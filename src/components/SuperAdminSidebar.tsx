@@ -16,7 +16,7 @@ export default function SuperAdminSidebar({ isOpen: externalOpen, onClose }: { i
   const [internalOpen, setInternalOpen] = useState(false);
 
   const isOpen = externalOpen !== undefined ? externalOpen : internalOpen;
-  const setIsOpen = externalOpen !== undefined ? (onClose || (() => {})) : setInternalOpen;
+  const setIsOpen = externalOpen !== undefined ? (onClose || (() => { })) : setInternalOpen;
 
   const handleLogout = () => logout(router, pathname);
 
@@ -45,7 +45,7 @@ export default function SuperAdminSidebar({ isOpen: externalOpen, onClose }: { i
         {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
       </button>
 
-      <aside className={`fixed top-0 right-0 h-full w-64 bg-white border-l border-slate-100 z-50 transition-all lg:translate-x-0 ${isOpen ? 'translate-x-0' : 'translate-x-full'} shadow-xl flex flex-col`}>
+      <aside className={`fixed top-0 right-0 h-full w-72 bg-white border-l border-slate-100 z-50 transition-all lg:translate-x-0 ${isOpen ? 'translate-x-0' : 'translate-x-full'} shadow-xl flex flex-col`}>
 
         {/* Brand Logo */}
         <div className="px-6 py-8 border-b border-slate-100">
@@ -71,23 +71,23 @@ export default function SuperAdminSidebar({ isOpen: externalOpen, onClose }: { i
           {/* PLATFORM */}
           <div className="space-y-1">
             <p className="px-3 py-1 text-[10px] font-black text-slate-400 uppercase tracking-[2px]">إدارة المنصة</p>
-            <SidebarLink href="/super-admin/schools"  icon={Building2}     label="إدارة المدارس"    active={isActive('/super-admin/schools')} />
-            <SidebarLink href="/super-admin/users"    icon={Users}         label="إدارة المستخدمين" active={isActive('/super-admin/users')} />
+            <SidebarLink href="/super-admin/schools" icon={Building2} label="إدارة المدارس" active={isActive('/super-admin/schools')} />
+            <SidebarLink href="/super-admin/users" icon={Users} label="إدارة المستخدمين" active={isActive('/super-admin/users')} />
           </div>
 
           {/* EXAMS */}
           <div className="space-y-1">
             <p className="px-3 py-1 text-[10px] font-black text-slate-400 uppercase tracking-[2px]">الامتحانات المركزية</p>
-            <SidebarLink href="/super-admin/exams"             icon={ClipboardList} label="كل الامتحانات"  active={isActive('/super-admin/exams')} />
-            <SidebarLink href="/super-admin/exams/new"         icon={BookOpen}      label="إنشاء جديد"      active={isActive('/super-admin/exams/new')} />
-            <SidebarLink href="/super-admin/exam-supervisors"  icon={UserCheck}     label="المشرفون"         active={isActive('/super-admin/exam-supervisors')} />
+            <SidebarLink href="/super-admin/exams" icon={ClipboardList} label="كل الامتحانات" active={isActive('/super-admin/exams')} />
+            <SidebarLink href="/super-admin/exams/new" icon={BookOpen} label="إنشاء جديد" active={isActive('/super-admin/exams/new')} />
+            <SidebarLink href="/super-admin/exam-supervisors" icon={UserCheck} label="المشرفون" active={isActive('/super-admin/exam-supervisors')} />
           </div>
 
           {/* COURSES */}
           <div className="space-y-1">
             <p className="px-3 py-1 text-[10px] font-black text-slate-400 uppercase tracking-[2px]">الكورسات المركزية</p>
-            <SidebarLink href="/super-admin/courses"         icon={Layers} label="كل الكورسات"  active={isActive('/super-admin/courses')} />
-            <SidebarLink href="/super-admin/courses/create"  icon={Plus}   label="إضافة كورس"   active={isActive('/super-admin/courses/create')} />
+            <SidebarLink href="/super-admin/courses" icon={Layers} label="كل الكورسات" active={isActive('/super-admin/courses')} />
+            <SidebarLink href="/super-admin/courses/create" icon={Plus} label="إضافة كورس" active={isActive('/super-admin/courses/create')} />
           </div>
 
           {/* REPORTS */}
@@ -129,24 +129,21 @@ function SidebarLink({ href, icon: Icon, label, active, badge }: {
   return (
     <Link
       href={href}
-      className={`flex items-center justify-between px-3 py-2.5 rounded-xl transition-all group ${
-        active
+      className={`flex items-center justify-between px-3 py-2.5 rounded-xl transition-all group ${active
           ? 'bg-slate-900 text-white'
           : 'text-slate-700 hover:bg-slate-900 hover:text-white'
-      }`}
+        }`}
     >
       <div className="flex items-center gap-3">
-        <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
-          active ? 'bg-white/15' : 'bg-slate-100 group-hover:bg-white/15'
-        }`}>
+        <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${active ? 'bg-white/15' : 'bg-slate-100 group-hover:bg-white/15'
+          }`}>
           <Icon className={`w-4 h-4 ${active ? 'text-white' : 'text-slate-500 group-hover:text-white'}`} />
         </div>
         <span className={`text-sm ${active ? 'font-black' : 'font-bold'}`}>{label}</span>
       </div>
       {badge && (
-        <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-black ${
-          active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-white/20 group-hover:text-white'
-        }`}>
+        <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-black ${active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-white/20 group-hover:text-white'
+          }`}>
           {badge}
         </span>
       )}

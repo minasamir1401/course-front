@@ -7,6 +7,7 @@ import {
   Type, Eraser, Palette, Heading1, Heading2,
   ChevronDown, Image as ImageIcon, Table, Sigma, X
 } from "lucide-react";
+import { compressImage } from "@/lib/image-utils";
 
 interface RichTextEditorProps {
   value: string;
@@ -58,17 +59,27 @@ export default function RichTextEditor({ value, onChange, placeholder, className
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.onchange = (e: any) => {
+    input.onchange = async (e: any) => {
       const file = e.target.files[0];
       if (file) {
-        const reader = new FileReader();
-        reader.onload = (readerEvent) => {
-          const content = readerEvent.target?.result as string;
-          setImageSettings({ src: content, width: "100", align: "center" });
+        try {
+          // Use client-side compression (max 1200px, 70% quality)
+          const compressedContent = await compressImage(file, 1200, 1200, 0.7);
+          setImageSettings({ src: compressedContent, width: "100", align: "center" });
           setEditingImage(null);
           setActiveModal('image');
-        };
-        reader.readAsDataURL(file);
+        } catch (error) {
+          console.error("Compression failed:", error);
+          // Fallback to original if compression fails
+          const reader = new FileReader();
+          reader.onload = (readerEvent) => {
+            const content = readerEvent.target?.result as string;
+            setImageSettings({ src: content, width: "100", align: "center" });
+            setEditingImage(null);
+            setActiveModal('image');
+          };
+          reader.readAsDataURL(file);
+        }
       }
     };
     input.click();

@@ -18,6 +18,7 @@ export default function ReportsPage() {
   const router = useRouter();
   const [stats, setStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const [activeReportTab, setActiveReportTab] = useState<'OVERVIEW' | 'EXAMS' | 'COURSES'>('OVERVIEW');
 
   const fetchStats = async () => {
@@ -47,6 +48,7 @@ export default function ReportsPage() {
 
   useEffect(() => {
     fetchStats();
+    setMounted(true);
   }, [router]);
 
   const handleExportPDF = () => {
@@ -167,21 +169,23 @@ export default function ReportsPage() {
                   منحنى الأداء في الاختبارات
                 </h3>
                 <div className="h-[300px] w-full" dir="ltr">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={stats?.submissions?.slice().reverse().map((s:any) => ({ name: new Date(s.createdAt).toLocaleDateString('ar-EG', {day:'numeric', month:'short'}), score: s.percentage }))}>
-                      <defs>
-                        <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94A3B8' }} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94A3B8' }} />
-                      <Tooltip />
-                      <Area type="monotone" dataKey="score" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorScore)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  {mounted && (
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                      <AreaChart data={stats?.submissions?.slice().reverse().map((s:any) => ({ name: new Date(s.createdAt).toLocaleDateString('ar-EG', {day:'numeric', month:'short'}), score: s.percentage }))}>
+                        <defs>
+                          <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94A3B8' }} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94A3B8' }} />
+                        <Tooltip />
+                        <Area type="monotone" dataKey="score" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorScore)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
               </div>
 
@@ -191,19 +195,21 @@ export default function ReportsPage() {
                   توزيع التقدم في الكورسات
                 </h3>
                 <div className="h-[300px] w-full" dir="ltr">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={stats?.courseProgresses}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="title" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94A3B8' }} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94A3B8' }} />
-                      <Tooltip />
-                      <Bar dataKey="progressPercent" radius={[4, 4, 0, 0]}>
-                        {stats?.courseProgresses?.map((entry:any, index:number) => (
-                          <Cell key={`cell-${index}`} fill={['#4361EE', '#3F37C9', '#4CC9F0', '#4895EF'][index % 4]} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                  {mounted && (
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                      <BarChart data={stats?.courseProgresses}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis dataKey="title" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94A3B8' }} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#94A3B8' }} />
+                        <Tooltip />
+                        <Bar dataKey="progressPercent" radius={[4, 4, 0, 0]}>
+                          {stats?.courseProgresses?.map((entry:any, index:number) => (
+                            <Cell key={`cell-${index}`} fill={['#4361EE', '#3F37C9', '#4CC9F0', '#4895EF'][index % 4]} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
               </div>
             </div>

@@ -3,6 +3,7 @@
 import { API_URL } from '@/lib/api';
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import DashboardLayout from "@/components/DashboardLayout";
 import {
   Building2, Users, Shield, BookOpen,
   TrendingUp, Plus, Search, Settings,
@@ -68,11 +69,8 @@ export default function SuperAdminDashboard() {
   }, [router]);
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-600 selection:bg-indigo-500/30" dir="rtl">
-      <SuperAdminSidebar />
-
-      {/* Main Content */}
-      <main className="lg:mr-64 p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8 transition-all duration-300">
+    <DashboardLayout>
+      <div className="space-y-10" dir="rtl">
 
         {/* Modern Dynamic Header */}
         <div className="relative overflow-hidden mb-10 rounded-[32px] bg-white border border-slate-100 shadow-sm p-8 sm:p-12">
@@ -165,7 +163,7 @@ export default function SuperAdminDashboard() {
 
             <div className="h-[300px] w-full relative z-10">
               {mounted && (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                   <BarChart data={schoolPerformanceData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.02)" vertical={false} />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
@@ -203,7 +201,7 @@ export default function SuperAdminDashboard() {
 
             <div className="h-[300px] w-full relative z-10">
               {mounted && (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                   <AreaChart data={examsActivityData}>
                     <defs>
                       <linearGradient id="colorExams" x1="0" y1="0" x2="0" y2="1">
@@ -315,8 +313,8 @@ export default function SuperAdminDashboard() {
             </div>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }
 

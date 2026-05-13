@@ -12,3 +12,12 @@ const getApiUrl = () => {
 };
 
 export const API_URL = getApiUrl();
+
+export const getFullImageUrl = (path: string | null | undefined) => {
+  if (!path) return null;
+  if (path.startsWith('data:') || path.startsWith('http')) return path;
+  // Remove /api from end of API_URL to get base server URL
+  const baseUrl = API_URL.replace(/\/api$/, '');
+  const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+  return `${baseUrl}/${cleanPath}`;
+};

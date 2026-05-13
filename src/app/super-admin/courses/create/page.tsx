@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { API_URL } from '@/lib/api';
 import { useNotification } from "@/context/NotificationContext";
-import SuperAdminSidebar from "@/components/SuperAdminSidebar";
+import DashboardLayout from "@/components/DashboardLayout";
 import { 
   ArrowLeft, Plus, Trash2, Video, FileText, 
   HelpCircle, BookOpen, Save, Layers, Edit2, X,
@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import * as XLSX from 'xlsx';
 import RichTextEditor from "@/components/RichTextEditor";
+import { compressImage } from "@/lib/image-utils";
 
 
 export default function CreateCoursePage() {
@@ -309,10 +310,8 @@ export default function CreateCoursePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900" dir="rtl">
-      <SuperAdminSidebar />
-
-      <main className="lg:mr-64 p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8">
+    <DashboardLayout>
+      <div dir="rtl">
         {isLessonModalOpen ? (
           <div className="max-w-6xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="bg-white border border-slate-200 w-full rounded-[40px] shadow-2xl overflow-hidden">
@@ -819,12 +818,17 @@ export default function CreateCoursePage() {
                                 <button onClick={() => setCourseData({...courseData, coverImage: ""})} className="p-2 bg-red-500 text-white rounded-xl hover:scale-110 transition-all"><Trash2 className="w-5 h-5" /></button>
                                 <label className="p-2 bg-indigo-600 text-white rounded-xl hover:scale-110 transition-all cursor-pointer">
                                   <Upload className="w-5 h-5" />
-                                  <input type="file" className="hidden" accept="image/*" onChange={(e: any) => {
+                                  <input type="file" className="hidden" accept="image/*" onChange={async (e: any) => {
                                     const file = e.target.files[0];
                                     if (file) {
-                                      const reader = new FileReader();
-                                      reader.onload = (re) => setCourseData({...courseData, coverImage: re.target?.result as string});
-                                      reader.readAsDataURL(file);
+                                      try {
+                                        const compressed = await compressImage(file, 1200, 1200, 0.7);
+                                        setCourseData({...courseData, coverImage: compressed});
+                                      } catch (err) {
+                                        const reader = new FileReader();
+                                        reader.onload = (re) => setCourseData({...courseData, coverImage: re.target?.result as string});
+                                        reader.readAsDataURL(file);
+                                      }
                                     }
                                   }} />
                                 </label>
@@ -836,12 +840,17 @@ export default function CreateCoursePage() {
                               <Upload className="w-6 h-6" />
                             </div>
                             <span className="text-[10px] font-black text-slate-400 group-hover:text-indigo-600">رفع غلاف الكورس</span>
-                            <input type="file" className="hidden" accept="image/*" onChange={(e: any) => {
+                            <input type="file" className="hidden" accept="image/*" onChange={async (e: any) => {
                                     const file = e.target.files[0];
                                     if (file) {
-                                      const reader = new FileReader();
-                                      reader.onload = (re) => setCourseData({...courseData, coverImage: re.target?.result as string});
-                                      reader.readAsDataURL(file);
+                                      try {
+                                        const compressed = await compressImage(file, 1200, 1200, 0.7);
+                                        setCourseData({...courseData, coverImage: compressed});
+                                      } catch (err) {
+                                        const reader = new FileReader();
+                                        reader.onload = (re) => setCourseData({...courseData, coverImage: re.target?.result as string});
+                                        reader.readAsDataURL(file);
+                                      }
                                     }
                                   }} />
                           </label>
@@ -988,7 +997,7 @@ export default function CreateCoursePage() {
             </div>
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

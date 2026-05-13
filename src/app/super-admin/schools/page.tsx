@@ -50,7 +50,8 @@ export default function SchoolsManagement() {
       });
       if (res.ok) {
         const data = await res.json();
-        setSchools(data);
+        const schoolsList = Array.isArray(data) ? data : (data.schools || []);
+        setSchools(schoolsList);
       }
     } catch (error) {
       console.error("Failed to fetch schools:", error);

@@ -76,8 +76,14 @@ function UsersManagementContent() {
         fetch(API_URL + "/admin/schools", { headers: { "Authorization": `Bearer ${token}` } })
       ]);
 
-      if (usersRes.ok) setUsers(await usersRes.json());
-      if (schoolsRes.ok) setSchools(await schoolsRes.json());
+      if (usersRes.ok) {
+        const data = await usersRes.json();
+        setUsers(Array.isArray(data) ? data : (data.users || []));
+      }
+      if (schoolsRes.ok) {
+        const data = await schoolsRes.json();
+        setSchools(Array.isArray(data) ? data : (data.schools || []));
+      }
     } catch (error) {
       console.error("Failed to fetch data:", error);
     } finally {

@@ -2,21 +2,20 @@
 
 import React, { useEffect, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { 
-  BookOpen, 
-  Play, 
-  Clock, 
-  ChevronLeft, 
-  CheckCircle2, 
-  Circle, 
+import {
+  BookOpen,
+  Play,
+  Clock,
+  CheckCircle2,
   Sparkles,
   Search,
-  Filter,
-  BarChart3,
-  ArrowRight
+  Target,
+  ArrowUpRight,
+  MoreVertical,
+  Filter
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { API_URL } from "@/lib/api";
+import { API_URL, getFullImageUrl } from "@/lib/api";
 
 export default function CoursesPage() {
   const router = useRouter();
@@ -33,13 +32,29 @@ export default function CoursesPage() {
           return;
         }
 
-        const statsRes = await fetch(`${API_URL}/student/stats`, {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
+        const [statsRes, coursesRes] = await Promise.all([
+          fetch(`${API_URL}/student/stats`, {
+            headers: { "Authorization": `Bearer ${token}` }
+          }),
+          fetch(`${API_URL}/courses`, {
+            headers: { "Authorization": `Bearer ${token}` }
+          })
+        ]);
 
-        if (statsRes.ok) {
+        if (statsRes.ok && coursesRes.ok) {
           const statsData = await statsRes.json();
-          setCourses(statsData.courseProgresses || []);
+          const coursesRaw = await coursesRes.json();
+          const coursesList = Array.isArray(coursesRaw) ? coursesRaw : (coursesRaw.courses || []);
+          
+          let progresses = statsData.courseProgresses || [];
+          
+          // Merge course details
+          progresses = progresses.map((p: any) => {
+            const fullCourse = coursesList.find((c: any) => c.id === p.id || c.id === p.courseId);
+            return { ...p, ...fullCourse };
+          });
+          
+          setCourses(progresses);
         }
       } catch (error) {
         console.error("Failed to fetch courses:", error);
@@ -51,7 +66,7 @@ export default function CoursesPage() {
     fetchCourses();
   }, [router]);
 
-  const filteredCourses = courses.filter(course => 
+  const filteredCourses = courses.filter(course =>
     course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     course.subject.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -60,7 +75,7 @@ export default function CoursesPage() {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin shadow-xl shadow-indigo-100"></div>
+          <div className="w-20 h-20 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin shadow-2xl shadow-indigo-100"></div>
         </div>
       </DashboardLayout>
     );
@@ -68,132 +83,166 @@ export default function CoursesPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto space-y-10 pb-20" dir="rtl">
-        {/* Modern List Header */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 bg-white p-8 md:p-12 rounded-[40px] border border-slate-100 shadow-sm relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-indigo-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-200">
-                <BookOpen className="w-6 h-6 text-white" />
+      <div className="max-w-7xl mx-auto space-y-8 md:space-y-12 pb-24 px-2 md:px-4" dir="rtl">
+        
+        {/* ── PREMIUM HEADER ── */}
+        <div className="relative overflow-hidden rounded-[32px] md:rounded-[48px] premium-gradient-primary p-8 md:p-16 group shadow-2xl shadow-indigo-500/20">
+           <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10" />
+           <div className="absolute top-[-20%] right-[-10%] w-96 h-96 bg-white/10 blur-[100px] rounded-full animate-pulse" />
+           
+           <div className="relative z-10 flex flex-col lg:flex-row justify-between items-center gap-8 md:gap-10">
+              <div className="space-y-4 md:space-y-6 text-center lg:text-right w-full lg:w-auto">
+                 <div className="inline-flex items-center gap-3 px-5 py-2 glass rounded-full border-white/20">
+                    <Sparkles className="w-4 h-4 text-amber-300 floating" />
+                    <span className="text-white text-[9px] md:text-[10px] font-black uppercase tracking-widest">مسارك التعليمي المخصص</span>
+                 </div>
+                 <h1 className="text-3xl md:text-6xl font-black text-white leading-tight tracking-tight">
+                    استكشف <span className="text-indigo-200">مقرراتك</span> الدراسية
+                 </h1>
+                 <p className="text-indigo-50/80 font-medium text-base md:text-lg max-w-xl leading-relaxed">
+                    هنا تجد جميع مقرراتك الدراسية منظمة حسب التقدم. واصل رحلة تعلمك وحقق أهدافك اليوم!
+                 </p>
               </div>
-              <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
-                المسار التعليمي
-              </h1>
-            </div>
-            <p className="text-slate-500 font-bold text-lg max-w-xl leading-relaxed">
-              هنا تجد جميع مقرراتك الدراسية منظمة حسب التقدم. واصل رحلة تعلمك الآن!
-            </p>
-          </div>
 
-          <div className="w-full lg:w-96 relative z-10 space-y-4">
-             <div className="relative group">
-                <input 
-                  type="text" 
-                  placeholder="ابحث عن كورس أو مادة..." 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pr-12 pl-6 text-slate-900 font-bold outline-none focus:border-indigo-600 focus:bg-white transition-all shadow-sm group-hover:shadow-md"
-                />
-                <Search className="w-5 h-5 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 transition-colors group-hover:text-indigo-600" />
-             </div>
-          </div>
+              <div className="w-full lg:w-[450px]">
+                 <div className="relative group">
+                    <input
+                      type="text"
+                      placeholder="ابحث عن كورس أو مادة..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full glass rounded-2xl md:rounded-[32px] py-4 md:py-6 pr-12 md:pr-14 pl-6 md:pl-8 text-white font-bold outline-none border-white/20 focus:border-white/40 focus:bg-white/10 transition-all placeholder:text-indigo-200 text-sm md:text-base"
+                    />
+                    <Search className="w-5 h-5 md:w-6 md:h-6 text-indigo-200 absolute right-5 md:right-6 top-1/2 -translate-y-1/2 group-focus-within:text-white transition-colors" />
+                 </div>
+              </div>
+           </div>
         </div>
 
-        {/* List View Container */}
-        <div className="space-y-4">
-          <div className="hidden md:grid grid-cols-12 gap-4 px-10 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">
-            <div className="col-span-5">المقرر والمادة</div>
-            <div className="col-span-3 text-center">التقدم الدراسي</div>
-            <div className="col-span-2 text-center">آخر نشاط</div>
-            <div className="col-span-2 text-left">الإجراء</div>
+        {/* ── COURSE LIST VIEW ── */}
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-4 md:px-8">
+             <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-100">
+                   <Target className="w-5 h-5 text-white" />
+                </div>
+                <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">جميع المقررات ({filteredCourses.length})</h2>
+             </div>
+             <div className="flex items-center gap-3">
+                <button className="p-2.5 md:p-3 rounded-xl border border-slate-200 text-slate-400 hover:bg-white hover:text-indigo-600 transition-all">
+                   <Filter className="w-5 h-5" />
+                </button>
+             </div>
           </div>
 
-          {filteredCourses.length > 0 ? filteredCourses.map((course, index) => {
-            const isFinished = course.progressPercent === 100;
-            const hasStarted = course.progressPercent > 0;
+          <div className="grid grid-cols-1 gap-6">
+            {filteredCourses.length > 0 ? filteredCourses.map((course, index) => {
+              const isFinished = course.progressPercent === 100;
+              const hasStarted = course.progressPercent > 0;
 
-            return (
-              <div
-                key={course.id}
-                onClick={() => router.push(`/courses/${course.id}`)}
-                className="bg-white rounded-[35px] p-6 md:p-8 border border-slate-100 shadow-sm hover:shadow-xl hover:border-indigo-200 transition-all duration-500 cursor-pointer group animate-in fade-in slide-in-from-bottom-4 fill-mode-both"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <div className="grid grid-cols-1 md:grid-cols-12 items-center gap-6 md:gap-4">
-                  {/* Title & Subject */}
-                  <div className="md:col-span-5 flex items-center gap-6">
-                    <div className={`w-24 h-16 md:w-32 md:h-20 rounded-[20px] flex items-center justify-center transition-all duration-500 group-hover:scale-105 shrink-0 overflow-hidden border border-slate-100 ${
-                      isFinished ? 'bg-emerald-50 text-emerald-600 shadow-emerald-100' : 'bg-indigo-50 text-indigo-600 shadow-indigo-100'
-                    } shadow-lg`}>
-                      {course.coverImage ? (
-                        <img src={course.coverImage} className="w-full h-full object-cover" alt={course.title} />
-                      ) : (
-                        <BookOpen className="w-8 h-8" />
-                      )}
+              return (
+                <div
+                  key={course.id}
+                  onClick={() => router.push(`/courses/${course.id}`)}
+                  className="premium-card rounded-[32px] md:rounded-[40px] p-4 md:p-6 group cursor-pointer animate-in fade-in slide-in-from-bottom-6"
+                  style={{ animationDelay: `${index * 80}ms` }}
+                >
+                  <div className="flex flex-col lg:flex-row items-center gap-6 md:gap-8">
+                    
+                    {/* Thumbnail & Info */}
+                    <div className="flex flex-1 items-center gap-4 md:gap-6 w-full lg:w-auto">
+                      <div className={`relative w-20 h-20 md:w-40 md:h-28 rounded-2xl md:rounded-[28px] overflow-hidden shrink-0 shadow-2xl transition-transform duration-500 group-hover:scale-105 border border-slate-100 ${
+                        isFinished ? 'shadow-emerald-100' : 'shadow-indigo-100'
+                      }`}>
+                        {(course.coverImage || course.course?.coverImage || course.image || course.thumbnail || course.courseImage) ? (
+                          <img src={getFullImageUrl(course.coverImage || course.course?.coverImage || course.image || course.thumbnail || course.courseImage) || ""} className="w-full h-full object-cover" alt={course.title || course.course?.title} />
+                        ) : (
+                          <div className={`w-full h-full flex items-center justify-center ${
+                            isFinished ? 'bg-emerald-50 text-emerald-500' : 'premium-gradient-primary text-white/40'
+                          }`}>
+                            <BookOpen className="w-8 h-8 md:w-10 md:h-10" />
+                          </div>
+                        )}
+                        {isFinished && (
+                           <div className="absolute inset-0 bg-emerald-500/20 backdrop-blur-[2px] flex items-center justify-center">
+                              <CheckCircle2 className="w-8 h-8 md:w-10 md:h-10 text-white" />
+                           </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex-1 space-y-1.5 md:space-y-2 min-w-0">
+                         <div className="flex items-center gap-3">
+                            <span className={`text-[8px] md:text-[9px] font-black px-2 md:px-3 py-1 rounded-lg uppercase tracking-widest border ${
+                               isFinished ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-400 border-slate-200'
+                            }`}>
+                               {course.subject}
+                            </span>
+                            {hasStarted && !isFinished && (
+                               <span className="flex items-center gap-1 text-[8px] md:text-[9px] font-black text-indigo-500 animate-pulse">
+                                  <div className="w-1 h-1 rounded-full bg-indigo-500" />
+                                  قيد التعلم
+                               </span>
+                            )}
+                         </div>
+                        <h3 className="text-lg md:text-2xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors truncate tracking-tight">
+                          {course.title}
+                        </h3>
+                        <div className="flex items-center gap-3 md:gap-4 text-slate-400 font-bold text-[10px] md:text-xs">
+                           <span className="flex items-center gap-1"><Clock className="w-3 md:w-3.5 h-3 md:h-3.5" /> 12 ساعة</span>
+                           <span className="flex items-center gap-1"><Play className="w-3 md:w-3.5 h-3 md:h-3.5" /> {course.totalLessons || 0} درساً</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <span className="text-[10px] font-black px-3 py-1 bg-slate-50 text-slate-400 rounded-lg border border-slate-100 uppercase tracking-widest mb-1.5 inline-block">
-                        {course.subject}
-                      </span>
-                      <h3 className="text-xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors truncate">
-                        {course.title}
-                      </h3>
-                    </div>
-                  </div>
 
-                  {/* Progress Bar Column */}
-                  <div className="md:col-span-3 flex flex-col gap-3 px-4">
-                    <div className="flex justify-between items-center text-[10px] font-black">
-                      <span className="text-slate-400 uppercase">معدل الإنجاز</span>
-                      <span className={isFinished ? 'text-emerald-600' : 'text-indigo-600'}>
-                        {course.progressPercent}%
-                      </span>
-                    </div>
-                    <div className="w-full h-3 bg-slate-50 rounded-full overflow-hidden shadow-inner p-0.5">
-                      <div
-                        className={`h-full rounded-full transition-all duration-1000 ease-out ${
-                          isFinished ? 'bg-gradient-to-l from-emerald-400 to-emerald-600' : 'bg-gradient-to-l from-indigo-500 to-indigo-700'
-                        }`}
-                        style={{ width: `${course.progressPercent}%` }}
-                      ></div>
-                    </div>
-                  </div>
-
-                  {/* Last Activity */}
-                  <div className="md:col-span-2 text-center flex md:flex-col items-center justify-center gap-3 md:gap-1 border-t md:border-t-0 pt-4 md:pt-0 border-slate-50">
-                    <Clock className="w-4 h-4 text-slate-300 md:mb-1" />
-                    <div className="text-right md:text-center">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">آخر مذاكرة</p>
-                      <p className="text-xs font-black text-slate-800">
-                        {course.lastAccessedAt ? new Date(course.lastAccessedAt).toLocaleDateString('ar-EG') : 'لم يبدأ'}
+                    {/* Progress Metrics */}
+                    <div className="w-full lg:w-72 flex flex-col gap-3 md:gap-4 md:px-4">
+                      <div className="flex justify-between items-center text-[9px] md:text-[10px] font-black">
+                        <span className="text-slate-400 uppercase tracking-widest">إجمالي الإنجاز</span>
+                        <span className={`px-2 py-0.5 md:py-1 rounded-md text-[10px] md:text-xs ${isFinished ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                          {course.progressPercent}%
+                        </span>
+                      </div>
+                      <div className="w-full h-2 md:h-2.5 bg-slate-50 rounded-full overflow-hidden shadow-inner p-0.5 border border-slate-100">
+                        <div
+                          className={`h-full rounded-full transition-all duration-1000 ease-out shadow-sm ${
+                            isFinished ? 'bg-emerald-500' : 'bg-indigo-600'
+                          }`}
+                          style={{ width: `${course.progressPercent}%` }}
+                        ></div>
+                      </div>
+                      <p className="text-[9px] md:text-[10px] text-slate-400 font-bold text-center">
+                         {isFinished ? 'أحسنت! لقد أتممت هذا المقرر بنجاح' : course.lastAccessedAt ? `آخر نشاط: ${new Date(course.lastAccessedAt).toLocaleDateString('ar-EG')}` : 'ابدأ دراستك الآن'}
                       </p>
                     </div>
-                  </div>
 
-                  {/* Action Button */}
-                  <div className="md:col-span-2 flex justify-end">
-                    <button className={`w-full md:w-auto px-8 py-4 rounded-2xl text-sm font-black transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95 ${
-                      isFinished 
-                        ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white' 
-                        : 'bg-indigo-600 text-white hover:bg-slate-900 hover:shadow-indigo-200'
-                    }`}>
-                      {isFinished ? 'مراجعة الكورس' : hasStarted ? 'متابعة' : 'ابدأ الآن'}
-                      <ChevronLeft className="w-4 h-4 group-hover:-translate-x-2 transition-transform" />
-                    </button>
+                    {/* Actions */}
+                    <div className="w-full lg:w-auto flex items-center gap-3">
+                       <button className={`flex-1 lg:flex-none px-6 md:px-10 py-4 md:py-5 rounded-2xl md:rounded-3xl text-xs md:text-sm font-black transition-all flex items-center justify-center gap-3 shadow-xl active:scale-95 ${
+                          isFinished 
+                          ? 'bg-slate-50 text-slate-900 hover:bg-slate-900 hover:text-white' 
+                          : 'bg-indigo-600 text-white hover:bg-slate-900 hover:shadow-indigo-200'
+                       }`}>
+                         {isFinished ? 'مراجعة المقرر' : hasStarted ? 'متابعة التعلم' : 'ابدأ الآن'}
+                         <ArrowUpRight className="w-4 h-4 md:w-5 md:h-5 group-hover:-translate-y-1 group-hover:translate-x-[-4px] transition-transform" />
+                       </button>
+                       <button className="p-4 md:p-5 rounded-xl md:rounded-[24px] border border-slate-100 text-slate-400 hover:bg-slate-50 transition-all shrink-0">
+                          <MoreVertical className="w-4 h-4 md:w-5 md:h-5" />
+                       </button>
+                    </div>
+
                   </div>
                 </div>
+              );
+            }) : (
+              <div className="py-24 md:py-40 text-center bg-white rounded-[40px] md:rounded-[60px] border-4 border-dashed border-slate-100 animate-in fade-in zoom-in duration-700 mx-4">
+                <div className="w-20 h-20 md:w-28 md:h-28 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 md:mb-8 shadow-inner">
+                  <Search className="w-10 h-10 md:w-12 md:h-12 text-slate-200" />
+                </div>
+                <h3 className="text-slate-900 text-2xl md:text-3xl font-black mb-3 tracking-tight">لم يتم العثور على أي نتائج</h3>
+                <p className="text-slate-400 font-bold text-base md:text-lg max-w-md mx-auto px-6">جرب البحث بكلمات أخرى أو تأكد من مسميات المواد الدراسية</p>
               </div>
-            );
-          }) : (
-            <div className="py-32 text-center bg-white rounded-[50px] border-2 border-slate-100 border-dashed animate-in fade-in zoom-in duration-700">
-              <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
-                <Search className="w-10 h-10 text-slate-200" />
-              </div>
-              <p className="text-slate-900 text-2xl font-black mb-2">لم يتم العثور على نتائج</p>
-              <p className="text-slate-400 font-bold">جرب البحث بكلمات أخرى أو تصفح الكورسات المتاحة</p>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </DashboardLayout>

@@ -3,13 +3,13 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { 
-  LayoutDashboard, 
-  BookOpen, 
-  ClipboardList, 
-  BarChart3, 
-  Settings, 
-  LogOut, 
+import {
+  LayoutDashboard,
+  BookOpen,
+  ClipboardList,
+  BarChart3,
+  Settings,
+  LogOut,
   GraduationCap,
   ChevronLeft,
   Calendar,
@@ -57,16 +57,14 @@ export default function StudentSidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center justify-between group p-3.5 rounded-2xl transition-all duration-300 ${
-                isActive 
-                  ? "bg-indigo-600 text-white shadow-xl shadow-indigo-100" 
+              className={`flex items-center justify-between group p-3.5 rounded-2xl transition-all duration-300 ${isActive
+                  ? "bg-indigo-600 text-white shadow-xl shadow-indigo-100"
                   : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-              }`}
+                }`}
             >
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-                  isActive ? "bg-white/20" : "bg-slate-50 group-hover:bg-white shadow-sm"
-                }`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isActive ? "bg-white/20" : "bg-slate-50 group-hover:bg-white shadow-sm"
+                  }`}>
                   <item.icon className="w-5 h-5" />
                 </div>
                 <span className="text-sm font-black tracking-tight">{item.label}</span>

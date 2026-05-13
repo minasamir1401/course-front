@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from "react";
 import {
   Search, Bell, Menu, ChevronDown, LogOut, Settings,
-  User, BookOpen, ArrowLeftCircle, Sparkles, MessageSquare
+  User, ArrowLeftCircle, Sparkles,
+  Globe, Zap
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -37,6 +38,13 @@ export default function Header({
   const [userInitials, setUserInitials] = useState("م");
   const [showDropdown, setShowDropdown] = useState(false);
   const [isImpersonating, setIsImpersonating] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     setIsImpersonating(localStorage.getItem("is_impersonating") === "true");
@@ -74,35 +82,37 @@ export default function Header({
 
   return (
     <header
-      className="sticky top-0 z-30 flex items-center justify-between bg-white/80 backdrop-blur-xl border-b border-slate-100 px-6 transition-all"
-      style={{ height: "80px" }}
+      className={`sticky top-0 z-40 flex items-center justify-between px-3 md:px-8 transition-all duration-500 ${
+        scrolled ? "h-20 glass shadow-lg shadow-indigo-500/5 mt-2 mx-2 md:mx-4 rounded-[32px] border-white/40" : "h-24 bg-transparent"
+      }`}
     >
-      {/* ── RIGHT SIDE ── */}
-      <div className="flex items-center gap-6 flex-1 min-w-0">
+      {/* ── RIGHT SIDE: Navigation & Logo ── */}
+      <div className="flex items-center gap-3 md:gap-8 flex-1 min-w-0">
         
-        {/* Breadcrumb / Title Area */}
-        <div className="flex items-center gap-3">
+        {/* Brand / Title Section */}
+        <div className="flex items-center gap-4">
            {!isStudent && (
               <button
                 onClick={onMenuClick}
-                className="lg:hidden p-2.5 rounded-xl bg-slate-50 text-slate-500 hover:bg-slate-100 transition-all border border-slate-200/50"
+                className="lg:hidden p-3 rounded-2xl bg-white/50 hover:bg-white text-slate-600 transition-all border border-slate-200/40"
               >
                 <Menu className="w-5 h-5" />
               </button>
            )}
-           <div className="hidden sm:flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
-                 <Sparkles className="w-4 h-4 text-indigo-600" />
+           <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-indigo-600 shadow-xl shadow-indigo-200 flex items-center justify-center transform group-hover:rotate-12 transition-transform">
+                 <Zap className="w-6 h-6 text-white fill-current" />
               </div>
-              <h2 className="text-sm font-black text-slate-800 tracking-tight uppercase">
-                {pathname?.split('/').filter(Boolean).pop()?.replace('-', ' ') || "Dashboard"}
-              </h2>
+              <div className="hidden sm:block">
+                 <h2 className="text-lg font-black text-slate-900 tracking-tight leading-none mb-1 uppercase">LMS PRO</h2>
+                 <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">Premium Learning</p>
+              </div>
            </div>
         </div>
 
-        {/* ── DESKTOP NAV (students only) ── */}
+        {/* ── DESKTOP NAV (Students) ── */}
         {isStudent && !isMobile && (
-          <nav className="flex items-center gap-1 bg-slate-100/50 p-1 rounded-2xl border border-slate-200/60">
+          <nav className="flex items-center gap-1.5 glass p-1.5 rounded-[24px] border-white/20 shadow-sm">
             {navLinks.map((link) => {
               const isActive =
                 pathname === link.href ||
@@ -111,13 +121,13 @@ export default function Header({
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black whitespace-nowrap transition-all duration-300 ${
+                  className={`flex items-center gap-2.5 px-6 py-3 rounded-2xl text-[11px] font-black whitespace-nowrap transition-all duration-300 ${
                     isActive
-                      ? "bg-white text-indigo-600 shadow-sm border border-slate-100"
-                      : "text-slate-500 hover:text-slate-900 hover:bg-white/60"
+                      ? "bg-indigo-600 text-white shadow-xl shadow-indigo-200"
+                      : "text-slate-500 hover:text-indigo-600 hover:bg-white/60"
                   }`}
                 >
-                  <link.icon className={`w-4 h-4 shrink-0 ${isActive ? "text-indigo-600" : "text-slate-400"}`} />
+                  <link.icon className={`w-4 h-4 shrink-0 ${isActive ? "text-white" : "text-slate-400"}`} />
                   <span>{link.label}</span>
                 </Link>
               );
@@ -125,51 +135,54 @@ export default function Header({
           </nav>
         )}
 
-        {/* Global Search */}
+        {/* Search Bar */}
         {!isMobile && (
-          <div className="flex items-center gap-3 bg-slate-50 border border-slate-200/50 rounded-2xl px-4 py-3 w-64 focus-within:w-80 focus-within:border-indigo-300 focus-within:bg-white focus-within:shadow-xl focus-within:shadow-indigo-100/20 transition-all duration-500 group">
-            <Search className="w-4 h-4 text-slate-400 shrink-0 group-focus-within:text-indigo-600 transition-colors" />
+          <div className="hidden xl:flex items-center gap-3 bg-white/50 border border-white/80 rounded-2xl px-5 py-3 w-80 focus-within:w-96 focus-within:bg-white focus-within:shadow-2xl focus-within:shadow-indigo-100 focus-within:border-indigo-200 transition-all duration-500 group">
+            <Search className="w-4 h-4 text-slate-400 shrink-0 group-focus-within:text-indigo-600" />
             <input
               type="text"
-              placeholder="ابحث عن دروس، معلمين، أو كورسات..."
+              placeholder="ابحث عن محتوى تعليمي..."
               className="bg-transparent text-xs font-bold outline-none w-full placeholder:text-slate-400"
             />
           </div>
         )}
       </div>
 
-      {/* ── LEFT SIDE: Actions ── */}
+      {/* ── LEFT SIDE: Profile & Utilities ── */}
       <div className="flex items-center gap-4 shrink-0">
         
-        {/* Support/Notification Area */}
-        <div className="hidden md:flex items-center gap-2 mr-2">
-           <button className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all">
-             <MessageSquare className="w-5 h-5" />
+        {/* Support & Language */}
+        <div className="hidden md:flex items-center gap-3 ml-2">
+           <button className="w-12 h-12 rounded-2xl flex items-center justify-center text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-xl hover:shadow-indigo-100/20 transition-all border border-transparent hover:border-slate-100">
+              <Globe className="w-5 h-5" />
            </button>
-           <button className="relative w-10 h-10 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all">
+           <button className="relative w-12 h-12 rounded-2xl flex items-center justify-center text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-xl hover:shadow-indigo-100/20 transition-all border border-transparent hover:border-slate-100">
               <Bell className="w-5 h-5" />
-              <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white animate-pulse" />
+              <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-rose-500 ring-4 ring-white animate-pulse" />
            </button>
         </div>
+
+        <div className="h-10 w-px bg-slate-200/50 mx-2 hidden md:block" />
 
         {/* Profile Card */}
         <div className="relative">
           <button
             onClick={() => setShowDropdown((v) => !v)}
-            className="flex items-center gap-3 p-1.5 pl-4 rounded-2xl bg-white border border-slate-100 hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-100/20 transition-all active:scale-95 group"
+            className="flex items-center gap-2 md:gap-4 p-1.5 md:p-2 sm:pl-6 rounded-[24px] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-indigo-100/30 hover:border-indigo-200 transition-all active:scale-95 group"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-blue-700 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-indigo-100 group-hover:rotate-6 transition-transform">
-              {userInitials}
+            <div className="relative">
+               <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-700 flex items-center justify-center text-white font-black text-sm shadow-xl shadow-indigo-100 group-hover:rotate-6 transition-transform">
+                 {userInitials}
+               </div>
+               <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-white rounded-full" />
             </div>
+            
             <div className="text-right hidden sm:block">
               <p className="text-xs font-black text-slate-900 leading-none mb-1">{userName}</p>
-              <div className="flex items-center gap-1.5">
-                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{userRoleName}</p>
-              </div>
+              <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">{userRoleName}</p>
             </div>
             <ChevronDown
-              className={`w-4 h-4 text-slate-300 transition-transform duration-300 ${showDropdown ? "rotate-180" : ""}`}
+              className={`w-4 h-4 text-slate-300 transition-transform duration-500 ${showDropdown ? "rotate-180 text-indigo-600" : ""}`}
             />
           </button>
 
@@ -177,21 +190,20 @@ export default function Header({
           {showDropdown && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setShowDropdown(false)} />
-              <div className="absolute left-0 top-[calc(100%+12px)] w-64 z-20 rounded-[32px] overflow-hidden shadow-2xl shadow-indigo-200/50 border border-slate-100 bg-white animate-in zoom-in duration-300 origin-top-left">
-                <div className="p-5 border-b border-slate-50">
-                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">حسابك الشخصي</p>
-                   <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center font-black text-indigo-600">
+              <div className="absolute left-0 top-[calc(100%+16px)] w-72 z-20 rounded-[40px] overflow-hidden shadow-2xl shadow-indigo-200/40 border border-slate-100 bg-white animate-in zoom-in slide-in-from-top-4 duration-300 origin-top-left p-2">
+                <div className="p-6 border-b border-slate-50 bg-slate-50/50 rounded-t-[32px] mb-2">
+                   <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-2xl bg-white border border-slate-100 shadow-lg flex items-center justify-center font-black text-xl text-indigo-600">
                          {userInitials}
                       </div>
                       <div className="min-w-0">
-                         <p className="font-black text-sm text-slate-900 truncate">{userName}</p>
-                         <p className="text-[10px] text-indigo-600 font-bold">{userRoleName}</p>
+                         <p className="font-black text-base text-slate-900 truncate leading-tight">{userName}</p>
+                         <p className="text-[10px] text-indigo-600 font-black uppercase tracking-widest mt-1">{userRoleName}</p>
                       </div>
                    </div>
                 </div>
 
-                <div className="p-3 space-y-1">
+                <div className="space-y-1">
                   <DropdownItem icon={User} label="الملف الشخصي" onClick={() => { setShowDropdown(false); router.push("/profile"); }} />
                   <DropdownItem icon={Settings} label="إعدادات الحساب" onClick={() => { setShowDropdown(false); router.push("/settings"); }} />
 
@@ -204,7 +216,7 @@ export default function Header({
                     />
                   )}
 
-                  <div className="h-px bg-slate-50 my-2 mx-3" />
+                  <div className="h-px bg-slate-50 my-3 mx-4" />
                   <DropdownItem icon={LogOut} label="تسجيل الخروج" onClick={handleLogout} color="rose" />
                 </div>
               </div>
@@ -235,10 +247,13 @@ function DropdownItem({
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all font-bold text-sm ${colors[color]}`}
+      className={`w-full flex items-center gap-3.5 px-5 py-4 rounded-3xl transition-all font-black text-sm ${colors[color]}`}
     >
-      <Icon className="w-4 h-4 shrink-0" />
+      <div className={`p-2 rounded-xl transition-colors ${color === 'rose' ? 'bg-rose-50 text-rose-600' : 'bg-slate-50 text-slate-400 group-hover:text-indigo-600'}`}>
+         <Icon className="w-4 h-4 shrink-0" />
+      </div>
       <span>{label}</span>
     </button>
   );
 }
+

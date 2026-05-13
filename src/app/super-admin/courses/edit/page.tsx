@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { API_URL } from '@/lib/api';
+import { API_URL, getFullImageUrl } from '@/lib/api';
 import { useNotification } from "@/context/NotificationContext";
 import SuperAdminSidebar from "@/components/SuperAdminSidebar";
 import {
@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import * as XLSX from 'xlsx';
 import RichTextEditor from "@/components/RichTextEditor";
+import { compressImage } from "@/lib/image-utils";
 
 
 export default function EditCoursePage() {
@@ -729,7 +730,7 @@ export default function EditCoursePage() {
                     <div className="px-6 py-4 space-y-4">
                       {courseData.coverImage && (
                         <div className="aspect-video w-full rounded-2xl overflow-hidden border border-slate-100 mb-2">
-                           <img src={courseData.coverImage} className="w-full h-full object-cover" alt="Cover" />
+                           <img src={getFullImageUrl(courseData.coverImage) || ""} className="w-full h-full object-cover" alt="Cover" />
                         </div>
                       )}
                       <div className="flex flex-col gap-1.5">
@@ -748,17 +749,22 @@ export default function EditCoursePage() {
                         <div className="relative group cursor-pointer">
                           {courseData.coverImage ? (
                             <div className="relative aspect-video w-full rounded-2xl overflow-hidden border-2 border-slate-100 group-hover:border-indigo-400 transition-all">
-                              <img src={courseData.coverImage} className="w-full h-full object-cover" alt="Cover" />
+                              <img src={getFullImageUrl(courseData.coverImage) || ""} className="w-full h-full object-cover" alt="Cover" />
                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-3">
                                  <button onClick={() => setCourseData({...courseData, coverImage: ""})} className="p-2 bg-red-500 text-white rounded-xl hover:scale-110 transition-all"><Trash2 className="w-5 h-5" /></button>
                                  <label className="p-2 bg-indigo-600 text-white rounded-xl hover:scale-110 transition-all cursor-pointer">
                                     <Upload className="w-5 h-5" />
-                                    <input type="file" className="hidden" accept="image/*" onChange={(e: any) => {
+                                    <input type="file" className="hidden" accept="image/*" onChange={async (e: any) => {
                                       const file = e.target.files[0];
                                       if (file) {
-                                        const reader = new FileReader();
-                                        reader.onload = (re) => setCourseData({...courseData, coverImage: re.target?.result as string});
-                                        reader.readAsDataURL(file);
+                                        try {
+                                          const compressed = await compressImage(file, 1200, 1200, 0.7);
+                                          setCourseData({...courseData, coverImage: compressed});
+                                        } catch (err) {
+                                          const reader = new FileReader();
+                                          reader.onload = (re) => setCourseData({...courseData, coverImage: re.target?.result as string});
+                                          reader.readAsDataURL(file);
+                                        }
                                       }
                                     }} />
                                  </label>
@@ -770,12 +776,17 @@ export default function EditCoursePage() {
                                 <Upload className="w-6 h-6" />
                               </div>
                               <span className="text-xs font-black text-slate-400 group-hover:text-indigo-600">اضغط لرفع غلاف الكورس</span>
-                              <input type="file" className="hidden" accept="image/*" onChange={(e: any) => {
+                              <input type="file" className="hidden" accept="image/*" onChange={async (e: any) => {
                                       const file = e.target.files[0];
                                       if (file) {
-                                        const reader = new FileReader();
-                                        reader.onload = (re) => setCourseData({...courseData, coverImage: re.target?.result as string});
-                                        reader.readAsDataURL(file);
+                                        try {
+                                          const compressed = await compressImage(file, 1200, 1200, 0.7);
+                                          setCourseData({...courseData, coverImage: compressed});
+                                        } catch (err) {
+                                          const reader = new FileReader();
+                                          reader.onload = (re) => setCourseData({...courseData, coverImage: re.target?.result as string});
+                                          reader.readAsDataURL(file);
+                                        }
                                       }
                                     }} />
                             </label>
