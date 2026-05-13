@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { API_URL } from '@/lib/api';
 import { useNotification } from "@/context/NotificationContext";
-import SuperAdminSidebar from "@/components/SuperAdminSidebar";
+import DashboardLayout from "@/components/DashboardLayout";
 import { 
   ArrowLeft, Plus, Trash2, Video, FileText, 
   HelpCircle, BookOpen, Save, Layers, Edit2, X,
@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import * as XLSX from 'xlsx';
 import RichTextEditor from "@/components/RichTextEditor";
+import { compressImage } from "@/lib/image-utils";
 
 
 export default function CreateCoursePage() {
@@ -28,6 +29,7 @@ export default function CreateCoursePage() {
   const [courseData, setCourseData] = useState({
     title: "",
     description: "",
+    coverImage: "",
     grade: "الصف الأول الثانوي",
     subject: "",
     isCentral: !schoolIdParam, // true if no specific school, false if schoolId provided
@@ -308,10 +310,8 @@ export default function CreateCoursePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900" dir="rtl">
-      <SuperAdminSidebar />
-
-      <main className="lg:mr-64 p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8">
+    <DashboardLayout>
+      <div dir="rtl">
         {isLessonModalOpen ? (
           <div className="max-w-6xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="bg-white border border-slate-200 w-full rounded-[40px] shadow-2xl overflow-hidden">
@@ -807,6 +807,57 @@ export default function CreateCoursePage() {
                   </h2>
                   
                   <div className="space-y-6 relative z-10">
+                    {/* Cover Image Upload */}
+                    <div className="space-y-3">
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">صورة الغلاف</label>
+                      <div className="relative group cursor-pointer">
+                        {courseData.coverImage ? (
+                          <div className="relative aspect-video w-full rounded-2xl overflow-hidden border-2 border-slate-100 group-hover:border-indigo-400 transition-all">
+                            <img src={courseData.coverImage} className="w-full h-full object-cover" alt="Cover" />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-3">
+                                <button onClick={() => setCourseData({...courseData, coverImage: ""})} className="p-2 bg-red-500 text-white rounded-xl hover:scale-110 transition-all"><Trash2 className="w-5 h-5" /></button>
+                                <label className="p-2 bg-indigo-600 text-white rounded-xl hover:scale-110 transition-all cursor-pointer">
+                                  <Upload className="w-5 h-5" />
+                                  <input type="file" className="hidden" accept="image/*" onChange={async (e: any) => {
+                                    const file = e.target.files[0];
+                                    if (file) {
+                                      try {
+                                        const compressed = await compressImage(file, 1200, 1200, 0.7);
+                                        setCourseData({...courseData, coverImage: compressed});
+                                      } catch (err) {
+                                        const reader = new FileReader();
+                                        reader.onload = (re) => setCourseData({...courseData, coverImage: re.target?.result as string});
+                                        reader.readAsDataURL(file);
+                                      }
+                                    }
+                                  }} />
+                                </label>
+                            </div>
+                          </div>
+                        ) : (
+                          <label className="flex flex-col items-center justify-center aspect-video w-full rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-200 transition-all group cursor-pointer">
+                            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-indigo-600 shadow-sm mb-3">
+                              <Upload className="w-6 h-6" />
+                            </div>
+                            <span className="text-[10px] font-black text-slate-400 group-hover:text-indigo-600">رفع غلاف الكورس</span>
+                            <input type="file" className="hidden" accept="image/*" onChange={async (e: any) => {
+                                    const file = e.target.files[0];
+                                    if (file) {
+                                      try {
+                                        const compressed = await compressImage(file, 1200, 1200, 0.7);
+                                        setCourseData({...courseData, coverImage: compressed});
+                                      } catch (err) {
+                                        const reader = new FileReader();
+                                        reader.onload = (re) => setCourseData({...courseData, coverImage: re.target?.result as string});
+                                        reader.readAsDataURL(file);
+                                      }
+                                    }
+                                  }} />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+
                     <div className="space-y-2">
                       <label className="text-xs font-black text-slate-400 uppercase tracking-widest">عنوان الكورس</label>
                       <input 
@@ -946,7 +997,7 @@ export default function CreateCoursePage() {
             </div>
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

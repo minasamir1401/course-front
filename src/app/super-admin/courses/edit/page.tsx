@@ -2,18 +2,19 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { API_URL } from '@/lib/api';
+import { API_URL, getFullImageUrl } from '@/lib/api';
 import { useNotification } from "@/context/NotificationContext";
 import SuperAdminSidebar from "@/components/SuperAdminSidebar";
-import { 
-  ArrowLeft, Plus, Trash2, Video, FileText, 
+import {
+  ArrowLeft, Plus, Trash2, Video, FileText,
   HelpCircle, BookOpen, Save, Layers, Edit2, X,
-  ChevronDown, ChevronUp, Play, Layout, Target, 
+  ChevronDown, ChevronUp, Play, Layout, Target,
   CheckCircle2, AlertCircle, Upload, Download, Settings,
-  Eye, Monitor, ListOrdered, FileJson
+  Eye, Monitor, ListOrdered, FileJson, Clock
 } from "lucide-react";
 import * as XLSX from 'xlsx';
 import RichTextEditor from "@/components/RichTextEditor";
+import { compressImage } from "@/lib/image-utils";
 
 
 export default function EditCoursePage() {
@@ -26,10 +27,11 @@ export default function EditCoursePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [schools, setSchools] = useState<any[]>([]);
-  
+
   const [courseData, setCourseData] = useState({
     title: "",
     description: "",
+    coverImage: "",
     grade: "الصف الأول الثانوي",
     subject: "",
     isCentral: false,
@@ -40,6 +42,9 @@ export default function EditCoursePage() {
   const [isLessonModalOpen, setIsLessonModalOpen] = useState(false);
   const [editingLessonIndex, setEditingLessonIndex] = useState<number | null>(null);
 
+  // Collapsible panel state
+  const [courseSettingsCollapsed, setCourseSettingsCollapsed] = useState(false);
+
   // Lesson State
   const [currentLesson, setCurrentLesson] = useState<any>({
     title: "",
@@ -49,13 +54,16 @@ export default function EditCoursePage() {
     standards: "",
     indicators: "",
     learningOutcomes: "",
+    isVisible: true,
+    publishDate: "",
+    cutOffDate: "",
     slides: [{ id: Date.now(), title: "المقدمة", content: "" }],
     questions: [],
     attachments: []
   });
 
   // UI States for Lesson Modal
-  const [activeTab, setActiveTab] = useState<'info' | 'slides' | 'exercises' | 'attachments'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'slides' | 'exercises' | 'attachments' | 'scheduling'>('info');
   const [showQuestionForm, setShowQuestionForm] = useState(false);
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null);
   const [tempQuestion, setTempQuestion] = useState<any>({
@@ -112,21 +120,22 @@ export default function EditCoursePage() {
         setCourseData({
           title: data.title,
           description: data.description || "",
+          coverImage: data.coverImage || "",
           grade: data.grade || "الصف الأول الثانوي",
           subject: data.subject || "",
           isCentral: data.isCentral,
           schoolId: data.schoolId || ""
         });
-        
+
         setLessons(data.lessons.map((l: any) => {
           let parsedQuestions = [];
           let parsedAttachments = [];
           let parsedSlides = [];
-          
+
           try {
             parsedQuestions = typeof l.questions === 'string' ? JSON.parse(l.questions) : (l.questions || []);
           } catch (e) { parsedQuestions = []; }
-          
+
           try {
             parsedAttachments = typeof l.attachments === 'string' ? JSON.parse(l.attachments) : (l.attachments || []);
           } catch (e) { parsedAttachments = []; }
@@ -137,6 +146,9 @@ export default function EditCoursePage() {
 
           return {
             ...l,
+            isVisible: l.isVisible !== undefined ? l.isVisible : true,
+            publishDate: l.publishDate ? new Date(l.publishDate).toISOString().slice(0, 16) : "",
+            cutOffDate: l.cutOffDate ? new Date(l.cutOffDate).toISOString().slice(0, 16) : "",
             questions: Array.isArray(parsedQuestions) ? parsedQuestions : [],
             attachments: Array.isArray(parsedAttachments) ? parsedAttachments : [],
             slides: Array.isArray(parsedSlides) && parsedSlides.length ? parsedSlides : [{ id: Date.now(), title: "المقدمة", content: "" }]
@@ -160,6 +172,7 @@ export default function EditCoursePage() {
     setEditingLessonIndex(null);
     setCurrentLesson({
       title: "", videoUrl: "", summary: "", notes: "", standards: "", indicators: "", learningOutcomes: "",
+      isVisible: true, publishDate: "", cutOffDate: "",
       slides: [{ id: Date.now(), title: "المقدمة", content: "" }],
       questions: [], attachments: []
     });
@@ -304,10 +317,10 @@ export default function EditCoursePage() {
       showToast("يرجى إدخال عنوان الكورس", "error");
       return;
     }
-    
+
     setIsSubmitting(true);
     const token = localStorage.getItem("super_admin_token");
-    
+
     try {
       const res = await fetch(`${API_URL}/school/courses/${courseId}`, {
         method: 'PUT',
@@ -386,20 +399,20 @@ export default function EditCoursePage() {
 
               <div className="flex border-b border-slate-100 bg-slate-50">
                 {[
-                  { id: 'info', label: 'الأهداف والبيانات', icon: Target },
-                  { id: 'slides', label: 'محتوى الشرح (Slides)', icon: Layout },
-                  { id: 'exercises', label: 'التدريبات والأسئلة', icon: HelpCircle },
+                  { id: 'info', label: 'البيانات الأساسية', icon: BookOpen },
+                  { id: 'scheduling', label: 'الجدولة والظهور', icon: Clock },
+                  { id: 'slides', label: 'محتوى الشرح', icon: Layout },
+                  { id: 'exercises', label: 'التدريبات', icon: HelpCircle },
                   { id: 'attachments', label: 'المرفقات', icon: FileText },
                 ].map(tab => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as any)}
-                    className={`flex-1 py-5 flex items-center justify-center gap-3 font-black text-sm transition-all ${
-                      activeTab === tab.id ? 'text-indigo-600 bg-white border-b-2 border-indigo-600' : 'text-slate-400 hover:text-slate-600'
-                    }`}
+                    className={`flex-1 py-5 flex items-center justify-center gap-3 font-black text-sm transition-all ${activeTab === tab.id ? 'text-indigo-600 bg-white border-b-2 border-indigo-600 shadow-[0_4px_20px_-10px_rgba(79,70,229,0.4)]' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100/50'
+                      }`}
                   >
                     <tab.icon className="w-5 h-5" />
-                    {tab.label}
+                    <span className="hidden sm:inline">{tab.label}</span>
                   </button>
                 ))}
               </div>
@@ -409,86 +422,124 @@ export default function EditCoursePage() {
                   <div className="space-y-10">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div>
-                        <label className="text-xs font-black text-slate-400 uppercase mb-3 block">عنوان الدرس</label>
-                        <input 
-                          type="text" 
+                        <label className="text-xs font-black text-slate-400 uppercase mb-3 block tracking-widest">عنوان الدرس</label>
+                        <input
+                          type="text"
+                          placeholder="مثال: مقدمة في علم الفيزياء"
                           value={currentLesson.title || ""}
-                          onChange={(e) => setCurrentLesson({...currentLesson, title: e.target.value})}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 text-lg font-bold outline-none focus:border-indigo-600 transition-all"
+                          onChange={(e) => setCurrentLesson({ ...currentLesson, title: e.target.value })}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 text-lg font-bold outline-none focus:border-indigo-600 focus:bg-white transition-all shadow-sm"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-black text-slate-400 uppercase mb-3 block">رابط الفيديو (YouTube)</label>
-                        <input 
-                          type="text" 
-                          value={currentLesson.videoUrl || ""}
-                          onChange={(e) => setCurrentLesson({...currentLesson, videoUrl: e.target.value})}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 text-lg font-bold outline-none focus:border-indigo-600 transition-all text-left"
-                          dir="ltr"
-                        />
+                        <label className="text-xs font-black text-slate-400 uppercase mb-3 block tracking-widest">رابط الفيديو (YouTube)</label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            placeholder="https://youtube.com/watch?v=..."
+                            value={currentLesson.videoUrl || ""}
+                            onChange={(e) => setCurrentLesson({ ...currentLesson, videoUrl: e.target.value })}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 text-lg font-bold outline-none focus:border-indigo-600 focus:bg-white transition-all text-left pl-12 shadow-sm"
+                            dir="ltr"
+                          />
+                          <Video className="w-5 h-5 text-slate-300 absolute left-4 top-1/2 -translate-y-1/2" />
+                        </div>
                       </div>
                     </div>
 
-                    <div className="bg-slate-50 border border-slate-100 p-8 rounded-[30px] space-y-8">
+                    <div className="bg-slate-50 border border-slate-100 p-8 rounded-[35px] space-y-8">
                       <h4 className="text-xl font-black text-slate-900 flex items-center gap-3">
-                        <Target className="w-6 h-6 text-indigo-600" />
-                        المعايير والمخرجات
+                        <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-100">
+                           <Target className="w-5 h-5 text-white" />
+                        </div>
+                        المعايير والمخرجات الأكاديمية
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-3">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">المعايير (Standards)</label>
-                          <input 
+                          <input
                             list="standards-list"
                             value={currentLesson.standards || ""}
-                            onChange={(e) => setCurrentLesson({...currentLesson, standards: e.target.value})}
-                            className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all"
+                            onChange={(e) => setCurrentLesson({ ...currentLesson, standards: e.target.value })}
+                            className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all shadow-sm"
                             placeholder="اختر أو اكتب معياراً..."
                           />
                           <datalist id="standards-list">
                             <option value="معايير وزارة التربية والتعليم" />
                             <option value="المعايير الدولية (IGCSE)" />
                             <option value="المعايير الأمريكية (SAT)" />
-                            <option value="معايير التفكير النقدي" />
-                            <option value="معايير البحث العلمي" />
                           </datalist>
                         </div>
 
                         <div className="space-y-3">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">المؤشرات (Indicators)</label>
-                          <input 
+                          <input
                             list="indicators-list"
                             value={currentLesson.indicators || ""}
-                            onChange={(e) => setCurrentLesson({...currentLesson, indicators: e.target.value})}
-                            className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all"
+                            onChange={(e) => setCurrentLesson({ ...currentLesson, indicators: e.target.value })}
+                            className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all shadow-sm"
                             placeholder="اختر أو اكتب مؤشراً..."
                           />
-                          <datalist id="indicators-list">
-                            <option value="قدرة الطالب على الاستنتاج" />
-                            <option value="سرعة حل المسائل الرياضية" />
-                            <option value="دقة الفهم القرائي" />
-                            <option value="مهارة تحليل البيانات" />
-                            <option value="استيعاب المفاهيم المجردة" />
-                          </datalist>
                         </div>
 
                         <div className="space-y-3">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">نواتج التعلم (Learning Outcomes)</label>
-                          <input 
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">نواتج التعلم (Outcomes)</label>
+                          <input
                             list="outcomes-list"
                             value={currentLesson.learningOutcomes || ""}
-                            onChange={(e) => setCurrentLesson({...currentLesson, learningOutcomes: e.target.value})}
-                            className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all"
-                            placeholder="اختر أو اكتب ناتجاً للتعلم..."
+                            onChange={(e) => setCurrentLesson({ ...currentLesson, learningOutcomes: e.target.value })}
+                            className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all shadow-sm"
+                            placeholder="اختر أو اكتب ناتجاً..."
                           />
-                          <datalist id="outcomes-list">
-                            <option value="أن يتعرف الطالب على المفاهيم الأساسية" />
-                            <option value="أن يطبق الطالب القوانين الرياضية بنجاح" />
-                            <option value="أن يستنتج الطالب العلاقة بين المتغيرات" />
-                            <option value="أن يحلل الطالب النصوص الأدبية بدقة" />
-                            <option value="أن يقيم الطالب الحجج والأدلة العلمية" />
-                          </datalist>
                         </div>
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'scheduling' && (
+                  <div className="space-y-8 animate-in fade-in duration-300">
+                    <div className="bg-indigo-50/50 border border-indigo-100 p-8 rounded-[35px] flex items-center justify-between">
+                       <div className="space-y-1">
+                          <h4 className="text-xl font-black text-indigo-900">حالة ظهور الدرس</h4>
+                          <p className="text-indigo-600/60 font-bold text-sm">تحكم في ما إذا كان الطالب يستطيع رؤية هذا الدرس حالياً</p>
+                       </div>
+                       <button 
+                        onClick={() => setCurrentLesson({...currentLesson, isVisible: !currentLesson.isVisible})}
+                        className={`w-20 h-10 rounded-full relative transition-all duration-300 ${currentLesson.isVisible ? 'bg-indigo-600' : 'bg-slate-300'}`}
+                       >
+                          <div className={`absolute top-1 w-8 h-8 bg-white rounded-full transition-all duration-300 ${currentLesson.isVisible ? 'right-11' : 'right-1'}`}></div>
+                       </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                       <div className="bg-white p-8 rounded-[35px] border border-slate-100 shadow-sm space-y-4">
+                          <div className="flex items-center gap-3 text-emerald-600">
+                             <CheckCircle2 className="w-6 h-6" />
+                             <label className="text-sm font-black uppercase tracking-widest">تاريخ النشر (Publish Date)</label>
+                          </div>
+                          <p className="text-slate-400 text-xs font-bold">لن يظهر الدرس للطالب قبل هذا التاريخ حتى لو كان وضع "الظهور" مفعلاً</p>
+                          <input 
+                            type="datetime-local"
+                            value={currentLesson.publishDate || ""}
+                            onChange={(e) => setCurrentLesson({...currentLesson, publishDate: e.target.value})}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 font-bold text-slate-700 outline-none focus:border-emerald-500 transition-all"
+                          />
+                       </div>
+
+                       <div className="bg-white p-8 rounded-[35px] border border-slate-100 shadow-sm space-y-4">
+                          <div className="flex items-center gap-3 text-red-500">
+                             <AlertCircle className="w-6 h-6" />
+                             <label className="text-sm font-black uppercase tracking-widest">تاريخ الانتهاء (Cut-off Date)</label>
+                          </div>
+                          <p className="text-slate-400 text-xs font-bold">سيختفي الدرس من واجهة الطالب تلقائياً بعد هذا التاريخ</p>
+                          <input 
+                            type="datetime-local"
+                            value={currentLesson.cutOffDate || ""}
+                            onChange={(e) => setCurrentLesson({...currentLesson, cutOffDate: e.target.value})}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 font-bold text-slate-700 outline-none focus:border-red-500 transition-all"
+                          />
+                       </div>
                     </div>
                   </div>
                 )}
@@ -521,8 +572,8 @@ export default function EditCoursePage() {
                     <div className="flex justify-between items-center">
                       <h4 className="text-xl font-black text-slate-900">تدريبات الدرس</h4>
                       <div className="flex gap-3">
-                         <button onClick={() => handleExcelUpload('questions')} className="bg-emerald-50 text-emerald-600 px-6 py-2.5 rounded-xl font-black flex items-center gap-2 hover:bg-emerald-600 hover:text-white transition-all"><Download className="w-5 h-5" /> استيراد Excel</button>
-                         <button onClick={handleAddQuestion} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black flex items-center gap-2 shadow-lg hover:bg-indigo-700 transition-all"><Plus className="w-5 h-5" /> إضافة سؤال</button>
+                        <button onClick={() => handleExcelUpload('questions')} className="bg-emerald-50 text-emerald-600 px-6 py-2.5 rounded-xl font-black flex items-center gap-2 hover:bg-emerald-600 hover:text-white transition-all"><Download className="w-5 h-5" /> استيراد Excel</button>
+                        <button onClick={handleAddQuestion} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black flex items-center gap-2 shadow-lg hover:bg-indigo-700 transition-all"><Plus className="w-5 h-5" /> إضافة سؤال</button>
                       </div>
                     </div>
 
@@ -530,107 +581,107 @@ export default function EditCoursePage() {
                       <div className="bg-white border-2 border-indigo-600 rounded-[35px] p-8 space-y-8 animate-in zoom-in-95 duration-300 shadow-xl">
                         <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
                           <div className="space-y-2">
-                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">نوع السؤال</label>
-                             <select className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600" value={tempQuestion.type} onChange={(e) => setTempQuestion({...tempQuestion, type: e.target.value, options: e.target.value === "TRUE_FALSE" ? ["صحيح", "خطأ", "", ""] : ["", "", "", ""]})}>
-                               {QUESTION_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-                             </select>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">نوع السؤال</label>
+                            <select className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600" value={tempQuestion.type} onChange={(e) => setTempQuestion({ ...tempQuestion, type: e.target.value, options: e.target.value === "TRUE_FALSE" ? ["صحيح", "خطأ", "", ""] : ["", "", "", ""] })}>
+                              {QUESTION_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                            </select>
                           </div>
                           <div className="space-y-2">
-                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">المستوى</label>
-                             <select className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600" value={tempQuestion.level} onChange={(e) => setTempQuestion({...tempQuestion, level: e.target.value})}>
-                               <option value="Easy">سهل</option><option value="Medium">متوسط</option><option value="Hard">صعب</option>
-                             </select>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">المستوى</label>
+                            <select className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600" value={tempQuestion.level} onChange={(e) => setTempQuestion({ ...tempQuestion, level: e.target.value })}>
+                              <option value="Easy">سهل</option><option value="Medium">متوسط</option><option value="Hard">صعب</option>
+                            </select>
                           </div>
                           <div className="space-y-2">
-                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">الدرجة</label>
-                             <input type="number" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600" value={tempQuestion.points} onChange={(e) => setTempQuestion({...tempQuestion, points: parseInt(e.target.value)})} placeholder="الدرجة" />
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">الدرجة</label>
+                            <input type="number" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600" value={tempQuestion.points} onChange={(e) => setTempQuestion({ ...tempQuestion, points: parseInt(e.target.value) })} placeholder="الدرجة" />
                           </div>
                           <div className="space-y-2">
-                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">ناتج التعلم (LO)</label>
-                             <input type="text" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600" value={tempQuestion.learningOutcome} onChange={(e) => setTempQuestion({...tempQuestion, learningOutcome: e.target.value})} placeholder="ناتج التعلم" />
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">ناتج التعلم (LO)</label>
+                            <input type="text" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600" value={tempQuestion.learningOutcome} onChange={(e) => setTempQuestion({ ...tempQuestion, learningOutcome: e.target.value })} placeholder="ناتج التعلم" />
                           </div>
                           <div className="space-y-2">
-                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">المحاولات</label>
-                             <input type="number" min="1" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600" value={tempQuestion.attempts || 1} onChange={(e) => setTempQuestion({...tempQuestion, attempts: parseInt(e.target.value)})} />
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">المحاولات</label>
+                            <input type="number" min="1" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600" value={tempQuestion.attempts || 1} onChange={(e) => setTempQuestion({ ...tempQuestion, attempts: parseInt(e.target.value) })} />
                           </div>
                         </div>
-                        <RichTextEditor value={tempQuestion.text} onChange={(val) => setTempQuestion({...tempQuestion, text: val})} placeholder="نص السؤال..." className="!bg-white !border-slate-100" />
+                        <RichTextEditor value={tempQuestion.text} onChange={(val) => setTempQuestion({ ...tempQuestion, text: val })} placeholder="نص السؤال..." className="!bg-white !border-slate-100" />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                           {tempQuestion.type !== "TRUE_FALSE" ? tempQuestion.options.map((opt: string, oIdx: number) => (
-                             <div key={oIdx} className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${tempQuestion.correctAnswer === opt && opt !== "" ? 'bg-emerald-50 border-emerald-500' : 'bg-slate-50 border-transparent'}`}>
-                               <div onClick={() => setTempQuestion({...tempQuestion, correctAnswer: opt})} className={`w-7 h-7 rounded-full border-4 cursor-pointer flex items-center justify-center ${tempQuestion.correctAnswer === opt && opt !== "" ? 'bg-emerald-500 border-white' : 'bg-white border-slate-200'}`}>{tempQuestion.correctAnswer === opt && opt !== "" && <CheckCircle2 className="w-4 h-4 text-white" />}</div>
-                               <input type="text" value={opt} onChange={(e) => { const opts = [...tempQuestion.options]; opts[oIdx] = e.target.value; setTempQuestion({...tempQuestion, options: opts}); }} className="bg-transparent flex-1 outline-none text-slate-900 font-bold" placeholder={`الخيار ${oIdx + 1}`} />
-                             </div>
-                           )) : ["صحيح", "خطأ"].map((opt, oIdx) => (
-                             <div key={oIdx} className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${tempQuestion.correctAnswer === opt ? 'bg-emerald-50 border-emerald-500' : 'bg-slate-50 border-transparent'}`}>
-                               <div onClick={() => setTempQuestion({...tempQuestion, correctAnswer: opt})} className={`w-7 h-7 rounded-full border-4 cursor-pointer flex items-center justify-center ${tempQuestion.correctAnswer === opt ? 'bg-emerald-500 border-white' : 'bg-white border-slate-200'}`}>{tempQuestion.correctAnswer === opt && <CheckCircle2 className="w-4 h-4 text-white" />}</div>
-                               <span className="text-slate-900 font-bold">{opt}</span>
-                             </div>
-                           ))}
+                          {tempQuestion.type !== "TRUE_FALSE" ? tempQuestion.options.map((opt: string, oIdx: number) => (
+                            <div key={oIdx} className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${tempQuestion.correctAnswer === opt && opt !== "" ? 'bg-emerald-50 border-emerald-500' : 'bg-slate-50 border-transparent'}`}>
+                              <div onClick={() => setTempQuestion({ ...tempQuestion, correctAnswer: opt })} className={`w-7 h-7 rounded-full border-4 cursor-pointer flex items-center justify-center ${tempQuestion.correctAnswer === opt && opt !== "" ? 'bg-emerald-500 border-white' : 'bg-white border-slate-200'}`}>{tempQuestion.correctAnswer === opt && opt !== "" && <CheckCircle2 className="w-4 h-4 text-white" />}</div>
+                              <input type="text" value={opt} onChange={(e) => { const opts = [...tempQuestion.options]; opts[oIdx] = e.target.value; setTempQuestion({ ...tempQuestion, options: opts }); }} className="bg-transparent flex-1 outline-none text-slate-900 font-bold" placeholder={`الخيار ${oIdx + 1}`} />
+                            </div>
+                          )) : ["صحيح", "خطأ"].map((opt, oIdx) => (
+                            <div key={oIdx} className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${tempQuestion.correctAnswer === opt ? 'bg-emerald-50 border-emerald-500' : 'bg-slate-50 border-transparent'}`}>
+                              <div onClick={() => setTempQuestion({ ...tempQuestion, correctAnswer: opt })} className={`w-7 h-7 rounded-full border-4 cursor-pointer flex items-center justify-center ${tempQuestion.correctAnswer === opt ? 'bg-emerald-500 border-white' : 'bg-white border-slate-200'}`}>{tempQuestion.correctAnswer === opt && <CheckCircle2 className="w-4 h-4 text-white" />}</div>
+                              <span className="text-slate-900 font-bold">{opt}</span>
+                            </div>
+                          ))}
                         </div>
                         <div className="space-y-3">
                           <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">تفسير الإجابة (Explanation)</label>
-                          <textarea 
+                          <textarea
                             value={tempQuestion.explanation}
-                            onChange={(e) => setTempQuestion({...tempQuestion, explanation: e.target.value})}
+                            onChange={(e) => setTempQuestion({ ...tempQuestion, explanation: e.target.value })}
                             className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all resize-none h-24"
                             placeholder="اشرح للطالب سبب كون هذه الإجابة هي الصحيحة..."
                           />
                         </div>
                         <div className="flex justify-end gap-4">
-                           <button onClick={() => setShowQuestionForm(false)} className="px-8 py-3 rounded-2xl bg-slate-100 text-slate-500 font-bold hover:bg-slate-200 transition-all">إلغاء</button>
-                           <button onClick={handleSaveQuestion} className="px-10 py-3 rounded-2xl bg-indigo-600 text-white font-black shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 transition-all">حفظ السؤال</button>
+                          <button onClick={() => setShowQuestionForm(false)} className="px-8 py-3 rounded-2xl bg-slate-100 text-slate-500 font-bold hover:bg-slate-200 transition-all">إلغاء</button>
+                          <button onClick={handleSaveQuestion} className="px-10 py-3 rounded-2xl bg-indigo-600 text-white font-black shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 transition-all">حفظ السؤال</button>
                         </div>
                       </div>
                     )}
 
                     <div className="space-y-4">
-                       {currentLesson.questions.map((q: any, index: number) => (
-                         <div key={index} className="bg-white border border-slate-100 rounded-3xl p-6 flex justify-between items-center group hover:border-indigo-200 transition-all shadow-sm">
-                            <div className="flex items-center gap-6 overflow-hidden">
-                               <span className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-indigo-600 font-black border border-slate-100">{index + 1}</span>
-                               <div className="text-slate-900 font-bold truncate max-w-xl" dangerouslySetInnerHTML={{ __html: q.text.replace(/<[^>]*>?/gm, '').substring(0, 80) + '...' }} />
-                            </div>
-                            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                               <button onClick={() => handleEditQuestion(index)} className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"><Edit2 className="w-5 h-5" /></button>
-                               <button onClick={() => { const nq = [...currentLesson.questions]; nq.splice(index, 1); setCurrentLesson({...currentLesson, questions: nq}); }} className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"><Trash2 className="w-5 h-5" /></button>
-                            </div>
-                         </div>
-                       ))}
+                      {currentLesson.questions.map((q: any, index: number) => (
+                        <div key={index} className="bg-white border border-slate-100 rounded-3xl p-6 flex justify-between items-center group hover:border-indigo-200 transition-all shadow-sm">
+                          <div className="flex items-center gap-6 overflow-hidden">
+                            <span className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-indigo-600 font-black border border-slate-100">{index + 1}</span>
+                            <div className="text-slate-900 font-bold truncate max-w-xl" dangerouslySetInnerHTML={{ __html: q.text.replace(/<[^>]*>?/gm, '').substring(0, 80) + '...' }} />
+                          </div>
+                          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => handleEditQuestion(index)} className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"><Edit2 className="w-5 h-5" /></button>
+                            <button onClick={() => { const nq = [...currentLesson.questions]; nq.splice(index, 1); setCurrentLesson({ ...currentLesson, questions: nq }); }} className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"><Trash2 className="w-5 h-5" /></button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
 
                 {activeTab === 'attachments' && (
                   <div className="space-y-8">
-                     <div className="flex justify-between items-center">
-                        <h4 className="text-xl font-black text-slate-900">الملفات المرفقة</h4>
-                        <button onClick={() => setCurrentLesson({...currentLesson, attachments: [...(currentLesson.attachments || []), { name: "", url: "", type: "PDF" }]})} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg"><Plus className="w-5 h-5" /> إضافة ملف</button>
-                     </div>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {(currentLesson.attachments || []).map((att: any, attIdx: number) => (
-                          <div key={attIdx} className="bg-white border border-slate-100 rounded-3xl p-6 space-y-4 hover:border-indigo-100 transition-all shadow-sm">
-                            <div className="flex justify-between items-start">
-                              <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center"><FileText className="w-6 h-6" /></div>
-                              <button onClick={() => { const atts = [...currentLesson.attachments]; atts.splice(attIdx, 1); setCurrentLesson({...currentLesson, attachments: atts}); }} className="text-red-500 hover:text-red-700 p-2 transition-colors"><Trash2 size={20} /></button>
+                    <div className="flex justify-between items-center">
+                      <h4 className="text-xl font-black text-slate-900">الملفات المرفقة</h4>
+                      <button onClick={() => setCurrentLesson({ ...currentLesson, attachments: [...(currentLesson.attachments || []), { name: "", url: "", type: "PDF" }] })} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg"><Plus className="w-5 h-5" /> إضافة ملف</button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {(currentLesson.attachments || []).map((att: any, attIdx: number) => (
+                        <div key={attIdx} className="bg-white border border-slate-100 rounded-3xl p-6 space-y-4 hover:border-indigo-100 transition-all shadow-sm">
+                          <div className="flex justify-between items-start">
+                            <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center"><FileText className="w-6 h-6" /></div>
+                            <button onClick={() => { const atts = [...currentLesson.attachments]; atts.splice(attIdx, 1); setCurrentLesson({ ...currentLesson, attachments: atts }); }} className="text-red-500 hover:text-red-700 p-2 transition-colors"><Trash2 size={20} /></button>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block px-1">اسم الملف</label>
+                            <input type="text" value={att.name} onChange={(e) => { const atts = [...currentLesson.attachments]; atts[attIdx].name = e.target.value; setCurrentLesson({ ...currentLesson, attachments: atts }); }} className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold text-sm outline-none focus:border-indigo-600" placeholder="مثال: كتاب الفيزياء الأساسي" />
+                          </div>
+                          <div className="flex gap-3">
+                            <div className="w-32 space-y-2">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block px-1">النوع</label>
+                              <select value={att.type} onChange={(e) => { const atts = [...currentLesson.attachments]; atts[attIdx].type = e.target.value; setCurrentLesson({ ...currentLesson, attachments: atts }); }} className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold text-xs outline-none focus:border-indigo-600"><option value="PDF">PDF</option><option value="PPT">PPT</option><option value="IMAGE">IMAGE</option></select>
                             </div>
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block px-1">اسم الملف</label>
-                              <input type="text" value={att.name} onChange={(e) => { const atts = [...currentLesson.attachments]; atts[attIdx].name = e.target.value; setCurrentLesson({...currentLesson, attachments: atts}); }} className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold text-sm outline-none focus:border-indigo-600" placeholder="مثال: كتاب الفيزياء الأساسي" />
-                            </div>
-                            <div className="flex gap-3">
-                               <div className="w-32 space-y-2">
-                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block px-1">النوع</label>
-                                  <select value={att.type} onChange={(e) => { const atts = [...currentLesson.attachments]; atts[attIdx].type = e.target.value; setCurrentLesson({...currentLesson, attachments: atts}); }} className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold text-xs outline-none focus:border-indigo-600"><option value="PDF">PDF</option><option value="PPT">PPT</option><option value="IMAGE">IMAGE</option></select>
-                               </div>
-                               <div className="flex-1 space-y-2">
-                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block px-1 text-left" dir="ltr">URL</label>
-                                  <input type="text" value={att.url} onChange={(e) => { const atts = [...currentLesson.attachments]; atts[attIdx].url = e.target.value; setCurrentLesson({...currentLesson, attachments: atts}); }} className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-600 text-xs outline-none text-left font-mono focus:border-indigo-600" dir="ltr" placeholder="https://..." />
-                               </div>
+                            <div className="flex-1 space-y-2">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block px-1 text-left" dir="ltr">URL</label>
+                              <input type="text" value={att.url} onChange={(e) => { const atts = [...currentLesson.attachments]; atts[attIdx].url = e.target.value; setCurrentLesson({ ...currentLesson, attachments: atts }); }} className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-600 text-xs outline-none text-left font-mono focus:border-indigo-600" dir="ltr" placeholder="https://..." />
                             </div>
                           </div>
-                        ))}
-                     </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -652,24 +703,120 @@ export default function EditCoursePage() {
                 </div>
               </div>
               <div className="flex gap-3">
-                 <button onClick={handleDeleteCourse} className="bg-red-50 text-red-600 px-8 py-4 rounded-2xl font-black flex items-center gap-2 hover:bg-red-600 hover:text-white transition-all border border-red-100"><Trash2 size={20} /> حذف</button>
-                 <button onClick={handleSubmit} disabled={isSubmitting} className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-10 py-4 rounded-2xl font-black flex items-center gap-3 hover:scale-105 shadow-xl shadow-indigo-600/20 disabled:opacity-50 transition-all">{isSubmitting ? "جاري الحفظ..." : "حفظ التعديلات"}<Save className="w-6 h-6" /></button>
+                <button onClick={handleDeleteCourse} className="bg-red-50 text-red-600 px-8 py-4 rounded-2xl font-black flex items-center gap-2 hover:bg-red-600 hover:text-white transition-all border border-red-100"><Trash2 size={20} /> حذف</button>
+                <button onClick={handleSubmit} disabled={isSubmitting} className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-10 py-4 rounded-2xl font-black flex items-center gap-3 hover:scale-105 shadow-xl shadow-indigo-600/20 disabled:opacity-50 transition-all">{isSubmitting ? "جاري الحفظ..." : "حفظ التعديلات"}<Save className="w-6 h-6" /></button>
               </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
               <div className="lg:col-span-4 space-y-8">
-                <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/5 blur-3xl -mr-16 -mt-16 group-hover:bg-indigo-600/10 transition-all"></div>
-                  <h2 className="text-xl font-black text-slate-900 mb-8 flex items-center gap-3 relative z-10"><Settings className="w-6 h-6 text-indigo-600" /> إعدادات الكورس</h2>
-                  <div className="space-y-6 relative z-10">
-                    <div className="space-y-2"><label className="text-xs font-black text-slate-400 uppercase tracking-widest block px-1">عنوان الكورس</label><input type="text" value={courseData.title} onChange={(e) => setCourseData({...courseData, title: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all" /></div>
-                    <div className="space-y-2"><label className="text-xs font-black text-slate-400 uppercase tracking-widest block px-1">وصف الكورس</label><textarea value={courseData.description} onChange={(e) => setCourseData({...courseData, description: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-bold outline-none focus:border-indigo-600 min-h-[120px] resize-none transition-all" /></div>
-                    <div className="grid grid-cols-1 gap-6">
-                      <div className="space-y-2"><label className="text-xs font-black text-slate-400 uppercase tracking-widest block px-1">المرحلة الدراسية</label><select value={courseData.grade} onChange={(e) => setCourseData({...courseData, grade: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-bold outline-none appearance-none focus:border-indigo-600 transition-all">{GRADES.map(g => <option key={g} value={g} className="bg-white text-slate-900">{g}</option>)}</select></div>
-                      <div className="space-y-2"><label className="text-xs font-black text-slate-400 uppercase tracking-widest block px-1">المادة</label><input type="text" value={courseData.subject} onChange={(e) => setCourseData({...courseData, subject: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all" /></div>
-                    </div>
+                {/* Course Settings Panel — Collapsible */}
+                <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm overflow-hidden">
+                  <div className="flex items-center justify-between px-6 py-4 border-b border-slate-50">
+                    <span className="font-black text-slate-800 flex items-center gap-2 text-sm">
+                      <Settings className="w-4 h-4 text-indigo-600" /> إعدادات الكورس
+                    </span>
+                    <button
+                      onClick={() => setCourseSettingsCollapsed(prev => !prev)}
+                      className="text-[10px] font-black px-3 py-1.5 rounded-lg bg-slate-50 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 transition-all flex items-center gap-1.5"
+                    >
+                      {courseSettingsCollapsed
+                        ? <><Edit2 className="w-3 h-3" />تعديل</>
+                        : <><CheckCircle2 className="w-3 h-3" />حفظ</>}
+                    </button>
                   </div>
+
+                  {courseSettingsCollapsed ? (
+                    <div className="px-6 py-4 space-y-4">
+                      {courseData.coverImage && (
+                        <div className="aspect-video w-full rounded-2xl overflow-hidden border border-slate-100 mb-2">
+                           <img src={getFullImageUrl(courseData.coverImage) || ""} className="w-full h-full object-cover" alt="Cover" />
+                        </div>
+                      )}
+                      <div className="flex flex-col gap-1.5">
+                        <p className="font-black text-slate-800 text-sm truncate">{courseData.title || '—'}</p>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          <span className="px-2 py-0.5 bg-slate-50 text-slate-500 rounded-lg text-xs font-black">{courseData.grade}</span>
+                          {courseData.subject && <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-black">{courseData.subject}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-6 space-y-5">
+                      {/* Cover Image Upload */}
+                      <div className="space-y-3">
+                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">صورة الغلاف</label>
+                        <div className="relative group cursor-pointer">
+                          {courseData.coverImage ? (
+                            <div className="relative aspect-video w-full rounded-2xl overflow-hidden border-2 border-slate-100 group-hover:border-indigo-400 transition-all">
+                              <img src={getFullImageUrl(courseData.coverImage) || ""} className="w-full h-full object-cover" alt="Cover" />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-3">
+                                 <button onClick={() => setCourseData({...courseData, coverImage: ""})} className="p-2 bg-red-500 text-white rounded-xl hover:scale-110 transition-all"><Trash2 className="w-5 h-5" /></button>
+                                 <label className="p-2 bg-indigo-600 text-white rounded-xl hover:scale-110 transition-all cursor-pointer">
+                                    <Upload className="w-5 h-5" />
+                                    <input type="file" className="hidden" accept="image/*" onChange={async (e: any) => {
+                                      const file = e.target.files[0];
+                                      if (file) {
+                                        try {
+                                          const compressed = await compressImage(file, 1200, 1200, 0.7);
+                                          setCourseData({...courseData, coverImage: compressed});
+                                        } catch (err) {
+                                          const reader = new FileReader();
+                                          reader.onload = (re) => setCourseData({...courseData, coverImage: re.target?.result as string});
+                                          reader.readAsDataURL(file);
+                                        }
+                                      }
+                                    }} />
+                                 </label>
+                              </div>
+                            </div>
+                          ) : (
+                            <label className="flex flex-col items-center justify-center aspect-video w-full rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-200 transition-all group cursor-pointer">
+                              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-indigo-600 shadow-sm mb-3">
+                                <Upload className="w-6 h-6" />
+                              </div>
+                              <span className="text-xs font-black text-slate-400 group-hover:text-indigo-600">اضغط لرفع غلاف الكورس</span>
+                              <input type="file" className="hidden" accept="image/*" onChange={async (e: any) => {
+                                      const file = e.target.files[0];
+                                      if (file) {
+                                        try {
+                                          const compressed = await compressImage(file, 1200, 1200, 0.7);
+                                          setCourseData({...courseData, coverImage: compressed});
+                                        } catch (err) {
+                                          const reader = new FileReader();
+                                          reader.onload = (re) => setCourseData({...courseData, coverImage: re.target?.result as string});
+                                          reader.readAsDataURL(file);
+                                        }
+                                      }
+                                    }} />
+                            </label>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">عنوان الكورس</label>
+                        <input type="text" value={courseData.title} onChange={(e) => setCourseData({ ...courseData, title: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all text-sm" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">وصف الكورس</label>
+                        <textarea value={courseData.description} onChange={(e) => setCourseData({ ...courseData, description: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 min-h-[100px] resize-none transition-all text-sm" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">المرحلة الدراسية</label>
+                        <select value={courseData.grade} onChange={(e) => setCourseData({ ...courseData, grade: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none appearance-none focus:border-indigo-600 transition-all text-sm">
+                          {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">المادة</label>
+                        <input type="text" value={courseData.subject} onChange={(e) => setCourseData({ ...courseData, subject: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all text-sm" />
+                      </div>
+                      <button onClick={() => setCourseSettingsCollapsed(true)} className="w-full py-3 rounded-2xl bg-slate-900 text-white font-black text-sm hover:bg-indigo-600 transition-all flex items-center justify-center gap-2">
+                        <CheckCircle2 className="w-4 h-4" /> حفظ الإعدادات
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -679,24 +826,66 @@ export default function EditCoursePage() {
                   <button onClick={openAddLessonModal} className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black flex items-center gap-3 transition-all hover:bg-indigo-700 shadow-xl shadow-indigo-600/20"><Plus size={24} /> إضافة درس</button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {lessons.map((lesson, index) => (
-                    <div key={index} className="bg-white border border-slate-100 rounded-[40px] p-8 hover:border-indigo-200 transition-all group relative overflow-hidden shadow-sm hover:shadow-xl">
-                       <div className="absolute top-0 left-0 w-2 h-full bg-indigo-600 opacity-0 group-hover:opacity-100 transition-all"></div>
-                       <div className="flex justify-between items-start mb-6">
-                          <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-2xl border border-indigo-100">{index + 1}</div>
-                          <div className="flex gap-2">
-                             <button onClick={() => openEditLessonModal(index)} className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center border border-blue-100 transition-all"><Edit2 size={20} /></button>
-                             <button onClick={() => handleRemoveLesson(index)} className="w-12 h-12 rounded-xl bg-red-50 text-red-600 hover:bg-red-600 hover:text-white flex items-center justify-center border border-red-100 transition-all"><Trash2 size={20} /></button>
-                          </div>
+                <div className="flex flex-col gap-4">
+                  {lessons.length === 0 ? (
+                    <div className="bg-white border-2 border-dashed border-slate-200 rounded-[40px] p-20 flex flex-col items-center justify-center text-slate-400 gap-4">
+                       <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center">
+                          <BookOpen className="w-10 h-10" />
                        </div>
-                       <h3 className="font-black text-slate-900 text-2xl mb-4 truncate group-hover:text-indigo-600 transition-colors">{lesson.title}</h3>
-                       <div className="flex items-center gap-4 text-xs font-bold text-slate-400">
-                          <div className="flex items-center gap-2 bg-slate-50 p-3 rounded-2xl border border-slate-100"><Monitor size={16} /> {lesson.slides?.length || 0} شرائح</div>
-                          <div className="flex items-center gap-2 bg-slate-50 p-3 rounded-2xl border border-slate-100"><HelpCircle size={16} /> {lesson.questions?.length || 0} تدريبات</div>
-                       </div>
+                       <p className="font-black text-xl">لا يوجد دروس في هذا الكورس بعد</p>
+                       <button onClick={openAddLessonModal} className="text-indigo-600 font-bold hover:underline">أضف درسك الأول الآن</button>
                     </div>
-                  ))}
+                  ) : (
+                    lessons.map((lesson, index) => (
+                      <div key={index} className="bg-white border border-slate-100 rounded-[30px] p-5 flex flex-col md:flex-row items-center justify-between gap-6 hover:border-indigo-200 transition-all group relative overflow-hidden shadow-sm hover:shadow-xl">
+                        <div className="absolute top-0 right-0 w-1.5 h-full bg-indigo-600 opacity-0 group-hover:opacity-100 transition-all"></div>
+                        
+                        <div className="flex items-center gap-6 flex-1 w-full md:w-auto">
+                          <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-2xl border border-indigo-100 shadow-inner group-hover:scale-105 transition-all shrink-0">
+                            {index + 1}
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <h3 className="font-black text-slate-900 text-xl truncate group-hover:text-indigo-600 transition-colors">
+                              {lesson.title}
+                            </h3>
+                            <div className="flex flex-wrap items-center gap-3 mt-2">
+                               <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase ${lesson.isVisible ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'}`}>
+                                  {lesson.isVisible ? <Eye className="w-3 h-3" /> : <X className="w-3 h-3" />}
+                                  {lesson.isVisible ? 'مرئي للطلاب' : 'مخفي عن الطلاب'}
+                               </div>
+                               {lesson.publishDate && (
+                                 <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black uppercase">
+                                    <Clock className="w-3 h-3" />
+                                    مجدول: {new Date(lesson.publishDate).toLocaleDateString('ar-EG')}
+                                 </div>
+                               )}
+                               <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 text-slate-400 text-[10px] font-black uppercase">
+                                  <Monitor className="w-3 h-3" />
+                                  {lesson.slides?.length || 0} شرائح
+                               </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+                          <div className="h-8 w-[1px] bg-slate-100 mx-2 hidden md:block"></div>
+                          <button 
+                            onClick={() => openEditLessonModal(index)} 
+                            className="flex items-center gap-2 bg-blue-50 text-blue-600 px-5 py-3 rounded-2xl font-black text-sm hover:bg-blue-600 hover:text-white transition-all border border-blue-100"
+                          >
+                            <Edit2 size={18} />
+                            تعديل الدرس
+                          </button>
+                          <button 
+                            onClick={() => handleRemoveLesson(index)} 
+                            className="p-3 bg-red-50 text-red-400 hover:bg-red-500 hover:text-white rounded-2xl transition-all border border-red-50"
+                          >
+                            <Trash2 size={20} />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </div>

@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { API_URL } from "@/lib/api";
+import { API_URL, getFullImageUrl } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";
 
 export default function SuperAdminCoursesPage() {
@@ -32,7 +32,8 @@ export default function SuperAdminCoursesPage() {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
-      setCourses(Array.isArray(data) ? data : []);
+      const coursesList = Array.isArray(data) ? data : (data.courses || []);
+      setCourses(coursesList);
     } catch (e) {
       console.error(e);
       showToast("خطأ في تحميل الكورسات", "error");
@@ -65,8 +66,7 @@ export default function SuperAdminCoursesPage() {
 
   return (
     <DashboardLayout>
-      <div className="min-h-screen bg-[#f8fafc] -mt-6 -mx-6 p-4 md:p-8" dir="rtl">
-        <main className="max-w-[1600px] mx-auto space-y-10">
+      <div className="space-y-10" dir="rtl">
           
           {/* Header Section */}
           <div className="relative bg-white rounded-[50px] p-12 overflow-hidden shadow-sm border border-slate-100">
@@ -159,8 +159,12 @@ export default function SuperAdminCoursesPage() {
                       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-blue-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-right"></div>
                       
                       <div className="flex justify-between items-start mb-8">
-                         <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-all duration-500">
-                            <Layers className="w-8 h-8" />
+                         <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-all duration-500 overflow-hidden border border-slate-100">
+                            {course.coverImage ? (
+                               <img src={getFullImageUrl(course.coverImage) || ""} className="w-full h-full object-cover" alt="Cover" />
+                            ) : (
+                               <Layers className="w-8 h-8 text-indigo-600" />
+                            )}
                          </div>
                          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
                             <button 
@@ -215,7 +219,6 @@ export default function SuperAdminCoursesPage() {
              </div>
           )}
 
-        </main>
       </div>
     </DashboardLayout>
   );

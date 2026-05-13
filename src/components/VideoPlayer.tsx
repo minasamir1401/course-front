@@ -61,7 +61,7 @@ export default function VideoPlayer({ url, onProgress }: VideoPlayerProps) {
     const roundedTime = Math.floor(currentTime);
     // Report progress every 5 seconds
     if (roundedTime > lastReportedTime.current + 4 || (roundedTime > 0 && roundedTime % 5 === 0 && roundedTime !== lastReportedTime.current)) {
-      console.log(`[VideoPlayer] Reporting progress: ${roundedTime}s`);
+      // Progress reported internally
       if (onProgressRef.current) {
         onProgressRef.current({ playedSeconds: roundedTime });
       }

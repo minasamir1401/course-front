@@ -2,8 +2,8 @@
 
 import React from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { 
-  FileText, Clock, AlertCircle, CheckCircle2, 
+import {
+  FileText, Clock, AlertCircle, CheckCircle2,
   ChevronRight, ChevronLeft, Calendar, ArrowUpRight, Filter, Search,
   PlayCircle, Timer, Award, Lock, Eye, EyeOff, Hourglass, CalendarClock
 } from "lucide-react";
@@ -25,27 +25,27 @@ export default function ExamsPage() {
 
   const fetchData = async () => {
     try {
-      const token = localStorage.getItem("lms_token") || 
-                    localStorage.getItem("school_admin_token") || 
-                    localStorage.getItem("super_admin_token");
-      
+      const token = localStorage.getItem("lms_token") ||
+        localStorage.getItem("school_admin_token") ||
+        localStorage.getItem("super_admin_token");
+
       if (!token) {
         setLoading(false);
         return;
       }
-      
-      const examsRes = await fetch(`${API_URL}/exams`, { 
-        headers: { Authorization: `Bearer ${token}` } 
+
+      const examsRes = await fetch(`${API_URL}/exams`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       if (examsRes.ok) {
         const examsData = await examsRes.json();
         setExams(Array.isArray(examsData) ? examsData : []);
       }
 
       try {
-        const statsRes = await fetch(`${API_URL}/student/stats`, { 
-          headers: { Authorization: `Bearer ${token}` } 
+        const statsRes = await fetch(`${API_URL}/student/stats`, {
+          headers: { Authorization: `Bearer ${token}` }
         });
         if (statsRes.ok) {
           const statsData = await statsRes.json();
@@ -73,7 +73,7 @@ export default function ExamsPage() {
 
     if (start && now < start) return { label: "قادم قريباً", color: "bg-amber-100 text-amber-700", icon: CalendarClock, type: "UPCOMING" };
     if (end && now > end) return { label: "انتهى الموعد", color: "bg-slate-100 text-slate-500", icon: Hourglass, type: "EXPIRED" };
-    
+
     const userSubs = getSubmissionsForExam(exam.id);
     if (exam.attemptsAllowed && userSubs.length >= exam.attemptsAllowed) {
       return { label: "استنفذت المحاولات", color: "bg-indigo-100 text-indigo-700", icon: CheckCircle2, type: "COMPLETED" };
@@ -88,26 +88,26 @@ export default function ExamsPage() {
     averagePerformance = Math.round(total / submissions.length);
   }
 
-  const performanceText = 
+  const performanceText =
     averagePerformance >= 90 ? "أداء ممتاز جداً" :
-    averagePerformance >= 80 ? "أداء جيد جداً" :
-    averagePerformance >= 70 ? "أداء جيد" :
-    averagePerformance >= 50 ? "أداء مقبول" :
-    averagePerformance === 0 && submissions.length === 0 ? "لا توجد بيانات" :
-    "يحتاج إلى تحسين";
+      averagePerformance >= 80 ? "أداء جيد جداً" :
+        averagePerformance >= 70 ? "أداء جيد" :
+          averagePerformance >= 50 ? "أداء مقبول" :
+            averagePerformance === 0 && submissions.length === 0 ? "لا توجد بيانات" :
+              "يحتاج إلى تحسين";
 
-  const performanceLevel = 
+  const performanceLevel =
     averagePerformance >= 90 ? "مستوى A+" :
-    averagePerformance >= 80 ? "مستوى B" :
-    averagePerformance >= 70 ? "مستوى C" :
-    averagePerformance >= 50 ? "مستوى D" :
-    averagePerformance === 0 && submissions.length === 0 ? "N/A" :
-    "مستوى F";
+      averagePerformance >= 80 ? "مستوى B" :
+        averagePerformance >= 70 ? "مستوى C" :
+          averagePerformance >= 50 ? "مستوى D" :
+            averagePerformance === 0 && submissions.length === 0 ? "N/A" :
+              "مستوى F";
 
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto space-y-8 pb-20 rtl" dir="rtl">
-        
+
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div>
@@ -123,7 +123,7 @@ export default function ExamsPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
+
           {/* Main Content: Upcoming Exams */}
           <div className="lg:col-span-8 space-y-6">
             <div className="flex justify-between items-center mb-2">
@@ -155,7 +155,7 @@ export default function ExamsPage() {
                   const status = getExamStatus(exam);
                   const userSubs = getSubmissionsForExam(exam.id);
                   const attemptsLeft = (exam.attemptsAllowed || 1) - userSubs.length;
-                  
+
                   return (
                     <div key={exam.id} className="bg-white rounded-[35px] p-8 border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-500 group relative overflow-hidden">
                       {exam.isCentral && (
@@ -163,12 +163,12 @@ export default function ExamsPage() {
                           امتحان مركزي
                         </div>
                       )}
-                      
+
                       <div className="flex flex-col md:flex-row md:items-center gap-8">
                         <div className={`w-20 h-20 rounded-3xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 shadow-lg ${status.type === 'AVAILABLE' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
                           <FileText className="w-10 h-10" />
                         </div>
-                        
+
                         <div className="flex-1">
                           <div className="flex flex-wrap items-center gap-3 mb-2">
                             <span className={`text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-xl flex items-center gap-2 ${status.color}`}>
@@ -183,9 +183,9 @@ export default function ExamsPage() {
                               </span>
                             )}
                           </div>
-                          
+
                           <h4 className="font-black text-slate-900 text-2xl group-hover:text-indigo-600 transition-colors mb-4">{exam.title}</h4>
-                          
+
                           <div className="flex flex-wrap gap-6">
                             <div className="flex items-center gap-2 text-sm text-slate-500 font-bold">
                               <Clock className="w-4 h-4 text-slate-300" />
@@ -206,16 +206,16 @@ export default function ExamsPage() {
 
                         <div className="flex flex-col gap-3 min-w-[160px]">
                           {userSubs.length > 0 && (
-                            <Link 
+                            <Link
                               href={`/exams/result/${userSubs[0].id}`}
                               className="w-full py-4 rounded-2xl bg-emerald-50 text-emerald-700 text-center font-black text-sm hover:bg-emerald-100 transition-all border border-emerald-100"
                             >
                               آخر نتيجة: {Math.round(userSubs[0].percentage)}%
                             </Link>
                           )}
-                          
+
                           {status.type === 'AVAILABLE' ? (
-                            <Link 
+                            <Link
                               href={`/exams/${exam.id}`}
                               className="w-full py-5 rounded-2xl bg-indigo-600 text-white text-center font-black text-lg shadow-xl shadow-indigo-100 hover:scale-105 transition-all flex items-center justify-center gap-3"
                             >
@@ -223,7 +223,7 @@ export default function ExamsPage() {
                               <ChevronLeft className="w-6 h-6" />
                             </Link>
                           ) : status.type === 'COMPLETED' ? (
-                            <Link 
+                            <Link
                               href={`/exams/result/${userSubs[0].id}`}
                               className="w-full py-5 rounded-2xl bg-emerald-600 text-white text-center font-black text-lg shadow-xl shadow-emerald-100 hover:scale-105 transition-all flex items-center justify-center gap-3"
                             >
@@ -305,7 +305,7 @@ export default function ExamsPage() {
                     <ArrowUpRight className="w-6 h-6 text-indigo-400" />
                   </div>
                 </div>
-                
+
                 <div className="flex items-baseline gap-2 mb-6">
                   <div className="text-6xl font-black tracking-tighter">{averagePerformance}</div>
                   <div className="text-2xl font-black text-indigo-400">%</div>
