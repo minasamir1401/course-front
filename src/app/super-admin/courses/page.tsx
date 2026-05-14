@@ -58,10 +58,18 @@ export default function SuperAdminCoursesPage() {
     }
   };
 
-  const filteredCourses = courses.filter(c => 
-    c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (c.subject && c.subject.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const stats = React.useMemo(() => ({
+    total: courses.length,
+    lessons: courses.reduce((acc, c) => acc + (c._count?.lessons || c.lessons?.length || 0), 0),
+    subjects: [...new Set(courses.map(c => c.subject).filter(Boolean))].length
+  }), [courses]);
+
+  const filteredCourses = React.useMemo(() => {
+    return courses.filter(c => 
+      c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.subject && c.subject.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+  }, [courses, searchQuery]);
 
   return (
     <DashboardLayout>
@@ -99,9 +107,9 @@ export default function SuperAdminCoursesPage() {
           <div className="flex flex-col xl:flex-row gap-4 sm:gap-6 items-center justify-between">
              <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 w-full xl:w-auto">
                  {[
-                   { label: "إجمالي المناهج", value: courses.length, icon: Layers, color: "blue" },
-                   { label: "الدروس", value: courses.reduce((acc, c) => acc + (c.lessons?.length || 0), 0), icon: Monitor, color: "indigo" },
-                   { label: "المواد", value: [...new Set(courses.map(c => c.subject))].length, icon: Book, color: "emerald" }
+                   { label: "إجمالي المناهج", value: stats.total, icon: Layers, color: "blue" },
+                   { label: "الدروس", value: stats.lessons, icon: Monitor, color: "indigo" },
+                   { label: "المواد", value: stats.subjects, icon: Book, color: "emerald" }
                  ].map((stat, i) => (
                    <div key={i} className="bg-white p-3 sm:p-5 px-4 sm:px-8 rounded-xl sm:rounded-[28px] border border-slate-100 shadow-sm flex items-center gap-3 sm:gap-5">
                       <div className={`w-8 h-8 sm:w-12 h-12 rounded-lg sm:rounded-2xl bg-${stat.color}-50 text-${stat.color}-600 flex items-center justify-center shrink-0`}>
