@@ -68,7 +68,7 @@ export default function SchoolManagementPage() {
       });
       if (schoolRes.ok) {
         const data = await schoolRes.json();
-        const schoolsList = Array.isArray(data) ? data : [];
+        const schoolsList = Array.isArray(data.schools) ? data.schools : (Array.isArray(data) ? data : []);
         const currentSchool = schoolsList.find((s: any) => s.id === id); 
         setSchool(currentSchool);
       }
@@ -91,12 +91,18 @@ export default function SchoolManagementPage() {
         const coursesRes = await fetch(`${API_URL}/courses?schoolId=${id}`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
-        if (coursesRes.ok) setCourses(await coursesRes.json());
+        if (coursesRes.ok) {
+          const data = await coursesRes.json();
+          setCourses(Array.isArray(data.courses) ? data.courses : (Array.isArray(data) ? data : []));
+        }
       } else {
         const usersRes = await fetch(`${API_URL}/admin/users?schoolId=${id}&role=${roleMap[activeTab]}`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
-        if (usersRes.ok) setUsers(await usersRes.json());
+        if (usersRes.ok) {
+          const data = await usersRes.json();
+          setUsers(Array.isArray(data.users) ? data.users : (Array.isArray(data) ? data : []));
+        }
       }
     } catch (error) {
       console.error("Failed to fetch data:", error);
@@ -246,7 +252,7 @@ export default function SchoolManagementPage() {
     }
   };
 
-  const filteredData = (activeTab === 'COURSES' ? courses : users).filter(item => {
+  const filteredData = (Array.isArray(activeTab === 'COURSES' ? courses : users) ? (activeTab === 'COURSES' ? courses : users) : []).filter(item => {
     const nameToSearch = (item.name || item.title || "").toLowerCase();
     const usernameToSearch = (item.username || "").toLowerCase();
     const matchesSearch = nameToSearch.includes(searchTerm.toLowerCase()) || 
