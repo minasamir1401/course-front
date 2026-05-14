@@ -67,8 +67,9 @@ export default function SchoolManagementPage() {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (schoolRes.ok) {
-        const schools = await schoolRes.json();
-        const currentSchool = schools.find((s: any) => s.id === id); 
+        const data = await schoolRes.json();
+        const schoolsList = Array.isArray(data) ? data : [];
+        const currentSchool = schoolsList.find((s: any) => s.id === id); 
         setSchool(currentSchool);
       }
 

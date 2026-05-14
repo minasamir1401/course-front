@@ -103,7 +103,8 @@ export default function EditCoursePage() {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
-        setSchools(await res.json());
+        const data = await res.json();
+        setSchools(Array.isArray(data) ? data : []);
       }
     } catch (error) {
       console.error("Failed to fetch schools");

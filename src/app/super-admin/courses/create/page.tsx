@@ -96,7 +96,8 @@ export default function CreateCoursePage() {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
-        setSchools(await res.json());
+        const data = await res.json();
+        setSchools(Array.isArray(data) ? data : []);
       }
     } catch (error) {
       console.error("Failed to fetch schools");
@@ -910,7 +911,7 @@ export default function CreateCoursePage() {
                         className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all appearance-none"
                       >
                         <option value="" className="bg-white text-slate-900">كورس مركزي (لكافة المدارس)</option>
-                        {schools.map(s => <option key={s.id} value={s.id} className="bg-white text-slate-900">{s.name}</option>)}
+                        {Array.isArray(schools) && schools.map(s => <option key={s.id} value={s.id} className="bg-white text-slate-900">{s.name}</option>)}
                       </select>
                     </div>
                   </div>
