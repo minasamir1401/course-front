@@ -30,8 +30,9 @@ export default function CreateCoursePage() {
     title: "",
     description: "",
     coverImage: "",
-    grade: "الصف الأول الثانوي",
+    grades: ["الصف الأول الثانوي"] as string[],
     subject: "",
+    country: "مصر",
     isCentral: !schoolIdParam, // true if no specific school, false if schoolId provided
     schoolId: schoolIdParam || ""
   });
@@ -153,60 +154,9 @@ export default function CreateCoursePage() {
     setIsLessonModalOpen(false);
   };
 
+  // Excel Upload hidden as requested
   const handleExcelUpload = (type: 'questions' | 'metadata') => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.xlsx, .xls';
-    input.onchange = async (e: any) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        try {
-          const bstr = evt.target?.result;
-          const wb = XLSX.read(bstr, { type: 'binary' });
-          const wsname = wb.SheetNames[0];
-          const ws = wb.Sheets[wsname];
-          const data = XLSX.utils.sheet_to_json(ws);
-
-          if (type === 'questions') {
-            const newQuestions = data.map((row: any) => ({
-              id: Date.now() + Math.random(),
-              text: row['السؤال'] || row['Question'] || "",
-              type: row['النوع'] || row['Type'] || "MCQ",
-              options: [row['أ'] || row['A'], row['ب'] || row['B'], row['ج'] || row['C'], row['د'] || row['D']].filter(Boolean),
-              correctAnswer: row['الإجابة'] || row['Answer'] || "",
-              explanation: row['التفسير'] || row['Explanation'] || "",
-              points: parseInt(row['النقاط'] || row['Points']) || 1,
-              learningOutcome: row['الناتج'] || row['Outcome'] || "",
-              level: row['المستوى'] || row['Level'] || "Medium",
-              skill: row['المهارة'] || row['Skill'] || "General"
-            }));
-            setCurrentLesson((prev: any) => ({
-              ...prev,
-              questions: [...prev.questions, ...newQuestions]
-            }));
-            showToast(`تم استيراد ${newQuestions.length} سؤال بنجاح`, "success");
-          } else {
-            const firstRow: any = data[0];
-            if (firstRow) {
-              setCurrentLesson((prev: any) => ({
-                ...prev,
-                standards: firstRow['المعايير'] || firstRow['Standards'] || prev.standards,
-                indicators: firstRow['المؤشرات'] || firstRow['Indicators'] || prev.indicators,
-                learningOutcomes: firstRow['نواتج_التعلم'] || firstRow['Outcomes'] || prev.learningOutcomes
-              }));
-              showToast("تم استيراد البيانات التعريفية بنجاح", "success");
-            }
-          }
-        } catch (error) {
-          showToast("خطأ في قراءة ملف Excel", "error");
-        }
-      };
-      reader.readAsBinaryString(file);
-    };
-    input.click();
+    showToast("هذه الميزة غير متوفرة حالياً", "info");
   };
 
   const addSlide = () => {
@@ -384,13 +334,6 @@ export default function CreateCoursePage() {
                           <Target className="w-6 h-6 text-indigo-600" />
                           المعايير والمخرجات
                         </h4>
-                        <button 
-                          onClick={() => handleExcelUpload('metadata')}
-                          className="flex items-center gap-2 text-xs font-black bg-emerald-500/10 text-emerald-400 px-4 py-2 rounded-xl border border-emerald-500/20 hover:bg-emerald-500/20 transition-all"
-                        >
-                          <Upload className="w-4 h-4" />
-                          رفع عبر Excel
-                        </button>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -504,11 +447,10 @@ export default function CreateCoursePage() {
                       </div>
                       <div className="flex gap-3">
                         <button 
-                          onClick={() => handleExcelUpload('questions')}
-                          className="bg-emerald-500/10 text-emerald-600 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 border border-emerald-500/20"
+                          onClick={() => showToast("جاري فتح بنك الأسئلة المركزي...", "info")} 
+                          className="bg-orange-50 text-orange-600 px-6 py-2.5 rounded-xl font-black flex items-center gap-2 hover:bg-orange-600 hover:text-white transition-all border border-orange-100"
                         >
-                          <Upload className="w-4 h-4" />
-                          رفع Excel
+                          <BookOpen className="w-5 h-5" /> بنك الأسئلة
                         </button>
                         <button 
                           onClick={handleAddQuestion}
@@ -816,20 +758,20 @@ export default function CreateCoursePage() {
                           <div className="relative aspect-video w-full rounded-2xl overflow-hidden border-2 border-slate-100 group-hover:border-indigo-400 transition-all">
                             <img src={courseData.coverImage} className="w-full h-full object-cover" alt="Cover" />
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-3">
-                                <button onClick={() => setCourseData({...courseData, coverImage: ""})} className="p-2 bg-red-500 text-white rounded-xl hover:scale-110 transition-all"><Trash2 className="w-5 h-5" /></button>
-                                <label className="p-2 bg-indigo-600 text-white rounded-xl hover:scale-110 transition-all cursor-pointer">
+                                <button onClick={() => setCourseData({...courseData, coverImage: ""})} className="p-2 bg-red-500 text-white rounded-xl hover:scale-110 transition-all shadow-lg"><Trash2 className="w-5 h-5" /></button>
+                                <label className="p-2 bg-indigo-600 text-white rounded-xl hover:scale-110 transition-all cursor-pointer shadow-lg">
                                   <Upload className="w-5 h-5" />
                                   <input type="file" className="hidden" accept="image/*" onChange={async (e: any) => {
                                     const file = e.target.files[0];
                                     if (file) {
-                                      try {
-                                        const compressed = await compressImage(file, 1200, 1200, 0.7);
-                                        setCourseData({...courseData, coverImage: compressed});
-                                      } catch (err) {
-                                        const reader = new FileReader();
-                                        reader.onload = (re) => setCourseData({...courseData, coverImage: re.target?.result as string});
-                                        reader.readAsDataURL(file);
-                                      }
+                                      const reader = new FileReader();
+                                      reader.onload = (re) => {
+                                        const result = re.target?.result as string;
+                                        if(confirm("هل تريد اعتماد هذه الصورة كغلاف؟")) {
+                                           setCourseData({...courseData, coverImage: result});
+                                        }
+                                      };
+                                      reader.readAsDataURL(file);
                                     }
                                   }} />
                                 </label>
@@ -844,14 +786,14 @@ export default function CreateCoursePage() {
                             <input type="file" className="hidden" accept="image/*" onChange={async (e: any) => {
                                     const file = e.target.files[0];
                                     if (file) {
-                                      try {
-                                        const compressed = await compressImage(file, 1200, 1200, 0.7);
-                                        setCourseData({...courseData, coverImage: compressed});
-                                      } catch (err) {
-                                        const reader = new FileReader();
-                                        reader.onload = (re) => setCourseData({...courseData, coverImage: re.target?.result as string});
-                                        reader.readAsDataURL(file);
-                                      }
+                                       const reader = new FileReader();
+                                       reader.onload = (re) => {
+                                          const result = re.target?.result as string;
+                                          if(confirm("هل تريد اعتماد هذه الصورة كغلاف؟")) {
+                                             setCourseData({...courseData, coverImage: result});
+                                          }
+                                       };
+                                       reader.readAsDataURL(file);
                                     }
                                   }} />
                           </label>
@@ -882,15 +824,51 @@ export default function CreateCoursePage() {
 
                     <div className="grid grid-cols-1 gap-6">
                       <div className="space-y-2">
-                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">المرحلة الدراسية</label>
+                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">الدولة</label>
                         <select 
-                          value={courseData.grade}
-                          onChange={(e) => setCourseData({...courseData, grade: e.target.value})}
+                          value={courseData.country}
+                          onChange={(e) => setCourseData({...courseData, country: e.target.value})}
                           className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all appearance-none"
                         >
-                          {GRADES.map(g => <option key={g} value={g} className="bg-white text-slate-900">{g}</option>)}
+                          <option value="مصر">مصر</option>
+                          <option value="السعودية">السعودية</option>
+                          <option value="الإمارات">الإمارات</option>
+                          <option value="الكويت">الكويت</option>
+                          <option value="قطر">قطر</option>
+                          <option value="عمان">عمان</option>
+                          <option value="البحرين">البحرين</option>
+                          <option value="الأردن">الأردن</option>
                         </select>
                       </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">المراحل الدراسية المستهدفة</label>
+                        <div className="flex flex-wrap gap-2 p-2 bg-slate-50 border border-slate-200 rounded-2xl min-h-[100px]">
+                           {GRADES.map(g => (
+                             <button
+                               key={g}
+                               type="button"
+                               onClick={() => {
+                                  const currentGrades = courseData.grades;
+                                  if (currentGrades.includes(g)) {
+                                     setCourseData({...courseData, grades: currentGrades.filter(x => x !== g)});
+                                  } else {
+                                     setCourseData({...courseData, grades: [...currentGrades, g]});
+                                  }
+                               }}
+                               className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${
+                                  courseData.grades.includes(g) 
+                                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' 
+                                  : 'bg-white text-slate-400 border border-slate-100 hover:border-indigo-200'
+                               }`}
+                             >
+                               {g}
+                             </button>
+                           ))}
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-bold px-2">يمكنك اختيار أكثر من مرحلة دراسية لهذا الكورس.</p>
+                      </div>
+
                       <div className="space-y-2">
                         <label className="text-xs font-black text-slate-400 uppercase tracking-widest">المادة / التخصص</label>
                         <input 

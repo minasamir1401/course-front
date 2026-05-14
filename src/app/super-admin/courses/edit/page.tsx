@@ -32,13 +32,16 @@ export default function EditCoursePage() {
     title: "",
     description: "",
     coverImage: "",
-    grade: "الصف الأول الثانوي",
+    grades: ["الصف الأول الثانوي"] as string[],
     subject: "",
+    country: "مصر",
     isCentral: false,
     schoolId: schoolIdParam || ""
   });
 
   const [lessons, setLessons] = useState<any[]>([]);
+  const [exams, setExams] = useState<any[]>([]);
+  const [activeContentTab, setActiveContentTab] = useState<'lessons' | 'quizzes' | 'assignments'>('lessons');
   const [isLessonModalOpen, setIsLessonModalOpen] = useState(false);
   const [editingLessonIndex, setEditingLessonIndex] = useState<number | null>(null);
 
@@ -118,15 +121,31 @@ export default function EditCoursePage() {
       });
       if (res.ok) {
         const data = await res.json();
+        let parsedGrades = ["الصف الأول الثانوي"];
+        try {
+          if (data.grades && typeof data.grades === 'string') {
+            parsedGrades = JSON.parse(data.grades);
+          } else if (Array.isArray(data.grades)) {
+            parsedGrades = data.grades;
+          } else if (data.grade) {
+            parsedGrades = [data.grade];
+          }
+        } catch (e) {
+          parsedGrades = data.grade ? [data.grade] : ["الصف الأول الثانوي"];
+        }
+
         setCourseData({
           title: data.title,
           description: data.description || "",
           coverImage: data.coverImage || "",
-          grade: data.grade || "الصف الأول الثانوي",
+          grades: parsedGrades,
           subject: data.subject || "",
+          country: data.country || "مصر",
           isCentral: data.isCentral,
           schoolId: data.schoolId || ""
         });
+        
+        setExams(data.exams || []);
 
         setLessons(data.lessons.map((l: any) => {
           let parsedQuestions = [];
@@ -205,60 +224,9 @@ export default function EditCoursePage() {
     setIsLessonModalOpen(false);
   };
 
+  // Excel Upload hidden as requested
   const handleExcelUpload = (type: 'questions' | 'metadata') => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.xlsx, .xls';
-    input.onchange = async (e: any) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        try {
-          const bstr = evt.target?.result;
-          const wb = XLSX.read(bstr, { type: 'binary' });
-          const wsname = wb.SheetNames[0];
-          const ws = wb.Sheets[wsname];
-          const data = XLSX.utils.sheet_to_json(ws);
-
-          if (type === 'questions') {
-            const newQuestions = data.map((row: any) => ({
-              id: Date.now() + Math.random(),
-              text: row['السؤال'] || row['Question'] || "",
-              type: row['النوع'] || row['Type'] || "MCQ",
-              options: [row['أ'] || row['A'], row['ب'] || row['B'], row['ج'] || row['C'], row['د'] || row['D']].filter(Boolean),
-              correctAnswer: row['الإجابة'] || row['Answer'] || "",
-              explanation: row['التفسير'] || row['Explanation'] || "",
-              points: parseInt(row['النقاط'] || row['Points']) || 1,
-              learningOutcome: row['الناتج'] || row['Outcome'] || "",
-              level: row['المستوى'] || row['Level'] || "Medium",
-              skill: row['المهارة'] || row['Skill'] || "General"
-            }));
-            setCurrentLesson((prev: any) => ({
-              ...prev,
-              questions: [...prev.questions, ...newQuestions]
-            }));
-            showToast(`تم استيراد ${newQuestions.length} سؤال بنجاح`, "success");
-          } else {
-            const firstRow: any = data[0];
-            if (firstRow) {
-              setCurrentLesson((prev: any) => ({
-                ...prev,
-                standards: firstRow['المعايير'] || firstRow['Standards'] || prev.standards,
-                indicators: firstRow['المؤشرات'] || firstRow['Indicators'] || prev.indicators,
-                learningOutcomes: firstRow['نواتج_التعلم'] || firstRow['Outcomes'] || prev.learningOutcomes
-              }));
-              showToast("تم استيراد البيانات التعريفية بنجاح", "success");
-            }
-          }
-        } catch (error) {
-          showToast("خطأ في قراءة ملف Excel", "error");
-        }
-      };
-      reader.readAsBinaryString(file);
-    };
-    input.click();
+    showToast("هذه الميزة تم تعطيلها من قبل المسؤول", "info");
   };
 
   const addSlide = () => {
@@ -570,13 +538,18 @@ export default function EditCoursePage() {
 
                 {activeTab === 'exercises' && (
                   <div className="space-y-8">
-                    <div className="flex justify-between items-center">
-                      <h4 className="text-xl font-black text-slate-900">تدريبات الدرس</h4>
-                      <div className="flex gap-3">
-                        <button onClick={() => handleExcelUpload('questions')} className="bg-emerald-50 text-emerald-600 px-6 py-2.5 rounded-xl font-black flex items-center gap-2 hover:bg-emerald-600 hover:text-white transition-all"><Download className="w-5 h-5" /> استيراد Excel</button>
-                        <button onClick={handleAddQuestion} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black flex items-center gap-2 shadow-lg hover:bg-indigo-700 transition-all"><Plus className="w-5 h-5" /> إضافة سؤال</button>
+                      <div className="flex justify-between items-center">
+                        <h4 className="text-xl font-black text-slate-900">تدريبات الدرس</h4>
+                        <div className="flex gap-3">
+                          <button 
+                            onClick={() => showToast("جاري فتح بنك الأسئلة المركزي...", "info")} 
+                            className="bg-orange-50 text-orange-600 px-6 py-2.5 rounded-xl font-black flex items-center gap-2 hover:bg-orange-600 hover:text-white transition-all border border-orange-100"
+                          >
+                            <BookOpen className="w-5 h-5" /> بنك الأسئلة
+                          </button>
+                          <button onClick={handleAddQuestion} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black flex items-center gap-2 shadow-lg hover:bg-indigo-700 transition-all"><Plus className="w-5 h-5" /> إضافة سؤال</button>
+                        </div>
                       </div>
-                    </div>
 
                     {showQuestionForm && (
                       <div className="bg-white border-2 border-indigo-600 rounded-[35px] p-8 space-y-8 animate-in zoom-in-95 duration-300 shadow-xl">
@@ -758,14 +731,14 @@ export default function EditCoursePage() {
                                     <input type="file" className="hidden" accept="image/*" onChange={async (e: any) => {
                                       const file = e.target.files[0];
                                       if (file) {
-                                        try {
-                                          const compressed = await compressImage(file, 1200, 1200, 0.7);
-                                          setCourseData({...courseData, coverImage: compressed});
-                                        } catch (err) {
-                                          const reader = new FileReader();
-                                          reader.onload = (re) => setCourseData({...courseData, coverImage: re.target?.result as string});
-                                          reader.readAsDataURL(file);
-                                        }
+                                        const reader = new FileReader();
+                                        reader.onload = (re) => {
+                                          const res = re.target?.result as string;
+                                          if(confirm("تأكيد تحديث صورة الغلاف؟")) {
+                                             setCourseData({...courseData, coverImage: res});
+                                          }
+                                        };
+                                        reader.readAsDataURL(file);
                                       }
                                     }} />
                                  </label>
@@ -780,14 +753,14 @@ export default function EditCoursePage() {
                               <input type="file" className="hidden" accept="image/*" onChange={async (e: any) => {
                                       const file = e.target.files[0];
                                       if (file) {
-                                        try {
-                                          const compressed = await compressImage(file, 1200, 1200, 0.7);
-                                          setCourseData({...courseData, coverImage: compressed});
-                                        } catch (err) {
-                                          const reader = new FileReader();
-                                          reader.onload = (re) => setCourseData({...courseData, coverImage: re.target?.result as string});
-                                          reader.readAsDataURL(file);
-                                        }
+                                        const reader = new FileReader();
+                                        reader.onload = (re) => {
+                                          const res = re.target?.result as string;
+                                          if(confirm("تأكيد اعتماد هذه الصورة كغلاف؟")) {
+                                             setCourseData({...courseData, coverImage: res});
+                                          }
+                                        };
+                                        reader.readAsDataURL(file);
                                       }
                                     }} />
                             </label>
@@ -804,10 +777,35 @@ export default function EditCoursePage() {
                         <textarea value={courseData.description} onChange={(e) => setCourseData({ ...courseData, description: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 min-h-[100px] resize-none transition-all text-sm" />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">المرحلة الدراسية</label>
-                        <select value={courseData.grade} onChange={(e) => setCourseData({ ...courseData, grade: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none appearance-none focus:border-indigo-600 transition-all text-sm">
-                          {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
+                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">الدولة</label>
+                        <select 
+                          value={courseData.country}
+                          onChange={(e) => setCourseData({...courseData, country: e.target.value})}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all text-sm appearance-none"
+                        >
+                          <option value="مصر">مصر</option>
+                          <option value="السعودية">السعودية</option>
+                          <option value="الإمارات">الإمارات</option>
+                          <option value="الكويت">الكويت</option>
                         </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">المراحل الدراسية</label>
+                        <div className="flex flex-wrap gap-1.5 p-2 bg-slate-50 border border-slate-200 rounded-xl">
+                           {GRADES.map(g => (
+                             <button
+                               key={g}
+                               type="button"
+                               onClick={() => {
+                                  const cur = courseData.grades;
+                                  setCourseData({...courseData, grades: cur.includes(g) ? cur.filter(x => x !== g) : [...cur, g]});
+                               }}
+                               className={`px-3 py-1.5 rounded-lg text-[9px] font-black transition-all ${courseData.grades.includes(g) ? 'bg-indigo-600 text-white' : 'bg-white text-slate-400 border border-slate-100'}`}
+                             >
+                               {g}
+                             </button>
+                           ))}
+                        </div>
                       </div>
                       <div className="space-y-2">
                         <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">المادة</label>
@@ -822,70 +820,152 @@ export default function EditCoursePage() {
               </div>
 
               <div className="lg:col-span-8 space-y-8">
+                {/* Content Navigation Tabs */}
+                <div className="bg-white p-2 rounded-[30px] border border-slate-100 shadow-sm flex gap-2">
+                   {[
+                     { id: 'lessons', label: 'الدروس والمحاضرات', icon: Layers, color: 'indigo' },
+                     { id: 'quizzes', label: 'الاختبارات القصيرة', icon: HelpCircle, color: 'orange' },
+                     { id: 'assignments', label: 'التكليفات والمهام', icon: FileText, color: 'emerald' },
+                   ].map(tab => (
+                     <button
+                       key={tab.id}
+                       onClick={() => setActiveContentTab(tab.id as any)}
+                       className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-2xl font-black transition-all ${
+                         activeContentTab === tab.id 
+                         ? `bg-${tab.color}-600 text-white shadow-lg shadow-${tab.color}-600/20` 
+                         : 'text-slate-400 hover:bg-slate-50'
+                       }`}
+                     >
+                       <tab.icon className="w-5 h-5" />
+                       {tab.label}
+                     </button>
+                   ))}
+                </div>
+
                 <div className="flex justify-between items-center bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
-                  <h3 className="text-2xl font-black text-slate-900 flex items-center gap-4"><Layers className="w-8 h-8 text-indigo-600" /> الدروس والمحاضرات</h3>
-                  <button onClick={openAddLessonModal} className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black flex items-center gap-3 transition-all hover:bg-indigo-700 shadow-xl shadow-indigo-600/20"><Plus size={24} /> إضافة درس</button>
+                  <h3 className="text-2xl font-black text-slate-900 flex items-center gap-4">
+                    {activeContentTab === 'lessons' && <><Layers className="w-8 h-8 text-indigo-600" /> الدروس والمحاضرات</>}
+                    {activeContentTab === 'quizzes' && <><HelpCircle className="w-8 h-8 text-orange-500" /> الاختبارات والتقييمات</>}
+                    {activeContentTab === 'assignments' && <><FileText className="w-8 h-8 text-emerald-500" /> التكليفات الدراسية</>}
+                  </h3>
+                  <button 
+                    onClick={() => {
+                      if (activeContentTab === 'lessons') openAddLessonModal();
+                      else showToast("سيتم تفعيل إنشاء الاختبارات/التكليفات قريباً", "info");
+                    }} 
+                    className={`px-8 py-4 rounded-2xl font-black flex items-center gap-3 transition-all shadow-xl text-white ${
+                      activeContentTab === 'lessons' ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20' :
+                      activeContentTab === 'quizzes' ? 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/20' :
+                      'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20'
+                    }`}
+                  >
+                    <Plus size={24} /> 
+                    إضافة {activeContentTab === 'lessons' ? 'درس' : activeContentTab === 'quizzes' ? 'اختبار' : 'تكليف'}
+                  </button>
                 </div>
 
                 <div className="flex flex-col gap-4">
-                  {lessons.length === 0 ? (
-                    <div className="bg-white border-2 border-dashed border-slate-200 rounded-[40px] p-20 flex flex-col items-center justify-center text-slate-400 gap-4">
-                       <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center">
-                          <BookOpen className="w-10 h-10" />
-                       </div>
-                       <p className="font-black text-xl">لا يوجد دروس في هذا الكورس بعد</p>
-                       <button onClick={openAddLessonModal} className="text-indigo-600 font-bold hover:underline">أضف درسك الأول الآن</button>
-                    </div>
-                  ) : (
-                    lessons.map((lesson, index) => (
-                      <div key={index} className="bg-white border border-slate-100 rounded-[30px] p-5 flex flex-col md:flex-row items-center justify-between gap-6 hover:border-indigo-200 transition-all group relative overflow-hidden shadow-sm hover:shadow-xl">
-                        <div className="absolute top-0 right-0 w-1.5 h-full bg-indigo-600 opacity-0 group-hover:opacity-100 transition-all"></div>
-                        
-                        <div className="flex items-center gap-6 flex-1 w-full md:w-auto">
-                          <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-2xl border border-indigo-100 shadow-inner group-hover:scale-105 transition-all shrink-0">
-                            {index + 1}
-                          </div>
-                          <div className="flex flex-col min-w-0">
-                            <h3 className="font-black text-slate-900 text-xl truncate group-hover:text-indigo-600 transition-colors">
-                              {lesson.title}
-                            </h3>
-                            <div className="flex flex-wrap items-center gap-3 mt-2">
-                               <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase ${lesson.isVisible ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'}`}>
-                                  {lesson.isVisible ? <Eye className="w-3 h-3" /> : <X className="w-3 h-3" />}
-                                  {lesson.isVisible ? 'مرئي للطلاب' : 'مخفي عن الطلاب'}
-                               </div>
-                               {lesson.publishDate && (
-                                 <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black uppercase">
-                                    <Clock className="w-3 h-3" />
-                                    مجدول: {new Date(lesson.publishDate).toLocaleDateString('ar-EG')}
-                                 </div>
-                               )}
-                               <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 text-slate-400 text-[10px] font-black uppercase">
-                                  <Monitor className="w-3 h-3" />
-                                  {lesson.slides?.length || 0} شرائح
-                               </div>
+                  {activeContentTab === 'lessons' ? (
+                    lessons.length === 0 ? (
+                      <div className="bg-white border-2 border-dashed border-slate-200 rounded-[40px] p-20 flex flex-col items-center justify-center text-slate-400 gap-4">
+                        <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center">
+                            <BookOpen className="w-10 h-10" />
+                        </div>
+                        <p className="font-black text-xl">لا يوجد دروس في هذا الكورس بعد</p>
+                        <button onClick={openAddLessonModal} className="text-indigo-600 font-bold hover:underline">أضف درسك الأول الآن</button>
+                      </div>
+                    ) : (
+                      lessons.map((lesson, index) => (
+                        <div key={index} className="bg-white border border-slate-100 rounded-[30px] p-5 flex flex-col md:flex-row items-center justify-between gap-6 hover:border-indigo-200 transition-all group relative overflow-hidden shadow-sm hover:shadow-xl">
+                          <div className="absolute top-0 right-0 w-1.5 h-full bg-indigo-600 opacity-0 group-hover:opacity-100 transition-all"></div>
+                          
+                          <div className="flex items-center gap-6 flex-1 w-full md:w-auto">
+                            <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-2xl border border-indigo-100 shadow-inner group-hover:scale-105 transition-all shrink-0">
+                              {index + 1}
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <h3 className="font-black text-slate-900 text-xl truncate group-hover:text-indigo-600 transition-colors">
+                                {lesson.title}
+                              </h3>
+                              <div className="flex flex-wrap items-center gap-3 mt-2">
+                                <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase ${lesson.isVisible ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'}`}>
+                                    {lesson.isVisible ? <Eye className="w-3 h-3" /> : <X className="w-3 h-3" />}
+                                    {lesson.isVisible ? 'مرئي للطلاب' : 'مخفي عن الطلاب'}
+                                </div>
+                                {lesson.publishDate && (
+                                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black uppercase">
+                                      <Clock className="w-3 h-3" />
+                                      مجدول: {new Date(lesson.publishDate).toLocaleDateString('ar-EG')}
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 text-slate-400 text-[10px] font-black uppercase">
+                                    <Monitor className="w-3 h-3" />
+                                    {lesson.slides?.length || 0} شرائح
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        </div>
 
-                        <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-                          <div className="h-8 w-[1px] bg-slate-100 mx-2 hidden md:block"></div>
-                          <button 
-                            onClick={() => openEditLessonModal(index)} 
-                            className="flex items-center gap-2 bg-blue-50 text-blue-600 px-5 py-3 rounded-2xl font-black text-sm hover:bg-blue-600 hover:text-white transition-all border border-blue-100"
-                          >
-                            <Edit2 size={18} />
-                            تعديل الدرس
-                          </button>
-                          <button 
-                            onClick={() => handleRemoveLesson(index)} 
-                            className="p-3 bg-red-50 text-red-400 hover:bg-red-500 hover:text-white rounded-2xl transition-all border border-red-50"
-                          >
-                            <Trash2 size={20} />
-                          </button>
+                          <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+                            <div className="h-8 w-[1px] bg-slate-100 mx-2 hidden md:block"></div>
+                            <button 
+                              onClick={() => openEditLessonModal(index)} 
+                              className="flex items-center gap-2 bg-blue-50 text-blue-600 px-5 py-3 rounded-2xl font-black text-sm hover:bg-blue-600 hover:text-white transition-all border border-blue-100"
+                            >
+                              <Edit2 size={18} />
+                              تعديل الدرس
+                            </button>
+                            <button 
+                              onClick={() => handleRemoveLesson(index)} 
+                              className="p-3 bg-red-50 text-red-400 hover:bg-red-500 hover:text-white rounded-2xl transition-all border border-red-50"
+                            >
+                              <Trash2 size={20} />
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      ))
+                    )
+                  ) : (
+                    <div className="bg-white border border-slate-100 rounded-[40px] p-12 flex flex-col items-center justify-center text-center gap-6">
+                       <div className={`w-24 h-24 rounded-[35px] flex items-center justify-center ${activeContentTab === 'quizzes' ? 'bg-orange-50 text-orange-500' : 'bg-emerald-50 text-emerald-500'}`}>
+                          {activeContentTab === 'quizzes' ? <HelpCircle className="w-12 h-12" /> : <FileText className="w-12 h-12" />}
+                       </div>
+                       <div>
+                         <h4 className="text-2xl font-black text-slate-900 mb-2">
+                           {activeContentTab === 'quizzes' ? 'إدارة الاختبارات' : 'إدارة التكليفات'}
+                         </h4>
+                         <p className="text-slate-400 font-bold max-w-md">
+                           يمكنك ربط هذا الكورس بأسئلة من بنك الأسئلة المركزي وتعيينها كـ {activeContentTab === 'quizzes' ? 'اختبارات' : 'تكليفات'} للطلاب.
+                         </p>
+                       </div>
+                       
+                       <div className="w-full max-w-2xl space-y-3">
+                          {exams.filter(e => activeContentTab === 'quizzes' ? e.type !== 'ASSIGNMENT' : e.type === 'ASSIGNMENT').length === 0 ? (
+                            <div className="p-8 border-2 border-dashed border-slate-100 rounded-3xl text-slate-400 font-bold">
+                               لا يوجد {activeContentTab === 'quizzes' ? 'اختبارات' : 'تكليفات'} مرتبطة بهذا الكورس حالياً.
+                            </div>
+                          ) : (
+                            exams.filter(e => activeContentTab === 'quizzes' ? e.type !== 'ASSIGNMENT' : e.type === 'ASSIGNMENT').map((exam, idx) => (
+                              <div key={idx} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
+                                 <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-900 font-black border border-slate-100">
+                                       {idx + 1}
+                                    </div>
+                                    <div className="text-right">
+                                       <div className="font-black text-slate-900">{exam.title}</div>
+                                       <div className="text-[10px] text-slate-400 font-bold flex gap-2">
+                                          <span>{exam._count?.questions || 0} سؤال</span>
+                                          <span>•</span>
+                                          <span>{exam.duration} دقيقة</span>
+                                       </div>
+                                    </div>
+                                 </div>
+                                 <button className="p-2 text-slate-400 hover:text-indigo-600 transition-all"><Edit2 size={16} /></button>
+                              </div>
+                            ))
+                          )}
+                       </div>
+                    </div>
                   )}
                 </div>
               </div>
