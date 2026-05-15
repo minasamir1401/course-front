@@ -13,6 +13,7 @@ import {
   ArrowUpRight, ListOrdered, TrendingUp, GraduationCap
 } from "lucide-react";
 import dynamic from 'next/dynamic';
+import { useNotification } from "@/context/NotificationContext";
 
 const VideoPlayer = dynamic(() => import('@/components/VideoPlayer'), { ssr: false });
 
@@ -23,6 +24,7 @@ export default function LessonPlayerPage() {
 
   const courseId = searchParams.get('courseId');
   const lessonId = params.id as string;
+  const { showToast } = useNotification();
 
   const [lesson, setLesson] = useState<any>(null);
   const [course, setCourse] = useState<any>(null);
@@ -224,39 +226,41 @@ export default function LessonPlayerPage() {
         </div>
 
         {/* ── MAIN CONTENT AREA ── */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-10">
+        <div className={`grid grid-cols-1 ${currentStage === 'welcome' || currentStage === 'summary' ? 'xl:grid-cols-12' : 'xl:grid-cols-1'} gap-10`}>
           
-          <div className="xl:col-span-8 space-y-10">
+          <div className={`${currentStage === 'welcome' || currentStage === 'summary' ? 'xl:col-span-8' : 'xl:col-span-12'} space-y-10`}>
             
-            {/* ── VIDEO PLAYER (PROMINENT) ── */}
-            <div className="premium-card rounded-[40px] md:rounded-[55px] p-4 md:p-6 relative overflow-hidden shadow-2xl shadow-indigo-50/50">
-               <div className="aspect-video bg-slate-950 rounded-[35px] overflow-hidden relative ring-4 ring-slate-50 group">
-                  {lesson.videoUrl ? (
-                    <VideoPlayer url={lesson.videoUrl} onProgress={handleProgressUpdate} />
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-700 font-black p-8 gap-4">
-                       <Lock className="w-12 h-12 opacity-20" />
-                       <span className="opacity-40">لا يوجد فيديو متوفر حالياً لهذا الدرس</span>
+            {/* ── VIDEO PLAYER (VISIBLE ONLY IN WELCOME/SUMMARY) ── */}
+            {(currentStage === 'welcome' || currentStage === 'summary') && (
+              <div className="premium-card rounded-[40px] md:rounded-[55px] p-4 md:p-6 relative overflow-hidden shadow-2xl shadow-indigo-50/50">
+                 <div className="aspect-video bg-slate-950 rounded-[35px] overflow-hidden relative ring-4 ring-slate-50 group">
+                    {lesson.videoUrl ? (
+                      <VideoPlayer url={lesson.videoUrl} onProgress={handleProgressUpdate} />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-slate-700 font-black p-8 gap-4">
+                         <Lock className="w-12 h-12 opacity-20" />
+                         <span className="opacity-40">لا يوجد فيديو متوفر حالياً لهذا الدرس</span>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-indigo-600/5 pointer-events-none group-hover:opacity-0 transition-opacity" />
+                 </div>
+                 
+                 <div className="mt-6 flex items-center justify-between px-4">
+                    <div className="flex items-center gap-3">
+                       <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+                          <Monitor className="w-5 h-5" />
+                       </div>
+                       <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest">فيديو الشرح التفاعلي</h4>
                     </div>
-                  )}
-                  <div className="absolute inset-0 bg-indigo-600/5 pointer-events-none group-hover:opacity-0 transition-opacity" />
-               </div>
-               
-               <div className="mt-6 flex items-center justify-between px-4">
-                  <div className="flex items-center gap-3">
-                     <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-100">
-                        <Monitor className="w-5 h-5" />
-                     </div>
-                     <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest">فيديو الشرح التفاعلي</h4>
-                  </div>
-                  {lesson.duration && (
-                    <div className="flex items-center gap-2 text-slate-400 font-bold text-xs">
-                       <Clock className="w-4 h-4" />
-                       <span>{Math.floor(lesson.duration / 60)} دقيقة</span>
-                    </div>
-                  )}
-               </div>
-            </div>
+                    {lesson.duration && (
+                      <div className="flex items-center gap-2 text-slate-400 font-bold text-xs">
+                         <Clock className="w-4 h-4" />
+                         <span>{Math.floor(lesson.duration / 60)} دقيقة</span>
+                      </div>
+                    )}
+                 </div>
+              </div>
+            )}
 
             {currentStage === 'welcome' && (
               <div className="premium-card p-8 md:p-16 rounded-[48px] animate-in fade-in zoom-in duration-700 flex flex-col justify-center min-h-[400px]">
@@ -308,10 +312,10 @@ export default function LessonPlayerPage() {
                    </div>
                 </div>
 
-                <div className="flex-1 p-10 md:p-16 overflow-y-auto custom-scrollbar flex flex-col items-center justify-center text-center">
-                  <h3 className="text-2xl md:text-4xl font-black text-slate-900 mb-8 leading-tight tracking-tight">{lesson.slides[currentSlideIndex].title}</h3>
+                <div className="flex-1 p-8 md:p-20 overflow-y-auto custom-scrollbar flex flex-col items-center justify-center text-center w-full">
+                  <h3 className="text-3xl md:text-5xl font-black text-slate-900 mb-10 leading-tight tracking-tight animate-in fade-in slide-in-from-top-4 duration-500">{lesson.slides[currentSlideIndex].title}</h3>
                   <div
-                    className="text-base md:text-xl text-slate-500 leading-relaxed max-w-4xl font-bold prose prose-indigo"
+                    className="text-lg md:text-2xl text-slate-600 leading-[1.8] max-w-5xl font-bold prose prose-indigo break-words whitespace-pre-wrap w-full animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150"
                     dangerouslySetInnerHTML={{ __html: lesson.slides[currentSlideIndex].content }}
                   />
                 </div>
@@ -352,9 +356,9 @@ export default function LessonPlayerPage() {
             )}
 
             {currentStage === 'exercises' && (
-              <div className="space-y-6 animate-in slide-in-from-bottom-8 duration-700">
-                <div className="premium-card p-4 rounded-[30px] flex items-center justify-between border-b-4 border-indigo-600">
-                  <div className="flex flex-wrap gap-2">
+              <div className="space-y-6 animate-in slide-in-from-bottom-8 duration-700 flex flex-col items-center">
+                <div className="premium-card p-4 rounded-[30px] flex flex-col md:flex-row items-center justify-between border-b-4 border-indigo-600 w-full max-w-4xl mx-auto gap-4">
+                  <div className="flex flex-wrap gap-2 justify-center">
                     {lesson.questions.map((_: any, i: number) => (
                       <button
                         key={i}
@@ -365,27 +369,38 @@ export default function LessonPlayerPage() {
                       </button>
                     ))}
                   </div>
+                  <button 
+                    onClick={() => {
+                      if(confirm("هل تريد بدء وضع الاختبار السريع؟ سيتم إخفاء التفسيرات حتى النهاية.")) {
+                        showToast("وضع الاختبار السريع مفعل", "info");
+                      }
+                    }}
+                    className="px-6 py-3 bg-orange-500 text-white rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-orange-600 transition-all shadow-lg"
+                  >
+                    <HelpCircle className="w-5 h-5" />
+                    Quiz Me!
+                  </button>
                 </div>
 
-                <div className="premium-card rounded-[40px] p-8 md:p-14 shadow-2xl border-indigo-50">
+                <div className="premium-card rounded-[40px] p-8 md:p-14 shadow-2xl border-indigo-50 w-full max-w-5xl mx-auto min-h-[60vh] flex flex-col justify-center">
                   {lesson.questions.length > 0 && lesson.questions[currentQuestionIndex] ? (
                     <>
                       <div className="flex items-center gap-3 mb-6">
                         <span className="px-3 py-1 bg-slate-100 rounded-lg text-[10px] font-black text-slate-500 uppercase">سؤال {currentQuestionIndex + 1}</span>
                       </div>
                       
-                      <h3 className="text-xl md:text-3xl font-black text-slate-900 mb-10 leading-relaxed tracking-tight" dangerouslySetInnerHTML={{ __html: lesson.questions[currentQuestionIndex].text }} />
+                      <h3 className="text-xl md:text-3xl font-black text-slate-900 mb-10 leading-relaxed tracking-tight break-words w-full" dangerouslySetInnerHTML={{ __html: lesson.questions[currentQuestionIndex].text }} />
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-10">
                         {(lesson.questions[currentQuestionIndex].options || []).map((opt: string, oIdx: number) => (
                           <button 
                             key={oIdx} 
                             onClick={() => handleAnswerSelect(opt)} 
-                            className={`p-6 md:p-8 rounded-[30px] border-4 text-right transition-all duration-300 font-black text-base md:text-lg relative ${answers[currentQuestionIndex] === opt ? 'bg-indigo-600 border-white text-white shadow-xl shadow-indigo-100' : 'bg-white border-slate-50 text-slate-600 hover:border-indigo-200'}`}
+                            className={`p-6 md:p-8 rounded-[30px] border-4 text-right transition-all duration-300 font-black text-base md:text-lg relative break-words overflow-hidden ${answers[currentQuestionIndex] === opt ? 'bg-indigo-600 border-white text-white shadow-xl shadow-indigo-100' : 'bg-white border-slate-50 text-slate-600 hover:border-indigo-200'}`}
                           >
-                            <div className="flex items-center justify-between">
-                              <span>{opt}</span>
-                              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${answers[currentQuestionIndex] === opt ? 'border-white bg-white/20' : 'border-slate-100'}`}>
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="flex-1 break-words">{opt}</span>
+                              <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${answers[currentQuestionIndex] === opt ? 'border-white bg-white/20' : 'border-slate-100'}`}>
                                   {answers[currentQuestionIndex] === opt && <CheckCircle2 className="w-4 h-4" />}
                               </div>
                             </div>
@@ -459,61 +474,62 @@ export default function LessonPlayerPage() {
             )}
           </div>
 
-          {/* ── SIDEBAR AREA ── */}
-          <div className="xl:col-span-4 space-y-10">
-            
-            {/* Summary Widget */}
-            <div className="premium-card rounded-[40px] p-8 md:p-10 space-y-6">
-               <h4 className="text-xs font-black text-slate-400 uppercase tracking-[3px] flex items-center gap-3">
-                  <Info className="w-4 h-4 text-indigo-600" />
-                  ملخص الدرس
-               </h4>
-               <p className="text-sm text-slate-600 font-bold leading-relaxed">{lesson.summary || "لا يوجد ملخص متاح حالياً لهذا الدرس."}</p>
-               <div className="pt-6 border-t border-slate-100 grid grid-cols-2 gap-4">
-                  <div className="text-center">
-                     <p className="text-[10px] font-black text-slate-400 uppercase mb-1">التمارين</p>
-                     <p className="text-xl font-black text-slate-900">{lesson.questions?.length || 0}</p>
-                  </div>
-                  <div className="text-center border-r border-slate-100">
-                     <p className="text-[10px] font-black text-slate-400 uppercase mb-1">المرفقات</p>
-                     <p className="text-xl font-black text-slate-900">{lesson.attachments?.length || 0}</p>
-                  </div>
-               </div>
-            </div>
+          {/* ── SIDEBAR AREA (VISIBLE ONLY IN WELCOME/SUMMARY) ── */}
+          {(currentStage === 'welcome' || currentStage === 'summary') && (
+            <div className="xl:col-span-4 space-y-10">
+              
+              {/* Summary Widget */}
+              <div className="premium-card rounded-[40px] p-8 md:p-10 space-y-6">
+                 <h4 className="text-xs font-black text-slate-400 uppercase tracking-[3px] flex items-center gap-3">
+                    <Info className="w-4 h-4 text-indigo-600" />
+                    ملخص الدرس
+                 </h4>
+                 <p className="text-sm text-slate-600 font-bold leading-relaxed">{lesson.summary || "لا يوجد ملخص متاح حالياً لهذا الدرس."}</p>
+                 <div className="pt-6 border-t border-slate-100 grid grid-cols-2 gap-4">
+                    <div className="text-center">
+                       <p className="text-[10px] font-black text-slate-400 uppercase mb-1">التمارين</p>
+                       <p className="text-xl font-black text-slate-900">{lesson.questions?.length || 0}</p>
+                    </div>
+                    <div className="text-center border-r border-slate-100">
+                       <p className="text-[10px] font-black text-slate-400 uppercase mb-1">المرفقات</p>
+                       <p className="text-xl font-black text-slate-900">{lesson.attachments?.length || 0}</p>
+                    </div>
+                 </div>
+              </div>
 
-            {/* Resources Widget */}
-            <div className="premium-card rounded-[40px] p-8 md:p-10 space-y-6">
-               <h4 className="text-xs font-black text-slate-400 uppercase tracking-[3px] flex items-center gap-3">
-                  <FileDown className="w-4 h-4 text-indigo-600" />
-                  المرفقات
-               </h4>
-               <div className="space-y-3">
-                  {lesson.attachments?.length > 0 ? lesson.attachments.map((att: any, i: number) => (
-                    <a 
-                      key={i} 
-                      href={att.url} 
-                      target="_blank" 
-                      className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:border-indigo-500/30 transition-all group"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                         <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                            <FileDown className="w-5 h-5" />
-                         </div>
-                         <span className="text-[11px] font-black text-slate-700 truncate">{att.name || `مرفق ${i+1}`}</span>
-                      </div>
-                      <ArrowUpRight className="w-4 h-4 text-slate-300" />
-                    </a>
-                  )) : (
-                    <p className="text-[11px] text-slate-400 font-bold text-center py-4">لا توجد مرفقات.</p>
-                  )}
-               </div>
+              {/* Resources Widget */}
+              <div className="premium-card rounded-[40px] p-8 md:p-10 space-y-6">
+                 <h4 className="text-xs font-black text-slate-400 uppercase tracking-[3px] flex items-center gap-3">
+                    <FileDown className="w-4 h-4 text-indigo-600" />
+                    المرفقات
+                 </h4>
+                 <div className="space-y-3">
+                    {lesson.attachments?.length > 0 ? lesson.attachments.map((att: any, i: number) => (
+                      <a 
+                        key={i} 
+                        href={att.url} 
+                        target="_blank" 
+                        className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:border-indigo-500/30 transition-all group"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                           <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                              <FileDown className="w-5 h-5" />
+                           </div>
+                           <span className="text-[11px] font-black text-slate-700 truncate">{att.name || `مرفق ${i+1}`}</span>
+                        </div>
+                        <ArrowUpRight className="w-4 h-4 text-slate-300" />
+                      </a>
+                    )) : (
+                      <p className="text-[11px] text-slate-400 font-bold text-center py-4">لا توجد مرفقات.</p>
+                    )}
+                 </div>
+              </div>
             </div>
-
-          </div>
+          )}
         </div>
       </div>
 
-      <style jsx global>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.1); border-radius: 10px; }
@@ -544,7 +560,8 @@ export default function LessonPlayerPage() {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
         }
-      `}</style>
+      ` }} />
+
     </DashboardLayout>
   );
 }
