@@ -10,7 +10,7 @@ import {
   HelpCircle, BookOpen, Save, Layers, Edit2, X,
   ChevronDown, ChevronUp, Play, Layout, Target, 
   CheckCircle2, AlertCircle, Upload, Download, Settings,
-  Eye, Monitor, ListOrdered, FileJson
+  Eye, Monitor, ListOrdered, FileJson, FileDown
 } from "lucide-react";
 import * as XLSX from 'xlsx';
 import RichTextEditor from "@/components/RichTextEditor";
@@ -30,11 +30,11 @@ export default function CreateCoursePage() {
     title: "",
     description: "",
     coverImage: "",
-    grades: ["الصف الأول الثانوي"] as string[],
+    grades: [] as string[],
     subject: "",
     country: "مصر",
-    isCentral: !schoolIdParam, // true if no specific school, false if schoolId provided
-    schoolId: schoolIdParam || ""
+    isCentral: true,
+    schoolId: ""
   });
 
   const [lessons, setLessons] = useState<any[]>([]);
@@ -59,14 +59,37 @@ export default function CreateCoursePage() {
   });
 
   // UI States for Lesson Modal
-  const [activeTab, setActiveTab] = useState<'info' | 'slides' | 'exercises' | 'attachments'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'slides' | 'assignments' | 'exercises' | 'attachments'>('info');
   const [showQuestionForm, setShowQuestionForm] = useState(false);
+  const [questionSource, setQuestionSource] = useState<'assignments' | 'exercises'>('exercises');
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null);
   const [tempQuestion, setTempQuestion] = useState<any>({
     text: "", type: "MCQ", options: ["", "", "", ""],
     correctAnswer: "", points: 1, skill: "General", level: "Medium",
-    learningOutcome: "", explanation: "", correctAnswers: [], attempts: 1
+    learningOutcome: "", standard: "", indicator: "", 
+    explanation: "", correctAnswers: [], attempts: 1
   });
+
+  const STANDARDS = [
+    "المعيار 1: الفهم الأساسي",
+    "المعيار 2: القدرة على التحليل",
+    "المعيار 3: التطبيق العملي",
+    "المعيار 4: التفكير الإبداعي"
+  ];
+
+  const INDICATORS = [
+    "المؤشر 1.1: تعريف المصطلحات",
+    "المؤشر 1.2: شرح المفاهيم",
+    "المؤشر 2.1: مقارنة النتائج",
+    "المؤشر 3.1: حل المسائل"
+  ];
+
+  const LEARNING_OUTCOMES = [
+    "LO1: أن يعدد الطالب خصائص...",
+    "LO2: أن يحلل الطالب العلاقة بين...",
+    "LO3: أن يطبق القوانين في...",
+    "LO4: أن يستنتج الطالب..."
+  ];
 
   const GRADES = [
     "الصف الأول الابتدائي", "الصف الثاني الابتدائي", "الصف الثالث الابتدائي",
@@ -194,18 +217,22 @@ export default function CreateCoursePage() {
   };
 
   // Advanced Question Logic
-  const handleAddQuestion = () => {
+  const handleAddQuestion = (source: 'assignments' | 'exercises') => {
     setTempQuestion({
       text: "", type: "MCQ", options: ["", "", "", ""],
       correctAnswer: "", points: 1, skill: "General", level: "Medium",
-      learningOutcome: "", explanation: "", correctAnswers: [], attempts: 1
+      learningOutcome: "", standard: "", indicator: "",
+      explanation: "", correctAnswers: [], attempts: 1
     });
+    setQuestionSource(source);
     setEditingQuestionIndex(null);
     setShowQuestionForm(true);
   };
 
-  const handleEditQuestion = (index: number) => {
-    setTempQuestion({ ...currentLesson.questions[index] });
+  const handleEditQuestion = (source: 'assignments' | 'exercises', index: number) => {
+    const questions = source === 'assignments' ? currentLesson.assignments : currentLesson.questions;
+    setTempQuestion({ ...questions[index] });
+    setQuestionSource(source);
     setEditingQuestionIndex(index);
     setShowQuestionForm(true);
   };
@@ -215,30 +242,29 @@ export default function CreateCoursePage() {
       showToast("يرجى إدخال نص السؤال", "error");
       return;
     }
-    const newQuestions = [...currentLesson.questions];
-    if (editingQuestionIndex !== null) {
-      newQuestions[editingQuestionIndex] = tempQuestion;
+
+    if (questionSource === 'assignments') {
+      const newAssignments = [...(currentLesson.assignments || [])];
+      if (editingQuestionIndex !== null) {
+        newAssignments[editingQuestionIndex] = tempQuestion;
+      } else {
+        newAssignments.push(tempQuestion);
+      }
+      setCurrentLesson({ ...currentLesson, assignments: newAssignments });
     } else {
-      newQuestions.push(tempQuestion);
+      const newQuestions = [...(currentLesson.questions || [])];
+      if (editingQuestionIndex !== null) {
+        newQuestions[editingQuestionIndex] = tempQuestion;
+      } else {
+        newQuestions.push(tempQuestion);
+      }
+      setCurrentLesson({ ...currentLesson, questions: newQuestions });
     }
-    setCurrentLesson({ ...currentLesson, questions: newQuestions });
+
     setShowQuestionForm(false);
   };
 
-  const handleSaveAssignment = () => {
-    if (!tempQuestion.text) {
-      showToast("يرجى إدخال نص التكليف", "error");
-      return;
-    }
-    const newAssignments = [...(currentLesson.assignments || [])];
-    if (editingQuestionIndex !== null) {
-      newAssignments[editingQuestionIndex] = tempQuestion;
-    } else {
-      newAssignments.push(tempQuestion);
-    }
-    setCurrentLesson({ ...currentLesson, assignments: newAssignments });
-    setShowQuestionForm(false);
-  };
+
 
   const removeQuestion = (index: number) => {
     const newQuestions = [...currentLesson.questions];
@@ -423,29 +449,111 @@ export default function CreateCoursePage() {
                     <div className="flex justify-between items-center mb-6">
                       <div>
                         <h4 className="text-xl font-black text-slate-900">تكاليف الدرس (Assignments)</h4>
-                        <p className="text-slate-400 text-sm font-bold">مهام تطبيقية يجب على الطالب إنجازها</p>
+                        <p className="text-slate-400 text-sm font-bold">مهام تطبيقية متقدمة (نظام MCQ وتفسير إجابة)</p>
                       </div>
-                      <button 
-                        onClick={() => {
-                          handleAddQuestion();
-                          setActiveTab('assignments'); // Ensure we stay here
-                        }}
-                        className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black flex items-center gap-2"
-                      >
-                        <Plus className="w-5 h-5" />
-                        إضافة تكليف
-                      </button>
+                      <div className="flex gap-3">
+                        <button 
+                          onClick={() => handleAddQuestion('assignments')}
+                          className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black flex items-center gap-2"
+                        >
+                          <Plus className="w-5 h-5" />
+                          إضافة تكليف
+                        </button>
+                      </div>
                     </div>
 
-                    {showQuestionForm && (
-                      <div className="bg-slate-50 border-2 border-indigo-600 rounded-[35px] p-8 space-y-8 animate-in zoom-in-95 duration-300 mb-10">
-                         {/* ... reuse question form logic ... */}
-                         <div className="flex justify-between items-center border-b border-slate-100 pb-6">
-                            <h5 className="text-lg font-black text-slate-900">إضافة تكليف جديد</h5>
+                    {showQuestionForm && questionSource === 'assignments' && (
+                       <div className="bg-slate-50 border-2 border-indigo-600 rounded-[35px] p-8 space-y-8 animate-in zoom-in-95 duration-300 mb-10">
+                          <div className="flex justify-between items-center border-b border-slate-100 pb-6">
+                            <h5 className="text-lg font-black text-slate-900 flex items-center gap-3">
+                              <Edit2 className="w-6 h-6 text-indigo-600" />
+                              {editingQuestionIndex !== null ? "تعديل التكليف" : "إضافة تكليف جديد"}
+                            </h5>
                             <button onClick={() => setShowQuestionForm(false)} className="text-slate-400 hover:text-slate-900"><X className="w-6 h-6" /></button>
-                         </div>
-                         <div className="space-y-4">
-                            <label className="text-xs font-black text-slate-400 uppercase">نص التكليف / السؤال</label>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">المعيار (Standard)</label>
+                              <select 
+                                className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600"
+                                value={tempQuestion.standard}
+                                onChange={(e) => setTempQuestion({...tempQuestion, standard: e.target.value})}
+                              >
+                                <option value="">اختر المعيار...</option>
+                                {STANDARDS.map(s => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">المؤشر (Indicator)</label>
+                              <select 
+                                className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600"
+                                value={tempQuestion.indicator}
+                                onChange={(e) => setTempQuestion({...tempQuestion, indicator: e.target.value})}
+                              >
+                                <option value="">اختر المؤشر...</option>
+                                {INDICATORS.map(i => <option key={i} value={i}>{i}</option>)}
+                              </select>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">ناتج التعلم (LO)</label>
+                              <select 
+                                className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600"
+                                value={tempQuestion.learningOutcome}
+                                onChange={(e) => setTempQuestion({...tempQuestion, learningOutcome: e.target.value})}
+                              >
+                                <option value="">اختر ناتج التعلم...</option>
+                                {LEARNING_OUTCOMES.map(lo => <option key={lo} value={lo}>{lo}</option>)}
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">نوع السؤال</label>
+                              <select 
+                                className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600"
+                                value={tempQuestion.type}
+                                onChange={(e) => setTempQuestion({...tempQuestion, type: e.target.value, options: e.target.value === "TRUE_FALSE" ? ["صحيح", "خطأ", "", ""] : ["", "", "", ""]})}
+                              >
+                                {QUESTION_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                              </select>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">المستوى</label>
+                              <select 
+                                className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600"
+                                value={tempQuestion.level}
+                                onChange={(e) => setTempQuestion({...tempQuestion, level: e.target.value})}
+                              >
+                                <option value="Easy">سهل</option>
+                                <option value="Medium">متوسط</option>
+                                <option value="Hard">صعب</option>
+                              </select>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">الدرجة</label>
+                              <input 
+                                type="number"
+                                className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600"
+                                value={tempQuestion.points}
+                                onChange={(e) => setTempQuestion({...tempQuestion, points: parseInt(e.target.value)})}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">المحاولات</label>
+                              <input 
+                                type="number"
+                                min="1"
+                                className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600"
+                                value={tempQuestion.attempts || 1}
+                                onChange={(e) => setTempQuestion({...tempQuestion, attempts: parseInt(e.target.value)})}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest">نص التكليف</label>
                             <RichTextEditor 
                               value={tempQuestion.text}
                               onChange={(val) => setTempQuestion({...tempQuestion, text: val})}
@@ -546,7 +654,7 @@ export default function CreateCoursePage() {
                           <BookOpen className="w-5 h-5" /> بنك الأسئلة
                         </button>
                         <button 
-                          onClick={handleAddQuestion}
+                          onClick={() => handleAddQuestion('exercises')}
                           className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black flex items-center gap-2"
                         >
                           <Plus className="w-5 h-5" />
@@ -565,7 +673,43 @@ export default function CreateCoursePage() {
                           <button onClick={() => setShowQuestionForm(false)} className="text-slate-400 hover:text-slate-900"><X className="w-6 h-6" /></button>
                         </div>
 
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">المعيار (Standard)</label>
+                            <select 
+                              className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 appearance-none"
+                              value={tempQuestion.standard}
+                              onChange={(e) => setTempQuestion({...tempQuestion, standard: e.target.value})}
+                            >
+                              <option value="">اختر المعيار...</option>
+                              {STANDARDS.map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">المؤشر (Indicator)</label>
+                            <select 
+                              className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 appearance-none"
+                              value={tempQuestion.indicator}
+                              onChange={(e) => setTempQuestion({...tempQuestion, indicator: e.target.value})}
+                            >
+                              <option value="">اختر المؤشر...</option>
+                              {INDICATORS.map(i => <option key={i} value={i}>{i}</option>)}
+                            </select>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">ناتج التعلم (LO)</label>
+                            <select 
+                              className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 appearance-none"
+                              value={tempQuestion.learningOutcome}
+                              onChange={(e) => setTempQuestion({...tempQuestion, learningOutcome: e.target.value})}
+                            >
+                              <option value="">اختر ناتج التعلم...</option>
+                              {LEARNING_OUTCOMES.map(lo => <option key={lo} value={lo}>{lo}</option>)}
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                           <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">نوع السؤال</label>
                             <select 
@@ -595,16 +739,6 @@ export default function CreateCoursePage() {
                               className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600"
                               value={tempQuestion.points}
                               onChange={(e) => setTempQuestion({...tempQuestion, points: parseInt(e.target.value)})}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">ناتج التعلم (LO)</label>
-                            <input 
-                              type="text"
-                              className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600"
-                              value={tempQuestion.learningOutcome}
-                              onChange={(e) => setTempQuestion({...tempQuestion, learningOutcome: e.target.value})}
-                              placeholder="مثال: LO-101"
                             />
                           </div>
                           <div className="space-y-2">
@@ -693,12 +827,13 @@ export default function CreateCoursePage() {
                               <div className="flex items-center gap-2 mb-1">
                                 <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded uppercase">{q.type}</span>
                                 <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded uppercase">{q.level} • {q.points} pts</span>
+                                {q.standard && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">{q.standard}</span>}
                               </div>
                               <div className="text-slate-700 font-bold truncate max-w-xl" dangerouslySetInnerHTML={{ __html: q.text.replace(/<[^>]*>?/gm, '').substring(0, 80) + '...' }} />
                             </div>
                           </div>
                           <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => handleEditQuestion(index)} className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"><Edit2 className="w-5 h-5" /></button>
+                            <button onClick={() => handleEditQuestion('exercises', index)} className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"><Edit2 className="w-5 h-5" /></button>
                             <button onClick={() => removeQuestion(index)} className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"><Trash2 className="w-5 h-5" /></button>
                           </div>
                         </div>
