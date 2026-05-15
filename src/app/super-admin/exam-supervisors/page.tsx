@@ -30,10 +30,13 @@ export default function ExamSupervisorsManagement() {
       });
       if (res.ok) {
         const data = await res.json();
-        setSupervisors(data);
+        // Ensure we extract the array correctly if the API wraps it
+        const supervisorsList = Array.isArray(data) ? data : (data.users || data.supervisors || []);
+        setSupervisors(supervisorsList);
       }
     } catch (error) {
       console.error(error);
+      setSupervisors([]);
     } finally {
       setIsLoading(false);
     }
@@ -65,10 +68,10 @@ export default function ExamSupervisorsManagement() {
     }
   };
 
-  const filtered = supervisors.filter(s =>
+  const filtered = Array.isArray(supervisors) ? supervisors.filter(s =>
     s.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
     s.username?.includes(searchTerm)
-  );
+  ) : [];
 
   return (
     <div className="min-h-screen bg-[#070710] text-slate-200" dir="rtl">

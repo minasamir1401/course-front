@@ -25,28 +25,12 @@ export default function StudentDashboard() {
           return;
         }
 
-        const [statsRes, coursesRes] = await Promise.all([
-          fetch(`${API_URL}/student/stats`, {
-            headers: { "Authorization": `Bearer ${token}` }
-          }),
-          fetch(`${API_URL}/courses`, {
-            headers: { "Authorization": `Bearer ${token}` }
-          })
-        ]);
+        const res = await fetch(`${API_URL}/student/stats`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
 
-        if (statsRes.ok && coursesRes.ok) {
-          const statsData = await statsRes.json();
-          const coursesRaw = await coursesRes.json();
-          const coursesList = Array.isArray(coursesRaw) ? coursesRaw : (coursesRaw.courses || []);
-          
-          // Merge course details (like coverImage) into progresses
-          if (statsData.courseProgresses) {
-            statsData.courseProgresses = statsData.courseProgresses.map((p: any) => {
-              const fullCourse = coursesList.find((c: any) => c.id === p.id || c.id === p.courseId);
-              return { ...p, ...fullCourse };
-            });
-          }
-          
+        if (res.ok) {
+          const statsData = await res.json();
           setStats(statsData);
         }
       } catch (error) {
