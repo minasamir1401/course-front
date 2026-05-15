@@ -57,7 +57,8 @@ export default function SuperAdminNewExamPage() {
     endDate: getDefaultDates().end,
     attemptsAllowed: 1,
     status: "PUBLISHED",
-    grade: "الصف الأول الثانوي",
+    grades: ["الصف الأول الثانوي"],
+    subjects: ["اللغة العربية"],
     skill: "Math",
     level: "Medium",
   });
@@ -90,6 +91,22 @@ export default function SuperAdminNewExamPage() {
     "Religious Education", "National Education", "SAT Reading", "SAT Writing"
   ];
 
+  const INDICATORS = [
+    "المؤشر 1.1: فهم النص المسموع",
+    "المؤشر 2.1: تحليل الأفكار الرئيسية",
+    "المؤشر 3.1: تطبيق القواعد النحوية",
+    "المؤشر 4.1: تنظيم الفقرات",
+    "المؤشر 5.1: استنتاج النتائج"
+  ];
+
+  const LEARNING_OUTCOMES = [
+    "الناتج 1: يميز بين أنواع النصوص",
+    "الناتج 2: يعبر عن أفكاره بوضوح",
+    "الناتج 3: يستخدم لغة سليمة",
+    "الناتج 4: يربط بين المفاهيم",
+    "الناتج 5: يقيم المحتوى بمهارة"
+  ];
+
   const VISIBILITY_OPTIONS = [
     { id: "SHOW_SCORE", label: "الدرجة فقط", desc: "سيرى الطالب مجموع درجاته فقط", icon: Eye },
     { id: "SHOW_ANSWERS", label: "الإجابات الصحيحة", desc: "سيتمكن الطالب من مراجعة كل إجابة مع النموذج الصحيح", icon: CheckCircle },
@@ -100,6 +117,7 @@ export default function SuperAdminNewExamPage() {
   const [currentQuestion, setCurrentQuestion] = useState<any>({
     text: "", type: "MCQ", options: ["", "", "", ""],
     correctAnswer: "", points: 1, skill: "Math", level: "Medium",
+    standard: "",
     learningOutcome: "",
     explanation: "", imageUrl: "", correctAnswers: [],
   });
@@ -112,13 +130,15 @@ export default function SuperAdminNewExamPage() {
     setFetchingSchools(true);
     setFetchError("");
     try {
-      const token = localStorage.getItem("super_admin_token");
-      const schoolsRes = await fetch(`${API_URL}/admin/schools`, {
+      const token = localStorage.getItem("super_admin_token") || localStorage.getItem("lms_token") || localStorage.getItem("token");
+      const schoolsRes = await fetch(`${API_URL}/admin/schools?limit=100`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const schoolsData = await schoolsRes.json();
-      if (schoolsRes.ok && Array.isArray(schoolsData)) {
-        setSchools(schoolsData);
+      
+      if (schoolsRes.ok) {
+        const schoolsList = Array.isArray(schoolsData) ? schoolsData : (schoolsData.schools || []);
+        setSchools(schoolsList);
       } else {
         setFetchError("فشل في جلب قائمة المدارس");
       }
@@ -134,6 +154,7 @@ export default function SuperAdminNewExamPage() {
     setCurrentQuestion({
       text: "", type: "MCQ", options: ["", "", "", ""],
       correctAnswer: "", points: 1, skill: "Math", level: "Medium",
+      standard: "",
       learningOutcome: "",
       explanation: "", imageUrl: "", correctAnswers: [],
     });
@@ -320,27 +341,36 @@ export default function SuperAdminNewExamPage() {
 
               <div className="space-y-6">
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest">المادة / الفئة</label>
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest">المواد (Subjects)</label>
                   <select 
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 outline-none font-bold text-slate-700 text-sm focus:ring-2 focus:ring-indigo-500/20 appearance-none"
-                    value={examInfo.category}
-                    onChange={(e) => setExamInfo({...examInfo, category: e.target.value})}
+                    multiple
+                    className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 outline-none font-bold text-black text-xs focus:ring-2 focus:ring-indigo-500/20 min-h-[120px]"
+                    value={examInfo.subjects}
+                    onChange={(e) => {
+                       const values = Array.from(e.target.selectedOptions, option => option.value);
+                       setExamInfo({...examInfo, subjects: values});
+                    }}
                   >
                     {CATEGORIES.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
+                      <option key={cat} value={cat} className="py-1">{cat}</option>
                     ))}
                   </select>
+                  <p className="text-[9px] text-slate-400 font-bold px-1">استخدم Ctrl للاختيار المتعدد</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col gap-2">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">المرحلة</label>
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">المراحل الدراسية</label>
                     <select 
-                      className="w-full bg-[#0a0a14] border border-white/10 rounded-xl px-4 py-3 outline-none font-bold text-white text-sm focus:ring-2 focus:ring-indigo-500/20 appearance-none"
-                      value={examInfo.grade}
-                      onChange={(e) => setExamInfo({...examInfo, grade: e.target.value})}
+                      multiple
+                      className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 outline-none font-bold text-black text-xs focus:ring-2 focus:ring-indigo-500/20 min-h-[120px]"
+                      value={examInfo.grades}
+                      onChange={(e) => {
+                         const values = Array.from(e.target.selectedOptions, option => option.value);
+                         setExamInfo({...examInfo, grades: values});
+                      }}
                     >
-                      {GRADES.map(g => <option key={g} value={g} className="bg-[#0a0a14] text-white">{g}</option>)}
+                      {GRADES.map(g => <option key={g} value={g} className="py-1">{g}</option>)}
                     </select>
                   </div>
                   <div className="flex flex-col gap-2">
@@ -438,54 +468,78 @@ export default function SuperAdminNewExamPage() {
                   <Globe className="w-6 h-6 text-indigo-600" />
                   المدارس المستهدفة
                 </h3>
-                {!examInfo.isCentral && (
-                   <button 
-                     onClick={handleSelectAll}
-                     className="text-xs font-black text-indigo-600 hover:bg-indigo-50 px-3 py-1.5 rounded-lg transition-all"
-                   >
-                     {examInfo.schoolIds.length === schools.length ? "إلغاء الكل" : "تحديد الكل"}
-                   </button>
-                )}
               </div>
 
               <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1.5 rounded-2xl">
                 <button 
                   onClick={() => setExamInfo({...examInfo, isCentral: true})}
-                  className={`py-3 rounded-xl font-bold text-xs transition-all ${examInfo.isCentral ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}
+                  className={`py-3 rounded-xl font-bold text-xs transition-all ${examInfo.isCentral ? 'bg-white text-indigo-600 shadow-sm border border-indigo-100' : 'text-slate-500'}`}
                 >
-                  جميع المدارس
+                  جميع المدارس (مركزي)
                 </button>
                 <button 
                   onClick={() => setExamInfo({...examInfo, isCentral: false})}
-                  className={`py-3 rounded-xl font-bold text-xs transition-all ${!examInfo.isCentral ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}
+                  className={`py-3 rounded-xl font-bold text-xs transition-all ${!examInfo.isCentral ? 'bg-white text-indigo-600 shadow-sm border border-indigo-100' : 'text-slate-500'}`}
                 >
-                  تحديد يدوي
+                  اختيار مدارس محددة
                 </button>
               </div>
 
               {!examInfo.isCentral && (
-                <div className="flex flex-col gap-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-                   {fetchingSchools ? (
-                    <div className="flex flex-col items-center justify-center py-12 gap-3 text-slate-400">
+                <div className="space-y-4 animate-in fade-in duration-300">
+                  {fetchingSchools ? (
+                    <div className="flex flex-col items-center justify-center py-12 gap-3 text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
                       <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
                       <span className="text-xs font-bold">جاري تحميل قائمة المدارس...</span>
                     </div>
-                  ) : schools.map((school: any) => (
-                    <label key={school.id} className="flex items-center gap-3 p-3.5 rounded-2xl border border-slate-50 hover:bg-slate-50 cursor-pointer transition-all">
-                      <input 
-                        type="checkbox" 
-                        className="w-5 h-5 accent-indigo-600 rounded-lg"
-                        checked={examInfo.schoolIds?.includes(school.id)}
-                        onChange={() => {
-                          const newIds = examInfo.schoolIds?.includes(school.id)
-                            ? examInfo.schoolIds.filter((id: string) => id !== school.id)
-                            : [...(examInfo.schoolIds || []), school.id];
-                          setExamInfo({...examInfo, schoolIds: newIds});
+                  ) : fetchError ? (
+                    <div className="flex flex-col items-center justify-center py-10 gap-4 text-center bg-red-50 rounded-2xl border border-red-100">
+                      <AlertCircle className="w-8 h-8 text-red-500" />
+                      <div className="space-y-1">
+                        <p className="text-xs font-black text-red-900">{fetchError}</p>
+                        <p className="text-[10px] text-red-600 font-bold">تأكد من اتصالك بالسيرفر أو تشغيل الـ Backend</p>
+                      </div>
+                      <button 
+                        onClick={fetchData}
+                        className="px-6 py-2 bg-white border border-red-200 text-red-600 rounded-xl text-[10px] font-black hover:bg-red-600 hover:text-white transition-all shadow-sm"
+                      >
+                        إعادة المحاولة
+                      </button>
+                    </div>
+                  ) : schools.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 gap-3 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                      <Globe className="w-8 h-8 text-slate-300" />
+                      <div className="space-y-1">
+                        <p className="text-xs font-black text-slate-600">لا توجد مدارس مضافة</p>
+                        <p className="text-[10px] text-slate-400 font-bold">لم نجد أي مدارس في قاعدة البيانات حالياً</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">اختر المدارس من القائمة:</label>
+                      <select 
+                        multiple
+                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-4 outline-none font-bold text-black text-sm focus:ring-2 focus:ring-indigo-500/20 min-h-[150px] appearance-none cursor-pointer"
+                        value={examInfo.schoolIds}
+                        onChange={(e) => {
+                          const values = Array.from(e.target.selectedOptions, option => option.value);
+                          setExamInfo({...examInfo, schoolIds: values});
                         }}
-                      />
-                      <span className="text-sm font-bold text-slate-700">{school.name}</span>
-                    </label>
-                  ))}
+                      >
+                        {schools.map((school: any) => (
+                          <option key={school.id} value={school.id} className="py-2 px-4 rounded-xl hover:bg-indigo-50 my-1">
+                            {school.name}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="flex justify-between items-center px-2">
+                        <p className="text-[9px] text-slate-400 font-bold">اضغط Ctrl للاختيار المتعدد</p>
+                        <button onClick={handleSelectAll} className="text-[10px] font-black text-indigo-600 hover:underline">
+                          {examInfo.schoolIds.length === schools.length ? "إلغاء الكل" : "تحديد كافة المدارس"}
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -558,12 +612,38 @@ export default function SuperAdminNewExamPage() {
                   </div>
                   
                   <div className="p-8 md:p-12 space-y-8">
+                    {/* Metadata Row */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-slate-100">
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">المؤشر (Indicator)</label>
+                        <select 
+                          className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 font-bold text-xs text-black outline-none"
+                          value={currentQuestion.indicator || ""}
+                          onChange={(e) => updateCurrentQuestion("indicator", e.target.value)}
+                        >
+                          <option value="">اختر المؤشر...</option>
+                          {INDICATORS.map(ind => <option key={ind} value={ind}>{ind}</option>)}
+                        </select>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">نواتج التعلم (Learning Outcomes)</label>
+                        <select 
+                          className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 font-bold text-xs text-black outline-none"
+                          value={currentQuestion.learningOutcome || ""}
+                          onChange={(e) => updateCurrentQuestion("learningOutcome", e.target.value)}
+                        >
+                          <option value="">اختر ناتج التعلم...</option>
+                          {LEARNING_OUTCOMES.map(lo => <option key={lo} value={lo}>{lo}</option>)}
+                        </select>
+                      </div>
+                    </div>
+
                     {/* Form Content */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 bg-slate-50 rounded-[30px] border border-slate-100">
                       <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">نوع السؤال</label>
                         <select 
-                          className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none"
+                          className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none"
                           value={currentQuestion.type}
                           onChange={(e) => {
                             const newType = e.target.value;
@@ -583,9 +663,21 @@ export default function SuperAdminNewExamPage() {
                       </div>
 
                       <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">المعيار (Standard)</label>
+                        <select 
+                          className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none"
+                          value={currentQuestion.standard}
+                          onChange={(e) => updateCurrentQuestion("standard", e.target.value)}
+                        >
+                          <option value="">اختر المعيار...</option>
+                          {STANDARDS.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">المهارة</label>
                         <select 
-                          className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none"
+                          className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none"
                           value={currentQuestion.skill}
                           onChange={(e) => updateCurrentQuestion("skill", e.target.value)}
                         >
@@ -598,7 +690,7 @@ export default function SuperAdminNewExamPage() {
                       <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">مستوى الصعوبة</label>
                         <select 
-                          className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none"
+                          className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none"
                           value={currentQuestion.level}
                           onChange={(e) => updateCurrentQuestion("level", e.target.value)}
                         >
@@ -724,9 +816,10 @@ export default function SuperAdminNewExamPage() {
                           <button onClick={() => moveQuestion(index, 'down')} disabled={index === questions.length - 1} className="text-slate-300 hover:text-indigo-600 disabled:opacity-20 transition-colors"><ChevronDown className="w-4 h-4" /></button>
                         </div>
                         <div className="flex flex-col flex-1 overflow-hidden">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded uppercase">{QUESTION_TYPES.find(t => t.id === q.type)?.label}</span>
                             <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded uppercase">{q.level === "Easy" ? "سهل" : q.level === "Medium" ? "متوسط" : "صعب"} • {q.points} نقطة</span>
+                            {q.standard && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">{q.standard}</span>}
                           </div>
                           <div 
                             className="text-slate-700 font-bold truncate text-sm"
