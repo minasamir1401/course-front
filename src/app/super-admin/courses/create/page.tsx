@@ -478,19 +478,6 @@ export default function CreateCoursePage() {
                       ))}
                     </div>
                   </div>
-                )}setCurrentLesson({...currentLesson, learningOutcomes: e.target.value})}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600"
-                            placeholder="اختر أو اكتب نواتج التعلم..."
-                          />
-                          <datalist id="los-list">
-                            <option value="ناتج 1: أن يكون الطالب قادراً على..." />
-                            <option value="ناتج 2: أن يميز الطالب بين..." />
-                            <option value="ناتج 3: أن يحلل الطالب..." />
-                          </datalist>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                 )}
 
                 {activeTab === 'slides' && (
