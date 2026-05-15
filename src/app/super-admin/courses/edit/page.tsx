@@ -658,10 +658,10 @@ export default function EditCoursePage() {
                         </div>
                         <RichTextEditor value={tempQuestion.text} onChange={(val) => setTempQuestion({ ...tempQuestion, text: val })} placeholder="نص السؤال..." className="!bg-white !border-slate-100" />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          {tempQuestion.type !== "TRUE_FALSE" ? tempQuestion.options.map((opt: string, oIdx: number) => (
+                          {tempQuestion.type !== "TRUE_FALSE" ? (tempQuestion.options || ["", "", "", ""]).map((opt: string, oIdx: number) => (
                             <div key={oIdx} className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${tempQuestion.correctAnswer === opt && opt !== "" ? 'bg-emerald-50 border-emerald-500' : 'bg-slate-50 border-transparent'}`}>
                               <div onClick={() => setTempQuestion({ ...tempQuestion, correctAnswer: opt })} className={`w-7 h-7 rounded-full border-4 cursor-pointer flex items-center justify-center ${tempQuestion.correctAnswer === opt && opt !== "" ? 'bg-emerald-500 border-white' : 'bg-white border-slate-200'}`}>{tempQuestion.correctAnswer === opt && opt !== "" && <CheckCircle2 className="w-4 h-4 text-white" />}</div>
-                              <input type="text" value={opt} onChange={(e) => { const opts = [...tempQuestion.options]; opts[oIdx] = e.target.value; setTempQuestion({ ...tempQuestion, options: opts }); }} className="bg-transparent flex-1 outline-none text-slate-900 font-bold" placeholder={`الخيار ${oIdx + 1}`} />
+                              <input type="text" value={opt} onChange={(e) => { const opts = [...(tempQuestion.options || ["", "", "", ""])]; opts[oIdx] = e.target.value; setTempQuestion({ ...tempQuestion, options: opts }); }} className="bg-transparent flex-1 outline-none text-slate-900 font-bold" placeholder={`الخيار ${oIdx + 1}`} />
                             </div>
                           )) : ["صحيح", "خطأ"].map((opt, oIdx) => (
                             <div key={oIdx} className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${tempQuestion.correctAnswer === opt ? 'bg-emerald-50 border-emerald-500' : 'bg-slate-50 border-transparent'}`}>
