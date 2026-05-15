@@ -691,7 +691,7 @@ export default function EditCoursePage() {
                         <div key={index} className="bg-white border border-slate-100 rounded-3xl p-6 flex justify-between items-center group hover:border-indigo-200 transition-all shadow-sm">
                           <div className="flex items-center gap-6 overflow-hidden">
                             <span className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-indigo-600 font-black border border-slate-100">{index + 1}</span>
-                            <div className="text-slate-900 font-bold truncate max-w-xl" dangerouslySetInnerHTML={{ __html: q.text.replace(/<[^>]*>?/gm, '').substring(0, 80) + '...' }} />
+                            <div className="text-slate-900 font-bold truncate max-w-xl" dangerouslySetInnerHTML={{ __html: (q.text || '').replace(/<[^>]*>?/gm, '').substring(0, 80) + (q.text?.length > 80 ? '...' : '') }} />
                           </div>
                           <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button onClick={() => handleEditQuestion(index)} className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"><Edit2 className="w-5 h-5" /></button>
