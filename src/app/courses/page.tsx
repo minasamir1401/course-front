@@ -32,29 +32,13 @@ export default function CoursesPage() {
           return;
         }
 
-        const [statsRes, coursesRes] = await Promise.all([
-          fetch(`${API_URL}/student/stats`, {
-            headers: { "Authorization": `Bearer ${token}` }
-          }),
-          fetch(`${API_URL}/courses`, {
-            headers: { "Authorization": `Bearer ${token}` }
-          })
-        ]);
+        const res = await fetch(`${API_URL}/student/stats`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
 
-        if (statsRes.ok && coursesRes.ok) {
-          const statsData = await statsRes.json();
-          const coursesRaw = await coursesRes.json();
-          const coursesList = Array.isArray(coursesRaw) ? coursesRaw : (coursesRaw.courses || []);
-          
-          let progresses = statsData.courseProgresses || [];
-          
-          // Merge course details
-          progresses = progresses.map((p: any) => {
-            const fullCourse = coursesList.find((c: any) => c.id === p.id || c.id === p.courseId);
-            return { ...p, ...fullCourse };
-          });
-          
-          setCourses(progresses);
+        if (res.ok) {
+          const statsData = await res.json();
+          setCourses(statsData.courseProgresses || []);
         }
       } catch (error) {
         console.error("Failed to fetch courses:", error);

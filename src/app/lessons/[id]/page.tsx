@@ -75,10 +75,15 @@ export default function LessonPlayerPage() {
         try { questions = typeof data.questions === 'string' ? JSON.parse(data.questions) : (data.questions || []); } catch (e) { }
         try { attachments = typeof data.attachments === 'string' ? JSON.parse(data.attachments) : (data.attachments || []); } catch (e) { }
 
+        const sanitizedQuestions = Array.isArray(questions) ? questions.map(q => ({
+          ...q,
+          options: Array.isArray(q.options) ? q.options : []
+        })) : [];
+
         setLesson({
           ...data,
           slides: Array.isArray(slides) && slides.length ? slides : [{ title: "مقدمة الدرس", content: data.summary || "أهلاً بك في هذا الدرس." }],
-          questions: Array.isArray(questions) ? questions : [],
+          questions: sanitizedQuestions,
           attachments: Array.isArray(attachments) ? attachments : []
         });
 
@@ -363,45 +368,62 @@ export default function LessonPlayerPage() {
                 </div>
 
                 <div className="premium-card rounded-[40px] p-8 md:p-14 shadow-2xl border-indigo-50">
-                  <div className="flex items-center gap-3 mb-6">
-                     <span className="px-3 py-1 bg-slate-100 rounded-lg text-[10px] font-black text-slate-500 uppercase">سؤال {currentQuestionIndex + 1}</span>
-                  </div>
-                  
-                  <h3 className="text-xl md:text-3xl font-black text-slate-900 mb-10 leading-relaxed tracking-tight" dangerouslySetInnerHTML={{ __html: lesson.questions[currentQuestionIndex].text }} />
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-10">
-                    {lesson.questions[currentQuestionIndex].options.map((opt: string, oIdx: number) => (
-                      <button 
-                        key={oIdx} 
-                        onClick={() => handleAnswerSelect(opt)} 
-                        className={`p-6 md:p-8 rounded-[30px] border-4 text-right transition-all duration-300 font-black text-base md:text-lg relative ${answers[currentQuestionIndex] === opt ? 'bg-indigo-600 border-white text-white shadow-xl shadow-indigo-100' : 'bg-white border-slate-50 text-slate-600 hover:border-indigo-200'}`}
-                      >
-                        <div className="flex items-center justify-between">
-                           <span>{opt}</span>
-                           <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${answers[currentQuestionIndex] === opt ? 'border-white bg-white/20' : 'border-slate-100'}`}>
-                              {answers[currentQuestionIndex] === opt && <CheckCircle2 className="w-4 h-4" />}
-                           </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
+                  {lesson.questions.length > 0 && lesson.questions[currentQuestionIndex] ? (
+                    <>
+                      <div className="flex items-center gap-3 mb-6">
+                        <span className="px-3 py-1 bg-slate-100 rounded-lg text-[10px] font-black text-slate-500 uppercase">سؤال {currentQuestionIndex + 1}</span>
+                      </div>
+                      
+                      <h3 className="text-xl md:text-3xl font-black text-slate-900 mb-10 leading-relaxed tracking-tight" dangerouslySetInnerHTML={{ __html: lesson.questions[currentQuestionIndex].text }} />
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-10">
+                        {(lesson.questions[currentQuestionIndex].options || []).map((opt: string, oIdx: number) => (
+                          <button 
+                            key={oIdx} 
+                            onClick={() => handleAnswerSelect(opt)} 
+                            className={`p-6 md:p-8 rounded-[30px] border-4 text-right transition-all duration-300 font-black text-base md:text-lg relative ${answers[currentQuestionIndex] === opt ? 'bg-indigo-600 border-white text-white shadow-xl shadow-indigo-100' : 'bg-white border-slate-50 text-slate-600 hover:border-indigo-200'}`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span>{opt}</span>
+                              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${answers[currentQuestionIndex] === opt ? 'border-white bg-white/20' : 'border-slate-100'}`}>
+                                  {answers[currentQuestionIndex] === opt && <CheckCircle2 className="w-4 h-4" />}
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
 
-                  <div className="flex justify-between items-center mt-12 pt-6 border-t border-slate-100">
-                    <button 
-                      onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))} 
-                      disabled={currentQuestionIndex === 0} 
-                      className="text-slate-400 px-6 py-3 rounded-xl font-black hover:text-slate-600 disabled:opacity-20"
-                    >
-                      السابق
-                    </button>
-                    <button 
-                      onClick={handleNextQuestion} 
-                      className={`px-10 py-4 rounded-2xl font-black transition-all flex items-center gap-3 text-lg shadow-xl ${currentQuestionIndex < lesson.questions.length - 1 ? 'bg-slate-950 text-white hover:bg-indigo-600' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
-                    >
-                      {currentQuestionIndex < lesson.questions.length - 1 ? "التالي" : "إنهاء الاختيار"}
-                      <ChevronLeft className="w-6 h-6" />
-                    </button>
-                  </div>
+                      <div className="flex justify-between items-center mt-12 pt-6 border-t border-slate-100">
+                        <button 
+                          onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))} 
+                          disabled={currentQuestionIndex === 0} 
+                          className="text-slate-400 px-6 py-3 rounded-xl font-black hover:text-slate-600 disabled:opacity-20"
+                        >
+                          السابق
+                        </button>
+                        <button 
+                          onClick={handleNextQuestion} 
+                          className={`px-10 py-4 rounded-2xl font-black transition-all flex items-center gap-3 text-lg shadow-xl ${currentQuestionIndex < lesson.questions.length - 1 ? 'bg-slate-950 text-white hover:bg-indigo-600' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                        >
+                          {currentQuestionIndex < lesson.questions.length - 1 ? "التالي" : "إنهاء الاختيار"}
+                          <ChevronLeft className="w-6 h-6" />
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-20 space-y-6">
+                      <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto">
+                        <HelpCircle className="w-10 h-10 text-slate-200" />
+                      </div>
+                      <p className="text-slate-400 font-bold text-lg">لا توجد تمارين متاحة لهذا الدرس حالياً.</p>
+                      <button 
+                        onClick={() => setCurrentStage('summary')}
+                        className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-black"
+                      >
+                        تجاوز التمارين
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -487,20 +509,6 @@ export default function LessonPlayerPage() {
                </div>
             </div>
 
-            {/* Support Widget */}
-            <div className="bg-slate-950 p-10 rounded-[50px] text-white relative overflow-hidden group">
-               <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/20 blur-[60px] -mr-16 -mt-16" />
-               <div className="relative z-10 space-y-6 text-center">
-                  <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                     <MessageSquare className="w-6 h-6 text-indigo-400" />
-                  </div>
-                  <h3 className="text-xl font-black">اسأل معلمك</h3>
-                  <p className="text-indigo-200/50 text-[11px] font-bold leading-relaxed">إذا كان لديك أي استفسار حول محتوى الدرس أو التمارين.</p>
-                  <button className="w-full py-4 bg-white text-slate-950 rounded-2xl font-black text-xs hover:bg-indigo-500 hover:text-white transition-all">
-                     بدء محادثة فورية
-                  </button>
-               </div>
-            </div>
           </div>
         </div>
       </div>

@@ -18,26 +18,85 @@ export default function SuperAdminCoursesPage() {
   const { showToast } = useNotification();
   const [courses, setCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [apiStats, setApiStats] = useState({ totalCourses: 0, totalLessons: 0, totalSubjects: 0 });
+  const [loadingStats, setLoadingStats] = useState(true);
 
   useEffect(() => {
-    fetchCourses();
-  }, []);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setPage(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-  const fetchCourses = async () => {
+  useEffect(() => {
+    fetchCourses(page === 1);
+  }, [debouncedSearch, page]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [debouncedSearch]);
+
+  const fetchStats = async () => {
     try {
+      setLoadingStats(true);
       const token = localStorage.getItem("super_admin_token");
-      const res = await fetch(`${API_URL}/courses`, {
+      const url = new URL(`${API_URL}/courses/stats`);
+      if (debouncedSearch) {
+        url.searchParams.append("search", debouncedSearch);
+      }
+
+      const res = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
-      const coursesList = Array.isArray(data) ? data : (data.courses || []);
-      setCourses(coursesList);
+      setApiStats(data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
+  const fetchCourses = async (reset = false) => {
+    try {
+      if (reset) setLoading(true);
+      else setLoadingMore(true);
+
+      const token = localStorage.getItem("super_admin_token");
+      const url = new URL(`${API_URL}/courses`);
+      url.searchParams.append("page", page.toString());
+      url.searchParams.append("limit", "12");
+      if (debouncedSearch) {
+        url.searchParams.append("search", debouncedSearch);
+      }
+
+      const res = await fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      
+      const newCourses = data.courses || [];
+      if (reset) {
+        setCourses(newCourses);
+      } else {
+        setCourses(prev => [...prev, ...newCourses]);
+      }
+
+      if (data.pagination) {
+        setHasMore(data.pagination.page < data.pagination.totalPages);
+      }
     } catch (e) {
       console.error(e);
       showToast("خطأ في تحميل الكورسات", "error");
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -52,6 +111,7 @@ export default function SuperAdminCoursesPage() {
       if (res.ok) {
         showToast("تم حذف الكورس بنجاح", "success");
         setCourses(prev => prev.filter(c => c.id !== id));
+        setApiStats(prev => ({ ...prev, totalCourses: prev.totalCourses - 1 }));
       }
     } catch (e) {
       showToast("حدث خطأ أثناء الحذف", "error");
@@ -59,17 +119,12 @@ export default function SuperAdminCoursesPage() {
   };
 
   const stats = React.useMemo(() => ({
-    total: courses.length,
-    lessons: courses.reduce((acc, c) => acc + (c._count?.lessons || c.lessons?.length || 0), 0),
-    subjects: [...new Set(courses.map(c => c.subject).filter(Boolean))].length
-  }), [courses]);
+    total: apiStats.totalCourses,
+    lessons: apiStats.totalLessons,
+    subjects: apiStats.totalSubjects
+  }), [apiStats]);
 
-  const filteredCourses = React.useMemo(() => {
-    return courses.filter(c => 
-      c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (c.subject && c.subject.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
-  }, [courses, searchQuery]);
+  const filteredCourses = courses;
 
   return (
     <DashboardLayout>
@@ -117,7 +172,13 @@ export default function SuperAdminCoursesPage() {
                       </div>
                       <div>
                          <p className="text-[8px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{stat.label}</p>
-                         <p className="text-sm sm:text-xl font-black text-slate-900 leading-tight">{stat.value}</p>
+                         <p className="text-sm sm:text-xl font-black text-slate-900 leading-tight">
+                            {loadingStats ? (
+                              <span className="inline-block w-8 h-4 bg-slate-100 animate-pulse rounded"></span>
+                            ) : (
+                              stat.value
+                            )}
+                          </p>
                       </div>
                    </div>
                  ))}
@@ -159,70 +220,91 @@ export default function SuperAdminCoursesPage() {
                  </Link>
               </div>
           ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8 pb-10 sm:pb-20">
-                 {filteredCourses.map((course) => (
-                    <div key={course.id} className="group bg-white rounded-[20px] sm:rounded-[40px] border border-slate-100 p-4 sm:p-8 hover:shadow-3xl hover:shadow-indigo-600/10 transition-all duration-500 relative overflow-hidden">
-                      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-blue-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-right"></div>
-                      
-                      <div className="flex justify-between items-start mb-4 sm:mb-8">
-                         <div className="w-10 h-10 sm:w-16 h-16 bg-indigo-50 rounded-lg sm:rounded-2xl flex items-center justify-center group-hover:scale-110 transition-all duration-500 overflow-hidden border border-slate-100 shrink-0">
-                            {course.coverImage ? (
-                               <img src={getFullImageUrl(course.coverImage) || ""} className="w-full h-full object-cover" alt="Cover" />
-                            ) : (
-                               <Layers className="w-5 h-5 sm:w-8 h-8 text-indigo-600" />
-                            )}
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8 pb-10 sm:pb-20">
+                   {filteredCourses.map((course) => (
+                      <div key={course.id} className="group bg-white rounded-[20px] sm:rounded-[40px] border border-slate-100 p-4 sm:p-8 hover:shadow-3xl hover:shadow-indigo-600/10 transition-all duration-500 relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-blue-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-right"></div>
+                        
+                        <div className="flex justify-between items-start mb-4 sm:mb-8">
+                           <div className="w-10 h-10 sm:w-16 h-16 bg-indigo-50 rounded-lg sm:rounded-2xl flex items-center justify-center group-hover:scale-110 transition-all duration-500 overflow-hidden border border-slate-100 shrink-0">
+                              {course.coverImage ? (
+                                 <img src={getFullImageUrl(course.coverImage) || ""} className="w-full h-full object-cover" alt="Cover" />
+                              ) : (
+                                 <Layers className="w-5 h-5 sm:w-8 h-8 text-indigo-600" />
+                              )}
+                           </div>
+                           <div className="flex gap-1 sm:gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-all duration-300">
+                              <button 
+                                onClick={() => router.push(`/super-admin/courses/edit?id=${course.id}`)}
+                                className="w-7 h-7 sm:w-10 h-10 bg-blue-50 text-blue-600 rounded-lg sm:rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                              >
+                                 <Edit2 className="w-3.5 h-3.5 sm:w-5 h-5" />
+                              </button>
+                              <button 
+                                onClick={() => handleDelete(course.id)}
+                                className="w-7 h-7 sm:w-10 h-10 bg-red-50 text-red-600 rounded-lg sm:rounded-xl flex items-center justify-center hover:bg-red-600 hover:text-white transition-all shadow-sm"
+                              >
+                                 <Trash2 className="w-3.5 h-3.5 sm:w-5 h-5" />
+                              </button>
+                           </div>
+                        </div>
+  
+                         <div className="mb-4 sm:mb-10">
+                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-3 mb-1.5 sm:mb-3">
+                               <span className="text-[7px] sm:text-[10px] font-black text-indigo-600 bg-indigo-50 px-1.5 sm:px-3 py-0.5 sm:py-1 rounded-md uppercase tracking-widest shrink-0">{course.subject || "عام"}</span>
+                               <span className="text-[7px] sm:text-[10px] font-black text-emerald-600 bg-emerald-50 px-1.5 sm:px-3 py-0.5 sm:py-1 rounded-md uppercase tracking-widest shrink-0">{course.grade || "عام"}</span>
+                            </div>
+                            <h3 className="text-sm sm:text-2xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors leading-tight mb-1 sm:mb-3 truncate">{course.title}</h3>
+                            <p className="text-slate-400 text-[9px] sm:text-sm font-bold line-clamp-2 leading-relaxed">{course.description || "منهج تعليمي مركزي."}</p>
                          </div>
-                         <div className="flex gap-1 sm:gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-all duration-300">
+  
+                         <div className="pt-4 sm:pt-8 border-t border-slate-50 flex items-center justify-between gap-2">
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-5 text-[7px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                               <div className="flex items-center gap-1 sm:gap-2">
+                                  <Monitor className="w-3 h-3 sm:w-4 h-4 text-indigo-400" />
+                                  {course._count?.lessons || 0} د
+                               </div>
+                               <div className="flex items-center gap-1 sm:gap-2">
+                                  <GraduationCap className="w-3 h-3 sm:w-4 h-4 text-blue-400" />
+                                  {course._count?.enrollments || 0} ط
+                               </div>
+                            </div>
                             <button 
                               onClick={() => router.push(`/super-admin/courses/edit?id=${course.id}`)}
-                              className="w-7 h-7 sm:w-10 h-10 bg-blue-50 text-blue-600 rounded-lg sm:rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                              className="w-7 h-7 sm:w-10 h-10 rounded-full bg-slate-50 text-slate-400 group-hover:bg-indigo-600 group-hover:text-white flex items-center justify-center transition-all shrink-0"
                             >
-                               <Edit2 className="w-3.5 h-3.5 sm:w-5 h-5" />
-                            </button>
-                            <button 
-                              onClick={() => handleDelete(course.id)}
-                              className="w-7 h-7 sm:w-10 h-10 bg-red-50 text-red-600 rounded-lg sm:rounded-xl flex items-center justify-center hover:bg-red-600 hover:text-white transition-all shadow-sm"
-                            >
-                               <Trash2 className="w-3.5 h-3.5 sm:w-5 h-5" />
+                               <ArrowUpRight className="w-3.5 h-3.5 sm:w-5 h-5" />
                             </button>
                          </div>
+  
+                         {/* Decoration */}
+                         <div className="absolute -bottom-12 -right-12 w-32 h-32 text-slate-50 group-hover:text-indigo-50/50 transition-colors duration-500 -rotate-12">
+                            <Book className="w-full h-full" />
+                         </div>
                       </div>
-
-                       <div className="mb-4 sm:mb-10">
-                          <div className="flex flex-wrap items-center gap-1.5 sm:gap-3 mb-1.5 sm:mb-3">
-                             <span className="text-[7px] sm:text-[10px] font-black text-indigo-600 bg-indigo-50 px-1.5 sm:px-3 py-0.5 sm:py-1 rounded-md uppercase tracking-widest shrink-0">{course.subject || "عام"}</span>
-                             <span className="text-[7px] sm:text-[10px] font-black text-emerald-600 bg-emerald-50 px-1.5 sm:px-3 py-0.5 sm:py-1 rounded-md uppercase tracking-widest shrink-0">{course.grade || "عام"}</span>
-                          </div>
-                          <h3 className="text-sm sm:text-2xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors leading-tight mb-1 sm:mb-3 truncate">{course.title}</h3>
-                          <p className="text-slate-400 text-[9px] sm:text-sm font-bold line-clamp-2 leading-relaxed">{course.description || "منهج تعليمي مركزي."}</p>
-                       </div>
-
-                       <div className="pt-4 sm:pt-8 border-t border-slate-50 flex items-center justify-between gap-2">
-                          <div className="flex flex-wrap items-center gap-2 sm:gap-5 text-[7px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                             <div className="flex items-center gap-1 sm:gap-2">
-                                <Monitor className="w-3 h-3 sm:w-4 h-4 text-indigo-400" />
-                                {course._count?.lessons || 0} د
-                             </div>
-                             <div className="flex items-center gap-1 sm:gap-2">
-                                <GraduationCap className="w-3 h-3 sm:w-4 h-4 text-blue-400" />
-                                {course._count?.enrollments || 0} ط
-                             </div>
-                          </div>
-                          <button 
-                            onClick={() => router.push(`/super-admin/courses/edit?id=${course.id}`)}
-                            className="w-7 h-7 sm:w-10 h-10 rounded-full bg-slate-50 text-slate-400 group-hover:bg-indigo-600 group-hover:text-white flex items-center justify-center transition-all shrink-0"
-                          >
-                             <ArrowUpRight className="w-3.5 h-3.5 sm:w-5 h-5" />
-                          </button>
-                       </div>
-
-                       {/* Decoration */}
-                       <div className="absolute -bottom-12 -right-12 w-32 h-32 text-slate-50 group-hover:text-indigo-50/50 transition-colors duration-500 -rotate-12">
-                          <Book className="w-full h-full" />
-                       </div>
-                    </div>
-                 ))}
-              </div>
+                   ))}
+                </div>
+  
+                {hasMore && (
+                  <div className="flex justify-center pb-10 sm:pb-20">
+                     <button 
+                       onClick={() => setPage(prev => prev + 1)}
+                       disabled={loadingMore}
+                       className="group bg-white border-2 border-slate-100 text-slate-600 px-10 py-4 rounded-[22px] font-black hover:border-indigo-600 hover:text-indigo-600 transition-all flex items-center gap-3 shadow-sm disabled:opacity-50 hover:shadow-xl hover:shadow-indigo-600/10"
+                     >
+                       {loadingMore ? (
+                         <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                       ) : (
+                         <>
+                           <span>عرض المزيد من المناهج</span>
+                           <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform" />
+                         </>
+                       )}
+                     </button>
+                  </div>
+                )}
+              </>
           )}
 
       </div>
