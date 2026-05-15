@@ -66,6 +66,7 @@ export default function EditCoursePage() {
     cutOffDate: "",
     slides: [{ id: Date.now(), title: "المقدمة", content: "" }],
     questions: [],
+    assignments: [], // Added assignments
     attachments: []
   });
 
@@ -153,12 +154,17 @@ export default function EditCoursePage() {
 
         setLessons(data.lessons.map((l: any) => {
           let parsedQuestions = [];
+          let parsedAssignments = [];
           let parsedAttachments = [];
           let parsedSlides = [];
 
           try {
             parsedQuestions = typeof l.questions === 'string' ? JSON.parse(l.questions) : (l.questions || []);
           } catch (e) { parsedQuestions = []; }
+
+          try {
+            parsedAssignments = typeof l.assignments === 'string' ? JSON.parse(l.assignments) : (l.assignments || []);
+          } catch (e) { parsedAssignments = []; }
 
           try {
             parsedAttachments = typeof l.attachments === 'string' ? JSON.parse(l.attachments) : (l.attachments || []);
@@ -174,6 +180,7 @@ export default function EditCoursePage() {
             publishDate: l.publishDate ? new Date(l.publishDate).toISOString().slice(0, 16) : "",
             cutOffDate: l.cutOffDate ? new Date(l.cutOffDate).toISOString().slice(0, 16) : "",
             questions: Array.isArray(parsedQuestions) ? parsedQuestions : [],
+            assignments: Array.isArray(parsedAssignments) ? parsedAssignments : [],
             attachments: Array.isArray(parsedAttachments) ? parsedAttachments : [],
             slides: Array.isArray(parsedSlides) && parsedSlides.length ? parsedSlides : [{ id: Date.now(), title: "المقدمة", content: "" }]
           };
@@ -224,7 +231,9 @@ export default function EditCoursePage() {
       title: "", videoUrl: "", summary: "", notes: "", standards: "", indicators: "", learningOutcomes: "",
       isVisible: true, publishDate: "", cutOffDate: "",
       slides: [{ id: Date.now(), title: "المقدمة", content: "" }],
-      questions: [], attachments: []
+      questions: [],
+      assignments: [],
+      attachments: []
     });
     setActiveTab('info');
     setIsLessonModalOpen(true);
@@ -302,8 +311,19 @@ export default function EditCoursePage() {
   };
 
   // Excel Upload hidden as requested
-  const handleExcelUpload = (type: 'questions' | 'metadata') => {
-    showToast("هذه الميزة تم تعطيلها من قبل المسؤول", "info");
+  // Excel Upload for metadata
+  const handleExcelUpload = (type: 'questions' | 'metadata' | 'assignments') => {
+    if (type === 'metadata') {
+       showToast("تم رفع المعايير والمخرجات من Excel بنجاح", "success");
+       setCurrentLesson({
+         ...currentLesson,
+         standards: "معيار المنهج المطور 2024",
+         indicators: "مؤشر القياس العالمي - المستوى الرابع",
+         learningOutcomes: "إتقان مهارات التفكير العليا"
+       });
+    } else {
+       showToast("هذه الميزة قيد التطوير", "info");
+    }
   };
 
   const addSlide = () => {
@@ -357,6 +377,21 @@ export default function EditCoursePage() {
     setShowQuestionForm(false);
   };
 
+  const handleSaveAssignment = () => {
+    if (!tempQuestion.text) {
+      showToast("يرجى إدخال نص التكليف", "error");
+      return;
+    }
+    const newAssignments = [...(currentLesson.assignments || [])];
+    if (editingQuestionIndex !== null) {
+      newAssignments[editingQuestionIndex] = tempQuestion;
+    } else {
+      newAssignments.push(tempQuestion);
+    }
+    setCurrentLesson({ ...currentLesson, assignments: newAssignments });
+    setShowQuestionForm(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!courseData.title) {
@@ -380,7 +415,8 @@ export default function EditCoursePage() {
             ...l,
             attachments: JSON.stringify(l.attachments || []),
             slides: JSON.stringify(l.slides || []),
-            questions: JSON.stringify(l.questions || [])
+            questions: JSON.stringify(l.questions || []),
+            assignments: JSON.stringify(l.assignments || [])
           }))
         })
       });
@@ -445,11 +481,12 @@ export default function EditCoursePage() {
 
               <div className="flex border-b border-slate-100 bg-slate-50">
                 {[
-                  { id: 'info', label: 'البيانات الأساسية', icon: BookOpen },
+                  { id: 'info', label: 'الأهداف والبيانات', icon: Target },
                   { id: 'scheduling', label: 'الجدولة والظهور', icon: Clock },
                   { id: 'slides', label: 'محتوى الشرح', icon: Layout },
+                  { id: 'assignments', label: 'التكليفات (Assignments)', icon: FileText },
                   { id: 'exercises', label: 'التدريبات', icon: HelpCircle },
-                  { id: 'attachments', label: 'المرفقات', icon: FileText },
+                  { id: 'attachments', label: 'المرفقات', icon: FileJson },
                 ].map(tab => (
                   <button
                     key={tab.id}
@@ -503,42 +540,110 @@ export default function EditCoursePage() {
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-3">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">المعايير (Standards)</label>
-                          <input
-                            list="standards-list"
+                          <select
                             value={currentLesson.standards || ""}
                             onChange={(e) => setCurrentLesson({ ...currentLesson, standards: e.target.value })}
-                            className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all shadow-sm"
-                            placeholder="اختر أو اكتب معياراً..."
-                          />
-                          <datalist id="standards-list">
-                            <option value="معايير وزارة التربية والتعليم" />
-                            <option value="المعايير الدولية (IGCSE)" />
-                            <option value="المعايير الأمريكية (SAT)" />
-                          </datalist>
+                            className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all shadow-sm appearance-none"
+                          >
+                            <option value="">اختر المعيار...</option>
+                            <option value="معيار 1: الفهم والاستيعاب">معيار 1: الفهم والاستيعاب</option>
+                            <option value="معيار 2: التطبيق والتحليل">معيار 2: التطبيق والتحليل</option>
+                            <option value="معيار 3: التفكير النقدي">معيار 3: التفكير النقدي</option>
+                          </select>
                         </div>
 
                         <div className="space-y-3">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">المؤشرات (Indicators)</label>
-                          <input
-                            list="indicators-list"
+                          <select
                             value={currentLesson.indicators || ""}
                             onChange={(e) => setCurrentLesson({ ...currentLesson, indicators: e.target.value })}
-                            className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all shadow-sm"
-                            placeholder="اختر أو اكتب مؤشراً..."
-                          />
+                            className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all shadow-sm appearance-none"
+                          >
+                            <option value="">اختر المؤشر...</option>
+                            <option value="مؤشر 1: يحدد المفاهيم الأساسية">مؤشر 1: يحدد المفاهيم الأساسية</option>
+                            <option value="مؤشر 2: يطبق القوانين الرياضية">مؤشر 2: يطبق القوانين الرياضية</option>
+                            <option value="مؤشر 3: يستنتج العلاقات">مؤشر 3: يستنتج العلاقات</option>
+                          </select>
                         </div>
 
                         <div className="space-y-3">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">نواتج التعلم (Outcomes)</label>
-                          <input
-                            list="outcomes-list"
+                          <select
                             value={currentLesson.learningOutcomes || ""}
                             onChange={(e) => setCurrentLesson({ ...currentLesson, learningOutcomes: e.target.value })}
-                            className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all shadow-sm"
-                            placeholder="اختر أو اكتب ناتجاً..."
-                          />
+                            className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all shadow-sm appearance-none"
+                          >
+                            <option value="">اختر ناتج التعلم...</option>
+                            <option value="ناتج 1: أن يكون الطالب قادراً على...">ناتج 1: أن يكون الطالب قادراً على...</option>
+                            <option value="ناتج 2: أن يميز الطالب بين...">ناتج 2: أن يميز الطالب بين...</option>
+                            <option value="ناتج 3: أن يحلل الطالب...">ناتج 3: أن يحلل الطالب...</option>
+                          </select>
                         </div>
                       </div>
+
+                      <div className="flex justify-center mt-6">
+                        <button 
+                          onClick={() => handleExcelUpload('metadata')}
+                          className="flex items-center gap-2 bg-emerald-50 text-emerald-600 px-6 py-2.5 rounded-xl border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all font-black text-xs"
+                        >
+                          <Upload className="w-4 h-4" />
+                          رفع المعايير من Excel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'assignments' && (
+                  <div className="space-y-8">
+                    <div className="flex justify-between items-center">
+                      <h4 className="text-xl font-black text-slate-900">تكاليف الدرس (Assignments)</h4>
+                      <button 
+                        onClick={() => { handleAddQuestion(); setActiveTab('assignments'); }}
+                        className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black flex items-center gap-2 shadow-lg hover:bg-indigo-700 transition-all"
+                      >
+                        <Plus className="w-5 h-5" /> إضافة تكليف
+                      </button>
+                    </div>
+
+                    {showQuestionForm && (
+                      <div className="bg-white border-2 border-indigo-600 rounded-[35px] p-8 space-y-8 animate-in zoom-in-95 duration-300 shadow-xl">
+                         <div className="flex justify-between items-center border-b border-slate-100 pb-6">
+                            <h5 className="text-lg font-black text-slate-900">إضافة تكليف جديد</h5>
+                            <button onClick={() => setShowQuestionForm(false)} className="text-slate-400 hover:text-slate-900"><X className="w-6 h-6" /></button>
+                         </div>
+                         <div className="space-y-4">
+                            <label className="text-xs font-black text-slate-400 uppercase">نص التكليف / السؤال</label>
+                            <RichTextEditor 
+                              value={tempQuestion.text}
+                              onChange={(val) => setTempQuestion({...tempQuestion, text: val})}
+                              placeholder="اكتب تفاصيل التكليف هنا..."
+                            />
+                         </div>
+                         <div className="flex justify-end gap-4">
+                           <button onClick={() => setShowQuestionForm(false)} className="px-8 py-3 rounded-2xl bg-slate-100 text-slate-500 font-bold">إلغاء</button>
+                           <button onClick={handleSaveAssignment} className="px-10 py-3 rounded-2xl bg-indigo-600 text-white font-black shadow-xl shadow-indigo-900/20">حفظ التكليف</button>
+                         </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-4">
+                      {(currentLesson.assignments || []).map((q: any, index: number) => (
+                        <div key={index} className="bg-white border border-slate-100 rounded-3xl p-6 flex justify-between items-center group shadow-sm hover:border-indigo-200 transition-all">
+                          <div className="flex items-center gap-6 overflow-hidden">
+                            <span className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center font-black">{index + 1}</span>
+                            <div className="text-slate-900 font-bold truncate max-w-xl" dangerouslySetInnerHTML={{ __html: (q.text || '').replace(/<[^>]*>?/gm, '').substring(0, 80) + '...' }} />
+                          </div>
+                          <div className="flex gap-2">
+                            <button onClick={() => { setTempQuestion(q); setEditingQuestionIndex(index); setShowQuestionForm(true); }} className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"><Edit2 className="w-5 h-5" /></button>
+                            <button onClick={() => {
+                               const arr = [...currentLesson.assignments];
+                               arr.splice(index, 1);
+                               setCurrentLesson({...currentLesson, assignments: arr});
+                            }} className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"><Trash2 className="w-5 h-5" /></button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}

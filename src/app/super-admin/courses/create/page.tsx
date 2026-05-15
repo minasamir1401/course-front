@@ -53,7 +53,8 @@ export default function CreateCoursePage() {
     slides: [
       { id: Date.now(), title: "المقدمة", content: "" }
     ],
-    questions: [], // Now using the advanced card logic
+    questions: [],
+    assignments: [], // New Assignments section
     attachments: []
   });
 
@@ -123,6 +124,7 @@ export default function CreateCoursePage() {
       learningOutcomes: "",
       slides: [{ id: Date.now(), title: "المقدمة", content: "" }],
       questions: [],
+      assignments: [],
       attachments: []
     });
     setActiveTab('info');
@@ -155,8 +157,20 @@ export default function CreateCoursePage() {
   };
 
   // Excel Upload hidden as requested
-  const handleExcelUpload = (type: 'questions' | 'metadata') => {
-    showToast("هذه الميزة غير متوفرة حالياً", "info");
+  // Excel Upload for metadata
+  const handleExcelUpload = (type: 'questions' | 'metadata' | 'assignments') => {
+    if (type === 'metadata') {
+       // Mock implementation for metadata excel upload
+       showToast("تم رفع المعايير والمخرجات من Excel بنجاح (بيانات وهمية)", "success");
+       setCurrentLesson({
+         ...currentLesson,
+         standards: "معيار المنهج المطور 2024",
+         indicators: "مؤشر القياس العالمي - المستوى الرابع",
+         learningOutcomes: "إتقان مهارات التفكير العليا"
+       });
+    } else {
+       showToast("هذه الميزة قيد التطوير", "info");
+    }
   };
 
   const addSlide = () => {
@@ -211,6 +225,21 @@ export default function CreateCoursePage() {
     setShowQuestionForm(false);
   };
 
+  const handleSaveAssignment = () => {
+    if (!tempQuestion.text) {
+      showToast("يرجى إدخال نص التكليف", "error");
+      return;
+    }
+    const newAssignments = [...(currentLesson.assignments || [])];
+    if (editingQuestionIndex !== null) {
+      newAssignments[editingQuestionIndex] = tempQuestion;
+    } else {
+      newAssignments.push(tempQuestion);
+    }
+    setCurrentLesson({ ...currentLesson, assignments: newAssignments });
+    setShowQuestionForm(false);
+  };
+
   const removeQuestion = (index: number) => {
     const newQuestions = [...currentLesson.questions];
     newQuestions.splice(index, 1);
@@ -241,7 +270,8 @@ export default function CreateCoursePage() {
             ...l,
             attachments: JSON.stringify(l.attachments || []),
             slides: JSON.stringify(l.slides || []),
-            questions: JSON.stringify(l.questions || [])
+            questions: JSON.stringify(l.questions || []),
+            assignments: JSON.stringify(l.assignments || [])
           }))
         })
       });
@@ -285,8 +315,9 @@ export default function CreateCoursePage() {
                 {[
                   { id: 'info', label: 'الأهداف والبيانات', icon: Target },
                   { id: 'slides', label: 'محتوى الشرح (Slides)', icon: Layout },
-                  { id: 'exercises', label: 'التدريبات والأسئلة', icon: HelpCircle },
-                  { id: 'attachments', label: 'المرفقات', icon: FileText },
+                  { id: 'assignments', label: 'التكاليف (Assignments)', icon: FileText },
+                  { id: 'exercises', label: 'التدريبات (Quiz Me)', icon: HelpCircle },
+                  { id: 'attachments', label: 'المرفقات', icon: FileDown },
                 ].map(tab => (
                   <button
                     key={tab.id}
@@ -322,57 +353,132 @@ export default function CreateCoursePage() {
                           value={currentLesson.videoUrl}
                           onChange={(e) => setCurrentLesson({...currentLesson, videoUrl: e.target.value})}
                           className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 text-lg font-bold outline-none focus:border-rose-600 transition-all text-left"
-                          placeholder="https://youtube.com/..."
-                          dir="ltr"
+                          placeholder="https://youtube.com/watch?v=..."
                         />
                       </div>
                     </div>
 
-                    <div className="bg-slate-50/50 border border-slate-100 p-8 rounded-[30px] space-y-8">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-xl font-black text-slate-900 flex items-center gap-3">
+                    <div className="bg-white p-8 rounded-[35px] border border-slate-100 space-y-8">
+                       <h4 className="text-xl font-black text-slate-900 flex items-center gap-3">
                           <Target className="w-6 h-6 text-indigo-600" />
-                          المعايير والمخرجات
-                        </h4>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          الأهداف والمعايير الأكاديمية
+                       </h4>
+                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-3">
                           <label className="text-xs font-black text-slate-500 uppercase tracking-widest">المعايير (Standards)</label>
-                          <input 
-                            list="standards-list"
+                          <select 
                             value={currentLesson.standards}
                             onChange={(e) => setCurrentLesson({...currentLesson, standards: e.target.value})}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600"
-                            placeholder="اختر أو اكتب المعايير..."
-                          />
-                          <datalist id="standards-list">
-                            <option value="معيار 1: الفهم والاستيعاب" />
-                            <option value="معيار 2: التطبيق والتحليل" />
-                            <option value="معيار 3: التفكير النقدي" />
-                          </datalist>
+                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none"
+                          >
+                            <option value="">اختر المعيار...</option>
+                            <option value="معيار 1: الفهم والاستيعاب">معيار 1: الفهم والاستيعاب</option>
+                            <option value="معيار 2: التطبيق والتحليل">معيار 2: التطبيق والتحليل</option>
+                            <option value="معيار 3: التفكير النقدي">معيار 3: التفكير النقدي</option>
+                          </select>
                         </div>
                         <div className="space-y-3">
                           <label className="text-xs font-black text-slate-400 uppercase tracking-widest">المؤشرات (Indicators)</label>
-                          <input 
-                            list="indicators-list"
+                          <select 
                             value={currentLesson.indicators}
                             onChange={(e) => setCurrentLesson({...currentLesson, indicators: e.target.value})}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600"
-                            placeholder="اختر أو اكتب المؤشرات..."
-                          />
-                          <datalist id="indicators-list">
-                            <option value="مؤشر 1: يحدد المفاهيم الأساسية" />
-                            <option value="مؤشر 2: يطبق القوانين الرياضية" />
-                            <option value="مؤشر 3: يستنتج العلاقات" />
-                          </datalist>
+                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none"
+                          >
+                            <option value="">اختر المؤشر...</option>
+                            <option value="مؤشر 1: يحدد المفاهيم الأساسية">مؤشر 1: يحدد المفاهيم الأساسية</option>
+                            <option value="مؤشر 2: يطبق القوانين الرياضية">مؤشر 2: يطبق القوانين الرياضية</option>
+                            <option value="مؤشر 3: يستنتج العلاقات">مؤشر 3: يستنتج العلاقات</option>
+                          </select>
                         </div>
                         <div className="space-y-3">
                           <label className="text-xs font-black text-slate-400 uppercase tracking-widest">نواتج التعلم (LOs)</label>
-                          <input 
-                            list="los-list"
+                          <select 
                             value={currentLesson.learningOutcomes}
                             onChange={(e) => setCurrentLesson({...currentLesson, learningOutcomes: e.target.value})}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none"
+                          >
+                            <option value="">اختر ناتج التعلم...</option>
+                            <option value="ناتج 1: أن يكون الطالب قادراً على...">ناتج 1: أن يكون الطالب قادراً على...</option>
+                            <option value="ناتج 2: أن يميز الطالب بين...">ناتج 2: أن يميز الطالب بين...</option>
+                            <option value="ناتج 3: أن يحلل الطالب...">ناتج 3: أن يحلل الطالب...</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-center mt-6">
+                        <button 
+                          onClick={() => handleExcelUpload('metadata')}
+                          className="flex items-center gap-2 bg-emerald-50 text-emerald-600 px-6 py-3 rounded-2xl border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all font-black text-xs"
+                        >
+                          <Upload className="w-4 h-4" />
+                          رفع المعايير من Excel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'assignments' && (
+                  <div className="space-y-8">
+                    <div className="flex justify-between items-center mb-6">
+                      <div>
+                        <h4 className="text-xl font-black text-slate-900">تكاليف الدرس (Assignments)</h4>
+                        <p className="text-slate-400 text-sm font-bold">مهام تطبيقية يجب على الطالب إنجازها</p>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          handleAddQuestion();
+                          setActiveTab('assignments'); // Ensure we stay here
+                        }}
+                        className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black flex items-center gap-2"
+                      >
+                        <Plus className="w-5 h-5" />
+                        إضافة تكليف
+                      </button>
+                    </div>
+
+                    {showQuestionForm && (
+                      <div className="bg-slate-50 border-2 border-indigo-600 rounded-[35px] p-8 space-y-8 animate-in zoom-in-95 duration-300 mb-10">
+                         {/* ... reuse question form logic ... */}
+                         <div className="flex justify-between items-center border-b border-slate-100 pb-6">
+                            <h5 className="text-lg font-black text-slate-900">إضافة تكليف جديد</h5>
+                            <button onClick={() => setShowQuestionForm(false)} className="text-slate-400 hover:text-slate-900"><X className="w-6 h-6" /></button>
+                         </div>
+                         <div className="space-y-4">
+                            <label className="text-xs font-black text-slate-400 uppercase">نص التكليف / السؤال</label>
+                            <RichTextEditor 
+                              value={tempQuestion.text}
+                              onChange={(val) => setTempQuestion({...tempQuestion, text: val})}
+                              placeholder="اكتب تفاصيل التكليف هنا..."
+                            />
+                         </div>
+                         <div className="flex justify-end gap-4">
+                           <button onClick={() => setShowQuestionForm(false)} className="px-8 py-3 rounded-2xl bg-slate-100 text-slate-500 font-bold">إلغاء</button>
+                           <button onClick={handleSaveAssignment} className="px-10 py-3 rounded-2xl bg-indigo-600 text-white font-black shadow-xl shadow-indigo-900/20">حفظ التكليف</button>
+                         </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-4">
+                      {(currentLesson.assignments || []).map((q: any, index: number) => (
+                        <div key={index} className="bg-white border border-slate-100 rounded-3xl p-6 flex justify-between items-center hover:bg-slate-100 transition-all group shadow-sm">
+                          <div className="flex items-center gap-6 overflow-hidden">
+                            <span className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 font-black">{index + 1}</span>
+                            <div className="text-slate-700 font-bold truncate max-w-xl" dangerouslySetInnerHTML={{ __html: q.text.replace(/<[^>]*>?/gm, '').substring(0, 80) + '...' }} />
+                          </div>
+                          <div className="flex gap-2">
+                            <button onClick={() => { setTempQuestion(q); setEditingQuestionIndex(index); setShowQuestionForm(true); }} className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"><Edit2 className="w-5 h-5" /></button>
+                            <button onClick={() => {
+                               const arr = [...currentLesson.assignments];
+                               arr.splice(index, 1);
+                               setCurrentLesson({...currentLesson, assignments: arr});
+                            }} className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"><Trash2 className="w-5 h-5" /></button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}setCurrentLesson({...currentLesson, learningOutcomes: e.target.value})}
                             className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600"
                             placeholder="اختر أو اكتب نواتج التعلم..."
                           />
@@ -842,31 +948,20 @@ export default function CreateCoursePage() {
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">المراحل الدراسية المستهدفة</label>
-                        <div className="flex flex-wrap gap-2 p-2 bg-slate-50 border border-slate-200 rounded-2xl min-h-[100px]">
-                           {GRADES.map(g => (
-                             <button
-                               key={g}
-                               type="button"
-                               onClick={() => {
-                                  const currentGrades = courseData.grades;
-                                  if (currentGrades.includes(g)) {
-                                     setCourseData({...courseData, grades: currentGrades.filter(x => x !== g)});
-                                  } else {
-                                     setCourseData({...courseData, grades: [...currentGrades, g]});
-                                  }
-                               }}
-                               className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${
-                                  courseData.grades.includes(g) 
-                                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' 
-                                  : 'bg-white text-slate-400 border border-slate-100 hover:border-indigo-200'
-                               }`}
-                             >
-                               {g}
-                             </button>
-                           ))}
-                        </div>
-                        <p className="text-[10px] text-slate-400 font-bold px-2">يمكنك اختيار أكثر من مرحلة دراسية لهذا الكورس.</p>
+                        <select 
+                          multiple
+                          value={courseData.grades}
+                          onChange={(e) => {
+                             const values = Array.from(e.target.selectedOptions, option => option.value);
+                             setCourseData({...courseData, grades: values});
+                          }}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all min-h-[150px]"
+                        >
+                          {GRADES.map(g => (
+                            <option key={g} value={g} className="py-2 px-4 rounded-xl hover:bg-indigo-50">{g}</option>
+                          ))}
+                        </select>
+                        <p className="text-[10px] text-slate-400 font-bold px-2">اضغط Ctrl (أو Cmd) لاختيار أكثر من مرحلة دراسية.</p>
                       </div>
 
                       <div className="space-y-2">
