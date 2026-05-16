@@ -620,6 +620,84 @@ export default function EditCoursePage() {
                               placeholder="اكتب تفاصيل التكليف هنا..."
                             />
                          </div>
+                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                           <div className="space-y-2">
+                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">نوع السؤال</label>
+                             <select className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600" value={tempQuestion.type} onChange={(e) => setTempQuestion({...tempQuestion, type: e.target.value, options: e.target.value === "TRUE_FALSE" ? ["صحيح", "خطأ"] : ["", "", "", ""]})}>
+                               {QUESTION_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                             </select>
+                           </div>
+                           <div className="space-y-2">
+                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">المستوى</label>
+                             <select className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600" value={tempQuestion.level} onChange={(e) => setTempQuestion({...tempQuestion, level: e.target.value})}>
+                               <option value="Easy">سهل</option><option value="Medium">متوسط</option><option value="Hard">صعب</option>
+                             </select>
+                           </div>
+                           <div className="space-y-2">
+                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">الدرجة</label>
+                             <input type="number" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600" value={tempQuestion.points} onChange={(e) => setTempQuestion({...tempQuestion, points: parseInt(e.target.value)})} />
+                           </div>
+                           <div className="space-y-2">
+                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">المحاولات</label>
+                             <input type="number" min="1" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600" value={tempQuestion.attempts || 1} onChange={(e) => setTempQuestion({...tempQuestion, attempts: parseInt(e.target.value)})} />
+                           </div>
+                         </div>
+                         {/* Answer Options for Assignment */}
+                         <div className="space-y-3">
+                           <label className="text-xs font-black text-slate-400 uppercase tracking-widest">خيارات الإجابة</label>
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             {tempQuestion.type !== "TRUE_FALSE" ? (
+                               <>
+                                 {(tempQuestion.options || ["", "", "", ""]).map((opt: string, oIdx: number) => {
+                                   const isSelected = tempQuestion.type === "MULTI_SELECT"
+                                     ? tempQuestion.correctAnswers?.includes(opt)
+                                     : tempQuestion.correctAnswer === opt;
+                                   return (
+                                     <div key={oIdx} className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all ${isSelected && opt !== "" ? 'bg-emerald-50 border-emerald-500' : 'bg-white border-slate-100 hover:border-slate-200'}`}>
+                                       <div
+                                         onClick={() => {
+                                           if (tempQuestion.type === "MULTI_SELECT") {
+                                             const answers = tempQuestion.correctAnswers || [];
+                                             if (answers.includes(opt)) {
+                                               setTempQuestion({...tempQuestion, correctAnswers: answers.filter((a: string) => a !== opt)});
+                                             } else if (opt !== "") {
+                                               setTempQuestion({...tempQuestion, correctAnswers: [...answers, opt]});
+                                             }
+                                           } else {
+                                             setTempQuestion({...tempQuestion, correctAnswer: opt});
+                                           }
+                                         }}
+                                         className={`w-7 h-7 rounded-full border-4 cursor-pointer flex items-center justify-center shrink-0 ${isSelected && opt !== "" ? 'bg-emerald-500 border-emerald-200' : 'bg-slate-100 border-white'}`}
+                                       >
+                                         {isSelected && opt !== "" && <CheckCircle2 className="w-4 h-4 text-white" />}
+                                       </div>
+                                       <input type="text" value={opt} onChange={(e) => { const opts = [...(tempQuestion.options || ["", "", "", ""])]; opts[oIdx] = e.target.value; setTempQuestion({...tempQuestion, options: opts}); }} className="bg-transparent flex-1 outline-none font-bold text-slate-900" placeholder={`الخيار ${oIdx + 1}`} />
+                                       {(tempQuestion.options || []).length > 2 && (
+                                         <button onClick={() => { const opts = [...tempQuestion.options]; opts.splice(oIdx, 1); setTempQuestion({...tempQuestion, options: opts}); }} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                                       )}
+                                     </div>
+                                   );
+                                 })}
+                                 <div className="flex items-center justify-center p-4 rounded-2xl border-2 border-dashed border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all cursor-pointer text-indigo-600 font-bold" onClick={() => setTempQuestion({...tempQuestion, options: [...(tempQuestion.options || []), ""]})}>
+                                   <Plus className="w-5 h-5 ml-2" /> إضافة خيار
+                                 </div>
+                               </>
+                             ) : (
+                               ["صحيح", "خطأ"].map((opt, oIdx) => (
+                                 <div key={oIdx} className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all cursor-pointer ${tempQuestion.correctAnswer === opt ? 'bg-emerald-50 border-emerald-500' : 'bg-white border-slate-100'}`} onClick={() => setTempQuestion({...tempQuestion, correctAnswer: opt})}>
+                                   <div className={`w-7 h-7 rounded-full border-4 flex items-center justify-center ${tempQuestion.correctAnswer === opt ? 'bg-emerald-500 border-emerald-200' : 'bg-slate-100 border-white'}`}>
+                                     {tempQuestion.correctAnswer === opt && <CheckCircle2 className="w-4 h-4 text-white" />}
+                                   </div>
+                                   <span className="font-bold text-slate-900">{opt}</span>
+                                 </div>
+                               ))
+                             )}
+                           </div>
+                         </div>
+                         <div className="space-y-3">
+                           <label className="text-xs font-black text-slate-400 uppercase tracking-widest">تفسير الإجابة</label>
+                           <textarea value={tempQuestion.explanation || ""} onChange={(e) => setTempQuestion({...tempQuestion, explanation: e.target.value})} className="w-full bg-white border border-slate-200 rounded-xl p-4 text-slate-900 text-sm min-h-[80px] outline-none focus:border-indigo-600" placeholder="اشرح لماذا هذه الإجابة صحيحة..." />
+                         </div>
                          <div className="flex justify-end gap-4">
                            <button onClick={() => setShowQuestionForm(false)} className="px-8 py-3 rounded-2xl bg-slate-100 text-slate-500 font-bold">إلغاء</button>
                            <button onClick={handleSaveAssignment} className="px-10 py-3 rounded-2xl bg-indigo-600 text-white font-black shadow-xl shadow-indigo-900/20">حفظ التكليف</button>
@@ -763,12 +841,38 @@ export default function EditCoursePage() {
                         </div>
                         <RichTextEditor value={tempQuestion.text} onChange={(val) => setTempQuestion({ ...tempQuestion, text: val })} placeholder="نص السؤال..." className="!bg-white !border-slate-100" />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          {tempQuestion.type !== "TRUE_FALSE" ? (tempQuestion.options || ["", "", "", ""]).map((opt: string, oIdx: number) => (
-                            <div key={oIdx} className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${tempQuestion.correctAnswer === opt && opt !== "" ? 'bg-emerald-50 border-emerald-500' : 'bg-slate-50 border-transparent'}`}>
-                              <div onClick={() => setTempQuestion({ ...tempQuestion, correctAnswer: opt })} className={`w-7 h-7 rounded-full border-4 cursor-pointer flex items-center justify-center ${tempQuestion.correctAnswer === opt && opt !== "" ? 'bg-emerald-500 border-white' : 'bg-white border-slate-200'}`}>{tempQuestion.correctAnswer === opt && opt !== "" && <CheckCircle2 className="w-4 h-4 text-white" />}</div>
-                              <input type="text" value={opt} onChange={(e) => { const opts = [...(tempQuestion.options || ["", "", "", ""])]; opts[oIdx] = e.target.value; setTempQuestion({ ...tempQuestion, options: opts }); }} className="bg-transparent flex-1 outline-none text-slate-900 font-bold" placeholder={`الخيار ${oIdx + 1}`} />
-                            </div>
-                          )) : ["صحيح", "خطأ"].map((opt, oIdx) => (
+                          {tempQuestion.type !== "TRUE_FALSE" ? (
+                            <>
+                              {(tempQuestion.options || ["", "", "", ""]).map((opt: string, oIdx: number) => {
+                                const isSelected = tempQuestion.type === "MULTI_SELECT"
+                                  ? tempQuestion.correctAnswers?.includes(opt)
+                                  : tempQuestion.correctAnswer === opt;
+                                return (
+                                  <div key={oIdx} className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isSelected && opt !== "" ? 'bg-emerald-50 border-emerald-500' : 'bg-slate-50 border-transparent'}`}>
+                                    <div onClick={() => {
+                                      if (tempQuestion.type === "MULTI_SELECT") {
+                                        const answers = tempQuestion.correctAnswers || [];
+                                        if (answers.includes(opt)) {
+                                          setTempQuestion({...tempQuestion, correctAnswers: answers.filter((a: string) => a !== opt)});
+                                        } else if (opt !== "") {
+                                          setTempQuestion({...tempQuestion, correctAnswers: [...answers, opt]});
+                                        }
+                                      } else {
+                                        setTempQuestion({...tempQuestion, correctAnswer: opt});
+                                      }
+                                    }} className={`w-7 h-7 rounded-full border-4 cursor-pointer flex items-center justify-center ${isSelected && opt !== "" ? 'bg-emerald-500 border-white' : 'bg-white border-slate-200'}`}>{isSelected && opt !== "" && <CheckCircle2 className="w-4 h-4 text-white" />}</div>
+                                    <input type="text" value={opt} onChange={(e) => { const opts = [...(tempQuestion.options || ["", "", "", ""])]; opts[oIdx] = e.target.value; setTempQuestion({...tempQuestion, options: opts}); }} className="bg-transparent flex-1 outline-none text-slate-900 font-bold" placeholder={`الخيار ${oIdx + 1}`} />
+                                    {(tempQuestion.options || []).length > 2 && (
+                                      <button onClick={() => { const opts = [...tempQuestion.options]; opts.splice(oIdx, 1); setTempQuestion({...tempQuestion, options: opts}); }} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                              <div className="flex items-center justify-center p-5 rounded-[22px] border-2 border-dashed border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all cursor-pointer text-indigo-600 font-bold" onClick={() => setTempQuestion({...tempQuestion, options: [...(tempQuestion.options || []), ""]})}>
+                                <Plus className="w-5 h-5 ml-2" /> إضافة خيار
+                              </div>
+                            </>
+                          ) : ["صحيح", "خطأ"].map((opt, oIdx) => (
                             <div key={oIdx} className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${tempQuestion.correctAnswer === opt ? 'bg-emerald-50 border-emerald-500' : 'bg-slate-50 border-transparent'}`}>
                               <div onClick={() => setTempQuestion({ ...tempQuestion, correctAnswer: opt })} className={`w-7 h-7 rounded-full border-4 cursor-pointer flex items-center justify-center ${tempQuestion.correctAnswer === opt ? 'bg-emerald-500 border-white' : 'bg-white border-slate-200'}`}>{tempQuestion.correctAnswer === opt && <CheckCircle2 className="w-4 h-4 text-white" />}</div>
                               <span className="text-slate-900 font-bold">{opt}</span>

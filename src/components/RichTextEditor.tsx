@@ -78,6 +78,9 @@ export default function RichTextEditor({ value, onChange, placeholder, className
             setEditingImage(null);
             setActiveModal('image');
           };
+          reader.onerror = () => {
+             alert("حدث خطأ أثناء رفع الصورة. يرجى التأكد من أن الملف سليم.");
+          };
           reader.readAsDataURL(file);
         }
       }

@@ -107,6 +107,14 @@ export default function SuperAdminNewExamPage() {
     "الناتج 5: يقيم المحتوى بمهارة"
   ];
 
+  const STANDARDS = [
+    "المعيار 1: المعرفة والفهم",
+    "المعيار 2: التطبيق والتحليل",
+    "المعيار 3: التركيب والتقويم",
+    "المعيار 4: التفكير النقدي",
+    "المعيار 5: حل المشكلات"
+  ];
+
   const VISIBILITY_OPTIONS = [
     { id: "SHOW_SCORE", label: "الدرجة فقط", desc: "سيرى الطالب مجموع درجاته فقط", icon: Eye },
     { id: "SHOW_ANSWERS", label: "الإجابات الصحيحة", desc: "سيتمكن الطالب من مراجعة كل إجابة مع النموذج الصحيح", icon: CheckCircle },
@@ -274,11 +282,19 @@ export default function SuperAdminNewExamPage() {
         showToast(status === "DRAFT" ? "تم حفظ المسودة بنجاح!" : "تم نشر الامتحان بنجاح!", 'success');
         router.push("/super-admin/exams");
       } else {
-        const err = await res.json();
-        showToast(err.error || "خطأ في الإضافة", 'error');
+        let errMessage = "خطأ في الإضافة";
+        try {
+          const err = await res.json();
+          errMessage = err.error || errMessage;
+        } catch (e) {
+          if (res.status === 413) errMessage = "حجم البيانات كبير جداً (Payload Too Large). يرجى تقليل حجم الصور المستخدمة.";
+          else errMessage = `خطأ في الخادم: ${res.status}`;
+        }
+        showToast(errMessage, 'error');
       }
     } catch (error) {
-      showToast("حدث خطأ غير متوقع", 'error');
+      console.error("Exam save error:", error);
+      showToast("حدث خطأ غير متوقع. يرجى التحقق من اتصالك.", 'error');
     } finally {
       setSaving(false);
     }
@@ -413,6 +429,31 @@ export default function SuperAdminNewExamPage() {
                     ))}
                   </select>
                 </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">سياسة عرض النتائج</label>
+                  <div className="flex flex-col gap-3">
+                    {VISIBILITY_OPTIONS.map((opt) => (
+                      <label key={opt.id} className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${examInfo.resultVisibility === opt.id ? 'bg-indigo-50 border-indigo-500 shadow-sm' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
+                        <input 
+                          type="radio" 
+                          name="resultVisibility" 
+                          value={opt.id}
+                          checked={examInfo.resultVisibility === opt.id}
+                          onChange={(e) => setExamInfo({...examInfo, resultVisibility: e.target.value})}
+                          className="hidden"
+                        />
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${examInfo.resultVisibility === opt.id ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-slate-400 border border-slate-200'}`}>
+                          <opt.icon className="w-5 h-5" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className={`text-sm font-black ${examInfo.resultVisibility === opt.id ? 'text-indigo-900' : 'text-slate-700'}`}>{opt.label}</span>
+                          <span className="text-[10px] font-bold text-slate-400">{opt.desc}</span>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -500,7 +541,7 @@ export default function SuperAdminNewExamPage() {
                         <p className="text-[10px] text-red-600 font-bold">تأكد من اتصالك بالسيرفر أو تشغيل الـ Backend</p>
                       </div>
                       <button 
-                        onClick={fetchData}
+                        onClick={fetchSchools}
                         className="px-6 py-2 bg-white border border-red-200 text-red-600 rounded-xl text-[10px] font-black hover:bg-red-600 hover:text-white transition-all shadow-sm"
                       >
                         إعادة المحاولة
@@ -765,23 +806,36 @@ export default function SuperAdminNewExamPage() {
                           </div>
                         </>
                       ) : (
-                        currentQuestion.options.map((opt: string, oIndex: number) => (
-                          <div key={oIndex} className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isCorrectAnswer(currentQuestion, opt) && opt !== "" ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
-                            <div 
-                              onClick={() => updateCorrectAnswers(oIndex)}
-                              className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isCorrectAnswer(currentQuestion, opt) && opt !== "" ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200'}`}
-                            >
-                              {isCorrectAnswer(currentQuestion, opt) && opt !== "" && <CheckCircle className="w-5 h-5 text-white" />}
+                        <>
+                          {currentQuestion.options.map((opt: string, oIndex: number) => (
+                            <div key={oIndex} className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isCorrectAnswer(currentQuestion, opt) && opt !== "" ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
+                              <div 
+                                onClick={() => updateCorrectAnswers(oIndex)}
+                                className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isCorrectAnswer(currentQuestion, opt) && opt !== "" ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200'}`}
+                              >
+                                {isCorrectAnswer(currentQuestion, opt) && opt !== "" && <CheckCircle className="w-5 h-5 text-white" />}
+                              </div>
+                              <input 
+                                type="text" 
+                                placeholder={`الخيار ${oIndex + 1}`}
+                                className="bg-transparent flex-1 outline-none font-bold text-slate-700 placeholder:text-slate-300"
+                                value={opt}
+                                onChange={(e) => updateOption(oIndex, e.target.value)}
+                              />
+                              {currentQuestion.options.length > 2 && (
+                                <button onClick={() => {
+                                  const newOptions = [...currentQuestion.options];
+                                  newOptions.splice(oIndex, 1);
+                                  setCurrentQuestion({ ...currentQuestion, options: newOptions });
+                                }} className="text-red-400 hover:text-red-600 transition-all"><Trash2 className="w-4 h-4" /></button>
+                              )}
                             </div>
-                            <input 
-                              type="text" 
-                              placeholder={`الخيار ${oIndex + 1}`}
-                              className="bg-transparent flex-1 outline-none font-bold text-slate-700 placeholder:text-slate-300"
-                              value={opt}
-                              onChange={(e) => updateOption(oIndex, e.target.value)}
-                            />
+                          ))}
+                          <div onClick={() => setCurrentQuestion({ ...currentQuestion, options: [...currentQuestion.options, ""] })} className="flex items-center justify-center gap-2 p-5 rounded-[22px] border-2 border-dashed border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all cursor-pointer text-indigo-600 font-bold">
+                            <Plus className="w-5 h-5" />
+                            إضافة خيار
                           </div>
-                        ))
+                        </>
                       )}
                     </div>
 

@@ -107,6 +107,14 @@ export default function SuperAdminEditExamPage() {
     "الناتج 5: يقيم المحتوى بمهارة"
   ];
 
+  const STANDARDS = [
+    "المعيار 1: المعرفة والفهم",
+    "المعيار 2: التطبيق والتحليل",
+    "المعيار 3: التركيب والتقويم",
+    "المعيار 4: التفكير النقدي",
+    "المعيار 5: حل المشكلات"
+  ];
+
   const VISIBILITY_OPTIONS = [
     { id: "SHOW_SCORE", label: "الدرجة فقط", desc: "سيرى الطالب مجموع درجاته فقط", icon: Eye },
     { id: "SHOW_ANSWERS", label: "الإجابات الصحيحة", desc: "سيتمكن الطالب من مراجعة كل إجابة مع النموذج الصحيح", icon: CheckCircle },
@@ -300,11 +308,19 @@ export default function SuperAdminEditExamPage() {
         showToast("تم تحديث الامتحان بنجاح!", 'success');
         router.push("/super-admin/exams");
       } else {
-        const err = await res.json();
-        showToast(err.error || "خطأ في التحديث", 'error');
+        let errMessage = "خطأ في التحديث";
+        try {
+          const err = await res.json();
+          errMessage = err.error || errMessage;
+        } catch (e) {
+          if (res.status === 413) errMessage = "حجم البيانات كبير جداً (Payload Too Large). يرجى تقليل حجم الصور المستخدمة.";
+          else errMessage = `خطأ في الخادم: ${res.status}`;
+        }
+        showToast(errMessage, 'error');
       }
     } catch (error) {
-      showToast("حدث خطأ غير متوقع", 'error');
+      console.error("Exam save error:", error);
+      showToast("حدث خطأ غير متوقع. يرجى التحقق من اتصالك.", 'error');
     } finally {
       setSaving(false);
     }
@@ -872,12 +888,25 @@ export default function SuperAdminEditExamPage() {
                           </div>
                         ))
                       ) : (
-                        currentQuestion.options.map((opt: string, i: number) => (
-                          <div key={i} className={`flex items-center gap-3 p-3 rounded-2xl border-2 transition-all ${isCorrectAnswer(currentQuestion, opt) && opt ? 'bg-emerald-50 border-emerald-500' : 'bg-slate-50 border-transparent'}`}>
-                            <div onClick={() => updateCorrectAnswers(i)} className={`w-6 h-6 rounded-full border-2 cursor-pointer ${isCorrectAnswer(currentQuestion, opt) && opt ? 'bg-emerald-500 border-emerald-200' : 'bg-white border-slate-300'}`} />
-                            <input type="text" className="bg-transparent flex-1 outline-none font-bold text-sm" placeholder={`الخيار ${i + 1}`} value={opt} onChange={(e) => updateOption(i, e.target.value)} />
+                        <>
+                          {currentQuestion.options.map((opt: string, i: number) => (
+                            <div key={i} className={`flex items-center gap-3 p-3 rounded-2xl border-2 transition-all ${isCorrectAnswer(currentQuestion, opt) && opt ? 'bg-emerald-50 border-emerald-500' : 'bg-slate-50 border-transparent'}`}>
+                              <div onClick={() => updateCorrectAnswers(i)} className={`w-6 h-6 rounded-full border-2 cursor-pointer ${isCorrectAnswer(currentQuestion, opt) && opt ? 'bg-emerald-500 border-emerald-200' : 'bg-white border-slate-300'}`} />
+                              <input type="text" className="bg-transparent flex-1 outline-none font-bold text-sm" placeholder={`الخيار ${i + 1}`} value={opt} onChange={(e) => updateOption(i, e.target.value)} />
+                              {currentQuestion.options.length > 2 && (
+                                <button onClick={() => {
+                                  const newOptions = [...currentQuestion.options];
+                                  newOptions.splice(i, 1);
+                                  setCurrentQuestion({ ...currentQuestion, options: newOptions });
+                                }} className="text-red-400 hover:text-red-600 transition-all"><Trash2 className="w-4 h-4" /></button>
+                              )}
+                            </div>
+                          ))}
+                          <div onClick={() => setCurrentQuestion({ ...currentQuestion, options: [...currentQuestion.options, ""] })} className="flex items-center justify-center gap-2 p-3 rounded-2xl border-2 border-dashed border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all cursor-pointer text-indigo-600 font-bold text-sm">
+                            <Plus className="w-5 h-5" />
+                            إضافة خيار
                           </div>
-                        ))
+                        </>
                       )}
                     </div>
                   </div>
