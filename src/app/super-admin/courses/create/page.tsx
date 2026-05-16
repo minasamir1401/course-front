@@ -10,7 +10,7 @@ import {
   HelpCircle, BookOpen, Save, Layers, Edit2, X,
   ChevronDown, ChevronUp, Play, Layout, Target, 
   CheckCircle2, AlertCircle, Upload, Download, Settings,
-  Eye, Monitor, ListOrdered, FileJson, FileDown
+  Eye, Monitor, ListOrdered, FileJson, FileDown, Clock
 } from "lucide-react";
 import * as XLSX from 'xlsx';
 import RichTextEditor from "@/components/RichTextEditor";
@@ -50,6 +50,9 @@ export default function CreateCoursePage() {
     standards: "",
     indicators: "",
     learningOutcomes: "",
+    isVisible: true,
+    publishDate: "",
+    cutOffDate: "",
     slides: [
       { id: Date.now(), title: "المقدمة", content: "" }
     ],
@@ -59,7 +62,7 @@ export default function CreateCoursePage() {
   });
 
   // UI States for Lesson Modal
-  const [activeTab, setActiveTab] = useState<'info' | 'slides' | 'assignments' | 'exercises' | 'attachments'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'slides' | 'assignments' | 'exercises' | 'attachments' | 'scheduling'>('info');
   const [showQuestionForm, setShowQuestionForm] = useState(false);
   const [questionSource, setQuestionSource] = useState<'assignments' | 'exercises'>('exercises');
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null);
@@ -104,6 +107,14 @@ export default function CreateCoursePage() {
     { id: "MULTI_SELECT", label: "اختيار متعدد" }
   ];
 
+  const CATEGORIES = [
+    "اللغة العربية", "اللغة الإنجليزية", "اللغة الفرنسية", "اللغة الألمانية", "اللغة الإيطالية",
+    "الرياضيات", "الفيزياء", "الكيمياء", "الأحياء", "الجيولوجيا", "الميكانيكا",
+    "التاريخ", "الجغرافيا", "الفلسفة", "علم النفس", "الاقتصاد", "الإحصاء",
+    "التربية الدينية", "التربية الوطنية", "الحاسب الآلي",
+    "SAT Math", "SAT English"
+  ];
+
   const SKILLS = ["General", "Critical Thinking", "Problem Solving", "Analysis", "Application"];
 
   useEffect(() => {
@@ -145,6 +156,9 @@ export default function CreateCoursePage() {
       standards: "",
       indicators: "",
       learningOutcomes: "",
+      isVisible: true,
+      publishDate: "",
+      cutOffDate: "",
       slides: [{ id: Date.now(), title: "المقدمة", content: "" }],
       questions: [],
       assignments: [],
@@ -340,6 +354,7 @@ export default function CreateCoursePage() {
               <div className="flex border-b border-slate-100 bg-slate-50/50">
                 {[
                   { id: 'info', label: 'الأهداف والبيانات', icon: Target },
+                  { id: 'scheduling', label: 'الجدولة والظهور', icon: Clock },
                   { id: 'slides', label: 'محتوى الشرح (Slides)', icon: Layout },
                   { id: 'assignments', label: 'التكاليف (Assignments)', icon: FileText },
                   { id: 'exercises', label: 'التدريبات (Quiz Me)', icon: HelpCircle },
@@ -440,6 +455,53 @@ export default function CreateCoursePage() {
                           رفع المعايير من Excel
                         </button>
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'scheduling' && (
+                  <div className="space-y-8 animate-in fade-in duration-300">
+                    <div className="bg-indigo-50/50 border border-indigo-100 p-8 rounded-[35px] flex items-center justify-between">
+                       <div className="space-y-1">
+                          <h4 className="text-xl font-black text-indigo-900">حالة ظهور الدرس</h4>
+                          <p className="text-indigo-600/60 font-bold text-sm">تحكم في ما إذا كان الطالب يستطيع رؤية هذا الدرس حالياً</p>
+                       </div>
+                       <button 
+                        onClick={() => setCurrentLesson({...currentLesson, isVisible: !currentLesson.isVisible})}
+                        className={`w-20 h-10 rounded-full relative transition-all duration-300 ${currentLesson.isVisible ? 'bg-indigo-600' : 'bg-slate-300'}`}
+                       >
+                          <div className={`absolute top-1 w-8 h-8 bg-white rounded-full transition-all duration-300 ${currentLesson.isVisible ? 'right-11' : 'right-1'}`}></div>
+                       </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                       <div className="bg-white p-8 rounded-[35px] border border-slate-100 shadow-sm space-y-4">
+                          <div className="flex items-center gap-3 text-emerald-600">
+                             <CheckCircle2 className="w-6 h-6" />
+                             <label className="text-sm font-black uppercase tracking-widest">تاريخ النشر (Publish Date)</label>
+                          </div>
+                          <p className="text-slate-400 text-xs font-bold">لن يظهر الدرس للطالب قبل هذا التاريخ حتى لو كان وضع "الظهور" مفعلاً</p>
+                          <input 
+                            type="datetime-local"
+                            value={currentLesson.publishDate || ""}
+                            onChange={(e) => setCurrentLesson({...currentLesson, publishDate: e.target.value})}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 font-bold text-slate-700 outline-none focus:border-emerald-500 transition-all"
+                          />
+                       </div>
+
+                       <div className="bg-white p-8 rounded-[35px] border border-slate-100 shadow-sm space-y-4">
+                          <div className="flex items-center gap-3 text-red-500">
+                             <AlertCircle className="w-6 h-6" />
+                             <label className="text-sm font-black uppercase tracking-widest">تاريخ الانتهاء (Cut-off Date)</label>
+                          </div>
+                          <p className="text-slate-400 text-xs font-bold">سيختفي الدرس من واجهة الطالب تلقائياً بعد هذا التاريخ</p>
+                          <input 
+                            type="datetime-local"
+                            value={currentLesson.cutOffDate || ""}
+                            onChange={(e) => setCurrentLesson({...currentLesson, cutOffDate: e.target.value})}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 font-bold text-slate-700 outline-none focus:border-red-500 transition-all"
+                          />
+                       </div>
                     </div>
                   </div>
                 )}
@@ -1179,32 +1241,37 @@ export default function CreateCoursePage() {
                         </select>
                       </div>
 
-                      <div className="space-y-2">
-                        <select 
-                          multiple
-                          value={courseData.grades}
-                          onChange={(e) => {
-                             const values = Array.from(e.target.selectedOptions, option => option.value);
-                             setCourseData({...courseData, grades: values});
-                          }}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all min-h-[150px]"
-                        >
+                      <div className="space-y-3">
+                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">المراحل الدراسية</label>
+                        <div className="grid grid-cols-2 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200 max-h-[250px] overflow-y-auto custom-scrollbar">
                           {GRADES.map(g => (
-                            <option key={g} value={g} className="py-2 px-4 rounded-xl hover:bg-indigo-50">{g}</option>
+                            <label key={g} className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${courseData.grades.includes(g) ? 'bg-indigo-50 border-indigo-500' : 'bg-white border-transparent hover:border-slate-200'}`}>
+                              <div className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${courseData.grades.includes(g) ? 'bg-indigo-600 text-white' : 'bg-slate-100 border border-slate-200'}`}>
+                                {courseData.grades.includes(g) && <CheckCircle2 className="w-4 h-4" />}
+                              </div>
+                              <span className={`text-sm font-bold ${courseData.grades.includes(g) ? 'text-indigo-900' : 'text-slate-600'}`}>{g}</span>
+                              <input type="checkbox" className="hidden" checked={courseData.grades.includes(g)} onChange={(e) => {
+                                if(e.target.checked) setCourseData({...courseData, grades: [...courseData.grades, g]});
+                                else setCourseData({...courseData, grades: courseData.grades.filter(gr => gr !== g)});
+                              }} />
+                            </label>
                           ))}
-                        </select>
-                        <p className="text-[10px] text-slate-400 font-bold px-2">اضغط Ctrl (أو Cmd) لاختيار أكثر من مرحلة دراسية.</p>
+                        </div>
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">المادة / التخصص</label>
-                        <input 
-                          type="text" 
+                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">المادة / التخصص <span className="text-red-500">*</span></label>
+                        <select 
                           value={courseData.subject}
                           onChange={(e) => setCourseData({...courseData, subject: e.target.value})}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all"
-                          placeholder="مثال: فيزياء"
-                        />
+                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all appearance-none"
+                          required
+                        >
+                          <option value="">اختر المادة...</option>
+                          {CATEGORIES.map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                          ))}
+                        </select>
                       </div>
                     </div>
 
