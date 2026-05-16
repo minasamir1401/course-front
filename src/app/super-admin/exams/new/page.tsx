@@ -255,9 +255,27 @@ export default function SuperAdminNewExamPage() {
     }
   };
 
+  const toggleSubject = (subject: string) => {
+    const currentSubjects = examInfo.subjects || [];
+    const nextSubjects = currentSubjects.includes(subject)
+      ? currentSubjects.filter((item: string) => item !== subject)
+      : [...currentSubjects, subject];
+
+    setExamInfo({
+      ...examInfo,
+      subjects: nextSubjects,
+      category: nextSubjects[0] || ""
+    });
+  };
+
   const handleSubmit = async (status: string = "PUBLISHED") => {
     if (!examInfo.title) {
       showToast("يرجى إدخال عنوان الامتحان", 'error');
+      return;
+    }
+
+    if (!examInfo.subjects || examInfo.subjects.length === 0) {
+      showToast("يرجى اختيار مادة واحدة على الأقل", 'error');
       return;
     }
 
@@ -275,7 +293,7 @@ export default function SuperAdminNewExamPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ ...examInfo, status, questions }),
+        body: JSON.stringify({ ...examInfo, category: examInfo.subjects[0], status, questions }),
       });
 
       if (res.ok) {
@@ -358,20 +376,21 @@ export default function SuperAdminNewExamPage() {
               <div className="space-y-6">
                 <div className="flex flex-col gap-2">
                   <label className="text-xs font-black text-slate-400 uppercase tracking-widest">المواد (Subjects)</label>
-                  <select 
-                    multiple
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 outline-none font-bold text-black text-xs focus:ring-2 focus:ring-indigo-500/20 min-h-[120px]"
-                    value={examInfo.subjects}
-                    onChange={(e) => {
-                       const values = Array.from(e.target.selectedOptions, option => option.value);
-                       setExamInfo({...examInfo, subjects: values});
-                    }}
-                  >
+                  <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 max-h-[170px] overflow-y-auto custom-scrollbar flex flex-wrap gap-2">
                     {CATEGORIES.map(cat => (
-                      <option key={cat} value={cat} className="py-1">{cat}</option>
+                      <label key={cat} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer transition-all ${examInfo.subjects.includes(cat) ? 'bg-indigo-100 border-indigo-300 text-indigo-900 shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                        <input
+                          type="checkbox"
+                          className="hidden"
+                          checked={examInfo.subjects.includes(cat)}
+                          onChange={() => toggleSubject(cat)}
+                        />
+                        {examInfo.subjects.includes(cat) && <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600" />}
+                        <span className="text-xs font-bold">{cat}</span>
+                      </label>
                     ))}
-                  </select>
-                  <p className="text-[9px] text-slate-400 font-bold px-1">استخدم Ctrl للاختيار المتعدد</p>
+                  </div>
+                  <p className="text-[9px] text-slate-400 font-bold px-1">يمكن اختيار أكثر من مادة للاختبار.</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

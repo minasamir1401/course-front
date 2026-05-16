@@ -33,8 +33,8 @@ export default function CreateCoursePage() {
     grades: [] as string[],
     subject: "",
     country: "مصر",
-    isCentral: true,
-    schoolId: ""
+    isCentral: !schoolIdParam,
+    schoolId: schoolIdParam || ""
   });
 
   const [lessons, setLessons] = useState<any[]>([]);
@@ -133,7 +133,7 @@ export default function CreateCoursePage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setSchools(Array.isArray(data) ? data : []);
+        setSchools(Array.isArray(data) ? data : (data.schools || []));
       }
     } catch (error) {
       console.error("Failed to fetch schools");
@@ -291,6 +291,10 @@ export default function CreateCoursePage() {
     e.preventDefault();
     if (!courseData.title) {
       showToast("يرجى إدخال عنوان الكورس", "error");
+      return;
+    }
+    if (!courseData.subject) {
+      showToast("يرجى اختيار المادة / التخصص", "error");
       return;
     }
     
@@ -1276,15 +1280,16 @@ export default function CreateCoursePage() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest">نطاق الكورس</label>
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest">إسناد الكورس للمدرسة</label>
                       <select 
                         value={courseData.schoolId}
                         onChange={(e) => setCourseData({...courseData, schoolId: e.target.value, isCentral: !e.target.value})}
                         className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all appearance-none"
                       >
-                        <option value="" className="bg-white text-slate-900">كورس مركزي (لكافة المدارس)</option>
+                        <option value="" className="bg-white text-slate-900">كورس مركزي لكل المدارس</option>
                         {Array.isArray(schools) && schools.map(s => <option key={s.id} value={s.id} className="bg-white text-slate-900">{s.name}</option>)}
                       </select>
+                      <p className="text-[10px] text-slate-400 font-bold">اختر مدرسة من القائمة أو اتركه مركزي لكل المدارس.</p>
                     </div>
                   </div>
                 </div>
