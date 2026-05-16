@@ -71,7 +71,7 @@ export default function EditCoursePage() {
   });
 
   // UI States for Lesson Modal
-  const [activeTab, setActiveTab] = useState<'info' | 'slides' | 'exercises' | 'attachments' | 'scheduling'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'slides' | 'exercises' | 'assignments' | 'attachments' | 'scheduling'>('info');
   const [showQuestionForm, setShowQuestionForm] = useState(false);
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null);
   const [tempQuestion, setTempQuestion] = useState<any>({
@@ -112,7 +112,7 @@ export default function EditCoursePage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setSchools(Array.isArray(data) ? data : []);
+        setSchools(Array.isArray(data) ? data : (data.schools || []));
       }
     } catch (error) {
       console.error("Failed to fetch schools");
@@ -996,7 +996,7 @@ export default function EditCoursePage() {
                       <div className="flex flex-col gap-1.5">
                         <p className="font-black text-slate-800 text-sm truncate">{courseData.title || '—'}</p>
                         <div className="flex flex-wrap gap-2 mt-1">
-                          <span className="px-2 py-0.5 bg-slate-50 text-slate-500 rounded-lg text-xs font-black">{courseData.grade}</span>
+                          <span className="px-2 py-0.5 bg-slate-50 text-slate-500 rounded-lg text-xs font-black">{courseData.grades?.[0] || "—"}</span>
                           {courseData.subject && <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-black">{courseData.subject}</span>}
                         </div>
                       </div>
