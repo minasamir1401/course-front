@@ -31,10 +31,10 @@ export default function CreateCoursePage() {
     description: "",
     coverImage: "",
     grades: [] as string[],
-    subject: "",
+    subjects: [] as string[],
     country: "مصر",
     isCentral: !schoolIdParam,
-    schoolId: schoolIdParam || ""
+    schoolIds: (schoolIdParam ? [schoolIdParam] : []) as string[]
   });
 
   const [lessons, setLessons] = useState<any[]>([]);
@@ -116,6 +116,29 @@ export default function CreateCoursePage() {
   ];
 
   const SKILLS = ["General", "Critical Thinking", "Problem Solving", "Analysis", "Application"];
+
+  const toggleCourseSubject = (subject: string) => {
+    const current = courseData.subjects || [];
+    const next = current.includes(subject)
+      ? current.filter((s) => s !== subject)
+      : [...current, subject];
+    setCourseData({ ...courseData, subjects: next });
+  };
+
+  const toggleCourseSchool = (id: string) => {
+    const current = courseData.schoolIds || [];
+    const next = current.includes(id) ? current.filter((sid) => sid !== id) : [...current, id];
+    setCourseData({ ...courseData, schoolIds: next, isCentral: next.length === 0 });
+  };
+
+  const selectAllSchools = () => {
+    if (!schools.length) return;
+    if ((courseData.schoolIds || []).length === schools.length) {
+      setCourseData({ ...courseData, schoolIds: [], isCentral: true });
+    } else {
+      setCourseData({ ...courseData, schoolIds: schools.map((s) => s.id), isCentral: false });
+    }
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("super_admin_token");
@@ -293,7 +316,7 @@ export default function CreateCoursePage() {
       showToast("يرجى إدخال عنوان الكورس", "error");
       return;
     }
-    if (!courseData.subject) {
+    if (!courseData.subjects || courseData.subjects.length === 0) {
       showToast("يرجى اختيار المادة / التخصص", "error");
       return;
     }
@@ -302,31 +325,59 @@ export default function CreateCoursePage() {
     const token = localStorage.getItem("super_admin_token");
     
     try {
-      const res = await fetch(`${API_URL}/school/courses`, {
-        method: 'POST',
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          ...courseData,
-          lessons: lessons.map(l => ({
-            ...l,
-            attachments: JSON.stringify(l.attachments || []),
-            slides: JSON.stringify(l.slides || []),
-            questions: JSON.stringify(l.questions || []),
-            assignments: JSON.stringify(l.assignments || [])
-          }))
-        })
-      });
+      const lessonsPayload = lessons.map((l) => ({
+        ...l,
+        attachments: JSON.stringify(l.attachments || []),
+        slides: JSON.stringify(l.slides || []),
+        questions: JSON.stringify(l.questions || []),
+        assignments: JSON.stringify(l.assignments || [])
+      }));
 
-      if (res.ok) {
-        showToast("تم إنشاء الكورس بنجاح", 'success');
-        router.push(`/super-admin/courses`);
+      const subjectString = courseData.subjects.join(", ");
+      const targetSchoolIds = courseData.schoolIds || [];
+
+      const createOne = async (schoolId: string | null) => {
+        const res = await fetch(`${API_URL}/school/courses`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            title: courseData.title,
+            description: courseData.description,
+            coverImage: courseData.coverImage,
+            grades: courseData.grades,
+            subject: subjectString,
+            country: courseData.country,
+            isCentral: !schoolId,
+            schoolId: schoolId || "",
+            lessons: lessonsPayload
+          })
+        });
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || "فشل إنشاء الكورس");
+        }
+      };
+
+      if (targetSchoolIds.length === 0) {
+        await createOne(null);
+        showToast("تم إنشاء الكورس المركزي بنجاح", "success");
+      } else if (targetSchoolIds.length === 1) {
+        await createOne(targetSchoolIds[0]);
+        showToast("تم إنشاء الكورس بنجاح", "success");
       } else {
-        const data = await res.json();
-        showToast(data.error || "فشل إنشاء الكورس", 'error');
+        let created = 0;
+        for (const sid of targetSchoolIds) {
+          await createOne(sid);
+          created += 1;
+        }
+        showToast(`تم إنشاء الكورس وإسناده إلى ${created} مدارس`, "success");
       }
+
+      router.push(`/super-admin/courses`);
     } catch (error) {
       showToast("خطأ في الاتصال بالخادم", 'error');
     } finally {
@@ -1265,31 +1316,91 @@ export default function CreateCoursePage() {
 
                       <div className="space-y-2">
                         <label className="text-xs font-black text-slate-400 uppercase tracking-widest">المادة / التخصص <span className="text-red-500">*</span></label>
-                        <select 
-                          value={courseData.subject}
-                          onChange={(e) => setCourseData({...courseData, subject: e.target.value})}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all appearance-none"
-                          required
-                        >
-                          <option value="">اختر المادة...</option>
-                          {CATEGORIES.map(cat => (
-                            <option key={cat} value={cat}>{cat}</option>
+                        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 max-h-[200px] overflow-y-auto custom-scrollbar flex flex-wrap gap-2">
+                          {CATEGORIES.map((cat) => (
+                            <label
+                              key={cat}
+                              className={`flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer transition-all ${
+                                courseData.subjects.includes(cat)
+                                  ? "bg-indigo-50 border-indigo-500 text-indigo-900"
+                                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                className="hidden"
+                                checked={courseData.subjects.includes(cat)}
+                                onChange={() => toggleCourseSubject(cat)}
+                              />
+                              <div
+                                className={`w-5 h-5 rounded flex items-center justify-center transition-all ${
+                                  courseData.subjects.includes(cat)
+                                    ? "bg-indigo-600 text-white"
+                                    : "bg-slate-100 border border-slate-200"
+                                }`}
+                              >
+                                {courseData.subjects.includes(cat) && <CheckCircle2 className="w-3 h-3" />}
+                              </div>
+                              <span className="text-xs font-black">{cat}</span>
+                            </label>
                           ))}
-                        </select>
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-bold">يمكن اختيار أكثر من مادة وسيتم حفظها كوسوم داخل نفس الكورس.</p>
                       </div>
                     </div>
 
                     <div className="space-y-2">
                       <label className="text-xs font-black text-slate-400 uppercase tracking-widest">إسناد الكورس للمدرسة</label>
-                      <select 
-                        value={courseData.schoolId}
-                        onChange={(e) => setCourseData({...courseData, schoolId: e.target.value, isCentral: !e.target.value})}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all appearance-none"
-                      >
-                        <option value="" className="bg-white text-slate-900">كورس مركزي لكل المدارس</option>
-                        {Array.isArray(schools) && schools.map(s => <option key={s.id} value={s.id} className="bg-white text-slate-900">{s.name}</option>)}
-                      </select>
-                      <p className="text-[10px] text-slate-400 font-bold">اختر مدرسة من القائمة أو اتركه مركزي لكل المدارس.</p>
+                      {schools.length === 0 ? (
+                        <div className="bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-6 text-center text-slate-500 font-bold text-sm">
+                          لا توجد مدارس مضافة
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex justify-between items-center px-2 mb-3">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">اختر المدارس (اختياري):</span>
+                            <button
+                              type="button"
+                              onClick={selectAllSchools}
+                              className="text-[10px] font-black text-indigo-600 hover:underline"
+                            >
+                              {(courseData.schoolIds || []).length === schools.length ? "إلغاء الكل" : "تحديد كافة المدارس"}
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-50 border border-slate-200 rounded-2xl p-4 max-h-[250px] overflow-y-auto custom-scrollbar">
+                            {schools.map((s) => (
+                              <label
+                                key={s.id}
+                                className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                                  (courseData.schoolIds || []).includes(s.id)
+                                    ? "bg-indigo-50 border-indigo-500"
+                                    : "bg-white border-transparent hover:border-slate-200"
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  className="hidden"
+                                  checked={(courseData.schoolIds || []).includes(s.id)}
+                                  onChange={() => toggleCourseSchool(s.id)}
+                                />
+                                <div
+                                  className={`w-5 h-5 rounded flex items-center justify-center transition-all ${
+                                    (courseData.schoolIds || []).includes(s.id)
+                                      ? "bg-indigo-600 text-white"
+                                      : "bg-slate-100 border border-slate-200"
+                                  }`}
+                                >
+                                  {(courseData.schoolIds || []).includes(s.id) && <CheckCircle2 className="w-3 h-3" />}
+                                </div>
+                                <span className="text-xs font-bold text-slate-700">{s.name}</span>
+                              </label>
+                            ))}
+                          </div>
+                          <p className="text-[10px] text-slate-400 font-bold">
+                            لو ما اخترتش مدارس: الكورس يبقى مركزي. لو اخترت أكثر من مدرسة: النظام هيعمل نسخة من نفس الكورس لكل مدرسة.
+                          </p>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
