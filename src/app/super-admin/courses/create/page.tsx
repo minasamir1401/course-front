@@ -327,6 +327,8 @@ export default function CreateCoursePage() {
     try {
       const lessonsPayload = lessons.map((l) => ({
         ...l,
+        publishDate: l.publishDate ? new Date(l.publishDate).toISOString() : null,
+        cutOffDate: l.cutOffDate ? new Date(l.cutOffDate).toISOString() : null,
         attachments: JSON.stringify(l.attachments || []),
         slides: JSON.stringify(l.slides || []),
         questions: JSON.stringify(l.questions || []),
@@ -336,46 +338,32 @@ export default function CreateCoursePage() {
       const subjectString = courseData.subjects.join(", ");
       const targetSchoolIds = courseData.schoolIds || [];
 
-      const createOne = async (schoolId: string | null) => {
-        const res = await fetch(`${API_URL}/school/courses`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            title: courseData.title,
-            description: courseData.description,
-            coverImage: courseData.coverImage,
-            grades: courseData.grades,
-            subject: subjectString,
-            country: courseData.country,
-            isCentral: !schoolId,
-            schoolId: schoolId || "",
-            lessons: lessonsPayload
-          })
-        });
+      const res = await fetch(`${API_URL}/school/courses`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          title: courseData.title,
+          description: courseData.description,
+          coverImage: courseData.coverImage,
+          grades: courseData.grades,
+          subject: subjectString,
+          country: courseData.country,
+          isCentral: targetSchoolIds.length === 0,
+          schoolId: targetSchoolIds.length > 0 ? targetSchoolIds[0] : "",
+          schoolIds: targetSchoolIds,
+          lessons: lessonsPayload
+        })
+      });
 
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || "فشل إنشاء الكورس");
-        }
-      };
-
-      if (targetSchoolIds.length === 0) {
-        await createOne(null);
-        showToast("تم إنشاء الكورس المركزي بنجاح", "success");
-      } else if (targetSchoolIds.length === 1) {
-        await createOne(targetSchoolIds[0]);
-        showToast("تم إنشاء الكورس بنجاح", "success");
-      } else {
-        let created = 0;
-        for (const sid of targetSchoolIds) {
-          await createOne(sid);
-          created += 1;
-        }
-        showToast(`تم إنشاء الكورس وإسناده إلى ${created} مدارس`, "success");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "فشل إنشاء الكورس");
       }
+
+      showToast(targetSchoolIds.length > 0 ? `تم إنشاء الكورس وإسناده للمدارس المختارة` : "تم إنشاء الكورس المركزي بنجاح", "success");
 
       router.push(`/super-admin/courses`);
     } catch (error) {

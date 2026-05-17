@@ -119,6 +119,23 @@ export default function EditCoursePage() {
     }
   };
 
+  const toggleCourseSchool = (id: string) => {
+    const current = courseData.schoolIds || [];
+    if (current.includes(id)) {
+      setCourseData({ ...courseData, schoolIds: current.filter(s => s !== id) });
+    } else {
+      setCourseData({ ...courseData, schoolIds: [...current, id] });
+    }
+  };
+
+  const selectAllSchools = () => {
+    if ((courseData.schoolIds || []).length === schools.length) {
+      setCourseData({ ...courseData, schoolIds: [] });
+    } else {
+      setCourseData({ ...courseData, schoolIds: schools.map(s => s.id) });
+    }
+  };
+
   const fetchCourseData = async (token: string, id: string) => {
     try {
       const res = await fetch(`${API_URL}/courses/${id}`, {
@@ -177,8 +194,8 @@ export default function EditCoursePage() {
           return {
             ...l,
             isVisible: l.isVisible !== undefined ? l.isVisible : true,
-            publishDate: l.publishDate ? new Date(l.publishDate).toISOString().slice(0, 16) : "",
-            cutOffDate: l.cutOffDate ? new Date(l.cutOffDate).toISOString().slice(0, 16) : "",
+            publishDate: l.publishDate ? new Date(new Date(l.publishDate).getTime() - new Date(l.publishDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
+            cutOffDate: l.cutOffDate ? new Date(new Date(l.cutOffDate).getTime() - new Date(l.cutOffDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
             questions: Array.isArray(parsedQuestions) ? parsedQuestions : [],
             assignments: Array.isArray(parsedAssignments) ? parsedAssignments : [],
             attachments: Array.isArray(parsedAttachments) ? parsedAttachments : [],
@@ -411,8 +428,13 @@ export default function EditCoursePage() {
         },
         body: JSON.stringify({
           ...courseData,
-          lessons: lessons.map(l => ({
+          isCentral: (courseData.schoolIds || []).length === 0,
+          schoolId: (courseData.schoolIds || []).length > 0 ? courseData.schoolIds[0] : "",
+          schoolIds: courseData.schoolIds || [],
+          lessons: lessons.map((l) => ({
             ...l,
+            publishDate: l.publishDate ? new Date(l.publishDate).toISOString() : null,
+            cutOffDate: l.cutOffDate ? new Date(l.cutOffDate).toISOString() : null,
             attachments: JSON.stringify(l.attachments || []),
             slides: JSON.stringify(l.slides || []),
             questions: JSON.stringify(l.questions || []),
@@ -1109,7 +1131,7 @@ export default function EditCoursePage() {
                         <div className="grid grid-cols-2 gap-3 mb-3">
                            <button 
                             type="button"
-                            onClick={() => setCourseData({...courseData, isCentral: true, schoolId: ""})}
+                            onClick={() => setCourseData({...courseData, isCentral: true, schoolId: "", schoolIds: []})}
                             className={`py-3 rounded-xl text-[10px] font-black transition-all ${courseData.isCentral ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-50 text-slate-400'}`}
                            >نطاق مركزي (كل المدارس)</button>
                            <button 
@@ -1121,16 +1143,45 @@ export default function EditCoursePage() {
                         
                         {!courseData.isCentral && (
                           <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                            <select 
-                              value={courseData.schoolId}
-                              onChange={(e) => setCourseData({...courseData, schoolId: e.target.value})}
-                              className="w-full bg-orange-50 border border-orange-100 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-orange-500 transition-all text-sm appearance-none"
-                            >
-                              <option value="">اختر المدرسة...</option>
-                              {schools.map(s => (
-                                <option key={s.id} value={s.id}>{s.name}</option>
+                            <div className="flex justify-between items-center mb-3 px-1">
+                              <span className="text-xs font-bold text-slate-500">اختر المدارس المحددة:</span>
+                              <button
+                                type="button"
+                                onClick={selectAllSchools}
+                                className="text-[10px] font-black text-indigo-600 hover:underline"
+                              >
+                                {(courseData.schoolIds || []).length === schools.length ? "إلغاء الكل" : "تحديد كافة المدارس"}
+                              </button>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-50 border border-slate-200 rounded-2xl p-4 max-h-[250px] overflow-y-auto custom-scrollbar">
+                              {schools.map((s) => (
+                                <label
+                                  key={s.id}
+                                  className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                                    (courseData.schoolIds || []).includes(s.id)
+                                      ? "bg-indigo-50 border-indigo-500"
+                                      : "bg-white border-transparent hover:border-slate-200"
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    className="hidden"
+                                    checked={(courseData.schoolIds || []).includes(s.id)}
+                                    onChange={() => toggleCourseSchool(s.id)}
+                                  />
+                                  <div
+                                    className={`w-5 h-5 rounded flex items-center justify-center transition-all ${
+                                      (courseData.schoolIds || []).includes(s.id)
+                                        ? "bg-indigo-600 text-white"
+                                        : "bg-slate-100 border border-slate-200"
+                                    }`}
+                                  >
+                                    {(courseData.schoolIds || []).includes(s.id) && <CheckCircle2 className="w-3 h-3" />}
+                                  </div>
+                                  <span className="text-xs font-bold text-slate-700">{s.name}</span>
+                                </label>
                               ))}
-                            </select>
+                            </div>
                           </div>
                         )}
                       </div>

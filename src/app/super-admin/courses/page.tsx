@@ -104,9 +104,11 @@ export default function SuperAdminCoursesPage() {
     if (!window.confirm("هل أنت متأكد من حذف هذا الكورس المركزي؟")) return;
     try {
       const token = localStorage.getItem("super_admin_token");
-      const res = await fetch(`${API_URL}/super/courses/${id}`, {
+      const res = await fetch(`${API_URL}/school/courses/${id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
       if (res.ok) {
         showToast("تم حذف الكورس بنجاح", "success");
@@ -203,9 +205,9 @@ export default function SuperAdminCoursesPage() {
 
           {/* Main Grid */}
           {loading ? (
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8">
+             <div className="flex flex-col gap-4 sm:gap-6">
                 {[1,2,3].map(i => (
-                   <div key={i} className="bg-white h-72 rounded-[24px] sm:rounded-[40px] border border-slate-100 animate-pulse"></div>
+                   <div key={i} className="bg-white h-32 rounded-[24px] sm:rounded-[30px] border border-slate-100 animate-pulse"></div>
                 ))}
              </div>
           ) : filteredCourses.length === 0 ? (
@@ -221,65 +223,58 @@ export default function SuperAdminCoursesPage() {
               </div>
           ) : (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8 pb-10 sm:pb-20">
+                <div className="flex flex-col gap-4 sm:gap-6 pb-10 sm:pb-20">
                    {filteredCourses.map((course) => (
-                      <div key={course.id} className="group bg-white rounded-[20px] sm:rounded-[40px] border border-slate-100 p-4 sm:p-8 hover:shadow-3xl hover:shadow-indigo-600/10 transition-all duration-500 relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-blue-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-right"></div>
+                      <div key={course.id} className="group bg-white rounded-[20px] sm:rounded-[30px] border border-slate-100 p-4 sm:p-6 hover:shadow-3xl hover:shadow-indigo-600/10 transition-all duration-500 relative overflow-hidden flex flex-col md:flex-row items-center gap-6">
+                        <div className="absolute top-0 right-0 w-1.5 h-full bg-gradient-to-b from-indigo-500 to-blue-500 transform scale-y-0 group-hover:scale-y-100 transition-transform duration-500 origin-top"></div>
                         
-                        <div className="flex justify-between items-start mb-4 sm:mb-8">
-                           <div className="w-10 h-10 sm:w-16 h-16 bg-indigo-50 rounded-lg sm:rounded-2xl flex items-center justify-center group-hover:scale-110 transition-all duration-500 overflow-hidden border border-slate-100 shrink-0">
-                              {course.coverImage ? (
-                                 <img src={getFullImageUrl(course.coverImage) || ""} className="w-full h-full object-cover" alt="Cover" />
-                              ) : (
-                                 <Layers className="w-5 h-5 sm:w-8 h-8 text-indigo-600" />
-                              )}
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-indigo-50 rounded-lg sm:rounded-2xl flex items-center justify-center group-hover:scale-110 transition-all duration-500 overflow-hidden border border-slate-100 shrink-0">
+                           {course.coverImage ? (
+                              <img src={getFullImageUrl(course.coverImage) || ""} className="w-full h-full object-cover" alt="Cover" />
+                           ) : (
+                              <Layers className="w-8 h-8 text-indigo-600" />
+                           )}
+                        </div>
+
+                        <div className="flex-1 min-w-0 w-full md:w-auto text-center md:text-right">
+                           <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-2">
+                              <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md uppercase tracking-widest shrink-0">{course.subject || "عام"}</span>
+                              <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md uppercase tracking-widest shrink-0">{course.grade || "عام"}</span>
                            </div>
-                           <div className="flex gap-1 sm:gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-all duration-300">
+                           <h3 className="text-xl sm:text-2xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors leading-tight mb-1.5 truncate">{course.title}</h3>
+                           <p className="text-slate-400 text-xs sm:text-sm font-bold line-clamp-1">{course.description || "منهج تعليمي مركزي."}</p>
+                        </div>
+
+                        <div className="flex items-center gap-6 shrink-0 w-full md:w-auto justify-between md:justify-end border-t border-slate-50 md:border-none pt-4 md:pt-0">
+                           <div className="flex items-center gap-4 text-xs font-black text-slate-400 uppercase tracking-widest">
+                              <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
+                                 <Monitor className="w-4 h-4 text-indigo-400" />
+                                 <span className="hidden sm:inline">درس</span> {course._count?.lessons || 0}
+                              </div>
+                              <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
+                                 <GraduationCap className="w-4 h-4 text-blue-400" />
+                                 <span className="hidden sm:inline">طالب</span> {course._count?.enrollments || 0}
+                              </div>
+                           </div>
+                           
+                           <div className="flex items-center gap-2">
                               <button 
                                 onClick={() => router.push(`/super-admin/courses/edit?id=${course.id}`)}
-                                className="w-7 h-7 sm:w-10 h-10 bg-blue-50 text-blue-600 rounded-lg sm:rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                                className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm"
                               >
-                                 <Edit2 className="w-3.5 h-3.5 sm:w-5 h-5" />
+                                 <Edit2 className="w-5 h-5" />
                               </button>
                               <button 
                                 onClick={() => handleDelete(course.id)}
-                                className="w-7 h-7 sm:w-10 h-10 bg-red-50 text-red-600 rounded-lg sm:rounded-xl flex items-center justify-center hover:bg-red-600 hover:text-white transition-all shadow-sm"
+                                className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center hover:bg-red-600 hover:text-white transition-all shadow-sm"
                               >
-                                 <Trash2 className="w-3.5 h-3.5 sm:w-5 h-5" />
+                                 <Trash2 className="w-5 h-5" />
                               </button>
                            </div>
                         </div>
-  
-                         <div className="mb-4 sm:mb-10">
-                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-3 mb-1.5 sm:mb-3">
-                               <span className="text-[7px] sm:text-[10px] font-black text-indigo-600 bg-indigo-50 px-1.5 sm:px-3 py-0.5 sm:py-1 rounded-md uppercase tracking-widest shrink-0">{course.subject || "عام"}</span>
-                               <span className="text-[7px] sm:text-[10px] font-black text-emerald-600 bg-emerald-50 px-1.5 sm:px-3 py-0.5 sm:py-1 rounded-md uppercase tracking-widest shrink-0">{course.grade || "عام"}</span>
-                            </div>
-                            <h3 className="text-sm sm:text-2xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors leading-tight mb-1 sm:mb-3 truncate">{course.title}</h3>
-                            <p className="text-slate-400 text-[9px] sm:text-sm font-bold line-clamp-2 leading-relaxed">{course.description || "منهج تعليمي مركزي."}</p>
-                         </div>
-  
-                         <div className="pt-4 sm:pt-8 border-t border-slate-50 flex items-center justify-between gap-2">
-                            <div className="flex flex-wrap items-center gap-2 sm:gap-5 text-[7px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                               <div className="flex items-center gap-1 sm:gap-2">
-                                  <Monitor className="w-3 h-3 sm:w-4 h-4 text-indigo-400" />
-                                  {course._count?.lessons || 0} د
-                               </div>
-                               <div className="flex items-center gap-1 sm:gap-2">
-                                  <GraduationCap className="w-3 h-3 sm:w-4 h-4 text-blue-400" />
-                                  {course._count?.enrollments || 0} ط
-                               </div>
-                            </div>
-                            <button 
-                              onClick={() => router.push(`/super-admin/courses/edit?id=${course.id}`)}
-                              className="w-7 h-7 sm:w-10 h-10 rounded-full bg-slate-50 text-slate-400 group-hover:bg-indigo-600 group-hover:text-white flex items-center justify-center transition-all shrink-0"
-                            >
-                               <ArrowUpRight className="w-3.5 h-3.5 sm:w-5 h-5" />
-                            </button>
-                         </div>
-  
+
                          {/* Decoration */}
-                         <div className="absolute -bottom-12 -right-12 w-32 h-32 text-slate-50 group-hover:text-indigo-50/50 transition-colors duration-500 -rotate-12">
+                         <div className="absolute -bottom-12 -left-12 w-32 h-32 text-slate-50 group-hover:text-indigo-50/50 transition-colors duration-500 -rotate-12 pointer-events-none">
                             <Book className="w-full h-full" />
                          </div>
                       </div>
