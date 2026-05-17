@@ -165,7 +165,8 @@ export default function EditCoursePage() {
           subject: data.subject || "",
           country: data.country || "مصر",
           isCentral: data.isCentral,
-          schoolId: data.schoolId || ""
+          schoolId: data.schoolId || "",
+          schoolIds: data.schools ? data.schools.map((s: any) => s.id) : (data.schoolId ? [data.schoolId] : [])
         });
         
         setExams(data.exams || []);
