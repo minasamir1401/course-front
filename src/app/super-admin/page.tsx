@@ -161,9 +161,9 @@ export default function SuperAdminDashboard() {
               </div>
             </div>
 
-            <div className="h-[300px] w-full relative z-10">
+            <div className="relative z-10" style={{ width: '100%', height: 300 }}>
               {mounted && (
-                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={schoolPerformanceData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.02)" vertical={false} />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
@@ -199,9 +199,9 @@ export default function SuperAdminDashboard() {
               </div>
             </div>
 
-            <div className="h-[300px] w-full relative z-10">
+            <div className="relative z-10" style={{ width: '100%', height: 300 }}>
               {mounted && (
-                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                <ResponsiveContainer width="100%" height={300}>
                   <AreaChart data={examsActivityData}>
                     <defs>
                       <linearGradient id="colorExams" x1="0" y1="0" x2="0" y2="1">

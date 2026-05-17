@@ -325,8 +325,16 @@ export default function CreateCoursePage() {
     const token = localStorage.getItem("super_admin_token");
     
     try {
+      // Build lesson payload explicitly — no spread to avoid unexpected fields
       const lessonsPayload = lessons.map((l) => ({
-        ...l,
+        title: l.title,
+        videoUrl: l.videoUrl || null,
+        summary: l.summary || null,
+        notes: l.notes || null,
+        standards: l.standards || null,
+        indicators: l.indicators || null,
+        learningOutcomes: l.learningOutcomes || null,
+        isVisible: l.isVisible !== undefined ? l.isVisible : true,
         publishDate: l.publishDate ? new Date(l.publishDate).toISOString() : null,
         cutOffDate: l.cutOffDate ? new Date(l.cutOffDate).toISOString() : null,
         attachments: JSON.stringify(l.attachments || []),
@@ -336,7 +344,9 @@ export default function CreateCoursePage() {
       }));
 
       const subjectString = courseData.subjects.join(", ");
-      const targetSchoolIds = courseData.schoolIds || [];
+      // Filter out any empty/falsy school IDs to avoid Prisma UUID errors
+      const targetSchoolIds = (courseData.schoolIds || []).filter(Boolean);
+      const isCentral = targetSchoolIds.length === 0;
 
       const res = await fetch(`${API_URL}/school/courses`, {
         method: "POST",
@@ -347,12 +357,13 @@ export default function CreateCoursePage() {
         body: JSON.stringify({
           title: courseData.title,
           description: courseData.description,
-          coverImage: courseData.coverImage,
+          coverImage: courseData.coverImage || null,
           grades: courseData.grades,
           subject: subjectString,
           country: courseData.country,
-          isCentral: targetSchoolIds.length === 0,
-          schoolId: targetSchoolIds.length > 0 ? targetSchoolIds[0] : "",
+          isCentral,
+          // Send null (not empty string) when no school is selected
+          schoolId: targetSchoolIds.length > 0 ? targetSchoolIds[0] : null,
           schoolIds: targetSchoolIds,
           lessons: lessonsPayload
         })
@@ -360,14 +371,20 @@ export default function CreateCoursePage() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "فشل إنشاء الكورس");
+        throw new Error(data.stack || data.details || data.error || "فشل إنشاء الكورس");
       }
 
-      showToast(targetSchoolIds.length > 0 ? `تم إنشاء الكورس وإسناده للمدارس المختارة` : "تم إنشاء الكورس المركزي بنجاح", "success");
+      showToast(
+        targetSchoolIds.length > 0
+          ? `تم إنشاء الكورس وإسناده للمدارس المختارة`
+          : "تم إنشاء الكورس المركزي بنجاح",
+        "success"
+      );
 
       router.push(`/super-admin/courses`);
-    } catch (error) {
-      showToast("خطأ في الاتصال بالخادم", 'error');
+    } catch (error: any) {
+      console.error("Course creation error:", error);
+      showToast(error.message || "خطأ في الاتصال بالخادم", 'error');
     } finally {
       setIsLoading(false);
     }

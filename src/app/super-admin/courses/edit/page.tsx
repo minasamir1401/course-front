@@ -422,6 +422,8 @@ export default function EditCoursePage() {
     const token = localStorage.getItem("super_admin_token");
 
     try {
+      const targetSchoolIds = (courseData.schoolIds || []).filter(Boolean);
+
       const res = await fetch(`${API_URL}/school/courses/${courseId}`, {
         method: 'PUT',
         headers: {
@@ -430,11 +432,18 @@ export default function EditCoursePage() {
         },
         body: JSON.stringify({
           ...courseData,
-          isCentral: (courseData.schoolIds || []).length === 0,
-          schoolId: (courseData.schoolIds || []).length > 0 ? courseData.schoolIds[0] : "",
-          schoolIds: courseData.schoolIds || [],
+          isCentral: targetSchoolIds.length === 0,
+          schoolId: targetSchoolIds.length > 0 ? targetSchoolIds[0] : null,
+          schoolIds: targetSchoolIds,
           lessons: lessons.map((l) => ({
-            ...l,
+            title: l.title,
+            videoUrl: l.videoUrl || null,
+            summary: l.summary || null,
+            notes: l.notes || null,
+            standards: l.standards || null,
+            indicators: l.indicators || null,
+            learningOutcomes: l.learningOutcomes || null,
+            isVisible: l.isVisible !== undefined ? l.isVisible : true,
             publishDate: l.publishDate ? new Date(l.publishDate).toISOString() : null,
             cutOffDate: l.cutOffDate ? new Date(l.cutOffDate).toISOString() : null,
             attachments: JSON.stringify(l.attachments || []),
@@ -449,11 +458,12 @@ export default function EditCoursePage() {
         showToast("تم تحديث الكورس بنجاح", 'success');
         router.push(`/super-admin/courses`);
       } else {
-        const data = await res.json();
-        showToast(data.error || "فشل تحديث الكورس", 'error');
+        const data = await res.json().catch(() => ({}));
+        showToast(data.error || data.details || "فشل تحديث الكورس", 'error');
       }
-    } catch (error) {
-      showToast("خطأ في الاتصال بالخادم", 'error');
+    } catch (error: any) {
+      console.error("Course update error:", error);
+      showToast(error.message || "خطأ في الاتصال بالخادم", 'error');
     } finally {
       setIsSubmitting(false);
     }
