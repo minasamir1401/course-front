@@ -36,7 +36,8 @@ export default function EditCoursePage() {
     subject: "",
     country: "مصر",
     isCentral: false,
-    schoolId: schoolIdParam || ""
+    schoolId: schoolIdParam || "",
+    schoolIds: (schoolIdParam ? [schoolIdParam] : []) as string[]
   });
 
   const [lessons, setLessons] = useState<any[]>([]);
