@@ -1,12 +1,5 @@
 import type { Metadata } from "next";
-import { Tajawal } from "next/font/google";
 import "./globals.css";
-
-const tajawal = Tajawal({ 
-  subsets: ["arabic"],
-  weight: ["200", "300", "400", "500", "700", "800", "900"],
-  variable: "--font-tajawal",
-});
 
 export const metadata: Metadata = {
   title: "منصتي - منصة التعليم الذكية",
@@ -23,7 +16,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ar" dir="rtl">
-      <body className={`${tajawal.variable} font-sans bg-[#F8FAFC] text-slate-800`}>
+      <body className="font-sans bg-[#F8FAFC] text-slate-800">
         <NotificationProvider>
           <ImpersonationBanner />
           {children}

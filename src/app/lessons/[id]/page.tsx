@@ -10,7 +10,7 @@ import {
   MessageSquare, FileDown, Clock, Info, X, Maximize,
   Volume2, Settings, ArrowRight, ArrowLeft, Star, Award, RotateCcw,
   CheckCircle2, AlertCircle, Sparkles, Lock, Timer,
-  ArrowUpRight, ListOrdered, TrendingUp, GraduationCap
+  ArrowUpRight, ListOrdered, TrendingUp, GraduationCap, FileText
 } from "lucide-react";
 import dynamic from 'next/dynamic';
 import { useNotification } from "@/context/NotificationContext";
@@ -32,7 +32,7 @@ export default function LessonPlayerPage() {
   const [isExpired, setIsExpired] = useState(false);
 
   // Player State
-  const [currentStage, setCurrentStage] = useState<'welcome' | 'slides' | 'exercises' | 'summary'>('welcome');
+  const [currentStage, setCurrentStage] = useState<'welcome' | 'slides' | 'assignments' | 'exercises' | 'summary'>('welcome');
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, any>>({});
@@ -71,10 +71,12 @@ export default function LessonPlayerPage() {
         // Parse metadata
         let slides = [];
         let questions = [];
+        let assignments = [];
         let attachments = [];
 
         try { slides = typeof data.slides === 'string' ? JSON.parse(data.slides) : (data.slides || []); } catch (e) { }
         try { questions = typeof data.questions === 'string' ? JSON.parse(data.questions) : (data.questions || []); } catch (e) { }
+        try { assignments = typeof data.assignments === 'string' ? JSON.parse(data.assignments) : (data.assignments || []); } catch (e) { }
         try { attachments = typeof data.attachments === 'string' ? JSON.parse(data.attachments) : (data.attachments || []); } catch (e) { }
 
         const sanitizedQuestions = Array.isArray(questions) ? questions.map(q => ({
@@ -86,6 +88,7 @@ export default function LessonPlayerPage() {
           ...data,
           slides: Array.isArray(slides) && slides.length ? slides : [{ title: "مقدمة الدرس", content: data.summary || "أهلاً بك في هذا الدرس." }],
           questions: sanitizedQuestions,
+          assignments: Array.isArray(assignments) ? assignments : [],
           attachments: Array.isArray(attachments) ? attachments : []
         });
 
@@ -97,7 +100,7 @@ export default function LessonPlayerPage() {
         }
       }
     } catch (error) {
-      console.error("Failed to fetch lesson data");
+      console.error("Failed to fetch lesson data:", error);
     } finally {
       setIsLoading(false);
     }
@@ -213,7 +216,7 @@ export default function LessonPlayerPage() {
 
            <div className="flex items-center gap-4">
               <div className="hidden md:flex gap-1.5 p-2 bg-slate-100/50 rounded-2xl">
-                {['welcome', 'slides', 'exercises', 'summary'].map((s) => (
+                {['welcome', 'slides', 'assignments', 'exercises', 'summary'].map((s) => (
                   <div key={s} className={`h-2 rounded-full transition-all duration-500 ${currentStage === s ? 'w-10 bg-indigo-600 shadow-lg shadow-indigo-100' : 'w-4 bg-slate-200'}`}></div>
                 ))}
               </div>
@@ -226,7 +229,7 @@ export default function LessonPlayerPage() {
         </div>
 
         {/* ── MAIN CONTENT AREA ── */}
-        <div className={`grid grid-cols-1 ${currentStage === 'welcome' || currentStage === 'summary' ? 'xl:grid-cols-12' : 'xl:grid-cols-1'} gap-10`}>
+        <div className={`grid grid-cols-1 items-start ${currentStage === 'welcome' || currentStage === 'summary' ? 'xl:grid-cols-12' : 'xl:grid-cols-1'} gap-10`}>
           
           <div className={`${currentStage === 'welcome' || currentStage === 'summary' ? 'xl:col-span-8' : 'xl:col-span-12'} space-y-10`}>
             
@@ -301,8 +304,8 @@ export default function LessonPlayerPage() {
             )}
 
             {currentStage === 'slides' && (
-              <div className="premium-card rounded-[48px] overflow-hidden flex flex-col min-h-[500px] group">
-                <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between px-8">
+              <div className="premium-card rounded-[48px] overflow-hidden flex flex-col group mx-auto w-full max-w-5xl">
+                <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between px-8 shrink-0">
                    <div className="flex items-center gap-3 text-slate-400 font-black text-xs uppercase tracking-widest">
                       <Layout className="w-4 h-4" />
                       شرائح الشرح
@@ -312,58 +315,95 @@ export default function LessonPlayerPage() {
                    </div>
                 </div>
 
-                <div className="flex-1 p-8 md:p-20 overflow-y-auto custom-scrollbar flex flex-col items-center justify-center text-center w-full">
-                  <h3 className="text-3xl md:text-5xl font-black text-slate-900 mb-10 leading-tight tracking-tight animate-in fade-in slide-in-from-top-4 duration-500">{lesson.slides[currentSlideIndex].title}</h3>
+                <div className="p-8 md:p-12 flex flex-col items-center text-center w-full">
+                  <h3 className="text-2xl md:text-4xl font-black text-slate-900 mb-6 leading-tight tracking-tight animate-in fade-in slide-in-from-top-4 duration-500">{lesson.slides[currentSlideIndex].title}</h3>
                   <div
-                    className="text-lg md:text-2xl text-slate-600 leading-[1.8] max-w-5xl font-bold prose prose-indigo break-words whitespace-pre-wrap w-full animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150"
+                    className="text-base md:text-xl text-slate-600 leading-[1.8] max-w-5xl font-bold prose prose-indigo break-words whitespace-pre-wrap w-full animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150"
                     dangerouslySetInnerHTML={{ __html: lesson.slides[currentSlideIndex].content }}
                   />
                 </div>
 
-                <div className="p-8 border-t border-slate-100 bg-slate-50/30 flex justify-between items-center gap-6">
+                <div className="p-6 border-t border-slate-100 bg-slate-50/30 flex justify-between items-center gap-6 shrink-0">
                   <button
                     onClick={() => setCurrentSlideIndex(prev => Math.max(0, prev - 1))}
                     disabled={currentSlideIndex === 0}
-                    className="w-14 h-14 rounded-2xl bg-white border border-slate-100 flex items-center justify-center hover:bg-slate-50 disabled:opacity-20 transition-all shadow-sm"
+                    className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center hover:bg-slate-50 disabled:opacity-20 transition-all shadow-sm"
                   >
-                    <ChevronRight className="w-8 h-8 text-slate-900" />
+                    <ChevronRight className="w-6 h-6 text-slate-900" />
                   </button>
                   
                   <div className="flex gap-2">
                     {lesson.slides.map((_: any, i: number) => (
-                      <div key={i} className={`h-2 rounded-full transition-all duration-700 ${currentSlideIndex === i ? 'w-10 bg-indigo-600' : 'w-2 bg-slate-200'}`}></div>
+                      <div key={i} className={`h-1.5 rounded-full transition-all duration-700 ${currentSlideIndex === i ? 'w-8 bg-indigo-600' : 'w-1.5 bg-slate-200'}`}></div>
                     ))}
                   </div>
 
                   {currentSlideIndex < lesson.slides.length - 1 ? (
                     <button
                       onClick={() => setCurrentSlideIndex(prev => prev + 1)}
-                      className="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all"
+                      className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all"
                     >
-                      <ChevronLeft className="w-8 h-8" />
+                      <ChevronLeft className="w-6 h-6" />
                     </button>
                   ) : (
                     <button
-                      onClick={() => setCurrentStage('exercises')}
-                      className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black text-lg hover:bg-emerald-700 shadow-xl shadow-emerald-100 flex items-center gap-3"
+                      onClick={() => setCurrentStage('assignments')}
+                      className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black text-base hover:bg-indigo-700 shadow-xl shadow-indigo-100 flex items-center gap-3"
                     >
-                      بدء التمارين
-                      <HelpCircle className="w-6 h-6" />
+                      عرض التكاليف
+                      <FileText className="w-5 h-5" />
                     </button>
                   )}
                 </div>
               </div>
             )}
 
+            {currentStage === 'assignments' && (
+              <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                <div className="text-center">
+                  <h2 className="text-2xl md:text-3xl font-black text-slate-900 mb-2">تكاليف الدرس (Assignments)</h2>
+                  <p className="text-slate-400 font-bold">يرجى قراءة التكليف بعناية وتنفيذه</p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6 max-w-4xl mx-auto">
+                   {lesson.assignments?.length > 0 ? lesson.assignments.map((as: any, idx: number) => (
+                     <div key={idx} className="premium-card p-8 rounded-[40px] border-r-8 border-indigo-600">
+                        <div className="flex items-center gap-4 mb-6">
+                           <span className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center font-black">
+                              {idx + 1}
+                           </span>
+                           <h3 className="font-black text-slate-900 text-lg">التكليف المطلوب</h3>
+                        </div>
+                        <div className="text-slate-600 text-lg leading-relaxed prose prose-indigo" dangerouslySetInnerHTML={{ __html: as.text }} />
+                     </div>
+                   )) : (
+                     <div className="premium-card p-12 rounded-[40px] text-center text-slate-400 font-bold">
+                        لا توجد تكاليف محددة لهذا الدرس. يمكنك الانتقال للتمارين.
+                     </div>
+                   )}
+                </div>
+
+                <div className="flex justify-center pt-8">
+                   <button 
+                    onClick={() => setCurrentStage('exercises')}
+                    className="bg-emerald-600 text-white px-12 py-5 rounded-[25px] font-black text-lg hover:scale-105 transition-all shadow-2xl shadow-emerald-100 flex items-center gap-4"
+                   >
+                    بدء التمارين والأسئلة
+                    <ArrowLeft className="w-5 h-5" />
+                   </button>
+                </div>
+              </div>
+            )}
+
             {currentStage === 'exercises' && (
-              <div className="space-y-6 animate-in slide-in-from-bottom-8 duration-700 flex flex-col items-center">
-                <div className="premium-card p-4 rounded-[30px] flex flex-col md:flex-row items-center justify-between border-b-4 border-indigo-600 w-full max-w-4xl mx-auto gap-4">
+              <div className="space-y-6 animate-in slide-in-from-bottom-8 duration-700 flex flex-col items-center w-full">
+                <div className="premium-card p-4 rounded-[30px] flex flex-col md:flex-row items-center justify-between border-b-4 border-indigo-600 w-full max-w-4xl mx-auto gap-4 shrink-0">
                   <div className="flex flex-wrap gap-2 justify-center">
                     {lesson.questions.map((_: any, i: number) => (
                       <button
                         key={i}
                         onClick={() => setCurrentQuestionIndex(i)}
-                        className={`w-10 h-10 md:w-12 md:h-12 rounded-xl font-black transition-all border-2 flex items-center justify-center ${currentQuestionIndex === i ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg' : answers[i] ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-white border-slate-100 text-slate-400'}`}
+                        className={`w-9 h-9 md:w-10 md:h-10 rounded-xl font-black transition-all border-2 flex items-center justify-center text-xs ${currentQuestionIndex === i ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg' : answers[i] ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-white border-slate-100 text-slate-400'}`}
                       >
                         {i + 1}
                       </button>
@@ -375,62 +415,64 @@ export default function LessonPlayerPage() {
                         showToast("وضع الاختبار السريع مفعل", "info");
                       }
                     }}
-                    className="px-6 py-3 bg-orange-500 text-white rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-orange-600 transition-all shadow-lg"
+                    className="px-5 py-2.5 bg-orange-500 text-white rounded-2xl font-black text-xs flex items-center gap-2 hover:bg-orange-600 transition-all shadow-lg"
                   >
-                    <HelpCircle className="w-5 h-5" />
+                    <HelpCircle className="w-4 h-4" />
                     Quiz Me!
                   </button>
                 </div>
 
-                <div className="premium-card rounded-[40px] p-8 md:p-14 shadow-2xl border-indigo-50 w-full max-w-5xl mx-auto min-h-[60vh] flex flex-col justify-center">
+                <div className="premium-card rounded-[40px] overflow-hidden shadow-2xl border-indigo-50 w-full max-w-5xl mx-auto flex flex-col">
                   {lesson.questions.length > 0 && lesson.questions[currentQuestionIndex] ? (
                     <>
-                      <div className="flex items-center gap-3 mb-6">
-                        <span className="px-3 py-1 bg-slate-100 rounded-lg text-[10px] font-black text-slate-500 uppercase">سؤال {currentQuestionIndex + 1}</span>
-                      </div>
-                      
-                      <h3 className="text-xl md:text-3xl font-black text-slate-900 mb-10 leading-relaxed tracking-tight break-words w-full" dangerouslySetInnerHTML={{ __html: lesson.questions[currentQuestionIndex].text }} />
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-10">
-                        {(lesson.questions[currentQuestionIndex].options || []).map((opt: string, oIdx: number) => (
-                          <button 
-                            key={oIdx} 
-                            onClick={() => handleAnswerSelect(opt)} 
-                            className={`p-6 md:p-8 rounded-[30px] border-4 text-right transition-all duration-300 font-black text-base md:text-lg relative break-words overflow-hidden ${answers[currentQuestionIndex] === opt ? 'bg-indigo-600 border-white text-white shadow-xl shadow-indigo-100' : 'bg-white border-slate-50 text-slate-600 hover:border-indigo-200'}`}
-                          >
-                            <div className="flex items-center justify-between gap-4">
-                              <span className="flex-1 break-words">{opt}</span>
-                              <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${answers[currentQuestionIndex] === opt ? 'border-white bg-white/20' : 'border-slate-100'}`}>
-                                  {answers[currentQuestionIndex] === opt && <CheckCircle2 className="w-4 h-4" />}
+                      <div className="p-8 md:p-10">
+                        <div className="flex items-center gap-3 mb-4">
+                          <span className="px-3 py-1 bg-slate-100 rounded-lg text-[10px] font-black text-slate-500 uppercase">سؤال {currentQuestionIndex + 1}</span>
+                        </div>
+                        
+                        <h3 className="text-lg md:text-2xl font-black text-slate-900 mb-8 leading-relaxed tracking-tight break-words w-full" dangerouslySetInnerHTML={{ __html: lesson.questions[currentQuestionIndex].text }} />
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-4 mb-6">
+                          {(lesson.questions[currentQuestionIndex].options || []).map((opt: string, oIdx: number) => (
+                            <button 
+                              key={oIdx} 
+                              onClick={() => handleAnswerSelect(opt)} 
+                              className={`p-5 md:p-6 rounded-[25px] border-4 text-right transition-all duration-300 font-black text-sm md:text-base relative break-words overflow-hidden ${answers[currentQuestionIndex] === opt ? 'bg-indigo-600 border-white text-white shadow-xl shadow-indigo-100' : 'bg-white border-slate-50 text-slate-600 hover:border-indigo-200'}`}
+                            >
+                              <div className="flex items-center justify-between gap-4">
+                                <span className="flex-1 break-words">{opt}</span>
+                                <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${answers[currentQuestionIndex] === opt ? 'border-white bg-white/20' : 'border-slate-100'}`}>
+                                    {answers[currentQuestionIndex] === opt && <CheckCircle2 className="w-3 h-3" />}
+                                </div>
                               </div>
-                            </div>
-                          </button>
-                        ))}
+                            </button>
+                          ))}
+                        </div>
                       </div>
 
-                      <div className="flex justify-between items-center mt-12 pt-6 border-t border-slate-100">
+                      <div className="p-6 md:p-8 border-t border-slate-100 bg-slate-50/30 flex justify-between items-center shrink-0">
                         <button 
                           onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))} 
                           disabled={currentQuestionIndex === 0} 
-                          className="text-slate-400 px-6 py-3 rounded-xl font-black hover:text-slate-600 disabled:opacity-20"
+                          className="text-slate-400 px-6 py-3 rounded-xl font-black hover:text-slate-600 disabled:opacity-20 text-sm"
                         >
                           السابق
                         </button>
                         <button 
                           onClick={handleNextQuestion} 
-                          className={`px-10 py-4 rounded-2xl font-black transition-all flex items-center gap-3 text-lg shadow-xl ${currentQuestionIndex < lesson.questions.length - 1 ? 'bg-slate-950 text-white hover:bg-indigo-600' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                          className={`px-8 py-3.5 rounded-2xl font-black transition-all flex items-center gap-3 text-base shadow-xl ${currentQuestionIndex < lesson.questions.length - 1 ? 'bg-slate-950 text-white hover:bg-indigo-600' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
                         >
                           {currentQuestionIndex < lesson.questions.length - 1 ? "التالي" : "إنهاء الاختيار"}
-                          <ChevronLeft className="w-6 h-6" />
+                          <ChevronLeft className="w-5 h-5" />
                         </button>
                       </div>
                     </>
                   ) : (
-                    <div className="text-center py-20 space-y-6">
-                      <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto">
-                        <HelpCircle className="w-10 h-10 text-slate-200" />
+                    <div className="text-center py-20 space-y-6 flex-1 flex flex-col items-center justify-center">
+                      <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto">
+                        <HelpCircle className="w-8 h-8 text-slate-200" />
                       </div>
-                      <p className="text-slate-400 font-bold text-lg">لا توجد تمارين متاحة لهذا الدرس حالياً.</p>
+                      <p className="text-slate-400 font-bold text-base">لا توجد تمارين متاحة لهذا الدرس حالياً.</p>
                       <button 
                         onClick={() => setCurrentStage('summary')}
                         className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-black"

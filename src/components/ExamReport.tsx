@@ -70,7 +70,9 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
       });
       if (res.ok) {
         const data = await res.json();
-        setSchools(data);
+        // Handle both direct array and paginated object response
+        const schoolsData = Array.isArray(data) ? data : (data.schools || []);
+        setSchools(schoolsData);
       }
     } catch (e) {
       console.error("Error fetching schools", e);
@@ -85,7 +87,7 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
       });
       if (res.ok) {
         const data = await res.json();
-        setExams(data);
+        setExams(Array.isArray(data) ? data : []);
       }
     } catch (e) {
       console.error("Error fetching exams", e);
@@ -140,7 +142,7 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
                 onChange={(e) => setSelectedSchool(e.target.value)}
               >
                 <option value="">-- اختر المدرسة --</option>
-                {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                {Array.isArray(schools) && schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
           )}
@@ -171,7 +173,7 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
               disabled={!selectedGrade || exams.length === 0}
             >
               <option value="">-- اختر الامتحان --</option>
-              {exams.map(e => <option key={e.id} value={e.id}>{e.title}</option>)}
+              {Array.isArray(exams) && exams.map(e => <option key={e.id} value={e.id}>{e.title}</option>)}
             </select>
           </div>
         </div>
@@ -223,7 +225,7 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
                   <div className="p-8 text-center text-slate-500 font-bold">لا يوجد طلاب أدوا الامتحان</div>
                 ) : (
                   <div className="divide-y divide-slate-100">
-                    {reportData.attended.map(student => (
+                    {Array.isArray(reportData.attended) && reportData.attended.map(student => (
                       <div key={student.id} className="p-4 flex justify-between items-center bg-white">
                         <div>
                           <p className="font-bold text-slate-800">{student.name}</p>
@@ -251,7 +253,7 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
                   <div className="p-8 text-center text-slate-500 font-bold">جميع الطلاب أدوا الامتحان</div>
                 ) : (
                   <div className="divide-y divide-slate-100">
-                    {reportData.missed.map(student => (
+                    {Array.isArray(reportData.missed) && reportData.missed.map(student => (
                       <div key={student.id} className="p-4 flex justify-between items-center bg-white">
                         <div>
                           <p className="font-bold text-slate-800">{student.name}</p>

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { API_URL, getFullImageUrl } from "@/lib/api";
+import { readCachedStudentStats, fetchStudentStats } from "@/lib/student-stats";
 
 export default function CoursesPage() {
   const router = useRouter();
@@ -32,14 +33,14 @@ export default function CoursesPage() {
           return;
         }
 
-        const res = await fetch(`${API_URL}/student/stats`, {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
-
-        if (res.ok) {
-          const statsData = await res.json();
-          setCourses(statsData.courseProgresses || []);
+        const cached = readCachedStudentStats();
+        if (cached?.courseProgresses) {
+          setCourses(cached.courseProgresses || []);
+          setIsLoading(false);
         }
+
+        const statsData = await fetchStudentStats(token);
+        setCourses(statsData.courseProgresses || []);
       } catch (error) {
         console.error("Failed to fetch courses:", error);
       } finally {

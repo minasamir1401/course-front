@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { API_URL, getFullImageUrl } from "@/lib/api";
+import { readCachedStudentStats, fetchStudentStats } from "@/lib/student-stats";
 
 export default function StudentDashboard() {
   const router = useRouter();
@@ -25,14 +26,14 @@ export default function StudentDashboard() {
           return;
         }
 
-        const res = await fetch(`${API_URL}/student/stats`, {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
-
-        if (res.ok) {
-          const statsData = await res.json();
-          setStats(statsData);
+        const cached = readCachedStudentStats();
+        if (cached) {
+          setStats(cached);
+          setIsLoading(false);
         }
+
+        const statsData = await fetchStudentStats(token);
+        setStats(statsData);
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
       } finally {
