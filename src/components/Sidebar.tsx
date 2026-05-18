@@ -13,10 +13,11 @@ import { logout } from "@/lib/auth";
 interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
+  onToggle?: (open: boolean) => void;
   role?: string;
 }
 
-export default function Sidebar({ isOpen: externalIsOpen, onClose, role }: SidebarProps) {
+export default function Sidebar({ isOpen: externalIsOpen, onClose, onToggle, role }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [internalIsOpen, setInternalIsOpen] = useState(false);
@@ -28,8 +29,11 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose, role }: Sideb
     setInternalIsOpen(false);
   };
   const handleToggle = () => {
-    if (onClose) onClose();
-    else setInternalIsOpen(prev => !prev);
+    if (externalIsOpen !== undefined) {
+      onToggle?.(!isOpen);
+      return;
+    }
+    setInternalIsOpen(prev => !prev);
   };
 
   const handleLogout = () => logout(router, pathname);

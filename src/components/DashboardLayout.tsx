@@ -46,8 +46,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [isSuperAdmin, isSchoolAdmin]);
 
   const renderSidebar = () => {
-    if (isSuperAdmin) return <SuperAdminSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />;
-    if (isSchoolAdmin) return <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} role={role} />;
+    if (isSuperAdmin) return <SuperAdminSidebar isOpen={isSidebarOpen} onToggle={setIsSidebarOpen} onClose={() => setIsSidebarOpen(false)} />;
+    if (isSchoolAdmin) return <Sidebar isOpen={isSidebarOpen} onToggle={setIsSidebarOpen} onClose={() => setIsSidebarOpen(false)} role={role} />;
     return null;
   };
 

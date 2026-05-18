@@ -10,13 +10,29 @@ import {
 } from "lucide-react";
 import { logout } from "@/lib/auth";
 
-export default function SuperAdminSidebar({ isOpen: externalOpen, onClose }: { isOpen?: boolean, onClose?: () => void }) {
+export default function SuperAdminSidebar({
+  isOpen: externalOpen,
+  onToggle,
+  onClose,
+}: {
+  isOpen?: boolean;
+  onToggle?: (open: boolean) => void;
+  onClose?: () => void;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [internalOpen, setInternalOpen] = useState(false);
 
-  const isOpen = externalOpen !== undefined ? externalOpen : internalOpen;
-  const setIsOpen = externalOpen !== undefined ? (onClose || (() => { })) : setInternalOpen;
+  const isControlled = externalOpen !== undefined;
+  const isOpen = isControlled ? externalOpen : internalOpen;
+  const setIsOpen = (open: boolean) => {
+    if (isControlled) {
+      if (onToggle) onToggle(open);
+      else if (!open) onClose?.();
+      return;
+    }
+    setInternalOpen(open);
+  };
 
   const handleLogout = () => logout(router, pathname);
 
