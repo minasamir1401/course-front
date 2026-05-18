@@ -127,7 +127,7 @@ export default function SuperAdminNewExamPage() {
     correctAnswer: "", points: 1, skill: "Math", level: "Medium",
     standard: "",
     learningOutcome: "",
-    explanation: "", imageUrl: "", correctAnswers: [],
+    explanations: [""], imageUrl: "", correctAnswers: [],
   });
 
   useEffect(() => {
@@ -164,7 +164,7 @@ export default function SuperAdminNewExamPage() {
       correctAnswer: "", points: 1, skill: "Math", level: "Medium",
       standard: "",
       learningOutcome: "",
-      explanation: "", imageUrl: "", correctAnswers: [],
+      explanations: [""], imageUrl: "", correctAnswers: [],
     });
     setEditingIndex(null);
     setShowQuestionForm(true);
@@ -287,13 +287,18 @@ export default function SuperAdminNewExamPage() {
     setSaving(true);
     try {
       const token = localStorage.getItem("super_admin_token");
+      const questionsPayload = questions.map(q => ({
+        ...q,
+        explanation: JSON.stringify(q.explanations || [""])
+      }));
+
       const res = await fetch(`${API_URL}/exams`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ ...examInfo, category: examInfo.subjects[0], status, questions }),
+        body: JSON.stringify({ ...examInfo, category: examInfo.subjects[0], status, questions: questionsPayload }),
       });
 
       if (res.ok) {
@@ -780,24 +785,35 @@ export default function SuperAdminNewExamPage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
                       <div className="flex flex-col gap-3">
-                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">ناتج التعلم</label>
-                        <input 
-                          type="text"
-                          className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 outline-none font-bold text-slate-700 text-sm"
-                          placeholder="مثال: فهم قوانين الحركة النيوتنية..."
-                          value={currentQuestion.learningOutcome || ""}
-                          onChange={(e) => updateCurrentQuestion("learningOutcome", e.target.value)}
-                        />
-                      </div>
-                      <div className="flex flex-col gap-3">
-                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">شرح الإجابة</label>
-                        <RichTextEditor 
-                          value={currentQuestion.explanation || ""}
-                          onChange={(value) => updateCurrentQuestion("explanation", value)}
-                          placeholder="اشرح لماذا هذه الإجابة هي الصحيحة..."
-                          className="!bg-slate-50 !border-slate-100"
-                        />
+                        <div className="flex justify-between items-center">
+                          <label className="text-xs font-black text-slate-400 uppercase tracking-widest">تفسيرات الإجابة (Explanations)</label>
+                          <button onClick={() => updateCurrentQuestion("explanations", [...(currentQuestion.explanations || [""]), ""])} className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1"><Plus className="w-3 h-3"/> إضافة تفسير</button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {(currentQuestion.explanations || [""]).map((exp: string, eIdx: number) => (
+                          <div key={eIdx} className="relative group min-w-0">
+                            <RichTextEditor 
+                              value={exp}
+                              onChange={(value) => {
+                                const newExps = [...(currentQuestion.explanations || [""])];
+                                newExps[eIdx] = value;
+                                updateCurrentQuestion("explanations", newExps);
+                              }}
+                              placeholder={`تفسير الإجابة ${eIdx + 1}...`}
+                              className="!bg-slate-50 !border-slate-100"
+                            />
+                            {(currentQuestion.explanations || []).length > 1 && (
+                              <button onClick={() => {
+                                const newExps = [...currentQuestion.explanations];
+                                newExps.splice(eIdx, 1);
+                                updateCurrentQuestion("explanations", newExps);
+                              }} className="absolute top-2 left-2 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all bg-red-50 p-1.5 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                            )}
+                          </div>
+                        ))}
+                        </div>
                       </div>
                     </div>
 
@@ -1066,3 +1082,5 @@ export default function SuperAdminNewExamPage() {
     </DashboardLayout>
   );
 }
+
+

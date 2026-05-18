@@ -10,11 +10,13 @@ import {
   Bookmark, MessageSquare, Download, Share2, Paperclip,
   Check, Lock, Play, Sparkles, Calendar, ArrowRight
 } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function CourseDetailsPage() {
   const router = useRouter();
   const params = useParams();
   const courseId = params.id as string;
+  const { t, language } = useLanguage();
 
   const [course, setCourse] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -87,9 +89,9 @@ export default function CourseDetailsPage() {
           <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 shadow-inner">
             <BookOpen className="w-12 h-12 text-slate-200" />
           </div>
-          <h2 className="text-3xl font-black text-slate-800 mb-2">الكورس غير موجود</h2>
+          <h2 className="text-3xl font-black text-slate-800 mb-2">{t('courseDetails.notFound')}</h2>
           <button onClick={() => router.push('/courses')} className="bg-slate-900 text-white px-8 py-3 rounded-2xl font-black mt-4 transition-all hover:bg-indigo-600 active:scale-95">
-            العودة للمقررات
+            {t('courseDetails.backToCourses')}
           </button>
         </div>
       </DashboardLayout>
@@ -102,7 +104,7 @@ export default function CourseDetailsPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto space-y-10 pb-20" dir="rtl">
+      <div className="max-w-6xl mx-auto space-y-10 pb-20" dir={language === 'ar' ? 'rtl' : 'ltr'}>
 
         {/* Course Folder Header */}
         <div className="bg-white rounded-[48px] border border-slate-100 shadow-sm relative overflow-hidden group min-h-[300px] flex flex-col justify-end">
@@ -126,14 +128,14 @@ export default function CourseDetailsPage() {
                 </span>
                 <span className="text-white/60 font-bold text-xs flex items-center gap-1">
                   <List className="w-3.5 h-3.5" />
-                  {totalLessons} دروس
+                  {totalLessons} {t('courseDetails.lessons')}
                 </span>
               </div>
               <h1 className="text-3xl md:text-6xl font-black text-white leading-tight">
                 {course.title}
               </h1>
               <p className="text-white/70 font-bold text-lg max-w-2xl">
-                {course.description || "مرحباً بك في هذا الكورس الشامل. ابدأ الآن بتطوير مهاراتك من خلال الدروس المرتبة أدناه."}
+                {course.description || t('courseDetails.defaultDescription')}
               </p>
             </div>
 
@@ -152,7 +154,7 @@ export default function CourseDetailsPage() {
                   {progressPercent}%
                 </div>
               </div>
-              <p className="text-[10px] font-black uppercase tracking-[2px] text-white/50">إجمالي التقدم</p>
+              <p className="text-[10px] font-black uppercase tracking-[2px] text-white/50">{t('courseDetails.totalProgress')}</p>
             </div>
           </div>
         </div>
@@ -162,12 +164,12 @@ export default function CourseDetailsPage() {
           <div className="flex items-center justify-between px-4">
             <h2 className="text-2xl font-black text-slate-900 flex items-center gap-3">
               <Sparkles className="w-6 h-6 text-amber-400" />
-              محتوى المجلد
+              {t('courseDetails.folderContent')}
             </h2>
             <div className="flex items-center gap-4 text-xs font-bold text-slate-400">
-              <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500"></div> مكتمل</span>
-              <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-indigo-500"></div> متاح</span>
-              <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-slate-300"></div> مجدول</span>
+              <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500"></div> {t('courseDetails.completed')}</span>
+              <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-indigo-500"></div> {t('courseDetails.available')}</span>
+              <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-slate-300"></div> {t('courseDetails.scheduled')}</span>
             </div>
           </div>
 
@@ -204,13 +206,13 @@ export default function CourseDetailsPage() {
                     </div>
 
                     {/* Lesson Info */}
-                    <div className="flex-1 text-center md:text-right space-y-1">
+                    <div className="flex-1 text-center md:text-start space-y-1">
                       <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-1">
-                        {isCompleted && <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-black rounded-lg">تم الإنجاز ✅</span>}
+                        {isCompleted && <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-black rounded-lg">{t('courseDetails.done')}</span>}
                         {isLocked && (
                           <span className="px-2 py-0.5 bg-amber-50 text-amber-700 text-[9px] font-black rounded-lg flex items-center gap-1">
                             <Calendar className="w-3 h-3" />
-                            ينشر في {new Date(lesson.publishDate).toLocaleDateString('ar-EG')}
+                            {t('courseDetails.publishedOn')} {new Date(lesson.publishDate).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US')}
                           </span>
                         )}
                       </div>
@@ -225,7 +227,7 @@ export default function CourseDetailsPage() {
                         {lesson.questions?.length > 0 && (
                           <span className="flex items-center gap-1">
                             <HelpCircle className="w-3.5 h-3.5" />
-                            {JSON.parse(lesson.questions).length} أسئلة
+                            {JSON.parse(lesson.questions).length} {t('courseDetails.questions')}
                           </span>
                         )}
                       </div>
@@ -236,15 +238,15 @@ export default function CourseDetailsPage() {
                       {isLocked ? (
                         <div className="px-6 py-4 rounded-2xl bg-slate-50 text-slate-400 text-xs font-black flex items-center justify-center gap-2 border border-slate-100">
                           <Lock className="w-4 h-4" />
-                          محتوى مجدول
+                          {t('courseDetails.scheduledContent')}
                         </div>
                       ) : (
                         <button className={`w-full md:w-auto px-10 py-4 rounded-2xl text-sm font-black transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95 ${isCompleted
                             ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white'
                             : 'bg-indigo-600 text-white hover:bg-slate-900 hover:shadow-indigo-200'
                           }`}>
-                          {isCompleted ? 'مراجعة الدرس' : 'بدء التعلم الآن'}
-                          <ChevronLeft className="w-4 h-4 group-hover:-translate-x-2 transition-transform" />
+                          {isCompleted ? t('courseDetails.reviewLesson') : t('courseDetails.startLearningNow')}
+                          <ChevronLeft className={`w-4 h-4 transition-transform ${language === 'ar' ? 'group-hover:-translate-x-2' : 'group-hover:translate-x-2 rotate-180'}`} />
                         </button>
                       )}
                     </div>
@@ -256,7 +258,7 @@ export default function CourseDetailsPage() {
             {(!course.lessons || course.lessons.length === 0) && (
               <div className="py-24 text-center bg-white rounded-[40px] border-2 border-slate-100 border-dashed">
                 <PlaySquare className="w-20 h-20 text-slate-100 mx-auto mb-6" />
-                <p className="text-slate-400 text-xl font-black">لا توجد دروس مضافة لهذا المجلد بعد</p>
+                <p className="text-slate-400 text-xl font-black">{t('courseDetails.noLessonsAdded')}</p>
               </div>
             )}
           </div>

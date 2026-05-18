@@ -76,6 +76,8 @@
 @layer base {
   body {
     @apply bg-mesh min-h-screen text-slate-900;
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
 }
 

@@ -130,8 +130,8 @@ function SidebarLink({ href, icon: Icon, label, active, badge }: {
     <Link
       href={href}
       className={`flex items-center justify-between px-3 py-2.5 rounded-xl transition-all group ${active
-          ? 'bg-slate-900 text-white'
-          : 'text-slate-700 hover:bg-slate-900 hover:text-white'
+        ? 'bg-slate-900 text-white'
+        : 'text-slate-700 hover:bg-slate-900 hover:text-white'
         }`}
     >
       <div className="flex items-center gap-3">

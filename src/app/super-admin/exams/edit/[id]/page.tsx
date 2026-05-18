@@ -62,7 +62,7 @@ export default function SuperAdminEditExamPage() {
     correctAnswer: "", points: 1, skill: "Math", level: "Medium",
     standard: "",
     learningOutcome: "",
-    explanation: "", imageUrl: "", correctAnswers: [],
+    explanations: [""], imageUrl: "", correctAnswers: [],
   });
 
   const CATEGORIES = [
@@ -173,9 +173,17 @@ export default function SuperAdminEditExamPage() {
           } catch (e) {
             console.error("Failed to parse options", e);
           }
+          let parsedExplanations = [""];
+          try {
+            parsedExplanations = typeof q.explanation === 'string' ? JSON.parse(q.explanation) : (q.explanations || [""]);
+            if (!Array.isArray(parsedExplanations)) parsedExplanations = [q.explanation || ""];
+          } catch (e) {
+            parsedExplanations = [q.explanation || ""];
+          }
           return {
             ...q,
-            options: Array.isArray(parsedOptions) ? parsedOptions : []
+            options: Array.isArray(parsedOptions) ? parsedOptions : [],
+            explanations: parsedExplanations
           };
         }) || []);
       }
@@ -194,7 +202,7 @@ export default function SuperAdminEditExamPage() {
       correctAnswer: "", points: 1, skill: "Math", level: "Medium",
       standard: "",
       learningOutcome: "",
-      explanation: "", imageUrl: "", correctAnswers: [],
+      explanations: [""], imageUrl: "", correctAnswers: [],
     });
     setEditingIndex(null);
     setShowQuestionForm(true);
@@ -300,7 +308,10 @@ export default function SuperAdminEditExamPage() {
         body: JSON.stringify({
           ...examInfo,
           status: statusOverride || examInfo.status,
-          questions
+          questions: questions.map(q => ({
+            ...q,
+            explanation: JSON.stringify(q.explanations || [""])
+          }))
         }),
       });
 
@@ -918,9 +929,31 @@ export default function SuperAdminEditExamPage() {
                       <input type="text" className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 font-bold text-sm" placeholder="الهدف من السؤال..." value={currentQuestion.learningOutcome || ""} onChange={(e) => updateCurrentQuestion("learningOutcome", e.target.value)} />
                     </div>
                     <div className="space-y-3">
-                      <label className="text-sm font-black text-slate-800">شرح الإجابة</label>
-                      <div className="border border-slate-100 rounded-xl">
-                        <RichTextEditor value={currentQuestion.explanation || ""} onChange={(v) => updateCurrentQuestion("explanation", v)} placeholder="لماذا هذه الإجابة صحيحة؟" />
+                      <div className="flex justify-between items-center">
+                        <label className="text-sm font-black text-slate-800">تفسيرات الإجابة (Explanations)</label>
+                        <button onClick={() => updateCurrentQuestion("explanations", [...(currentQuestion.explanations || [""]), ""])} className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1"><Plus className="w-3 h-3"/> إضافة تفسير</button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {(currentQuestion.explanations || [""]).map((exp: string, eIdx: number) => (
+                          <div key={eIdx} className="relative group min-w-0 border border-slate-100 rounded-xl">
+                            <RichTextEditor 
+                              value={exp} 
+                              onChange={(v) => {
+                                const newExps = [...(currentQuestion.explanations || [""])];
+                                newExps[eIdx] = v;
+                                updateCurrentQuestion("explanations", newExps);
+                              }} 
+                              placeholder={`تفسير الإجابة ${eIdx + 1}...`} 
+                            />
+                            {(currentQuestion.explanations || []).length > 1 && (
+                              <button onClick={() => {
+                                const newExps = [...currentQuestion.explanations];
+                                newExps.splice(eIdx, 1);
+                                updateCurrentQuestion("explanations", newExps);
+                              }} className="absolute top-2 left-2 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all bg-red-50 p-1.5 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -1023,3 +1056,5 @@ export default function SuperAdminEditExamPage() {
     </DashboardLayout>
   );
 }
+
+

@@ -381,22 +381,30 @@ export default function TakeExamPage() {
               <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600">
                 <HelpCircle className="w-6 h-6" />
               </div>
-              <div className="flex flex-wrap gap-2">
-                <span className="bg-indigo-600 text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider">
-                  {question.type === 'MCQ' ? 'اختيار من متعدد' : question.type === 'MULTI_SELECT' ? 'اختيار متعدد' : 'صح وخطأ'}
+            <div className="flex flex-wrap items-center gap-3 mb-6">
+              <span className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider">
+                {question.type === 'MCQ' ? 'اختيار من متعدد' : question.type === 'MULTI_SELECT' ? 'اختيار متعدد' : 'صح وخطأ'}
+              </span>
+              <span className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                {question.skill} | {question.level === 'Easy' ? 'سهل' : question.level === 'Medium' ? 'متوسط' : 'صعب'}
+              </span>
+              {question.standard && (
+                <span className="px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                  المعيار: {question.standard}
                 </span>
-                <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider">
-                  {question.skill} | {question.level === 'Easy' ? 'سهل' : question.level === 'Medium' ? 'متوسط' : 'صعب'}
-                </span>
-              </div>
-            </div>
-            <div className="mb-4">
-              {question.learningOutcome && (
-                <div className="flex items-center gap-2 text-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-100 mb-4 w-fit">
-                  <Target className="w-4 h-4" />
-                  <span className="text-xs font-black uppercase tracking-widest">ناتج التعلم: {question.learningOutcome}</span>
-                </div>
               )}
+              {question.indicator && (
+                <span className="px-3 py-1.5 bg-purple-50 text-purple-600 border border-purple-100 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                  المؤشر: {question.indicator}
+                </span>
+              )}
+              {question.learningOutcome && (
+                <span className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                  <Target className="w-3 h-3" />
+                  الناتج: {question.learningOutcome}
+                </span>
+              )}
+            </div>
             </div>
             <h2 
               className="text-2xl font-bold text-slate-800 mb-8 leading-relaxed"

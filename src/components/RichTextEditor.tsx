@@ -205,7 +205,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
   );
 
   return (
-    <div className={`flex flex-col border-2 rounded-[30px] transition-all duration-300 bg-white ${isFocused
+    <div className={`w-full max-w-full flex flex-col border-2 rounded-[30px] transition-all duration-300 bg-white ${isFocused
         ? 'border-indigo-500 ring-8 ring-indigo-500/5 shadow-2xl'
         : 'border-slate-100 hover:border-slate-200 shadow-sm'
       } ${className} relative`}>

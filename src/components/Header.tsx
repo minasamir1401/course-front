@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { logout, stopImpersonation } from "@/lib/auth";
 import { LucideIcon } from "lucide-react";
 
@@ -39,6 +40,7 @@ export default function Header({
   const [showDropdown, setShowDropdown] = useState(false);
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const { t, language, setLanguage } = useLanguage();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -81,13 +83,16 @@ export default function Header({
   const handleLogout = () => logout(router, pathname ?? undefined);
 
   return (
-    <header
-      className={`sticky top-0 z-40 flex items-center justify-between px-3 md:px-8 transition-all duration-500 ${
-        scrolled ? "h-20 glass shadow-lg shadow-indigo-500/5 mt-2 mx-2 md:mx-4 rounded-[32px] border-white/40" : "h-24 bg-transparent"
-      }`}
-    >
+    <header className="sticky top-0 z-40 w-full h-24 transition-all duration-500">
+      <div
+        className={`flex items-center justify-between px-3 md:px-8 w-full transition-all duration-500 border ${
+          scrolled
+            ? "h-20 glass shadow-lg shadow-indigo-500/5 mt-2 mx-2 md:mx-4 rounded-[32px] border-white/40 max-w-[calc(100%-16px)] md:max-w-[calc(100%-32px)]"
+            : "h-24 bg-transparent border-transparent max-w-full mx-0 mt-0 rounded-none"
+        }`}
+      >
       {/* ── RIGHT SIDE: Navigation & Logo ── */}
-      <div className="flex items-center gap-3 md:gap-8 flex-1 min-w-0">
+      <div className="flex items-center gap-3 xl:gap-8 flex-1 min-w-0">
         
         {/* Brand / Title Section */}
         <div className="flex items-center gap-4">
@@ -112,7 +117,7 @@ export default function Header({
 
         {/* ── DESKTOP NAV (Students) ── */}
         {isStudent && !isMobile && (
-          <nav className="flex items-center gap-1.5 glass p-1.5 rounded-[24px] border-white/20 shadow-sm">
+          <nav className="flex items-center gap-1 xl:gap-1.5 glass p-1 xl:p-1.5 rounded-[24px] border-white/20 shadow-sm">
             {navLinks.map((link) => {
               const isActive =
                 pathname === link.href ||
@@ -121,13 +126,13 @@ export default function Header({
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`flex items-center gap-2.5 px-6 py-3 rounded-2xl text-[11px] font-black whitespace-nowrap transition-all duration-300 ${
+                  className={`flex items-center gap-1.5 xl:gap-2.5 px-2 lg:px-2.5 xl:px-6 py-2 lg:py-2 xl:py-3 rounded-xl xl:rounded-2xl text-[10px] xl:text-[11px] font-black whitespace-nowrap transition-all duration-300 ${
                     isActive
                       ? "bg-indigo-600 text-white shadow-xl shadow-indigo-200"
                       : "text-slate-500 hover:text-indigo-600 hover:bg-white/60"
                   }`}
                 >
-                  <link.icon className={`w-4 h-4 shrink-0 ${isActive ? "text-white" : "text-slate-400"}`} />
+                  <link.icon className={`w-3.5 h-3.5 xl:w-4 xl:h-4 shrink-0 ${isActive ? "text-white" : "text-slate-400"}`} />
                   <span>{link.label}</span>
                 </Link>
               );
@@ -141,7 +146,7 @@ export default function Header({
             <Search className="w-4 h-4 text-slate-400 shrink-0 group-focus-within:text-indigo-600" />
             <input
               type="text"
-              placeholder="ابحث عن محتوى تعليمي..."
+              placeholder={t('header.searchPlaceholder')}
               className="bg-transparent text-xs font-bold outline-none w-full placeholder:text-slate-400"
             />
           </div>
@@ -152,9 +157,13 @@ export default function Header({
       <div className="flex items-center gap-4 shrink-0">
         
         {/* Support & Language */}
-        <div className="hidden md:flex items-center gap-3 ml-2">
-           <button className="w-12 h-12 rounded-2xl flex items-center justify-center text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-xl hover:shadow-indigo-100/20 transition-all border border-transparent hover:border-slate-100">
-              <Globe className="w-5 h-5" />
+        <div className="hidden md:flex items-center gap-3 ms-2">
+           <button 
+             onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
+             className="w-12 h-12 rounded-2xl flex items-center justify-center text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-xl hover:shadow-indigo-100/20 transition-all border border-transparent hover:border-slate-100 font-black text-xs uppercase"
+             title={language === 'ar' ? 'Switch to English' : 'التبديل للعربية'}
+           >
+              {language === 'ar' ? 'EN' : 'AR'}
            </button>
            <button className="relative w-12 h-12 rounded-2xl flex items-center justify-center text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-xl hover:shadow-indigo-100/20 transition-all border border-transparent hover:border-slate-100">
               <Bell className="w-5 h-5" />
@@ -164,22 +173,33 @@ export default function Header({
 
         <div className="h-10 w-px bg-slate-200/50 mx-2 hidden md:block" />
 
+        {/* Impersonation Return Button */}
+        {isImpersonating && (
+          <button
+            onClick={() => stopImpersonation()}
+            className="flex items-center gap-2 bg-rose-50 border border-rose-200 text-rose-600 px-3 py-1.5 rounded-xl hover:bg-rose-100 transition-all font-bold text-xs"
+          >
+            <ArrowLeftCircle className="w-4 h-4" />
+            <span className="hidden sm:inline">{t('header.returnAdmin')}</span>
+          </button>
+        )}
+
         {/* Profile Card */}
         <div className="relative">
           <button
             onClick={() => setShowDropdown((v) => !v)}
-            className="flex items-center gap-2 md:gap-4 p-1.5 md:p-2 sm:pl-6 rounded-[24px] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-indigo-100/30 hover:border-indigo-200 transition-all active:scale-95 group"
+            className="flex items-center gap-2 xl:gap-4 p-1.5 md:p-2 sm:ps-4 xl:ps-6 rounded-[24px] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-indigo-100/30 hover:border-indigo-200 transition-all active:scale-95 group"
           >
             <div className="relative">
                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-700 flex items-center justify-center text-white font-black text-sm shadow-xl shadow-indigo-100 group-hover:rotate-6 transition-transform">
                  {userInitials}
                </div>
-               <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-white rounded-full" />
+               <div className="absolute -bottom-1 -end-1 w-4 h-4 bg-emerald-500 border-2 border-white rounded-full" />
             </div>
             
-            <div className="text-right hidden sm:block">
-              <p className="text-xs font-black text-slate-900 leading-none mb-1">{userName}</p>
-              <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">{userRoleName}</p>
+            <div className="text-start hidden sm:block min-w-0">
+              <p className="text-xs font-black text-slate-900 leading-none mb-1 truncate max-w-[80px] lg:max-w-[100px] xl:max-w-[150px]">{userName}</p>
+              <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest truncate">{userRoleName}</p>
             </div>
             <ChevronDown
               className={`w-4 h-4 text-slate-300 transition-transform duration-500 ${showDropdown ? "rotate-180 text-indigo-600" : ""}`}
@@ -190,7 +210,7 @@ export default function Header({
           {showDropdown && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setShowDropdown(false)} />
-              <div className="absolute left-0 top-[calc(100%+16px)] w-72 z-20 rounded-[40px] overflow-hidden shadow-2xl shadow-indigo-200/40 border border-slate-100 bg-white animate-in zoom-in slide-in-from-top-4 duration-300 origin-top-left p-2">
+              <div className="absolute end-0 top-[calc(100%+16px)] w-72 z-20 rounded-[40px] overflow-hidden shadow-2xl shadow-indigo-200/40 border border-slate-100 bg-white animate-in zoom-in slide-in-from-top-4 duration-300 origin-top-right rtl:origin-top-left p-2">
                 <div className="p-6 border-b border-slate-50 bg-slate-50/50 rounded-t-[32px] mb-2">
                    <div className="flex items-center gap-4">
                       <div className="w-14 h-14 rounded-2xl bg-white border border-slate-100 shadow-lg flex items-center justify-center font-black text-xl text-indigo-600">
@@ -204,25 +224,26 @@ export default function Header({
                 </div>
 
                 <div className="space-y-1">
-                  <DropdownItem icon={User} label="الملف الشخصي" onClick={() => { setShowDropdown(false); router.push("/profile"); }} />
-                  <DropdownItem icon={Settings} label="إعدادات الحساب" onClick={() => { setShowDropdown(false); router.push("/settings"); }} />
+                  <DropdownItem icon={User} label={t('header.profile')} onClick={() => { setShowDropdown(false); router.push("/profile"); }} />
+                  <DropdownItem icon={Settings} label={t('header.accountSettings')} onClick={() => { setShowDropdown(false); router.push("/settings"); }} />
 
                   {isImpersonating && (
                     <DropdownItem
                       icon={ArrowLeftCircle}
-                      label="العودة للإدارة"
+                      label={t('header.returnAdmin')}
                       onClick={() => { setShowDropdown(false); stopImpersonation(); }}
                       color="indigo"
                     />
                   )}
 
                   <div className="h-px bg-slate-50 my-3 mx-4" />
-                  <DropdownItem icon={LogOut} label="تسجيل الخروج" onClick={handleLogout} color="rose" />
+                  <DropdownItem icon={LogOut} label={t('header.logout')} onClick={handleLogout} color="rose" />
                 </div>
               </div>
             </>
           )}
         </div>
+      </div>
       </div>
     </header>
   );

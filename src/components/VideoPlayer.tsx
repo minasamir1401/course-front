@@ -12,15 +12,8 @@ function getVideoInfo(url: string): { type: 'youtube' | 'vimeo', id: string } | 
   const normalized = url.trim();
   
   // YouTube patterns
-  const ytPatterns = [
-    /youtube\.com\/watch\?v=([^&\s]+)/,
-    /youtu\.be\/([^?&\s]+)/,
-    /youtube\.com\/embed\/([^?&\s]+)/,
-  ];
-  for (const p of ytPatterns) {
-    const m = normalized.match(p);
-    if (m) return { type: 'youtube', id: m[1] };
-  }
+  const ytMatch = normalized.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+  if (ytMatch) return { type: 'youtube', id: ytMatch[1] };
   
   // Vimeo patterns
   const vimeoPatterns = [

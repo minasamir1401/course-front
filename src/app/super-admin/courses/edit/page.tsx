@@ -10,7 +10,8 @@ import {
   HelpCircle, BookOpen, Save, Layers, Edit2, X,
   ChevronDown, ChevronUp, Play, Layout, Target,
   CheckCircle2, AlertCircle, Upload, Download, Settings,
-  Eye, Monitor, ListOrdered, FileJson, Clock
+  Eye, Monitor, ListOrdered, FileJson, Clock,
+  Lightbulb, MessageSquareQuote, TriangleAlert, Search, CheckCircle
 } from "lucide-react";
 import * as XLSX from 'xlsx';
 import RichTextEditor from "@/components/RichTextEditor";
@@ -18,6 +19,49 @@ import { compressImage } from "@/lib/image-utils";
 
 
 export default function EditCoursePage() {
+  const SECTION_STYLE_PRESETS: Record<string, {
+    icon: any;
+    label: string;
+    container: string;
+    badge: string;
+  }> = {
+    HINT: {
+      icon: Lightbulb,
+      label: "Hint",
+      container: "bg-yellow-50/70 border-yellow-200",
+      badge: "bg-yellow-100 text-yellow-700",
+    },
+    TIP: {
+      icon: Lightbulb,
+      label: "Tip",
+      container: "bg-sky-50/70 border-sky-200",
+      badge: "bg-sky-100 text-sky-700",
+    },
+    WARNING: {
+      icon: TriangleAlert,
+      label: "Warning",
+      container: "bg-rose-50/70 border-rose-200",
+      badge: "bg-rose-100 text-rose-700",
+    },
+    KEY_INSIGHT: {
+      icon: Search,
+      label: "Key Insight",
+      container: "bg-indigo-50/70 border-indigo-200",
+      badge: "bg-indigo-100 text-indigo-700",
+    },
+    FEEDBACK: {
+      icon: MessageSquareQuote,
+      label: "Feedback",
+      container: "bg-emerald-50/70 border-emerald-200",
+      badge: "bg-emerald-100 text-emerald-700",
+    },
+    EXPLANATION: {
+      icon: CheckCircle,
+      label: "Explanation",
+      container: "bg-amber-50/70 border-amber-200",
+      badge: "bg-amber-100 text-amber-700",
+    },
+  };
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showToast } = useNotification();
@@ -65,9 +109,9 @@ export default function EditCoursePage() {
     isVisible: true,
     publishDate: "",
     cutOffDate: "",
-    slides: [{ id: Date.now(), title: "المقدمة", content: "" }],
+    slides: [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: "المقدمة", content: "", sections: [] }],
     questions: [],
-    assignments: [], // Added assignments
+    assignments: [],
     attachments: []
   });
 
@@ -78,7 +122,7 @@ export default function EditCoursePage() {
   const [tempQuestion, setTempQuestion] = useState<any>({
     text: "", type: "MCQ", options: ["", "", "", ""],
     correctAnswer: "", points: 1, skill: "General", level: "Medium",
-    learningOutcome: "", explanation: "", correctAnswers: [], attempts: 1
+    learningOutcome: "", explanations: [""], correctAnswers: [], attempts: 1
   });
 
   const GRADES = [
@@ -191,17 +235,35 @@ export default function EditCoursePage() {
 
           try {
             parsedSlides = typeof l.slides === 'string' ? JSON.parse(l.slides) : (l.slides || []);
-          } catch (e) { parsedSlides = [{ id: Date.now(), title: "المقدمة", content: "" }]; }
+          } catch (e) { parsedSlides = [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: "المقدمة", content: "", sections: [] }]; }
 
           return {
             ...l,
             isVisible: l.isVisible !== undefined ? l.isVisible : true,
             publishDate: l.publishDate ? new Date(new Date(l.publishDate).getTime() - new Date(l.publishDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
             cutOffDate: l.cutOffDate ? new Date(new Date(l.cutOffDate).getTime() - new Date(l.cutOffDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
-            questions: Array.isArray(parsedQuestions) ? parsedQuestions : [],
-            assignments: Array.isArray(parsedAssignments) ? parsedAssignments : [],
+            questions: Array.isArray(parsedQuestions) ? parsedQuestions.map(q => {
+              let parsedExps = [""];
+              try {
+                parsedExps = typeof q.explanation === 'string' && q.explanation.startsWith('[') ? JSON.parse(q.explanation) : (q.explanations || [""]);
+                if (!Array.isArray(parsedExps)) parsedExps = [q.explanation || ""];
+              } catch (e) {
+                parsedExps = [q.explanation || ""];
+              }
+              return { ...q, explanations: parsedExps };
+            }) : [],
+            assignments: Array.isArray(parsedAssignments) ? parsedAssignments.map(q => {
+              let parsedExps = [""];
+              try {
+                parsedExps = typeof q.explanation === 'string' && q.explanation.startsWith('[') ? JSON.parse(q.explanation) : (q.explanations || [""]);
+                if (!Array.isArray(parsedExps)) parsedExps = [q.explanation || ""];
+              } catch (e) {
+                parsedExps = [q.explanation || ""];
+              }
+              return { ...q, explanations: parsedExps };
+            }) : [],
             attachments: Array.isArray(parsedAttachments) ? parsedAttachments : [],
-            slides: Array.isArray(parsedSlides) && parsedSlides.length ? parsedSlides : [{ id: Date.now(), title: "المقدمة", content: "" }]
+            slides: Array.isArray(parsedSlides) && parsedSlides.length ? parsedSlides : [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: "المقدمة", content: "", sections: [] }]
           };
         }));
 
@@ -249,7 +311,7 @@ export default function EditCoursePage() {
     setCurrentLesson({
       title: "", videoUrl: "", summary: "", notes: "", standards: "", indicators: "", learningOutcomes: "",
       isVisible: true, publishDate: "", cutOffDate: "",
-      slides: [{ id: Date.now(), title: "المقدمة", content: "" }],
+      slides: [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: "المقدمة", content: "", sections: [] }],
       questions: [],
       assignments: [],
       attachments: []
@@ -261,7 +323,7 @@ export default function EditCoursePage() {
   const openEditLessonModal = (index: number) => {
     setEditingLessonIndex(index);
     const lessonToEdit = { ...lessons[index] };
-    if (!lessonToEdit.slides || lessonToEdit.slides.length === 0) lessonToEdit.slides = [{ id: Date.now(), title: "المقدمة", content: "" }];
+    if (!lessonToEdit.slides || lessonToEdit.slides.length === 0) lessonToEdit.slides = [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: "المقدمة", content: "", sections: [] }];
     setCurrentLesson(lessonToEdit);
     setActiveTab('info');
     setIsLessonModalOpen(true);
@@ -345,23 +407,44 @@ export default function EditCoursePage() {
     }
   };
 
-  const addSlide = () => {
+  const addBlock = (type: 'TEXT' | 'QUESTION') => {
+    const newBlock = type === 'TEXT' 
+      ? { id: Date.now(), type: 'TEXT', label: 'CONTENT', title: `محتوى جديد`, content: "", sections: [] }
+      : { id: Date.now(), type: 'QUESTION', label: 'MCQ', title: `سؤال جديد`, content: "", options: ["", "", "", ""], correctAnswer: "", sections: [] };
     setCurrentLesson({
       ...currentLesson,
-      slides: [...(currentLesson.slides || []), { id: Date.now(), title: `شريحة جديدة ${(currentLesson.slides?.length || 0) + 1}`, content: "" }]
+      slides: [...(currentLesson.slides || []), newBlock]
     });
   };
 
-  const updateSlide = (index: number, field: string, value: any) => {
+  const updateBlock = (index: number, field: string, value: any) => {
     const newSlides = [...currentLesson.slides];
     newSlides[index] = { ...newSlides[index], [field]: value };
     setCurrentLesson({ ...currentLesson, slides: newSlides });
   };
 
-  const removeSlide = (index: number) => {
-    if (currentLesson.slides.length === 1) return;
+  const removeBlock = (index: number) => {
     const newSlides = [...currentLesson.slides];
     newSlides.splice(index, 1);
+    setCurrentLesson({ ...currentLesson, slides: newSlides });
+  };
+
+  const addSection = (blockIndex: number, type: string) => {
+    const newSlides = [...currentLesson.slides];
+    if (!newSlides[blockIndex].sections) newSlides[blockIndex].sections = [];
+    newSlides[blockIndex].sections.push({ id: Date.now(), type, content: "" });
+    setCurrentLesson({ ...currentLesson, slides: newSlides });
+  };
+
+  const updateSection = (blockIndex: number, sectionIndex: number, content: string) => {
+    const newSlides = [...currentLesson.slides];
+    newSlides[blockIndex].sections[sectionIndex].content = content;
+    setCurrentLesson({ ...currentLesson, slides: newSlides });
+  };
+
+  const removeSection = (blockIndex: number, sectionIndex: number) => {
+    const newSlides = [...currentLesson.slides];
+    newSlides[blockIndex].sections.splice(sectionIndex, 1);
     setCurrentLesson({ ...currentLesson, slides: newSlides });
   };
 
@@ -369,7 +452,7 @@ export default function EditCoursePage() {
     setTempQuestion({
       text: "", type: "MCQ", options: ["", "", "", ""],
       correctAnswer: "", points: 1, skill: "General", level: "Medium",
-      learningOutcome: "", explanation: "", correctAnswers: [], attempts: 1
+      learningOutcome: "", explanations: [""], correctAnswers: [], attempts: 1
     });
     setEditingQuestionIndex(null);
     setShowQuestionForm(true);
@@ -729,8 +812,33 @@ export default function EditCoursePage() {
                            </div>
                          </div>
                          <div className="space-y-3">
-                           <label className="text-xs font-black text-slate-400 uppercase tracking-widest">تفسير الإجابة</label>
-                           <textarea value={tempQuestion.explanation || ""} onChange={(e) => setTempQuestion({...tempQuestion, explanation: e.target.value})} className="w-full bg-white border border-slate-200 rounded-xl p-4 text-slate-900 text-sm min-h-[80px] outline-none focus:border-indigo-600" placeholder="اشرح لماذا هذه الإجابة صحيحة..." />
+                           <div className="flex justify-between items-center">
+                             <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">تفسيرات الإجابة (Explanations)</label>
+                             <button onClick={() => setTempQuestion({...tempQuestion, explanations: [...(tempQuestion.explanations || [""]), ""]})} className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1"><Plus className="w-3 h-3"/> إضافة تفسير</button>
+                           </div>
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                             {(tempQuestion.explanations || [""]).map((exp: string, eIdx: number) => (
+                               <div key={eIdx} className="relative group min-w-0">
+                                 <textarea
+                                   value={exp}
+                                   onChange={(e) => {
+                                     const newExps = [...(tempQuestion.explanations || [""])];
+                                     newExps[eIdx] = e.target.value;
+                                     setTempQuestion({ ...tempQuestion, explanations: newExps });
+                                   }}
+                                   className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all resize-none h-24 max-h-[150px] overflow-y-auto"
+                                   placeholder={`تفسير الإجابة ${eIdx + 1}...`}
+                                 />
+                                 {(tempQuestion.explanations || []).length > 1 && (
+                                   <button onClick={() => {
+                                     const newExps = [...tempQuestion.explanations];
+                                     newExps.splice(eIdx, 1);
+                                     setTempQuestion({...tempQuestion, explanations: newExps});
+                                   }} className="absolute top-2 left-2 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all bg-red-50 p-1.5 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                                 )}
+                               </div>
+                             ))}
+                           </div>
                          </div>
                          <div className="flex justify-end gap-4">
                            <button onClick={() => setShowQuestionForm(false)} className="px-8 py-3 rounded-2xl bg-slate-100 text-slate-500 font-bold">إلغاء</button>
@@ -809,24 +917,210 @@ export default function EditCoursePage() {
 
                 {activeTab === 'slides' && (
                   <div className="space-y-8">
-                    <div className="flex justify-between items-center">
-                      <h4 className="text-xl font-black text-slate-900">شرائح المحتوى</h4>
-                      <button onClick={addSlide} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black flex items-center gap-2 shadow-lg hover:bg-indigo-700 transition-all"><Plus className="w-5 h-5" /> إضافة شريحة</button>
-                    </div>
-                    {currentLesson.slides.map((slide: any, sIdx: number) => (
-                      <div key={slide.id} className="bg-white border border-slate-200 rounded-[30px] overflow-hidden group hover:border-indigo-200 transition-all shadow-sm">
-                        <div className="bg-slate-50 p-4 flex justify-between items-center border-b border-slate-100">
-                          <div className="flex items-center gap-4">
-                            <span className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center font-black text-white">{sIdx + 1}</span>
-                            <input type="text" value={slide.title} onChange={(e) => updateSlide(sIdx, 'title', e.target.value)} className="bg-transparent text-slate-900 font-black outline-none border-b border-transparent focus:border-indigo-600 px-2 py-1" />
-                          </div>
-                          <button onClick={() => removeSlide(sIdx)} className="text-red-500 hover:text-red-700 p-2"><Trash2 className="w-5 h-5" /></button>
-                        </div>
-                        <div className="p-6">
-                          <RichTextEditor value={slide.content} onChange={(val) => updateSlide(sIdx, 'content', val)} className="!bg-white !border-slate-100" />
-                        </div>
+                    <div className="flex justify-between items-center mb-4">
+                      <div>
+                        <h4 className="text-xl font-black text-slate-900 flex items-center gap-3">
+                          <Layout className="w-6 h-6 text-indigo-600" />
+                          بناء محتوى الدرس (Blocks)
+                        </h4>
+                        <p className="text-slate-400 text-sm font-bold mt-1">قم بإضافة وحدات نصية أو أسئلة تفاعلية لتسلسل الدرس</p>
                       </div>
-                    ))}
+                      <div className="flex gap-3">
+                        <button 
+                          onClick={() => addBlock('TEXT')}
+                          className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all"
+                        >
+                          <Plus className="w-5 h-5" />
+                          وحدة محتوى (Text)
+                        </button>
+                        <button 
+                          onClick={() => addBlock('QUESTION')}
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all shadow-lg"
+                        >
+                          <Plus className="w-5 h-5" />
+                          سؤال مدمج (Question)
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-8">
+                      {currentLesson.slides.map((block: any, sIdx: number) => (
+                        <div key={block.id} className="bg-slate-50 border border-slate-200 rounded-[30px] overflow-hidden group shadow-sm">
+                          <div className={`p-4 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center border-b ${block.type === 'QUESTION' ? 'bg-indigo-50/50 border-indigo-100' : 'bg-white border-slate-100'}`}>
+                            <div className="flex items-center gap-4 w-full md:w-auto">
+                              <span className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-white shadow-md ${block.type === 'QUESTION' ? 'bg-indigo-600' : 'bg-slate-800'}`}>
+                                {sIdx + 1}
+                              </span>
+                              <div className="flex flex-col gap-1 w-full md:w-auto">
+                                <div className="flex gap-2">
+                                  <select
+                                    value={block.label}
+                                    onChange={(e) => updateBlock(sIdx, 'label', e.target.value)}
+                                    className="bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-600 outline-none focus:border-indigo-600 px-2 py-1 uppercase"
+                                  >
+                                    {block.type === 'TEXT' ? (
+                                      <>
+                                        <option value="CONTENT">محتوى (Content)</option>
+                                        <option value="EXAMPLE">مثال (Example)</option>
+                                        <option value="SUMMARY">ملخص (Summary)</option>
+                                        <option value="HINT">ملاحظة (Note)</option>
+                                        <option value="EXPLANATION">شرح (Explanation)</option>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <option value="MCQ">اختيار من متعدد (MCQ)</option>
+                                        <option value="TRUE_FALSE">صح وخطأ (T/F)</option>
+                                        <option value="MULTI_SELECT">اختيار متعدد (Multi-select)</option>
+                                      </>
+                                    )}
+                                  </select>
+                                  <input 
+                                    type="text"
+                                    value={block.title || ""}
+                                    onChange={(e) => updateBlock(sIdx, 'title', e.target.value)}
+                                    className="bg-transparent text-slate-900 font-black outline-none border-b border-transparent focus:border-indigo-600 px-2 py-1 w-full md:w-48 placeholder:text-slate-400"
+                                    placeholder={block.type === 'TEXT' ? "عنوان الوحدة (اختياري)" : "عنوان السؤال (اختياري)"}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 self-end md:self-auto">
+                              <div className="relative group/menu">
+                                <button className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all">
+                                  <Plus className="w-4 h-4" /> Add Section
+                                </button>
+                                <div className="absolute left-0 mt-2 w-56 bg-white border border-slate-100 rounded-xl shadow-xl p-2 hidden group-hover/menu:block z-10">
+                                  {['FEEDBACK', 'HINT', 'EXPLANATION', 'TIP', 'WARNING', 'KEY_INSIGHT'].map(secType => (
+                                    <button
+                                      key={secType}
+                                      onClick={() => addSection(sIdx, secType)}
+                                      className="w-full text-left px-3 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors flex items-center gap-2"
+                                    >
+                                      {React.createElement(SECTION_STYLE_PRESETS[secType]?.icon || FileText, { className: "w-4 h-4" })}
+                                      <span>{SECTION_STYLE_PRESETS[secType]?.label || secType}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                              <button 
+                                onClick={() => removeBlock(sIdx)}
+                                className="text-red-500 hover:text-red-600 p-2 hover:bg-red-500/10 rounded-xl transition-all bg-white"
+                              >
+                                <Trash2 className="w-5 h-5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="p-6 space-y-6">
+                            <div>
+                              <RichTextEditor 
+                                value={block.content}
+                                onChange={(val) => updateBlock(sIdx, 'content', val)}
+                                placeholder={block.type === 'TEXT' ? "اكتب محتوى الشرح هنا..." : "اكتب نص السؤال هنا..."}
+                                className="!bg-white !border-slate-200"
+                              />
+                            </div>
+
+                            {block.type === 'QUESTION' && (
+                              <div className="bg-slate-100 p-6 rounded-2xl border border-slate-200 space-y-4">
+                                <label className="text-xs font-black text-slate-500 uppercase tracking-widest block">خيارات الإجابة</label>
+                                {block.label === 'TRUE_FALSE' ? (
+                                  <div className="grid grid-cols-2 gap-4">
+                                    {['صحيح', 'خطأ'].map((opt) => (
+                                      <div key={opt} className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${block.correctAnswer === opt ? 'bg-emerald-50 border-emerald-500' : 'bg-white border-transparent'}`} onClick={() => updateBlock(sIdx, 'correctAnswer', opt)}>
+                                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${block.correctAnswer === opt ? 'bg-emerald-500 border-emerald-200' : 'bg-slate-200 border-transparent'}`}>
+                                          {block.correctAnswer === opt && <CheckCircle2 className="w-4 h-4 text-white" />}
+                                        </div>
+                                        <span className="font-bold text-slate-700">{opt}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {(block.options || []).map((opt: string, oIdx: number) => {
+                                      const isSelected = block.label === 'MULTI_SELECT' 
+                                        ? (block.correctAnswers || []).includes(opt) 
+                                        : block.correctAnswer === opt;
+                                      
+                                      return (
+                                        <div key={oIdx} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${isSelected && opt ? 'bg-emerald-50 border-emerald-500' : 'bg-white border-transparent'}`}>
+                                          <div 
+                                            onClick={() => {
+                                              if (block.label === 'MULTI_SELECT') {
+                                                const answers = block.correctAnswers || [];
+                                                if (answers.includes(opt)) updateBlock(sIdx, 'correctAnswers', answers.filter((a:string) => a !== opt));
+                                                else if (opt) updateBlock(sIdx, 'correctAnswers', [...answers, opt]);
+                                              } else {
+                                                updateBlock(sIdx, 'correctAnswer', opt);
+                                              }
+                                            }}
+                                            className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 cursor-pointer ${isSelected && opt ? 'bg-emerald-500 border-emerald-200' : 'bg-slate-200 border-transparent'}`}
+                                          >
+                                            {isSelected && opt && <CheckCircle2 className="w-4 h-4 text-white" />}
+                                          </div>
+                                          <input 
+                                            type="text"
+                                            value={opt}
+                                            onChange={(e) => {
+                                              const newOpts = [...(block.options || [])];
+                                              newOpts[oIdx] = e.target.value;
+                                              updateBlock(sIdx, 'options', newOpts);
+                                            }}
+                                            placeholder={`خيار ${oIdx + 1}`}
+                                            className="bg-transparent outline-none font-bold text-slate-700 flex-1"
+                                          />
+                                          {block.options.length > 2 && (
+                                            <button onClick={() => {
+                                              const newOpts = [...block.options];
+                                              newOpts.splice(oIdx, 1);
+                                              updateBlock(sIdx, 'options', newOpts);
+                                            }} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                    <button 
+                                      onClick={() => updateBlock(sIdx, 'options', [...(block.options||[]), ""])}
+                                      className="flex justify-center items-center p-3 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-200 hover:border-slate-400 transition-all"
+                                    >
+                                      <Plus className="w-5 h-5 ml-1" /> إضافة خيار
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {(block.sections || []).length > 0 && (
+                              <div className="space-y-4 pt-4 border-t border-slate-100">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">أقسام إضافية ديناميكية (Dynamic Sections)</label>
+                                {(block.sections || []).map((sec: any, secIdx: number) => {
+                                  const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
+                                  const SectionIcon = preset.icon;
+                                  return (
+                                  <div key={sec.id} className={`p-4 rounded-2xl relative group/section border ${preset.container}`}>
+                                    <div className="flex justify-between items-center mb-3">
+                                      <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1.5 ${preset.badge}`}>
+                                        <SectionIcon className="w-3.5 h-3.5" />
+                                        {preset.label}
+                                      </span>
+                                      <button onClick={() => removeSection(sIdx, secIdx)} className="text-red-400 hover:text-red-600 opacity-0 group-hover/section:opacity-100 transition-all">
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                    <RichTextEditor 
+                                      value={sec.content}
+                                      onChange={(val) => updateSection(sIdx, secIdx, val)}
+                                      placeholder={`محتوى الـ ${sec.type}...`}
+                                      className="!bg-white"
+                                    />
+                                  </div>
+                                )})}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 
@@ -914,13 +1208,33 @@ export default function EditCoursePage() {
                           ))}
                         </div>
                         <div className="space-y-3">
-                          <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">تفسير الإجابة (Explanation)</label>
-                          <textarea
-                            value={tempQuestion.explanation}
-                            onChange={(e) => setTempQuestion({ ...tempQuestion, explanation: e.target.value })}
-                            className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all resize-none h-24 max-h-[150px] overflow-y-auto"
-                            placeholder="اشرح للطالب سبب كون هذه الإجابة هي الصحيحة..."
-                          />
+                          <div className="flex justify-between items-center">
+                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">تفسيرات الإجابة (Explanations)</label>
+                            <button onClick={() => setTempQuestion({...tempQuestion, explanations: [...(tempQuestion.explanations || [""]), ""]})} className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1"><Plus className="w-3 h-3"/> إضافة تفسير</button>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {(tempQuestion.explanations || [""]).map((exp: string, eIdx: number) => (
+                              <div key={eIdx} className="relative group min-w-0">
+                                <textarea
+                                  value={exp}
+                                  onChange={(e) => {
+                                    const newExps = [...(tempQuestion.explanations || [""])];
+                                    newExps[eIdx] = e.target.value;
+                                    setTempQuestion({ ...tempQuestion, explanations: newExps });
+                                  }}
+                                  className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all resize-none h-24 max-h-[150px] overflow-y-auto"
+                                  placeholder={`تفسير الإجابة ${eIdx + 1}...`}
+                                />
+                                {(tempQuestion.explanations || []).length > 1 && (
+                                  <button onClick={() => {
+                                    const newExps = [...tempQuestion.explanations];
+                                    newExps.splice(eIdx, 1);
+                                    setTempQuestion({...tempQuestion, explanations: newExps});
+                                  }} className="absolute top-2 left-2 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all bg-red-50 p-1.5 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
                         </div>
                         <div className="flex justify-end gap-4">
                           <button onClick={() => setShowQuestionForm(false)} className="px-8 py-3 rounded-2xl bg-slate-100 text-slate-500 font-bold hover:bg-slate-200 transition-all">إلغاء</button>
@@ -1112,7 +1426,7 @@ export default function EditCoursePage() {
                       </div>
                       <div className="space-y-2">
                         <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">المراحل الدراسية</label>
-                        <div className="relative group">
+                        <div className="relative group min-w-0">
                           <select 
                             multiple
                             value={courseData.grades}
@@ -1475,3 +1789,6 @@ export default function EditCoursePage() {
     </div>
   );
 }
+
+
+
