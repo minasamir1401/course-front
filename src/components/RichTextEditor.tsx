@@ -5,7 +5,8 @@ import {
   Bold, Italic, Underline, List, ListOrdered,
   AlignLeft, AlignCenter, AlignRight,
   Type, Eraser, Palette, Heading1, Heading2,
-  ChevronDown, Image as ImageIcon, Table, Sigma, X
+  ChevronDown, Image as ImageIcon, Table, Sigma, X,
+  Highlighter
 } from "lucide-react";
 import { compressImage } from "@/lib/image-utils";
 
@@ -276,6 +277,17 @@ export default function RichTextEditor({ value, onChange, placeholder, className
             </button>
           ))}
         </div>
+
+        <div className="w-px h-6 bg-slate-200 mx-1" />
+        
+        <ToolButton 
+          onClick={() => {
+             document.execCommand('backColor', false, '#fef08a') || document.execCommand('hiliteColor', false, '#fef08a');
+             handleInput();
+          }} 
+          icon={Highlighter} 
+          title="تظليل النص (أصفر)" 
+        />
 
         <div className="w-px h-6 bg-slate-200 mx-1" />
 

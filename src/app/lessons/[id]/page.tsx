@@ -41,6 +41,20 @@ export default function LessonPlayerPage() {
   const [score, setScore] = useState(0);
   const [quizTimer, setQuizTimer] = useState(0);
 
+  const [slideAnswers, setSlideAnswers] = useState<Record<number, any>>({});
+  const [slideSubmitted, setSlideSubmitted] = useState<Record<number, boolean>>({});
+  const [assignmentAnswers, setAssignmentAnswers] = useState<Record<number, any>>({});
+  const [assignmentSubmitted, setAssignmentSubmitted] = useState<Record<number, boolean>>({});
+
+  const SECTION_STYLE_PRESETS: Record<string, any> = {
+    HINT: { icon: HelpCircle, bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", label: "تلميح" },
+    TIP: { icon: Info, bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200", label: "نصيحة" },
+    WARNING: { icon: AlertCircle, bg: "bg-red-50", text: "text-red-700", border: "border-red-200", label: "تحذير" },
+    KEY_INSIGHT: { icon: Sparkles, bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200", label: "نقطة هامة" },
+    FEEDBACK: { icon: MessageSquare, bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", label: "ملاحظات" },
+    EXPLANATION: { icon: BookOpen, bg: "bg-indigo-50", text: "text-indigo-700", border: "border-indigo-200", label: "شرح مفصل" }
+  };
+
   useEffect(() => {
     let interval: any;
     if (currentStage === 'exercises') {
@@ -296,12 +310,12 @@ export default function LessonPlayerPage() {
                     { title: t('lesson.indicators'), icon: TrendingUp, content: lesson.indicators, color: "text-purple-600", bg: "bg-purple-50" },
                     { title: t('lesson.outcomes'), icon: Award, content: lesson.learningOutcomes, color: "text-emerald-600", bg: "bg-emerald-50" },
                   ].map((item, i) => (
-                    <div key={i} className="bg-slate-50/50 border border-slate-100 p-6 rounded-[35px] hover:bg-white hover:shadow-xl transition-all duration-500 group">
-                      <div className={`w-12 h-12 ${item.bg} ${item.color} rounded-xl flex items-center justify-center mb-4 group-hover:rotate-12 transition-transform`}>
-                        <item.icon className="w-6 h-6" />
+                    <div key={i} className="bg-slate-50/50 border border-slate-100 p-6 md:p-8 rounded-[35px] hover:bg-white hover:shadow-xl transition-all duration-500 group">
+                      <div className={`w-14 h-14 ${item.bg} ${item.color} rounded-2xl flex items-center justify-center mb-4 group-hover:rotate-12 transition-transform shadow-sm`}>
+                        <item.icon className="w-7 h-7" />
                       </div>
-                      <h3 className="text-lg font-black text-slate-900 mb-2 tracking-tight">{item.title}</h3>
-                      <p className="text-[11px] text-slate-500 leading-relaxed font-bold">{item.content || t('lesson.plannedGoals')}</p>
+                      <h3 className="text-xl font-black text-slate-900 mb-3 tracking-tight">{item.title}</h3>
+                      <p className="text-sm md:text-base text-slate-600 leading-relaxed font-bold">{item.content || t('lesson.plannedGoals')}</p>
                     </div>
                   ))}
                 </div>
@@ -341,18 +355,76 @@ export default function LessonPlayerPage() {
                     className="text-base md:text-xl text-slate-600 leading-[1.8] max-w-5xl font-bold prose prose-indigo break-words whitespace-pre-wrap w-full animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150"
                     dangerouslySetInnerHTML={{ __html: lesson.slides[currentSlideIndex].content }}
                   />
+
+                  {/* Question Options for Slide */}
+                  {lesson.slides[currentSlideIndex].type === 'QUESTION' && lesson.slides[currentSlideIndex].options?.length > 0 && (
+                    <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-4xl">
+                      {lesson.slides[currentSlideIndex].options.map((opt: string, oIdx: number) => {
+                         const isSelected = slideAnswers[currentSlideIndex] === opt;
+                         const isSubmitted = slideSubmitted[currentSlideIndex];
+                         const isCorrect = isSubmitted && opt === lesson.slides[currentSlideIndex].correctAnswer;
+                         const isWrong = isSubmitted && isSelected && opt !== lesson.slides[currentSlideIndex].correctAnswer;
+                         
+                         return (
+                          <button
+                            key={oIdx}
+                            onClick={() => !isSubmitted && setSlideAnswers({ ...slideAnswers, [currentSlideIndex]: opt })}
+                            className={`relative p-6 rounded-3xl border-4 text-right transition-all group overflow-hidden ${isSelected ? (isCorrect ? 'border-emerald-500 bg-emerald-50' : isWrong ? 'border-red-500 bg-red-50' : 'border-indigo-500 bg-indigo-50') : 'border-slate-100 bg-white hover:border-indigo-200'} ${isSubmitted && !isSelected && !isCorrect ? 'opacity-50' : ''}`}
+                            disabled={isSubmitted}
+                          >
+                            <span className={`text-xl font-bold ${isSelected ? (isCorrect ? 'text-emerald-700' : isWrong ? 'text-red-700' : 'text-indigo-700') : 'text-slate-700'}`}>{opt}</span>
+                            {isSelected && !isSubmitted && <CheckCircle2 className="absolute top-1/2 left-6 -translate-y-1/2 w-8 h-8 text-indigo-500" />}
+                            {isCorrect && <CheckCircle2 className="absolute top-1/2 left-6 -translate-y-1/2 w-8 h-8 text-emerald-500" />}
+                            {isWrong && <X className="absolute top-1/2 left-6 -translate-y-1/2 w-8 h-8 text-red-500" />}
+                          </button>
+                         );
+                      })}
+                    </div>
+                  )}
+                  {lesson.slides[currentSlideIndex].type === 'QUESTION' && slideAnswers[currentSlideIndex] && !slideSubmitted[currentSlideIndex] && (
+                     <button 
+                       onClick={() => setSlideSubmitted({ ...slideSubmitted, [currentSlideIndex]: true })}
+                       className="mt-6 bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black text-lg hover:bg-indigo-700 shadow-xl"
+                     >
+                       تأكيد الإجابة
+                     </button>
+                  )}
+
+                  {/* Slide Sections (Hints, Explanations, etc.) */}
+                  {lesson.slides[currentSlideIndex].sections?.length > 0 && (lesson.slides[currentSlideIndex].type !== 'QUESTION' || slideSubmitted[currentSlideIndex]) && (
+                     <div className="mt-8 w-full max-w-4xl space-y-4">
+                        {lesson.slides[currentSlideIndex].sections.map((sec: any, sIdx: number) => {
+                           const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.HINT;
+                           const Icon = preset.icon;
+                           return (
+                             <div key={sIdx} className={`p-6 rounded-3xl border-2 ${preset.bg} ${preset.border} flex flex-col text-right`}>
+                                <div className={`flex items-center gap-3 mb-3 ${preset.text}`}>
+                                   <Icon className="w-6 h-6" />
+                                   <span className="font-black text-lg">{preset.label}</span>
+                                </div>
+                                <div className={`prose prose-sm max-w-none ${preset.text} font-bold text-base leading-relaxed`} dangerouslySetInnerHTML={{ __html: sec.content }} />
+                             </div>
+                           );
+                        })}
+                     </div>
+                  )}
                 </div>
 
                 <div className="p-6 border-t border-slate-100 bg-slate-50/30 flex justify-between items-center gap-6 shrink-0">
                   <button
-                    onClick={() => setCurrentSlideIndex(prev => Math.max(0, prev - 1))}
-                    disabled={currentSlideIndex === 0}
-                    className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center hover:bg-slate-50 disabled:opacity-20 transition-all shadow-sm"
+                    onClick={() => {
+                      if (currentSlideIndex > 0) {
+                         setCurrentSlideIndex(prev => prev - 1);
+                      } else {
+                         setCurrentStage('welcome');
+                      }
+                    }}
+                    className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center hover:bg-slate-50 transition-all shadow-sm"
                   >
                     <ChevronRight className="w-6 h-6 text-slate-900" />
                   </button>
                   
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap justify-center">
                     {lesson.slides.map((_: any, i: number) => (
                       <div key={i} className={`h-1.5 rounded-full transition-all duration-700 ${currentSlideIndex === i ? 'w-8 bg-indigo-600' : 'w-1.5 bg-slate-200'}`}></div>
                     ))}
@@ -368,7 +440,7 @@ export default function LessonPlayerPage() {
                   ) : (
                     <button
                       onClick={() => setCurrentStage('assignments')}
-                      className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black text-base hover:bg-indigo-700 shadow-xl shadow-indigo-100 flex items-center gap-3"
+                      className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black text-base hover:bg-indigo-700 shadow-xl shadow-indigo-100 flex items-center gap-3 shrink-0"
                     >
                       {t('lesson.showAssignments')}
                     </button>
@@ -384,31 +456,90 @@ export default function LessonPlayerPage() {
                   <p className="text-slate-400 font-bold">{t('lesson.assignmentsMsg')}</p>
                 </div>
 
-                <div className="grid grid-cols-1 gap-6 max-w-4xl mx-auto">
-                   {lesson.assignments?.length > 0 ? lesson.assignments.map((as: any, idx: number) => (
+                <div className="grid grid-cols-1 gap-6 max-w-4xl mx-auto w-full">
+                   {lesson.assignments?.length > 0 ? lesson.assignments.map((as: any, idx: number) => {
+                     const isSubmitted = assignmentSubmitted[idx];
+                     return (
                      <div key={idx} className="premium-card p-8 rounded-[40px] border-r-8 border-indigo-600">
                         <div className="flex items-center gap-4 mb-6">
                            <span className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center font-black">
                               {idx + 1}
                            </span>
-                           <h3 className="font-black text-slate-900 text-lg">{t('lesson.requiredAssignment')}</h3>
+                           <h3 className="font-black text-slate-900 text-lg">{as.type === 'QUESTION' ? t('lesson.requiredAssignment') : t('lesson.requiredAssignment')}</h3>
                         </div>
-                        <div className="text-slate-600 text-lg leading-relaxed prose prose-indigo" dangerouslySetInnerHTML={{ __html: as.text }} />
+                        <div className="text-slate-600 text-lg leading-relaxed prose prose-indigo mb-6" dangerouslySetInnerHTML={{ __html: as.text }} />
+                        
+                        {as.type === 'QUESTION' && as.options?.length > 0 && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                            {as.options.map((opt: string, oIdx: number) => {
+                               const isSelected = assignmentAnswers[idx] === opt;
+                               const isCorrect = isSubmitted && opt === as.correctAnswer;
+                               const isWrong = isSubmitted && isSelected && opt !== as.correctAnswer;
+                               return (
+                                <button
+                                  key={oIdx}
+                                  onClick={() => !isSubmitted && setAssignmentAnswers({ ...assignmentAnswers, [idx]: opt })}
+                                  className={`relative p-5 rounded-3xl border-4 text-right transition-all group overflow-hidden ${isSelected ? (isCorrect ? 'border-emerald-500 bg-emerald-50' : isWrong ? 'border-red-500 bg-red-50' : 'border-indigo-500 bg-indigo-50') : 'border-slate-100 bg-white hover:border-indigo-200'} ${isSubmitted && !isSelected && !isCorrect ? 'opacity-50' : ''}`}
+                                  disabled={isSubmitted}
+                                >
+                                  <span className={`text-lg font-bold ${isSelected ? (isCorrect ? 'text-emerald-700' : isWrong ? 'text-red-700' : 'text-indigo-700') : 'text-slate-700'}`}>{opt}</span>
+                                  {isSelected && !isSubmitted && <CheckCircle2 className="absolute top-1/2 left-4 -translate-y-1/2 w-6 h-6 text-indigo-500" />}
+                                  {isCorrect && <CheckCircle2 className="absolute top-1/2 left-4 -translate-y-1/2 w-6 h-6 text-emerald-500" />}
+                                  {isWrong && <X className="absolute top-1/2 left-4 -translate-y-1/2 w-6 h-6 text-red-500" />}
+                                </button>
+                               );
+                            })}
+                          </div>
+                        )}
+                        {as.type === 'QUESTION' && assignmentAnswers[idx] && !isSubmitted && (
+                           <button 
+                             onClick={() => setAssignmentSubmitted({ ...assignmentSubmitted, [idx]: true })}
+                             className="mt-6 bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black text-lg hover:bg-indigo-700 shadow-xl"
+                           >
+                             تأكيد الإجابة
+                           </button>
+                        )}
+                        {/* Assignment Sections (Hints, Explanations, etc.) */}
+                        {isSubmitted && as.sections?.length > 0 && (
+                           <div className="mt-8 space-y-4">
+                              {as.sections.map((sec: any, sIdx: number) => {
+                                 const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.HINT;
+                                 const Icon = preset.icon;
+                                 return (
+                                   <div key={sIdx} className={`p-6 rounded-3xl border-2 ${preset.bg} ${preset.border} flex flex-col text-right`}>
+                                      <div className={`flex items-center gap-3 mb-3 ${preset.text}`}>
+                                         <Icon className="w-6 h-6" />
+                                         <span className="font-black text-lg">{preset.label}</span>
+                                      </div>
+                                      <div className={`prose prose-sm max-w-none ${preset.text} font-bold text-base leading-relaxed`} dangerouslySetInnerHTML={{ __html: sec.content }} />
+                                   </div>
+                                 );
+                              })}
+                           </div>
+                        )}
                      </div>
-                   )) : (
+                     );
+                   }) : (
                      <div className="premium-card p-12 rounded-[40px] text-center text-slate-400 font-bold">
                         {t('lesson.noAssignments')}
                      </div>
                    )}
                 </div>
 
-                <div className="flex justify-center pt-8">
+                <div className="flex justify-center pt-8 gap-4 flex-wrap">
+                   <button 
+                    onClick={() => setCurrentStage('slides')}
+                    className="bg-white border-2 border-slate-200 text-slate-700 px-8 py-5 rounded-[25px] font-black text-lg hover:bg-slate-50 transition-all flex items-center gap-4"
+                   >
+                    <ArrowRight className={`w-5 h-5 ${language === 'en' ? 'rotate-180' : ''}`} />
+                    {t('lesson.previous')}
+                   </button>
                    <button 
                     onClick={() => setCurrentStage('exercises')}
                     className="bg-emerald-600 text-white px-12 py-5 rounded-[25px] font-black text-lg hover:scale-105 transition-all shadow-2xl shadow-emerald-100 flex items-center gap-4"
                    >
                     {t('lesson.startExercises')}
-                    <ArrowLeft className="w-5 h-5" />
+                    <ArrowLeft className={`w-5 h-5 ${language === 'en' ? 'rotate-180' : ''}`} />
                    </button>
                 </div>
               </div>
@@ -493,7 +624,7 @@ export default function LessonPlayerPage() {
                               className={`p-5 md:p-6 rounded-[25px] border-4 text-start transition-all duration-300 font-black text-sm md:text-base relative break-words overflow-hidden ${answers[currentQuestionIndex] === opt ? 'bg-indigo-600 border-white text-white shadow-xl shadow-indigo-100' : 'bg-white border-slate-50 text-slate-600 hover:border-indigo-200'}`}
                             >
                               <div className="flex items-center justify-between gap-4">
-                                <span className="flex-1 break-words">{opt}</span>
+                                <span className="flex-1 break-words leading-relaxed">{opt}</span>
                                 <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${answers[currentQuestionIndex] === opt ? 'border-white bg-white/20' : 'border-slate-100'}`}>
                                     {answers[currentQuestionIndex] === opt && <CheckCircle2 className="w-3 h-3" />}
                                 </div>
@@ -501,6 +632,25 @@ export default function LessonPlayerPage() {
                             </button>
                           ))}
                         </div>
+                        
+                        {/* Question Sections (Hints, Explanations, Feedback) */}
+                        {answers[currentQuestionIndex] && lesson.questions[currentQuestionIndex].sections?.length > 0 && (
+                           <div className="mt-8 space-y-4 animate-in fade-in slide-in-from-top-2">
+                              {lesson.questions[currentQuestionIndex].sections.map((sec: any, sIdx: number) => {
+                                 const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.HINT;
+                                 const Icon = preset.icon;
+                                 return (
+                                   <div key={sIdx} className={`p-6 rounded-3xl border-2 ${preset.bg} ${preset.border} flex flex-col text-right`}>
+                                      <div className={`flex items-center gap-3 mb-3 ${preset.text}`}>
+                                         <Icon className="w-6 h-6" />
+                                         <span className="font-black text-lg">{preset.label}</span>
+                                      </div>
+                                      <div className={`prose prose-sm max-w-none ${preset.text} font-bold text-base leading-relaxed`} dangerouslySetInnerHTML={{ __html: sec.content }} />
+                                   </div>
+                                 );
+                              })}
+                           </div>
+                        )}
                       </div>
 
                       <div className="p-6 md:p-8 border-t border-slate-100 bg-slate-50/30 flex justify-between items-center shrink-0">
