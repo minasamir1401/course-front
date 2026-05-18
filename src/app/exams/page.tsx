@@ -108,13 +108,13 @@ export default function ExamsPage() {
 
   return (
     <DashboardLayout>
-      <div className={`max-w-7xl mx-auto space-y-8 pb-20 ${language === 'ar' ? 'rtl' : 'ltr'}`} dir={language === 'ar' ? "rtl" : "ltr"}>
+      <div className={`max-w-7xl mx-auto space-y-6 md:space-y-8 pb-20 px-1 sm:px-0 overflow-x-hidden ${language === 'ar' ? 'rtl' : 'ltr'}`} dir={language === 'ar' ? "rtl" : "ltr"}>
 
         {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="flex flex-col gap-4">
           <div className={language === 'ar' ? 'text-right' : 'text-left'}>
-            <h1 className="text-4xl font-black text-slate-900 mb-2">{t('exams.title')}</h1>
-            <p className="text-slate-500 font-bold text-lg">{t('exams.subtitle')}</p>
+            <h1 className="text-2xl sm:text-4xl font-black text-slate-900 mb-2">{t('exams.title')}</h1>
+            <p className="text-slate-500 font-bold text-sm sm:text-lg">{t('exams.subtitle')}</p>
           </div>
           <div className="flex gap-4">
             <button className="px-6 py-3 rounded-2xl bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-all flex items-center gap-2">
@@ -159,16 +159,16 @@ export default function ExamsPage() {
                   const attemptsLeft = (exam.attemptsAllowed || 1) - userSubs.length;
 
                   return (
-                    <div key={exam.id} className="bg-white rounded-[35px] p-8 border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-500 group relative overflow-hidden">
+                    <div key={exam.id} className="bg-white rounded-[24px] sm:rounded-[35px] p-4 sm:p-8 border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 transition-all duration-500 group relative overflow-hidden">
                       {exam.isCentral && (
                         <div className={`absolute top-0 px-6 py-2 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest ${language === 'ar' ? 'right-0 rounded-bl-3xl' : 'left-0 rounded-br-3xl'}`}>
                           {t('exams.centralExam')}
                         </div>
                       )}
 
-                      <div className="flex flex-col md:flex-row md:items-center gap-8">
-                        <div className={`w-20 h-20 rounded-3xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 shadow-lg ${status.type === 'AVAILABLE' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
-                          <FileText className="w-10 h-10" />
+                      <div className="flex flex-col gap-4 sm:gap-8">
+                        <div className={`w-14 h-14 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 shadow-lg ${status.type === 'AVAILABLE' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                          <FileText className="w-7 h-7 sm:w-10 sm:h-10" />
                         </div>
 
                         <div className="flex-1">
@@ -186,7 +186,7 @@ export default function ExamsPage() {
                             )}
                           </div>
 
-                          <h4 className="font-black text-slate-900 text-2xl group-hover:text-indigo-600 transition-colors mb-4">{exam.title}</h4>
+                          <h4 className="font-black text-slate-900 text-lg sm:text-2xl group-hover:text-indigo-600 transition-colors mb-2 sm:mb-4">{exam.title}</h4>
 
                           <div className="flex flex-wrap gap-6">
                             <div className="flex items-center gap-2 text-sm text-slate-500 font-bold">
@@ -206,7 +206,7 @@ export default function ExamsPage() {
                           </div>
                         </div>
 
-                        <div className="flex flex-col gap-3 min-w-[160px]">
+                        <div className="flex flex-col gap-3 w-full sm:min-w-[160px]">
                           {userSubs.length > 0 && (
                             <Link
                               href={`/exams/result/${userSubs[0].id}`}

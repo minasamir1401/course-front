@@ -75,7 +75,7 @@ export default function ReportsPage() {
 
   return (
     <DashboardLayout>
-      <div className={`max-w-7xl mx-auto space-y-6 ${language === 'ar' ? 'rtl' : 'ltr'}`} dir={language === 'ar' ? "rtl" : "ltr"}>
+      <div className={`max-w-7xl mx-auto space-y-6 overflow-x-hidden px-1 sm:px-0 ${language === 'ar' ? 'rtl' : 'ltr'}`} dir={language === 'ar' ? "rtl" : "ltr"}>
         
         {/* Header Section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
@@ -98,22 +98,22 @@ export default function ReportsPage() {
         </div>
 
         {/* Tabs Navigation */}
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl w-fit no-print">
+        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl w-full sm:w-fit overflow-x-auto no-print">
           <button 
             onClick={() => setActiveReportTab('OVERVIEW')}
-            className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeReportTab === 'OVERVIEW' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+            className={`px-3 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${activeReportTab === 'OVERVIEW' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
           >
             {t('reports.tabs.overview')}
           </button>
           <button 
             onClick={() => setActiveReportTab('EXAMS')}
-            className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeReportTab === 'EXAMS' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+            className={`px-3 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${activeReportTab === 'EXAMS' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
           >
             {t('reports.tabs.exams')}
           </button>
           <button 
             onClick={() => setActiveReportTab('COURSES')}
-            className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeReportTab === 'COURSES' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+            className={`px-3 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${activeReportTab === 'COURSES' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
           >
             {t('reports.tabs.courses')}
           </button>
@@ -122,7 +122,7 @@ export default function ReportsPage() {
         {activeReportTab === 'OVERVIEW' && (
           <>
             {/* Summary Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
               <div className={`card p-6 flex items-center gap-4 border-b-4 border-b-blue-500 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                 <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
                   <Star className="w-6 h-6" />

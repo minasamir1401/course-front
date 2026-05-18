@@ -79,7 +79,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           navLinks={NAV_LINKS}
         />
 
-        <main className={`flex-1 p-2 sm:p-4 md:p-8 lg:p-10 transition-all duration-500 ${isStudent && isMobile ? "pb-32" : "pb-10"}`}>
+        <main className={`flex-1 p-1 sm:p-2 md:p-8 lg:p-10 transition-all duration-500 overflow-x-hidden ${isStudent && isMobile ? "pb-32" : "pb-10"}`}>
           {children}
         </main>
 

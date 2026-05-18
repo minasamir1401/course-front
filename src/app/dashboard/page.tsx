@@ -110,7 +110,7 @@ export default function StudentDashboard() {
 
   return (
     <DashboardLayout>
-      <div className="w-full max-w-[1600px] mx-auto space-y-6 md:space-y-12 pb-24 px-2 md:px-4" dir={language === 'ar' ? "rtl" : "ltr"}>
+      <div className="w-full max-w-[1600px] mx-auto space-y-4 md:space-y-12 pb-24 px-1 sm:px-2 md:px-4 overflow-x-hidden" dir={language === 'ar' ? "rtl" : "ltr"}>
 
         {/* ── PREMIUM WELCOME HERO ── */}
         <div className="relative overflow-hidden rounded-[32px] md:rounded-[48px] premium-gradient-primary shadow-2xl shadow-indigo-500/20 group">
@@ -118,14 +118,14 @@ export default function StudentDashboard() {
           <div className="absolute top-[-10%] right-[-10%] w-[600px] h-[600px] bg-white/10 blur-[120px] rounded-full animate-pulse" />
           <div className="absolute bottom-[-20%] left-[-10%] w-[400px] h-[400px] bg-blue-400/20 blur-[100px] rounded-full" />
           
-          <div className="relative z-10 px-6 py-8 md:py-14 lg:py-16 xl:py-24 lg:px-14 xl:px-20 flex flex-col xl:flex-row items-center justify-between gap-8 xl:gap-12">
+          <div className="relative z-10 px-4 py-6 md:py-14 lg:py-16 xl:py-24 lg:px-14 xl:px-20 flex flex-col xl:flex-row items-center justify-between gap-6 xl:gap-12">
             <div className="flex-1 text-center xl:text-start space-y-4 md:space-y-6 w-full">
               <div className="inline-flex items-center gap-3 px-5 py-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-full mx-auto xl:mx-0">
                 <Sparkles className="w-4 h-4 text-amber-300 floating" />
                 <span className="text-white text-[10px] font-black uppercase tracking-widest">{t('dashboard.studentPortal')}</span>
               </div>
               
-              <h1 className="text-2xl sm:text-4xl lg:text-4xl xl:text-6xl font-black text-white leading-tight tracking-tight">
+              <h1 className="text-xl sm:text-4xl lg:text-4xl xl:text-6xl font-black text-white leading-tight tracking-tight">
                 {t('dashboard.welcome')}، <span className="text-transparent bg-clip-text bg-gradient-to-l from-white via-indigo-100 to-blue-100">{stats?.name?.split(' ')[0] || ""}</span>
               </h1>
               
@@ -133,13 +133,13 @@ export default function StudentDashboard() {
                 {t('dashboard.progressDesc1')} <span className="font-black text-white">{stats?.upcomingExams || 0} {t('dashboard.progressDesc2')}</span> {t('dashboard.progressDesc3')}
               </p>
 
-              <div className="flex flex-wrap justify-center xl:justify-start gap-3 md:gap-5 pt-2">
+              <div className="flex flex-col xs:flex-row flex-wrap justify-center xl:justify-start gap-2 md:gap-5 pt-2 w-full">
                 <button
                   onClick={() => router.push('/courses')}
-                  className="group px-8 md:px-12 py-4 md:py-5 bg-white text-indigo-600 rounded-2xl md:rounded-3xl font-black text-base md:text-lg hover:shadow-2xl hover:shadow-white/20 transition-all duration-500 active:scale-95 flex items-center gap-3 md:gap-4"
+                  className="group w-full xs:w-auto px-5 md:px-12 py-3 md:py-5 bg-white text-indigo-600 rounded-2xl md:rounded-3xl font-black text-sm md:text-lg hover:shadow-2xl hover:shadow-white/20 transition-all duration-500 active:scale-95 flex items-center justify-center gap-2 md:gap-4"
                 >
                   {t('dashboard.continueLearning')}
-                  <ArrowLeft className={`w-5 h-5 md:w-6 md:h-6 transition-transform ${language === 'ar' ? 'group-hover:-translate-x-2' : 'group-hover:translate-x-2 rotate-180'}`} />
+                  <ArrowLeft className={`w-4 h-4 md:w-6 md:h-6 transition-transform ${language === 'ar' ? 'group-hover:-translate-x-2' : 'group-hover:translate-x-2 rotate-180'}`} />
                 </button>
                 
                 <div className="glass px-6 md:px-8 py-4 md:py-5 rounded-2xl md:rounded-3xl flex items-center gap-4 md:gap-5 border-white/10">
@@ -189,14 +189,14 @@ export default function StudentDashboard() {
         </div>
 
         {/* ── PREMIUM STATS GRID ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-6">
           {[
             { label: t('dashboard.activeCourses'), value: stats?.coursesCount || 0, icon: BookOpen, color: "text-indigo-600", bg: "bg-indigo-50", trend: `4 ${t('dashboard.activeCoursesTrend')}` },
             { label: t('dashboard.gpa'), value: `${Math.round(stats?.avgScore || 0)}%`, icon: Award, color: "text-amber-500", bg: "bg-amber-50", trend: t('dashboard.gpaTrend') },
             { label: t('dashboard.completedExams'), value: stats?.totalExams || 0, icon: FileText, color: "text-blue-500", bg: "bg-blue-50", trend: t('dashboard.completedExamsTrend') },
             { label: t('dashboard.learningHours'), value: "24.5", icon: Clock, color: "text-emerald-500", bg: "bg-emerald-50", trend: `12% ${t('dashboard.learningHoursTrend')}` },
           ].map((stat, i) => (
-            <div key={i} className="premium-card p-5 md:p-8 rounded-[24px] md:rounded-[32px] group hover:scale-[1.02] transition-all">
+            <div key={i} className="premium-card p-3 md:p-8 rounded-[20px] md:rounded-[32px] group hover:scale-[1.02] transition-all">
               <div className="flex flex-col gap-6 md:gap-8">
                 <div className={`w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl ${stat.bg} flex items-center justify-center transition-all group-hover:scale-110 group-hover:rotate-6`}>
                   <stat.icon className={`w-6 h-6 md:w-8 md:h-8 ${stat.color}`} />
@@ -204,7 +204,7 @@ export default function StudentDashboard() {
                 <div className="space-y-1">
                   <p className="text-slate-400 text-[10px] md:text-[11px] font-black uppercase tracking-[1px] md:tracking-[2px]">{stat.label}</p>
                   <div className="flex items-baseline gap-2 md:gap-3">
-                    <span className="text-3xl md:text-5xl font-black text-slate-900 tracking-tighter">{stat.value}</span>
+                    <span className="text-2xl md:text-5xl font-black text-slate-900 tracking-tighter">{stat.value}</span>
                   </div>
                   <p className="text-[10px] md:text-[11px] text-slate-500 font-bold mt-1 md:mt-2 flex items-center gap-2">
                     <TrendingUp className="w-3 md:w-3.5 h-3 md:h-3.5 text-emerald-500" />

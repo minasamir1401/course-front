@@ -104,7 +104,7 @@ export default function CourseDetailsPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto space-y-10 pb-20" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <div className="max-w-6xl mx-auto space-y-6 md:space-y-10 pb-20 px-1 sm:px-0 overflow-x-hidden" dir={language === 'ar' ? 'rtl' : 'ltr'}>
 
         {/* Course Folder Header */}
         <div className="bg-white rounded-[48px] border border-slate-100 shadow-sm relative overflow-hidden group min-h-[300px] flex flex-col justify-end">
@@ -131,7 +131,7 @@ export default function CourseDetailsPage() {
                   {totalLessons} {t('courseDetails.lessons')}
                 </span>
               </div>
-              <h1 className="text-3xl md:text-6xl font-black text-white leading-tight">
+              <h1 className="text-2xl sm:text-3xl md:text-6xl font-black text-white leading-tight">
                 {course.title}
               </h1>
               <p className="text-white/70 font-bold text-lg max-w-2xl">
@@ -140,7 +140,7 @@ export default function CourseDetailsPage() {
             </div>
 
             {/* Overall Progress Circle/Card */}
-            <div className="bg-white/10 backdrop-blur-md text-white p-8 rounded-[40px] border border-white/20 shadow-2xl flex flex-col items-center justify-center min-w-[200px] animate-in zoom-in duration-700">
+            <div className="hidden sm:flex bg-white/10 backdrop-blur-md text-white p-6 md:p-8 rounded-[32px] border border-white/20 shadow-2xl flex-col items-center justify-center min-w-[180px] animate-in zoom-in duration-700">
               <div className="relative w-24 h-24 mb-4">
                 <svg className="w-full h-full" viewBox="0 0 36 36">
                   <path className="stroke-white/10 stroke-[3] fill-none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
@@ -184,14 +184,14 @@ export default function CourseDetailsPage() {
                   key={lesson.id}
                   onClick={() => !isLocked && router.push(`/lessons/${lesson.id}?courseId=${course.id}`)}
                   style={{ animationDelay: `${index * 100}ms` }}
-                  className={`bg-white p-6 md:p-8 rounded-[32px] border transition-all duration-500 group animate-in fade-in slide-in-from-bottom-4 fill-mode-both ${isLocked
+                  className={`bg-white p-4 sm:p-6 md:p-8 rounded-[24px] sm:rounded-[32px] border transition-all duration-500 group animate-in fade-in slide-in-from-bottom-4 fill-mode-both ${isLocked
                       ? 'opacity-70 grayscale cursor-not-allowed border-slate-100'
                       : 'cursor-pointer hover:shadow-xl hover:-translate-y-1 hover:border-indigo-200 border-slate-100'
                     }`}
                 >
-                  <div className="flex flex-col md:flex-row items-center gap-6">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 md:gap-6">
                     {/* Index & Icon */}
-                    <div className="flex items-center gap-6 shrink-0">
+                    <div className="flex items-center gap-3 sm:gap-6 shrink-0">
                       <span className="text-2xl font-black text-slate-200 group-hover:text-indigo-100 transition-colors w-8">
                         {(index + 1).toString().padStart(2, '0')}
                       </span>

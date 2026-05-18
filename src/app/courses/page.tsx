@@ -70,7 +70,7 @@ export default function CoursesPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto space-y-8 md:space-y-12 pb-24 px-2 md:px-4" dir={language === 'ar' ? "rtl" : "ltr"}>
+      <div className="max-w-7xl mx-auto space-y-6 md:space-y-12 pb-24 px-1 sm:px-2 md:px-4 overflow-x-hidden" dir={language === 'ar' ? "rtl" : "ltr"}>
         
         {/* ── PREMIUM HEADER ── */}
         <div className="relative overflow-hidden rounded-[32px] md:rounded-[48px] premium-gradient-primary p-8 md:p-16 group shadow-2xl shadow-indigo-500/20">
@@ -83,7 +83,7 @@ export default function CoursesPage() {
                     <Sparkles className="w-4 h-4 text-amber-300 floating" />
                     <span className="text-white text-[9px] md:text-[10px] font-black uppercase tracking-widest">{t('courses.customPath')}</span>
                  </div>
-                 <h1 className="text-3xl md:text-6xl font-black text-white leading-tight tracking-tight">
+                 <h1 className="text-2xl sm:text-4xl md:text-6xl font-black text-white leading-tight tracking-tight">
                     {t('courses.explore')} <span className="text-indigo-200">{t('courses.yourCourses')}</span>
                  </h1>
                  <p className="text-indigo-50/80 font-medium text-base md:text-lg max-w-xl leading-relaxed">
@@ -131,13 +131,13 @@ export default function CoursesPage() {
                 <div
                   key={course.id}
                   onClick={() => router.push(`/courses/${course.id}`)}
-                  className="premium-card rounded-[32px] md:rounded-[40px] p-4 md:p-6 group cursor-pointer animate-in fade-in slide-in-from-bottom-6"
+                  className="premium-card rounded-[24px] sm:rounded-[32px] md:rounded-[40px] p-3 sm:p-4 md:p-6 group cursor-pointer animate-in fade-in slide-in-from-bottom-6"
                   style={{ animationDelay: `${index * 80}ms` }}
                 >
                   <div className="flex flex-col lg:flex-row items-center gap-6 md:gap-8">
                     
                     {/* Thumbnail & Info */}
-                    <div className="flex flex-1 items-center gap-4 md:gap-6 w-full lg:w-auto">
+                    <div className="flex flex-1 items-center gap-3 sm:gap-4 md:gap-6 w-full lg:w-auto">
                       <div className={`relative w-20 h-20 md:w-40 md:h-28 rounded-2xl md:rounded-[28px] overflow-hidden shrink-0 shadow-2xl transition-transform duration-500 group-hover:scale-105 border border-slate-100 ${
                         isFinished ? 'shadow-emerald-100' : 'shadow-indigo-100'
                       }`}>
@@ -171,7 +171,7 @@ export default function CoursesPage() {
                                </span>
                             )}
                          </div>
-                        <h3 className="text-lg md:text-2xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors truncate tracking-tight">
+                        <h3 className="text-base sm:text-lg md:text-2xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors truncate tracking-tight">
                           {course.title}
                         </h3>
                         <div className="flex items-center gap-3 md:gap-4 text-slate-400 font-bold text-[10px] md:text-xs">

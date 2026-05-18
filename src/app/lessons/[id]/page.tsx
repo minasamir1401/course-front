@@ -209,10 +209,10 @@ export default function LessonPlayerPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-[1600px] mx-auto space-y-8 md:space-y-12 pb-24" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <div className="max-w-[1600px] mx-auto space-y-6 md:space-y-12 pb-24 overflow-x-hidden px-1 sm:px-0" dir={language === 'ar' ? 'rtl' : 'ltr'}>
         
         {/* ── TOP HEADER BAR ── */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6 px-2">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-6 px-1 sm:px-2">
            <div className="flex items-center gap-6">
               <button 
                 onClick={() => router.back()} 
@@ -221,7 +221,7 @@ export default function LessonPlayerPage() {
                 <ArrowRight className="w-6 h-6 text-slate-900" />
               </button>
               <div>
-                <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">{lesson.title}</h1>
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">{lesson.title}</h1>
                 <p className="text-indigo-600 font-bold text-sm flex items-center gap-2">
                    <BookOpen className="w-4 h-4" />
                    {course?.title || t('lesson.educationalCourse')}
@@ -290,7 +290,7 @@ export default function LessonPlayerPage() {
                   <p className="text-slate-500 text-base md:text-lg font-bold max-w-xl mx-auto leading-relaxed">{t('lesson.readyMessage')}</p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
                   {[
                     { title: t('lesson.standards'), icon: Target, content: lesson.standards, color: "text-blue-600", bg: "bg-blue-50" },
                     { title: t('lesson.indicators'), icon: TrendingUp, content: lesson.indicators, color: "text-purple-600", bg: "bg-purple-50" },
@@ -546,7 +546,7 @@ export default function LessonPlayerPage() {
                 <h2 className="text-4xl md:text-6xl font-black text-slate-900 mb-4 tracking-tight">{t('lesson.greatJob')}</h2>
                 <p className="text-slate-500 text-lg font-bold mb-12">{t('lesson.completedMessage')}</p>
                 
-                <div className="flex justify-center gap-6 md:gap-10 mb-16">
+              <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 md:gap-10 mb-10 md:mb-16">
                   <div className="premium-card p-8 rounded-[35px] min-w-[180px] border-b-8 border-indigo-600">
                     <p className="text-slate-400 text-[10px] font-black mb-2 uppercase tracking-widest">{t('lesson.score')}</p>
                     <p className="text-4xl md:text-6xl font-black text-slate-900">{score}</p>
