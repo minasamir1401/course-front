@@ -929,32 +929,52 @@ export default function LessonPlayerPage() {
               
               let title = t('lesson.greatJob') || "عمل رائع!";
               let message = t('lesson.completedMessage') || "لقد أكملت جميع متطلبات هذا الدرس بنجاح.";
-              let iconBg = "bg-emerald-500 shadow-emerald-100";
               let borderCol = "border-indigo-600";
-              let icon = <CheckCircle className="w-12 h-12 text-white" />;
-              
+              let iconEl: React.ReactNode;
+
               if (pct >= 85) {
                 title = "أداء ممتاز! 🏆";
                 message = "رائع جداً! لقد تفوقت وأكملت الدرس بنسبة ممتازة تليق بذكائك.";
-                iconBg = "bg-emerald-500 shadow-emerald-100 animate-bounce-slow";
-                icon = (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-circle-check-big w-12 h-12 text-white" aria-hidden="true">
-                    <path d="M21.801 10A10 10 0 1 1 17 3.335"></path>
-                    <path d="m9 11 3 3L22 4"></path>
-                  </svg>
+                borderCol = "border-emerald-500";
+                iconEl = (
+                  <div className="relative flex items-center justify-center" style={{ width: 120, height: 120 }}>
+                    {/* Outer glow ring */}
+                    <div className="absolute inset-0 rounded-full animate-ping-slow" style={{ background: 'radial-gradient(circle, rgba(16,185,129,0.35) 0%, transparent 70%)' }} />
+                    <div className="absolute inset-2 rounded-full animate-ping-slow" style={{ animationDelay: '0.4s', background: 'radial-gradient(circle, rgba(16,185,129,0.2) 0%, transparent 70%)' }} />
+                    <div className="w-24 h-24 rounded-[35px] flex items-center justify-center shadow-2xl animate-float-trophy" style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', boxShadow: '0 0 40px rgba(16,185,129,0.6), 0 20px 40px rgba(5,150,105,0.4)' }}>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21.801 10A10 10 0 1 1 17 3.335"/>
+                        <path d="m9 11 3 3L22 4"/>
+                      </svg>
+                    </div>
+                  </div>
                 );
               } else if (pct >= 50) {
                 title = "عمل جيد جداً! ⭐";
                 message = "أحسنت! لقد نجحت واجتزت الدرس بنجاح. استمر في التقدم!";
-                iconBg = "bg-amber-500 shadow-amber-100 animate-pulse";
                 borderCol = "border-amber-500";
-                icon = <Star className="w-12 h-12 text-white fill-current" />;
+                iconEl = (
+                  <div className="relative flex items-center justify-center" style={{ width: 120, height: 120 }}>
+                    {/* Rotating sparkle ring */}
+                    <div className="absolute inset-0 animate-spin-slow" style={{ background: 'conic-gradient(from 0deg, rgba(245,158,11,0.8), rgba(251,191,36,0.4), rgba(245,158,11,0.8))', borderRadius: '50%', filter: 'blur(8px)' }} />
+                    <div className="absolute inset-3 rounded-full" style={{ background: 'white' }} />
+                    <div className="w-24 h-24 rounded-[35px] flex items-center justify-center shadow-2xl animate-float-star relative" style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', boxShadow: '0 0 50px rgba(245,158,11,0.7), 0 20px 40px rgba(217,119,6,0.5)' }}>
+                      <Star className="w-12 h-12 text-white fill-current animate-spin-slow" style={{ animationDuration: '4s' }} />
+                    </div>
+                  </div>
+                );
               } else {
                 title = "تحتاج للمحاولة مجدداً 🔄";
                 message = "لم تحقق نسبة الاجتياز المطلوبة (50%). لا تقلق، التعلم يحتاج لبعض التدريب الإضافي!";
-                iconBg = "bg-rose-500 shadow-rose-100 animate-pulse";
                 borderCol = "border-rose-500";
-                icon = <RotateCcw className="w-12 h-12 text-white" />;
+                iconEl = (
+                  <div className="relative flex items-center justify-center" style={{ width: 120, height: 120 }}>
+                    <div className="absolute inset-0 rounded-full animate-pulse" style={{ background: 'radial-gradient(circle, rgba(244,63,94,0.3) 0%, transparent 70%)' }} />
+                    <div className="w-24 h-24 rounded-[35px] flex items-center justify-center shadow-2xl animate-shake" style={{ background: 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)', boxShadow: '0 0 40px rgba(244,63,94,0.6), 0 20px 40px rgba(225,29,72,0.4)' }}>
+                      <RotateCcw className="w-12 h-12 text-white animate-spin" style={{ animationDuration: '2s' }} />
+                    </div>
+                  </div>
+                );
               }
               
               return (
@@ -968,8 +988,8 @@ export default function LessonPlayerPage() {
                         />
                      </div>
                   )}
-                  <div className={`w-24 h-24 ${iconBg} rounded-[35px] flex items-center justify-center mx-auto mb-8 shadow-2xl relative z-10`}>
-                    {icon}
+                  <div className="flex items-center justify-center mx-auto mb-8 relative z-10">
+                    {iconEl}
                   </div>
                   <h2 className="text-4xl md:text-6xl font-black text-slate-900 mb-4 tracking-tight">{title}</h2>
                   <p className="text-slate-500 text-lg font-bold mb-12">{message}</p>
@@ -1082,7 +1102,53 @@ export default function LessonPlayerPage() {
           50% { transform: translateY(-10px); }
         }
         .animate-bounce-slow { animation: bounce-slow 3s infinite ease-in-out; }
-        
+
+        /* ── Trophy float: gentle up/down with scale pulse ── */
+        @keyframes float-trophy {
+          0%   { transform: translateY(0px) scale(1); box-shadow: 0 0 40px rgba(16,185,129,0.6), 0 20px 40px rgba(5,150,105,0.4); }
+          30%  { transform: translateY(-14px) scale(1.06); box-shadow: 0 0 70px rgba(16,185,129,0.9), 0 30px 60px rgba(5,150,105,0.6); }
+          60%  { transform: translateY(-6px) scale(1.03); }
+          100% { transform: translateY(0px) scale(1); box-shadow: 0 0 40px rgba(16,185,129,0.6), 0 20px 40px rgba(5,150,105,0.4); }
+        }
+        .animate-float-trophy { animation: float-trophy 2.4s infinite ease-in-out; }
+
+        /* ── Star float: bouncy with glow pulse ── */
+        @keyframes float-star {
+          0%   { transform: translateY(0px) rotate(-3deg) scale(1); }
+          25%  { transform: translateY(-16px) rotate(4deg) scale(1.08); }
+          50%  { transform: translateY(-8px) rotate(-2deg) scale(1.04); }
+          75%  { transform: translateY(-18px) rotate(5deg) scale(1.1); }
+          100% { transform: translateY(0px) rotate(-3deg) scale(1); }
+        }
+        .animate-float-star { animation: float-star 2.2s infinite ease-in-out; }
+
+        /* ── Slow spin for conic ring & star icon ── */
+        @keyframes spin-slow {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
+        .animate-spin-slow { animation: spin-slow 6s linear infinite; }
+
+        /* ── Shake for retry icon ── */
+        @keyframes shake {
+          0%, 100% { transform: translateX(0) rotate(0deg); }
+          15%      { transform: translateX(-8px) rotate(-6deg); }
+          30%      { transform: translateX(8px) rotate(6deg); }
+          45%      { transform: translateX(-5px) rotate(-3deg); }
+          60%      { transform: translateX(5px) rotate(3deg); }
+          75%      { transform: translateX(-3px) rotate(-1deg); }
+          90%      { transform: translateX(3px) rotate(1deg); }
+        }
+        .animate-shake { animation: shake 1.8s infinite ease-in-out; }
+
+        /* ── Slow ping for glow rings ── */
+        @keyframes ping-slow {
+          0%   { transform: scale(0.85); opacity: 0.8; }
+          50%  { transform: scale(1.15); opacity: 0.3; }
+          100% { transform: scale(0.85); opacity: 0.8; }
+        }
+        .animate-ping-slow { animation: ping-slow 2s infinite ease-in-out; }
+
         .premium-card {
           background: rgba(255, 255, 255, 0.8);
           backdrop-filter: blur(20px);
