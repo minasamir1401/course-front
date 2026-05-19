@@ -788,7 +788,19 @@ export default function EditCoursePage() {
                                        >
                                          {isSelected && opt !== "" && <CheckCircle2 className="w-4 h-4 text-white" />}
                                        </div>
-                                       <input type="text" value={opt} onChange={(e) => { const opts = [...(tempQuestion.options || ["", "", "", ""])]; opts[oIdx] = e.target.value; setTempQuestion({...tempQuestion, options: opts}); }} className="bg-transparent flex-1 outline-none font-bold text-slate-900" placeholder={`الخيار ${oIdx + 1}`} />
+                                       <input type="text" value={opt} onChange={(e) => { 
+                                         const opts = [...(tempQuestion.options || ["", "", "", ""])]; 
+                                         const oldVal = opts[oIdx];
+                                         const newVal = e.target.value;
+                                         opts[oIdx] = newVal; 
+                                         const newQ = {...tempQuestion, options: opts};
+                                         if (tempQuestion.type === "MULTI_SELECT" && (tempQuestion.correctAnswers || []).includes(oldVal)) {
+                                           newQ.correctAnswers = tempQuestion.correctAnswers.map((a: string) => a === oldVal ? newVal : a);
+                                         } else if (tempQuestion.correctAnswer === oldVal) {
+                                           newQ.correctAnswer = newVal;
+                                         }
+                                         setTempQuestion(newQ); 
+                                       }} className="bg-transparent flex-1 outline-none font-bold text-slate-900" placeholder={`الخيار ${oIdx + 1}`} />
                                        {(tempQuestion.options || []).length > 2 && (
                                          <button onClick={() => { const opts = [...tempQuestion.options]; opts.splice(oIdx, 1); setTempQuestion({...tempQuestion, options: opts}); }} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
                                        )}
@@ -811,35 +823,69 @@ export default function EditCoursePage() {
                              )}
                            </div>
                          </div>
-                         <div className="space-y-3">
-                           <div className="flex justify-between items-center">
-                             <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">تفسيرات الإجابة (Explanations)</label>
-                             <button onClick={() => setTempQuestion({...tempQuestion, explanations: [...(tempQuestion.explanations || [""]), ""]})} className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1"><Plus className="w-3 h-3"/> إضافة تفسير</button>
-                           </div>
-                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                             {(tempQuestion.explanations || [""]).map((exp: string, eIdx: number) => (
-                               <div key={eIdx} className="relative group min-w-0">
-                                 <textarea
-                                   value={exp}
-                                   onChange={(e) => {
-                                     const newExps = [...(tempQuestion.explanations || [""])];
-                                     newExps[eIdx] = e.target.value;
-                                     setTempQuestion({ ...tempQuestion, explanations: newExps });
-                                   }}
-                                   className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all resize-none h-24 max-h-[150px] overflow-y-auto"
-                                   placeholder={`تفسير الإجابة ${eIdx + 1}...`}
-                                 />
-                                 {(tempQuestion.explanations || []).length > 1 && (
-                                   <button onClick={() => {
-                                     const newExps = [...tempQuestion.explanations];
-                                     newExps.splice(eIdx, 1);
-                                     setTempQuestion({...tempQuestion, explanations: newExps});
-                                   }} className="absolute top-2 left-2 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all bg-red-50 p-1.5 rounded-lg"><Trash2 className="w-4 h-4" /></button>
-                                 )}
-                               </div>
-                             ))}
-                           </div>
-                         </div>
+                          <div className="space-y-4 pt-4 border-t border-slate-100">
+                            <div className="flex justify-between items-center">
+                              <label className="text-xs font-black text-slate-400 uppercase tracking-widest">أقسام إضافية (ملاحظات، شرح، إلخ)</label>
+                              <div className="relative group/menu">
+                                <button className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1">
+                                  <Plus className="w-4 h-4"/> إضافة قسم
+                                </button>
+                                <div className="absolute left-0 mt-2 w-48 bg-white border border-slate-100 rounded-xl shadow-xl p-2 hidden group-hover/menu:block z-10">
+                                  {['FEEDBACK', 'HINT', 'EXPLANATION', 'TIP', 'WARNING', 'KEY_INSIGHT'].map(secType => (
+                                    <button
+                                      key={secType}
+                                      onClick={(e) => {
+                                         e.preventDefault();
+                                         setTempQuestion({...tempQuestion, sections: [...(tempQuestion.sections || []), { id: Date.now(), type: secType, content: "" }]});
+                                      }}
+                                      className="w-full text-left px-3 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors flex items-center gap-2"
+                                    >
+                                      {React.createElement(SECTION_STYLE_PRESETS[secType]?.icon || FileText, { className: "w-4 h-4" })}
+                                      <span>{SECTION_STYLE_PRESETS[secType]?.label || secType}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-4">
+                              {(tempQuestion.sections || []).map((sec: any, secIdx: number) => {
+                                const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
+                                const SectionIcon = preset.icon;
+                                return (
+                                  <div key={sec.id} className={`p-4 rounded-2xl relative group/section border ${preset.container}`}>
+                                    <div className="flex justify-between items-center mb-3">
+                                      <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1.5 ${preset.badge}`}>
+                                        <SectionIcon className="w-3.5 h-3.5" />
+                                        {preset.label}
+                                      </span>
+                                      <button 
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          const newSections = [...tempQuestion.sections];
+                                          newSections.splice(secIdx, 1);
+                                          setTempQuestion({...tempQuestion, sections: newSections});
+                                        }} 
+                                        className="text-red-400 hover:text-red-600 opacity-0 group-hover/section:opacity-100 transition-all"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                    <RichTextEditor 
+                                      value={sec.content}
+                                      onChange={(val) => {
+                                        const newSections = [...tempQuestion.sections];
+                                        newSections[secIdx].content = val;
+                                        setTempQuestion({...tempQuestion, sections: newSections});
+                                      }}
+                                      placeholder={`محتوى الـ ${sec.type}...`}
+                                      className="!bg-white"
+                                    />
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
                          <div className="flex justify-end gap-4">
                            <button onClick={() => setShowQuestionForm(false)} className="px-8 py-3 rounded-2xl bg-slate-100 text-slate-500 font-bold">إلغاء</button>
                            <button onClick={handleSaveAssignment} className="px-10 py-3 rounded-2xl bg-indigo-600 text-white font-black shadow-xl shadow-indigo-900/20">حفظ التكليف</button>
@@ -1073,8 +1119,20 @@ export default function EditCoursePage() {
                                             value={opt}
                                             onChange={(e) => {
                                               const newOpts = [...(block.options || [])];
-                                              newOpts[oIdx] = e.target.value;
-                                              updateBlock(sIdx, 'options', newOpts);
+                                              const oldVal = newOpts[oIdx];
+                                              const newVal = e.target.value;
+                                              newOpts[oIdx] = newVal;
+                                              
+                                              const newBlock = { ...block, options: newOpts };
+                                              if (block.label === 'MULTI_SELECT' && (block.correctAnswers || []).includes(oldVal)) {
+                                                newBlock.correctAnswers = (block.correctAnswers || []).map((a: string) => a === oldVal ? newVal : a);
+                                              } else if (block.correctAnswer === oldVal) {
+                                                newBlock.correctAnswer = newVal;
+                                              }
+                                              
+                                              const newSlides = [...currentLesson.slides];
+                                              newSlides[sIdx] = newBlock;
+                                              setCurrentLesson({ ...currentLesson, slides: newSlides });
                                             }}
                                             placeholder={`خيار ${oIdx + 1}`}
                                             className="bg-transparent outline-none font-bold text-slate-700 flex-1"
@@ -1166,7 +1224,7 @@ export default function EditCoursePage() {
                           </div>
                           <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">الدرجة</label>
-                            <input type="number" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600" value={tempQuestion.points} onChange={(e) => setTempQuestion({ ...tempQuestion, points: parseInt(e.target.value) })} placeholder="الدرجة" />
+                            <input type="number" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600" value={isNaN(tempQuestion.points) ? "" : tempQuestion.points} onChange={(e) => setTempQuestion({ ...tempQuestion, points: parseInt(e.target.value) })} placeholder="الدرجة" />
                           </div>
                           <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">ناتج التعلم (LO)</label>
@@ -1174,7 +1232,7 @@ export default function EditCoursePage() {
                           </div>
                           <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">المحاولات</label>
-                            <input type="number" min="1" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600" value={tempQuestion.attempts || 1} onChange={(e) => setTempQuestion({ ...tempQuestion, attempts: parseInt(e.target.value) })} />
+                            <input type="number" min="1" className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600" value={isNaN(tempQuestion.attempts) ? 1 : (tempQuestion.attempts || 1)} onChange={(e) => setTempQuestion({ ...tempQuestion, attempts: parseInt(e.target.value) })} />
                           </div>
                         </div>
                         <RichTextEditor value={tempQuestion.text} onChange={(val) => setTempQuestion({ ...tempQuestion, text: val })} placeholder="نص السؤال..." className="!bg-white !border-slate-100" />
@@ -1199,7 +1257,19 @@ export default function EditCoursePage() {
                                         setTempQuestion({...tempQuestion, correctAnswer: opt});
                                       }
                                     }} className={`w-7 h-7 rounded-full border-4 cursor-pointer flex items-center justify-center ${isSelected && opt !== "" ? 'bg-emerald-500 border-white' : 'bg-white border-slate-200'}`}>{isSelected && opt !== "" && <CheckCircle2 className="w-4 h-4 text-white" />}</div>
-                                    <input type="text" value={opt} onChange={(e) => { const opts = [...(tempQuestion.options || ["", "", "", ""])]; opts[oIdx] = e.target.value; setTempQuestion({...tempQuestion, options: opts}); }} className="bg-transparent flex-1 outline-none text-slate-900 font-bold" placeholder={`الخيار ${oIdx + 1}`} />
+                                    <input type="text" value={opt} onChange={(e) => { 
+                                      const opts = [...(tempQuestion.options || ["", "", "", ""])]; 
+                                      const oldVal = opts[oIdx];
+                                      const newVal = e.target.value;
+                                      opts[oIdx] = newVal; 
+                                      const newQ = {...tempQuestion, options: opts};
+                                      if (tempQuestion.type === "MULTI_SELECT" && (tempQuestion.correctAnswers || []).includes(oldVal)) {
+                                        newQ.correctAnswers = tempQuestion.correctAnswers.map((a: string) => a === oldVal ? newVal : a);
+                                      } else if (tempQuestion.correctAnswer === oldVal) {
+                                        newQ.correctAnswer = newVal;
+                                      }
+                                      setTempQuestion(newQ); 
+                                    }} className="bg-transparent flex-1 outline-none text-slate-900 font-bold" placeholder={`الخيار ${oIdx + 1}`} />
                                     {(tempQuestion.options || []).length > 2 && (
                                       <button onClick={() => { const opts = [...tempQuestion.options]; opts.splice(oIdx, 1); setTempQuestion({...tempQuestion, options: opts}); }} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
                                     )}
@@ -1217,33 +1287,67 @@ export default function EditCoursePage() {
                             </div>
                           ))}
                         </div>
-                        <div className="space-y-3">
+                        <div className="space-y-4 pt-4 border-t border-slate-100">
                           <div className="flex justify-between items-center">
-                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">تفسيرات الإجابة (Explanations)</label>
-                            <button onClick={() => setTempQuestion({...tempQuestion, explanations: [...(tempQuestion.explanations || [""]), ""]})} className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1"><Plus className="w-3 h-3"/> إضافة تفسير</button>
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {(tempQuestion.explanations || [""]).map((exp: string, eIdx: number) => (
-                              <div key={eIdx} className="relative group min-w-0">
-                                <textarea
-                                  value={exp}
-                                  onChange={(e) => {
-                                    const newExps = [...(tempQuestion.explanations || [""])];
-                                    newExps[eIdx] = e.target.value;
-                                    setTempQuestion({ ...tempQuestion, explanations: newExps });
-                                  }}
-                                  className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all resize-none h-24 max-h-[150px] overflow-y-auto"
-                                  placeholder={`تفسير الإجابة ${eIdx + 1}...`}
-                                />
-                                {(tempQuestion.explanations || []).length > 1 && (
-                                  <button onClick={() => {
-                                    const newExps = [...tempQuestion.explanations];
-                                    newExps.splice(eIdx, 1);
-                                    setTempQuestion({...tempQuestion, explanations: newExps});
-                                  }} className="absolute top-2 left-2 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all bg-red-50 p-1.5 rounded-lg"><Trash2 className="w-4 h-4" /></button>
-                                )}
+                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest">أقسام إضافية (ملاحظات، شرح، إلخ)</label>
+                            <div className="relative group/menu">
+                              <button className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1">
+                                <Plus className="w-4 h-4"/> إضافة قسم
+                              </button>
+                              <div className="absolute left-0 mt-2 w-48 bg-white border border-slate-100 rounded-xl shadow-xl p-2 hidden group-hover/menu:block z-10">
+                                {['FEEDBACK', 'HINT', 'EXPLANATION', 'TIP', 'WARNING', 'KEY_INSIGHT'].map(secType => (
+                                  <button
+                                    key={secType}
+                                    onClick={(e) => {
+                                       e.preventDefault();
+                                       setTempQuestion({...tempQuestion, sections: [...(tempQuestion.sections || []), { id: Date.now(), type: secType, content: "" }]});
+                                    }}
+                                    className="w-full text-left px-3 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors flex items-center gap-2"
+                                  >
+                                    {React.createElement(SECTION_STYLE_PRESETS[secType]?.icon || FileText, { className: "w-4 h-4" })}
+                                    <span>{SECTION_STYLE_PRESETS[secType]?.label || secType}</span>
+                                  </button>
+                                ))}
                               </div>
-                            ))}
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-4">
+                            {(tempQuestion.sections || []).map((sec: any, secIdx: number) => {
+                              const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
+                              const SectionIcon = preset.icon;
+                              return (
+                                <div key={sec.id} className={`p-4 rounded-2xl relative group/section border ${preset.container}`}>
+                                  <div className="flex justify-between items-center mb-3">
+                                    <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1.5 ${preset.badge}`}>
+                                      <SectionIcon className="w-3.5 h-3.5" />
+                                      {preset.label}
+                                    </span>
+                                    <button 
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        const newSections = [...tempQuestion.sections];
+                                        newSections.splice(secIdx, 1);
+                                        setTempQuestion({...tempQuestion, sections: newSections});
+                                      }} 
+                                      className="text-red-400 hover:text-red-600 opacity-0 group-hover/section:opacity-100 transition-all"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <RichTextEditor 
+                                    value={sec.content}
+                                    onChange={(val) => {
+                                      const newSections = [...tempQuestion.sections];
+                                      newSections[secIdx].content = val;
+                                      setTempQuestion({...tempQuestion, sections: newSections});
+                                    }}
+                                    placeholder={`محتوى الـ ${sec.type}...`}
+                                    className="!bg-white"
+                                  />
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                         <div className="flex justify-end gap-4">

@@ -818,33 +818,67 @@ export default function CreateCoursePage() {
                            </div>
                          </div>
 
-                         <div className="space-y-3">
+                         <div className="space-y-4 pt-4 border-t border-slate-100">
                            <div className="flex justify-between items-center">
-                             <label className="text-xs font-black text-slate-400 uppercase tracking-widest">تفسيرات الإجابة (Explanations)</label>
-                             <button onClick={() => setTempQuestion({...tempQuestion, explanations: [...(tempQuestion.explanations || [""]), ""]})} className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1"><Plus className="w-3 h-3"/> إضافة تفسير</button>
-                           </div>
-                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                             {(tempQuestion.explanations || [""]).map((exp: string, eIdx: number) => (
-                               <div key={eIdx} className="relative group min-w-0">
-                                 <textarea 
-                                   value={exp}
-                                   onChange={(e) => {
-                                     const newExps = [...(tempQuestion.explanations || [""])];
-                                     newExps[eIdx] = e.target.value;
-                                     setTempQuestion({...tempQuestion, explanations: newExps});
-                                   }}
-                                   className="w-full bg-white border border-slate-200 rounded-xl p-4 text-slate-900 text-sm min-h-[80px] outline-none focus:border-indigo-600"
-                                   placeholder={`تفسير الإجابة ${eIdx + 1}...`}
-                                 />
-                                 {(tempQuestion.explanations || []).length > 1 && (
-                                   <button onClick={() => {
-                                     const newExps = [...tempQuestion.explanations];
-                                     newExps.splice(eIdx, 1);
-                                     setTempQuestion({...tempQuestion, explanations: newExps});
-                                   }} className="absolute top-2 left-2 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all bg-red-50 p-1.5 rounded-lg"><Trash2 className="w-4 h-4" /></button>
-                                 )}
+                             <label className="text-xs font-black text-slate-400 uppercase tracking-widest">أقسام إضافية (ملاحظات، شرح، إلخ)</label>
+                             <div className="relative group/menu">
+                               <button className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1">
+                                 <Plus className="w-4 h-4"/> إضافة قسم
+                               </button>
+                               <div className="absolute left-0 mt-2 w-48 bg-white border border-slate-100 rounded-xl shadow-xl p-2 hidden group-hover/menu:block z-10">
+                                 {['FEEDBACK', 'HINT', 'EXPLANATION', 'TIP', 'WARNING', 'KEY_INSIGHT'].map(secType => (
+                                   <button
+                                     key={secType}
+                                     onClick={(e) => {
+                                        e.preventDefault();
+                                        setTempQuestion({...tempQuestion, sections: [...(tempQuestion.sections || []), { id: Date.now(), type: secType, content: "" }]});
+                                     }}
+                                     className="w-full text-left px-3 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors flex items-center gap-2"
+                                   >
+                                     {React.createElement(SECTION_STYLE_PRESETS[secType]?.icon || FileText, { className: "w-4 h-4" })}
+                                     <span>{SECTION_STYLE_PRESETS[secType]?.label || secType}</span>
+                                   </button>
+                                 ))}
                                </div>
-                             ))}
+                             </div>
+                           </div>
+                           
+                           <div className="space-y-4">
+                             {(tempQuestion.sections || []).map((sec: any, secIdx: number) => {
+                               const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
+                               const SectionIcon = preset.icon;
+                               return (
+                                 <div key={sec.id} className={`p-4 rounded-2xl relative group/section border ${preset.container}`}>
+                                   <div className="flex justify-between items-center mb-3">
+                                     <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1.5 ${preset.badge}`}>
+                                       <SectionIcon className="w-3.5 h-3.5" />
+                                       {preset.label}
+                                     </span>
+                                     <button 
+                                       onClick={(e) => {
+                                         e.preventDefault();
+                                         const newSections = [...tempQuestion.sections];
+                                         newSections.splice(secIdx, 1);
+                                         setTempQuestion({...tempQuestion, sections: newSections});
+                                       }} 
+                                       className="text-red-400 hover:text-red-600 opacity-0 group-hover/section:opacity-100 transition-all"
+                                     >
+                                       <Trash2 className="w-4 h-4" />
+                                     </button>
+                                   </div>
+                                   <RichTextEditor 
+                                     value={sec.content}
+                                     onChange={(val) => {
+                                       const newSections = [...tempQuestion.sections];
+                                       newSections[secIdx].content = val;
+                                       setTempQuestion({...tempQuestion, sections: newSections});
+                                     }}
+                                     placeholder={`محتوى الـ ${sec.type}...`}
+                                     className="!bg-white"
+                                   />
+                                 </div>
+                               );
+                             })}
                            </div>
                          </div>
 
@@ -1209,33 +1243,67 @@ export default function CreateCoursePage() {
                           />
                         </div>
 
-                        <div className="space-y-3">
+                        <div className="space-y-4 pt-4 border-t border-slate-100">
                           <div className="flex justify-between items-center">
-                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest">تفسيرات الإجابة (Explanations)</label>
-                            <button onClick={() => setTempQuestion({...tempQuestion, explanations: [...(tempQuestion.explanations || [""]), ""]})} className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1"><Plus className="w-3 h-3"/> إضافة تفسير</button>
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {(tempQuestion.explanations || [""]).map((exp: string, eIdx: number) => (
-                              <div key={eIdx} className="relative group min-w-0">
-                                <textarea 
-                                  value={exp}
-                                  onChange={(e) => {
-                                    const newExps = [...(tempQuestion.explanations || [""])];
-                                    newExps[eIdx] = e.target.value;
-                                    setTempQuestion({...tempQuestion, explanations: newExps});
-                                  }}
-                                  className="w-full bg-white border border-slate-200 rounded-xl p-4 text-slate-900 text-sm min-h-[80px] outline-none focus:border-indigo-600"
-                                  placeholder={`تفسير الإجابة ${eIdx + 1}...`}
-                                />
-                                {(tempQuestion.explanations || []).length > 1 && (
-                                  <button onClick={() => {
-                                    const newExps = [...tempQuestion.explanations];
-                                    newExps.splice(eIdx, 1);
-                                    setTempQuestion({...tempQuestion, explanations: newExps});
-                                  }} className="absolute top-2 left-2 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all bg-red-50 p-1.5 rounded-lg"><Trash2 className="w-4 h-4" /></button>
-                                )}
+                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest">أقسام إضافية (ملاحظات، شرح، إلخ)</label>
+                            <div className="relative group/menu">
+                              <button className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1">
+                                <Plus className="w-4 h-4"/> إضافة قسم
+                              </button>
+                              <div className="absolute left-0 mt-2 w-48 bg-white border border-slate-100 rounded-xl shadow-xl p-2 hidden group-hover/menu:block z-10">
+                                {['FEEDBACK', 'HINT', 'EXPLANATION', 'TIP', 'WARNING', 'KEY_INSIGHT'].map(secType => (
+                                  <button
+                                    key={secType}
+                                    onClick={(e) => {
+                                       e.preventDefault();
+                                       setTempQuestion({...tempQuestion, sections: [...(tempQuestion.sections || []), { id: Date.now(), type: secType, content: "" }]});
+                                    }}
+                                    className="w-full text-left px-3 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors flex items-center gap-2"
+                                  >
+                                    {React.createElement(SECTION_STYLE_PRESETS[secType]?.icon || FileText, { className: "w-4 h-4" })}
+                                    <span>{SECTION_STYLE_PRESETS[secType]?.label || secType}</span>
+                                  </button>
+                                ))}
                               </div>
-                            ))}
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-4">
+                            {(tempQuestion.sections || []).map((sec: any, secIdx: number) => {
+                              const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
+                              const SectionIcon = preset.icon;
+                              return (
+                                <div key={sec.id} className={`p-4 rounded-2xl relative group/section border ${preset.container}`}>
+                                  <div className="flex justify-between items-center mb-3">
+                                    <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1.5 ${preset.badge}`}>
+                                      <SectionIcon className="w-3.5 h-3.5" />
+                                      {preset.label}
+                                    </span>
+                                    <button 
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        const newSections = [...tempQuestion.sections];
+                                        newSections.splice(secIdx, 1);
+                                        setTempQuestion({...tempQuestion, sections: newSections});
+                                      }} 
+                                      className="text-red-400 hover:text-red-600 opacity-0 group-hover/section:opacity-100 transition-all"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <RichTextEditor 
+                                    value={sec.content}
+                                    onChange={(val) => {
+                                      const newSections = [...tempQuestion.sections];
+                                      newSections[secIdx].content = val;
+                                      setTempQuestion({...tempQuestion, sections: newSections});
+                                    }}
+                                    placeholder={`محتوى الـ ${sec.type}...`}
+                                    className="!bg-white"
+                                  />
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
 

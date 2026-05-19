@@ -10,13 +10,63 @@ import {
   MessageSquare, FileDown, Clock, Info, X, Maximize,
   Volume2, Settings, ArrowRight, ArrowLeft, Star, Award, RotateCcw,
   CheckCircle2, AlertCircle, Sparkles, Lock, Timer,
-  ArrowUpRight, ListOrdered, TrendingUp, GraduationCap, FileText
+  ArrowUpRight, ListOrdered, TrendingUp, GraduationCap, FileText, ChevronDown
 } from "lucide-react";
 import dynamic from 'next/dynamic';
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const VideoPlayer = dynamic(() => import('@/components/VideoPlayer'), { ssr: false });
+
+const CollapsibleSection = ({ section, isCorrect, isWrong, language }: { section: any, isCorrect?: boolean, isWrong?: boolean, language: string }) => {
+   const [isOpen, setIsOpen] = useState(false);
+   
+   const SECTION_STYLE_PRESETS: Record<string, any> = {
+     HINT: { icon: HelpCircle, bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", label: "تلميح" },
+     TIP: { icon: Info, bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200", label: "نصيحة" },
+     WARNING: { icon: AlertCircle, bg: "bg-red-50", text: "text-red-700", border: "border-red-200", label: "تحذير" },
+     KEY_INSIGHT: { icon: Sparkles, bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200", label: "نقطة هامة" },
+     FEEDBACK: { icon: MessageSquare, bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", label: "ملاحظات" },
+     EXPLANATION: { icon: BookOpen, bg: "bg-indigo-50", text: "text-indigo-700", border: "border-indigo-200", label: "شرح مفصل" }
+   };
+
+   const preset = SECTION_STYLE_PRESETS[section.type] || SECTION_STYLE_PRESETS.HINT;
+   const Icon = preset.icon;
+   
+   return (
+      <div className={`rounded-3xl border-2 ${preset.bg} ${preset.border} overflow-hidden mb-4 transition-all duration-300 w-full`}>
+         <button 
+            onClick={() => setIsOpen(!isOpen)}
+            className={`w-full p-4 md:p-6 flex items-center justify-between ${language === 'ar' ? 'text-right' : 'text-left'} outline-none hover:bg-white/40 transition-colors`}
+         >
+            <div className={`flex items-center gap-3 ${preset.text}`}>
+               <Icon className="w-6 h-6 md:w-7 md:h-7" />
+               <span className="font-black text-lg md:text-xl">{preset.label}</span>
+            </div>
+            
+            <div className="flex items-center gap-4">
+               {section.type === 'FEEDBACK' && isCorrect && (
+                  <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 animate-bounce">
+                     <CheckCircle2 className="w-6 h-6" />
+                  </div>
+               )}
+               {section.type === 'FEEDBACK' && isWrong && (
+                  <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 animate-pulse">
+                     <RotateCcw className="w-6 h-6" />
+                  </div>
+               )}
+               <ChevronDown className={`w-6 h-6 md:w-7 md:h-7 ${preset.text} transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+            </div>
+         </button>
+         
+         <div className={`grid transition-all duration-300 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+            <div className="overflow-hidden">
+               <div className={`p-6 pt-0 border-t border-transparent prose prose-sm md:prose-base max-w-none ${preset.text} font-bold leading-relaxed break-words`} dangerouslySetInnerHTML={{ __html: section.content }} />
+            </div>
+         </div>
+      </div>
+   );
+};
 
 export default function LessonPlayerPage() {
   const { t, language } = useLanguage();
@@ -45,6 +95,80 @@ export default function LessonPlayerPage() {
   const [slideSubmitted, setSlideSubmitted] = useState<Record<number, boolean>>({});
   const [assignmentAnswers, setAssignmentAnswers] = useState<Record<number, any>>({});
   const [assignmentSubmitted, setAssignmentSubmitted] = useState<Record<number, boolean>>({});
+  const [correctCount, setCorrectCount] = useState(0);
+  const [totalQuestionsCount, setTotalQuestionsCount] = useState(0);
+
+  // Dynamic Score Calculation across Slides, Assignments, and Exercises
+  useEffect(() => {
+    if (!lesson) return;
+    
+    let totalScore = 0;
+    let correctQ = 0;
+    let totalQ = 0;
+    
+    // 1. Slides questions
+    lesson.slides?.forEach((slide: any, idx: number) => {
+      if (slide.type === 'QUESTION') {
+        totalQ++;
+        if (slideSubmitted[idx]) {
+          const isMulti = slide.label === 'MULTI_SELECT';
+          const studentAnswers = slideAnswers[idx] || (isMulti ? [] : '');
+          const isCorrect = isMulti ? studentAnswers.length === (slide.correctAnswers || []).length && studentAnswers.every((a: string) => (slide.correctAnswers || []).includes(a)) : (!slide.correctAnswer || slideAnswers[idx] === slide.correctAnswer);
+          if (isCorrect && studentAnswers.length > 0) {
+            totalScore += (Number(slide.points) || 1);
+            correctQ++;
+          }
+        }
+      }
+    });
+    
+    // 2. Assignment questions
+    lesson.assignments?.forEach((as: any, idx: number) => {
+      if (as.type === 'QUESTION') {
+        totalQ++;
+        if (assignmentSubmitted[idx]) {
+          const isMulti = as.type === 'MULTI_SELECT';
+          const studentAnswers = assignmentAnswers[idx] || (isMulti ? [] : '');
+          const isCorrect = isMulti ? studentAnswers.length === (as.correctAnswers || []).length && studentAnswers.every((a: string) => (as.correctAnswers || []).includes(a)) : (!as.correctAnswer || assignmentAnswers[idx] === as.correctAnswer);
+          if (isCorrect && studentAnswers.length > 0) {
+            totalScore += (Number(as.points) || 1);
+            correctQ++;
+          }
+        }
+      }
+    });
+    
+    // 3. Exercise questions
+    lesson.questions?.forEach((q: any, idx: number) => {
+      totalQ++;
+      const isMulti = q.type === 'MULTI_SELECT';
+      const studentAnswers = answers[idx] || (isMulti ? [] : '');
+      const isCorrect = isMulti ? studentAnswers.length === (q.correctAnswers || []).length && studentAnswers.every((a: string) => (q.correctAnswers || []).includes(a)) : (!q.correctAnswer || answers[idx] === q.correctAnswer);
+      if (isCorrect && studentAnswers.length > 0) {
+        totalScore += (Number(q.points) || 1);
+        correctQ++;
+      }
+    });
+    
+    setScore(totalScore);
+    setCorrectCount(correctQ);
+    setTotalQuestionsCount(totalQ);
+  }, [slideAnswers, slideSubmitted, assignmentAnswers, assignmentSubmitted, answers, lesson]);
+
+  const getMaxPossibleScore = () => {
+    if (!lesson) return 1;
+    let maxScore = 0;
+    lesson.slides?.forEach((slide: any) => {
+      if (slide.type === 'QUESTION') maxScore += (Number(slide.points) || 1);
+    });
+    lesson.assignments?.forEach((as: any) => {
+      if (as.type === 'QUESTION') maxScore += (Number(as.points) || 1);
+    });
+    lesson.questions?.forEach((q: any) => {
+      maxScore += (Number(q.points) || 1);
+    });
+    return Math.max(1, maxScore);
+  };
 
   const SECTION_STYLE_PRESETS: Record<string, any> = {
     HINT: { icon: HelpCircle, bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", label: "تلميح" },
@@ -154,21 +278,19 @@ export default function LessonPlayerPage() {
   };
 
   const handleAnswerSelect = (option: string) => {
-    const newAnswers = { ...answers, [currentQuestionIndex]: option };
-    setAnswers(newAnswers);
+    if (lesson.questions[currentQuestionIndex]?.type === 'MULTI_SELECT') {
+      const currentArr = answers[currentQuestionIndex] || [];
+      const newArr = currentArr.includes(option) ? currentArr.filter((a: string) => a !== option) : [...currentArr, option];
+      setAnswers({ ...answers, [currentQuestionIndex]: newArr });
+    } else {
+      setAnswers({ ...answers, [currentQuestionIndex]: option });
+    }
   };
 
   const handleNextQuestion = () => {
     if (currentQuestionIndex < lesson.questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
-      let finalScore = 0;
-      lesson.questions.forEach((q: any, index: number) => {
-        if (answers[index] === q.correctAnswer) {
-          finalScore += (q.points || 1);
-        }
-      });
-      setScore(finalScore);
       setCurrentStage('summary');
     }
   };
@@ -360,15 +482,26 @@ export default function LessonPlayerPage() {
                   {lesson.slides[currentSlideIndex].type === 'QUESTION' && lesson.slides[currentSlideIndex].options?.length > 0 && (
                     <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-4xl">
                       {lesson.slides[currentSlideIndex].options.map((opt: string, oIdx: number) => {
-                         const isSelected = slideAnswers[currentSlideIndex] === opt;
+                         const isMulti = lesson.slides[currentSlideIndex].label === 'MULTI_SELECT';
+                         const isSelected = isMulti ? (slideAnswers[currentSlideIndex] || []).includes(opt) : slideAnswers[currentSlideIndex] === opt;
                          const isSubmitted = slideSubmitted[currentSlideIndex];
-                         const isCorrect = isSubmitted && opt === lesson.slides[currentSlideIndex].correctAnswer;
-                         const isWrong = isSubmitted && isSelected && opt !== lesson.slides[currentSlideIndex].correctAnswer;
+                         const isCorrect = isSubmitted && (isMulti ? (lesson.slides[currentSlideIndex].correctAnswers || []).includes(opt) : ((!lesson.slides[currentSlideIndex].correctAnswer && isSelected) || opt === lesson.slides[currentSlideIndex].correctAnswer));
+                         const isWrong = isSubmitted && isSelected && !isCorrect;
                          
                          return (
                           <button
                             key={oIdx}
-                            onClick={() => !isSubmitted && setSlideAnswers({ ...slideAnswers, [currentSlideIndex]: opt })}
+                            onClick={() => {
+                                if (!isSubmitted) {
+                                    if (isMulti) {
+                                        const currentArr = slideAnswers[currentSlideIndex] || [];
+                                        const newArr = currentArr.includes(opt) ? currentArr.filter((a: string) => a !== opt) : [...currentArr, opt];
+                                        setSlideAnswers({ ...slideAnswers, [currentSlideIndex]: newArr });
+                                    } else {
+                                        setSlideAnswers({ ...slideAnswers, [currentSlideIndex]: opt });
+                                    }
+                                }
+                            }}
                             className={`relative p-6 rounded-3xl border-4 text-right transition-all group overflow-hidden ${isSelected ? (isCorrect ? 'border-emerald-500 bg-emerald-50' : isWrong ? 'border-red-500 bg-red-50' : 'border-indigo-500 bg-indigo-50') : 'border-slate-100 bg-white hover:border-indigo-200'} ${isSubmitted && !isSelected && !isCorrect ? 'opacity-50' : ''}`}
                             disabled={isSubmitted}
                           >
@@ -390,20 +523,16 @@ export default function LessonPlayerPage() {
                      </button>
                   )}
 
-                  {/* Slide Sections (Hints, Explanations, etc.) */}
                   {lesson.slides[currentSlideIndex].sections?.length > 0 && (lesson.slides[currentSlideIndex].type !== 'QUESTION' || slideSubmitted[currentSlideIndex]) && (
                      <div className="mt-8 w-full max-w-4xl space-y-4">
                         {lesson.slides[currentSlideIndex].sections.map((sec: any, sIdx: number) => {
-                           const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.HINT;
-                           const Icon = preset.icon;
+                           const isSubmitted = slideSubmitted[currentSlideIndex];
+                           const isMulti = lesson.slides[currentSlideIndex].label === 'MULTI_SELECT';
+                           const studentAnswers = slideAnswers[currentSlideIndex] || (isMulti ? [] : '');
+                           const isCorrect = isSubmitted && (isMulti ? studentAnswers.length === (lesson.slides[currentSlideIndex].correctAnswers || []).length && studentAnswers.every((a: string) => (lesson.slides[currentSlideIndex].correctAnswers || []).includes(a)) : slideAnswers[currentSlideIndex] === lesson.slides[currentSlideIndex].correctAnswer);
+                           const isWrong = isSubmitted && !isCorrect;
                            return (
-                             <div key={sIdx} className={`p-6 rounded-3xl border-2 ${preset.bg} ${preset.border} flex flex-col text-right`}>
-                                <div className={`flex items-center gap-3 mb-3 ${preset.text}`}>
-                                   <Icon className="w-6 h-6" />
-                                   <span className="font-black text-lg">{preset.label}</span>
-                                </div>
-                                <div className={`prose prose-sm max-w-none ${preset.text} font-bold text-base leading-relaxed`} dangerouslySetInnerHTML={{ __html: sec.content }} />
-                             </div>
+                             <CollapsibleSection key={sIdx} section={sec} isCorrect={isCorrect} isWrong={isWrong} language={language} />
                            );
                         })}
                      </div>
@@ -472,13 +601,24 @@ export default function LessonPlayerPage() {
                         {as.type === 'QUESTION' && as.options?.length > 0 && (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                             {as.options.map((opt: string, oIdx: number) => {
-                               const isSelected = assignmentAnswers[idx] === opt;
-                               const isCorrect = isSubmitted && opt === as.correctAnswer;
-                               const isWrong = isSubmitted && isSelected && opt !== as.correctAnswer;
+                               const isMulti = as.type === 'MULTI_SELECT';
+                               const isSelected = isMulti ? (assignmentAnswers[idx] || []).includes(opt) : assignmentAnswers[idx] === opt;
+                               const isCorrect = isSubmitted && (isMulti ? (as.correctAnswers || []).includes(opt) : ((!as.correctAnswer && isSelected) || opt === as.correctAnswer));
+                               const isWrong = isSubmitted && isSelected && !isCorrect;
                                return (
                                 <button
                                   key={oIdx}
-                                  onClick={() => !isSubmitted && setAssignmentAnswers({ ...assignmentAnswers, [idx]: opt })}
+                                  onClick={() => {
+                                      if (!isSubmitted) {
+                                          if (isMulti) {
+                                              const currentArr = assignmentAnswers[idx] || [];
+                                              const newArr = currentArr.includes(opt) ? currentArr.filter((a: string) => a !== opt) : [...currentArr, opt];
+                                              setAssignmentAnswers({ ...assignmentAnswers, [idx]: newArr });
+                                          } else {
+                                              setAssignmentAnswers({ ...assignmentAnswers, [idx]: opt });
+                                          }
+                                      }
+                                  }}
                                   className={`relative p-5 rounded-3xl border-4 text-right transition-all group overflow-hidden ${isSelected ? (isCorrect ? 'border-emerald-500 bg-emerald-50' : isWrong ? 'border-red-500 bg-red-50' : 'border-indigo-500 bg-indigo-50') : 'border-slate-100 bg-white hover:border-indigo-200'} ${isSubmitted && !isSelected && !isCorrect ? 'opacity-50' : ''}`}
                                   disabled={isSubmitted}
                                 >
@@ -503,16 +643,12 @@ export default function LessonPlayerPage() {
                         {isSubmitted && as.sections?.length > 0 && (
                            <div className="mt-8 space-y-4">
                               {as.sections.map((sec: any, sIdx: number) => {
-                                 const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.HINT;
-                                 const Icon = preset.icon;
+                                 const isMulti = as.type === 'MULTI_SELECT';
+                                 const studentAnswers = assignmentAnswers[idx] || (isMulti ? [] : '');
+                                 const isCorrect = isMulti ? studentAnswers.length === (as.correctAnswers || []).length && studentAnswers.every((a: string) => (as.correctAnswers || []).includes(a)) : (!as.correctAnswer || assignmentAnswers[idx] === as.correctAnswer);
+                                 const isWrong = !isCorrect;
                                  return (
-                                   <div key={sIdx} className={`p-6 rounded-3xl border-2 ${preset.bg} ${preset.border} flex flex-col text-right`}>
-                                      <div className={`flex items-center gap-3 mb-3 ${preset.text}`}>
-                                         <Icon className="w-6 h-6" />
-                                         <span className="font-black text-lg">{preset.label}</span>
-                                      </div>
-                                      <div className={`prose prose-sm max-w-none ${preset.text} font-bold text-base leading-relaxed`} dangerouslySetInnerHTML={{ __html: sec.content }} />
-                                   </div>
+                                   <CollapsibleSection key={sIdx} section={sec} isCorrect={isCorrect} isWrong={isWrong} language={language} />
                                  );
                               })}
                            </div>
@@ -577,34 +713,34 @@ export default function LessonPlayerPage() {
                     <>
                       <div className="p-8 md:p-10">
                         <div className="flex justify-between items-start mb-6">
-                          <div className="flex flex-wrap items-center gap-3">
-                            <span className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-[10px] font-black uppercase tracking-wider shadow-sm">
+                          <div className="flex flex-wrap items-center gap-3 max-w-full w-full">
+                            <span className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-xs md:text-sm font-black uppercase tracking-wider shadow-sm max-w-full break-words whitespace-normal text-right">
                               {t('lesson.question')} {currentQuestionIndex + 1}
                             </span>
                             {lesson.questions[currentQuestionIndex].level && (
-                              <span className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                              <span className="px-3 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs md:text-sm font-bold uppercase tracking-wider max-w-full break-words whitespace-normal text-right">
                                 {t('lesson.level')}: {lesson.questions[currentQuestionIndex].level === 'Easy' ? t('lesson.easy') : lesson.questions[currentQuestionIndex].level === 'Medium' ? t('lesson.medium') : t('lesson.hard')}
                               </span>
                             )}
                             {lesson.questions[currentQuestionIndex].skill && (
-                              <span className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                              <span className="px-3 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs md:text-sm font-bold uppercase tracking-wider max-w-full break-words whitespace-normal text-right">
                                 {t('lesson.skill')}: {lesson.questions[currentQuestionIndex].skill}
                               </span>
                             )}
                             {lesson.questions[currentQuestionIndex].standard && (
-                              <span className="px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                              <span className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg text-xs md:text-sm font-bold uppercase tracking-wider max-w-full break-words whitespace-normal text-right">
                                 {t('lesson.standard')}: {lesson.questions[currentQuestionIndex].standard}
                               </span>
                             )}
                             {lesson.questions[currentQuestionIndex].indicator && (
-                              <span className="px-3 py-1.5 bg-purple-50 text-purple-600 border border-purple-100 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                              <span className="px-3 py-2 bg-purple-50 text-purple-600 border border-purple-100 rounded-lg text-xs md:text-sm font-bold uppercase tracking-wider max-w-full break-words whitespace-normal text-right">
                                 {t('lesson.indicator')}: {lesson.questions[currentQuestionIndex].indicator}
                               </span>
                             )}
                             {lesson.questions[currentQuestionIndex].learningOutcome && (
-                              <span className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg text-[10px] font-bold uppercase tracking-wider">
-                                <Target className="w-3 h-3" />
-                                {t('lesson.outcome')}: {lesson.questions[currentQuestionIndex].learningOutcome}
+                              <span className="flex items-start gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg text-xs md:text-sm font-bold uppercase tracking-wider max-w-full break-words whitespace-normal text-right">
+                                <Target className="w-4 h-4 shrink-0 mt-0.5" />
+                                <span>{t('lesson.outcome')}: {lesson.questions[currentQuestionIndex].learningOutcome}</span>
                               </span>
                             )}
                           </div>
@@ -617,36 +753,35 @@ export default function LessonPlayerPage() {
                         <h3 className="text-lg md:text-2xl font-black text-slate-900 mb-8 leading-relaxed tracking-tight break-words w-full" dangerouslySetInnerHTML={{ __html: lesson.questions[currentQuestionIndex].text }} />
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-4 mb-6">
-                          {(lesson.questions[currentQuestionIndex].options || []).map((opt: string, oIdx: number) => (
+                          {(lesson.questions[currentQuestionIndex].options || []).map((opt: string, oIdx: number) => {
+                            const isSelected = lesson.questions[currentQuestionIndex].type === 'MULTI_SELECT' ? (answers[currentQuestionIndex] || []).includes(opt) : answers[currentQuestionIndex] === opt;
+                            return (
                             <button 
                               key={oIdx} 
                               onClick={() => handleAnswerSelect(opt)} 
-                              className={`p-5 md:p-6 rounded-[25px] border-4 text-start transition-all duration-300 font-black text-sm md:text-base relative break-words overflow-hidden ${answers[currentQuestionIndex] === opt ? 'bg-indigo-600 border-white text-white shadow-xl shadow-indigo-100' : 'bg-white border-slate-50 text-slate-600 hover:border-indigo-200'}`}
+                              className={`p-5 md:p-6 rounded-[25px] border-4 text-start transition-all duration-300 font-black text-sm md:text-base relative break-words overflow-hidden ${isSelected ? 'bg-indigo-600 border-white text-white shadow-xl shadow-indigo-100' : 'bg-white border-slate-50 text-slate-600 hover:border-indigo-200'}`}
                             >
                               <div className="flex items-center justify-between gap-4">
                                 <span className="flex-1 break-words leading-relaxed">{opt}</span>
-                                <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${answers[currentQuestionIndex] === opt ? 'border-white bg-white/20' : 'border-slate-100'}`}>
-                                    {answers[currentQuestionIndex] === opt && <CheckCircle2 className="w-3 h-3" />}
+                                <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${isSelected ? 'border-white bg-white/20' : 'border-slate-100'}`}>
+                                    {isSelected && <CheckCircle2 className="w-3 h-3" />}
                                 </div>
                               </div>
                             </button>
-                          ))}
+                            );
+                          })}
                         </div>
                         
                         {/* Question Sections (Hints, Explanations, Feedback) */}
                         {answers[currentQuestionIndex] && lesson.questions[currentQuestionIndex].sections?.length > 0 && (
                            <div className="mt-8 space-y-4 animate-in fade-in slide-in-from-top-2">
                               {lesson.questions[currentQuestionIndex].sections.map((sec: any, sIdx: number) => {
-                                 const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.HINT;
-                                 const Icon = preset.icon;
+                                 const isMulti = lesson.questions[currentQuestionIndex].type === 'MULTI_SELECT';
+                                 const studentAnswers = answers[currentQuestionIndex] || (isMulti ? [] : '');
+                                 const isCorrect = isMulti ? studentAnswers.length === (lesson.questions[currentQuestionIndex].correctAnswers || []).length && studentAnswers.every((a: string) => (lesson.questions[currentQuestionIndex].correctAnswers || []).includes(a)) : (!lesson.questions[currentQuestionIndex].correctAnswer || answers[currentQuestionIndex] === lesson.questions[currentQuestionIndex].correctAnswer);
+                                 const isWrong = !isCorrect;
                                  return (
-                                   <div key={sIdx} className={`p-6 rounded-3xl border-2 ${preset.bg} ${preset.border} flex flex-col text-right`}>
-                                      <div className={`flex items-center gap-3 mb-3 ${preset.text}`}>
-                                         <Icon className="w-6 h-6" />
-                                         <span className="font-black text-lg">{preset.label}</span>
-                                      </div>
-                                      <div className={`prose prose-sm max-w-none ${preset.text} font-bold text-base leading-relaxed`} dangerouslySetInnerHTML={{ __html: sec.content }} />
-                                   </div>
+                                   <CollapsibleSection key={sIdx} section={sec} isCorrect={isCorrect} isWrong={isWrong} language={language} />
                                  );
                               })}
                            </div>
@@ -688,35 +823,87 @@ export default function LessonPlayerPage() {
               </div>
             )}
 
-            {currentStage === 'summary' && (
-              <div className="premium-card p-10 md:p-20 rounded-[50px] animate-in zoom-in duration-700 text-center">
-                <div className="w-24 h-24 bg-emerald-500 rounded-[35px] flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-emerald-100 animate-bounce-slow">
-                  <CheckCircle className="w-12 h-12 text-white" />
-                </div>
-                <h2 className="text-4xl md:text-6xl font-black text-slate-900 mb-4 tracking-tight">{t('lesson.greatJob')}</h2>
-                <p className="text-slate-500 text-lg font-bold mb-12">{t('lesson.completedMessage')}</p>
-                
-              <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 md:gap-10 mb-10 md:mb-16">
-                  <div className="premium-card p-8 rounded-[35px] min-w-[180px] border-b-8 border-indigo-600">
-                    <p className="text-slate-400 text-[10px] font-black mb-2 uppercase tracking-widest">{t('lesson.score')}</p>
-                    <p className="text-4xl md:text-6xl font-black text-slate-900">{score}</p>
+            {currentStage === 'summary' && (() => {
+              const maxPossible = getMaxPossibleScore();
+              const pct = Math.round((score / maxPossible) * 100);
+              
+              let title = t('lesson.greatJob') || "عمل رائع!";
+              let message = t('lesson.completedMessage') || "لقد أكملت جميع متطلبات هذا الدرس بنجاح.";
+              let iconBg = "bg-emerald-500 shadow-emerald-100";
+              let borderCol = "border-indigo-600";
+              let icon = <CheckCircle className="w-12 h-12 text-white" />;
+              
+              if (pct >= 85) {
+                title = "أداء ممتاز! 🏆";
+                message = "رائع جداً! لقد تفوقت وأكملت الدرس بنسبة ممتازة تليق بذكائك.";
+                iconBg = "bg-emerald-500 shadow-emerald-100 animate-bounce-slow";
+                icon = (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-circle-check-big w-12 h-12 text-white" aria-hidden="true">
+                    <path d="M21.801 10A10 10 0 1 1 17 3.335"></path>
+                    <path d="m9 11 3 3L22 4"></path>
+                  </svg>
+                );
+              } else if (pct >= 50) {
+                title = "عمل جيد جداً! ⭐";
+                message = "أحسنت! لقد نجحت واجتزت الدرس بنجاح. استمر في التقدم!";
+                iconBg = "bg-amber-500 shadow-amber-100 animate-pulse";
+                borderCol = "border-amber-500";
+                icon = <Star className="w-12 h-12 text-white fill-current" />;
+              } else {
+                title = "تحتاج للمحاولة مجدداً 🔄";
+                message = "لم تحقق نسبة الاجتياز المطلوبة (50%). لا تقلق، التعلم يحتاج لبعض التدريب الإضافي!";
+                iconBg = "bg-rose-500 shadow-rose-100 animate-pulse";
+                borderCol = "border-rose-500";
+                icon = <RotateCcw className="w-12 h-12 text-white" />;
+              }
+              
+              return (
+                <div className="premium-card p-10 md:p-20 rounded-[50px] animate-in zoom-in duration-700 text-center">
+                  <div className={`w-24 h-24 ${iconBg} rounded-[35px] flex items-center justify-center mx-auto mb-8 shadow-2xl`}>
+                    {icon}
                   </div>
-                  <div className="premium-card p-8 rounded-[35px] min-w-[180px] border-b-8 border-amber-500">
-                    <p className="text-slate-400 text-[10px] font-black mb-2 uppercase tracking-widest">{t('lesson.percentage')}</p>
-                    <p className="text-4xl md:text-6xl font-black text-amber-500">
-                       {Math.round((score / Math.max(1, lesson.questions.reduce((acc: number, q: any) => acc + (q.points || 1), 0))) * 100)}%
-                    </p>
+                  <h2 className="text-4xl md:text-6xl font-black text-slate-900 mb-4 tracking-tight">{title}</h2>
+                  <p className="text-slate-500 text-lg font-bold mb-12">{message}</p>
+                  <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 md:gap-10 mb-10 md:mb-16">
+                    <div className={`premium-card p-8 rounded-[35px] min-w-[180px] border-b-8 ${borderCol}`}>
+                      <p className="text-slate-400 text-[10px] font-black mb-2 uppercase tracking-widest">{t('lesson.score') || 'الدرجة'}</p>
+                      <p className="text-4xl md:text-6xl font-black text-slate-900">{correctCount} <span className="text-2xl text-slate-400">/ {totalQuestionsCount}</span></p>
+                    </div>
+                    <div className={`premium-card p-8 rounded-[35px] min-w-[180px] border-b-8 ${pct >= 50 ? 'border-amber-500' : 'border-rose-500'}`}>
+                      <p className="text-slate-400 text-[10px] font-black mb-2 uppercase tracking-widest">{t('lesson.percentage') || 'النسبة'}</p>
+                      <p className={`text-4xl md:text-6xl font-black ${pct >= 85 ? 'text-emerald-500' : pct >= 50 ? 'text-amber-500' : 'text-rose-500'}`}>{pct}%</p>
+                    </div>
                   </div>
-                </div>
 
-                <button 
-                  onClick={() => router.push(`/courses/${lesson.courseId}`)} 
-                  className="premium-gradient-primary text-white px-16 py-5 rounded-[25px] font-black text-xl hover:scale-105 transition-all shadow-2xl shadow-indigo-200 mx-auto"
-                >
-                  {t('lesson.backToCourse')}
-                </button>
-              </div>
-            )}
+                  <div className="flex flex-col sm:flex-row justify-center gap-4">
+                    {pct < 50 && (
+                      <button 
+                        onClick={() => {
+                          setAnswers({});
+                          setSlideAnswers({});
+                          setSlideSubmitted({});
+                          setAssignmentAnswers({});
+                          setAssignmentSubmitted({});
+                          setScore(0);
+                          setCurrentStage('welcome');
+                          setCurrentSlideIndex(0);
+                          setCurrentQuestionIndex(0);
+                        }} 
+                        className="bg-slate-950 text-white px-10 py-5 rounded-[25px] font-black text-xl hover:scale-105 transition-all shadow-2xl shadow-slate-200"
+                      >
+                        إعادة المحاولة 🔄
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => router.push(`/courses/${lesson.courseId}`)} 
+                      className="premium-gradient-primary text-white px-16 py-5 rounded-[25px] font-black text-xl hover:scale-105 transition-all shadow-2xl shadow-indigo-200"
+                    >
+                      {t('lesson.backToCourse')}
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* ── SIDEBAR AREA (VISIBLE ONLY IN WELCOME/SUMMARY) ── */}
