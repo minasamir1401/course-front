@@ -17,6 +17,37 @@ import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const VideoPlayer = dynamic(() => import('@/components/VideoPlayer'), { ssr: false });
+const Confetti = dynamic(() => import('react-confetti'), { ssr: false });
+
+const QuestionFeedback = ({ isCorrect, correctAnswer, language }: any) => {
+  return (
+    <div className={`p-6 rounded-[30px] border-2 flex items-center gap-6 animate-in zoom-in duration-500 mb-6 ${isCorrect ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+      <div className={`w-16 h-16 shrink-0 rounded-2xl flex items-center justify-center shadow-lg ${isCorrect ? 'bg-emerald-500 shadow-emerald-200 animate-bounce' : 'bg-red-500 shadow-red-200 animate-pulse'}`}>
+        <span className="text-4xl">{isCorrect ? '🎉' : '❌'}</span>
+      </div>
+      <div>
+        <h3 className={`text-xl md:text-2xl font-black mb-2 ${isCorrect ? 'text-emerald-700' : 'text-red-700'}`}>
+          {isCorrect 
+            ? (language === 'ar' ? 'أحسنت! إجابة صحيحة' : 'Great Job! Correct') 
+            : (language === 'ar' ? 'حاول مرة أخرى' : 'Try Again')}
+        </h3>
+        {!isCorrect && correctAnswer && (
+          <p className="text-red-600 font-bold text-sm md:text-base leading-relaxed">
+            {language === 'ar' ? 'الإجابة الصحيحة هي:' : 'The correct answer is:'} 
+            <span className="inline-block bg-white px-3 py-1 rounded-xl text-red-700 mx-2 shadow-sm border border-red-100" dir="ltr">
+              {Array.isArray(correctAnswer) ? correctAnswer.join(' , ') : correctAnswer}
+            </span>
+          </p>
+        )}
+        {isCorrect && (
+          <p className="text-emerald-600 font-bold text-sm md:text-base">
+            {language === 'ar' ? 'عمل ممتاز، استمر في هذا الأداء!' : 'Excellent work, keep it up!'}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const CollapsibleSection = ({ section, isCorrect, isWrong, language }: { section: any, isCorrect?: boolean, isWrong?: boolean, language: string }) => {
    const [isOpen, setIsOpen] = useState(false);
@@ -95,6 +126,7 @@ export default function LessonPlayerPage() {
   const [slideSubmitted, setSlideSubmitted] = useState<Record<number, boolean>>({});
   const [assignmentAnswers, setAssignmentAnswers] = useState<Record<number, any>>({});
   const [assignmentSubmitted, setAssignmentSubmitted] = useState<Record<number, boolean>>({});
+  const [quizSubmitted, setQuizSubmitted] = useState<Record<number, boolean>>({});
   const [correctCount, setCorrectCount] = useState(0);
   const [totalQuestionsCount, setTotalQuestionsCount] = useState(0);
 
@@ -140,20 +172,24 @@ export default function LessonPlayerPage() {
     
     // 3. Exercise questions
     lesson.questions?.forEach((q: any, idx: number) => {
-      totalQ++;
-      const isMulti = q.type === 'MULTI_SELECT';
-      const studentAnswers = answers[idx] || (isMulti ? [] : '');
-      const isCorrect = isMulti ? studentAnswers.length === (q.correctAnswers || []).length && studentAnswers.every((a: string) => (q.correctAnswers || []).includes(a)) : (!q.correctAnswer || answers[idx] === q.correctAnswer);
-      if (isCorrect && studentAnswers.length > 0) {
-        totalScore += (Number(q.points) || 1);
-        correctQ++;
+      if (q.type === 'QUESTION' || !q.type || q.type === 'MULTI_SELECT') {
+        totalQ++;
+        if (quizSubmitted[idx]) {
+          const isMulti = q.type === 'MULTI_SELECT';
+          const studentAnswers = answers[idx] || (isMulti ? [] : '');
+          const isCorrect = isMulti ? studentAnswers.length === (q.correctAnswers || []).length && studentAnswers.every((a: string) => (q.correctAnswers || []).includes(a)) : (!q.correctAnswer || answers[idx] === q.correctAnswer);
+          if (isCorrect && studentAnswers.length > 0) {
+            totalScore += (Number(q.points) || 1);
+            correctQ++;
+          }
+        }
       }
     });
     
     setScore(totalScore);
     setCorrectCount(correctQ);
     setTotalQuestionsCount(totalQ);
-  }, [slideAnswers, slideSubmitted, assignmentAnswers, assignmentSubmitted, answers, lesson]);
+  }, [slideAnswers, slideSubmitted, assignmentAnswers, assignmentSubmitted, answers, quizSubmitted, lesson]);
 
   const getMaxPossibleScore = () => {
     if (!lesson) return 1;
@@ -278,6 +314,7 @@ export default function LessonPlayerPage() {
   };
 
   const handleAnswerSelect = (option: string) => {
+    if (quizSubmitted[currentQuestionIndex]) return;
     if (lesson.questions[currentQuestionIndex]?.type === 'MULTI_SELECT') {
       const currentArr = answers[currentQuestionIndex] || [];
       const newArr = currentArr.includes(option) ? currentArr.filter((a: string) => a !== option) : [...currentArr, option];
@@ -522,9 +559,24 @@ export default function LessonPlayerPage() {
                        تأكيد الإجابة
                      </button>
                   )}
+                  
+                  {slideSubmitted[currentSlideIndex] && lesson.slides[currentSlideIndex].type === 'QUESTION' && (() => {
+                     const isMulti = lesson.slides[currentSlideIndex].label === 'MULTI_SELECT';
+                     const studentAnswers = slideAnswers[currentSlideIndex] || (isMulti ? [] : '');
+                     const isCorrect = isMulti ? studentAnswers.length === (lesson.slides[currentSlideIndex].correctAnswers || []).length && studentAnswers.every((a: string) => (lesson.slides[currentSlideIndex].correctAnswers || []).includes(a)) : slideAnswers[currentSlideIndex] === lesson.slides[currentSlideIndex].correctAnswer;
+                     return (
+                        <div className="mt-8 w-full max-w-4xl">
+                           <QuestionFeedback 
+                             isCorrect={isCorrect}
+                             correctAnswer={isMulti ? lesson.slides[currentSlideIndex].correctAnswers : lesson.slides[currentSlideIndex].correctAnswer}
+                             language={language}
+                           />
+                        </div>
+                     );
+                  })()}
 
                   {lesson.slides[currentSlideIndex].sections?.length > 0 && (lesson.slides[currentSlideIndex].type !== 'QUESTION' || slideSubmitted[currentSlideIndex]) && (
-                     <div className="mt-8 w-full max-w-4xl space-y-4">
+                     <div className="mt-4 w-full max-w-4xl space-y-4">
                         {lesson.slides[currentSlideIndex].sections.map((sec: any, sIdx: number) => {
                            const isSubmitted = slideSubmitted[currentSlideIndex];
                            const isMulti = lesson.slides[currentSlideIndex].label === 'MULTI_SELECT';
@@ -639,9 +691,25 @@ export default function LessonPlayerPage() {
                              تأكيد الإجابة
                            </button>
                         )}
+                        
+                        {isSubmitted && as.type === 'QUESTION' && (() => {
+                           const isMulti = as.type === 'MULTI_SELECT';
+                           const studentAnswers = assignmentAnswers[idx] || (isMulti ? [] : '');
+                           const isCorrect = isMulti ? studentAnswers.length === (as.correctAnswers || []).length && studentAnswers.every((a: string) => (as.correctAnswers || []).includes(a)) : (!as.correctAnswer || assignmentAnswers[idx] === as.correctAnswer);
+                           return (
+                             <div className="mt-8">
+                                <QuestionFeedback 
+                                  isCorrect={isCorrect}
+                                  correctAnswer={isMulti ? as.correctAnswers : as.correctAnswer}
+                                  language={language}
+                                />
+                             </div>
+                           );
+                        })()}
+                        
                         {/* Assignment Sections (Hints, Explanations, etc.) */}
                         {isSubmitted && as.sections?.length > 0 && (
-                           <div className="mt-8 space-y-4">
+                           <div className="mt-4 space-y-4">
                               {as.sections.map((sec: any, sIdx: number) => {
                                  const isMulti = as.type === 'MULTI_SELECT';
                                  const studentAnswers = assignmentAnswers[idx] || (isMulti ? [] : '');
@@ -754,17 +822,25 @@ export default function LessonPlayerPage() {
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-4 mb-6">
                           {(lesson.questions[currentQuestionIndex].options || []).map((opt: string, oIdx: number) => {
-                            const isSelected = lesson.questions[currentQuestionIndex].type === 'MULTI_SELECT' ? (answers[currentQuestionIndex] || []).includes(opt) : answers[currentQuestionIndex] === opt;
+                            const isMulti = lesson.questions[currentQuestionIndex].type === 'MULTI_SELECT';
+                            const isSelected = isMulti ? (answers[currentQuestionIndex] || []).includes(opt) : answers[currentQuestionIndex] === opt;
+                            const isSubmitted = quizSubmitted[currentQuestionIndex];
+                            const isCorrect = isSubmitted && (isMulti ? (lesson.questions[currentQuestionIndex].correctAnswers || []).includes(opt) : ((!lesson.questions[currentQuestionIndex].correctAnswer && isSelected) || opt === lesson.questions[currentQuestionIndex].correctAnswer));
+                            const isWrong = isSubmitted && isSelected && !isCorrect;
+
                             return (
                             <button 
                               key={oIdx} 
                               onClick={() => handleAnswerSelect(opt)} 
-                              className={`p-5 md:p-6 rounded-[25px] border-4 text-start transition-all duration-300 font-black text-sm md:text-base relative break-words overflow-hidden ${isSelected ? 'bg-indigo-600 border-white text-white shadow-xl shadow-indigo-100' : 'bg-white border-slate-50 text-slate-600 hover:border-indigo-200'}`}
+                              disabled={isSubmitted}
+                              className={`p-5 md:p-6 rounded-[25px] border-4 text-start transition-all duration-300 font-black text-sm md:text-base relative break-words overflow-hidden ${isSelected ? (isCorrect ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : isWrong ? 'border-red-500 bg-red-50 text-red-700' : 'bg-indigo-600 border-white text-white shadow-xl shadow-indigo-100') : 'bg-white border-slate-50 text-slate-600 hover:border-indigo-200'} ${isSubmitted && !isSelected && !isCorrect ? 'opacity-50' : ''}`}
                             >
                               <div className="flex items-center justify-between gap-4">
-                                <span className="flex-1 break-words leading-relaxed">{opt}</span>
-                                <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${isSelected ? 'border-white bg-white/20' : 'border-slate-100'}`}>
-                                    {isSelected && <CheckCircle2 className="w-3 h-3" />}
+                                <span className={`flex-1 break-words leading-relaxed ${isSelected && !isSubmitted ? 'text-white' : ''}`}>{opt}</span>
+                                <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${isSelected && !isSubmitted ? 'border-white bg-white/20' : isCorrect ? 'border-emerald-500 bg-emerald-500 text-white' : isWrong ? 'border-red-500 bg-red-500 text-white' : 'border-slate-200'}`}>
+                                    {isSelected && !isSubmitted && <CheckCircle2 className="w-4 h-4" />}
+                                    {isCorrect && <CheckCircle2 className="w-4 h-4" />}
+                                    {isWrong && <X className="w-4 h-4" />}
                                 </div>
                               </div>
                             </button>
@@ -772,9 +848,33 @@ export default function LessonPlayerPage() {
                           })}
                         </div>
                         
+                        {answers[currentQuestionIndex] && !quizSubmitted[currentQuestionIndex] && (
+                           <button 
+                             onClick={() => setQuizSubmitted({ ...quizSubmitted, [currentQuestionIndex]: true })}
+                             className="mt-2 mb-6 bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black text-lg hover:bg-indigo-700 shadow-xl"
+                           >
+                             تأكيد الإجابة
+                           </button>
+                        )}
+
+                        {quizSubmitted[currentQuestionIndex] && (() => {
+                           const isMulti = lesson.questions[currentQuestionIndex].type === 'MULTI_SELECT';
+                           const studentAnswers = answers[currentQuestionIndex] || (isMulti ? [] : '');
+                           const isCorrect = isMulti ? studentAnswers.length === (lesson.questions[currentQuestionIndex].correctAnswers || []).length && studentAnswers.every((a: string) => (lesson.questions[currentQuestionIndex].correctAnswers || []).includes(a)) : (!lesson.questions[currentQuestionIndex].correctAnswer || answers[currentQuestionIndex] === lesson.questions[currentQuestionIndex].correctAnswer);
+                           return (
+                             <div className="mt-4 animate-in fade-in slide-in-from-top-2">
+                               <QuestionFeedback 
+                                 isCorrect={isCorrect}
+                                 correctAnswer={isMulti ? lesson.questions[currentQuestionIndex].correctAnswers : lesson.questions[currentQuestionIndex].correctAnswer}
+                                 language={language}
+                               />
+                             </div>
+                           );
+                        })()}
+
                         {/* Question Sections (Hints, Explanations, Feedback) */}
-                        {answers[currentQuestionIndex] && lesson.questions[currentQuestionIndex].sections?.length > 0 && (
-                           <div className="mt-8 space-y-4 animate-in fade-in slide-in-from-top-2">
+                        {quizSubmitted[currentQuestionIndex] && lesson.questions[currentQuestionIndex].sections?.length > 0 && (
+                           <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2">
                               {lesson.questions[currentQuestionIndex].sections.map((sec: any, sIdx: number) => {
                                  const isMulti = lesson.questions[currentQuestionIndex].type === 'MULTI_SELECT';
                                  const studentAnswers = answers[currentQuestionIndex] || (isMulti ? [] : '');
@@ -858,8 +958,17 @@ export default function LessonPlayerPage() {
               }
               
               return (
-                <div className="premium-card p-10 md:p-20 rounded-[50px] animate-in zoom-in duration-700 text-center">
-                  <div className={`w-24 h-24 ${iconBg} rounded-[35px] flex items-center justify-center mx-auto mb-8 shadow-2xl`}>
+                <div className="premium-card p-10 md:p-20 rounded-[50px] animate-in zoom-in duration-700 text-center relative">
+                  {pct >= 50 && (
+                     <div className="fixed inset-0 pointer-events-none z-[100]">
+                        <Confetti 
+                          recycle={false} 
+                          numberOfPieces={600} 
+                          gravity={0.15}
+                        />
+                     </div>
+                  )}
+                  <div className={`w-24 h-24 ${iconBg} rounded-[35px] flex items-center justify-center mx-auto mb-8 shadow-2xl relative z-10`}>
                     {icon}
                   </div>
                   <h2 className="text-4xl md:text-6xl font-black text-slate-900 mb-4 tracking-tight">{title}</h2>
@@ -884,6 +993,7 @@ export default function LessonPlayerPage() {
                           setSlideSubmitted({});
                           setAssignmentAnswers({});
                           setAssignmentSubmitted({});
+                          setQuizSubmitted({});
                           setScore(0);
                           setCurrentStage('welcome');
                           setCurrentSlideIndex(0);
