@@ -10,7 +10,7 @@ import {
   MessageSquare, FileDown, Clock, Info, X, Maximize,
   Volume2, Settings, ArrowRight, ArrowLeft, Star, Award, RotateCcw,
   CheckCircle2, AlertCircle, Sparkles, Lock, Timer,
-  ArrowUpRight, ListOrdered, TrendingUp, GraduationCap, FileText, ChevronDown
+  ArrowUpRight, ListOrdered, TrendingUp, GraduationCap
 } from "lucide-react";
 import dynamic from 'next/dynamic';
 import { useNotification } from "@/context/NotificationContext";
@@ -20,6 +20,20 @@ const VideoPlayer = dynamic(() => import('@/components/VideoPlayer'), { ssr: fal
 const Confetti = dynamic(() => import('react-confetti'), { ssr: false });
 
 const QuestionFeedback = ({ isCorrect, correctAnswer, language }: any) => {
+  if (!isCorrect) {
+    return (
+      <div className="p-6 rounded-[30px] border-2 flex flex-col items-center justify-center gap-3 animate-in zoom-in duration-500 mb-6 bg-red-50 border-red-200">
+        <div className="relative w-20 h-20 rounded-3xl bg-red-500/10 border-2 border-red-300 flex items-center justify-center animate-pulse">
+          <div className="absolute inset-0 rounded-3xl border-2 border-red-400/40 animate-ping" />
+          <AlertCircle className="w-10 h-10 text-red-600" />
+        </div>
+        <p className="text-red-700 font-black text-sm md:text-base">
+          {language === 'ar' ? 'إجابة غير صحيحة' : 'Incorrect answer'}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className={`p-6 rounded-[30px] border-2 flex items-center gap-6 animate-in zoom-in duration-500 mb-6 ${isCorrect ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
       <div className={`w-16 h-16 shrink-0 rounded-2xl flex items-center justify-center shadow-lg ${isCorrect ? 'bg-emerald-500 shadow-emerald-200 animate-bounce' : 'bg-red-500 shadow-red-200 animate-pulse'}`}>
@@ -27,18 +41,10 @@ const QuestionFeedback = ({ isCorrect, correctAnswer, language }: any) => {
       </div>
       <div>
         <h3 className={`text-xl md:text-2xl font-black mb-2 ${isCorrect ? 'text-emerald-700' : 'text-red-700'}`}>
-          {isCorrect 
-            ? (language === 'ar' ? 'أحسنت! إجابة صحيحة' : 'Great Job! Correct') 
+          {isCorrect
+            ? (language === 'ar' ? 'أحسنت! إجابة صحيحة' : 'Great Job! Correct')
             : (language === 'ar' ? 'حاول مرة أخرى' : 'Try Again')}
         </h3>
-        {!isCorrect && correctAnswer && (
-          <p className="text-red-600 font-bold text-sm md:text-base leading-relaxed">
-            {language === 'ar' ? 'الإجابة الصحيحة هي:' : 'The correct answer is:'} 
-            <span className="inline-block bg-white px-3 py-1 rounded-xl text-red-700 mx-2 shadow-sm border border-red-100" dir="ltr">
-              {Array.isArray(correctAnswer) ? correctAnswer.join(' , ') : correctAnswer}
-            </span>
-          </p>
-        )}
         {isCorrect && (
           <p className="text-emerald-600 font-bold text-sm md:text-base">
             {language === 'ar' ? 'عمل ممتاز، استمر في هذا الأداء!' : 'Excellent work, keep it up!'}
@@ -49,54 +55,68 @@ const QuestionFeedback = ({ isCorrect, correctAnswer, language }: any) => {
   );
 };
 
-const CollapsibleSection = ({ section, isCorrect, isWrong, language }: { section: any, isCorrect?: boolean, isWrong?: boolean, language: string }) => {
-   const [isOpen, setIsOpen] = useState(false);
-   
-   const SECTION_STYLE_PRESETS: Record<string, any> = {
-     HINT: { icon: HelpCircle, bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", label: "تلميح" },
-     TIP: { icon: Info, bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200", label: "نصيحة" },
-     WARNING: { icon: AlertCircle, bg: "bg-red-50", text: "text-red-700", border: "border-red-200", label: "تحذير" },
-     KEY_INSIGHT: { icon: Sparkles, bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200", label: "نقطة هامة" },
-     FEEDBACK: { icon: MessageSquare, bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", label: "ملاحظات" },
-     EXPLANATION: { icon: BookOpen, bg: "bg-indigo-50", text: "text-indigo-700", border: "border-indigo-200", label: "شرح مفصل" }
-   };
+const SectionsInlineTabs = ({
+  sections,
+  language
+}: {
+  sections: any[],
+  language: string
+}) => {
+  const SECTION_STYLE_PRESETS: Record<string, any> = {
+    HINT: { icon: HelpCircle, bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", label: "تلميح", chip: "bg-amber-100 text-amber-700 border-amber-200" },
+    TIP: { icon: Info, bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200", label: "نصيحة", chip: "bg-blue-100 text-blue-700 border-blue-200" },
+    WARNING: { icon: AlertCircle, bg: "bg-red-50", text: "text-red-700", border: "border-red-200", label: "تحذير", chip: "bg-red-100 text-red-700 border-red-200" },
+    KEY_INSIGHT: { icon: Sparkles, bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200", label: "نقطة هامة", chip: "bg-purple-100 text-purple-700 border-purple-200" },
+    FEEDBACK: { icon: MessageSquare, bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", label: "ملاحظات", chip: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+    EXPLANATION: { icon: BookOpen, bg: "bg-indigo-50", text: "text-indigo-700", border: "border-indigo-200", label: "شرح", chip: "bg-indigo-100 text-indigo-700 border-indigo-200" }
+  };
 
-   const preset = SECTION_STYLE_PRESETS[section.type] || SECTION_STYLE_PRESETS.HINT;
-   const Icon = preset.icon;
-   
-   return (
-      <div className={`rounded-3xl border-2 ${preset.bg} ${preset.border} overflow-hidden mb-4 transition-all duration-300 w-full`}>
-         <button 
-            onClick={() => setIsOpen(!isOpen)}
-            className={`w-full p-4 md:p-6 flex items-center justify-between ${language === 'ar' ? 'text-right' : 'text-left'} outline-none hover:bg-white/40 transition-colors`}
-         >
-            <div className={`flex items-center gap-3 ${preset.text}`}>
-               <Icon className="w-6 h-6 md:w-7 md:h-7" />
-               <span className="font-black text-lg md:text-xl">{preset.label}</span>
-            </div>
-            
-            <div className="flex items-center gap-4">
-               {section.type === 'FEEDBACK' && isCorrect && (
-                  <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 animate-bounce">
-                     <CheckCircle2 className="w-6 h-6" />
-                  </div>
-               )}
-               {section.type === 'FEEDBACK' && isWrong && (
-                  <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 animate-pulse">
-                     <RotateCcw className="w-6 h-6" />
-                  </div>
-               )}
-               <ChevronDown className={`w-6 h-6 md:w-7 md:h-7 ${preset.text} transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
-            </div>
-         </button>
-         
-         <div className={`grid transition-all duration-300 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
-            <div className="overflow-hidden">
-               <div className={`p-6 pt-0 border-t border-transparent prose prose-sm md:prose-base max-w-none ${preset.text} font-bold leading-relaxed break-words`} dangerouslySetInnerHTML={{ __html: section.content }} />
-            </div>
-         </div>
+  const filteredSections = (sections || []).filter((sec) => sec?.type !== "FEEDBACK");
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [filteredSections.length]);
+
+  if (!filteredSections.length) return null;
+
+  const active = filteredSections[Math.min(activeIndex, filteredSections.length - 1)];
+  const preset = SECTION_STYLE_PRESETS[active.type] || SECTION_STYLE_PRESETS.HINT;
+  const ActiveIcon = preset.icon;
+
+  return (
+    <div className="mt-5 w-full space-y-4">
+      <div className={`flex flex-wrap gap-2 ${language === 'ar' ? 'justify-end' : 'justify-start'}`}>
+        {filteredSections.map((sec, idx) => {
+          const p = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.HINT;
+          const Icon = p.icon;
+          const isActive = idx === activeIndex;
+          return (
+            <button
+              key={sec.id || idx}
+              type="button"
+              onClick={() => setActiveIndex(idx)}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border-2 font-black text-xs md:text-sm transition-all ${isActive ? `${p.chip} shadow-sm scale-[1.02]` : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
+            >
+              <Icon className="w-4 h-4" />
+              <span>{p.label}</span>
+            </button>
+          );
+        })}
       </div>
-   );
+
+      <div className={`rounded-2xl border-2 p-5 md:p-6 ${preset.bg} ${preset.border}`}>
+        <div className={`flex items-center gap-2 mb-3 font-black ${preset.text}`}>
+          <ActiveIcon className="w-5 h-5" />
+          <span>{preset.label}</span>
+        </div>
+        <div
+          className={`prose prose-sm md:prose-base max-w-none leading-relaxed break-words ${preset.text}`}
+          dangerouslySetInnerHTML={{ __html: active.content }}
+        />
+      </div>
+    </div>
+  );
 };
 
 export default function LessonPlayerPage() {
@@ -111,6 +131,7 @@ export default function LessonPlayerPage() {
 
   const [lesson, setLesson] = useState<any>(null);
   const [course, setCourse] = useState<any>(null);
+  const [courseLessons, setCourseLessons] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isExpired, setIsExpired] = useState(false);
 
@@ -128,24 +149,38 @@ export default function LessonPlayerPage() {
   const [assignmentSubmitted, setAssignmentSubmitted] = useState<Record<number, boolean>>({});
   const [quizSubmitted, setQuizSubmitted] = useState<Record<number, boolean>>({});
   const [correctCount, setCorrectCount] = useState(0);
-  const [totalQuestionsCount, setTotalQuestionsCount] = useState(0);
+  const [attemptedQuestionsCount, setAttemptedQuestionsCount] = useState(0);
+  const [attemptedMaxScore, setAttemptedMaxScore] = useState(0);
+  const [actualVideoDuration, setActualVideoDuration] = useState<number>(0);
+
+  const isQuestionLike = (item: any) =>
+    item?.type === 'QUESTION' || item?.type === 'MCQ' || item?.type === 'TRUE_FALSE' || item?.type === 'MULTI_SELECT' || item?.label === 'MULTI_SELECT';
+
+  const normalizeAnswer = (value: any) => String(value ?? '').trim().toLowerCase();
 
   // Dynamic Score Calculation across Slides, Assignments, and Exercises
   useEffect(() => {
     if (!lesson) return;
-    
+
     let totalScore = 0;
     let correctQ = 0;
     let totalQ = 0;
-    
+    let attemptedQ = 0;
+    let attemptedScoreCap = 0;
+
     // 1. Slides questions
     lesson.slides?.forEach((slide: any, idx: number) => {
-      if (slide.type === 'QUESTION') {
+      if (isQuestionLike(slide)) {
         totalQ++;
         if (slideSubmitted[idx]) {
+          attemptedQ++;
+          attemptedScoreCap += (Number(slide.points) || 1);
           const isMulti = slide.label === 'MULTI_SELECT';
           const studentAnswers = slideAnswers[idx] || (isMulti ? [] : '');
-          const isCorrect = isMulti ? studentAnswers.length === (slide.correctAnswers || []).length && studentAnswers.every((a: string) => (slide.correctAnswers || []).includes(a)) : (!slide.correctAnswer || slideAnswers[idx] === slide.correctAnswer);
+          const isCorrect = isMulti
+            ? studentAnswers.length === (slide.correctAnswers || []).length &&
+              studentAnswers.every((a: string) => (slide.correctAnswers || []).map(normalizeAnswer).includes(normalizeAnswer(a)))
+            : (!slide.correctAnswer || normalizeAnswer(slideAnswers[idx]) === normalizeAnswer(slide.correctAnswer));
           if (isCorrect && studentAnswers.length > 0) {
             totalScore += (Number(slide.points) || 1);
             correctQ++;
@@ -153,15 +188,20 @@ export default function LessonPlayerPage() {
         }
       }
     });
-    
+
     // 2. Assignment questions
     lesson.assignments?.forEach((as: any, idx: number) => {
-      if (as.type === 'QUESTION') {
+      if (isQuestionLike(as)) {
         totalQ++;
         if (assignmentSubmitted[idx]) {
+          attemptedQ++;
+          attemptedScoreCap += (Number(as.points) || 1);
           const isMulti = as.type === 'MULTI_SELECT';
           const studentAnswers = assignmentAnswers[idx] || (isMulti ? [] : '');
-          const isCorrect = isMulti ? studentAnswers.length === (as.correctAnswers || []).length && studentAnswers.every((a: string) => (as.correctAnswers || []).includes(a)) : (!as.correctAnswer || assignmentAnswers[idx] === as.correctAnswer);
+          const isCorrect = isMulti
+            ? studentAnswers.length === (as.correctAnswers || []).length &&
+              studentAnswers.every((a: string) => (as.correctAnswers || []).map(normalizeAnswer).includes(normalizeAnswer(a)))
+            : (!as.correctAnswer || normalizeAnswer(assignmentAnswers[idx]) === normalizeAnswer(as.correctAnswer));
           if (isCorrect && studentAnswers.length > 0) {
             totalScore += (Number(as.points) || 1);
             correctQ++;
@@ -169,15 +209,20 @@ export default function LessonPlayerPage() {
         }
       }
     });
-    
+
     // 3. Exercise questions
     lesson.questions?.forEach((q: any, idx: number) => {
-      if (q.type === 'QUESTION' || !q.type || q.type === 'MULTI_SELECT') {
+      if (isQuestionLike(q) || !q.type) {
         totalQ++;
         if (quizSubmitted[idx]) {
+          attemptedQ++;
+          attemptedScoreCap += (Number(q.points) || 1);
           const isMulti = q.type === 'MULTI_SELECT';
           const studentAnswers = answers[idx] || (isMulti ? [] : '');
-          const isCorrect = isMulti ? studentAnswers.length === (q.correctAnswers || []).length && studentAnswers.every((a: string) => (q.correctAnswers || []).includes(a)) : (!q.correctAnswer || answers[idx] === q.correctAnswer);
+          const isCorrect = isMulti
+            ? studentAnswers.length === (q.correctAnswers || []).length &&
+              studentAnswers.every((a: string) => (q.correctAnswers || []).map(normalizeAnswer).includes(normalizeAnswer(a)))
+            : (!q.correctAnswer || normalizeAnswer(answers[idx]) === normalizeAnswer(q.correctAnswer));
           if (isCorrect && studentAnswers.length > 0) {
             totalScore += (Number(q.points) || 1);
             correctQ++;
@@ -185,26 +230,12 @@ export default function LessonPlayerPage() {
         }
       }
     });
-    
+
     setScore(totalScore);
     setCorrectCount(correctQ);
-    setTotalQuestionsCount(totalQ);
+    setAttemptedQuestionsCount(attemptedQ);
+    setAttemptedMaxScore(Math.max(1, attemptedScoreCap));
   }, [slideAnswers, slideSubmitted, assignmentAnswers, assignmentSubmitted, answers, quizSubmitted, lesson]);
-
-  const getMaxPossibleScore = () => {
-    if (!lesson) return 1;
-    let maxScore = 0;
-    lesson.slides?.forEach((slide: any) => {
-      if (slide.type === 'QUESTION') maxScore += (Number(slide.points) || 1);
-    });
-    lesson.assignments?.forEach((as: any) => {
-      if (as.type === 'QUESTION') maxScore += (Number(as.points) || 1);
-    });
-    lesson.questions?.forEach((q: any) => {
-      maxScore += (Number(q.points) || 1);
-    });
-    return Math.max(1, maxScore);
-  };
 
   const SECTION_STYLE_PRESETS: Record<string, any> = {
     HINT: { icon: HelpCircle, bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", label: "تلميح" },
@@ -273,19 +304,32 @@ export default function LessonPlayerPage() {
           options: Array.isArray(q.options) ? q.options : []
         })) : [];
 
+        const sanitizedAssignments = Array.isArray(assignments) ? assignments.map(a => ({
+          ...a,
+          options: Array.isArray(a.options) ? a.options : []
+        })) : [];
+
         setLesson({
           ...data,
           slides: Array.isArray(slides) && slides.length ? slides : [{ title: t('lesson.lessonIntro'), content: data.summary || t('lesson.welcomeToLesson') }],
           questions: sanitizedQuestions,
-          assignments: Array.isArray(assignments) ? assignments : [],
+          assignments: sanitizedAssignments,
           attachments: Array.isArray(attachments) ? attachments : []
         });
 
-        if (data.courseId) {
-          const cRes = await fetch(`${API_URL}/courses/${data.courseId}`, {
+        const finalCourseId = data.courseId || courseId;
+        if (finalCourseId) {
+          const cRes = await fetch(`${API_URL}/courses/${finalCourseId}`, {
             headers: { "Authorization": `Bearer ${token}` }
           });
-          if (cRes.ok) setCourse(await cRes.json());
+          if (cRes.ok) {
+            const courseData = await cRes.json();
+            setCourse(courseData);
+            if (Array.isArray(courseData.lessons)) {
+              const sorted = [...courseData.lessons].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+              setCourseLessons(sorted);
+            }
+          }
         }
       }
     } catch (error) {
@@ -356,7 +400,7 @@ export default function LessonPlayerPage() {
           <p className="text-slate-500 text-lg font-bold max-w-md mb-12 leading-relaxed">
             {t('lesson.expiredMessage')} ({new Date(lesson?.cutOffDate).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US')}). {t('lesson.contactAdmin')}
           </p>
-          <button 
+          <button
             onClick={() => router.push('/courses')}
             className="bg-indigo-600 text-white px-12 py-5 rounded-[22px] font-black text-lg hover:scale-105 transition-all shadow-2xl shadow-indigo-100"
           >
@@ -371,85 +415,140 @@ export default function LessonPlayerPage() {
     return (
       <DashboardLayout>
         <div className="min-h-[70vh] flex items-center justify-center">
-           <div className="text-center space-y-4">
-              <AlertCircle className="w-16 h-16 text-slate-300 mx-auto" />
-              <p className="text-slate-400 font-black text-xl">{t('lesson.contentNotAvailable')}</p>
-           </div>
+          <div className="text-center space-y-4">
+            <AlertCircle className="w-16 h-16 text-slate-300 mx-auto" />
+            <p className="text-slate-400 font-black text-xl">{t('lesson.contentNotAvailable')}</p>
+          </div>
         </div>
       </DashboardLayout>
     );
   }
 
+  const currentLessonIdx = courseLessons.findIndex((l) => l.id === lessonId);
+  const prevLesson = currentLessonIdx > 0 ? courseLessons[currentLessonIdx - 1] : null;
+  const nextLesson = currentLessonIdx >= 0 && currentLessonIdx < courseLessons.length - 1 ? courseLessons[currentLessonIdx + 1] : null;
+
+  const goToLesson = (lsn: any) => {
+    router.push(`/lessons/${lsn.id}?courseId=${lesson?.courseId || courseId}`);
+  };
+
   return (
     <DashboardLayout>
       <div className="max-w-[1600px] mx-auto space-y-6 md:space-y-12 pb-24 overflow-x-hidden px-1 sm:px-0" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-        
+
         {/* ── TOP HEADER BAR ── */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-6 px-1 sm:px-2">
-           <div className="flex items-center gap-6">
-              <button 
-                onClick={() => router.back()} 
-                className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center hover:bg-slate-50 transition-all shadow-sm"
-              >
-                <ArrowRight className="w-6 h-6 text-slate-900" />
-              </button>
-              <div>
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">{lesson.title}</h1>
-                <p className="text-indigo-600 font-bold text-sm flex items-center gap-2">
-                   <BookOpen className="w-4 h-4" />
-                   {course?.title || t('lesson.educationalCourse')}
-                </p>
-              </div>
-           </div>
+          <div className="flex items-center gap-6">
+            <button
+              onClick={() => router.back()}
+              className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center hover:bg-slate-50 transition-all shadow-sm"
+            >
+              <ArrowRight className="w-6 h-6 text-slate-900" />
+            </button>
+            <div>
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">{lesson.title}</h1>
+              <p className="text-indigo-600 font-bold text-sm flex items-center gap-2">
+                <BookOpen className="w-4 h-4" />
+                {course?.title || t('lesson.educationalCourse')}
+              </p>
+            </div>
+          </div>
 
-           <div className="flex items-center gap-4">
-              <div className="hidden md:flex gap-1.5 p-2 bg-slate-100/50 rounded-2xl">
-                {['welcome', 'slides', 'assignments', 'exercises', 'summary'].map((s) => (
-                  <div key={s} className={`h-2 rounded-full transition-all duration-500 ${currentStage === s ? 'w-10 bg-indigo-600 shadow-lg shadow-indigo-100' : 'w-4 bg-slate-200'}`}></div>
-                ))}
-              </div>
-              <div className="h-10 w-px bg-slate-100 mx-2"></div>
-              <div className="bg-indigo-600 text-white px-6 py-3 rounded-2xl text-sm font-black flex items-center gap-3 shadow-xl shadow-indigo-100">
-                <Star className="w-5 h-5 fill-current text-amber-300" />
-                {score} {t('lesson.pointsEarned')}
-              </div>
-           </div>
+          <div className="flex items-center gap-3">
+            <div className="hidden md:flex gap-1.5 p-2 bg-slate-100/50 rounded-2xl">
+              {['welcome', 'slides', 'assignments', 'exercises', 'summary'].map((s) => (
+                <div key={s} className={`h-2 rounded-full transition-all duration-500 ${currentStage === s ? 'w-10 bg-indigo-600 shadow-lg shadow-indigo-100' : 'w-4 bg-slate-200'}`}></div>
+              ))}
+            </div>
+            <div className="h-10 w-px bg-slate-100 mx-2"></div>
+            <div className="bg-indigo-600 text-white px-6 py-3 rounded-2xl text-sm font-black flex items-center gap-3 shadow-xl shadow-indigo-100">
+              <Star className="w-5 h-5 fill-current text-amber-300" />
+              {score} {t('lesson.pointsEarned')}
+            </div>
+          </div>
         </div>
+
+        {/* Elegant Next/Prev Lesson Switcher Bar (Placed directly below the header) */}
+        {(prevLesson || nextLesson) && (
+          <div className="premium-card p-4 rounded-[30px] flex flex-col sm:flex-row items-center justify-between border-r-4 border-indigo-600 shadow-sm animate-in fade-in slide-in-from-top-2 duration-500 gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 shrink-0">
+                <BookOpen className="w-5 h-5" />
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">تنقل سريع بين الدروس</p>
+                <p className="text-sm font-black text-slate-700 truncate max-w-[250px]">{course?.title || "الكورس الدراسي"}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4 w-full sm:w-auto justify-end">
+              {prevLesson && (
+                <button
+                  onClick={() => goToLesson(prevLesson)}
+                  title={prevLesson.title}
+                  className="flex items-center gap-3 px-6 py-3 bg-white border-2 border-slate-100 text-slate-700 rounded-2xl font-black text-sm hover:border-indigo-400 hover:text-indigo-600 transition-all shadow-sm group cursor-pointer"
+                >
+                  <ChevronRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform text-slate-400 group-hover:text-indigo-600" />
+                  <div className="flex flex-col text-right">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">الدرس السابق</span>
+                    <span className="truncate max-w-[140px] text-xs sm:text-sm font-black">{prevLesson.title}</span>
+                  </div>
+                </button>
+              )}
+              {nextLesson && (
+                <button
+                  onClick={() => goToLesson(nextLesson)}
+                  title={nextLesson.title}
+                  className="flex items-center gap-3 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-black text-sm hover:bg-indigo-700 transition-all shadow-lg hover:shadow-indigo-200 group cursor-pointer"
+                >
+                  <div className="flex flex-col text-right">
+                    <span className="text-[10px] text-indigo-200 font-bold uppercase tracking-wider">الدرس التالي</span>
+                    <span className="truncate max-w-[140px] text-xs sm:text-sm font-black">{nextLesson.title}</span>
+                  </div>
+                  <ChevronLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform text-indigo-200 group-hover:text-white" />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* ── MAIN CONTENT AREA ── */}
         <div className={`grid grid-cols-1 items-start ${currentStage === 'welcome' || currentStage === 'summary' ? 'xl:grid-cols-12' : 'xl:grid-cols-1'} gap-10`}>
-          
+
           <div className={`${currentStage === 'welcome' || currentStage === 'summary' ? 'xl:col-span-8' : 'xl:col-span-12'} space-y-10`}>
-            
+
             {/* ── VIDEO PLAYER (VISIBLE ONLY IN WELCOME/SUMMARY) ── */}
             {(currentStage === 'welcome' || currentStage === 'summary') && (
               <div className="premium-card rounded-[40px] md:rounded-[55px] p-4 md:p-6 relative overflow-hidden shadow-2xl shadow-indigo-50/50">
-                 <div className="aspect-video bg-slate-950 rounded-[35px] overflow-hidden relative ring-4 ring-slate-50 group">
-                    {lesson.videoUrl ? (
-                      <VideoPlayer url={lesson.videoUrl} onProgress={handleProgressUpdate} />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center text-slate-700 font-black p-8 gap-4">
-                         <Lock className="w-12 h-12 opacity-20" />
-                         <span className="opacity-40">{t('lesson.noVideo')}</span>
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-indigo-600/5 pointer-events-none group-hover:opacity-0 transition-opacity" />
-                 </div>
-                 
-                 <div className="mt-6 flex items-center justify-between px-4">
-                    <div className="flex items-center gap-3">
-                       <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-100">
-                          <Monitor className="w-5 h-5" />
-                       </div>
-                       <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest">{t('lesson.interactiveVideo')}</h4>
+                <div className="aspect-video bg-slate-950 rounded-[35px] overflow-hidden relative ring-4 ring-slate-50 group" style={{ aspectRatio: '16/9' }}>
+                  {lesson.videoUrl ? (
+                    <VideoPlayer
+                      url={lesson.videoUrl}
+                      onProgress={handleProgressUpdate}
+                      onDuration={(d) => setActualVideoDuration(d)}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-700 font-black p-8 gap-4">
+                      <Lock className="w-12 h-12 opacity-20" />
+                      <span className="opacity-40">{t('lesson.noVideo')}</span>
                     </div>
-                    {lesson.duration && (
-                      <div className="flex items-center gap-2 text-slate-400 font-bold text-xs">
-                         <Clock className="w-4 h-4" />
-                         <span>{Math.floor(lesson.duration / 60)} {t('lesson.minutes')}</span>
-                      </div>
-                    )}
-                 </div>
+                  )}
+                  <div className="absolute inset-0 bg-indigo-600/5 pointer-events-none group-hover:opacity-0 transition-opacity" />
+                </div>
+
+                <div className="mt-6 flex items-center justify-between px-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+                      <Monitor className="w-5 h-5" />
+                    </div>
+                    <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest">{t('lesson.interactiveVideo')}</h4>
+                  </div>
+                  {(actualVideoDuration > 0 || lesson.duration) && (
+                    <div className="flex items-center gap-2 text-slate-400 font-bold text-xs">
+                      <Clock className="w-4 h-4" />
+                      <span>{Math.floor((actualVideoDuration || lesson.duration || 0) / 60)} {t('lesson.minutes')}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -463,7 +562,7 @@ export default function LessonPlayerPage() {
                   <p className="text-slate-500 text-base md:text-lg font-bold max-w-xl mx-auto leading-relaxed">{t('lesson.readyMessage')}</p>
                 </div>
 
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
                   {[
                     { title: t('lesson.standards'), icon: Target, content: lesson.standards, color: "text-blue-600", bg: "bg-blue-50" },
                     { title: t('lesson.indicators'), icon: TrendingUp, content: lesson.indicators, color: "text-purple-600", bg: "bg-purple-50" },
@@ -479,7 +578,7 @@ export default function LessonPlayerPage() {
                   ))}
                 </div>
 
-                <div className="mt-12 text-center">
+                <div className="mt-12 text-center space-y-6">
                   <button
                     onClick={() => setCurrentStage('slides')}
                     className="premium-gradient-primary text-white px-12 py-5 rounded-[25px] font-black text-lg hover:scale-105 transition-all shadow-2xl shadow-indigo-200 flex items-center gap-4 mx-auto"
@@ -494,19 +593,19 @@ export default function LessonPlayerPage() {
             {currentStage === 'slides' && (
               <div className="premium-card rounded-[48px] overflow-hidden flex flex-col group mx-auto w-full max-w-5xl">
                 <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between px-8 shrink-0">
-                   <div className="flex items-center gap-3 text-slate-400 font-black text-xs uppercase tracking-widest">
-                      <Layout className="w-4 h-4" />
-                      {t('lesson.slides')}
-                   </div>
-                   <div className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-black">
-                      {t('lesson.slide')} {currentSlideIndex + 1} / {lesson.slides.length}
-                   </div>
+                  <div className="flex items-center gap-3 text-slate-400 font-black text-xs uppercase tracking-widest">
+                    <Layout className="w-4 h-4" />
+                    {t('lesson.slides')}
+                  </div>
+                  <div className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-black">
+                    {t('lesson.slide')} {currentSlideIndex + 1} / {lesson.slides.length}
+                  </div>
                 </div>
 
                 <div className="p-8 md:p-12 flex flex-col items-center text-center w-full">
                   <h3 className="text-2xl md:text-4xl font-black text-slate-900 mb-6 leading-tight tracking-tight animate-in fade-in slide-in-from-top-4 duration-500">{lesson.slides[currentSlideIndex].title}</h3>
                   {lesson.slides[currentSlideIndex].videoUrl && (
-                    <div className="w-full max-w-4xl mx-auto mb-8 rounded-[35px] overflow-hidden shadow-2xl border border-slate-100">
+                    <div className="w-full max-w-4xl mx-auto mb-8 rounded-[35px] overflow-hidden shadow-2xl border border-slate-100 relative aspect-video" style={{ aspectRatio: '16/9' }}>
                       <VideoPlayer url={lesson.slides[currentSlideIndex].videoUrl} />
                     </div>
                   )}
@@ -516,28 +615,28 @@ export default function LessonPlayerPage() {
                   />
 
                   {/* Question Options for Slide */}
-                  {lesson.slides[currentSlideIndex].type === 'QUESTION' && lesson.slides[currentSlideIndex].options?.length > 0 && (
+                  {lesson.slides[currentSlideIndex].type === 'QUESTION' && (lesson.slides[currentSlideIndex].options || []).filter(Boolean).length > 0 && (
                     <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-4xl">
-                      {lesson.slides[currentSlideIndex].options.map((opt: string, oIdx: number) => {
-                         const isMulti = lesson.slides[currentSlideIndex].label === 'MULTI_SELECT';
-                         const isSelected = isMulti ? (slideAnswers[currentSlideIndex] || []).includes(opt) : slideAnswers[currentSlideIndex] === opt;
-                         const isSubmitted = slideSubmitted[currentSlideIndex];
-                         const isCorrect = isSubmitted && (isMulti ? (lesson.slides[currentSlideIndex].correctAnswers || []).includes(opt) : ((!lesson.slides[currentSlideIndex].correctAnswer && isSelected) || opt === lesson.slides[currentSlideIndex].correctAnswer));
-                         const isWrong = isSubmitted && isSelected && !isCorrect;
-                         
-                         return (
+                      {(lesson.slides[currentSlideIndex].options || []).filter(Boolean).map((opt: string, oIdx: number) => {
+                        const isMulti = lesson.slides[currentSlideIndex].label === 'MULTI_SELECT';
+                        const isSelected = isMulti ? (slideAnswers[currentSlideIndex] || []).includes(opt) : slideAnswers[currentSlideIndex] === opt;
+                        const isSubmitted = slideSubmitted[currentSlideIndex];
+                        const isCorrect = isSubmitted && (isMulti ? (lesson.slides[currentSlideIndex].correctAnswers || []).includes(opt) : ((!lesson.slides[currentSlideIndex].correctAnswer && isSelected) || opt === lesson.slides[currentSlideIndex].correctAnswer));
+                        const isWrong = isSubmitted && isSelected && !isCorrect;
+
+                        return (
                           <button
                             key={oIdx}
                             onClick={() => {
-                                if (!isSubmitted) {
-                                    if (isMulti) {
-                                        const currentArr = slideAnswers[currentSlideIndex] || [];
-                                        const newArr = currentArr.includes(opt) ? currentArr.filter((a: string) => a !== opt) : [...currentArr, opt];
-                                        setSlideAnswers({ ...slideAnswers, [currentSlideIndex]: newArr });
-                                    } else {
-                                        setSlideAnswers({ ...slideAnswers, [currentSlideIndex]: opt });
-                                    }
+                              if (!isSubmitted) {
+                                if (isMulti) {
+                                  const currentArr = slideAnswers[currentSlideIndex] || [];
+                                  const newArr = currentArr.includes(opt) ? currentArr.filter((a: string) => a !== opt) : [...currentArr, opt];
+                                  setSlideAnswers({ ...slideAnswers, [currentSlideIndex]: newArr });
+                                } else {
+                                  setSlideAnswers({ ...slideAnswers, [currentSlideIndex]: opt });
                                 }
+                              }
                             }}
                             className={`relative p-6 rounded-3xl border-4 text-right transition-all group overflow-hidden ${isSelected ? (isCorrect ? 'border-emerald-500 bg-emerald-50' : isWrong ? 'border-red-500 bg-red-50' : 'border-indigo-500 bg-indigo-50') : 'border-slate-100 bg-white hover:border-indigo-200'} ${isSubmitted && !isSelected && !isCorrect ? 'opacity-50' : ''}`}
                             disabled={isSubmitted}
@@ -547,64 +646,67 @@ export default function LessonPlayerPage() {
                             {isCorrect && <CheckCircle2 className="absolute top-1/2 left-6 -translate-y-1/2 w-8 h-8 text-emerald-500" />}
                             {isWrong && <X className="absolute top-1/2 left-6 -translate-y-1/2 w-8 h-8 text-red-500" />}
                           </button>
-                         );
+                        );
                       })}
                     </div>
                   )}
                   {lesson.slides[currentSlideIndex].type === 'QUESTION' && slideAnswers[currentSlideIndex] && !slideSubmitted[currentSlideIndex] && (
-                     <button 
-                       onClick={() => setSlideSubmitted({ ...slideSubmitted, [currentSlideIndex]: true })}
-                       className="mt-6 bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black text-lg hover:bg-indigo-700 shadow-xl"
-                     >
-                       تأكيد الإجابة
-                     </button>
+                    <button
+                      onClick={() => setSlideSubmitted({ ...slideSubmitted, [currentSlideIndex]: true })}
+                      className="mt-6 bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black text-lg hover:bg-indigo-700 shadow-xl"
+                    >
+                      تأكيد الإجابة
+                    </button>
                   )}
-                  
+
                   {slideSubmitted[currentSlideIndex] && lesson.slides[currentSlideIndex].type === 'QUESTION' && (() => {
-                     const isMulti = lesson.slides[currentSlideIndex].label === 'MULTI_SELECT';
-                     const studentAnswers = slideAnswers[currentSlideIndex] || (isMulti ? [] : '');
-                     const isCorrect = isMulti ? studentAnswers.length === (lesson.slides[currentSlideIndex].correctAnswers || []).length && studentAnswers.every((a: string) => (lesson.slides[currentSlideIndex].correctAnswers || []).includes(a)) : slideAnswers[currentSlideIndex] === lesson.slides[currentSlideIndex].correctAnswer;
-                     return (
-                        <div className="mt-8 w-full max-w-4xl">
-                           <QuestionFeedback 
-                             isCorrect={isCorrect}
-                             correctAnswer={isMulti ? lesson.slides[currentSlideIndex].correctAnswers : lesson.slides[currentSlideIndex].correctAnswer}
-                             language={language}
-                           />
-                        </div>
-                     );
+                    const isMulti = lesson.slides[currentSlideIndex].label === 'MULTI_SELECT';
+                    const studentAnswers = slideAnswers[currentSlideIndex] || (isMulti ? [] : '');
+                    const isCorrect = isMulti ? studentAnswers.length === (lesson.slides[currentSlideIndex].correctAnswers || []).length && studentAnswers.every((a: string) => (lesson.slides[currentSlideIndex].correctAnswers || []).includes(a)) : slideAnswers[currentSlideIndex] === lesson.slides[currentSlideIndex].correctAnswer;
+                    return (
+                      <div className="mt-8 w-full max-w-4xl">
+                        <QuestionFeedback
+                          isCorrect={isCorrect}
+                          correctAnswer={isMulti ? lesson.slides[currentSlideIndex].correctAnswers : lesson.slides[currentSlideIndex].correctAnswer}
+                          language={language}
+                        />
+                      </div>
+                    );
                   })()}
 
-                  {lesson.slides[currentSlideIndex].sections?.length > 0 && (lesson.slides[currentSlideIndex].type !== 'QUESTION' || slideSubmitted[currentSlideIndex]) && (
-                     <div className="mt-4 w-full max-w-4xl space-y-4">
-                        {lesson.slides[currentSlideIndex].sections.map((sec: any, sIdx: number) => {
-                           const isSubmitted = slideSubmitted[currentSlideIndex];
-                           const isMulti = lesson.slides[currentSlideIndex].label === 'MULTI_SELECT';
-                           const studentAnswers = slideAnswers[currentSlideIndex] || (isMulti ? [] : '');
-                           const isCorrect = isSubmitted && (isMulti ? studentAnswers.length === (lesson.slides[currentSlideIndex].correctAnswers || []).length && studentAnswers.every((a: string) => (lesson.slides[currentSlideIndex].correctAnswers || []).includes(a)) : slideAnswers[currentSlideIndex] === lesson.slides[currentSlideIndex].correctAnswer);
-                           const isWrong = isSubmitted && !isCorrect;
-                           return (
-                             <CollapsibleSection key={sIdx} section={sec} isCorrect={isCorrect} isWrong={isWrong} language={language} />
-                           );
-                        })}
-                     </div>
-                  )}
+                  {(() => {
+                    const slide = lesson.slides[currentSlideIndex];
+                    if (!slide.sections || slide.sections.length === 0) return null;
+                    
+                    const isSubmitted = slideSubmitted[currentSlideIndex] || slide.type !== 'QUESTION';
+                    const visibleSections = isSubmitted 
+                      ? slide.sections 
+                      : slide.sections.filter((sec: any) => sec.type === 'HINT');
+                      
+                    if (visibleSections.length === 0) return null;
+                    
+                    return (
+                      <div className="mt-4 w-full max-w-4xl">
+                        <SectionsInlineTabs sections={visibleSections} language={language} />
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div className="p-6 border-t border-slate-100 bg-slate-50/30 flex justify-between items-center gap-6 shrink-0">
                   <button
                     onClick={() => {
                       if (currentSlideIndex > 0) {
-                         setCurrentSlideIndex(prev => prev - 1);
+                        setCurrentSlideIndex(prev => prev - 1);
                       } else {
-                         setCurrentStage('welcome');
+                        setCurrentStage('welcome');
                       }
                     }}
                     className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center hover:bg-slate-50 transition-all shadow-sm"
                   >
                     <ChevronRight className="w-6 h-6 text-slate-900" />
                   </button>
-                  
+
                   <div className="flex gap-2 flex-wrap justify-center">
                     {lesson.slides.map((_: any, i: number) => (
                       <div key={i} className={`h-1.5 rounded-full transition-all duration-700 ${currentSlideIndex === i ? 'w-8 bg-indigo-600' : 'w-1.5 bg-slate-200'}`}></div>
@@ -638,38 +740,38 @@ export default function LessonPlayerPage() {
                 </div>
 
                 <div className="grid grid-cols-1 gap-6 max-w-4xl mx-auto w-full">
-                   {lesson.assignments?.length > 0 ? lesson.assignments.map((as: any, idx: number) => {
-                     const isSubmitted = assignmentSubmitted[idx];
-                     return (
-                     <div key={idx} className="premium-card p-8 rounded-[40px] border-r-8 border-indigo-600">
+                  {lesson.assignments?.length > 0 ? lesson.assignments.map((as: any, idx: number) => {
+                    const isSubmitted = assignmentSubmitted[idx];
+                    return (
+                      <div key={idx} className="premium-card p-8 rounded-[40px] border-r-8 border-indigo-600">
                         <div className="flex items-center gap-4 mb-6">
-                           <span className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center font-black">
-                              {idx + 1}
-                           </span>
-                           <h3 className="font-black text-slate-900 text-lg">{as.type === 'QUESTION' ? t('lesson.requiredAssignment') : t('lesson.requiredAssignment')}</h3>
+                          <span className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center font-black">
+                            {idx + 1}
+                          </span>
+                          <h3 className="font-black text-slate-900 text-lg">{as.type === 'QUESTION' ? t('lesson.requiredAssignment') : t('lesson.requiredAssignment')}</h3>
                         </div>
                         <div className="text-slate-600 text-lg leading-relaxed prose prose-indigo mb-6" dangerouslySetInnerHTML={{ __html: as.text }} />
-                        
-                        {as.type === 'QUESTION' && as.options?.length > 0 && (
+
+                        {isQuestionLike(as) && (as.options || []).filter(Boolean).length > 0 && (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-                            {as.options.map((opt: string, oIdx: number) => {
-                               const isMulti = as.type === 'MULTI_SELECT';
-                               const isSelected = isMulti ? (assignmentAnswers[idx] || []).includes(opt) : assignmentAnswers[idx] === opt;
-                               const isCorrect = isSubmitted && (isMulti ? (as.correctAnswers || []).includes(opt) : ((!as.correctAnswer && isSelected) || opt === as.correctAnswer));
-                               const isWrong = isSubmitted && isSelected && !isCorrect;
-                               return (
+                            {(as.options || []).filter(Boolean).map((opt: string, oIdx: number) => {
+                              const isMulti = as.type === 'MULTI_SELECT' || as.label === 'MULTI_SELECT';
+                              const isSelected = isMulti ? (assignmentAnswers[idx] || []).includes(opt) : assignmentAnswers[idx] === opt;
+                              const isCorrect = isSubmitted && (isMulti ? (as.correctAnswers || []).includes(opt) : ((!as.correctAnswer && isSelected) || opt === as.correctAnswer));
+                              const isWrong = isSubmitted && isSelected && !isCorrect;
+                              return (
                                 <button
                                   key={oIdx}
                                   onClick={() => {
-                                      if (!isSubmitted) {
-                                          if (isMulti) {
-                                              const currentArr = assignmentAnswers[idx] || [];
-                                              const newArr = currentArr.includes(opt) ? currentArr.filter((a: string) => a !== opt) : [...currentArr, opt];
-                                              setAssignmentAnswers({ ...assignmentAnswers, [idx]: newArr });
-                                          } else {
-                                              setAssignmentAnswers({ ...assignmentAnswers, [idx]: opt });
-                                          }
+                                    if (!isSubmitted) {
+                                      if (isMulti) {
+                                        const currentArr = assignmentAnswers[idx] || [];
+                                        const newArr = currentArr.includes(opt) ? currentArr.filter((a: string) => a !== opt) : [...currentArr, opt];
+                                        setAssignmentAnswers({ ...assignmentAnswers, [idx]: newArr });
+                                      } else {
+                                        setAssignmentAnswers({ ...assignmentAnswers, [idx]: opt });
                                       }
+                                    }
                                   }}
                                   className={`relative p-5 rounded-3xl border-4 text-right transition-all group overflow-hidden ${isSelected ? (isCorrect ? 'border-emerald-500 bg-emerald-50' : isWrong ? 'border-red-500 bg-red-50' : 'border-indigo-500 bg-indigo-50') : 'border-slate-100 bg-white hover:border-indigo-200'} ${isSubmitted && !isSelected && !isCorrect ? 'opacity-50' : ''}`}
                                   disabled={isSubmitted}
@@ -679,72 +781,72 @@ export default function LessonPlayerPage() {
                                   {isCorrect && <CheckCircle2 className="absolute top-1/2 left-4 -translate-y-1/2 w-6 h-6 text-emerald-500" />}
                                   {isWrong && <X className="absolute top-1/2 left-4 -translate-y-1/2 w-6 h-6 text-red-500" />}
                                 </button>
-                               );
+                              );
                             })}
                           </div>
                         )}
-                        {as.type === 'QUESTION' && assignmentAnswers[idx] && !isSubmitted && (
-                           <button 
-                             onClick={() => setAssignmentSubmitted({ ...assignmentSubmitted, [idx]: true })}
-                             className="mt-6 bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black text-lg hover:bg-indigo-700 shadow-xl"
-                           >
-                             تأكيد الإجابة
-                           </button>
+                        {isQuestionLike(as) && assignmentAnswers[idx] && !isSubmitted && (
+                          <button
+                            onClick={() => setAssignmentSubmitted({ ...assignmentSubmitted, [idx]: true })}
+                            className="mt-6 bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black text-lg hover:bg-indigo-700 shadow-xl"
+                          >
+                            تأكيد الإجابة
+                          </button>
                         )}
-                        
-                        {isSubmitted && as.type === 'QUESTION' && (() => {
-                           const isMulti = as.type === 'MULTI_SELECT';
-                           const studentAnswers = assignmentAnswers[idx] || (isMulti ? [] : '');
-                           const isCorrect = isMulti ? studentAnswers.length === (as.correctAnswers || []).length && studentAnswers.every((a: string) => (as.correctAnswers || []).includes(a)) : (!as.correctAnswer || assignmentAnswers[idx] === as.correctAnswer);
-                           return (
-                             <div className="mt-8">
-                                <QuestionFeedback 
-                                  isCorrect={isCorrect}
-                                  correctAnswer={isMulti ? as.correctAnswers : as.correctAnswer}
-                                  language={language}
-                                />
-                             </div>
-                           );
+
+                        {isSubmitted && isQuestionLike(as) && (() => {
+                          const isMulti = as.type === 'MULTI_SELECT' || as.label === 'MULTI_SELECT';
+                          const studentAnswers = assignmentAnswers[idx] || (isMulti ? [] : '');
+                          const isCorrect = isMulti ? studentAnswers.length === (as.correctAnswers || []).length && studentAnswers.every((a: string) => (as.correctAnswers || []).includes(a)) : (!as.correctAnswer || assignmentAnswers[idx] === as.correctAnswer);
+                          return (
+                            <div className="mt-8">
+                              <QuestionFeedback
+                                isCorrect={isCorrect}
+                                correctAnswer={isMulti ? as.correctAnswers : as.correctAnswer}
+                                language={language}
+                              />
+                            </div>
+                          );
                         })()}
-                        
+
                         {/* Assignment Sections (Hints, Explanations, etc.) */}
-                        {isSubmitted && as.sections?.length > 0 && (
-                           <div className="mt-4 space-y-4">
-                              {as.sections.map((sec: any, sIdx: number) => {
-                                 const isMulti = as.type === 'MULTI_SELECT';
-                                 const studentAnswers = assignmentAnswers[idx] || (isMulti ? [] : '');
-                                 const isCorrect = isMulti ? studentAnswers.length === (as.correctAnswers || []).length && studentAnswers.every((a: string) => (as.correctAnswers || []).includes(a)) : (!as.correctAnswer || assignmentAnswers[idx] === as.correctAnswer);
-                                 const isWrong = !isCorrect;
-                                 return (
-                                   <CollapsibleSection key={sIdx} section={sec} isCorrect={isCorrect} isWrong={isWrong} language={language} />
-                                 );
-                              })}
-                           </div>
-                        )}
-                     </div>
-                     );
-                   }) : (
-                     <div className="premium-card p-12 rounded-[40px] text-center text-slate-400 font-bold">
-                        {t('lesson.noAssignments')}
-                     </div>
-                   )}
+                        {(() => {
+                          if (!as.sections || as.sections.length === 0) return null;
+                          const isSubmitted = assignmentSubmitted[idx] || !isQuestionLike(as);
+                          const visibleSections = isSubmitted
+                            ? as.sections
+                            : as.sections.filter((sec: any) => sec.type === 'HINT');
+                          if (visibleSections.length === 0) return null;
+                          return (
+                            <div className="mt-4">
+                              <SectionsInlineTabs sections={visibleSections} language={language} />
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    );
+                  }) : (
+                    <div className="premium-card p-12 rounded-[40px] text-center text-slate-400 font-bold">
+                      {t('lesson.noAssignments')}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex justify-center pt-8 gap-4 flex-wrap">
-                   <button 
+                  <button
                     onClick={() => setCurrentStage('slides')}
                     className="bg-white border-2 border-slate-200 text-slate-700 px-8 py-5 rounded-[25px] font-black text-lg hover:bg-slate-50 transition-all flex items-center gap-4"
-                   >
+                  >
                     <ArrowRight className={`w-5 h-5 ${language === 'en' ? 'rotate-180' : ''}`} />
                     {t('lesson.previous')}
-                   </button>
-                   <button 
+                  </button>
+                  <button
                     onClick={() => setCurrentStage('exercises')}
                     className="bg-emerald-600 text-white px-12 py-5 rounded-[25px] font-black text-lg hover:scale-105 transition-all shadow-2xl shadow-emerald-100 flex items-center gap-4"
-                   >
+                  >
                     {t('lesson.startExercises')}
                     <ArrowLeft className={`w-5 h-5 ${language === 'en' ? 'rotate-180' : ''}`} />
-                   </button>
+                  </button>
                 </div>
               </div>
             )}
@@ -763,9 +865,9 @@ export default function LessonPlayerPage() {
                       </button>
                     ))}
                   </div>
-                  <button 
+                  <button
                     onClick={() => {
-                      if(confirm(t('lesson.quizModePrompt'))) {
+                      if (confirm(t('lesson.quizModePrompt'))) {
                         showToast(t('lesson.quizModeEnabled'), "info");
                       }
                     }}
@@ -817,11 +919,11 @@ export default function LessonPlayerPage() {
                             {Math.floor(quizTimer / 60)}:{(quizTimer % 60).toString().padStart(2, '0')}
                           </div>
                         </div>
-                        
+
                         <h3 className="text-lg md:text-2xl font-black text-slate-900 mb-8 leading-relaxed tracking-tight break-words w-full" dangerouslySetInnerHTML={{ __html: lesson.questions[currentQuestionIndex].text }} />
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-4 mb-6">
-                          {(lesson.questions[currentQuestionIndex].options || []).map((opt: string, oIdx: number) => {
+                          {(lesson.questions[currentQuestionIndex].options || []).filter(Boolean).map((opt: string, oIdx: number) => {
                             const isMulti = lesson.questions[currentQuestionIndex].type === 'MULTI_SELECT';
                             const isSelected = isMulti ? (answers[currentQuestionIndex] || []).includes(opt) : answers[currentQuestionIndex] === opt;
                             const isSubmitted = quizSubmitted[currentQuestionIndex];
@@ -829,75 +931,79 @@ export default function LessonPlayerPage() {
                             const isWrong = isSubmitted && isSelected && !isCorrect;
 
                             return (
-                            <button 
-                              key={oIdx} 
-                              onClick={() => handleAnswerSelect(opt)} 
-                              disabled={isSubmitted}
-                              className={`p-5 md:p-6 rounded-[25px] border-4 text-start transition-all duration-300 font-black text-sm md:text-base relative break-words overflow-hidden ${isSelected ? (isCorrect ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : isWrong ? 'border-red-500 bg-red-50 text-red-700' : 'bg-indigo-600 border-white text-white shadow-xl shadow-indigo-100') : 'bg-white border-slate-50 text-slate-600 hover:border-indigo-200'} ${isSubmitted && !isSelected && !isCorrect ? 'opacity-50' : ''}`}
-                            >
-                              <div className="flex items-center justify-between gap-4">
-                                <span className={`flex-1 break-words leading-relaxed ${isSelected && !isSubmitted ? 'text-white' : ''}`}>{opt}</span>
-                                <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${isSelected && !isSubmitted ? 'border-white bg-white/20' : isCorrect ? 'border-emerald-500 bg-emerald-500 text-white' : isWrong ? 'border-red-500 bg-red-500 text-white' : 'border-slate-200'}`}>
+                              <button
+                                key={oIdx}
+                                onClick={() => handleAnswerSelect(opt)}
+                                disabled={isSubmitted}
+                                className={`p-5 md:p-6 rounded-[25px] border-4 text-start transition-all duration-300 font-black text-sm md:text-base relative break-words overflow-hidden ${isSelected ? (isCorrect ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : isWrong ? 'border-red-500 bg-red-50 text-red-700' : 'bg-indigo-600 border-white text-white shadow-xl shadow-indigo-100') : 'bg-white border-slate-50 text-slate-600 hover:border-indigo-200'} ${isSubmitted && !isSelected && !isCorrect ? 'opacity-50' : ''}`}
+                              >
+                                <div className="flex items-center justify-between gap-4">
+                                  <span className={`flex-1 break-words leading-relaxed ${isSelected && !isSubmitted ? 'text-white' : ''}`}>{opt}</span>
+                                  <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${isSelected && !isSubmitted ? 'border-white bg-white/20' : isCorrect ? 'border-emerald-500 bg-emerald-500 text-white' : isWrong ? 'border-red-500 bg-red-500 text-white' : 'border-slate-200'}`}>
                                     {isSelected && !isSubmitted && <CheckCircle2 className="w-4 h-4" />}
                                     {isCorrect && <CheckCircle2 className="w-4 h-4" />}
                                     {isWrong && <X className="w-4 h-4" />}
+                                  </div>
                                 </div>
-                              </div>
-                            </button>
+                              </button>
                             );
                           })}
                         </div>
-                        
+
                         {answers[currentQuestionIndex] && !quizSubmitted[currentQuestionIndex] && (
-                           <button 
-                             onClick={() => setQuizSubmitted({ ...quizSubmitted, [currentQuestionIndex]: true })}
-                             className="mt-2 mb-6 bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black text-lg hover:bg-indigo-700 shadow-xl"
-                           >
-                             تأكيد الإجابة
-                           </button>
+                          <button
+                            onClick={() => setQuizSubmitted({ ...quizSubmitted, [currentQuestionIndex]: true })}
+                            className="mt-2 mb-6 bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black text-lg hover:bg-indigo-700 shadow-xl"
+                          >
+                            تأكيد الإجابة
+                          </button>
                         )}
 
                         {quizSubmitted[currentQuestionIndex] && (() => {
-                           const isMulti = lesson.questions[currentQuestionIndex].type === 'MULTI_SELECT';
-                           const studentAnswers = answers[currentQuestionIndex] || (isMulti ? [] : '');
-                           const isCorrect = isMulti ? studentAnswers.length === (lesson.questions[currentQuestionIndex].correctAnswers || []).length && studentAnswers.every((a: string) => (lesson.questions[currentQuestionIndex].correctAnswers || []).includes(a)) : (!lesson.questions[currentQuestionIndex].correctAnswer || answers[currentQuestionIndex] === lesson.questions[currentQuestionIndex].correctAnswer);
-                           return (
-                             <div className="mt-4 animate-in fade-in slide-in-from-top-2">
-                               <QuestionFeedback 
-                                 isCorrect={isCorrect}
-                                 correctAnswer={isMulti ? lesson.questions[currentQuestionIndex].correctAnswers : lesson.questions[currentQuestionIndex].correctAnswer}
-                                 language={language}
-                               />
-                             </div>
-                           );
+                          const isMulti = lesson.questions[currentQuestionIndex].type === 'MULTI_SELECT';
+                          const studentAnswers = answers[currentQuestionIndex] || (isMulti ? [] : '');
+                          const isCorrect = isMulti ? studentAnswers.length === (lesson.questions[currentQuestionIndex].correctAnswers || []).length && studentAnswers.every((a: string) => (lesson.questions[currentQuestionIndex].correctAnswers || []).includes(a)) : (!lesson.questions[currentQuestionIndex].correctAnswer || answers[currentQuestionIndex] === lesson.questions[currentQuestionIndex].correctAnswer);
+                          return (
+                            <div className="mt-4 animate-in fade-in slide-in-from-top-2">
+                              <QuestionFeedback
+                                isCorrect={isCorrect}
+                                correctAnswer={isMulti ? lesson.questions[currentQuestionIndex].correctAnswers : lesson.questions[currentQuestionIndex].correctAnswer}
+                                language={language}
+                              />
+                            </div>
+                          );
                         })()}
 
                         {/* Question Sections (Hints, Explanations, Feedback) */}
-                        {quizSubmitted[currentQuestionIndex] && lesson.questions[currentQuestionIndex].sections?.length > 0 && (
-                           <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2">
-                              {lesson.questions[currentQuestionIndex].sections.map((sec: any, sIdx: number) => {
-                                 const isMulti = lesson.questions[currentQuestionIndex].type === 'MULTI_SELECT';
-                                 const studentAnswers = answers[currentQuestionIndex] || (isMulti ? [] : '');
-                                 const isCorrect = isMulti ? studentAnswers.length === (lesson.questions[currentQuestionIndex].correctAnswers || []).length && studentAnswers.every((a: string) => (lesson.questions[currentQuestionIndex].correctAnswers || []).includes(a)) : (!lesson.questions[currentQuestionIndex].correctAnswer || answers[currentQuestionIndex] === lesson.questions[currentQuestionIndex].correctAnswer);
-                                 const isWrong = !isCorrect;
-                                 return (
-                                   <CollapsibleSection key={sIdx} section={sec} isCorrect={isCorrect} isWrong={isWrong} language={language} />
-                                 );
-                              })}
-                           </div>
-                        )}
+                        {(() => {
+                          const question = lesson.questions[currentQuestionIndex];
+                          if (!question.sections || question.sections.length === 0) return null;
+                          
+                          const isSubmitted = quizSubmitted[currentQuestionIndex];
+                          const visibleSections = isSubmitted 
+                            ? question.sections 
+                            : question.sections.filter((sec: any) => sec.type === 'HINT');
+                            
+                          if (visibleSections.length === 0) return null;
+                          
+                          return (
+                            <div className="mt-4 animate-in fade-in slide-in-from-top-2">
+                              <SectionsInlineTabs sections={visibleSections} language={language} />
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       <div className="p-6 md:p-8 border-t border-slate-100 bg-slate-50/30 flex justify-between items-center shrink-0">
-                        <button 
-                          onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))} 
-                          disabled={currentQuestionIndex === 0} 
+                        <button
+                          onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
+                          disabled={currentQuestionIndex === 0}
                           className="text-slate-400 px-6 py-3 rounded-xl font-black hover:text-slate-600 disabled:opacity-20 text-sm"
                         >
                           {t('lesson.previous')}
                         </button>
-                        <button 
-                          onClick={handleNextQuestion} 
+                        <button
+                          onClick={handleNextQuestion}
                           className={`px-8 py-3.5 rounded-2xl font-black transition-all flex items-center gap-3 text-base shadow-xl ${currentQuestionIndex < lesson.questions.length - 1 ? 'bg-slate-950 text-white hover:bg-indigo-600' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
                         >
                           {currentQuestionIndex < lesson.questions.length - 1 ? t('lesson.next') : t('lesson.finishQuiz')}
@@ -911,7 +1017,7 @@ export default function LessonPlayerPage() {
                         <HelpCircle className="w-8 h-8 text-slate-200" />
                       </div>
                       <p className="text-slate-400 font-bold text-base">{t('lesson.noExercises')}</p>
-                      <button 
+                      <button
                         onClick={() => setCurrentStage('summary')}
                         className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-black"
                       >
@@ -924,9 +1030,8 @@ export default function LessonPlayerPage() {
             )}
 
             {currentStage === 'summary' && (() => {
-              const maxPossible = getMaxPossibleScore();
-              const pct = Math.round((score / maxPossible) * 100);
-              
+              const pct = Math.round((score / attemptedMaxScore) * 100);
+
               let title = t('lesson.greatJob') || "عمل رائع!";
               let message = t('lesson.completedMessage') || "لقد أكملت جميع متطلبات هذا الدرس بنجاح.";
               let borderCol = "border-indigo-600";
@@ -943,8 +1048,8 @@ export default function LessonPlayerPage() {
                     <div className="absolute inset-2 rounded-full animate-ping-slow" style={{ animationDelay: '0.4s', background: 'radial-gradient(circle, rgba(16,185,129,0.2) 0%, transparent 70%)' }} />
                     <div className="w-24 h-24 rounded-[35px] flex items-center justify-center shadow-2xl animate-float-trophy" style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', boxShadow: '0 0 40px rgba(16,185,129,0.6), 0 20px 40px rgba(5,150,105,0.4)' }}>
                       <svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21.801 10A10 10 0 1 1 17 3.335"/>
-                        <path d="m9 11 3 3L22 4"/>
+                        <path d="M21.801 10A10 10 0 1 1 17 3.335" />
+                        <path d="m9 11 3 3L22 4" />
                       </svg>
                     </div>
                   </div>
@@ -976,17 +1081,17 @@ export default function LessonPlayerPage() {
                   </div>
                 );
               }
-              
+
               return (
                 <div className="premium-card p-10 md:p-20 rounded-[50px] animate-in zoom-in duration-700 text-center relative">
                   {pct >= 50 && (
-                     <div className="fixed inset-0 pointer-events-none z-[100]">
-                        <Confetti 
-                          recycle={false} 
-                          numberOfPieces={600} 
-                          gravity={0.15}
-                        />
-                     </div>
+                    <div className="fixed inset-0 pointer-events-none z-[100]">
+                      <Confetti
+                        recycle={false}
+                        numberOfPieces={600}
+                        gravity={0.15}
+                      />
+                    </div>
                   )}
                   <div className="flex items-center justify-center mx-auto mb-8 relative z-10">
                     {iconEl}
@@ -996,7 +1101,7 @@ export default function LessonPlayerPage() {
                   <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 md:gap-10 mb-10 md:mb-16">
                     <div className={`premium-card p-8 rounded-[35px] min-w-[180px] border-b-8 ${borderCol}`}>
                       <p className="text-slate-400 text-[10px] font-black mb-2 uppercase tracking-widest">{t('lesson.score') || 'الدرجة'}</p>
-                      <p className="text-4xl md:text-6xl font-black text-slate-900">{correctCount} <span className="text-2xl text-slate-400">/ {totalQuestionsCount}</span></p>
+                      <p className="text-4xl md:text-6xl font-black text-slate-900">{correctCount} <span className="text-2xl text-slate-400">/ {attemptedQuestionsCount}</span></p>
                     </div>
                     <div className={`premium-card p-8 rounded-[35px] min-w-[180px] border-b-8 ${pct >= 50 ? 'border-amber-500' : 'border-rose-500'}`}>
                       <p className="text-slate-400 text-[10px] font-black mb-2 uppercase tracking-widest">{t('lesson.percentage') || 'النسبة'}</p>
@@ -1006,7 +1111,7 @@ export default function LessonPlayerPage() {
 
                   <div className="flex flex-col sm:flex-row justify-center gap-4">
                     {pct < 50 && (
-                      <button 
+                      <button
                         onClick={() => {
                           setAnswers({});
                           setSlideAnswers({});
@@ -1018,19 +1123,52 @@ export default function LessonPlayerPage() {
                           setCurrentStage('welcome');
                           setCurrentSlideIndex(0);
                           setCurrentQuestionIndex(0);
-                        }} 
+                        }}
                         className="bg-slate-950 text-white px-10 py-5 rounded-[25px] font-black text-xl hover:scale-105 transition-all shadow-2xl shadow-slate-200"
                       >
                         إعادة المحاولة 🔄
                       </button>
                     )}
-                    <button 
-                      onClick={() => router.push(`/courses/${lesson.courseId}`)} 
+                    <button
+                      onClick={() => router.push(`/courses/${lesson.courseId}`)}
                       className="premium-gradient-primary text-white px-16 py-5 rounded-[25px] font-black text-xl hover:scale-105 transition-all shadow-2xl shadow-indigo-200"
                     >
                       {t('lesson.backToCourse')}
                     </button>
                   </div>
+
+                  {/* Prev / Next lesson navigation */}
+                  {(prevLesson || nextLesson) && (
+                    <div className="mt-10 pt-8 border-t border-slate-100 flex flex-col sm:flex-row gap-4 justify-center items-center">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest w-full sm:w-auto text-center">الدروس الأخرى في الكورس</p>
+                      <div className="flex gap-4">
+                        {prevLesson && (
+                          <button
+                            onClick={() => goToLesson(prevLesson)}
+                            className="flex items-center gap-3 px-8 py-4 bg-white border-2 border-slate-200 text-slate-700 rounded-[22px] font-black hover:border-indigo-400 hover:text-indigo-600 transition-all shadow-sm group"
+                          >
+                            <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                            <div className="text-right">
+                              <p className="text-[10px] text-slate-400 uppercase tracking-widest">الدرس السابق</p>
+                              <p className="text-sm font-black truncate max-w-[160px]">{prevLesson.title}</p>
+                            </div>
+                          </button>
+                        )}
+                        {nextLesson && (
+                          <button
+                            onClick={() => goToLesson(nextLesson)}
+                            className="flex items-center gap-3 px-8 py-4 bg-indigo-600 text-white rounded-[22px] font-black hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200 group"
+                          >
+                            <div className="text-right">
+                              <p className="text-[10px] text-indigo-200 uppercase tracking-widest">الدرس التالي</p>
+                              <p className="text-sm font-black truncate max-w-[160px]">{nextLesson.title}</p>
+                            </div>
+                            <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })()}
@@ -1039,134 +1177,135 @@ export default function LessonPlayerPage() {
           {/* ── SIDEBAR AREA (VISIBLE ONLY IN WELCOME/SUMMARY) ── */}
           {(currentStage === 'welcome' || currentStage === 'summary') && (
             <div className="xl:col-span-4 space-y-10">
-              
+
               {/* Summary Widget */}
               <div className="premium-card rounded-[40px] p-8 md:p-10 space-y-6">
-                 <h4 className="text-xs font-black text-slate-400 uppercase tracking-[3px] flex items-center gap-3">
-                    <Info className="w-4 h-4 text-indigo-600" />
-                    {t('lesson.lessonSummary')}
-                 </h4>
-                 <p className="text-sm text-slate-600 font-bold leading-relaxed">{lesson.summary || t('lesson.noSummary')}</p>
-                 <div className="pt-6 border-t border-slate-100 grid grid-cols-2 gap-4">
-                    <div className="text-center">
-                       <p className="text-[10px] font-black text-slate-400 uppercase mb-1">{t('lesson.exercises')}</p>
-                       <p className="text-xl font-black text-slate-900">{lesson.questions?.length || 0}</p>
-                    </div>
-                    <div className="text-center border-r border-slate-100">
-                       <p className="text-[10px] font-black text-slate-400 uppercase mb-1">{t('lesson.attachments')}</p>
-                       <p className="text-xl font-black text-slate-900">{lesson.attachments?.length || 0}</p>
-                    </div>
-                 </div>
+                <h4 className="text-xs font-black text-slate-400 uppercase tracking-[3px] flex items-center gap-3">
+                  <Info className="w-4 h-4 text-indigo-600" />
+                  {t('lesson.lessonSummary')}
+                </h4>
+                <p className="text-sm text-slate-600 font-bold leading-relaxed">{lesson.summary || t('lesson.noSummary')}</p>
+                <div className="pt-6 border-t border-slate-100 grid grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1">{t('lesson.exercises')}</p>
+                    <p className="text-xl font-black text-slate-900">{lesson.questions?.length || 0}</p>
+                  </div>
+                  <div className="text-center border-r border-slate-100">
+                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1">{t('lesson.attachments')}</p>
+                    <p className="text-xl font-black text-slate-900">{lesson.attachments?.length || 0}</p>
+                  </div>
+                </div>
               </div>
 
               {/* Resources Widget */}
               <div className="premium-card rounded-[40px] p-8 md:p-10 space-y-6">
-                 <h4 className="text-xs font-black text-slate-400 uppercase tracking-[3px] flex items-center gap-3">
-                    <FileDown className="w-4 h-4 text-indigo-600" />
-                    {t('lesson.attachments')}
-                 </h4>
-                 <div className="space-y-3">
-                    {lesson.attachments?.length > 0 ? lesson.attachments.map((att: any, i: number) => (
-                      <a 
-                        key={i} 
-                        href={att.url} 
-                        target="_blank" 
-                        className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:border-indigo-500/30 transition-all group"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                           <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">
-                              <FileDown className="w-5 h-5" />
-                           </div>
-                           <span className="text-[11px] font-black text-slate-700 truncate">{att.name || `${t('lesson.attachment')} ${i+1}`}</span>
+                <h4 className="text-xs font-black text-slate-400 uppercase tracking-[3px] flex items-center gap-3">
+                  <FileDown className="w-4 h-4 text-indigo-600" />
+                  {t('lesson.attachments')}
+                </h4>
+                <div className="space-y-3">
+                  {lesson.attachments?.length > 0 ? lesson.attachments.map((att: any, i: number) => (
+                    <a
+                      key={i}
+                      href={att.url}
+                      target="_blank"
+                      className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:border-indigo-500/30 transition-all group"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                          <FileDown className="w-5 h-5" />
                         </div>
-                        <ArrowUpRight className="w-4 h-4 text-slate-300" />
-                      </a>
-                    )) : (
-                      <p className="text-[11px] text-slate-400 font-bold text-center py-4">{t('lesson.noAttachments')}</p>
-                    )}
-                 </div>
+                        <span className="text-[11px] font-black text-slate-700 truncate">{att.name || `${t('lesson.attachment')} ${i + 1}`}</span>
+                      </div>
+                      <ArrowUpRight className="w-4 h-4 text-slate-300" />
+                    </a>
+                  )) : (
+                    <p className="text-[11px] text-slate-400 font-bold text-center py-4">{t('lesson.noAttachments')}</p>
+                  )}
+                </div>
               </div>
             </div>
           )}
         </div>
       </div>
 
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.1); border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.2); }
-        
-        @keyframes bounce-slow {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
-        }
-        .animate-bounce-slow { animation: bounce-slow 3s infinite ease-in-out; }
 
-        /* ── Trophy float: gentle up/down with scale pulse ── */
-        @keyframes float-trophy {
-          0%   { transform: translateY(0px) scale(1); box-shadow: 0 0 40px rgba(16,185,129,0.6), 0 20px 40px rgba(5,150,105,0.4); }
-          30%  { transform: translateY(-14px) scale(1.06); box-shadow: 0 0 70px rgba(16,185,129,0.9), 0 30px 60px rgba(5,150,105,0.6); }
-          60%  { transform: translateY(-6px) scale(1.03); }
-          100% { transform: translateY(0px) scale(1); box-shadow: 0 0 40px rgba(16,185,129,0.6), 0 20px 40px rgba(5,150,105,0.4); }
+      @keyframes bounce-slow {
+        0 %, 100 % { transform: translateY(0); }
+          50% {transform: translateY(-10px); }
         }
-        .animate-float-trophy { animation: float-trophy 2.4s infinite ease-in-out; }
+      .animate-bounce-slow {animation: bounce-slow 3s infinite ease-in-out; }
 
-        /* ── Star float: bouncy with glow pulse ── */
-        @keyframes float-star {
-          0%   { transform: translateY(0px) rotate(-3deg) scale(1); }
-          25%  { transform: translateY(-16px) rotate(4deg) scale(1.08); }
-          50%  { transform: translateY(-8px) rotate(-2deg) scale(1.04); }
-          75%  { transform: translateY(-18px) rotate(5deg) scale(1.1); }
-          100% { transform: translateY(0px) rotate(-3deg) scale(1); }
+      /* ── Trophy float: gentle up/down with scale pulse ── */
+      @keyframes float-trophy {
+        0 % { transform: translateY(0px) scale(1); box- shadow: 0 0 40px rgba(16,185,129,0.6), 0 20px 40px rgba(5,150,105,0.4); }
+      30%  {transform: translateY(-14px) scale(1.06); box-shadow: 0 0 70px rgba(16,185,129,0.9), 0 30px 60px rgba(5,150,105,0.6); }
+      60%  {transform: translateY(-6px) scale(1.03); }
+      100% {transform: translateY(0px) scale(1); box-shadow: 0 0 40px rgba(16,185,129,0.6), 0 20px 40px rgba(5,150,105,0.4); }
         }
-        .animate-float-star { animation: float-star 2.2s infinite ease-in-out; }
+      .animate-float-trophy {animation: float-trophy 2.4s infinite ease-in-out; }
 
-        /* ── Slow spin for conic ring & star icon ── */
-        @keyframes spin-slow {
-          from { transform: rotate(0deg); }
-          to   { transform: rotate(360deg); }
+      /* ── Star float: bouncy with glow pulse ── */
+      @keyframes float-star {
+        0 % { transform: translateY(0px) rotate(- 3deg) scale(1); }
+      25%  {transform: translateY(-16px) rotate(4deg) scale(1.08); }
+      50%  {transform: translateY(-8px) rotate(-2deg) scale(1.04); }
+      75%  {transform: translateY(-18px) rotate(5deg) scale(1.1); }
+      100% {transform: translateY(0px) rotate(-3deg) scale(1); }
         }
-        .animate-spin-slow { animation: spin-slow 6s linear infinite; }
+      .animate-float-star {animation: float-star 2.2s infinite ease-in-out; }
 
-        /* ── Shake for retry icon ── */
-        @keyframes shake {
-          0%, 100% { transform: translateX(0) rotate(0deg); }
-          15%      { transform: translateX(-8px) rotate(-6deg); }
-          30%      { transform: translateX(8px) rotate(6deg); }
-          45%      { transform: translateX(-5px) rotate(-3deg); }
-          60%      { transform: translateX(5px) rotate(3deg); }
-          75%      { transform: translateX(-3px) rotate(-1deg); }
-          90%      { transform: translateX(3px) rotate(1deg); }
+      /* ── Slow spin for conic ring & star icon ── */
+      @keyframes spin-slow {
+        from {transform: rotate(0deg); }
+      to   {transform: rotate(360deg); }
         }
-        .animate-shake { animation: shake 1.8s infinite ease-in-out; }
+      .animate-spin-slow {animation: spin-slow 6s linear infinite; }
 
-        /* ── Slow ping for glow rings ── */
-        @keyframes ping-slow {
-          0%   { transform: scale(0.85); opacity: 0.8; }
-          50%  { transform: scale(1.15); opacity: 0.3; }
-          100% { transform: scale(0.85); opacity: 0.8; }
+      /* ── Shake for retry icon ── */
+      @keyframes shake {
+        0 %, 100 % { transform: translateX(0) rotate(0deg); }
+          15%      {transform: translateX(-8px) rotate(-6deg); }
+      30%      {transform: translateX(8px) rotate(6deg); }
+      45%      {transform: translateX(-5px) rotate(-3deg); }
+      60%      {transform: translateX(5px) rotate(3deg); }
+      75%      {transform: translateX(-3px) rotate(-1deg); }
+      90%      {transform: translateX(3px) rotate(1deg); }
         }
-        .animate-ping-slow { animation: ping-slow 2s infinite ease-in-out; }
+      .animate-shake {animation: shake 1.8s infinite ease-in-out; }
 
-        .premium-card {
-          background: rgba(255, 255, 255, 0.8);
-          backdrop-filter: blur(20px);
-          border: 1px solid rgba(255, 255, 255, 0.5);
-          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.02);
+      /* ── Slow ping for glow rings ── */
+      @keyframes ping-slow {
+        0 % { transform: scale(0.85); opacity: 0.8; }
+          50%  {transform: scale(1.15); opacity: 0.3; }
+      100% {transform: scale(0.85); opacity: 0.8; }
+        }
+      .animate-ping-slow {animation: ping-slow 2s infinite ease-in-out; }
+
+      .premium-card {
+        background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.02);
         }
 
-        .premium-gradient-primary {
-          background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+      .premium-gradient-primary {
+        background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
         }
-        
-        .animate-in {
-          animation: fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+
+      .animate-in {
+        animation: fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        
-        @keyframes fade-in {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
+
+      @keyframes fade-in {
+        from {opacity: 0; transform: translateY(10px); }
+      to {opacity: 1; transform: translateY(0); }
         }
       ` }} />
 

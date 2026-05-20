@@ -53,9 +53,46 @@ export default function CoursesPage() {
     fetchCourses();
   }, [router]);
 
+  const toNumber = (value: any) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  // Format course total duration from seconds to human-readable string
+  const formatDuration = (course: any): string => {
+    // Primary: use totalDurationSeconds returned by the new backend stats endpoint
+    const seconds = toNumber(course.totalDurationSeconds);
+    if (seconds > 0) {
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      if (hours > 0 && minutes > 0) {
+        return language === 'ar' ? `${hours}س ${minutes}د` : `${hours}h ${minutes}m`;
+      }
+      if (hours > 0) {
+        return language === 'ar' ? `${hours} ${hours === 1 ? 'ساعة' : 'ساعات'}` : `${hours}h`;
+      }
+      if (minutes > 0) {
+        return language === 'ar' ? `${minutes} دقيقة` : `${minutes}m`;
+      }
+      return language === 'ar' ? 'أقل من دقيقة' : '< 1m';
+    }
+    // Fallback for legacy fields
+    const fallbackHours = (() => {
+      const fromMinutes = toNumber(course.totalDurationMinutes || course.durationMinutes);
+      if (fromMinutes > 0) return Math.max(1, Math.round(fromMinutes / 60));
+      const fromHours = toNumber(course.totalDurationHours || course.durationHours);
+      if (fromHours > 0) return Math.max(1, Math.round(fromHours));
+      return 0;
+    })();
+    if (fallbackHours > 0) {
+      return language === 'ar' ? `${fallbackHours} ساعة` : `${fallbackHours}h`;
+    }
+    return language === 'ar' ? 'غير محدد' : 'Unknown';
+  };
+
   const filteredCourses = courses.filter(course =>
-    course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    course.subject.toLowerCase().includes(searchTerm.toLowerCase())
+    (course.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (course.subject || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (isLoading) {
@@ -126,6 +163,9 @@ export default function CoursesPage() {
             {filteredCourses.length > 0 ? filteredCourses.map((course, index) => {
               const isFinished = course.progressPercent === 100;
               const hasStarted = course.progressPercent > 0;
+              const totalLessons = Number(course.totalLessons || course.lessonsCount || course.course?.totalLessons || 0);
+              const durationLabel = formatDuration(course);
+              const totalQuestions = Number(course.totalQuestions || 0);
 
               return (
                 <div
@@ -174,9 +214,15 @@ export default function CoursesPage() {
                         <h3 className="text-base sm:text-lg md:text-2xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors truncate tracking-tight">
                           {course.title}
                         </h3>
-                        <div className="flex items-center gap-3 md:gap-4 text-slate-400 font-bold text-[10px] md:text-xs">
-                           <span className="flex items-center gap-1"><Clock className="w-3 md:w-3.5 h-3 md:h-3.5" /> 12 {t('courses.hours')}</span>
-                           <span className="flex items-center gap-1"><Play className="w-3 md:w-3.5 h-3 md:h-3.5" /> {course.totalLessons || 0} {t('courses.lessons')}</span>
+                        <div className="flex items-center gap-3 md:gap-4 text-slate-400 font-bold text-[10px] md:text-xs flex-wrap">
+                           <span className="flex items-center gap-1"><Clock className="w-3 md:w-3.5 h-3 md:h-3.5" /> {durationLabel}</span>
+                           <span className="flex items-center gap-1"><Play className="w-3 md:w-3.5 h-3 md:h-3.5" /> {totalLessons} {t('courses.lessons')}</span>
+                           {totalQuestions > 0 && (
+                             <span className="flex items-center gap-1">
+                               <svg xmlns="http://www.w3.org/2000/svg" className="w-3 md:w-3.5 h-3 md:h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+                               {totalQuestions} {language === 'ar' ? 'سؤال' : 'Q'}
+                             </span>
+                           )}
                         </div>
                       </div>
                     </div>

@@ -98,7 +98,7 @@ export default function CreateCoursePage() {
     publishDate: "",
     cutOffDate: "",
     slides: [
-      { id: Date.now(), type: 'TEXT', label: 'CONTENT', title: "المقدمة", content: "", sections: [] }
+      { id: Date.now(), type: 'TEXT', label: 'CONTENT', title: "المقدمة", content: "", videoUrl: "", sections: [] }
     ],
     questions: [],
     assignments: [],
@@ -226,7 +226,7 @@ export default function CreateCoursePage() {
       isVisible: true,
       publishDate: "",
       cutOffDate: "",
-      slides: [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: "المقدمة", content: "", sections: [] }],
+      slides: [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: "المقدمة", content: "", videoUrl: "", sections: [] }],
       questions: [],
       assignments: [],
       attachments: []
@@ -279,8 +279,8 @@ export default function CreateCoursePage() {
 
   const addBlock = (type: 'TEXT' | 'QUESTION') => {
     const newBlock = type === 'TEXT' 
-      ? { id: Date.now(), type: 'TEXT', label: 'CONTENT', title: `محتوى جديد`, content: "", sections: [] }
-      : { id: Date.now(), type: 'QUESTION', label: 'MCQ', title: `سؤال جديد`, content: "", options: ["", "", "", ""], correctAnswer: "", sections: [] };
+      ? { id: Date.now(), type: 'TEXT', label: 'CONTENT', title: `محتوى جديد`, content: "", videoUrl: "", sections: [] }
+      : { id: Date.now(), type: 'QUESTION', label: 'MCQ', title: `سؤال جديد`, content: "", videoUrl: "", options: ["", "", "", ""], correctAnswer: "", sections: [] };
     setCurrentLesson({
       ...currentLesson,
       slides: [...currentLesson.slides, newBlock]
@@ -1007,6 +1007,16 @@ export default function CreateCoursePage() {
                           </div>
 
                           <div className="p-6 space-y-6">
+                            <div className="mb-4">
+                              <label className="text-xs font-black text-slate-500 uppercase tracking-widest block mb-2">رابط فيديو (اختياري) خاص بهذا القسم</label>
+                              <input
+                                type="url"
+                                value={block.videoUrl || ""}
+                                onChange={(e) => updateBlock(sIdx, 'videoUrl', e.target.value)}
+                                placeholder="أضف رابط يوتيوب أو فيميو هنا..."
+                                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 font-bold"
+                              />
+                            </div>
                             <div>
                               <RichTextEditor 
                                 value={block.content}

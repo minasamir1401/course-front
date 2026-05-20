@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useParams, useRouter } from "next/navigation";
 import { API_URL, getFullImageUrl } from '@/lib/api';
+import { fetchStudentStats, readCachedStudentStats } from "@/lib/student-stats";
 import {
   PlaySquare, FileText, HelpCircle, ChevronLeft, ChevronRight,
   BookOpen, Clock, CheckCircle, List,
@@ -21,6 +22,7 @@ export default function CourseDetailsPage() {
   const [course, setCourse] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [now] = useState(new Date());
+  const [courseProgressPercent, setCourseProgressPercent] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchCourseDetails = async () => {
@@ -54,6 +56,21 @@ export default function CourseDetailsPage() {
               .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
           }
           setCourse(data);
+
+          try {
+            const cached = readCachedStudentStats();
+            const token = localStorage.getItem("lms_token");
+            const stats = cached || (token ? await fetchStudentStats(token) : null);
+            const progresses = stats?.courseProgresses || [];
+            const progressItem = progresses.find((p: any) =>
+              String(p.id) === String(courseId) || String(p.courseId) === String(courseId)
+            );
+            if (progressItem && typeof progressItem.progressPercent === "number") {
+              setCourseProgressPercent(progressItem.progressPercent);
+            }
+          } catch (e) {
+            // keep fallback calculation from lesson progresses
+          }
         }
       } catch (error) {
         console.error("Failed to fetch course details:", error);
@@ -66,10 +83,38 @@ export default function CourseDetailsPage() {
   }, [courseId, router, now]);
 
   const formatDuration = (seconds: number) => {
-    if (!seconds) return '00:00';
+    if (!seconds) return '--:--';
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const toNumber = (value: any) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const lessonDurationSeconds = (lesson: any) => {
+    const directSec = toNumber(lesson.durationSeconds || lesson.videoDurationSeconds);
+    if (directSec > 0) return directSec;
+    const minutes = toNumber(lesson.durationMinutes || lesson.videoDurationMinutes);
+    if (minutes > 0) return Math.round(minutes * 60);
+    const legacy = toNumber(lesson.duration);
+    return legacy > 0 ? legacy : 0;
+  };
+
+  const lessonQuestionsCount = (lesson: any) => {
+    const q = lesson?.questions;
+    if (Array.isArray(q)) return q.length;
+    if (typeof q === "string") {
+      try {
+        const parsed = JSON.parse(q);
+        return Array.isArray(parsed) ? parsed.length : 0;
+      } catch {
+        return 0;
+      }
+    }
+    return 0;
   };
 
   if (isLoading) {
@@ -100,7 +145,8 @@ export default function CourseDetailsPage() {
 
   const completedCount = course.lessons?.filter((l: any) => l.progresses?.[0]?.isCompleted).length || 0;
   const totalLessons = course.lessons?.length || 0;
-  const progressPercent = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+  const fallbackProgressPercent = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+  const progressPercent = courseProgressPercent ?? fallbackProgressPercent;
 
   return (
     <DashboardLayout>
@@ -222,12 +268,12 @@ export default function CourseDetailsPage() {
                       <div className="flex items-center justify-center md:justify-start gap-3 text-slate-400 text-xs font-bold">
                         <span className="flex items-center gap-1">
                           <Clock className="w-3.5 h-3.5" />
-                          {formatDuration(lesson.duration || 0)}
+                          {formatDuration(lessonDurationSeconds(lesson))}
                         </span>
-                        {lesson.questions?.length > 0 && (
+                        {lessonQuestionsCount(lesson) > 0 && (
                           <span className="flex items-center gap-1">
                             <HelpCircle className="w-3.5 h-3.5" />
-                            {JSON.parse(lesson.questions).length} {t('courseDetails.questions')}
+                            {lessonQuestionsCount(lesson)} {t('courseDetails.questions')}
                           </span>
                         )}
                       </div>
