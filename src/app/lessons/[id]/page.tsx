@@ -57,32 +57,39 @@ const QuestionFeedback = ({ isCorrect, correctAnswer, language }: any) => {
 
 const SectionsInlineTabs = ({
   sections,
-  language
+  language,
+  isSubmitted = true
 }: {
   sections: any[],
-  language: string
+  language: string,
+  isSubmitted?: boolean
 }) => {
   const SECTION_STYLE_PRESETS: Record<string, any> = {
-    HINT: { icon: HelpCircle, bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", label: "تلميح", chip: "bg-amber-100 text-amber-700 border-amber-200" },
-    TIP: { icon: Info, bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200", label: "نصيحة", chip: "bg-blue-100 text-blue-700 border-blue-200" },
-    WARNING: { icon: AlertCircle, bg: "bg-red-50", text: "text-red-700", border: "border-red-200", label: "تحذير", chip: "bg-red-100 text-red-700 border-red-200" },
-    KEY_INSIGHT: { icon: Sparkles, bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200", label: "نقطة هامة", chip: "bg-purple-100 text-purple-700 border-purple-200" },
-    FEEDBACK: { icon: MessageSquare, bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", label: "ملاحظات", chip: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-    EXPLANATION: { icon: BookOpen, bg: "bg-indigo-50", text: "text-indigo-700", border: "border-indigo-200", label: "شرح", chip: "bg-indigo-100 text-indigo-700 border-indigo-200" }
+    HINT: { icon: HelpCircle, bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", label: language === 'ar' ? "تلميح" : "Hint", chip: "bg-amber-100 text-amber-700 border-amber-200" },
+    TIP: { icon: Info, bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200", label: language === 'ar' ? "نصيحة" : "Tip", chip: "bg-blue-100 text-blue-700 border-blue-200" },
+    WARNING: { icon: AlertCircle, bg: "bg-red-50", text: "text-red-700", border: "border-red-200", label: language === 'ar' ? "تحذير" : "Warning", chip: "bg-red-100 text-red-700 border-red-200" },
+    KEY_INSIGHT: { icon: Sparkles, bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200", label: language === 'ar' ? "نقطة هامة" : "Key Insight", chip: "bg-purple-100 text-purple-700 border-purple-200" },
+    FEEDBACK: { icon: MessageSquare, bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", label: language === 'ar' ? "ملاحظات" : "Feedback", chip: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+    EXPLANATION: { icon: BookOpen, bg: "bg-indigo-50", text: "text-indigo-700", border: "border-indigo-200", label: language === 'ar' ? "شرح" : "Explanation", chip: "bg-indigo-100 text-indigo-700 border-indigo-200" }
   };
 
   const filteredSections = (sections || []).filter((sec) => sec?.type !== "FEEDBACK");
   const [activeIndex, setActiveIndex] = useState(0);
 
+  // Default active index to the first unlocked section (usually HINT) if currently locked
   useEffect(() => {
-    setActiveIndex(0);
-  }, [filteredSections.length]);
+    const defaultIdx = filteredSections.findIndex(
+      (sec) => sec.type === 'HINT' || isSubmitted
+    );
+    setActiveIndex(defaultIdx >= 0 ? defaultIdx : 0);
+  }, [filteredSections.length, isSubmitted]);
 
   if (!filteredSections.length) return null;
 
   const active = filteredSections[Math.min(activeIndex, filteredSections.length - 1)];
   const preset = SECTION_STYLE_PRESETS[active.type] || SECTION_STYLE_PRESETS.HINT;
   const ActiveIcon = preset.icon;
+  const isActiveLocked = active.type !== 'HINT' && !isSubmitted;
 
   return (
     <div className="mt-5 w-full space-y-4">
@@ -91,30 +98,261 @@ const SectionsInlineTabs = ({
           const p = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.HINT;
           const Icon = p.icon;
           const isActive = idx === activeIndex;
+          const isLocked = sec.type !== 'HINT' && !isSubmitted;
+
           return (
             <button
               key={sec.id || idx}
               type="button"
-              onClick={() => setActiveIndex(idx)}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border-2 font-black text-xs md:text-sm transition-all ${isActive ? `${p.chip} shadow-sm scale-[1.02]` : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
+              onClick={() => {
+                if (!isLocked) {
+                  setActiveIndex(idx);
+                }
+              }}
+              disabled={isLocked}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border-2 font-black text-xs md:text-sm transition-all ${
+                isLocked 
+                  ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60' 
+                  : isActive 
+                    ? `${p.chip} shadow-sm scale-[1.02]` 
+                    : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
+              }`}
             >
-              <Icon className="w-4 h-4" />
+              {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Icon className="w-4 h-4" />}
               <span>{p.label}</span>
+              {isLocked && <span className="text-[10px]">🔒</span>}
             </button>
           );
         })}
       </div>
 
-      <div className={`rounded-2xl border-2 p-5 md:p-6 ${preset.bg} ${preset.border}`}>
-        <div className={`flex items-center gap-2 mb-3 font-black ${preset.text}`}>
-          <ActiveIcon className="w-5 h-5" />
+      <div className={`rounded-2xl border-2 p-5 md:p-6 transition-all duration-300 ${isActiveLocked ? 'bg-slate-50 border-slate-200 text-slate-400' : `${preset.bg} ${preset.border}`}`}>
+        <div className={`flex items-center gap-2 mb-3 font-black ${isActiveLocked ? 'text-slate-500' : preset.text}`}>
+          {isActiveLocked ? <Lock className="w-5 h-5 text-slate-400 animate-pulse" /> : <ActiveIcon className="w-5 h-5" />}
           <span>{preset.label}</span>
         </div>
-        <div
-          className={`prose prose-sm md:prose-base max-w-none leading-relaxed break-words ${preset.text}`}
-          dangerouslySetInnerHTML={{ __html: active.content }}
-        />
+        {isActiveLocked ? (
+          <div className="flex flex-col items-center justify-center py-6 text-center gap-2">
+            <span className="text-3xl animate-bounce">🔒</span>
+            <p className="font-bold text-sm md:text-base text-slate-700">
+              {language === 'ar' 
+                ? 'هذا القسم مغلق حتى تقوم بتأكيد إجابتك' 
+                : 'This section is locked until you submit your answer'}
+            </p>
+            <p className="text-xs text-slate-400">
+              {language === 'ar'
+                ? 'قم بحل السؤال وتأكيد إجابتك أولاً لعرض هذا المحتوى'
+                : 'Solve the question and confirm your answer first to view this content'}
+            </p>
+          </div>
+        ) : (
+          <div
+            className={`prose prose-sm md:prose-base max-w-none leading-relaxed break-words ${preset.text}`}
+            dangerouslySetInnerHTML={{ __html: active.content }}
+          />
+        )}
       </div>
+    </div>
+  );
+};
+
+const isQuestionLike = (item: any) =>
+  item?.type === 'QUESTION' || item?.type === 'MCQ' || item?.type === 'TRUE_FALSE' || item?.type === 'MULTI_SELECT' || item?.label === 'MULTI_SELECT';
+
+const SlideSectionsToggle = ({ slide, slideIndex, slideSubmitted, slideAnswers, language }: { slide: any; slideIndex: number; slideSubmitted: Record<number, boolean>; slideAnswers: Record<number, any>; language: string }) => {
+  const SECTION_STYLE_PRESETS: Record<string, any> = {
+    HINT: { icon: HelpCircle, bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", label: "تلميح" },
+    TIP: { icon: Info, bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200", label: "نصيحة" },
+    WARNING: { icon: AlertCircle, bg: "bg-red-50", text: "text-red-700", border: "border-red-200", label: "تحذير" },
+    KEY_INSIGHT: { icon: Sparkles, bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200", label: "نقطة هامة" },
+    FEEDBACK: { icon: MessageSquare, bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", label: "ملاحظات" },
+    EXPLANATION: { icon: BookOpen, bg: "bg-indigo-50", text: "text-indigo-700", border: "border-indigo-200", label: "شرح مفصل" }
+  };
+
+  if (!slide.sections || slide.sections.length === 0) return null;
+  
+  const filteredSections = slide.sections.filter((sec: any) => sec.type !== 'FEEDBACK');
+  if (filteredSections.length === 0) return null;
+  
+  const isSubmitted = slideSubmitted[slideIndex] || slide.type !== 'QUESTION';
+  const visibleSections = isSubmitted 
+    ? filteredSections 
+    : filteredSections.filter((sec: any) => sec.type === 'HINT');
+    
+  if (visibleSections.length === 0) return null;
+
+  const [showSlideSections, setShowSlideSections] = useState(false);
+  const hintSection = visibleSections.find((s: any) => s.type === 'HINT');
+  const otherSections = visibleSections.filter((s: any) => s.type !== 'HINT');
+  
+  return (
+    <div className="mt-6 w-full max-w-4xl space-y-3">
+      {hintSection && (
+        <button
+          onClick={() => setShowSlideSections(!showSlideSections)}
+          className="w-full flex items-center gap-3 px-5 py-3 rounded-2xl bg-amber-50 border-2 border-amber-200 hover:bg-amber-100 transition-all font-black text-amber-700 text-sm"
+        >
+          <HelpCircle className="w-5 h-5" />
+          <span>تلميح (Hint)</span>
+          <span className={`mr-auto text-lg transition-transform ${showSlideSections ? 'rotate-180' : ''}`}>▼</span>
+        </button>
+      )}
+      {showSlideSections && (
+        <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+          {hintSection && (
+            <div className="p-5 rounded-2xl bg-amber-50 border-2 border-amber-200">
+              <div className="flex items-center gap-2 mb-3 font-black text-amber-700">
+                <HelpCircle className="w-5 h-5" />
+                <span>تلميح</span>
+              </div>
+              <div className="prose prose-sm max-w-none text-amber-700" dangerouslySetInnerHTML={{ __html: hintSection.content }} />
+            </div>
+          )}
+          {otherSections.map((sec: any, sIdx: number) => {
+            const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
+            return (
+              <div key={sec.id || sIdx} className={`p-5 rounded-2xl border-2 ${preset.bg} ${preset.border}`}>
+                <div className={`flex items-center gap-2 mb-3 font-black ${preset.text}`}>
+                  {React.createElement(preset.icon, { className: "w-5 h-5" })}
+                  <span>{preset.label}</span>
+                </div>
+                <div className={`prose prose-sm max-w-none ${preset.text}`} dangerouslySetInnerHTML={{ __html: sec.content }} />
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const AssignmentSectionsToggle = ({ assignment, assignmentIndex, assignmentSubmitted, assignmentAnswers }: { assignment: any; assignmentIndex: number; assignmentSubmitted: Record<number, boolean>; assignmentAnswers: Record<number, any> }) => {
+  const SECTION_STYLE_PRESETS: Record<string, any> = {
+    HINT: { icon: HelpCircle, bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", label: "تلميح" },
+    TIP: { icon: Info, bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200", label: "نصيحة" },
+    WARNING: { icon: AlertCircle, bg: "bg-red-50", text: "text-red-700", border: "border-red-200", label: "تحذير" },
+    KEY_INSIGHT: { icon: Sparkles, bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200", label: "نقطة هامة" },
+    FEEDBACK: { icon: MessageSquare, bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", label: "ملاحظات" },
+    EXPLANATION: { icon: BookOpen, bg: "bg-indigo-50", text: "text-indigo-700", border: "border-indigo-200", label: "شرح مفصل" }
+  };
+
+  if (!assignment.sections || assignment.sections.length === 0) return null;
+  const filteredSections = assignment.sections.filter((sec: any) => sec.type !== 'FEEDBACK');
+  if (filteredSections.length === 0) return null;
+  const isSubmitted = assignmentSubmitted[assignmentIndex] || !isQuestionLike(assignment);
+  const visibleSections = isSubmitted
+    ? filteredSections
+    : filteredSections.filter((sec: any) => sec.type === 'HINT');
+  if (visibleSections.length === 0) return null;
+  
+  const [showSections, setShowSections] = useState(false);
+  const hintSection = visibleSections.find((s: any) => s.type === 'HINT');
+  const otherSections = visibleSections.filter((s: any) => s.type !== 'HINT');
+  
+  return (
+    <div className="mt-4 space-y-3">
+      {hintSection && (
+        <button
+          onClick={() => setShowSections(!showSections)}
+          className="w-full flex items-center gap-3 px-5 py-3 rounded-2xl bg-amber-50 border-2 border-amber-200 hover:bg-amber-100 transition-all font-black text-amber-700 text-sm"
+        >
+          <HelpCircle className="w-5 h-5" />
+          <span>تلميح (Hint)</span>
+          <span className={`mr-auto text-lg transition-transform ${showSections ? 'rotate-180' : ''}`}>▼</span>
+        </button>
+      )}
+      {showSections && (
+        <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+          {hintSection && (
+            <div className="p-5 rounded-2xl bg-amber-50 border-2 border-amber-200">
+              <div className="flex items-center gap-2 mb-3 font-black text-amber-700">
+                <HelpCircle className="w-5 h-5" />
+                <span>تلميح</span>
+              </div>
+              <div className="prose prose-sm max-w-none text-amber-700" dangerouslySetInnerHTML={{ __html: hintSection.content }} />
+            </div>
+          )}
+          {otherSections.map((sec: any, sIdx: number) => {
+            const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
+            return (
+              <div key={sec.id || sIdx} className={`p-5 rounded-2xl border-2 ${preset.bg} ${preset.border}`}>
+                <div className={`flex items-center gap-2 mb-3 font-black ${preset.text}`}>
+                  {React.createElement(preset.icon, { className: "w-5 h-5" })}
+                  <span>{preset.label}</span>
+                </div>
+                <div className={`prose prose-sm max-w-none ${preset.text}`} dangerouslySetInnerHTML={{ __html: sec.content }} />
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const QuizSectionsToggle = ({ question, questionIndex, quizSubmitted }: { question: any; questionIndex: number; quizSubmitted: Record<number, boolean> }) => {
+  const SECTION_STYLE_PRESETS: Record<string, any> = {
+    HINT: { icon: HelpCircle, bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", label: "تلميح" },
+    TIP: { icon: Info, bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200", label: "نصيحة" },
+    WARNING: { icon: AlertCircle, bg: "bg-red-50", text: "text-red-700", border: "border-red-200", label: "تحذير" },
+    KEY_INSIGHT: { icon: Sparkles, bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200", label: "نقطة هامة" },
+    FEEDBACK: { icon: MessageSquare, bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", label: "ملاحظات" },
+    EXPLANATION: { icon: BookOpen, bg: "bg-indigo-50", text: "text-indigo-700", border: "border-indigo-200", label: "شرح مفصل" }
+  };
+
+  if (!question.sections || question.sections.length === 0) return null;
+  
+  const filteredSections = question.sections.filter((sec: any) => sec.type !== 'FEEDBACK');
+  if (filteredSections.length === 0) return null;
+  
+  const isSubmitted = quizSubmitted[questionIndex];
+  const visibleSections = isSubmitted 
+    ? filteredSections 
+    : filteredSections.filter((sec: any) => sec.type === 'HINT');
+    
+  if (visibleSections.length === 0) return null;
+
+  const [showQuizSections, setShowQuizSections] = useState(false);
+  const hintSection = visibleSections.find((s: any) => s.type === 'HINT');
+  const otherSections = visibleSections.filter((s: any) => s.type !== 'HINT');
+  
+  return (
+    <div className="mt-4 space-y-3 animate-in fade-in slide-in-from-top-2">
+      {hintSection && (
+        <button
+          onClick={() => setShowQuizSections(!showQuizSections)}
+          className="w-full flex items-center gap-3 px-5 py-3 rounded-2xl bg-amber-50 border-2 border-amber-200 hover:bg-amber-100 transition-all font-black text-amber-700 text-sm"
+        >
+          <HelpCircle className="w-5 h-5" />
+          <span>تلميح (Hint)</span>
+          <span className={`mr-auto text-lg transition-transform ${showQuizSections ? 'rotate-180' : ''}`}>▼</span>
+        </button>
+      )}
+      {showQuizSections && (
+        <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+          {hintSection && (
+            <div className="p-5 rounded-2xl bg-amber-50 border-2 border-amber-200">
+              <div className="flex items-center gap-2 mb-3 font-black text-amber-700">
+                <HelpCircle className="w-5 h-5" />
+                <span>تلميح</span>
+              </div>
+              <div className="prose prose-sm max-w-none text-amber-700" dangerouslySetInnerHTML={{ __html: hintSection.content }} />
+            </div>
+          )}
+          {otherSections.map((sec: any, sIdx: number) => {
+            const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
+            return (
+              <div key={sec.id || sIdx} className={`p-5 rounded-2xl border-2 ${preset.bg} ${preset.border}`}>
+                <div className={`flex items-center gap-2 mb-3 font-black ${preset.text}`}>
+                  {React.createElement(preset.icon, { className: "w-5 h-5" })}
+                  <span>{preset.label}</span>
+                </div>
+                <div className={`prose prose-sm max-w-none ${preset.text}`} dangerouslySetInnerHTML={{ __html: sec.content }} />
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
@@ -152,9 +390,6 @@ export default function LessonPlayerPage() {
   const [attemptedQuestionsCount, setAttemptedQuestionsCount] = useState(0);
   const [attemptedMaxScore, setAttemptedMaxScore] = useState(0);
   const [actualVideoDuration, setActualVideoDuration] = useState<number>(0);
-
-  const isQuestionLike = (item: any) =>
-    item?.type === 'QUESTION' || item?.type === 'MCQ' || item?.type === 'TRUE_FALSE' || item?.type === 'MULTI_SELECT' || item?.label === 'MULTI_SELECT';
 
   const normalizeAnswer = (value: any) => String(value ?? '').trim().toLowerCase();
 
@@ -438,13 +673,23 @@ export default function LessonPlayerPage() {
 
         {/* ── TOP HEADER BAR ── */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-6 px-1 sm:px-2">
-          <div className="flex items-center gap-6">
-            <button
-              onClick={() => router.back()}
-              className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center hover:bg-slate-50 transition-all shadow-sm"
-            >
-              <ArrowRight className="w-6 h-6 text-slate-900" />
-            </button>
+          <div className="flex items-center gap-4 sm:gap-6 w-full sm:w-auto">
+            {prevLesson ? (
+              <button
+                onClick={() => goToLesson(prevLesson)}
+                className="w-12 h-12 rounded-2xl bg-white border-2 border-slate-100 flex items-center justify-center hover:border-indigo-400 hover:bg-indigo-50 transition-all shadow-sm group shrink-0"
+                title={prevLesson.title}
+              >
+                <ChevronRight className="w-6 h-6 text-slate-400 group-hover:text-indigo-600 transition-colors" />
+              </button>
+            ) : (
+              <button
+                onClick={() => router.back()}
+                className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center hover:bg-slate-50 transition-all shadow-sm"
+              >
+                <ArrowRight className="w-6 h-6 text-slate-900" />
+              </button>
+            )}
             <div>
               <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">{lesson.title}</h1>
               <p className="text-indigo-600 font-bold text-sm flex items-center gap-2">
@@ -452,6 +697,15 @@ export default function LessonPlayerPage() {
                 {course?.title || t('lesson.educationalCourse')}
               </p>
             </div>
+            {nextLesson && (
+              <button
+                onClick={() => goToLesson(nextLesson)}
+                className="w-12 h-12 rounded-2xl bg-indigo-600 border-2 border-indigo-600 flex items-center justify-center hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 group shrink-0"
+                title={nextLesson.title}
+              >
+                <ChevronLeft className="w-6 h-6 text-white group-hover:scale-110 transition-transform" />
+              </button>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
@@ -655,7 +909,7 @@ export default function LessonPlayerPage() {
                       onClick={() => setSlideSubmitted({ ...slideSubmitted, [currentSlideIndex]: true })}
                       className="mt-6 bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black text-lg hover:bg-indigo-700 shadow-xl"
                     >
-                      تأكيد الإجابة
+                      تأكيد الإجابة ✓
                     </button>
                   )}
 
@@ -674,23 +928,13 @@ export default function LessonPlayerPage() {
                     );
                   })()}
 
-                  {(() => {
-                    const slide = lesson.slides[currentSlideIndex];
-                    if (!slide.sections || slide.sections.length === 0) return null;
-                    
-                    const isSubmitted = slideSubmitted[currentSlideIndex] || slide.type !== 'QUESTION';
-                    const visibleSections = isSubmitted 
-                      ? slide.sections 
-                      : slide.sections.filter((sec: any) => sec.type === 'HINT');
-                      
-                    if (visibleSections.length === 0) return null;
-                    
-                    return (
-                      <div className="mt-4 w-full max-w-4xl">
-                        <SectionsInlineTabs sections={visibleSections} language={language} />
-                      </div>
-                    );
-                  })()}
+                  <SlideSectionsToggle 
+                    slide={lesson.slides[currentSlideIndex]} 
+                    slideIndex={currentSlideIndex}
+                    slideSubmitted={slideSubmitted} 
+                    slideAnswers={slideAnswers}
+                    language={language}
+                  />
                 </div>
 
                 <div className="p-6 border-t border-slate-100 bg-slate-50/30 flex justify-between items-center gap-6 shrink-0">
@@ -809,20 +1053,12 @@ export default function LessonPlayerPage() {
                           );
                         })()}
 
-                        {/* Assignment Sections (Hints, Explanations, etc.) */}
-                        {(() => {
-                          if (!as.sections || as.sections.length === 0) return null;
-                          const isSubmitted = assignmentSubmitted[idx] || !isQuestionLike(as);
-                          const visibleSections = isSubmitted
-                            ? as.sections
-                            : as.sections.filter((sec: any) => sec.type === 'HINT');
-                          if (visibleSections.length === 0) return null;
-                          return (
-                            <div className="mt-4">
-                              <SectionsInlineTabs sections={visibleSections} language={language} />
-                            </div>
-                          );
-                        })()}
+                        <AssignmentSectionsToggle 
+                          assignment={as} 
+                          assignmentIndex={idx}
+                          assignmentSubmitted={assignmentSubmitted} 
+                          assignmentAnswers={assignmentAnswers}
+                        />
                       </div>
                     );
                   }) : (
@@ -974,24 +1210,11 @@ export default function LessonPlayerPage() {
                           );
                         })()}
 
-                        {/* Question Sections (Hints, Explanations, Feedback) */}
-                        {(() => {
-                          const question = lesson.questions[currentQuestionIndex];
-                          if (!question.sections || question.sections.length === 0) return null;
-                          
-                          const isSubmitted = quizSubmitted[currentQuestionIndex];
-                          const visibleSections = isSubmitted 
-                            ? question.sections 
-                            : question.sections.filter((sec: any) => sec.type === 'HINT');
-                            
-                          if (visibleSections.length === 0) return null;
-                          
-                          return (
-                            <div className="mt-4 animate-in fade-in slide-in-from-top-2">
-                              <SectionsInlineTabs sections={visibleSections} language={language} />
-                            </div>
-                          );
-                        })()}
+                        <QuizSectionsToggle 
+                          question={lesson.questions[currentQuestionIndex]} 
+                          questionIndex={currentQuestionIndex}
+                          quizSubmitted={quizSubmitted}
+                        />
                       </div>
 
                       <div className="p-6 md:p-8 border-t border-slate-100 bg-slate-50/30 flex justify-between items-center shrink-0">

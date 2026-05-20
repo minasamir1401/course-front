@@ -388,7 +388,7 @@ export default function EditCoursePage() {
     showToast("تم إضافة السؤال للدرس", "success");
   };
 
-  const saveLesson = () => {
+  const saveLesson = async () => {
     if (!currentLesson.title) {
       showToast("يجب إدخال عنوان الدرس", "error");
       return;
@@ -401,6 +401,51 @@ export default function EditCoursePage() {
     }
     setLessons(newLessons);
     setIsLessonModalOpen(false);
+
+    const token = localStorage.getItem("super_admin_token");
+    if (!token || !courseId) return;
+
+    try {
+      const targetSchoolIds = (courseData.schoolIds || []).filter(Boolean);
+      const res = await fetch(`${API_URL}/school/courses/${courseId}`, {
+        method: 'PUT',
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          ...courseData,
+          isCentral: targetSchoolIds.length === 0,
+          schoolId: targetSchoolIds.length > 0 ? targetSchoolIds[0] : null,
+          schoolIds: targetSchoolIds,
+          lessons: newLessons.map((l) => ({
+            title: l.title,
+            videoUrl: l.videoUrl || null,
+            summary: l.summary || null,
+            notes: l.notes || null,
+            standards: l.standards || null,
+            indicators: l.indicators || null,
+            learningOutcomes: l.learningOutcomes || null,
+            isVisible: l.isVisible !== undefined ? l.isVisible : true,
+            publishDate: l.publishDate ? new Date(l.publishDate).toISOString() : null,
+            cutOffDate: l.cutOffDate ? new Date(l.cutOffDate).toISOString() : null,
+            attachments: JSON.stringify(l.attachments || []),
+            slides: JSON.stringify(l.slides || []),
+            questions: JSON.stringify(l.questions || []),
+            assignments: JSON.stringify(l.assignments || [])
+          }))
+        })
+      });
+
+      if (res.ok) {
+        showToast("تم حفظ الدرس ونشره تلقائياً ✅", "success");
+      } else {
+        showToast("تم الحفظ محلياً لكن فشل النشر - تأكد من الاتصال", "error");
+      }
+    } catch (error: any) {
+      console.error("Auto-save error:", error);
+      showToast("تم الحفظ محلياً لكن فشل النشر", "error");
+    }
   };
 
   // Excel Upload hidden as requested
@@ -836,21 +881,21 @@ export default function EditCoursePage() {
                            </div>
                          </div>
                           <div className="space-y-4 pt-4 border-t border-slate-100">
-                            <div className="flex justify-between items-center">
-                              <label className="text-xs font-black text-slate-400 uppercase tracking-widest">أقسام إضافية (ملاحظات، شرح، إلخ)</label>
-                              <div className="relative" data-dropdown-root="true" onClick={(e) => e.stopPropagation()}>
-                                 <button 
-                                   type="button"
-                                   onClick={(e) => {
-                                     e.preventDefault();
-                                     e.stopPropagation();
-                                     setOpenDropdownId(openDropdownId === "assignment" ? null : "assignment");
-                                   }}
-                                   className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1"
-                                 >
-                                   <Plus className="w-4 h-4"/> إضافة قسم
-                                 </button>
-                                 <div className={`absolute right-0 left-auto mt-2 w-48 bg-white border border-slate-100 rounded-xl shadow-xl p-2 z-50 ${openDropdownId === "assignment" ? "block" : "hidden"}`}>
+                             <div className="flex justify-between items-center">
+                               <label className="text-xs font-black text-slate-400 uppercase tracking-widest">أقسام إضافية (ملاحظات، شرح، إلخ)</label>
+                               <div className="relative" data-dropdown-root="true" onClick={(e) => e.stopPropagation()}>
+                                  <button 
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setOpenDropdownId(openDropdownId === "assignment-sections" ? null : "assignment-sections");
+                                    }}
+                                    className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1"
+                                  >
+                                    <Plus className="w-4 h-4"/> إضافة قسم
+                                  </button>
+                                  <div className={`absolute right-0 left-auto mt-2 w-48 bg-white border border-slate-100 rounded-xl shadow-xl p-2 z-50 ${openDropdownId === "assignment-sections" ? "block" : "hidden"}`}>
                                   {['FEEDBACK', 'HINT', 'EXPLANATION', 'TIP', 'WARNING', 'KEY_INSIGHT'].map(secType => (
                                     <button
                                       key={secType}
@@ -1111,7 +1156,7 @@ export default function EditCoursePage() {
                               />
                             </div>
 
-                            {block.type === 'QUESTION' && (
+                  {block.type === 'QUESTION' && (
                               <div className="bg-slate-100 p-6 rounded-2xl border border-slate-200 space-y-4">
                                 <label className="text-xs font-black text-slate-500 uppercase tracking-widest block">خيارات الإجابة</label>
                                 {block.label === 'TRUE_FALSE' ? (
@@ -1127,7 +1172,7 @@ export default function EditCoursePage() {
                                   </div>
                                 ) : (
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {(block.options || []).map((opt: string, oIdx: number) => {
+                                    {(block.options || ["", "", "", ""]).map((opt: string, oIdx: number) => {
                                       const isSelected = block.label === 'MULTI_SELECT' 
                                         ? (block.correctAnswers || []).includes(opt) 
                                         : block.correctAnswer === opt;
@@ -1152,7 +1197,7 @@ export default function EditCoursePage() {
                                             type="text"
                                             value={opt}
                                             onChange={(e) => {
-                                              const newOpts = [...(block.options || [])];
+                                              const newOpts = [...(block.options || ["", "", "", ""])];
                                               const oldVal = newOpts[oIdx];
                                               const newVal = e.target.value;
                                               newOpts[oIdx] = newVal;
@@ -1182,7 +1227,7 @@ export default function EditCoursePage() {
                                       );
                                     })}
                                     <button 
-                                      onClick={() => updateBlock(sIdx, 'options', [...(block.options||[]), ""])}
+                                      onClick={() => updateBlock(sIdx, 'options', [...(block.options||["", "", "", ""]), ""])}
                                       className="flex justify-center items-center p-3 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-200 hover:border-slate-400 transition-all"
                                     >
                                       <Plus className="w-5 h-5 ml-1" /> إضافة خيار
@@ -1322,7 +1367,7 @@ export default function EditCoursePage() {
                           ))}
                         </div>
                         <div className="space-y-4 pt-4 border-t border-slate-100">
-                          <div className="flex justify-between items-center">
+                            <div className="flex justify-between items-center">
                             <label className="text-xs font-black text-slate-400 uppercase tracking-widest">أقسام إضافية (ملاحظات، شرح، إلخ)</label>
                             <div className="relative" data-dropdown-root="true" onClick={(e) => e.stopPropagation()}>
                                  <button 
@@ -1330,13 +1375,13 @@ export default function EditCoursePage() {
                                    onClick={(e) => {
                                      e.preventDefault();
                                      e.stopPropagation();
-                                     setOpenDropdownId(openDropdownId === "assignment" ? null : "assignment");
+                                     setOpenDropdownId(openDropdownId === "exercise-sections" ? null : "exercise-sections");
                                    }}
                                    className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1"
                                  >
                                    <Plus className="w-4 h-4"/> إضافة قسم
                                  </button>
-                                 <div className={`absolute right-0 left-auto mt-2 w-48 bg-white border border-slate-100 rounded-xl shadow-xl p-2 z-50 ${openDropdownId === "assignment" ? "block" : "hidden"}`}>
+                                 <div className={`absolute right-0 left-auto mt-2 w-48 bg-white border border-slate-100 rounded-xl shadow-xl p-2 z-50 ${openDropdownId === "exercise-sections" ? "block" : "hidden"}`}>
                                 {['FEEDBACK', 'HINT', 'EXPLANATION', 'TIP', 'WARNING', 'KEY_INSIGHT'].map(secType => (
                                   <button
                                     key={secType}
