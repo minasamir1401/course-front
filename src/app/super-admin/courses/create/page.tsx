@@ -117,6 +117,18 @@ export default function CreateCoursePage() {
     explanations: [""], correctAnswers: [], attempts: 1
   });
 
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleGlobalClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('[data-dropdown-root="true"]')) return;
+      setOpenDropdownId(null);
+    };
+    document.addEventListener("click", handleGlobalClick);
+    return () => document.removeEventListener("click", handleGlobalClick);
+  }, []);
+
   const STANDARDS = [
     "المعيار 1: الفهم الأساسي",
     "المعيار 2: القدرة على التحليل",
@@ -821,26 +833,36 @@ export default function CreateCoursePage() {
                          <div className="space-y-4 pt-4 border-t border-slate-100">
                            <div className="flex justify-between items-center">
                              <label className="text-xs font-black text-slate-400 uppercase tracking-widest">أقسام إضافية (ملاحظات، شرح، إلخ)</label>
-                             <div className="relative group/menu">
-                               <button className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1">
-                                 <Plus className="w-4 h-4"/> إضافة قسم
-                               </button>
-                               <div className="absolute left-0 mt-2 w-48 bg-white border border-slate-100 rounded-xl shadow-xl p-2 hidden group-hover/menu:block z-10">
-                                 {['FEEDBACK', 'HINT', 'EXPLANATION', 'TIP', 'WARNING', 'KEY_INSIGHT'].map(secType => (
-                                   <button
-                                     key={secType}
-                                     onClick={(e) => {
-                                        e.preventDefault();
-                                        setTempQuestion({...tempQuestion, sections: [...(tempQuestion.sections || []), { id: Date.now(), type: secType, content: "" }]});
-                                     }}
-                                     className="w-full text-left px-3 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors flex items-center gap-2"
-                                   >
-                                     {React.createElement(SECTION_STYLE_PRESETS[secType]?.icon || FileText, { className: "w-4 h-4" })}
-                                     <span>{SECTION_STYLE_PRESETS[secType]?.label || secType}</span>
-                                   </button>
-                                 ))}
-                               </div>
-                             </div>
+                             <div className="relative" data-dropdown-root="true" onClick={(e) => e.stopPropagation()}>
+                                <button 
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setOpenDropdownId(openDropdownId === "assignment-sections" ? null : "assignment-sections");
+                                  }}
+                                  className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1"
+                                >
+                                  <Plus className="w-4 h-4"/> إضافة قسم
+                                </button>
+                                <div className={`absolute left-0 mt-2 w-48 bg-white border border-slate-100 rounded-xl shadow-xl p-2 z-50 ${openDropdownId === "assignment-sections" ? "block" : "hidden"}`}>
+                                  {['FEEDBACK', 'HINT', 'EXPLANATION', 'TIP', 'WARNING', 'KEY_INSIGHT'].map(secType => (
+                                    <button
+                                      key={secType}
+                                      type="button"
+                                      onClick={(e) => {
+                                         e.preventDefault();
+                                         setTempQuestion({...tempQuestion, sections: [...(tempQuestion.sections || []), { id: Date.now(), type: secType, content: "" }]});
+                                         setOpenDropdownId(null);
+                                      }}
+                                      className="w-full text-left px-3 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors flex items-center gap-2"
+                                    >
+                                      {React.createElement(SECTION_STYLE_PRESETS[secType]?.icon || FileText, { className: "w-4 h-4" })}
+                                      <span>{SECTION_STYLE_PRESETS[secType]?.label || secType}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
                            </div>
                            
                            <div className="space-y-4">
@@ -980,15 +1002,27 @@ export default function CreateCoursePage() {
                               </div>
                             </div>
                             <div className="flex items-center gap-3 self-end md:self-auto">
-                              <div className="relative group/menu">
-                                <button className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all">
+                              <div className="relative" data-dropdown-root="true" onClick={(e) => e.stopPropagation()}>
+                                <button 
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setOpenDropdownId(openDropdownId === `slide-${sIdx}` ? null : `slide-${sIdx}`);
+                                  }}
+                                  className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all"
+                                >
                                   <Plus className="w-4 h-4" /> Add Section
                                 </button>
-                                <div className="absolute left-0 mt-2 w-56 bg-white border border-slate-100 rounded-xl shadow-xl p-2 hidden group-hover/menu:block z-10">
+                                <div className={`absolute left-0 mt-2 w-56 bg-white border border-slate-100 rounded-xl shadow-xl p-2 z-50 ${openDropdownId === `slide-${sIdx}` ? "block" : "hidden"}`}>
                                   {['FEEDBACK', 'HINT', 'EXPLANATION', 'TIP', 'WARNING', 'KEY_INSIGHT'].map(secType => (
                                     <button
                                       key={secType}
-                                      onClick={() => addSection(sIdx, secType)}
+                                      type="button"
+                                      onClick={() => {
+                                         addSection(sIdx, secType);
+                                         setOpenDropdownId(null);
+                                      }}
                                       className="w-full text-left px-3 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors flex items-center gap-2"
                                     >
                                       {React.createElement(SECTION_STYLE_PRESETS[secType]?.icon || FileText, { className: "w-4 h-4" })}
@@ -1256,17 +1290,27 @@ export default function CreateCoursePage() {
                         <div className="space-y-4 pt-4 border-t border-slate-100">
                           <div className="flex justify-between items-center">
                             <label className="text-xs font-black text-slate-400 uppercase tracking-widest">أقسام إضافية (ملاحظات، شرح، إلخ)</label>
-                            <div className="relative group/menu">
-                              <button className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1">
+                            <div className="relative" data-dropdown-root="true" onClick={(e) => e.stopPropagation()}>
+                              <button 
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setOpenDropdownId(openDropdownId === "exercise-sections" ? null : "exercise-sections");
+                                }}
+                                className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1"
+                              >
                                 <Plus className="w-4 h-4"/> إضافة قسم
                               </button>
-                              <div className="absolute left-0 mt-2 w-48 bg-white border border-slate-100 rounded-xl shadow-xl p-2 hidden group-hover/menu:block z-10">
+                              <div className={`absolute left-0 mt-2 w-48 bg-white border border-slate-100 rounded-xl shadow-xl p-2 z-50 ${openDropdownId === "exercise-sections" ? "block" : "hidden"}`}>
                                 {['FEEDBACK', 'HINT', 'EXPLANATION', 'TIP', 'WARNING', 'KEY_INSIGHT'].map(secType => (
                                   <button
                                     key={secType}
+                                    type="button"
                                     onClick={(e) => {
                                        e.preventDefault();
                                        setTempQuestion({...tempQuestion, sections: [...(tempQuestion.sections || []), { id: Date.now(), type: secType, content: "" }]});
+                                       setOpenDropdownId(null);
                                     }}
                                     className="w-full text-left px-3 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors flex items-center gap-2"
                                   >
