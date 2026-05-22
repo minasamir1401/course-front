@@ -208,12 +208,12 @@ const SlideSectionsToggle = ({ slide, slideIndex, slideSubmitted, slideAnswers, 
             <span className={`mr-auto text-lg transition-transform ${showSlideSections ? 'rotate-180' : ''}`}>▼</span>
           </button>
           {showSlideSections && (
-            <div className="p-5 rounded-2xl bg-amber-50 border-2 border-amber-200 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="p-5 rounded-2xl bg-amber-50 border-2 border-amber-200 animate-in fade-in slide-in-from-top-2 duration-300 text-start" dir="auto">
               <div className="flex items-center gap-2 mb-3 font-black text-amber-700">
                 <HelpCircle className="w-5 h-5" />
                 <span>{SECTION_STYLE_PRESETS.HINT.label}</span>
               </div>
-              <div className="prose prose-sm max-w-none text-amber-700" dangerouslySetInnerHTML={{ __html: hintSection.content }} />
+              <div className="prose prose-sm max-w-none text-amber-700 text-start" dangerouslySetInnerHTML={{ __html: hintSection.content }} />
             </div>
           )}
         </div>
@@ -224,12 +224,12 @@ const SlideSectionsToggle = ({ slide, slideIndex, slideSubmitted, slideAnswers, 
           {otherSections.map((sec: any, sIdx: number) => {
             const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
             return (
-              <div key={sec.id || sIdx} className={`p-5 rounded-2xl border-2 text-right ${preset.bg} ${preset.border}`}>
+              <div key={sec.id || sIdx} className={`p-5 rounded-2xl border-2 text-start ${preset.bg} ${preset.border}`} dir="auto">
                 <div className={`flex items-center gap-2 mb-3 font-black ${preset.text}`}>
                   {React.createElement(preset.icon, { className: "w-5 h-5" })}
                   <span>{preset.label}</span>
                 </div>
-                <div className={`prose prose-sm max-w-none text-right ${preset.text}`} dangerouslySetInnerHTML={{ __html: sec.content }} />
+                <div className={`prose prose-sm max-w-none text-start ${preset.text}`} dangerouslySetInnerHTML={{ __html: sec.content }} />
               </div>
             );
           })}
@@ -276,12 +276,12 @@ const AssignmentSectionsToggle = ({ assignment, assignmentIndex, assignmentSubmi
             <span className={`mr-auto text-lg transition-transform ${showSections ? 'rotate-180' : ''}`}>▼</span>
           </button>
           {showSections && (
-            <div className="p-5 rounded-2xl bg-amber-50 border-2 border-amber-200 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="p-5 rounded-2xl bg-amber-50 border-2 border-amber-200 animate-in fade-in slide-in-from-top-2 duration-300 text-start" dir="auto">
               <div className="flex items-center gap-2 mb-3 font-black text-amber-700">
                 <HelpCircle className="w-5 h-5" />
                 <span>{SECTION_STYLE_PRESETS.HINT.label}</span>
               </div>
-              <div className="prose prose-sm max-w-none text-amber-700" dangerouslySetInnerHTML={{ __html: hintSection.content }} />
+              <div className="prose prose-sm max-w-none text-amber-700 text-start" dangerouslySetInnerHTML={{ __html: hintSection.content }} />
             </div>
           )}
         </div>
@@ -292,12 +292,12 @@ const AssignmentSectionsToggle = ({ assignment, assignmentIndex, assignmentSubmi
           {otherSections.map((sec: any, sIdx: number) => {
             const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
             return (
-              <div key={sec.id || sIdx} className={`p-5 rounded-2xl border-2 text-right ${preset.bg} ${preset.border}`}>
+              <div key={sec.id || sIdx} className={`p-5 rounded-2xl border-2 text-start ${preset.bg} ${preset.border}`} dir="auto">
                 <div className={`flex items-center gap-2 mb-3 font-black ${preset.text}`}>
                   {React.createElement(preset.icon, { className: "w-5 h-5" })}
                   <span>{preset.label}</span>
                 </div>
-                <div className={`prose prose-sm max-w-none text-right ${preset.text}`} dangerouslySetInnerHTML={{ __html: sec.content }} />
+                <div className={`prose prose-sm max-w-none text-start ${preset.text}`} dangerouslySetInnerHTML={{ __html: sec.content }} />
               </div>
             );
           })}
@@ -345,12 +345,12 @@ const QuizSectionsToggle = ({ question, questionIndex, quizSubmitted, language }
             <span className={`mr-auto text-lg transition-transform ${showQuizSections ? 'rotate-180' : ''}`}>▼</span>
           </button>
           {showQuizSections && (
-            <div className="p-5 rounded-2xl bg-amber-50 border-2 border-amber-200 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="p-5 rounded-2xl bg-amber-50 border-2 border-amber-200 animate-in fade-in slide-in-from-top-2 duration-300 text-start" dir="auto">
               <div className="flex items-center gap-2 mb-3 font-black text-amber-700">
                 <HelpCircle className="w-5 h-5" />
                 <span>{SECTION_STYLE_PRESETS.HINT.label}</span>
               </div>
-              <div className="prose prose-sm max-w-none text-amber-700" dangerouslySetInnerHTML={{ __html: hintSection.content }} />
+              <div className="prose prose-sm max-w-none text-amber-700 text-start" dangerouslySetInnerHTML={{ __html: hintSection.content }} />
             </div>
           )}
         </div>
@@ -361,12 +361,12 @@ const QuizSectionsToggle = ({ question, questionIndex, quizSubmitted, language }
           {otherSections.map((sec: any, sIdx: number) => {
             const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
             return (
-              <div key={sec.id || sIdx} className={`p-5 rounded-2xl border-2 text-right ${preset.bg} ${preset.border}`}>
+              <div key={sec.id || sIdx} className={`p-5 rounded-2xl border-2 text-start ${preset.bg} ${preset.border}`} dir="auto">
                 <div className={`flex items-center gap-2 mb-3 font-black ${preset.text}`}>
                   {React.createElement(preset.icon, { className: "w-5 h-5" })}
                   <span>{preset.label}</span>
                 </div>
-                <div className={`prose prose-sm max-w-none text-right ${preset.text}`} dangerouslySetInnerHTML={{ __html: sec.content }} />
+                <div className={`prose prose-sm max-w-none text-start ${preset.text}`} dangerouslySetInnerHTML={{ __html: sec.content }} />
               </div>
             );
           })}
@@ -883,7 +883,8 @@ export default function LessonPlayerPage() {
                     </div>
                   )}
                   <div
-                    className="text-base md:text-xl text-slate-600 leading-[1.8] max-w-5xl font-bold prose prose-indigo break-words whitespace-pre-wrap w-full animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150"
+                    className="text-base md:text-xl text-slate-600 leading-[1.8] max-w-5xl font-bold prose prose-indigo break-words w-full animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150 text-start"
+                    dir="auto"
                     dangerouslySetInnerHTML={{ __html: lesson.slides[currentSlideIndex].content }}
                   />
 
@@ -1015,7 +1016,7 @@ export default function LessonPlayerPage() {
                           </span>
                           <h3 className="font-black text-slate-900 text-lg">{as.type === 'QUESTION' ? t('lesson.requiredAssignment') : t('lesson.requiredAssignment')}</h3>
                         </div>
-                        <div className="text-slate-600 text-lg leading-relaxed prose prose-indigo mb-6" dangerouslySetInnerHTML={{ __html: as.text }} />
+                        <div className="text-slate-600 text-lg leading-relaxed prose prose-indigo mb-6 text-start" dir="auto" dangerouslySetInnerHTML={{ __html: as.text }} />
 
                         {isQuestionLike(as) && (as.options || []).filter(Boolean).length > 0 && (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
@@ -1178,7 +1179,7 @@ export default function LessonPlayerPage() {
                           </div>
                         </div>
 
-                        <h3 className="text-lg md:text-2xl font-black text-slate-900 mb-8 leading-relaxed tracking-tight break-words w-full" dangerouslySetInnerHTML={{ __html: lesson.questions[currentQuestionIndex].text }} />
+                        <h3 className="text-lg md:text-2xl font-black text-slate-900 mb-8 leading-relaxed tracking-tight break-words w-full text-start" dir="auto" dangerouslySetInnerHTML={{ __html: lesson.questions[currentQuestionIndex].text }} />
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-4 mb-6">
                           {(lesson.questions[currentQuestionIndex].options || []).filter(Boolean).map((opt: string, oIdx: number) => {

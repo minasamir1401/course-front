@@ -19,6 +19,7 @@ interface RichTextEditorProps {
 
 export default function RichTextEditor({ value, onChange, placeholder, className = "" }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
+  const debounceTimeoutRef = useRef<any>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [activeModal, setActiveModal] = useState<'table' | 'math' | 'image' | null>(null);
   const [tableConfig, setTableConfig] = useState({ rows: "3", cols: "3" });
@@ -47,12 +48,21 @@ export default function RichTextEditor({ value, onChange, placeholder, className
     }
   }, [value, isFocused]);
 
+  // Clean up debounce timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const execCommand = (command: string, cmdValue?: string) => {
     if (editorRef.current) {
       editorRef.current.focus();
     }
     document.execCommand(command, false, cmdValue);
-    handleInput();
+    handleInput(true);
   };
 
 
@@ -115,7 +125,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
     img.style.float = floatStyle;
     img.style.margin = marginStyle;
     img.style.display = displayStyle;
-    handleInput();
+    handleInput(true);
   };
 
   useEffect(() => {
@@ -163,17 +173,26 @@ export default function RichTextEditor({ value, onChange, placeholder, className
     setActiveModal(null);
   };
 
-  const handleInput = () => {
+  const handleInput = (immediate = false) => {
     if (editorRef.current) {
       const content = editorRef.current.innerHTML;
-      onChange(content);
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+      if (immediate) {
+        onChange(content);
+      } else {
+        debounceTimeoutRef.current = setTimeout(() => {
+          onChange(content);
+        }, 500);
+      }
     }
   };
 
   const handleFocus = () => setIsFocused(true);
   const handleBlur = () => {
     setIsFocused(false);
-    handleInput();
+    handleInput(true);
   };
 
   const ToolButton = ({
@@ -283,7 +302,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
         <ToolButton 
           onClick={() => {
              document.execCommand('backColor', false, '#fef08a') || document.execCommand('hiliteColor', false, '#fef08a');
-             handleInput();
+             handleInput(true);
           }} 
           icon={Highlighter} 
           title="تظليل النص (أصفر)" 
@@ -425,13 +444,13 @@ export default function RichTextEditor({ value, onChange, placeholder, className
         <div
           ref={editorRef}
           contentEditable
-          onInput={handleInput}
+          onInput={() => handleInput(false)}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          className="p-6 md:p-8 outline-none text-lg min-h-[150px] prose prose-slate max-w-none rtl editor-content"
+          className="p-6 md:p-8 outline-none text-lg min-h-[150px] prose prose-slate max-w-none editor-content text-start"
+          dir="auto"
           style={{
-            direction: 'rtl',
-            textAlign: 'right',
+            textAlign: 'start',
           }}
           suppressContentEditableWarning
         />
