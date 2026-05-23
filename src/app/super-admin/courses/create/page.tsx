@@ -289,31 +289,32 @@ export default function CreateCoursePage() {
     }
   };
 
-  const addBlock = (type: 'TEXT' | 'QUESTION') => {
+  const addBlock = (source: 'slides' | 'assignments' | 'questions' = 'slides', type: 'TEXT' | 'QUESTION') => {
     const newBlock = type === 'TEXT' 
-      ? { id: Date.now(), type: 'TEXT', label: 'CONTENT', title: `محتوى جديد`, content: "", videoUrl: "", sections: [] }
-      : { id: Date.now(), type: 'QUESTION', label: 'MCQ', title: `سؤال جديد`, content: "", videoUrl: "", options: ["", "", "", ""], correctAnswer: "", sections: [] };
+      ? { id: Date.now() + Math.random(), type: 'TEXT', label: 'CONTENT', title: `New Content`, content: "", videoUrl: "", sections: [] }
+      : { id: Date.now() + Math.random(), type: 'QUESTION', label: 'MCQ', title: `New Question`, content: "", videoUrl: "", options: ["", "", "", ""], correctAnswer: "", sections: [] };
+    const currentList = currentLesson[source] || [];
     setCurrentLesson({
       ...currentLesson,
-      slides: [...currentLesson.slides, newBlock]
+      [source]: [...currentList, newBlock]
     });
   };
 
-  const insertBlockAt = (index: number, type: 'TEXT' | 'QUESTION') => {
+  const insertBlockAt = (source: 'slides' | 'assignments' | 'questions' = 'slides', index: number, type: 'TEXT' | 'QUESTION') => {
     const newBlock = type === 'TEXT' 
-      ? { id: Date.now() + Math.random(), type: 'TEXT', label: 'CONTENT', title: `محتوى جديد`, content: "", videoUrl: "", sections: [] }
-      : { id: Date.now() + Math.random(), type: 'QUESTION', label: 'MCQ', title: `سؤال جديد`, content: "", videoUrl: "", options: ["", "", "", ""], correctAnswer: "", sections: [] };
-    const newSlides = [...currentLesson.slides];
+      ? { id: Date.now() + Math.random(), type: 'TEXT', label: 'CONTENT', title: `New Content`, content: "", videoUrl: "", sections: [] }
+      : { id: Date.now() + Math.random(), type: 'QUESTION', label: 'MCQ', title: `New Question`, content: "", videoUrl: "", options: ["", "", "", ""], correctAnswer: "", sections: [] };
+    const newSlides = [...(currentLesson[source] || [])];
     newSlides.splice(index, 0, newBlock);
     setCurrentLesson({
       ...currentLesson,
-      slides: newSlides
+      [source]: newSlides
     });
-    showToast("تم إدراج الشريحة بنجاح", "success");
+    showToast("Slide inserted successfully", "success");
   };
 
-  const moveBlock = (index: number, direction: 'UP' | 'DOWN') => {
-    const newSlides = [...currentLesson.slides];
+  const moveBlock = (source: 'slides' | 'assignments' | 'questions' = 'slides', index: number, direction: 'UP' | 'DOWN') => {
+    const newSlides = [...(currentLesson[source] || [])];
     const targetIndex = direction === 'UP' ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= newSlides.length) return;
     const temp = newSlides[index];
@@ -321,39 +322,365 @@ export default function CreateCoursePage() {
     newSlides[targetIndex] = temp;
     setCurrentLesson({
       ...currentLesson,
-      slides: newSlides
+      [source]: newSlides
     });
   };
 
-  const updateBlock = (index: number, field: string, value: any) => {
-    const newSlides = [...currentLesson.slides];
+  const updateBlock = (source: 'slides' | 'assignments' | 'questions' = 'slides', index: number, field: string, value: any) => {
+    const newSlides = [...(currentLesson[source] || [])];
     newSlides[index] = { ...newSlides[index], [field]: value };
-    setCurrentLesson({ ...currentLesson, slides: newSlides });
+    setCurrentLesson({ ...currentLesson, [source]: newSlides });
   };
 
-  const removeBlock = (index: number) => {
-    const newSlides = [...currentLesson.slides];
+  const removeBlock = (source: 'slides' | 'assignments' | 'questions' = 'slides', index: number) => {
+    const newSlides = [...(currentLesson[source] || [])];
     newSlides.splice(index, 1);
-    setCurrentLesson({ ...currentLesson, slides: newSlides });
+    setCurrentLesson({ ...currentLesson, [source]: newSlides });
   };
 
-  const addSection = (blockIndex: number, type: string) => {
-    const newSlides = [...currentLesson.slides];
+  const addSection = (source: 'slides' | 'assignments' | 'questions' = 'slides', blockIndex: number, type: string) => {
+    const newSlides = [...(currentLesson[source] || [])];
     if (!newSlides[blockIndex].sections) newSlides[blockIndex].sections = [];
-    newSlides[blockIndex].sections.push({ id: Date.now(), type, content: "" });
-    setCurrentLesson({ ...currentLesson, slides: newSlides });
+    newSlides[blockIndex].sections.push({ id: Date.now() + Math.random(), type, content: "" });
+    setCurrentLesson({ ...currentLesson, [source]: newSlides });
   };
 
-  const updateSection = (blockIndex: number, sectionIndex: number, content: string) => {
-    const newSlides = [...currentLesson.slides];
+  const updateSection = (source: 'slides' | 'assignments' | 'questions' = 'slides', blockIndex: number, sectionIndex: number, content: string) => {
+    const newSlides = [...(currentLesson[source] || [])];
     newSlides[blockIndex].sections[sectionIndex].content = content;
-    setCurrentLesson({ ...currentLesson, slides: newSlides });
+    setCurrentLesson({ ...currentLesson, [source]: newSlides });
   };
 
-  const removeSection = (blockIndex: number, sectionIndex: number) => {
-    const newSlides = [...currentLesson.slides];
+  const removeSection = (source: 'slides' | 'assignments' | 'questions' = 'slides', blockIndex: number, sectionIndex: number) => {
+    const newSlides = [...(currentLesson[source] || [])];
     newSlides[blockIndex].sections.splice(sectionIndex, 1);
-    setCurrentLesson({ ...currentLesson, slides: newSlides });
+    setCurrentLesson({ ...currentLesson, [source]: newSlides });
+  };
+
+  const renderSlidesBuilder = (source: 'slides' | 'assignments' | 'questions') => {
+    const list = currentLesson[source] || [];
+    
+    // Label translations depending on source
+    const headerLabel = source === 'slides' ? 'Lecture Slides' : source === 'assignments' ? 'Lesson Assignments' : 'Practice Quizzes (Quiz Me)';
+    const headerDesc = source === 'slides' 
+      ? 'Add rich text and interactive slides for lecture explanation' 
+      : source === 'assignments' 
+        ? 'Add application tasks and homework blocks for students' 
+        : 'Add interactive practice questions to test student understanding';
+
+    return (
+      <div className="space-y-8">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h4 className="text-xl font-black text-slate-900 flex items-center gap-3">
+              <Layout className="w-6 h-6 text-indigo-600" />
+              {headerLabel}
+            </h4>
+            <p className="text-slate-400 text-sm font-bold mt-1">{headerDesc}</p>
+          </div>
+          <div className="flex gap-3">
+            <button 
+              type="button"
+              onClick={() => addBlock(source, 'TEXT')}
+              className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer"
+            >
+              <Plus className="w-5 h-5" />
+              + Text Content
+            </button>
+            <button 
+              type="button"
+              onClick={() => addBlock(source, 'QUESTION')}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all shadow-lg cursor-pointer"
+            >
+              <Plus className="w-5 h-5" />
+              + Question Slide
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {list.map((block: any, sIdx: number) => (
+            <React.Fragment key={block.id || sIdx}>
+              {sIdx === 0 && (
+                <div className="group/divider relative py-2 flex items-center justify-center my-2">
+                  <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                    <div className="w-full border-t border-dashed border-slate-200 group-hover/divider:border-indigo-300 transition-colors"></div>
+                  </div>
+                  <div className="relative flex justify-center opacity-0 group-hover/divider:opacity-100 transition-all duration-300 scale-95 group-hover/divider:scale-100 gap-3 z-10">
+                    <button
+                      type="button"
+                      onClick={() => insertBlockAt(source, 0, 'TEXT')}
+                      className="bg-white border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 px-4 py-2 rounded-full text-xs font-black flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>+ Text Slide</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => insertBlockAt(source, 0, 'QUESTION')}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full text-xs font-black flex items-center gap-1.5 shadow-md hover:shadow-indigo-900/10 transition-all cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>+ Question Slide</span>
+                    </button>
+                  </div>
+                  <div className="relative w-6 h-6 bg-slate-100 border border-slate-200 text-slate-400 rounded-full flex items-center justify-center text-[10px] font-black group-hover/divider:hidden transition-all shadow-sm">
+                    +
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-slate-50 border border-slate-200 rounded-[30px] overflow-hidden group shadow-sm transition-all hover:shadow-md">
+                <div className={`p-4 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center border-b ${block.type === 'QUESTION' ? 'bg-indigo-50/50 border-indigo-100' : 'bg-white border-slate-100'}`}>
+                  <div className="flex items-center gap-4 w-full md:w-auto">
+                    <span className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-white shadow-md ${block.type === 'QUESTION' ? 'bg-indigo-600' : 'bg-slate-800'}`}>
+                      {sIdx + 1}
+                    </span>
+                    <div className="flex flex-col gap-1 w-full md:w-auto">
+                      <div className="flex gap-2">
+                        <select
+                          value={block.label}
+                          onChange={(e) => updateBlock(source, sIdx, 'label', e.target.value)}
+                          className="bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-600 outline-none focus:border-indigo-600 px-2 py-1 uppercase"
+                        >
+                          {block.type === 'TEXT' ? (
+                            <>
+                              <option value="CONTENT">Content (Lecture)</option>
+                              <option value="EXAMPLE">Worked Example</option>
+                              <option value="SUMMARY">Key Summary</option>
+                              <option value="HINT">Note / Helper</option>
+                              <option value="EXPLANATION">Explanation</option>
+                            </>
+                          ) : (
+                            <>
+                              <option value="MCQ">Multiple Choice (MCQ)</option>
+                              <option value="TRUE_FALSE">True / False (T/F)</option>
+                              <option value="MULTI_SELECT">Multi-select (Checkboxes)</option>
+                            </>
+                          )}
+                        </select>
+                        <input 
+                          type="text"
+                          value={block.title || ""}
+                          onChange={(e) => updateBlock(source, sIdx, 'title', e.target.value)}
+                          className="bg-transparent text-slate-900 font-black outline-none border-b border-transparent focus:border-indigo-600 px-2 py-1 w-full md:w-48 placeholder:text-slate-400"
+                          placeholder={block.type === 'TEXT' ? "Section Title (Optional)" : "Question Title (Optional)"}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 self-end md:self-auto">
+                    <div className="flex items-center bg-white border border-slate-200 rounded-xl p-0.5 shadow-sm ml-1">
+                      <button
+                        type="button"
+                        disabled={sIdx === 0}
+                        onClick={() => moveBlock(source, sIdx, 'UP')}
+                        className="p-2 text-slate-500 hover:text-indigo-600 disabled:text-slate-300 disabled:hover:text-slate-300 hover:bg-slate-50 rounded-lg transition-all"
+                        title="Move Up"
+                      >
+                        <ChevronUp className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={sIdx === list.length - 1}
+                        onClick={() => moveBlock(source, sIdx, 'DOWN')}
+                        className="p-2 text-slate-500 hover:text-indigo-600 disabled:text-slate-300 disabled:hover:text-slate-300 hover:bg-slate-50 rounded-lg transition-all"
+                        title="Move Down"
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="relative" data-dropdown-root="true" onClick={(e) => e.stopPropagation()}>
+                      <button 
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setOpenDropdownId(openDropdownId === `${source}-slide-${sIdx}` ? null : `${source}-slide-${sIdx}`);
+                        }}
+                        className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all cursor-pointer"
+                      >
+                        <Plus className="w-4 h-4" /> Add Block
+                      </button>
+                      <div className={`absolute left-0 mt-2 w-56 bg-white border border-slate-100 rounded-xl shadow-xl p-2 z-50 ${openDropdownId === `${source}-slide-${sIdx}` ? "block" : "hidden"}`}>
+                        {['FEEDBACK', 'HINT', 'EXPLANATION', 'TIP', 'WARNING', 'KEY_INSIGHT'].map(secType => (
+                          <button
+                            key={secType}
+                            type="button"
+                            onClick={() => {
+                               addSection(source, sIdx, secType);
+                               setOpenDropdownId(null);
+                            }}
+                            className="w-full text-left px-3 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors flex-center gap-2"
+                          >
+                            {React.createElement(SECTION_STYLE_PRESETS[secType]?.icon || FileText, { className: "w-4 h-4" })}
+                            <span>{SECTION_STYLE_PRESETS[secType]?.label || secType}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => removeBlock(source, sIdx)}
+                      className="text-red-500 hover:text-red-600 p-2 hover:bg-red-500/10 rounded-xl transition-all bg-white cursor-pointer"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-6 space-y-6">
+                  <div className="mb-4">
+                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest block mb-2">Optional Video Link (YouTube/Vimeo) for this section</label>
+                    <input
+                      type="url"
+                      value={block.videoUrl || ""}
+                      onChange={(e) => updateBlock(source, sIdx, 'videoUrl', e.target.value)}
+                      placeholder="Paste video URL here..."
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 font-bold"
+                    />
+                  </div>
+                  <div>
+                    <RichTextEditor 
+                      value={block.content}
+                      onChange={(val) => updateBlock(source, sIdx, 'content', val)}
+                      placeholder={block.type === 'TEXT' ? "Write lecture explanation content here..." : "Write question prompt here..."}
+                      className="!bg-white !border-slate-200"
+                    />
+                  </div>
+
+                  {block.type === 'QUESTION' && (
+                    <div className="bg-slate-100 p-6 rounded-2xl border border-slate-200 space-y-4">
+                      <label className="text-xs font-black text-slate-500 uppercase tracking-widest block">Answer Options & Correct Answer</label>
+                      {block.label === 'TRUE_FALSE' ? (
+                        <div className="grid grid-cols-2 gap-4">
+                          {['صحيح', 'خطأ'].map((opt) => (
+                            <div key={opt} className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${block.correctAnswer === opt ? 'bg-emerald-50 border-emerald-500' : 'bg-white border-transparent'}`} onClick={() => updateBlock(source, sIdx, 'correctAnswer', opt)}>
+                              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${block.correctAnswer === opt ? 'bg-emerald-500 border-emerald-200' : 'bg-slate-200 border-transparent'}`}>
+                                {block.correctAnswer === opt && <CheckCircle2 className="w-4 h-4 text-white" />}
+                              </div>
+                              <span className="font-bold text-slate-700">{opt === 'صحيح' ? 'True (صحيح)' : 'False (خطأ)'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {(block.options || []).map((opt: string, oIdx: number) => {
+                            const isSelected = block.label === 'MULTI_SELECT' 
+                              ? (block.correctAnswers || []).includes(opt) 
+                              : block.correctAnswer === opt;
+                            
+                            return (
+                              <div key={oIdx} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${isSelected && opt ? 'bg-emerald-50 border-emerald-500' : 'bg-white border-transparent'}`}>
+                                <div 
+                                  onClick={() => {
+                                    if (block.label === 'MULTI_SELECT') {
+                                      const answers = block.correctAnswers || [];
+                                      if (answers.includes(opt) && opt) updateBlock(source, sIdx, 'correctAnswers', answers.filter((a:string) => a !== opt));
+                                      else if (opt) updateBlock(source, sIdx, 'correctAnswers', [...answers, opt]);
+                                    } else {
+                                      updateBlock(source, sIdx, 'correctAnswer', opt);
+                                    }
+                                  }}
+                                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 cursor-pointer ${isSelected && opt ? 'bg-emerald-500 border-emerald-200' : 'bg-slate-200 border-transparent'}`}
+                                >
+                                  {isSelected && opt && <CheckCircle2 className="w-4 h-4 text-white" />}
+                                </div>
+                                <input 
+                                  type="text"
+                                  value={opt}
+                                  onChange={(e) => {
+                                    const newOpts = [...(block.options || [])];
+                                    newOpts[oIdx] = e.target.value;
+                                    updateBlock(source, sIdx, 'options', newOpts);
+                                  }}
+                                  placeholder={`Option ${oIdx + 1}`}
+                                  className="bg-transparent outline-none font-bold text-slate-700 flex-1"
+                                />
+                                {block.options.length > 2 && (
+                                  <button type="button" onClick={() => {
+                                    const newOpts = [...block.options];
+                                    newOpts.splice(oIdx, 1);
+                                    updateBlock(source, sIdx, 'options', newOpts);
+                                  }} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                                )}
+                              </div>
+                            );
+                          })}
+                          <button 
+                            type="button"
+                            onClick={() => updateBlock(source, sIdx, 'options', [...(block.options||[]), ""])}
+                            className="flex justify-center items-center p-3 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-200 hover:border-slate-400 transition-all cursor-pointer"
+                          >
+                            <Plus className="w-5 h-5 ml-1" /> Add Option
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {(block.sections || []).length > 0 && (
+                    <div className="space-y-4 pt-4 border-t border-slate-100">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Dynamic Content Blocks</label>
+                      {(block.sections || []).map((sec: any, secIdx: number) => {
+                        const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
+                        const SectionIcon = preset.icon;
+                        return (
+                          <div key={sec.id || secIdx} className={`p-4 rounded-2xl relative group/section border ${preset.container}`}>
+                            <div className="flex justify-between items-center mb-3">
+                              <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1.5 ${preset.badge}`}>
+                                <SectionIcon className="w-3.5 h-3.5" />
+                                {preset.label}
+                              </span>
+                              <button type="button" onClick={() => removeSection(source, sIdx, secIdx)} className="text-red-400 hover:text-red-600 opacity-0 group-hover/section:opacity-100 transition-all cursor-pointer">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                            <RichTextEditor 
+                              value={sec.content}
+                              onChange={(val) => updateSection(source, sIdx, secIdx, val)}
+                              placeholder={`Write ${preset.label} content here...`}
+                              className="!bg-white"
+                            />
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="group/divider relative py-2 flex items-center justify-center my-2">
+                <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                  <div className="w-full border-t border-dashed border-slate-200 group-hover/divider:border-indigo-300 transition-colors"></div>
+                </div>
+                <div className="relative flex justify-center opacity-0 group-hover/divider:opacity-100 transition-all duration-300 scale-95 group-hover/divider:scale-100 gap-3 z-10">
+                  <button
+                    type="button"
+                    onClick={() => insertBlockAt(source, sIdx + 1, 'TEXT')}
+                    className="bg-white border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 px-4 py-2 rounded-full text-xs font-black flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Text Slide</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertBlockAt(source, sIdx + 1, 'QUESTION')}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full text-xs font-black flex items-center gap-1.5 shadow-md hover:shadow-indigo-900/10 transition-all cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Question Slide</span>
+                  </button>
+                </div>
+                <div className="relative w-6 h-6 bg-slate-100 border border-slate-200 text-slate-400 rounded-full flex items-center justify-center text-[10px] font-black group-hover/divider:hidden transition-all shadow-sm">
+                  +
+                </div>
+              </div>
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   // Advanced Question Logic
@@ -467,27 +794,27 @@ export default function CreateCoursePage() {
           isCentral,
           // Send null (not empty string) when no school is selected
           schoolId: targetSchoolIds.length > 0 ? targetSchoolIds[0] : null,
-          schoolIds: targetSchoolIds,
+schoolIds: targetSchoolIds,
           lessons: lessonsPayload
         })
       });
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.stack || data.details || data.error || "فشل إنشاء الكورس");
+        throw new Error(data.stack || data.details || data.error || "Failed to create course");
       }
 
       showToast(
         targetSchoolIds.length > 0
-          ? `تم إنشاء الكورس وإسناده للمدارس المختارة`
-          : "تم إنشاء الكورس المركزي بنجاح",
+          ? `Course created and assigned to selected schools`
+          : "Central course created successfully",
         "success"
       );
 
       router.push(`/super-admin/courses`);
     } catch (error: any) {
       console.error("Course creation error:", error);
-      showToast(error.message || "خطأ في الاتصال بالخادم", 'error');
+      showToast(error.message || "Connection error", 'error');
     } finally {
       setIsLoading(false);
     }
@@ -495,7 +822,7 @@ export default function CreateCoursePage() {
 
   return (
     <DashboardLayout>
-      <div dir="rtl">
+      <div dir="ltr">
         {isLessonModalOpen ? (
           <div className="max-w-6xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="bg-white border border-slate-200 w-full rounded-[40px] shadow-2xl overflow-hidden">
@@ -504,9 +831,9 @@ export default function CreateCoursePage() {
                 <div>
                   <h3 className="text-2xl font-black text-white flex items-center gap-3">
                     <Monitor className="w-8 h-8" />
-                    {editingLessonIndex !== null ? `تعديل الدرس: ${currentLesson.title}` : "تصميم درس جديد"}
+                    {editingLessonIndex !== null ? `Edit Lesson: ${currentLesson.title}` : "Design New Lesson"}
                   </h3>
-                  <p className="text-slate-400 mt-1 font-bold">قم ببناء محتوى الدرس والأهداف والتدريبات</p>
+                  <p className="text-slate-400 mt-1 font-bold">Build lesson content, objectives, and interactive tasks</p>
                 </div>
                 <button onClick={() => setIsLessonModalOpen(false)} className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-all">
                   <X className="w-6 h-6" />
@@ -516,12 +843,12 @@ export default function CreateCoursePage() {
               {/* Modal Tabs */}
               <div className="flex border-b border-slate-100 bg-slate-50/50">
                 {[
-                  { id: 'info', label: 'الأهداف والبيانات', icon: Target },
-                  { id: 'scheduling', label: 'الجدولة والظهور', icon: Clock },
-                  { id: 'slides', label: 'محتوى الشرح (Slides)', icon: Layout },
-                  { id: 'assignments', label: 'التكاليف (Assignments)', icon: FileText },
-                  { id: 'exercises', label: 'التدريبات (Quiz Me)', icon: HelpCircle },
-                  { id: 'attachments', label: 'المرفقات', icon: FileDown },
+                  { id: 'info', label: 'Objectives & Info', icon: Target },
+                  { id: 'scheduling', label: 'Scheduling & Visibility', icon: Clock },
+                  { id: 'slides', label: 'Lecture Slides', icon: Layout },
+                  { id: 'assignments', label: 'Lesson Assignments', icon: FileText },
+                  { id: 'exercises', label: 'Practice Quizzes (Quiz Me)', icon: HelpCircle },
+                  { id: 'attachments', label: 'Attachments', icon: FileDown },
                 ].map(tab => (
                   <button
                     key={tab.id}
@@ -541,17 +868,17 @@ export default function CreateCoursePage() {
                   <div className="space-y-10">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div>
-                        <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">عنوان الدرس</label>
+                        <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Lesson Title</label>
                         <input 
                           type="text" 
                           value={currentLesson.title}
                           onChange={(e) => setCurrentLesson({...currentLesson, title: e.target.value})}
                           className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 text-lg font-bold outline-none focus:border-indigo-600 transition-all shadow-sm"
-                          placeholder="مثال: القوة والحركة في بعد واحد"
+                          placeholder="e.g. Force and Motion in One Dimension"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">رابط الفيديو (YouTube)</label>
+                        <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">YouTube Video URL</label>
                         <input 
                           type="text" 
                           value={currentLesson.videoUrl}
@@ -565,59 +892,59 @@ export default function CreateCoursePage() {
                     <div className="bg-white p-8 rounded-[35px] border border-slate-100 space-y-8">
                        <h4 className="text-xl font-black text-slate-900 flex items-center gap-3">
                           <Target className="w-6 h-6 text-indigo-600" />
-                          الأهداف والمعايير الأكاديمية
+                          Academic Objectives & Standards
                        </h4>
                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-3">
-                          <label className="text-xs font-black text-slate-500 uppercase tracking-widest">المعايير (Standards)</label>
+                          <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Standards</label>
                           <select 
                             value={currentLesson.standards}
                             onChange={(e) => setCurrentLesson({...currentLesson, standards: e.target.value})}
                             className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none"
                           >
-                            <option value="">اختر المعيار...</option>
-                            <option value="معيار 1: الفهم والاستيعاب">معيار 1: الفهم والاستيعاب</option>
-                            <option value="معيار 2: التطبيق والتحليل">معيار 2: التطبيق والتحليل</option>
-                            <option value="معيار 3: التفكير النقدي">معيار 3: التفكير النقدي</option>
+                            <option value="">Select Standard...</option>
+                            <option value="معيار 1: الفهم والاستيعاب">Standard 1: Understanding & Comprehension</option>
+                            <option value="معيار 2: التطبيق والتحليل">Standard 2: Application & Analysis</option>
+                            <option value="معيار 3: التفكير النقدي">Standard 3: Critical Thinking</option>
                           </select>
                         </div>
                         <div className="space-y-3">
-                          <label className="text-xs font-black text-slate-400 uppercase tracking-widest">المؤشرات (Indicators)</label>
+                          <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Indicators</label>
                           <select 
                             value={currentLesson.indicators}
                             onChange={(e) => setCurrentLesson({...currentLesson, indicators: e.target.value})}
                             className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none"
                           >
-                            <option value="">اختر المؤشر...</option>
-                            <option value="مؤشر 1: يحدد المفاهيم الأساسية">مؤشر 1: يحدد المفاهيم الأساسية</option>
-                            <option value="مؤشر 2: يطبق القوانين الرياضية">مؤشر 2: يطبق القوانين الرياضية</option>
-                            <option value="مؤشر 3: يستنتج العلاقات">مؤشر 3: يستنتج العلاقات</option>
+                            <option value="">Select Indicator...</option>
+                            <option value="مؤشر 1: يحدد المفاهيم الأساسية">Indicator 1: Identify Key Concepts</option>
+                            <option value="مؤشر 2: يطبق القوانين الرياضية">Indicator 2: Apply Mathematical Formulas</option>
+                            <option value="مؤشر 3: يستنتج العلاقات">Indicator 3: Deduce Relationships</option>
                           </select>
                         </div>
                         <div className="space-y-3">
-                          <label className="text-xs font-black text-slate-400 uppercase tracking-widest">نواتج التعلم (LOs)</label>
+                          <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Learning Outcomes (LOs)</label>
                           <select 
                             value={currentLesson.learningOutcomes}
                             onChange={(e) => setCurrentLesson({...currentLesson, learningOutcomes: e.target.value})}
                             className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none"
                           >
-                            <option value="">اختر ناتج التعلم...</option>
-                            <option value="ناتج 1: أن يكون الطالب قادراً على...">ناتج 1: أن يكون الطالب قادراً على...</option>
-                            <option value="ناتج 2: أن يميز الطالب بين...">ناتج 2: أن يميز الطالب بين...</option>
-                            <option value="ناتج 3: أن يحلل الطالب...">ناتج 3: أن يحلل الطالب...</option>
+                            <option value="">Select Learning Outcome...</option>
+                            <option value="ناتج 1: أن يكون الطالب قادراً على...">Outcome 1: Student is able to...</option>
+                            <option value="ناتج 2: أن يميز الطالب بين...">Outcome 2: Student distinguishes between...</option>
+                            <option value="ناتج 3: أن يحلل الطالب...">Outcome 3: Student analyzes...</option>
                           </select>
                         </div>
-                      </div>
+                       </div>
 
-                      <div className="flex justify-center mt-6">
+                       <div className="flex justify-center mt-6">
                         <button 
                           onClick={() => handleExcelUpload('metadata')}
                           className="flex items-center gap-2 bg-emerald-50 text-emerald-600 px-6 py-3 rounded-2xl border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all font-black text-xs"
                         >
                           <Upload className="w-4 h-4" />
-                          رفع المعايير من Excel
+                          Upload Standards from Excel
                         </button>
-                      </div>
+                       </div>
                     </div>
                   </div>
                 )}
@@ -626,8 +953,8 @@ export default function CreateCoursePage() {
                   <div className="space-y-8 animate-in fade-in duration-300">
                     <div className="bg-indigo-50/50 border border-indigo-100 p-8 rounded-[35px] flex items-center justify-between">
                        <div className="space-y-1">
-                          <h4 className="text-xl font-black text-indigo-900">حالة ظهور الدرس</h4>
-                          <p className="text-indigo-600/60 font-bold text-sm">تحكم في ما إذا كان الطالب يستطيع رؤية هذا الدرس حالياً</p>
+                          <h4 className="text-xl font-black text-indigo-900">Lesson Visibility</h4>
+                          <p className="text-indigo-600/60 font-bold text-sm">Control whether students can see this lesson currently</p>
                        </div>
                        <button 
                         onClick={() => setCurrentLesson({...currentLesson, isVisible: !currentLesson.isVisible})}
@@ -641,9 +968,9 @@ export default function CreateCoursePage() {
                        <div className="bg-white p-8 rounded-[35px] border border-slate-100 shadow-sm space-y-4">
                           <div className="flex items-center gap-3 text-emerald-600">
                              <CheckCircle2 className="w-6 h-6" />
-                             <label className="text-sm font-black uppercase tracking-widest">تاريخ النشر (Publish Date)</label>
+                             <label className="text-sm font-black uppercase tracking-widest">Publish Date</label>
                           </div>
-                          <p className="text-slate-400 text-xs font-bold">لن يظهر الدرس للطالب قبل هذا التاريخ حتى لو كان وضع "الظهور" مفعلاً</p>
+                          <p className="text-slate-400 text-xs font-bold">The lesson will not appear to students before this date even if Visibility is enabled</p>
                           <input 
                             type="datetime-local"
                             value={currentLesson.publishDate || ""}
@@ -655,9 +982,9 @@ export default function CreateCoursePage() {
                        <div className="bg-white p-8 rounded-[35px] border border-slate-100 shadow-sm space-y-4">
                           <div className="flex items-center gap-3 text-red-500">
                              <AlertCircle className="w-6 h-6" />
-                             <label className="text-sm font-black uppercase tracking-widest">تاريخ الانتهاء (Cut-off Date)</label>
+                             <label className="text-sm font-black uppercase tracking-widest">Cut-off Date</label>
                           </div>
-                          <p className="text-slate-400 text-xs font-bold">سيختفي الدرس من واجهة الطالب تلقائياً بعد هذا التاريخ</p>
+                          <p className="text-slate-400 text-xs font-bold">The lesson will automatically disappear from the student interface after this date</p>
                           <input 
                             type="datetime-local"
                             value={currentLesson.cutOffDate || ""}
@@ -669,877 +996,19 @@ export default function CreateCoursePage() {
                   </div>
                 )}
 
-                {activeTab === 'assignments' && (
-                  <div className="space-y-8">
-                    <div className="flex justify-between items-center mb-6">
-                      <div>
-                        <h4 className="text-xl font-black text-slate-900">تكاليف الدرس (Assignments)</h4>
-                        <p className="text-slate-400 text-sm font-bold">مهام تطبيقية متقدمة (نظام MCQ وتفسير إجابة)</p>
-                      </div>
-                      <div className="flex gap-3">
-                        <button 
-                          onClick={() => handleAddQuestion('assignments')}
-                          className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black flex items-center gap-2"
-                        >
-                          <Plus className="w-5 h-5" />
-                          إضافة تكليف
-                        </button>
-                      </div>
-                    </div>
-
-                    {showQuestionForm && questionSource === 'assignments' && (
-                       <div className="bg-slate-50 border-2 border-indigo-600 rounded-[35px] p-8 space-y-8 animate-in zoom-in-95 duration-300 mb-10">
-                          <div className="flex justify-between items-center border-b border-slate-100 pb-6">
-                            <h5 className="text-lg font-black text-slate-900 flex items-center gap-3">
-                              <Edit2 className="w-6 h-6 text-indigo-600" />
-                              {editingQuestionIndex !== null ? "تعديل التكليف" : "إضافة تكليف جديد"}
-                            </h5>
-                            <button onClick={() => setShowQuestionForm(false)} className="text-slate-400 hover:text-slate-900"><X className="w-6 h-6" /></button>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">المعيار (Standard)</label>
-                              <select 
-                                className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600"
-                                value={tempQuestion.standard}
-                                onChange={(e) => setTempQuestion({...tempQuestion, standard: e.target.value})}
-                              >
-                                <option value="">اختر المعيار...</option>
-                                {STANDARDS.map(s => <option key={s} value={s}>{s}</option>)}
-                              </select>
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">المؤشر (Indicator)</label>
-                              <select 
-                                className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600"
-                                value={tempQuestion.indicator}
-                                onChange={(e) => setTempQuestion({...tempQuestion, indicator: e.target.value})}
-                              >
-                                <option value="">اختر المؤشر...</option>
-                                {INDICATORS.map(i => <option key={i} value={i}>{i}</option>)}
-                              </select>
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">ناتج التعلم (LO)</label>
-                              <select 
-                                className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600"
-                                value={tempQuestion.learningOutcome}
-                                onChange={(e) => setTempQuestion({...tempQuestion, learningOutcome: e.target.value})}
-                              >
-                                <option value="">اختر ناتج التعلم...</option>
-                                {LEARNING_OUTCOMES.map(lo => <option key={lo} value={lo}>{lo}</option>)}
-                              </select>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">نوع السؤال</label>
-                              <select 
-                                className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600"
-                                value={tempQuestion.type}
-                                onChange={(e) => setTempQuestion({...tempQuestion, type: e.target.value, options: e.target.value === "TRUE_FALSE" ? ["صحيح", "خطأ", "", ""] : ["", "", "", ""]})}
-                              >
-                                {QUESTION_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-                              </select>
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">المستوى</label>
-                              <select 
-                                className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600"
-                                value={tempQuestion.level}
-                                onChange={(e) => setTempQuestion({...tempQuestion, level: e.target.value})}
-                              >
-                                <option value="Easy">سهل</option>
-                                <option value="Medium">متوسط</option>
-                                <option value="Hard">صعب</option>
-                              </select>
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">الدرجة</label>
-                              <input 
-                                type="number"
-                                className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600"
-                                value={tempQuestion.points}
-                                onChange={(e) => setTempQuestion({...tempQuestion, points: parseInt(e.target.value)})}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">المحاولات</label>
-                              <input 
-                                type="number"
-                                min="1"
-                                className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600"
-                                value={tempQuestion.attempts || 1}
-                                onChange={(e) => setTempQuestion({...tempQuestion, attempts: parseInt(e.target.value)})}
-                              />
-                            </div>
-                          </div>
-
-                          <div className="space-y-3">
-                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest">نص التكليف</label>
-                            <RichTextEditor 
-                              value={tempQuestion.text}
-                              onChange={(val) => setTempQuestion({...tempQuestion, text: val})}
-                              placeholder="اكتب تفاصيل التكليف هنا..."
-                            />
-                         </div>
-
-                         {/* Answer Options for Assignment */}
-                         <div className="space-y-3">
-                           <label className="text-xs font-black text-slate-400 uppercase tracking-widest">خيارات الإجابة</label>
-                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                             {tempQuestion.type !== "TRUE_FALSE" ? (
-                               <>
-                                 {tempQuestion.options.map((opt: string, oIdx: number) => {
-                                   const isSelected = tempQuestion.type === "MULTI_SELECT"
-                                     ? tempQuestion.correctAnswers?.includes(opt)
-                                     : tempQuestion.correctAnswer === opt;
-                                   return (
-                                     <div key={oIdx} className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all ${isSelected && opt !== "" ? 'bg-emerald-50 border-emerald-500' : 'bg-white border-slate-100 hover:border-slate-200'}`}>
-                                       <div
-                                         onClick={() => {
-                                           if (tempQuestion.type === "MULTI_SELECT") {
-                                             const answers = tempQuestion.correctAnswers || [];
-                                             if (answers.includes(opt)) {
-                                               setTempQuestion({...tempQuestion, correctAnswers: answers.filter((a: string) => a !== opt)});
-                                             } else if (opt !== "") {
-                                               setTempQuestion({...tempQuestion, correctAnswers: [...answers, opt]});
-                                             }
-                                           } else {
-                                             setTempQuestion({...tempQuestion, correctAnswer: opt});
-                                           }
-                                         }}
-                                         className={`w-7 h-7 rounded-full border-4 cursor-pointer flex items-center justify-center shrink-0 ${isSelected && opt !== "" ? 'bg-emerald-500 border-emerald-200' : 'bg-slate-100 border-white'}`}
-                                       >
-                                         {isSelected && opt !== "" && <CheckCircle2 className="w-4 h-4 text-white" />}
-                                       </div>
-                                       <input
-                                         type="text"
-                                         value={opt}
-                                         onChange={(e) => {
-                                           const opts = [...tempQuestion.options];
-                                           opts[oIdx] = e.target.value;
-                                           setTempQuestion({...tempQuestion, options: opts});
-                                         }}
-                                         className="bg-transparent flex-1 outline-none font-bold text-slate-900"
-                                         placeholder={`الخيار ${oIdx + 1}`}
-                                       />
-                                       {tempQuestion.options.length > 2 && (
-                                         <button onClick={() => {
-                                           const opts = [...tempQuestion.options];
-                                           opts.splice(oIdx, 1);
-                                           setTempQuestion({...tempQuestion, options: opts});
-                                         }} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
-                                       )}
-                                     </div>
-                                   );
-                                 })}
-                                 <div className="flex items-center justify-center p-4 rounded-2xl border-2 border-dashed border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all cursor-pointer text-indigo-600 font-bold" onClick={() => setTempQuestion({...tempQuestion, options: [...tempQuestion.options, ""]})}>
-                                   <Plus className="w-5 h-5 ml-2" />
-                                   إضافة خيار
-                                 </div>
-                               </>
-                             ) : (
-                               ["صحيح", "خطأ"].map((opt, oIdx) => (
-                                 <div key={oIdx} className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all cursor-pointer ${tempQuestion.correctAnswer === opt ? 'bg-emerald-50 border-emerald-500' : 'bg-white border-slate-100 hover:border-slate-200'}`}
-                                   onClick={() => setTempQuestion({...tempQuestion, correctAnswer: opt})}
-                                 >
-                                   <div className={`w-7 h-7 rounded-full border-4 flex items-center justify-center ${tempQuestion.correctAnswer === opt ? 'bg-emerald-500 border-emerald-200' : 'bg-slate-100 border-white'}`}>
-                                     {tempQuestion.correctAnswer === opt && <CheckCircle2 className="w-4 h-4 text-white" />}
-                                   </div>
-                                   <span className="font-bold text-slate-900">{opt}</span>
-                                 </div>
-                               ))
-                             )}
-                           </div>
-                         </div>
-
-                         <div className="space-y-4 pt-4 border-t border-slate-100">
-                           <div className="flex justify-between items-center">
-                             <label className="text-xs font-black text-slate-400 uppercase tracking-widest">أقسام إضافية (ملاحظات، شرح، إلخ)</label>
-                             <div className="relative" data-dropdown-root="true" onClick={(e) => e.stopPropagation()}>
-                                <button 
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setOpenDropdownId(openDropdownId === "assignment-sections" ? null : "assignment-sections");
-                                  }}
-                                  className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1"
-                                >
-                                  <Plus className="w-4 h-4"/> إضافة قسم
-                                </button>
-                                <div className={`absolute left-0 mt-2 w-48 bg-white border border-slate-100 rounded-xl shadow-xl p-2 z-50 ${openDropdownId === "assignment-sections" ? "block" : "hidden"}`}>
-                                  {['FEEDBACK', 'HINT', 'EXPLANATION', 'TIP', 'WARNING', 'KEY_INSIGHT'].map(secType => (
-                                    <button
-                                      key={secType}
-                                      type="button"
-                                      onClick={(e) => {
-                                         e.preventDefault();
-                                         setTempQuestion({...tempQuestion, sections: [...(tempQuestion.sections || []), { id: Date.now(), type: secType, content: "" }]});
-                                         setOpenDropdownId(null);
-                                      }}
-                                      className="w-full text-left px-3 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors flex items-center gap-2"
-                                    >
-                                      {React.createElement(SECTION_STYLE_PRESETS[secType]?.icon || FileText, { className: "w-4 h-4" })}
-                                      <span>{SECTION_STYLE_PRESETS[secType]?.label || secType}</span>
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                           </div>
-                           
-                           <div className="space-y-4">
-                             {(tempQuestion.sections || []).map((sec: any, secIdx: number) => {
-                               const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
-                               const SectionIcon = preset.icon;
-                               return (
-                                 <div key={sec.id} className={`p-4 rounded-2xl relative group/section border ${preset.container}`}>
-                                   <div className="flex justify-between items-center mb-3">
-                                     <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1.5 ${preset.badge}`}>
-                                       <SectionIcon className="w-3.5 h-3.5" />
-                                       {preset.label}
-                                     </span>
-                                     <button 
-                                       onClick={(e) => {
-                                         e.preventDefault();
-                                         const newSections = [...tempQuestion.sections];
-                                         newSections.splice(secIdx, 1);
-                                         setTempQuestion({...tempQuestion, sections: newSections});
-                                       }} 
-                                       className="text-red-400 hover:text-red-600 opacity-0 group-hover/section:opacity-100 transition-all"
-                                     >
-                                       <Trash2 className="w-4 h-4" />
-                                     </button>
-                                   </div>
-                                   <RichTextEditor 
-                                     value={sec.content}
-                                     onChange={(val) => {
-                                       const newSections = [...tempQuestion.sections];
-                                       newSections[secIdx].content = val;
-                                       setTempQuestion({...tempQuestion, sections: newSections});
-                                     }}
-                                     placeholder={`محتوى الـ ${sec.type}...`}
-                                     className="!bg-white"
-                                   />
-                                 </div>
-                               );
-                             })}
-                           </div>
-                         </div>
-
-                         <div className="flex justify-end gap-4">
-                           <button onClick={() => setShowQuestionForm(false)} className="px-8 py-3 rounded-2xl bg-slate-100 text-slate-500 font-bold">إلغاء</button>
-                           <button onClick={handleSaveQuestion} className="px-10 py-3 rounded-2xl bg-indigo-600 text-white font-black shadow-xl shadow-indigo-900/20">حفظ التكليف</button>
-                         </div>
-                      </div>
-                    )}
-
-                    <div className="space-y-4">
-                      {(currentLesson.assignments || []).map((q: any, index: number) => (
-                        <div key={index} className="bg-white border border-slate-100 rounded-3xl p-6 flex justify-between items-center hover:bg-slate-100 transition-all group shadow-sm">
-                          <div className="flex items-center gap-6 overflow-hidden">
-                            <span className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 font-black">{index + 1}</span>
-                            <div className="text-slate-700 font-bold truncate max-w-xl" dangerouslySetInnerHTML={{ __html: q.text.replace(/<[^>]*>?/gm, '').substring(0, 80) + '...' }} />
-                          </div>
-                          <div className="flex gap-2">
-                            <button onClick={() => { setTempQuestion(q); setEditingQuestionIndex(index); setShowQuestionForm(true); }} className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"><Edit2 className="w-5 h-5" /></button>
-                            <button onClick={() => {
-                               const arr = [...currentLesson.assignments];
-                               arr.splice(index, 1);
-                               setCurrentLesson({...currentLesson, assignments: arr});
-                            }} className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"><Trash2 className="w-5 h-5" /></button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === 'slides' && (
-                  <div className="space-y-8">
-                    <div className="flex justify-between items-center mb-4">
-                      <div>
-                        <h4 className="text-xl font-black text-slate-900 flex items-center gap-3">
-                          <Layout className="w-6 h-6 text-indigo-600" />
-                          بناء محتوى الدرس (Blocks)
-                        </h4>
-                        <p className="text-slate-400 text-sm font-bold mt-1">قم بإضافة وحدات نصية أو أسئلة تفاعلية لتسلسل الدرس</p>
-                      </div>
-                      <div className="flex gap-3">
-                        <button 
-                          onClick={() => addBlock('TEXT')}
-                          className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all"
-                        >
-                          <Plus className="w-5 h-5" />
-                          وحدة محتوى (Text)
-                        </button>
-                        <button 
-                          onClick={() => addBlock('QUESTION')}
-                          className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all shadow-lg"
-                        >
-                          <Plus className="w-5 h-5" />
-                          سؤال مدمج (Question)
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      {currentLesson.slides.map((block: any, sIdx: number) => (
-                        <React.Fragment key={block.id}>
-                          {sIdx === 0 && (
-                            <div className="group/divider relative py-2 flex items-center justify-center my-2">
-                              <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                                <div className="w-full border-t border-dashed border-slate-200 group-hover/divider:border-indigo-300 transition-colors"></div>
-                              </div>
-                              <div className="relative flex justify-center opacity-0 group-hover/divider:opacity-100 transition-all duration-300 scale-95 group-hover/divider:scale-100 gap-3 z-10">
-                                <button
-                                  type="button"
-                                  onClick={() => insertBlockAt(0, 'TEXT')}
-                                  className="bg-white border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 px-4 py-2 rounded-full text-xs font-black flex items-center gap-1.5 shadow-sm transition-all cursor-pointer animate-in fade-in zoom-in-95 duration-200"
-                                >
-                                  <Plus className="w-3.5 h-3.5" />
-                                  <span>+ شريحة محتوى</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => insertBlockAt(0, 'QUESTION')}
-                                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full text-xs font-black flex items-center gap-1.5 shadow-md hover:shadow-indigo-900/10 transition-all cursor-pointer animate-in fade-in zoom-in-95 duration-200"
-                                >
-                                  <Plus className="w-3.5 h-3.5" />
-                                  <span>+ سؤال مدمج</span>
-                                </button>
-                              </div>
-                              <div className="relative w-6 h-6 bg-slate-100 border border-slate-200 text-slate-400 rounded-full flex items-center justify-center text-[10px] font-black group-hover/divider:hidden transition-all shadow-sm">
-                                +
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="bg-slate-50 border border-slate-200 rounded-[30px] overflow-hidden group shadow-sm transition-all hover:shadow-md">
-                            <div className={`p-4 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center border-b ${block.type === 'QUESTION' ? 'bg-indigo-50/50 border-indigo-100' : 'bg-white border-slate-100'}`}>
-                              <div className="flex items-center gap-4 w-full md:w-auto">
-                                <span className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-white shadow-md ${block.type === 'QUESTION' ? 'bg-indigo-600' : 'bg-slate-800'}`}>
-                                  {sIdx + 1}
-                                </span>
-                                <div className="flex flex-col gap-1 w-full md:w-auto">
-                                  <div className="flex gap-2">
-                                    <select
-                                      value={block.label}
-                                      onChange={(e) => updateBlock(sIdx, 'label', e.target.value)}
-                                      className="bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-600 outline-none focus:border-indigo-600 px-2 py-1 uppercase"
-                                    >
-                                      {block.type === 'TEXT' ? (
-                                        <>
-                                          <option value="CONTENT">محتوى (Content)</option>
-                                          <option value="EXAMPLE">مثال (Example)</option>
-                                          <option value="SUMMARY">ملخص (Summary)</option>
-                                          <option value="HINT">ملاحظة (Note)</option>
-                                          <option value="EXPLANATION">شرح (Explanation)</option>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <option value="MCQ">اختيار من متعدد (MCQ)</option>
-                                          <option value="TRUE_FALSE">صح وخطأ (T/F)</option>
-                                          <option value="MULTI_SELECT">اختيار متعدد (Multi-select)</option>
-                                        </>
-                                      )}
-                                    </select>
-                                    <input 
-                                      type="text"
-                                      value={block.title || ""}
-                                      onChange={(e) => updateBlock(sIdx, 'title', e.target.value)}
-                                      className="bg-transparent text-slate-900 font-black outline-none border-b border-transparent focus:border-indigo-600 px-2 py-1 w-full md:w-48 placeholder:text-slate-400"
-                                      placeholder={block.type === 'TEXT' ? "عنوان الوحدة (اختياري)" : "عنوان السؤال (اختياري)"}
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-3 self-end md:self-auto">
-                                <div className="flex items-center bg-white border border-slate-200 rounded-xl p-0.5 shadow-sm ml-1">
-                                  <button
-                                    type="button"
-                                    disabled={sIdx === 0}
-                                    onClick={() => moveBlock(sIdx, 'UP')}
-                                    className="p-2 text-slate-500 hover:text-indigo-600 disabled:text-slate-300 disabled:hover:text-slate-300 hover:bg-slate-50 rounded-lg transition-all"
-                                    title="تحريك لأعلى"
-                                  >
-                                    <ChevronUp className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    disabled={sIdx === currentLesson.slides.length - 1}
-                                    onClick={() => moveBlock(sIdx, 'DOWN')}
-                                    className="p-2 text-slate-500 hover:text-indigo-600 disabled:text-slate-300 disabled:hover:text-slate-300 hover:bg-slate-50 rounded-lg transition-all"
-                                    title="تحريك لأسفل"
-                                  >
-                                    <ChevronDown className="w-4 h-4" />
-                                  </button>
-                                </div>
-                                <div className="relative" data-dropdown-root="true" onClick={(e) => e.stopPropagation()}>
-                                  <button 
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      setOpenDropdownId(openDropdownId === `slide-${sIdx}` ? null : `slide-${sIdx}`);
-                                    }}
-                                    className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all"
-                                  >
-                                    <Plus className="w-4 h-4" /> Add Section
-                                  </button>
-                                  <div className={`absolute left-0 mt-2 w-56 bg-white border border-slate-100 rounded-xl shadow-xl p-2 z-50 ${openDropdownId === `slide-${sIdx}` ? "block" : "hidden"}`}>
-                                    {['FEEDBACK', 'HINT', 'EXPLANATION', 'TIP', 'WARNING', 'KEY_INSIGHT'].map(secType => (
-                                      <button
-                                        key={secType}
-                                        type="button"
-                                        onClick={() => {
-                                           addSection(sIdx, secType);
-                                           setOpenDropdownId(null);
-                                        }}
-                                        className="w-full text-left px-3 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors flex items-center gap-2"
-                                      >
-                                        {React.createElement(SECTION_STYLE_PRESETS[secType]?.icon || FileText, { className: "w-4 h-4" })}
-                                        <span>{SECTION_STYLE_PRESETS[secType]?.label || secType}</span>
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-                                <button 
-                                  onClick={() => removeBlock(sIdx)}
-                                  className="text-red-500 hover:text-red-600 p-2 hover:bg-red-500/10 rounded-xl transition-all bg-white"
-                                >
-                                  <Trash2 className="w-5 h-5" />
-                                </button>
-                              </div>
-                            </div>
-
-                            <div className="p-6 space-y-6">
-                              <div className="mb-4">
-                                <label className="text-xs font-black text-slate-500 uppercase tracking-widest block mb-2">رابط فيديو (اختياري) خاص بهذا القسم</label>
-                                <input
-                                  type="url"
-                                  value={block.videoUrl || ""}
-                                  onChange={(e) => updateBlock(sIdx, 'videoUrl', e.target.value)}
-                                  placeholder="أضف رابط يوتيوب أو فيميو هنا..."
-                                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 font-bold"
-                                />
-                              </div>
-                              <div>
-                                <RichTextEditor 
-                                  value={block.content}
-                                  onChange={(val) => updateBlock(sIdx, 'content', val)}
-                                  placeholder={block.type === 'TEXT' ? "اكتب محتوى الشرح هنا..." : "اكتب نص السؤال هنا..."}
-                                  className="!bg-white !border-slate-200"
-                                />
-                              </div>
-
-                              {block.type === 'QUESTION' && (
-                                <div className="bg-slate-100 p-6 rounded-2xl border border-slate-200 space-y-4">
-                                  <label className="text-xs font-black text-slate-500 uppercase tracking-widest block">خيارات الإجابة</label>
-                                  {block.label === 'TRUE_FALSE' ? (
-                                    <div className="grid grid-cols-2 gap-4">
-                                      {['صحيح', 'خطأ'].map((opt) => (
-                                        <div key={opt} className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${block.correctAnswer === opt ? 'bg-emerald-50 border-emerald-500' : 'bg-white border-transparent'}`} onClick={() => updateBlock(sIdx, 'correctAnswer', opt)}>
-                                          <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${block.correctAnswer === opt ? 'bg-emerald-500 border-emerald-200' : 'bg-slate-200 border-transparent'}`}>
-                                            {block.correctAnswer === opt && <CheckCircle2 className="w-4 h-4 text-white" />}
-                                          </div>
-                                          <span className="font-bold text-slate-700">{opt}</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                      {(block.options || []).map((opt: string, oIdx: number) => {
-                                        const isSelected = block.label === 'MULTI_SELECT' 
-                                          ? (block.correctAnswers || []).includes(opt) 
-                                          : block.correctAnswer === opt;
-                                        
-                                        return (
-                                          <div key={oIdx} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${isSelected && opt ? 'bg-emerald-50 border-emerald-500' : 'bg-white border-transparent'}`}>
-                                            <div 
-                                              onClick={() => {
-                                                if (block.label === 'MULTI_SELECT') {
-                                                  const answers = block.correctAnswers || [];
-                                                  if (answers.includes(opt) && opt) updateBlock(sIdx, 'correctAnswers', answers.filter((a:string) => a !== opt));
-                                                  else if (opt) updateBlock(sIdx, 'correctAnswers', [...answers, opt]);
-                                                } else {
-                                                  updateBlock(sIdx, 'correctAnswer', opt);
-                                                }
-                                              }}
-                                              className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 cursor-pointer ${isSelected && opt ? 'bg-emerald-500 border-emerald-200' : 'bg-slate-200 border-transparent'}`}
-                                            >
-                                              {isSelected && opt && <CheckCircle2 className="w-4 h-4 text-white" />}
-                                            </div>
-                                            <input 
-                                              type="text"
-                                              value={opt}
-                                              onChange={(e) => {
-                                                const newOpts = [...(block.options || [])];
-                                                newOpts[oIdx] = e.target.value;
-                                                updateBlock(sIdx, 'options', newOpts);
-                                              }}
-                                              placeholder={`خيار ${oIdx + 1}`}
-                                              className="bg-transparent outline-none font-bold text-slate-700 flex-1"
-                                            />
-                                            {block.options.length > 2 && (
-                                              <button onClick={() => {
-                                                const newOpts = [...block.options];
-                                                newOpts.splice(oIdx, 1);
-                                                updateBlock(sIdx, 'options', newOpts);
-                                              }} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
-                                            )}
-                                          </div>
-                                        );
-                                      })}
-                                      <button 
-                                        onClick={() => updateBlock(sIdx, 'options', [...(block.options||[]), ""])}
-                                        className="flex justify-center items-center p-3 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-200 hover:border-slate-400 transition-all"
-                                      >
-                                        <Plus className="w-5 h-5 ml-1" /> إضافة خيار
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-
-                              {(block.sections || []).length > 0 && (
-                                <div className="space-y-4 pt-4 border-t border-slate-100">
-                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">أقسام إضافية ديناميكية (Dynamic Sections)</label>
-                                  {(block.sections || []).map((sec: any, secIdx: number) => {
-                                    const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
-                                    const SectionIcon = preset.icon;
-                                    return (
-                                    <div key={sec.id} className={`p-4 rounded-2xl relative group/section border ${preset.container}`}>
-                                      <div className="flex justify-between items-center mb-3">
-                                        <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1.5 ${preset.badge}`}>
-                                          <SectionIcon className="w-3.5 h-3.5" />
-                                          {preset.label}
-                                        </span>
-                                        <button onClick={() => removeSection(sIdx, secIdx)} className="text-red-400 hover:text-red-600 opacity-0 group-hover/section:opacity-100 transition-all">
-                                          <Trash2 className="w-4 h-4" />
-                                        </button>
-                                      </div>
-                                      <RichTextEditor 
-                                        value={sec.content}
-                                        onChange={(val) => updateSection(sIdx, secIdx, val)}
-                                        placeholder={`محتوى الـ ${sec.type}...`}
-                                        className="!bg-white"
-                                      />
-                                    </div>
-                                  )})}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="group/divider relative py-2 flex items-center justify-center my-2">
-                            <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                              <div className="w-full border-t border-dashed border-slate-200 group-hover/divider:border-indigo-300 transition-colors"></div>
-                            </div>
-                            <div className="relative flex justify-center opacity-0 group-hover/divider:opacity-100 transition-all duration-300 scale-95 group-hover/divider:scale-100 gap-3 z-10">
-                              <button
-                                type="button"
-                                onClick={() => insertBlockAt(sIdx + 1, 'TEXT')}
-                                className="bg-white border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 px-4 py-2 rounded-full text-xs font-black flex items-center gap-1.5 shadow-sm transition-all cursor-pointer animate-in fade-in zoom-in-95 duration-200"
-                              >
-                                <Plus className="w-3.5 h-3.5" />
-                                <span>+ شريحة محتوى</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => insertBlockAt(sIdx + 1, 'QUESTION')}
-                                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full text-xs font-black flex items-center gap-1.5 shadow-md hover:shadow-indigo-900/10 transition-all cursor-pointer animate-in fade-in zoom-in-95 duration-200"
-                              >
-                                <Plus className="w-3.5 h-3.5" />
-                                <span>+ سؤال مدمج</span>
-                              </button>
-                            </div>
-                            <div className="relative w-6 h-6 bg-slate-100 border border-slate-200 text-slate-400 rounded-full flex items-center justify-center text-[10px] font-black group-hover/divider:hidden transition-all shadow-sm">
-                              +
-                            </div>
-                          </div>
-                        </React.Fragment>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 {activeTab === 'exercises' && (
-                  <div className="space-y-8">
+                  <div className="space-y-8 animate-in fade-in duration-300">
                     <div className="flex justify-between items-center mb-6">
-                      <div>
-                        <h4 className="text-xl font-black text-slate-900">تدريبات الدرس</h4>
-                        <p className="text-slate-400 text-sm font-bold">تمارين تفاعلية تظهر للطالب أثناء دراسة المحتوى</p>
-                      </div>
-                      <div className="flex gap-3">
-                        <button 
-                          onClick={() => showToast("جاري فتح بنك الأسئلة المركزي...", "info")} 
-                          className="bg-orange-50 text-orange-600 px-6 py-2.5 rounded-xl font-black flex items-center gap-2 hover:bg-orange-600 hover:text-white transition-all border border-orange-100"
-                        >
-                          <BookOpen className="w-5 h-5" /> بنك الأسئلة
-                        </button>
-                        <button 
-                          onClick={() => handleAddQuestion('exercises')}
-                          className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black flex items-center gap-2"
-                        >
-                          <Plus className="w-5 h-5" />
-                          إضافة سؤال
-                        </button>
-                      </div>
+                       <h4 className="text-xl font-black text-slate-900">تدريبات الدرس</h4>
+                       <button 
+                         onClick={() => handleAddQuestion('exercises')}
+                         className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black flex items-center gap-2 shadow-lg hover:bg-indigo-700 transition-all"
+                       >
+                         <Plus className="w-5 h-5" /> إضافة سؤال جديد
+                       </button>
                     </div>
-
-                    {showQuestionForm && (
-                      <div className="bg-slate-50 border-2 border-indigo-600 rounded-[35px] p-8 space-y-8 animate-in zoom-in-95 duration-300 mb-10">
-                        <div className="flex justify-between items-center border-b border-slate-100 pb-6">
-                          <h5 className="text-lg font-black text-slate-900 flex items-center gap-3">
-                            <Edit2 className="w-6 h-6 text-indigo-600" />
-                            {editingQuestionIndex !== null ? "تعديل السؤال" : "إضافة سؤال جديد للتدريبات"}
-                          </h5>
-                          <button onClick={() => setShowQuestionForm(false)} className="text-slate-400 hover:text-slate-900"><X className="w-6 h-6" /></button>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">المعيار (Standard)</label>
-                            <select 
-                              className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 appearance-none"
-                              value={tempQuestion.standard}
-                              onChange={(e) => setTempQuestion({...tempQuestion, standard: e.target.value})}
-                            >
-                              <option value="">اختر المعيار...</option>
-                              {STANDARDS.map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">المؤشر (Indicator)</label>
-                            <select 
-                              className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 appearance-none"
-                              value={tempQuestion.indicator}
-                              onChange={(e) => setTempQuestion({...tempQuestion, indicator: e.target.value})}
-                            >
-                              <option value="">اختر المؤشر...</option>
-                              {INDICATORS.map(i => <option key={i} value={i}>{i}</option>)}
-                            </select>
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">ناتج التعلم (LO)</label>
-                            <select 
-                              className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 appearance-none"
-                              value={tempQuestion.learningOutcome}
-                              onChange={(e) => setTempQuestion({...tempQuestion, learningOutcome: e.target.value})}
-                            >
-                              <option value="">اختر ناتج التعلم...</option>
-                              {LEARNING_OUTCOMES.map(lo => <option key={lo} value={lo}>{lo}</option>)}
-                            </select>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">نوع السؤال</label>
-                            <select 
-                              className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600"
-                              value={tempQuestion.type}
-                              onChange={(e) => setTempQuestion({...tempQuestion, type: e.target.value, options: e.target.value === "TRUE_FALSE" ? ["صحيح", "خطأ", "", ""] : ["", "", "", ""]})}
-                            >
-                              {QUESTION_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-                            </select>
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">المستوى</label>
-                            <select 
-                              className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600"
-                              value={tempQuestion.level}
-                              onChange={(e) => setTempQuestion({...tempQuestion, level: e.target.value})}
-                            >
-                              <option value="Easy">سهل</option>
-                              <option value="Medium">متوسط</option>
-                              <option value="Hard">صعب</option>
-                            </select>
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">الدرجة</label>
-                            <input 
-                              type="number"
-                              className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600"
-                              value={tempQuestion.points}
-                              onChange={(e) => setTempQuestion({...tempQuestion, points: parseInt(e.target.value)})}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">المحاولات</label>
-                            <input 
-                              type="number"
-                              min="1"
-                              className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600"
-                              value={tempQuestion.attempts || 1}
-                              onChange={(e) => setTempQuestion({...tempQuestion, attempts: parseInt(e.target.value)})}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="space-y-3">
-                          <label className="text-xs font-black text-slate-400 uppercase tracking-widest">نص السؤال</label>
-                          <RichTextEditor 
-                            value={tempQuestion.text}
-                            onChange={(val) => setTempQuestion({...tempQuestion, text: val})}
-                            placeholder="اكتب السؤال هنا..."
-                            className="!bg-white !border-slate-100"
-                          />
-                        </div>
-
-                        <div className="space-y-4 pt-4 border-t border-slate-100">
-                          <div className="flex justify-between items-center">
-                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest">أقسام إضافية (ملاحظات، شرح، إلخ)</label>
-                            <div className="relative" data-dropdown-root="true" onClick={(e) => e.stopPropagation()}>
-                              <button 
-                                type="button"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setOpenDropdownId(openDropdownId === "exercise-sections" ? null : "exercise-sections");
-                                }}
-                                className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1"
-                              >
-                                <Plus className="w-4 h-4"/> إضافة قسم
-                              </button>
-                              <div className={`absolute left-0 mt-2 w-48 bg-white border border-slate-100 rounded-xl shadow-xl p-2 z-50 ${openDropdownId === "exercise-sections" ? "block" : "hidden"}`}>
-                                {['FEEDBACK', 'HINT', 'EXPLANATION', 'TIP', 'WARNING', 'KEY_INSIGHT'].map(secType => (
-                                  <button
-                                    key={secType}
-                                    type="button"
-                                    onClick={(e) => {
-                                       e.preventDefault();
-                                       setTempQuestion({...tempQuestion, sections: [...(tempQuestion.sections || []), { id: Date.now(), type: secType, content: "" }]});
-                                       setOpenDropdownId(null);
-                                    }}
-                                    className="w-full text-left px-3 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors flex items-center gap-2"
-                                  >
-                                    {React.createElement(SECTION_STYLE_PRESETS[secType]?.icon || FileText, { className: "w-4 h-4" })}
-                                    <span>{SECTION_STYLE_PRESETS[secType]?.label || secType}</span>
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-4">
-                            {(tempQuestion.sections || []).map((sec: any, secIdx: number) => {
-                              const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
-                              const SectionIcon = preset.icon;
-                              return (
-                                <div key={sec.id} className={`p-4 rounded-2xl relative group/section border ${preset.container}`}>
-                                  <div className="flex justify-between items-center mb-3">
-                                    <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1.5 ${preset.badge}`}>
-                                      <SectionIcon className="w-3.5 h-3.5" />
-                                      {preset.label}
-                                    </span>
-                                    <button 
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        const newSections = [...tempQuestion.sections];
-                                        newSections.splice(secIdx, 1);
-                                        setTempQuestion({...tempQuestion, sections: newSections});
-                                      }} 
-                                      className="text-red-400 hover:text-red-600 opacity-0 group-hover/section:opacity-100 transition-all"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
-                                  </div>
-                                  <RichTextEditor 
-                                    value={sec.content}
-                                    onChange={(val) => {
-                                      const newSections = [...tempQuestion.sections];
-                                      newSections[secIdx].content = val;
-                                      setTempQuestion({...tempQuestion, sections: newSections});
-                                    }}
-                                    placeholder={`محتوى الـ ${sec.type}...`}
-                                    className="!bg-white"
-                                  />
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          {tempQuestion.type !== "TRUE_FALSE" ? (
-                            <>
-                              {tempQuestion.options.map((opt: string, oIdx: number) => {
-                                const isSelected = tempQuestion.type === "MULTI_SELECT" 
-                                  ? tempQuestion.correctAnswers?.includes(opt) 
-                                  : tempQuestion.correctAnswer === opt;
-                                return (
-                                  <div key={oIdx} className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isSelected && opt !== "" ? 'bg-emerald-50 border-emerald-600' : 'bg-slate-50 border-slate-100'}`}>
-                                    <div 
-                                      onClick={() => {
-                                        if (tempQuestion.type === "MULTI_SELECT") {
-                                          const answers = tempQuestion.correctAnswers || [];
-                                          if (answers.includes(opt)) {
-                                            setTempQuestion({...tempQuestion, correctAnswers: answers.filter((a: string) => a !== opt)});
-                                          } else if (opt !== "") {
-                                            setTempQuestion({...tempQuestion, correctAnswers: [...answers, opt]});
-                                          }
-                                        } else {
-                                          setTempQuestion({...tempQuestion, correctAnswer: opt});
-                                        }
-                                      }}
-                                      className={`w-7 h-7 rounded-full border-4 cursor-pointer flex items-center justify-center ${isSelected && opt !== "" ? 'bg-white border-emerald-400' : 'bg-slate-200 border-white'}`}
-                                    >
-                                      {isSelected && opt !== "" && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
-                                    </div>
-                                    <input 
-                                      type="text"
-                                      value={opt}
-                                      onChange={(e) => {
-                                        const opts = [...tempQuestion.options];
-                                        opts[oIdx] = e.target.value;
-                                        setTempQuestion({...tempQuestion, options: opts});
-                                      }}
-                                      className={`bg-transparent flex-1 outline-none font-bold ${isSelected && opt !== "" ? 'text-slate-900' : 'text-slate-900'}`}
-                                      placeholder={`الخيار ${oIdx + 1}`}
-                                    />
-                                    {tempQuestion.options.length > 2 && (
-                                      <button onClick={() => {
-                                          const opts = [...tempQuestion.options];
-                                          opts.splice(oIdx, 1);
-                                          setTempQuestion({...tempQuestion, options: opts});
-                                      }} className="text-red-500 hover:text-red-600"><Trash2 className="w-4 h-4"/></button>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                              <div className="flex items-center justify-center p-5 rounded-[22px] border-2 border-dashed border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all cursor-pointer text-indigo-600 font-bold" onClick={() => setTempQuestion({...tempQuestion, options: [...tempQuestion.options, ""]})}>
-                                <Plus className="w-5 h-5 ml-2" />
-                                إضافة خيار
-                              </div>
-                            </>
-                          ) : (
-                            ["صحيح", "خطأ"].map((opt, oIdx) => (
-                              <div key={oIdx} className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${tempQuestion.correctAnswer === opt ? 'bg-emerald-600 border-emerald-700' : 'bg-slate-50 border-slate-100'}`}>
-                                <div 
-                                  onClick={() => setTempQuestion({...tempQuestion, correctAnswer: opt})}
-                                  className={`w-7 h-7 rounded-full border-4 cursor-pointer flex items-center justify-center ${tempQuestion.correctAnswer === opt ? 'bg-white border-emerald-400' : 'bg-slate-200 border-white'}`}
-                                >
-                                  {tempQuestion.correctAnswer === opt && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
-                                </div>
-                                <span className={`font-bold ${tempQuestion.correctAnswer === opt ? 'text-white' : 'text-slate-900'}`}>{opt}</span>
-                              </div>
-                            ))
-                          )}
-                        </div>
-
-                        <div className="flex justify-end gap-4">
-                          <button onClick={() => setShowQuestionForm(false)} className="px-8 py-3 rounded-2xl bg-slate-100 text-slate-500 font-bold hover:bg-slate-200 transition-all">إلغاء</button>
-                          <button onClick={handleSaveQuestion} className="px-10 py-3 rounded-2xl bg-indigo-600 text-white font-black hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-900/20">حفظ السؤال</button>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="space-y-4">
+                    
+                    <div className="flex flex-col gap-4">
                       {currentLesson.questions.map((q: any, index: number) => (
                         <div key={index} className="bg-slate-50 border border-slate-100 rounded-3xl p-6 flex justify-between items-center hover:bg-slate-100 transition-all group shadow-sm">
                           <div className="flex items-center gap-6 overflow-hidden">

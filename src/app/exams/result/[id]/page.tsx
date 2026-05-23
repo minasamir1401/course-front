@@ -3,9 +3,76 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { API_URL } from "@/lib/api";
-import { CheckCircle2, XCircle, ChevronRight, ChevronLeft, LayoutDashboard, RefreshCw, Award, Target, Clock, MessageCircle, Lock, EyeOff } from "lucide-react";
+import { CheckCircle2, XCircle, ChevronRight, ChevronLeft, LayoutDashboard, RefreshCw, Award, Target, Clock, MessageCircle, Lock, EyeOff, HelpCircle, Info, AlertCircle, Sparkles, BookOpen, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { useNotification } from "@/context/NotificationContext";
+
+const renderExplanation = (explanationString: string) => {
+  if (!explanationString) return null;
+  
+  let sections = [];
+  let isJson = false;
+  try {
+    const parsed = JSON.parse(explanationString);
+    if (Array.isArray(parsed)) {
+      sections = parsed.map((item: any) => {
+        if (typeof item === 'string') {
+          return { type: 'EXPLANATION', content: item };
+        }
+        return item;
+      });
+      isJson = true;
+    }
+  } catch (e) {
+    // Not JSON, treat as plain text/HTML
+  }
+
+  const SECTION_STYLE_PRESETS: Record<string, any> = {
+    HINT: { icon: HelpCircle, bg: "bg-amber-50/70", text: "text-amber-700", border: "border-amber-200", label: "Hint / تلميح" },
+    TIP: { icon: Info, bg: "bg-blue-50/70", text: "text-blue-700", border: "border-blue-200", label: "Tip / نصيحة" },
+    WARNING: { icon: AlertCircle, bg: "bg-red-50/70", text: "text-red-700", border: "border-red-200", label: "Warning / تحذير" },
+    KEY_INSIGHT: { icon: Sparkles, bg: "bg-purple-50/70", text: "text-purple-700", border: "border-purple-200", label: "Key Insight / نقطة هامة" },
+    FEEDBACK: { icon: MessageSquare, bg: "bg-emerald-50/70", text: "text-emerald-700", border: "border-emerald-200", label: "Feedback / ملاحظات" },
+    EXPLANATION: { icon: BookOpen, bg: "bg-indigo-50/70", text: "text-indigo-700", border: "border-indigo-200", label: "Explanation / شرح مفصل" }
+  };
+
+  if (!isJson || sections.length === 0) {
+    return (
+      <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 flex gap-5 text-right">
+        <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-slate-400 shrink-0">
+          <MessageCircle className="w-5 h-5" />
+        </div>
+        <div>
+          <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-widest text-right">
+            شرح وتوضيح الإجابة
+          </p>
+          <div 
+            className="text-slate-600 leading-relaxed font-medium text-right prose prose-sm max-w-none"
+            dangerouslySetInnerHTML={{ __html: explanationString }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 text-right mt-6" dir="rtl">
+      {sections.map((sec: any, sIdx: number) => {
+        const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
+        const Icon = preset.icon || MessageCircle;
+        return (
+          <div key={sIdx} className={`p-6 rounded-2xl border-2 text-right ${preset.bg} ${preset.border}`} dir="auto">
+            <div className={`flex items-center gap-2 mb-3 font-black ${preset.text}`}>
+              <Icon className="w-5 h-5 shrink-0" />
+              <span>{preset.label}</span>
+            </div>
+            <div className={`prose prose-sm max-w-none text-right ${preset.text}`} dangerouslySetInnerHTML={{ __html: sec.content }} />
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 export default function ExamResultPage() {
   const { id } = useParams();
@@ -305,25 +372,10 @@ export default function ExamResultPage() {
                         <img
                           src={answer.question.imageUrl}
                           alt="Question"
-                          className="max-w-full rounded-2xl border border-slate-100 shadow-sm"
+                          className="max-w-full rounded-2xl border border-slate-100 shadow-sm mx-auto"
                         />
                       )}
-                      {answer.question.explanation && (
-                        <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 flex gap-5">
-                          <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-slate-400 shrink-0">
-                            <MessageCircle className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-widest">
-                              شرح وتوضيح الإجابة
-                            </p>
-                            <div 
-                              className="text-slate-600 leading-relaxed font-medium"
-                              dangerouslySetInnerHTML={{ __html: answer.question.explanation }}
-                            />
-                          </div>
-                        </div>
-                      )}
+                      {answer.question.explanation && renderExplanation(answer.question.explanation)}
                     </div>
                   )}
                 </div>

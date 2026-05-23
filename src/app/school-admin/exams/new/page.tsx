@@ -11,6 +11,7 @@ import {
 import RichTextEditor from "@/components/RichTextEditor";
 
 import { API_URL } from "@/lib/api";
+import { sanitizeHtml } from "@/lib/sanitize";
 import { useRouter } from "next/navigation";
 import { useNotification } from "@/context/NotificationContext";
 
@@ -702,7 +703,7 @@ export default function SchoolAdminNewExamPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                           <div className="space-y-4">
                             <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">محتوى السؤال:</h5>
-                            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm prose prose-slate max-w-none" dangerouslySetInnerHTML={{ __html: q.text }} />
+                            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm prose prose-slate max-w-none" dangerouslySetInnerHTML={{ __html: sanitizeHtml(q.text) }} />
                             
                             {q.learningOutcome && (
                               <div className="flex items-center gap-2 text-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-100 w-fit">
@@ -786,7 +787,7 @@ export default function SchoolAdminNewExamPage() {
 
                   <h2 
                     className="text-3xl font-bold text-slate-800 leading-relaxed prose prose-indigo max-w-none"
-                    dangerouslySetInnerHTML={{ __html: previewQuestion.text }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewQuestion.text) }}
                   />
 
                   {previewQuestion.imageUrl && (
