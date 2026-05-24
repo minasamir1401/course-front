@@ -105,10 +105,6 @@ export default function SchoolAdminPage() {
               <p className="text-slate-500 text-xs md:text-lg font-medium opacity-80">إليك ملخص شامل لأداء مدرستك وتفاعل الطلاب اليوم.</p>
             </div>
             <div className="flex gap-2 md:gap-3 w-full md:w-auto">
-              <Link href="/school-admin/students" className="flex-1 md:flex-none justify-center bg-blue-600 text-white px-4 md:px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 text-xs md:text-base">
-                <Plus className="w-4 h-4 md:w-5 md:h-5" />
-                إضافة طالب
-              </Link>
               <button className="flex-1 md:flex-none justify-center bg-white text-slate-700 border border-slate-200 px-4 md:px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-slate-50 transition-all shadow-sm text-xs md:text-base">
                 <Download className="w-4 h-4 md:w-5 md:h-5" />
                 تقرير
