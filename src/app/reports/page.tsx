@@ -172,7 +172,7 @@ export default function ReportsPage() {
                 </h3>
                 <div className="h-[300px] w-full" dir="ltr">
                   {mounted && (
-                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                    <ResponsiveContainer width="100%" height={300}>
                       <AreaChart data={stats?.submissions?.slice().reverse().map((s:any) => ({ name: new Date(s.createdAt).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {day:'numeric', month:'short'}), score: s.percentage }))}>
                         <defs>
                           <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
@@ -198,7 +198,7 @@ export default function ReportsPage() {
                 </h3>
                 <div className="h-[300px] w-full" dir="ltr">
                   {mounted && (
-                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                    <ResponsiveContainer width="100%" height={300}>
                       <BarChart data={stats?.courseProgresses}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                         <XAxis dataKey="title" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94A3B8' }} />

@@ -105,7 +105,7 @@ export default function SchoolAdminStudentsPage() {
 
       if (res.ok) {
         const data = await res.json();
-        setStudents(Array.isArray(data) ? data : []);
+        setStudents(Array.isArray(data) ? data : (data.users || []));
       } else {
         setError("فشل جلب البيانات.");
       }

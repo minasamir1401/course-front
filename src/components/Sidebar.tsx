@@ -83,7 +83,7 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose, onToggle, rol
         {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
       </button>
 
-      <aside className={`fixed top-0 start-0 h-full w-72 bg-white border-e border-slate-100 z-50 transition-all duration-500 lg:translate-x-0 ${isOpen ? 'translate-x-0' : 'ltr:-translate-x-full rtl:translate-x-full'} shadow-[0_0_40px_rgba(0,0,0,0.03)] flex flex-col`}>
+      <aside className={`fixed top-0 start-0 h-full w-72 bg-white border-e border-slate-100 z-50 transition-all duration-500 lg:translate-x-0 lg:rtl:translate-x-0 ${isOpen ? 'translate-x-0' : 'ltr:-translate-x-full rtl:translate-x-full'} shadow-[0_0_40px_rgba(0,0,0,0.03)] flex flex-col`}>
 
         {/* School Identity */}
         <div className="p-8 mb-4 border-b border-slate-50">
