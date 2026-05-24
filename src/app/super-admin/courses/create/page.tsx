@@ -88,6 +88,7 @@ export default function CreateCoursePage() {
   // Lesson State
   const [currentLesson, setCurrentLesson] = useState<any>({
     title: "",
+    domain: "",
     videoUrl: "",
     summary: "",
     notes: "",
@@ -229,6 +230,7 @@ export default function CreateCoursePage() {
     setEditingLessonIndex(null);
     setCurrentLesson({
       title: "",
+      domain: "",
       videoUrl: "",
       summary: "",
       notes: "",
@@ -755,9 +757,9 @@ export default function CreateCoursePage() {
     const token = localStorage.getItem("super_admin_token");
     
     try {
-      // Build lesson payload explicitly — no spread to avoid unexpected fields
       const lessonsPayload = lessons.map((l) => ({
         title: l.title,
+        domain: l.domain || null,
         videoUrl: l.videoUrl || null,
         summary: l.summary || null,
         notes: l.notes || null,
@@ -894,7 +896,30 @@ schoolIds: targetSchoolIds,
                           <Target className="w-6 h-6 text-indigo-600" />
                           Academic Objectives & Standards
                        </h4>
-                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div className="space-y-3">
+                          <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Domain</label>
+                          <select 
+                            value={currentLesson.domain || ""}
+                            onChange={(e) => {
+                              if (e.target.value === "__NEW__") {
+                                const newDomain = prompt("أدخل اسم المجال الجديد (New Domain Name):");
+                                if (newDomain && newDomain.trim()) {
+                                  setCurrentLesson({...currentLesson, domain: newDomain.trim()});
+                                }
+                              } else {
+                                setCurrentLesson({...currentLesson, domain: e.target.value});
+                              }
+                            }}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none shadow-sm"
+                          >
+                            <option value="">Select Domain...</option>
+                            {Array.from(new Set(lessons.map(l => l.domain).filter(Boolean))).map((domainName: any) => (
+                              <option key={domainName} value={domainName}>{domainName}</option>
+                            ))}
+                            <option value="__NEW__" className="text-indigo-600 font-bold">+ Add New Domain...</option>
+                          </select>
+                        </div>
                         <div className="space-y-3">
                           <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Standards</label>
                           <select 

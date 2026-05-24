@@ -100,6 +100,7 @@ export default function EditCoursePage() {
   // Lesson State
   const [currentLesson, setCurrentLesson] = useState<any>({
     title: "",
+    domain: "",
     videoUrl: "",
     summary: "",
     notes: "",
@@ -321,7 +322,7 @@ export default function EditCoursePage() {
   const openAddLessonModal = () => {
     setEditingLessonIndex(null);
     setCurrentLesson({
-      title: "", videoUrl: "", summary: "", notes: "", standards: "", indicators: "", learningOutcomes: "",
+      title: "", domain: "", videoUrl: "", summary: "", notes: "", standards: "", indicators: "", learningOutcomes: "",
       isVisible: true, publishDate: "", cutOffDate: "",
       slides: [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: "المقدمة", content: "", sections: [] }],
       questions: [],
@@ -420,6 +421,7 @@ export default function EditCoursePage() {
           schoolIds: targetSchoolIds,
           lessons: newLessons.map((l) => ({
             title: l.title,
+            domain: l.domain || null,
             videoUrl: l.videoUrl || null,
             summary: l.summary || null,
             notes: l.notes || null,
@@ -603,6 +605,7 @@ export default function EditCoursePage() {
           schoolIds: targetSchoolIds,
           lessons: lessons.map((l) => ({
             title: l.title,
+            domain: l.domain || null,
             videoUrl: l.videoUrl || null,
             summary: l.summary || null,
             notes: l.notes || null,
@@ -737,7 +740,30 @@ export default function EditCoursePage() {
                         </div>
                         المعايير والمخرجات الأكاديمية
                       </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div className="space-y-3">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">المجال (Domain)</label>
+                          <select
+                            value={currentLesson.domain || ""}
+                            onChange={(e) => {
+                              if (e.target.value === "__NEW__") {
+                                const newDomain = prompt("أدخل اسم المجال الجديد (New Domain Name):");
+                                if (newDomain && newDomain.trim()) {
+                                  setCurrentLesson({ ...currentLesson, domain: newDomain.trim() });
+                                }
+                              } else {
+                                setCurrentLesson({ ...currentLesson, domain: e.target.value });
+                              }
+                            }}
+                            className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all shadow-sm appearance-none"
+                          >
+                            <option value="">اختر المجال...</option>
+                            {Array.from(new Set(lessons.map(l => l.domain).filter(Boolean))).map((domainName: any) => (
+                              <option key={domainName} value={domainName}>{domainName}</option>
+                            ))}
+                            <option value="__NEW__" className="text-indigo-600 font-bold">+ إضافة مجال جديد...</option>
+                          </select>
+                        </div>
                         <div className="space-y-3">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">المعايير (Standards)</label>
                           <select
