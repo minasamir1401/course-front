@@ -3,13 +3,23 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { API_URL } from "@/lib/api";
-import { Clock, ChevronRight, ChevronLeft, Send, AlertCircle, HelpCircle, Lock, Play, Calendar, ShieldCheck, CheckCircle2, Target } from "lucide-react";
+import { sanitizeHtml } from "@/lib/sanitize";
+import { Clock, ChevronRight, ChevronLeft, Send, AlertCircle, HelpCircle, Lock, Play, Calendar, ShieldCheck, CheckCircle2, Target, Info, Sparkles, BookOpen, MessageSquare } from "lucide-react";
 import { useNotification } from "@/context/NotificationContext";
 
 export default function TakeExamPage() {
   const { id } = useParams();
   const router = useRouter();
   const { showToast } = useNotification();
+
+  const SECTION_STYLE_PRESETS: Record<string, any> = {
+    HINT: { icon: HelpCircle, bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", label: "Hint" },
+    TIP: { icon: Info, bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200", label: "Tip" },
+    WARNING: { icon: AlertCircle, bg: "bg-red-50", text: "text-red-700", border: "border-red-200", label: "Warning" },
+    KEY_INSIGHT: { icon: Sparkles, bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200", label: "Key Insight" },
+    FEEDBACK: { icon: MessageSquare, bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", label: "Feedback" },
+    EXPLANATION: { icon: BookOpen, bg: "bg-indigo-50", text: "text-indigo-700", border: "border-indigo-200", label: "Explanation" }
+  };
 
   // Exam data
   const [exam, setExam] = useState<any>(null);
@@ -75,7 +85,33 @@ export default function TakeExamPage() {
         }
       }
 
-      setExam(data);
+      const mappedQuestions = data.questions?.map((q: any) => {
+        let parsedSections = [];
+        try {
+          const parsed = typeof q.explanation === 'string' ? JSON.parse(q.explanation) : [];
+          if (Array.isArray(parsed)) {
+            parsedSections = parsed.map((item: any) => {
+              if (typeof item === 'string') {
+                return { type: 'EXPLANATION', content: item };
+              }
+              return item;
+            });
+          } else {
+            parsedSections = [{ type: 'EXPLANATION', content: q.explanation || "" }];
+          }
+        } catch (e) {
+          parsedSections = [{ type: 'EXPLANATION', content: q.explanation || "" }];
+        }
+        return {
+          ...q,
+          sections: parsedSections
+        };
+      }) || [];
+
+      setExam({
+        ...data,
+        questions: mappedQuestions
+      });
       setTimeLeft(data.duration * 60);
     } catch (error) {
       console.error(error);
@@ -281,7 +317,13 @@ export default function TakeExamPage() {
   const answerObj = answers.find((a) => a.questionId === question.id);
   const selectedAnswer = answerObj?.selectedAnswer;
   const selectedAnswers = answerObj?.selectedAnswers || [];
-  const unansweredCount = exam.questions.length - answers.length;
+  
+  const questionsThatRequireAnswer = exam.questions.filter((q: any) => q.type !== "TEXT");
+  const answeredQuestionsCount = answers.filter(a => {
+    const q = exam.questions.find((quest: any) => quest.id === a.questionId);
+    return q && q.type !== "TEXT" && (a.selectedAnswer || (Array.isArray(a.selectedAnswers) && a.selectedAnswers.length > 0));
+  }).length;
+  const unansweredCount = Math.max(0, questionsThatRequireAnswer.length - answeredQuestionsCount);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col rtl" dir="rtl">
@@ -381,88 +423,121 @@ export default function TakeExamPage() {
               <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600">
                 <HelpCircle className="w-6 h-6" />
               </div>
-              <div className="flex flex-wrap gap-2">
-                <span className="bg-indigo-600 text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider">
-                  {question.type === 'MCQ' ? 'اختيار من متعدد' : question.type === 'MULTI_SELECT' ? 'اختيار متعدد' : 'صح وخطأ'}
-                </span>
-                <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider">
-                  {question.skill} | {question.level === 'Easy' ? 'سهل' : question.level === 'Medium' ? 'متوسط' : 'صعب'}
-                </span>
-              </div>
-            </div>
-            <div className="mb-4">
-              {question.learningOutcome && (
-                <div className="flex items-center gap-2 text-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-100 mb-4 w-fit">
-                  <Target className="w-4 h-4" />
-                  <span className="text-xs font-black uppercase tracking-widest">ناتج التعلم: {question.learningOutcome}</span>
-                </div>
+            <div className="flex flex-wrap items-center gap-3 mb-6">
+              <span className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider">
+                {question.type === 'MCQ' ? 'اختيار من متعدد' : question.type === 'MULTI_SELECT' ? 'اختيار متعدد' : question.type === 'TEXT' ? 'شريحة شرح' : 'صح وخطأ'}
+              </span>
+              {question.type !== 'TEXT' && (
+                <>
+                  <span className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                    {question.skill} | {question.level === 'Easy' ? 'سهل' : question.level === 'Medium' ? 'متوسط' : 'صعب'}
+                  </span>
+                  {question.standard && (
+                    <span className="px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                      المعيار: {question.standard}
+                    </span>
+                  )}
+                  {question.indicator && (
+                    <span className="px-3 py-1.5 bg-purple-50 text-purple-600 border border-purple-100 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                      المؤشر: {question.indicator}
+                    </span>
+                  )}
+                  {question.learningOutcome && (
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                      <Target className="w-3 h-3" />
+                      الناتج: {question.learningOutcome}
+                    </span>
+                  )}
+                </>
               )}
             </div>
+            </div>
             <h2 
-              className="text-2xl font-bold text-slate-800 mb-8 leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: question.text }}
+              className="text-2xl font-bold text-slate-800 mb-8 leading-relaxed text-right animate-in fade-in duration-500"
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(question.text) }}
             />
             {question.imageUrl && (
               <img
                 src={question.imageUrl}
                 alt="Question"
-                className="max-w-full rounded-2xl mb-8 border border-slate-200 shadow-sm"
+                className="max-w-full rounded-2xl mb-8 border border-slate-200 shadow-sm mx-auto"
               />
             )}
-            <div className="flex flex-col gap-4">
-              {question.type === "MCQ" || question.type === "MULTI_SELECT" ? (
-                question.options.filter((opt: string) => opt && opt.trim() !== "").map((option: string, i: number) => {
-                  const isSelected = question.type === "MULTI_SELECT" 
-                    ? selectedAnswers.includes(option)
-                    : selectedAnswer === option;
+            
+            {question.type !== "TEXT" ? (
+              <div className="flex flex-col gap-4">
+                {question.type === "MCQ" || question.type === "MULTI_SELECT" ? (
+                  question.options.filter((opt: string) => opt && opt.trim() !== "").map((option: string, i: number) => {
+                    const isSelected = question.type === "MULTI_SELECT" 
+                      ? selectedAnswers.includes(option)
+                      : selectedAnswer === option;
 
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => handleSelectAnswer(option)}
-                      className={`w-full text-right p-5 rounded-2xl border-2 transition-all flex items-center gap-4 group ${
-                        isSelected
-                          ? "bg-indigo-50 border-indigo-600 shadow-md shadow-indigo-100"
-                          : "bg-white border-slate-100 hover:border-slate-300 hover:bg-slate-50"
-                      }`}
-                    >
-                      <div
-                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => handleSelectAnswer(option)}
+                        className={`w-full text-right p-5 rounded-2xl border-2 transition-all flex items-center gap-4 group ${
                           isSelected
-                            ? "bg-indigo-600 border-indigo-600"
-                            : "border-slate-300 group-hover:border-indigo-400"
+                            ? "bg-indigo-50 border-indigo-600 shadow-md shadow-indigo-100"
+                            : "bg-white border-slate-100 hover:border-slate-300 hover:bg-slate-50"
                         }`}
                       >
-                        {isSelected && (
-                          question.type === "MULTI_SELECT" 
-                            ? <CheckCircle2 className="w-4 h-4 text-white" />
-                            : <div className="w-2 h-2 bg-white rounded-full"></div>
-                        )}
-                      </div>
-                      <span className={`text-lg font-bold ${isSelected ? "text-indigo-900" : "text-slate-700"}`}>
+                        <div
+                          className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${
+                            isSelected
+                              ? "bg-indigo-600 border-indigo-600"
+                              : "border-slate-300 group-hover:border-indigo-400"
+                          }`}
+                        >
+                          {isSelected && (
+                            question.type === "MULTI_SELECT" 
+                              ? <CheckCircle2 className="w-4 h-4 text-white" />
+                              : <div className="w-2 h-2 bg-white rounded-full"></div>
+                          )}
+                        </div>
+                        <span className={`text-lg font-bold ${isSelected ? "text-indigo-900" : "text-slate-700"}`}>
+                          {option}
+                        </span>
+                      </button>
+                    );
+                  })
+                ) : (
+                  <div className="flex gap-4">
+                    {["صحيح", "خطأ"].map((option) => (
+                      <button
+                        key={option}
+                        onClick={() => handleSelectAnswer(option)}
+                        className={`flex-1 py-6 rounded-2xl border-2 font-bold text-xl transition-all ${
+                          selectedAnswer === option
+                            ? "bg-indigo-50 border-indigo-600 text-indigo-900"
+                            : "bg-white border-slate-100 text-slate-500 hover:bg-slate-50"
+                        }`}
+                      >
                         {option}
-                      </span>
-                    </button>
-                  );
-                })
-              ) : (
-                <div className="flex gap-4">
-                  {["صحيح", "خطأ"].map((option) => (
-                    <button
-                      key={option}
-                      onClick={() => handleSelectAnswer(option)}
-                      className={`flex-1 py-6 rounded-2xl border-2 font-bold text-xl transition-all ${
-                        selectedAnswer === option
-                          ? "bg-indigo-50 border-indigo-600 text-indigo-900"
-                          : "bg-white border-slate-100 text-slate-500 hover:bg-slate-50"
-                      }`}
-                    >
-                      {option}
-                    </button>
-                  ))}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              question.sections && question.sections.length > 0 && (
+                <div className="mt-8 space-y-4 text-right animate-in fade-in duration-700" dir="rtl">
+                  {question.sections.map((sec: any, sIdx: number) => {
+                    const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
+                    const Icon = preset.icon;
+                    return (
+                      <div key={sIdx} className={`p-6 rounded-2xl border-2 text-right ${preset.bg} ${preset.border}`} dir="auto">
+                        <div className={`flex items-center gap-2 mb-3 font-black ${preset.text}`}>
+                          <Icon className="w-5 h-5 animate-bounce-slow shrink-0" />
+                          <span>{preset.label}</span>
+                        </div>
+                        <div className={`prose prose-sm max-w-none text-right ${preset.text}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(sec.content) }} />
+                      </div>
+                    );
+                  })}
                 </div>
-              )}
-            </div>
+              )
+            )}
           </div>
         </div>
 

@@ -80,7 +80,7 @@ export default function SchoolAdminClassesPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setTeachers(Array.isArray(data) ? data : []);
+        setTeachers(Array.isArray(data) ? data : (data.users || []));
       }
     } catch (e) {
       console.error(e);

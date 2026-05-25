@@ -5,7 +5,8 @@ import {
   Bold, Italic, Underline, List, ListOrdered,
   AlignLeft, AlignCenter, AlignRight,
   Type, Eraser, Palette, Heading1, Heading2,
-  ChevronDown, Image as ImageIcon, Table, Sigma, X
+  ChevronDown, Image as ImageIcon, Table, Sigma, X,
+  Highlighter
 } from "lucide-react";
 import { compressImage } from "@/lib/image-utils";
 
@@ -18,6 +19,7 @@ interface RichTextEditorProps {
 
 export default function RichTextEditor({ value, onChange, placeholder, className = "" }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
+  const debounceTimeoutRef = useRef<any>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [activeModal, setActiveModal] = useState<'table' | 'math' | 'image' | null>(null);
   const [tableConfig, setTableConfig] = useState({ rows: "3", cols: "3" });
@@ -46,12 +48,21 @@ export default function RichTextEditor({ value, onChange, placeholder, className
     }
   }, [value, isFocused]);
 
+  // Clean up debounce timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const execCommand = (command: string, cmdValue?: string) => {
     if (editorRef.current) {
       editorRef.current.focus();
     }
     document.execCommand(command, false, cmdValue);
-    handleInput();
+    handleInput(true);
   };
 
 
@@ -114,7 +125,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
     img.style.float = floatStyle;
     img.style.margin = marginStyle;
     img.style.display = displayStyle;
-    handleInput();
+    handleInput(true);
   };
 
   useEffect(() => {
@@ -162,17 +173,26 @@ export default function RichTextEditor({ value, onChange, placeholder, className
     setActiveModal(null);
   };
 
-  const handleInput = () => {
+  const handleInput = (immediate = false) => {
     if (editorRef.current) {
       const content = editorRef.current.innerHTML;
-      onChange(content);
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+      if (immediate) {
+        onChange(content);
+      } else {
+        debounceTimeoutRef.current = setTimeout(() => {
+          onChange(content);
+        }, 500);
+      }
     }
   };
 
   const handleFocus = () => setIsFocused(true);
   const handleBlur = () => {
     setIsFocused(false);
-    handleInput();
+    handleInput(true);
   };
 
   const ToolButton = ({
@@ -205,7 +225,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
   );
 
   return (
-    <div className={`flex flex-col border-2 rounded-[30px] transition-all duration-300 bg-white ${isFocused
+    <div className={`w-full max-w-full flex flex-col border-2 rounded-[30px] transition-all duration-300 bg-white ${isFocused
         ? 'border-indigo-500 ring-8 ring-indigo-500/5 shadow-2xl'
         : 'border-slate-100 hover:border-slate-200 shadow-sm'
       } ${className} relative`}>
@@ -276,6 +296,17 @@ export default function RichTextEditor({ value, onChange, placeholder, className
             </button>
           ))}
         </div>
+
+        <div className="w-px h-6 bg-slate-200 mx-1" />
+        
+        <ToolButton 
+          onClick={() => {
+             document.execCommand('backColor', false, '#fef08a') || document.execCommand('hiliteColor', false, '#fef08a');
+             handleInput(true);
+          }} 
+          icon={Highlighter} 
+          title="تظليل النص (أصفر)" 
+        />
 
         <div className="w-px h-6 bg-slate-200 mx-1" />
 
@@ -413,13 +444,13 @@ export default function RichTextEditor({ value, onChange, placeholder, className
         <div
           ref={editorRef}
           contentEditable
-          onInput={handleInput}
+          onInput={() => handleInput(false)}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          className="p-6 md:p-8 outline-none text-lg min-h-[150px] prose prose-slate max-w-none rtl editor-content"
+          className="p-6 md:p-8 outline-none text-lg min-h-[150px] prose prose-slate max-w-none editor-content text-start"
+          dir="auto"
           style={{
-            direction: 'rtl',
-            textAlign: 'right',
+            textAlign: 'start',
           }}
           suppressContentEditableWarning
         />

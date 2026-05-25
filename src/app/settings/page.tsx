@@ -3,18 +3,21 @@
 import React from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Settings } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function SettingsPage() {
+  const { t, language } = useLanguage();
+
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-6">
+      <div className={`flex flex-col gap-6 ${language === 'ar' ? 'rtl' : 'ltr'}`} dir={language === 'ar' ? "rtl" : "ltr"}>
         <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
           <div>
             <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-              الإعدادات
+              {t('settingsPage.title')}
             </h2>
             <div className="text-sm text-slate-500 mt-1 flex items-center gap-2">
-              <span>الرئيسية</span> <span className="text-slate-300">/</span> <span>الإعدادات</span>
+              <span>{t('settingsPage.home')}</span> <span className="text-slate-300">/</span> <span>{t('settingsPage.title')}</span>
             </div>
           </div>
           <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-primary">
@@ -26,8 +29,8 @@ export default function SettingsPage() {
           <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4">
             <Settings className="w-10 h-10" />
           </div>
-          <h3 className="text-xl font-bold text-slate-800 mb-2">صفحة الإعدادات قيد التطوير</h3>
-          <p className="text-slate-500 max-w-md">نحن نعمل على تجهيز هذه الصفحة بكامل المميزات قريباً.</p>
+          <h3 className="text-xl font-bold text-slate-800 mb-2">{t('settingsPage.underDev')}</h3>
+          <p className="text-slate-500 max-w-md">{t('settingsPage.underDevDesc')}</p>
         </div>
       </div>
     </DashboardLayout>

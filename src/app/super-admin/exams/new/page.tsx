@@ -7,11 +7,13 @@ import {
   ArrowRight, Settings, ListPlus, Globe, Layout, Loader2, 
   Clock, Lock, Calendar, Eye, EyeOff, FileText, AlertCircle,
   Bold, Italic, Underline, List, ListOrdered, AlignRight, Code,
-  ChevronDown, ChevronUp, Edit3, Play, GripVertical, X, CheckCircle2, Target
+  ChevronDown, ChevronUp, Edit3, Play, GripVertical, X, CheckCircle2, Target,
+  Info, Sparkles, BookOpen, MessageSquare
 } from "lucide-react";
 import RichTextEditor from "@/components/RichTextEditor";
 
 import { API_URL } from "@/lib/api";
+import { sanitizeHtml } from "@/lib/sanitize";
 import { useRouter } from "next/navigation";
 import { useNotification } from "@/context/NotificationContext";
 
@@ -29,6 +31,51 @@ export default function SuperAdminNewExamPage() {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [previewQuestion, setPreviewQuestion] = useState<any>(null);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+
+  const SECTION_STYLE_PRESETS: Record<string, {
+    icon: any;
+    label: string;
+    container: string;
+    badge: string;
+  }> = {
+    HINT: {
+      icon: HelpCircle,
+      label: "Hint",
+      container: "bg-yellow-50/70 border-yellow-200",
+      badge: "bg-yellow-100 text-yellow-700",
+    },
+    TIP: {
+      icon: Info,
+      label: "Tip",
+      container: "bg-sky-50/70 border-sky-200",
+      badge: "bg-sky-100 text-sky-700",
+    },
+    WARNING: {
+      icon: AlertCircle,
+      label: "Warning",
+      container: "bg-rose-50/70 border-rose-200",
+      badge: "bg-rose-100 text-rose-700",
+    },
+    KEY_INSIGHT: {
+      icon: Sparkles,
+      label: "Key Insight",
+      container: "bg-indigo-50/70 border-indigo-200",
+      badge: "bg-indigo-100 text-indigo-700",
+    },
+    FEEDBACK: {
+      icon: MessageSquare,
+      label: "Feedback",
+      container: "bg-emerald-50/70 border-emerald-200",
+      badge: "bg-emerald-100 text-emerald-700",
+    },
+    EXPLANATION: {
+      icon: BookOpen,
+      label: "Explanation",
+      container: "bg-amber-50/70 border-amber-200",
+      badge: "bg-amber-100 text-amber-700",
+    },
+  };
 
   const getDefaultDates = () => {
     const start = new Date();
@@ -64,25 +111,26 @@ export default function SuperAdminNewExamPage() {
   });
 
   const QUESTION_TYPES = [
-    { id: "MCQ", label: "اختيار من متعدد", desc: "اختر إجابة واحدة صحيحة" },
-    { id: "TRUE_FALSE", label: "صح وخطأ", desc: "حدد إذا كانت العبارة صحيحة أم خاطئة" },
-    { id: "MULTI_SELECT", label: "اختيار متعدد", desc: "اختر جميع الإجابات الصحيحة" }
+    { id: "MCQ", label: "Multiple Choice (MCQ)", desc: "Select one correct answer" },
+    { id: "TRUE_FALSE", label: "True / False", desc: "Select true or false statement" },
+    { id: "MULTI_SELECT", label: "Multi-Select", desc: "Select one or more correct answers" },
+    { id: "TEXT", label: "Text Slide", desc: "A text block for explanation or summary (No answer required)" }
   ];
 
   const [questions, setQuestions] = useState<any[]>([]);
 
   const CATEGORIES = [
-    "اللغة العربية", "اللغة الإنجليزية", "اللغة الفرنسية", "اللغة الألمانية", "اللغة الإيطالية",
-    "الرياضيات", "الفيزياء", "الكيمياء", "الأحياء", "الجيولوجيا", "الميكانيكا",
-    "التاريخ", "الجغرافيا", "الفلسفة", "علم النفس", "الاقتصاد", "الإحصاء",
-    "التربية الدينية", "التربية الوطنية", "الحاسب الآلي",
+    "Arabic", "English", "French", "German", "Italian",
+    "Mathematics", "Physics", "Chemistry", "Biology", "Geology", "Mechanics",
+    "History", "Geography", "Philosophy", "Psychology", "Economics", "Statistics",
+    "Religious Education", "National Education", "Computer Science",
     "SAT Math", "SAT English"
   ];
   const GRADES = [
-    "الصف الأول الابتدائي", "الصف الثاني الابتدائي", "الصف الثالث الابتدائي",
-    "الصف الرابع الابتدائي", "الصف الخامس الابتدائي", "الصف السادس الابتدائي",
-    "الصف الأول الإعدادي", "الصف الثاني الإعدادي", "الصف الثالث الإعدادي",
-    "الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"
+    "Grade 1 Primary", "Grade 2 Primary", "Grade 3 Primary",
+    "Grade 4 Primary", "Grade 5 Primary", "Grade 6 Primary",
+    "Grade 1 Preparatory", "Grade 2 Preparatory", "Grade 3 Preparatory",
+    "Grade 1 Secondary", "Grade 2 Secondary", "Grade 3 Secondary"
   ];
   const SKILLS = [
     "Math", "Physics", "Chemistry", "Biology", "Geology", "Mechanics",
@@ -92,34 +140,34 @@ export default function SuperAdminNewExamPage() {
   ];
 
   const INDICATORS = [
-    "المؤشر 1.1: فهم النص المسموع",
-    "المؤشر 2.1: تحليل الأفكار الرئيسية",
-    "المؤشر 3.1: تطبيق القواعد النحوية",
-    "المؤشر 4.1: تنظيم الفقرات",
-    "المؤشر 5.1: استنتاج النتائج"
+    "Indicator 1.1: Listening Comprehension",
+    "Indicator 2.1: Analyzing Main Ideas",
+    "Indicator 3.1: Applying Grammar Rules",
+    "Indicator 4.1: Paragraph Structure",
+    "Indicator 5.1: Drawing Conclusions"
   ];
 
   const LEARNING_OUTCOMES = [
-    "الناتج 1: يميز بين أنواع النصوص",
-    "الناتج 2: يعبر عن أفكاره بوضوح",
-    "الناتج 3: يستخدم لغة سليمة",
-    "الناتج 4: يربط بين المفاهيم",
-    "الناتج 5: يقيم المحتوى بمهارة"
+    "Outcome 1: Distinguish Text Types",
+    "Outcome 2: Express Ideas Clearly",
+    "Outcome 3: Use Accurate Language",
+    "Outcome 4: Connect Key Concepts",
+    "Outcome 5: Evaluate Content Critically"
   ];
 
   const STANDARDS = [
-    "المعيار 1: المعرفة والفهم",
-    "المعيار 2: التطبيق والتحليل",
-    "المعيار 3: التركيب والتقويم",
-    "المعيار 4: التفكير النقدي",
-    "المعيار 5: حل المشكلات"
+    "Standard 1: Knowledge and Understanding",
+    "Standard 2: Application and Analysis",
+    "Standard 3: Synthesis and Evaluation",
+    "Standard 4: Critical Thinking",
+    "Standard 5: Problem Solving"
   ];
 
   const VISIBILITY_OPTIONS = [
-    { id: "SHOW_SCORE", label: "الدرجة فقط", desc: "سيرى الطالب مجموع درجاته فقط", icon: Eye },
-    { id: "SHOW_ANSWERS", label: "الإجابات الصحيحة", desc: "سيتمكن الطالب من مراجعة كل إجابة مع النموذج الصحيح", icon: CheckCircle },
-    { id: "SHOW_MARK_ONLY", label: "الصح والغلط", desc: "سيرى الطالب إذا كانت إجابته صحيحة أم خاطئة بدون معرفة النموذج الصحيح", icon: HelpCircle },
-    { id: "HIDE_ALL", label: "إخفاء النتائج بالكامل", desc: "لن تظهر أي نتائج حتى تقوم بتغيير هذه السياسة", icon: EyeOff },
+    { id: "SHOW_SCORE", label: "Score Only", desc: "Student will only see their total score", icon: Eye },
+    { id: "SHOW_ANSWERS", label: "Show Correct Answers", desc: "Student can review each question with the correct model answer", icon: CheckCircle },
+    { id: "SHOW_MARK_ONLY", label: "Show Correct/Incorrect Only", desc: "Student will see which answers were right or wrong, but not the correct model", icon: HelpCircle },
+    { id: "HIDE_ALL", label: "Hide All Results", desc: "No results will be shown until you change this policy", icon: EyeOff },
   ];
 
   const [currentQuestion, setCurrentQuestion] = useState<any>({
@@ -127,7 +175,7 @@ export default function SuperAdminNewExamPage() {
     correctAnswer: "", points: 1, skill: "Math", level: "Medium",
     standard: "",
     learningOutcome: "",
-    explanation: "", imageUrl: "", correctAnswers: [],
+    sections: [{ type: "EXPLANATION", content: "" }], imageUrl: "", correctAnswers: [],
   });
 
   useEffect(() => {
@@ -158,27 +206,48 @@ export default function SuperAdminNewExamPage() {
     }
   };
 
-  const handleAddQuestion = () => {
+  const handleAddQuestion = (type: string = 'MCQ') => {
     setCurrentQuestion({
-      text: "", type: "MCQ", options: ["", "", "", ""],
-      correctAnswer: "", points: 1, skill: "Math", level: "Medium",
+      text: "", type, options: type === 'TRUE_FALSE' ? ["صحيح", "خطأ", "", ""] : ["", "", "", ""],
+      correctAnswer: "", points: type === 'TEXT' ? 0 : 1, skill: "Math", level: "Medium",
       standard: "",
       learningOutcome: "",
-      explanation: "", imageUrl: "", correctAnswers: [],
+      sections: [{ type: "EXPLANATION", content: "" }], imageUrl: "", correctAnswers: [],
     });
     setEditingIndex(null);
     setShowQuestionForm(true);
   };
 
   const handleEditQuestion = (index: number) => {
-    setCurrentQuestion({ ...questions[index] });
+    const q = questions[index];
+    let parsedSections = [];
+    try {
+      const parsed = typeof q.explanation === 'string' ? JSON.parse(q.explanation) : (q.sections || []);
+      if (Array.isArray(parsed)) {
+        parsedSections = parsed.map((item: any) => {
+          if (typeof item === 'string') {
+            return { type: 'EXPLANATION', content: item };
+          }
+          return item;
+        });
+      } else {
+        parsedSections = [{ type: 'EXPLANATION', content: q.explanation || "" }];
+      }
+    } catch (e) {
+      parsedSections = [{ type: 'EXPLANATION', content: q.explanation || "" }];
+    }
+
+    setCurrentQuestion({ 
+      ...q,
+      sections: parsedSections.length > 0 ? parsedSections : [{ type: "EXPLANATION", content: "" }]
+    });
     setEditingIndex(index);
     setShowQuestionForm(true);
   };
 
   const handleSaveQuestion = () => {
     if (!currentQuestion.text) {
-      showToast("يرجى إدخال نص السؤال", "error");
+      showToast("Please enter the slide/question text or content", "error");
       return;
     }
     
@@ -192,6 +261,24 @@ export default function SuperAdminNewExamPage() {
     
     setShowQuestionForm(false);
     setEditingIndex(null);
+  };
+
+  const addSection = (type: string) => {
+    const sections = [...(currentQuestion.sections || [])];
+    sections.push({ type, content: "" });
+    setCurrentQuestion({ ...currentQuestion, sections });
+  };
+
+  const removeSection = (index: number) => {
+    const sections = [...(currentQuestion.sections || [])];
+    sections.splice(index, 1);
+    setCurrentQuestion({ ...currentQuestion, sections });
+  };
+
+  const updateSectionContent = (index: number, content: string) => {
+    const sections = [...(currentQuestion.sections || [])];
+    sections[index].content = content;
+    setCurrentQuestion({ ...currentQuestion, sections });
   };
 
   const removeQuestion = (index: number) => {
@@ -270,37 +357,42 @@ export default function SuperAdminNewExamPage() {
 
   const handleSubmit = async (status: string = "PUBLISHED") => {
     if (!examInfo.title) {
-      showToast("يرجى إدخال عنوان الامتحان", 'error');
+      showToast("Please enter the exam title", 'error');
       return;
     }
 
     if (!examInfo.subjects || examInfo.subjects.length === 0) {
-      showToast("يرجى اختيار مادة واحدة على الأقل", 'error');
+      showToast("Please select at least one subject", 'error');
       return;
     }
 
     if (questions.length === 0) {
-      showToast("يرجى إضافة سؤال واحد على الأقل", 'error');
+      showToast("Please add at least one question or slide", 'error');
       return;
     }
 
     setSaving(true);
     try {
       const token = localStorage.getItem("super_admin_token");
+      const questionsPayload = questions.map(q => ({
+        ...q,
+        explanation: JSON.stringify(q.sections || [])
+      }));
+
       const res = await fetch(`${API_URL}/exams`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ ...examInfo, category: examInfo.subjects[0], status, questions }),
+        body: JSON.stringify({ ...examInfo, category: examInfo.subjects[0], status, questions: questionsPayload }),
       });
 
       if (res.ok) {
-        showToast(status === "DRAFT" ? "تم حفظ المسودة بنجاح!" : "تم نشر الامتحان بنجاح!", 'success');
+        showToast(status === "DRAFT" ? "Draft saved successfully!" : "Exam published successfully!", 'success');
         router.push("/super-admin/exams");
       } else {
-        let errMessage = "خطأ في الإضافة";
+        let errMessage = "Failed to add exam";
         try {
           const err = await res.json();
           errMessage = err.error || errMessage;
@@ -320,21 +412,21 @@ export default function SuperAdminNewExamPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto flex flex-col gap-10 pb-20 rtl" dir="rtl">
+      <div className="max-w-7xl mx-auto flex flex-col gap-10 pb-20 ltr" dir="ltr">
         {/* Command Center Header */}
         <div className="bg-[#0f0f1d] p-8 md:p-12 rounded-[40px] shadow-2xl relative overflow-hidden border border-white/5">
           <div className="relative z-10 flex flex-col lg:flex-row justify-between items-center gap-8">
-            <div className="text-center lg:text-right">
+            <div className="text-center lg:text-left">
               <div className="flex items-center gap-4 justify-center lg:justify-start mb-4">
                 <div className="p-3 bg-indigo-500/20 rounded-2xl border border-indigo-500/30 shadow-lg shadow-indigo-500/10">
                   <ListPlus className="w-8 h-8 text-indigo-400" />
                 </div>
                 <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight">
-                  إنشاء امتحان احترافي
+                  Create Central Exam
                 </h2>
               </div>
               <p className="text-slate-400 mt-2 text-lg font-medium max-w-2xl leading-relaxed">
-                صمم امتحاناتك المركزية بدقة عالية، تحكم في المواعيد، كلمات السر، وسياسات النتائج لجميع المدارس.
+                Design your central exams with high precision. Control scheduling, passwords, and result policies for all target schools.
               </p>
             </div>
             
@@ -344,7 +436,7 @@ export default function SuperAdminNewExamPage() {
                 disabled={saving}
                 className="px-8 py-5 rounded-2xl font-bold bg-white/5 text-white border border-white/10 hover:bg-white/10 transition-all flex items-center gap-3 disabled:opacity-50"
               >
-                حفظ كمسودة
+                Save as Draft
                 <FileText className="w-5 h-5" />
               </button>
               
@@ -353,7 +445,7 @@ export default function SuperAdminNewExamPage() {
                 disabled={saving}
                 className="px-10 py-5 rounded-2xl font-black bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-xl shadow-indigo-900/40 hover:scale-105 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
               >
-                {saving ? "جاري المعالجة..." : "نشر الامتحان"}
+                {saving ? "Processing..." : "Publish Exam"}
                 <Globe className="w-6 h-6" />
               </button>
             </div>
@@ -370,32 +462,32 @@ export default function SuperAdminNewExamPage() {
             <div className="bg-white p-8 rounded-[35px] border border-slate-100 shadow-sm flex flex-col gap-8">
               <h3 className="font-black text-slate-800 flex items-center gap-3 text-lg border-b border-slate-50 pb-6">
                 <Settings className="w-6 h-6 text-indigo-600" />
-                الإعدادات الأساسية
+                General Settings
               </h3>
 
               <div className="space-y-6">
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest">المواد (Subjects)</label>
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Subjects</label>
                   <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 max-h-[170px] overflow-y-auto custom-scrollbar flex flex-wrap gap-2">
                     {CATEGORIES.map(cat => (
                       <label key={cat} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer transition-all ${examInfo.subjects.includes(cat) ? 'bg-indigo-100 border-indigo-300 text-indigo-900 shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
                         <input
-                          type="checkbox"
-                          className="hidden"
-                          checked={examInfo.subjects.includes(cat)}
-                          onChange={() => toggleSubject(cat)}
+                           type="checkbox"
+                           className="hidden"
+                           checked={examInfo.subjects.includes(cat)}
+                           onChange={() => toggleSubject(cat)}
                         />
                         {examInfo.subjects.includes(cat) && <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600" />}
                         <span className="text-xs font-bold">{cat}</span>
                       </label>
                     ))}
                   </div>
-                  <p className="text-[9px] text-slate-400 font-bold px-1">يمكن اختيار أكثر من مادة للاختبار.</p>
+                  <p className="text-[9px] text-slate-400 font-bold px-1">You can select multiple subjects for this exam.</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col gap-2">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">المراحل الدراسية</label>
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Grade Levels</label>
                     <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 max-h-[120px] overflow-y-auto custom-scrollbar flex flex-wrap gap-2">
                       {GRADES.map(g => (
                         <label key={g} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer transition-all ${examInfo.grades.includes(g) ? 'bg-indigo-100 border-indigo-300 text-indigo-900 shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
@@ -410,7 +502,7 @@ export default function SuperAdminNewExamPage() {
                     </div>
                   </div>
                   <div className="flex flex-col gap-2">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">المدة (دقيقة)</label>
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Duration (min)</label>
                     <div className="relative">
                       <input 
                         type="number"
@@ -424,11 +516,11 @@ export default function SuperAdminNewExamPage() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest">كلمة سر الامتحان (اختياري)</label>
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Exam Password (Optional)</label>
                   <div className="relative">
                     <input 
                       type="text"
-                      placeholder="مثال: SAT2026"
+                      placeholder="e.g. SAT2026"
                       className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 outline-none font-bold text-slate-700 text-sm focus:ring-2 focus:ring-indigo-500/20"
                       value={examInfo.password}
                       onChange={(e) => setExamInfo({...examInfo, password: e.target.value})}
@@ -438,7 +530,7 @@ export default function SuperAdminNewExamPage() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">المهارة</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Skill</label>
                   <select 
                     className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5 font-bold text-slate-700 text-sm appearance-none"
                     value={examInfo.skill}
@@ -451,7 +543,7 @@ export default function SuperAdminNewExamPage() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">سياسة عرض النتائج</label>
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Result Visibility Policy</label>
                   <div className="flex flex-col gap-3">
                     {VISIBILITY_OPTIONS.map((opt) => (
                       <label key={opt.id} className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${examInfo.resultVisibility === opt.id ? 'bg-indigo-50 border-indigo-500 shadow-sm' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
@@ -481,13 +573,13 @@ export default function SuperAdminNewExamPage() {
             <div className="bg-white p-8 rounded-[35px] border border-slate-100 shadow-sm flex flex-col gap-8">
               <h3 className="font-black text-slate-800 flex items-center gap-3 text-lg border-b border-slate-50 pb-6">
                 <Calendar className="w-6 h-6 text-indigo-600" />
-                الجدولة والتحكم
+                Scheduling & Control
               </h3>
 
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-2">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">تاريخ البدء</label>
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Start Date</label>
                     <input 
                       type="datetime-local"
                       className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 outline-none font-bold text-slate-700 text-xs focus:ring-2 focus:ring-indigo-500/20"
@@ -496,7 +588,7 @@ export default function SuperAdminNewExamPage() {
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">تاريخ الانتهاء</label>
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">End Date</label>
                     <input 
                       type="datetime-local"
                       className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 outline-none font-bold text-slate-700 text-xs focus:ring-2 focus:ring-indigo-500/20"
@@ -507,16 +599,16 @@ export default function SuperAdminNewExamPage() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest">عدد المحاولات</label>
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Allowed Attempts</label>
                   <select 
                     className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 outline-none font-bold text-slate-700 text-sm focus:ring-2 focus:ring-indigo-500/20"
                     value={examInfo.attemptsAllowed}
                     onChange={(e) => setExamInfo({...examInfo, attemptsAllowed: parseInt(e.target.value)})}
                   >
-                    <option value={1}>محاولة واحدة فقط</option>
-                    <option value={2}>محاولتين</option>
-                    <option value={3}>3 محاولات</option>
-                    <option value={999}>غير محدود</option>
+                    <option value={1}>1 Attempt Only</option>
+                    <option value={2}>2 Attempts</option>
+                    <option value={3}>3 Attempts</option>
+                    <option value={999}>Unlimited</option>
                   </select>
                 </div>
               </div>
@@ -527,7 +619,7 @@ export default function SuperAdminNewExamPage() {
               <div className="flex justify-between items-center border-b border-slate-50 pb-4">
                 <h3 className="font-black text-slate-800 flex items-center gap-3 text-lg">
                   <Globe className="w-6 h-6 text-indigo-600" />
-                  المدارس المستهدفة
+                  Target Schools
                 </h3>
               </div>
 
@@ -536,13 +628,13 @@ export default function SuperAdminNewExamPage() {
                   onClick={() => setExamInfo({...examInfo, isCentral: true})}
                   className={`py-3 rounded-xl font-bold text-xs transition-all ${examInfo.isCentral ? 'bg-white text-indigo-600 shadow-sm border border-indigo-100' : 'text-slate-500'}`}
                 >
-                  جميع المدارس (مركزي)
+                  All Schools (Central)
                 </button>
                 <button 
                   onClick={() => setExamInfo({...examInfo, isCentral: false})}
                   className={`py-3 rounded-xl font-bold text-xs transition-all ${!examInfo.isCentral ? 'bg-white text-indigo-600 shadow-sm border border-indigo-100' : 'text-slate-500'}`}
                 >
-                  اختيار مدارس محددة
+                  Specific Schools
                 </button>
               </div>
 
@@ -551,36 +643,36 @@ export default function SuperAdminNewExamPage() {
                   {fetchingSchools ? (
                     <div className="flex flex-col items-center justify-center py-12 gap-3 text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
                       <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-                      <span className="text-xs font-bold">جاري تحميل قائمة المدارس...</span>
+                      <span className="text-xs font-bold">Loading target schools...</span>
                     </div>
                   ) : fetchError ? (
                     <div className="flex flex-col items-center justify-center py-10 gap-4 text-center bg-red-50 rounded-2xl border border-red-100">
                       <AlertCircle className="w-8 h-8 text-red-500" />
                       <div className="space-y-1">
                         <p className="text-xs font-black text-red-900">{fetchError}</p>
-                        <p className="text-[10px] text-red-600 font-bold">تأكد من اتصالك بالسيرفر أو تشغيل الـ Backend</p>
+                        <p className="text-[10px] text-red-600 font-bold">Please check your server connection.</p>
                       </div>
                       <button 
                         onClick={fetchSchools}
                         className="px-6 py-2 bg-white border border-red-200 text-red-600 rounded-xl text-[10px] font-black hover:bg-red-600 hover:text-white transition-all shadow-sm"
                       >
-                        إعادة المحاولة
+                        Retry
                       </button>
                     </div>
                   ) : schools.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 gap-3 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
                       <Globe className="w-8 h-8 text-slate-300" />
                       <div className="space-y-1">
-                        <p className="text-xs font-black text-slate-600">لا توجد مدارس مضافة</p>
-                        <p className="text-[10px] text-slate-400 font-bold">لم نجد أي مدارس في قاعدة البيانات حالياً</p>
+                        <p className="text-xs font-black text-slate-600">No schools added</p>
+                        <p className="text-[10px] text-slate-400 font-bold">No schools found in the database.</p>
                       </div>
                     </div>
                   ) : (
                     <>
                       <div className="flex justify-between items-center px-2 mb-3">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">اختر المدارس من القائمة:</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select schools from list:</label>
                         <button onClick={handleSelectAll} className="text-[10px] font-black text-indigo-600 hover:underline">
-                          {examInfo.schoolIds.length === schools.length ? "إلغاء الكل" : "تحديد كافة المدارس"}
+                          {examInfo.schoolIds.length === schools.length ? "Deselect All" : "Select All Schools"}
                         </button>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-4 max-h-[250px] overflow-y-auto custom-scrollbar">
@@ -601,17 +693,12 @@ export default function SuperAdminNewExamPage() {
                   )}
                 </div>
               )}
-            </div>
-          </div>
-
-          {/* Questions Content Area */}
-          <div className="lg:col-span-8 flex flex-col gap-8">
-            <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-sm">
-               <label className="text-sm font-black text-slate-400 mb-3 block uppercase tracking-widest">عنوان الامتحان</label>
+            </div>            <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-sm">
+               <label className="text-sm font-black text-slate-400 mb-3 block uppercase tracking-widest">Exam Title</label>
                <input 
                 type="text" 
                 className="w-full bg-slate-50 border border-slate-100 rounded-[25px] px-8 py-6 text-2xl md:text-3xl font-black outline-none focus:ring-4 focus:ring-indigo-500/5 focus:bg-white focus:border-indigo-500 transition-all text-slate-800"
-                placeholder="أدخل عنوان الامتحان هنا..."
+                placeholder="Enter exam title here..."
                 value={examInfo.title}
                 onChange={(e) => setExamInfo({...examInfo, title: e.target.value})}
               />
@@ -620,18 +707,27 @@ export default function SuperAdminNewExamPage() {
             {/* Questions List Header */}
             <div className="flex justify-between items-center px-4">
               <div className="flex items-center gap-3">
-                <h3 className="text-2xl font-black text-slate-800">الأسئلة ({questions.length})</h3>
+                <h3 className="text-2xl font-black text-slate-800">Exam Slides ({questions.length})</h3>
                 <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-black">
-                  {questions.reduce((sum, q) => sum + (q.points || 0), 0)} نقطة إجمالية
+                  {questions.reduce((sum, q) => sum + (q.points || 0), 0)} total points
                 </span>
               </div>
-              <button 
-                onClick={handleAddQuestion}
-                className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
-              >
-                <Plus className="w-5 h-5" />
-                إضافة سؤال جديد
-              </button>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => handleAddQuestion('TEXT')}
+                  className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-2xl font-bold transition-all shadow-sm border border-slate-200"
+                >
+                  <Plus className="w-5 h-5" />
+                  + Text Slide
+                </button>
+                <button 
+                  onClick={() => handleAddQuestion('MCQ')}
+                  className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+                >
+                  <Plus className="w-5 h-5" />
+                  + Question Slide
+                </button>
+              </div>
             </div>
 
             {/* Questions Management Flow */}
@@ -642,15 +738,23 @@ export default function SuperAdminNewExamPage() {
                     <HelpCircle className="w-12 h-12" />
                   </div>
                   <div>
-                    <h4 className="text-2xl font-black text-slate-800 mb-2">لا توجد أسئلة بعد</h4>
-                    <p className="text-slate-400 font-medium max-w-sm">ابدأ بإضافة أول سؤال لامتحانك الآن لتظهر لك قائمة الأسئلة هنا.</p>
+                    <h4 className="text-2xl font-black text-slate-800 mb-2">No slides yet</h4>
+                    <p className="text-slate-400 font-medium max-w-sm">Start by adding your first text slide or question slide for this exam.</p>
                   </div>
-                  <button 
-                    onClick={handleAddQuestion}
-                    className="bg-[#0f0f1d] text-white px-10 py-5 rounded-3xl font-black hover:scale-105 transition-all shadow-2xl"
-                  >
-                    أنشئ أول سؤال
-                  </button>
+                  <div className="flex gap-4">
+                    <button 
+                      onClick={() => handleAddQuestion('TEXT')}
+                      className="bg-slate-100 text-slate-800 px-10 py-5 rounded-3xl font-black hover:scale-105 transition-all shadow-md border border-slate-200"
+                    >
+                      + Add Text Slide
+                    </button>
+                    <button 
+                      onClick={() => handleAddQuestion('MCQ')}
+                      className="bg-[#0f0f1d] text-white px-10 py-5 rounded-3xl font-black hover:scale-105 transition-all shadow-2xl"
+                    >
+                      + Add Question Slide
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -660,7 +764,7 @@ export default function SuperAdminNewExamPage() {
                   <div className="bg-indigo-600 px-8 py-5 flex justify-between items-center">
                     <h4 className="text-white font-black flex items-center gap-3">
                       <Edit3 className="w-5 h-5" />
-                      {editingIndex !== null ? `تعديل السؤال رقم ${editingIndex + 1}` : "إضافة سؤال جديد"}
+                      {editingIndex !== null ? `Edit Slide / Question #${editingIndex + 1}` : "Add Slide / Question"}
                     </h4>
                     <button 
                       onClick={() => setShowQuestionForm(false)}
@@ -674,24 +778,24 @@ export default function SuperAdminNewExamPage() {
                     {/* Metadata Row */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-slate-100">
                       <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">المؤشر (Indicator)</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Indicator</label>
                         <select 
                           className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 font-bold text-xs text-black outline-none"
                           value={currentQuestion.indicator || ""}
                           onChange={(e) => updateCurrentQuestion("indicator", e.target.value)}
                         >
-                          <option value="">اختر المؤشر...</option>
+                          <option value="">Select Indicator...</option>
                           {INDICATORS.map(ind => <option key={ind} value={ind}>{ind}</option>)}
                         </select>
                       </div>
                       <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">نواتج التعلم (Learning Outcomes)</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Learning Outcomes</label>
                         <select 
                           className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 font-bold text-xs text-black outline-none"
                           value={currentQuestion.learningOutcome || ""}
                           onChange={(e) => updateCurrentQuestion("learningOutcome", e.target.value)}
                         >
-                          <option value="">اختر ناتج التعلم...</option>
+                          <option value="">Select Learning Outcome...</option>
                           {LEARNING_OUTCOMES.map(lo => <option key={lo} value={lo}>{lo}</option>)}
                         </select>
                       </div>
@@ -700,7 +804,7 @@ export default function SuperAdminNewExamPage() {
                     {/* Form Content */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 bg-slate-50 rounded-[30px] border border-slate-100">
                       <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">نوع السؤال</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Slide Type</label>
                         <select 
                           className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none"
                           value={currentQuestion.type}
@@ -712,6 +816,9 @@ export default function SuperAdminNewExamPage() {
                             } else if (currentQuestion.type === "TRUE_FALSE") {
                               updated.options = ["", "", "", ""];
                             }
+                            if (newType === "TEXT") {
+                              updated.points = 0;
+                            }
                             setCurrentQuestion(updated);
                           }}
                         >
@@ -722,19 +829,19 @@ export default function SuperAdminNewExamPage() {
                       </div>
 
                       <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">المعيار (Standard)</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Standard</label>
                         <select 
                           className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none"
                           value={currentQuestion.standard}
                           onChange={(e) => updateCurrentQuestion("standard", e.target.value)}
                         >
-                          <option value="">اختر المعيار...</option>
+                          <option value="">Select Standard...</option>
                           {STANDARDS.map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
                       </div>
 
                       <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">المهارة</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Skill</label>
                         <select 
                           className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none"
                           value={currentQuestion.skill}
@@ -747,128 +854,180 @@ export default function SuperAdminNewExamPage() {
                       </div>
 
                       <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">مستوى الصعوبة</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Difficulty Level</label>
                         <select 
                           className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none"
                           value={currentQuestion.level}
                           onChange={(e) => updateCurrentQuestion("level", e.target.value)}
                         >
-                          <option value="Easy">سهل</option>
-                          <option value="Medium">متوسط</option>
-                          <option value="Hard">صعب</option>
+                          <option value="Easy">Easy</option>
+                          <option value="Medium">Medium</option>
+                          <option value="Hard">Hard</option>
                         </select>
                       </div>
 
-                      <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">النقاط</label>
-                        <input 
-                          type="number"
-                          className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none"
-                          value={currentQuestion.points}
-                          onChange={(e) => updateCurrentQuestion("points", parseInt(e.target.value))}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-3">
-                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest">نص السؤال</label>
-                      <RichTextEditor
-                        value={currentQuestion.text}
-                        onChange={(value) => updateCurrentQuestion("text", value)}
-                        placeholder="اكتب نص السؤال بدقة هنا..."
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="flex flex-col gap-3">
-                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">ناتج التعلم</label>
-                        <input 
-                          type="text"
-                          className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 outline-none font-bold text-slate-700 text-sm"
-                          placeholder="مثال: فهم قوانين الحركة النيوتنية..."
-                          value={currentQuestion.learningOutcome || ""}
-                          onChange={(e) => updateCurrentQuestion("learningOutcome", e.target.value)}
-                        />
-                      </div>
-                      <div className="flex flex-col gap-3">
-                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">شرح الإجابة</label>
-                        <RichTextEditor 
-                          value={currentQuestion.explanation || ""}
-                          onChange={(value) => updateCurrentQuestion("explanation", value)}
-                          placeholder="اشرح لماذا هذه الإجابة هي الصحيحة..."
-                          className="!bg-slate-50 !border-slate-100"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {currentQuestion.type === "TRUE_FALSE" ? (
-                        <>
-                          <div className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isCorrectAnswer(currentQuestion, "صحيح") ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
-                            <div 
-                              onClick={() => updateCorrectAnswers(0)}
-                              className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isCorrectAnswer(currentQuestion, "صحيح") ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200'}`}
-                            >
-                              {isCorrectAnswer(currentQuestion, "صحيح") && <CheckCircle className="w-5 h-5 text-white" />}
-                            </div>
-                            <span className="bg-transparent flex-1 outline-none font-bold text-slate-700">صحيح</span>
-                          </div>
-                          <div className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isCorrectAnswer(currentQuestion, "خطأ") ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
-                            <div 
-                              onClick={() => updateCorrectAnswers(1)}
-                              className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isCorrectAnswer(currentQuestion, "خطأ") ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200'}`}
-                            >
-                              {isCorrectAnswer(currentQuestion, "خطأ") && <CheckCircle className="w-5 h-5 text-white" />}
-                            </div>
-                            <span className="bg-transparent flex-1 outline-none font-bold text-slate-700">خطأ</span>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          {currentQuestion.options.map((opt: string, oIndex: number) => (
-                            <div key={oIndex} className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isCorrectAnswer(currentQuestion, opt) && opt !== "" ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
-                              <div 
-                                onClick={() => updateCorrectAnswers(oIndex)}
-                                className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isCorrectAnswer(currentQuestion, opt) && opt !== "" ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200'}`}
-                              >
-                                {isCorrectAnswer(currentQuestion, opt) && opt !== "" && <CheckCircle className="w-5 h-5 text-white" />}
-                              </div>
-                              <input 
-                                type="text" 
-                                placeholder={`الخيار ${oIndex + 1}`}
-                                className="bg-transparent flex-1 outline-none font-bold text-slate-700 placeholder:text-slate-300"
-                                value={opt}
-                                onChange={(e) => updateOption(oIndex, e.target.value)}
-                              />
-                              {currentQuestion.options.length > 2 && (
-                                <button onClick={() => {
-                                  const newOptions = [...currentQuestion.options];
-                                  newOptions.splice(oIndex, 1);
-                                  setCurrentQuestion({ ...currentQuestion, options: newOptions });
-                                }} className="text-red-400 hover:text-red-600 transition-all"><Trash2 className="w-4 h-4" /></button>
-                              )}
-                            </div>
-                          ))}
-                          <div onClick={() => setCurrentQuestion({ ...currentQuestion, options: [...currentQuestion.options, ""] })} className="flex items-center justify-center gap-2 p-5 rounded-[22px] border-2 border-dashed border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all cursor-pointer text-indigo-600 font-bold">
-                            <Plus className="w-5 h-5" />
-                            إضافة خيار
-                          </div>
-                        </>
+                      {currentQuestion.type !== 'TEXT' && (
+                        <div className="flex flex-col gap-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Points</label>
+                          <input 
+                            type="number"
+                            className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none"
+                            value={currentQuestion.points}
+                            onChange={(e) => updateCurrentQuestion("points", parseInt(e.target.value))}
+                          />
+                        </div>
                       )}
                     </div>
 
-                    <div className="flex justify-end gap-4 pt-4">
+                    <div className="flex flex-col gap-3">
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Content / Question Text</label>
+                      <RichTextEditor
+                        value={currentQuestion.text}
+                        onChange={(value) => updateCurrentQuestion("text", value)}
+                        placeholder="Write the slide text or question prompt here..."
+                      />
+                    </div>
+
+                    {/* Dynamic Explanation Blocks */}
+                    <div className="flex flex-col gap-5 border-t border-slate-100 pt-6">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <label className="text-xs font-black text-slate-500 uppercase tracking-widest block">Answer Explanations & Content Blocks</label>
+                          <p className="text-slate-400 text-[10px] font-bold mt-0.5">Add Hints, Tips, Warnings, or detailed Explanations for this slide/question</p>
+                        </div>
+                        <div className="relative" data-dropdown-root="true">
+                          <button 
+                            type="button"
+                            onClick={() => setOpenDropdownId(openDropdownId === 'question-sections' ? null : 'question-sections')}
+                            className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all cursor-pointer border border-indigo-100"
+                          >
+                            <Plus className="w-4 h-4" /> Add Block
+                          </button>
+                          <div className={`absolute right-0 mt-2 w-56 bg-white border border-slate-100 rounded-xl shadow-xl p-2 z-50 ${openDropdownId === 'question-sections' ? "block" : "hidden"}`}>
+                            {['EXPLANATION', 'HINT', 'TIP', 'WARNING', 'KEY_INSIGHT'].map(secType => (
+                              <button
+                                key={secType}
+                                type="button"
+                                onClick={() => {
+                                   addSection(secType);
+                                   setOpenDropdownId(null);
+                                }}
+                                className="w-full text-left px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors flex items-center gap-2"
+                              >
+                                {React.createElement(SECTION_STYLE_PRESETS[secType]?.icon || FileText, { className: "w-4 h-4" })}
+                                <span>{SECTION_STYLE_PRESETS[secType]?.label || secType}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4">
+                        {(currentQuestion.sections || []).map((sec: any, idx: number) => {
+                          const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
+                          const IconComponent = preset.icon;
+                          return (
+                            <div key={idx} className={`p-6 rounded-3xl border-2 flex flex-col gap-4 relative group ${preset.container}`}>
+                              <div className="flex justify-between items-center">
+                                <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 ${preset.badge}`}>
+                                  <IconComponent className="w-3.5 h-3.5" />
+                                  {preset.label}
+                                </span>
+                                <button 
+                                  type="button"
+                                  onClick={() => removeSection(idx)} 
+                                  className="text-red-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                              <RichTextEditor 
+                                value={sec.content}
+                                onChange={(value) => updateSectionContent(idx, value)}
+                                placeholder={`Write ${preset.label.toLowerCase()} content here...`}
+                                className="!bg-white !border-slate-200"
+                              />
+                            </div>
+                          );
+                        })}
+                        {(currentQuestion.sections || []).length === 0 && (
+                          <div className="bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-6 text-center text-slate-400 text-xs font-bold">
+                            No explanations or content blocks added yet. Click "Add Block" to insert a Hint, Tip, Warning, etc.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {currentQuestion.type !== "TEXT" && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-slate-100 pt-6">
+                        {currentQuestion.type === "TRUE_FALSE" ? (
+                          <>
+                            <div className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isCorrectAnswer(currentQuestion, "صحيح") ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
+                              <div 
+                                onClick={() => updateCorrectAnswers(0)}
+                                className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isCorrectAnswer(currentQuestion, "صحيح") ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200'}`}
+                              >
+                                {isCorrectAnswer(currentQuestion, "صحيح") && <CheckCircle className="w-5 h-5 text-white" />}
+                              </div>
+                              <span className="bg-transparent flex-1 outline-none font-bold text-slate-700">True</span>
+                            </div>
+                            <div className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isCorrectAnswer(currentQuestion, "خطأ") ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
+                              <div 
+                                onClick={() => updateCorrectAnswers(1)}
+                                className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isCorrectAnswer(currentQuestion, "خطأ") ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200'}`}
+                              >
+                                {isCorrectAnswer(currentQuestion, "خطأ") && <CheckCircle className="w-5 h-5 text-white" />}
+                              </div>
+                              <span className="bg-transparent flex-1 outline-none font-bold text-slate-700">False</span>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            {currentQuestion.options.map((opt: string, oIndex: number) => (
+                              <div key={oIndex} className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isCorrectAnswer(currentQuestion, opt) && opt !== "" ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
+                                <div 
+                                  onClick={() => updateCorrectAnswers(oIndex)}
+                                  className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isCorrectAnswer(currentQuestion, opt) && opt !== "" ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200'}`}
+                                >
+                                  {isCorrectAnswer(currentQuestion, opt) && opt !== "" && <CheckCircle className="w-5 h-5 text-white" />}
+                                </div>
+                                <input 
+                                  type="text" 
+                                  placeholder={`Option ${oIndex + 1}`}
+                                  className="bg-transparent flex-1 outline-none font-bold text-slate-700 placeholder:text-slate-300"
+                                  value={opt}
+                                  onChange={(e) => updateOption(oIndex, e.target.value)}
+                                />
+                                {currentQuestion.options.length > 2 && (
+                                  <button onClick={() => {
+                                    const newOptions = [...currentQuestion.options];
+                                    newOptions.splice(oIndex, 1);
+                                    setCurrentQuestion({ ...currentQuestion, options: newOptions });
+                                  }} className="text-red-400 hover:text-red-600 transition-all"><Trash2 className="w-4 h-4" /></button>
+                                )}
+                              </div>
+                            ))}
+                            <div onClick={() => setCurrentQuestion({ ...currentQuestion, options: [...currentQuestion.options, ""] })} className="flex items-center justify-center gap-2 p-5 rounded-[22px] border-2 border-dashed border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all cursor-pointer text-indigo-600 font-bold">
+                              <Plus className="w-5 h-5" />
+                              Add Option
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex justify-end gap-4 pt-4 border-t border-slate-100">
                       <button 
                         onClick={() => setShowQuestionForm(false)}
                         className="px-8 py-4 rounded-2xl font-bold bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all"
                       >
-                        إلغاء
+                        Cancel
                       </button>
                       <button 
                         onClick={handleSaveQuestion}
                         className="px-10 py-4 rounded-2xl font-black bg-indigo-600 text-white shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center gap-3"
                       >
-                        حفظ السؤال في القائمة
+                        Save Slide to List
                         <Save className="w-5 h-5" />
                       </button>
                     </div>
@@ -890,7 +1049,7 @@ export default function SuperAdminNewExamPage() {
                         <div className="flex flex-col flex-1 overflow-hidden">
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded uppercase">{QUESTION_TYPES.find(t => t.id === q.type)?.label}</span>
-                            <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded uppercase">{q.level === "Easy" ? "سهل" : q.level === "Medium" ? "متوسط" : "صعب"} • {q.points} نقطة</span>
+                            <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded uppercase">{q.level} • {q.points} {q.points === 1 ? "point" : "points"}</span>
                             {q.standard && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">{q.standard}</span>}
                           </div>
                           <div 
@@ -904,28 +1063,28 @@ export default function SuperAdminNewExamPage() {
                         <button 
                           onClick={() => setExpandedIndex(expandedIndex === index ? null : index)}
                           className="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center hover:bg-slate-100 hover:text-indigo-600 transition-all"
-                          title={expandedIndex === index ? "تصغير" : "توسيع"}
+                          title={expandedIndex === index ? "Collapse" : "Expand"}
                         >
                           {expandedIndex === index ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                         </button>
                         <button 
                           onClick={() => setPreviewQuestion(q)}
                           className="w-10 h-10 bg-indigo-50 text-indigo-400 rounded-xl flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all"
-                          title="معاينة كطالب"
+                          title="Student Preview"
                         >
                           <Play className="w-5 h-5" />
                         </button>
                         <button 
                           onClick={() => handleEditQuestion(index)}
                           className="w-10 h-10 bg-blue-50 text-blue-400 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"
-                          title="تعديل"
+                          title="Edit"
                         >
                           <Edit3 className="w-5 h-5" />
                         </button>
                         <button 
                           onClick={() => removeQuestion(index)}
                           className="w-10 h-10 bg-red-50 text-red-400 rounded-xl flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"
-                          title="حذف"
+                          title="Delete"
                         >
                           <Trash2 className="w-5 h-5" />
                         </button>
@@ -937,19 +1096,19 @@ export default function SuperAdminNewExamPage() {
                       <div className="px-8 pb-8 pt-4 border-t border-slate-50 bg-slate-50/30 animate-in slide-in-from-top-2 duration-300">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                           <div className="space-y-4">
-                            <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">محتوى السؤال:</h5>
-                            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm prose prose-slate max-w-none" dangerouslySetInnerHTML={{ __html: q.text }} />
+                            <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">Slide Content:</h5>
+                            <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm prose prose-slate max-w-none" dangerouslySetInnerHTML={{ __html: sanitizeHtml(q.text) }} />
                             
                             {q.learningOutcome && (
                               <div className="flex items-center gap-2 text-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-100 w-fit">
                                 <Target className="w-4 h-4" />
-                                <span className="text-[10px] font-black uppercase">ناتج التعلم: {q.learningOutcome}</span>
+                                <span className="text-[10px] font-black uppercase">Learning Outcome: {q.learningOutcome}</span>
                               </div>
                             )}
                           </div>
                           
                           <div className="space-y-4">
-                            <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">الخيارات:</h5>
+                            <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">Options:</h5>
                             <div className="flex flex-col gap-2">
                               {q.type === "MCQ" || q.type === "MULTI_SELECT" ? (
                                 q.options.filter((o: string) => o).map((opt: string, i: number) => (
@@ -958,13 +1117,18 @@ export default function SuperAdminNewExamPage() {
                                     <span className="font-bold text-sm">{opt}</span>
                                   </div>
                                 ))
+                              ) : q.type === "TRUE_FALSE" ? (
+                                ["True", "False"].map((opt, i) => {
+                                  const isCorrect = isCorrectAnswer(q, opt === "True" ? "صحيح" : "خطأ");
+                                  return (
+                                    <div key={i} className={`p-4 rounded-xl border flex items-center gap-3 ${isCorrect ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-slate-100 text-slate-500'}`}>
+                                      {isCorrect ? <CheckCircle2 className="w-4 h-4" /> : <div className="w-4 h-4 rounded-full border-2 border-slate-200" />}
+                                      <span className="font-bold text-sm">{opt}</span>
+                                    </div>
+                                  );
+                                })
                               ) : (
-                                ["صحيح", "خطأ"].map((opt, i) => (
-                                  <div key={i} className={`p-4 rounded-xl border flex items-center gap-3 ${isCorrectAnswer(q, opt) ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-slate-100 text-slate-500'}`}>
-                                    {isCorrectAnswer(q, opt) ? <CheckCircle2 className="w-4 h-4" /> : <div className="w-4 h-4 rounded-full border-2 border-slate-200" />}
-                                    <span className="font-bold text-sm">{opt}</span>
-                                  </div>
-                                ))
+                                <div className="text-xs font-bold text-slate-400">Content slide (No answers required)</div>
                               )}
                             </div>
                           </div>
@@ -981,7 +1145,7 @@ export default function SuperAdminNewExamPage() {
 
       {/* Student Preview Modal */}
       {previewQuestion && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10 rtl" dir="rtl">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10 ltr" dir="ltr">
           <div className="absolute inset-0 bg-[#0f0f1d]/80 backdrop-blur-xl" onClick={() => setPreviewQuestion(null)}></div>
           <div className="relative bg-white w-full max-w-4xl h-full max-h-[85vh] rounded-[50px] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
             {/* Modal Header */}
@@ -991,8 +1155,8 @@ export default function SuperAdminNewExamPage() {
                   <Play className="w-6 h-6" />
                 </div>
                 <div>
-                  <h4 className="text-2xl font-black text-slate-800">معاينة الطالب</h4>
-                  <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">هكذا سيظهر السؤال تماماً في واجهة الطالب</p>
+                  <h4 className="text-2xl font-black text-slate-800">Student Preview</h4>
+                  <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">This is exactly how it will appear in the student interface.</p>
                 </div>
               </div>
               <button 
@@ -1008,23 +1172,23 @@ export default function SuperAdminNewExamPage() {
                <div className="max-w-2xl mx-auto space-y-12">
                   <div className="flex flex-wrap gap-3">
                     <span className="bg-indigo-600 text-white px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider">
-                      {previewQuestion.type === 'MCQ' ? 'اختيار من متعدد' : previewQuestion.type === 'MULTI_SELECT' ? 'اختيار متعدد' : 'صح وخطأ'}
+                      {QUESTION_TYPES.find(t => t.id === previewQuestion.type)?.label || previewQuestion.type}
                     </span>
                     <span className="bg-slate-100 text-slate-600 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider">
-                      {previewQuestion.skill} | {previewQuestion.level === 'Easy' ? 'سهل' : previewQuestion.level === 'Medium' ? 'متوسط' : 'صعب'}
+                      {previewQuestion.skill} | {previewQuestion.level}
                     </span>
                   </div>
 
                   {previewQuestion.learningOutcome && (
                     <div className="flex items-center gap-3 text-indigo-600 bg-indigo-50 px-6 py-3 rounded-2xl border border-indigo-100 w-fit">
                       <Target className="w-5 h-5" />
-                      <span className="text-xs font-black uppercase tracking-widest">ناتج التعلم: {previewQuestion.learningOutcome}</span>
+                      <span className="text-xs font-black uppercase tracking-widest">Learning Outcome: {previewQuestion.learningOutcome}</span>
                     </div>
                   )}
 
                   <h2 
                     className="text-3xl font-bold text-slate-800 leading-relaxed prose prose-indigo max-w-none"
-                    dangerouslySetInnerHTML={{ __html: previewQuestion.text }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewQuestion.text) }}
                   />
 
                   {previewQuestion.imageUrl && (
@@ -1035,19 +1199,21 @@ export default function SuperAdminNewExamPage() {
                     />
                   )}
 
-                  <div className="flex flex-col gap-4">
-                    {(previewQuestion.type === "MCQ" || previewQuestion.type === "MULTI_SELECT" ? previewQuestion.options : ["صحيح", "خطأ"]).filter((o: string) => o).map((option: string, i: number) => (
-                      <button
-                        key={i}
-                        className="w-full text-right p-6 rounded-3xl border-2 border-slate-100 bg-white hover:border-indigo-600 hover:bg-indigo-50/30 transition-all flex items-center gap-5 group"
-                      >
-                        <div className="w-7 h-7 rounded-full border-2 border-slate-200 group-hover:border-indigo-600 flex items-center justify-center transition-all">
-                          <div className="w-3 h-3 bg-indigo-600 rounded-full opacity-0 group-hover:opacity-100 transition-all"></div>
-                        </div>
-                        <span className="text-xl font-bold text-slate-700 group-hover:text-indigo-900">{option}</span>
-                      </button>
-                    ))}
-                  </div>
+                  {previewQuestion.type !== "TEXT" && (
+                    <div className="flex flex-col gap-4">
+                      {(previewQuestion.type === "MCQ" || previewQuestion.type === "MULTI_SELECT" ? previewQuestion.options : ["True", "False"]).filter((o: string) => o).map((option: string, i: number) => (
+                        <button
+                          key={i}
+                          className="w-full text-left p-6 rounded-3xl border-2 border-slate-100 bg-white hover:border-indigo-600 hover:bg-indigo-50/30 transition-all flex items-center gap-5 group"
+                        >
+                          <div className="w-7 h-7 rounded-full border-2 border-slate-200 group-hover:border-indigo-600 flex items-center justify-center transition-all">
+                            <div className="w-3 h-3 bg-indigo-600 rounded-full opacity-0 group-hover:opacity-100 transition-all"></div>
+                          </div>
+                          <span className="text-xl font-bold text-slate-700 group-hover:text-indigo-900">{option}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                </div>
             </div>
 
@@ -1057,7 +1223,7 @@ export default function SuperAdminNewExamPage() {
                 onClick={() => setPreviewQuestion(null)}
                 className="bg-indigo-600 text-white px-12 py-4 rounded-2xl font-black shadow-xl shadow-indigo-100 hover:scale-105 transition-all"
                >
-                 إغلاق المعاينة
+                 Close Preview
                </button>
             </div>
           </div>
@@ -1066,3 +1232,5 @@ export default function SuperAdminNewExamPage() {
     </DashboardLayout>
   );
 }
+
+

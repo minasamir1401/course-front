@@ -14,6 +14,30 @@ export default function StudentLoginPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
+  const [language, setLanguage] = useState<'ar' | 'en'>('ar');
+
+  const text = {
+    ar: {
+      title: 'بوابة الطلاب والمعلمين',
+      subtitle: 'سجّل دخولك للوصول إلى دروسك وامتحاناتك',
+      username: 'اسم المستخدم',
+      password: 'كلمة المرور',
+      loginBtn: 'دخول',
+      loadingBtn: 'جاري الدخول...',
+      usernamePlaceholder: 'أدخل اسم المستخدم',
+      platform: 'منصتي للتعليم الذكي',
+    },
+    en: {
+      title: 'Students & Teachers Portal',
+      subtitle: 'Login to access your lessons and exams',
+      username: 'Username',
+      password: 'Password',
+      loginBtn: 'Login',
+      loadingBtn: 'Logging in...',
+      usernamePlaceholder: 'Enter your username',
+      platform: 'Smart Learning Platform',
+    }
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("lms_token");
@@ -101,11 +125,18 @@ export default function StudentLoginPage() {
   return (
     <div
       className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
-      dir="rtl"
+      dir={language === 'ar' ? "rtl" : "ltr"}
       style={{
         background: "linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%)",
       }}
     >
+      {/* Language Switch */}
+      <button
+        onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
+        className="absolute top-6 right-6 z-50 bg-white/10 hover:bg-white/20 border border-white/20 text-white px-4 py-2 rounded-xl backdrop-blur-md font-bold transition-all"
+      >
+        {language === 'ar' ? 'English' : 'العربية'}
+      </button>
       {/* Background blobs */}
       <div className="absolute top-[-100px] right-[-100px] w-[400px] h-[400px] rounded-full opacity-20" style={{ background: "radial-gradient(circle, #3b82f6, transparent)" }} />
       <div className="absolute bottom-[-100px] left-[-100px] w-[400px] h-[400px] rounded-full opacity-20" style={{ background: "radial-gradient(circle, #8b5cf6, transparent)" }} />
@@ -118,8 +149,8 @@ export default function StudentLoginPage() {
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4" style={{ background: "linear-gradient(135deg, #3b82f6, #8b5cf6)" }}>
               <GraduationCap className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-white mb-1">بوابة الطلاب والمعلمين</h1>
-            <p className="text-blue-300 text-sm">سجّل دخولك للوصول إلى دروسك وامتحاناتك</p>
+            <h1 className="text-2xl font-bold text-white mb-1">{text[language].title}</h1>
+            <p className="text-blue-300 text-sm">{text[language].subtitle}</p>
           </div>
 
           {/* Form */}
@@ -132,9 +163,9 @@ export default function StudentLoginPage() {
               )}
 
               <div>
-                <label className="block text-sm font-semibold text-blue-200 mb-2">اسم المستخدم</label>
+                <label className="block text-sm font-semibold text-blue-200 mb-2">{text[language].username}</label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                  <div className={`absolute inset-y-0 ${language === 'ar' ? 'right-0 pr-3' : 'left-0 pl-3'} flex items-center pointer-events-none`}>
                     <User className="h-5 w-5 text-slate-400" />
                   </div>
                   <input
@@ -144,17 +175,17 @@ export default function StudentLoginPage() {
                     required
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="w-full pl-4 pr-10 py-3 bg-white/10 border border-white/20 rounded-xl outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition-all text-white placeholder-slate-500"
-                    placeholder="أدخل اسم المستخدم"
+                    className={`w-full ${language === 'ar' ? 'pl-4 pr-10' : 'pr-4 pl-10'} py-3 bg-white/10 border border-white/20 rounded-xl outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition-all text-white placeholder-slate-500`}
+                    placeholder={text[language].usernamePlaceholder}
                     dir="ltr"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-blue-200 mb-2">كلمة المرور</label>
+                <label className="block text-sm font-semibold text-blue-200 mb-2">{text[language].password}</label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                  <div className={`absolute inset-y-0 ${language === 'ar' ? 'right-0 pr-3' : 'left-0 pl-3'} flex items-center pointer-events-none`}>
                     <Lock className="h-5 w-5 text-slate-400" />
                   </div>
                   <input
@@ -164,7 +195,7 @@ export default function StudentLoginPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-4 pr-10 py-3 bg-white/10 border border-white/20 rounded-xl outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition-all text-white placeholder-slate-500"
+                    className={`w-full ${language === 'ar' ? 'pl-4 pr-10' : 'pr-4 pl-10'} py-3 bg-white/10 border border-white/20 rounded-xl outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition-all text-white placeholder-slate-500`}
                     placeholder="••••••••"
                     dir="ltr"
                   />
@@ -177,7 +208,7 @@ export default function StudentLoginPage() {
                 className="w-full text-white font-bold py-3 px-4 rounded-xl transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                 style={{ background: "linear-gradient(135deg, #3b82f6, #8b5cf6)" }}
               >
-                {isLoading ? "جاري الدخول..." : "دخول"}
+                {isLoading ? text[language].loadingBtn : text[language].loginBtn}
               </button>
             </form>
           </div>
@@ -186,7 +217,7 @@ export default function StudentLoginPage() {
         {/* Branding */}
         <div className="mt-6 text-center flex items-center justify-center gap-2 text-slate-500 text-sm">
           <BookOpen className="w-4 h-4" />
-          <span>منصتي للتعليم الذكي</span>
+          <span>{text[language].platform}</span>
         </div>
       </div>
     </div>

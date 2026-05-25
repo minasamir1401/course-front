@@ -4,21 +4,25 @@ import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useParams, useRouter } from "next/navigation";
 import { API_URL, getFullImageUrl } from '@/lib/api';
+import { fetchStudentStats, readCachedStudentStats } from "@/lib/student-stats";
 import {
   PlaySquare, FileText, HelpCircle, ChevronLeft, ChevronRight,
   BookOpen, Clock, CheckCircle, List,
   Bookmark, MessageSquare, Download, Share2, Paperclip,
   Check, Lock, Play, Sparkles, Calendar, ArrowRight
 } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function CourseDetailsPage() {
   const router = useRouter();
   const params = useParams();
   const courseId = params.id as string;
+  const { t, language } = useLanguage();
 
   const [course, setCourse] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [now] = useState(new Date());
+  const [courseProgressPercent, setCourseProgressPercent] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchCourseDetails = async () => {
@@ -52,6 +56,21 @@ export default function CourseDetailsPage() {
               .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
           }
           setCourse(data);
+
+          try {
+            const cached = readCachedStudentStats();
+            const token = localStorage.getItem("lms_token");
+            const stats = cached || (token ? await fetchStudentStats(token) : null);
+            const progresses = stats?.courseProgresses || [];
+            const progressItem = progresses.find((p: any) =>
+              String(p.id) === String(courseId) || String(p.courseId) === String(courseId)
+            );
+            if (progressItem && typeof progressItem.progressPercent === "number") {
+              setCourseProgressPercent(progressItem.progressPercent);
+            }
+          } catch (e) {
+            // keep fallback calculation from lesson progresses
+          }
         }
       } catch (error) {
         console.error("Failed to fetch course details:", error);
@@ -64,10 +83,38 @@ export default function CourseDetailsPage() {
   }, [courseId, router, now]);
 
   const formatDuration = (seconds: number) => {
-    if (!seconds) return '00:00';
+    if (!seconds) return '--:--';
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const toNumber = (value: any) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const lessonDurationSeconds = (lesson: any) => {
+    const directSec = toNumber(lesson.durationSeconds || lesson.videoDurationSeconds);
+    if (directSec > 0) return directSec;
+    const minutes = toNumber(lesson.durationMinutes || lesson.videoDurationMinutes);
+    if (minutes > 0) return Math.round(minutes * 60);
+    const legacy = toNumber(lesson.duration);
+    return legacy > 0 ? legacy : 0;
+  };
+
+  const lessonQuestionsCount = (lesson: any) => {
+    const q = lesson?.questions;
+    if (Array.isArray(q)) return q.length;
+    if (typeof q === "string") {
+      try {
+        const parsed = JSON.parse(q);
+        return Array.isArray(parsed) ? parsed.length : 0;
+      } catch {
+        return 0;
+      }
+    }
+    return 0;
   };
 
   if (isLoading) {
@@ -87,9 +134,9 @@ export default function CourseDetailsPage() {
           <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 shadow-inner">
             <BookOpen className="w-12 h-12 text-slate-200" />
           </div>
-          <h2 className="text-3xl font-black text-slate-800 mb-2">الكورس غير موجود</h2>
+          <h2 className="text-3xl font-black text-slate-800 mb-2">{t('courseDetails.notFound')}</h2>
           <button onClick={() => router.push('/courses')} className="bg-slate-900 text-white px-8 py-3 rounded-2xl font-black mt-4 transition-all hover:bg-indigo-600 active:scale-95">
-            العودة للمقررات
+            {t('courseDetails.backToCourses')}
           </button>
         </div>
       </DashboardLayout>
@@ -98,11 +145,12 @@ export default function CourseDetailsPage() {
 
   const completedCount = course.lessons?.filter((l: any) => l.progresses?.[0]?.isCompleted).length || 0;
   const totalLessons = course.lessons?.length || 0;
-  const progressPercent = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+  const fallbackProgressPercent = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+  const progressPercent = courseProgressPercent ?? fallbackProgressPercent;
 
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto space-y-10 pb-20" dir="rtl">
+      <div className="max-w-6xl mx-auto space-y-6 md:space-y-10 pb-20 px-1 sm:px-0 overflow-x-hidden" dir={language === 'ar' ? 'rtl' : 'ltr'}>
 
         {/* Course Folder Header */}
         <div className="bg-white rounded-[48px] border border-slate-100 shadow-sm relative overflow-hidden group min-h-[300px] flex flex-col justify-end">
@@ -126,19 +174,19 @@ export default function CourseDetailsPage() {
                 </span>
                 <span className="text-white/60 font-bold text-xs flex items-center gap-1">
                   <List className="w-3.5 h-3.5" />
-                  {totalLessons} دروس
+                  {totalLessons} {t('courseDetails.lessons')}
                 </span>
               </div>
-              <h1 className="text-3xl md:text-6xl font-black text-white leading-tight">
+              <h1 className="text-2xl sm:text-3xl md:text-6xl font-black text-white leading-tight">
                 {course.title}
               </h1>
               <p className="text-white/70 font-bold text-lg max-w-2xl">
-                {course.description || "مرحباً بك في هذا الكورس الشامل. ابدأ الآن بتطوير مهاراتك من خلال الدروس المرتبة أدناه."}
+                {course.description || t('courseDetails.defaultDescription')}
               </p>
             </div>
 
             {/* Overall Progress Circle/Card */}
-            <div className="bg-white/10 backdrop-blur-md text-white p-8 rounded-[40px] border border-white/20 shadow-2xl flex flex-col items-center justify-center min-w-[200px] animate-in zoom-in duration-700">
+            <div className="hidden sm:flex bg-white/10 backdrop-blur-md text-white p-6 md:p-8 rounded-[32px] border border-white/20 shadow-2xl flex-col items-center justify-center min-w-[180px] animate-in zoom-in duration-700">
               <div className="relative w-24 h-24 mb-4">
                 <svg className="w-full h-full" viewBox="0 0 36 36">
                   <path className="stroke-white/10 stroke-[3] fill-none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
@@ -152,7 +200,7 @@ export default function CourseDetailsPage() {
                   {progressPercent}%
                 </div>
               </div>
-              <p className="text-[10px] font-black uppercase tracking-[2px] text-white/50">إجمالي التقدم</p>
+              <p className="text-[10px] font-black uppercase tracking-[2px] text-white/50">{t('courseDetails.totalProgress')}</p>
             </div>
           </div>
         </div>
@@ -162,103 +210,155 @@ export default function CourseDetailsPage() {
           <div className="flex items-center justify-between px-4">
             <h2 className="text-2xl font-black text-slate-900 flex items-center gap-3">
               <Sparkles className="w-6 h-6 text-amber-400" />
-              محتوى المجلد
+              {t('courseDetails.folderContent')}
             </h2>
             <div className="flex items-center gap-4 text-xs font-bold text-slate-400">
-              <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500"></div> مكتمل</span>
-              <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-indigo-500"></div> متاح</span>
-              <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-slate-300"></div> مجدول</span>
+              <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500"></div> {t('courseDetails.completed')}</span>
+              <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-indigo-500"></div> {t('courseDetails.available')}</span>
+              <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-slate-300"></div> {t('courseDetails.scheduled')}</span>
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4">
-            {course.lessons?.map((lesson: any, index: number) => {
-              const isCompleted = lesson.progresses?.[0]?.isCompleted;
-              const isLocked = lesson.isLocked;
-              const isActive = !isLocked;
+            {(() => {
+              if (!course.lessons || course.lessons.length === 0) {
+                return (
+                  <div className="py-24 text-center bg-white rounded-[40px] border-2 border-slate-100 border-dashed animate-in fade-in duration-500">
+                    <PlaySquare className="w-20 h-20 text-slate-100 mx-auto mb-6" />
+                    <p className="text-slate-400 text-xl font-black">{t('courseDetails.noLessonsAdded')}</p>
+                  </div>
+                );
+              }
 
-              return (
-                <div
-                  key={lesson.id}
-                  onClick={() => !isLocked && router.push(`/lessons/${lesson.id}?courseId=${course.id}`)}
-                  style={{ animationDelay: `${index * 100}ms` }}
-                  className={`bg-white p-6 md:p-8 rounded-[32px] border transition-all duration-500 group animate-in fade-in slide-in-from-bottom-4 fill-mode-both ${isLocked
-                      ? 'opacity-70 grayscale cursor-not-allowed border-slate-100'
-                      : 'cursor-pointer hover:shadow-xl hover:-translate-y-1 hover:border-indigo-200 border-slate-100'
-                    }`}
-                >
-                  <div className="flex flex-col md:flex-row items-center gap-6">
-                    {/* Index & Icon */}
-                    <div className="flex items-center gap-6 shrink-0">
-                      <span className="text-2xl font-black text-slate-200 group-hover:text-indigo-100 transition-colors w-8">
-                        {(index + 1).toString().padStart(2, '0')}
-                      </span>
-                      <div className={`w-16 h-16 rounded-3xl flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-110 ${isCompleted
-                          ? 'bg-emerald-50 text-emerald-600 shadow-emerald-100'
-                          : isLocked
-                            ? 'bg-slate-100 text-slate-400 shadow-none'
-                            : 'bg-indigo-50 text-indigo-600 shadow-indigo-100'
-                        }`}>
-                        {isCompleted ? <CheckCircle className="w-8 h-8" /> : isLocked ? <Lock className="w-7 h-7" /> : <Play className="w-7 h-7 fill-current" />}
-                      </div>
-                    </div>
+              // Group lessons by domain while preserving their original sorted order
+              const groupedByDomain: { domainName: string; lessons: any[] }[] = [];
+              course.lessons.forEach((lesson: any) => {
+                const domainName = lesson.domain?.trim() || "";
+                let existingGroup = groupedByDomain.find(g => g.domainName === domainName);
+                if (!existingGroup) {
+                  existingGroup = { domainName, lessons: [] };
+                  groupedByDomain.push(existingGroup);
+                }
+                existingGroup.lessons.push(lesson);
+              });
 
-                    {/* Lesson Info */}
-                    <div className="flex-1 text-center md:text-right space-y-1">
-                      <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-1">
-                        {isCompleted && <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-black rounded-lg">تم الإنجاز ✅</span>}
-                        {isLocked && (
-                          <span className="px-2 py-0.5 bg-amber-50 text-amber-700 text-[9px] font-black rounded-lg flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            ينشر في {new Date(lesson.publishDate).toLocaleDateString('ar-EG')}
-                          </span>
-                        )}
-                      </div>
-                      <h3 className="text-xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors leading-tight">
-                        {lesson.title}
-                      </h3>
-                      <div className="flex items-center justify-center md:justify-start gap-3 text-slate-400 text-xs font-bold">
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5" />
-                          {formatDuration(lesson.duration || 0)}
-                        </span>
-                        {lesson.questions?.length > 0 && (
-                          <span className="flex items-center gap-1">
-                            <HelpCircle className="w-3.5 h-3.5" />
-                            {JSON.parse(lesson.questions).length} أسئلة
-                          </span>
-                        )}
-                      </div>
-                    </div>
+              let globalIndexCounter = 0;
 
-                    {/* Action */}
-                    <div className="shrink-0 w-full md:w-auto">
-                      {isLocked ? (
-                        <div className="px-6 py-4 rounded-2xl bg-slate-50 text-slate-400 text-xs font-black flex items-center justify-center gap-2 border border-slate-100">
-                          <Lock className="w-4 h-4" />
-                          محتوى مجدول
+              return groupedByDomain.map((group, groupIdx) => {
+                const isDomainless = !group.domainName;
+                
+                return (
+                  <div key={group.domainName || `domainless-${groupIdx}`} className="space-y-6">
+                    {!isDomainless && (
+                      <div className="bg-indigo-50/50 border border-indigo-100/50 p-6 rounded-[28px] flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-500 my-4">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-md shadow-indigo-200 shrink-0">
+                            <BookOpen className="w-6 h-6 text-white" />
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest block mb-0.5">
+                              {language === 'ar' ? 'المجال الأكاديمي' : 'Academic Domain'}
+                            </span>
+                            <h3 className="text-xl font-black text-slate-800 leading-none">
+                              {group.domainName}
+                            </h3>
+                          </div>
                         </div>
-                      ) : (
-                        <button className={`w-full md:w-auto px-10 py-4 rounded-2xl text-sm font-black transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95 ${isCompleted
-                            ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white'
-                            : 'bg-indigo-600 text-white hover:bg-slate-900 hover:shadow-indigo-200'
-                          }`}>
-                          {isCompleted ? 'مراجعة الدرس' : 'بدء التعلم الآن'}
-                          <ChevronLeft className="w-4 h-4 group-hover:-translate-x-2 transition-transform" />
-                        </button>
-                      )}
+                        <span className="px-4 py-2 bg-white rounded-full text-xs font-black text-indigo-700 border border-indigo-100 shadow-sm shrink-0">
+                          {group.lessons.length} {language === 'ar' ? 'دروس' : 'Lessons'}
+                        </span>
+                      </div>
+                    )}
+                    
+                    <div className={`grid grid-cols-1 gap-4 ${!isDomainless ? 'pl-0 md:pr-4 rtl:md:pl-4' : ''}`}>
+                      {group.lessons.map((lesson: any) => {
+                        const isCompleted = lesson.progresses?.[0]?.isCompleted;
+                        const isLocked = lesson.isLocked;
+                        const lessonIdx = globalIndexCounter++;
+                        
+                        return (
+                          <div
+                            key={lesson.id}
+                            onClick={() => !isLocked && router.push(`/lessons/${lesson.id}?courseId=${course.id}`)}
+                            style={{ animationDelay: `${lessonIdx * 100}ms` }}
+                            className={`bg-white p-4 sm:p-6 md:p-8 rounded-[24px] sm:rounded-[32px] border transition-all duration-500 group animate-in fade-in slide-in-from-bottom-4 fill-mode-both ${
+                              isLocked
+                                ? 'opacity-70 grayscale cursor-not-allowed border-slate-100'
+                                : 'cursor-pointer hover:shadow-xl hover:-translate-y-1 hover:border-indigo-200 border-slate-100'
+                            }`}
+                          >
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 md:gap-6">
+                              {/* Index & Icon */}
+                              <div className="flex items-center gap-3 sm:gap-6 shrink-0">
+                                <span className="text-2xl font-black text-slate-200 group-hover:text-indigo-100 transition-colors w-8">
+                                  {(lessonIdx + 1).toString().padStart(2, '0')}
+                                </span>
+                                <div className={`w-16 h-16 rounded-3xl flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-110 ${
+                                  isCompleted
+                                    ? 'bg-emerald-50 text-emerald-600 shadow-emerald-100'
+                                    : isLocked
+                                      ? 'bg-slate-100 text-slate-400 shadow-none'
+                                      : 'bg-indigo-50 text-indigo-600 shadow-indigo-100'
+                                }`}>
+                                  {isCompleted ? <CheckCircle className="w-8 h-8" /> : isLocked ? <Lock className="w-7 h-7" /> : <Play className="w-7 h-7 fill-current" />}
+                                </div>
+                              </div>
+
+                              {/* Lesson Info */}
+                              <div className="flex-1 text-center md:text-start space-y-1">
+                                <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-1">
+                                  {isCompleted && <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-black rounded-lg">{t('courseDetails.done')}</span>}
+                                  {isLocked && (
+                                    <span className="px-2 py-0.5 bg-amber-50 text-amber-700 text-[9px] font-black rounded-lg flex items-center gap-1">
+                                      <Calendar className="w-3 h-3" />
+                                      {t('courseDetails.publishedOn')} {new Date(lesson.publishDate).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US')}
+                                    </span>
+                                  )}
+                                </div>
+                                <h3 className="text-xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors leading-tight">
+                                  {lesson.title}
+                                </h3>
+                                <div className="flex items-center justify-center md:justify-start gap-3 text-slate-400 text-xs font-bold">
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="w-3.5 h-3.5" />
+                                    {formatDuration(lessonDurationSeconds(lesson))}
+                                  </span>
+                                  {lessonQuestionsCount(lesson) > 0 && (
+                                    <span className="flex items-center gap-1">
+                                      <HelpCircle className="w-3.5 h-3.5" />
+                                      {lessonQuestionsCount(lesson)} {t('courseDetails.questions')}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Action */}
+                              <div className="shrink-0 w-full md:w-auto">
+                                {isLocked ? (
+                                  <div className="px-6 py-4 rounded-2xl bg-slate-50 text-slate-400 text-xs font-black flex items-center justify-center gap-2 border border-slate-100">
+                                    <Lock className="w-4 h-4" />
+                                    {t('courseDetails.scheduledContent')}
+                                  </div>
+                                ) : (
+                                  <button className={`w-full md:w-auto px-10 py-4 rounded-2xl text-sm font-black transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95 ${
+                                    isCompleted
+                                      ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white'
+                                      : 'bg-indigo-600 text-white hover:bg-slate-900 hover:shadow-indigo-200'
+                                  }`}>
+                                    {isCompleted ? t('courseDetails.reviewLesson') : t('courseDetails.startLearningNow')}
+                                    <ChevronLeft className={`w-4 h-4 transition-transform ${language === 'ar' ? 'group-hover:-translate-x-2' : 'group-hover:translate-x-2 rotate-180'}`} />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
-                </div>
-              );
-            })}
-
-            {(!course.lessons || course.lessons.length === 0) && (
-              <div className="py-24 text-center bg-white rounded-[40px] border-2 border-slate-100 border-dashed">
-                <PlaySquare className="w-20 h-20 text-slate-100 mx-auto mb-6" />
-                <p className="text-slate-400 text-xl font-black">لا توجد دروس مضافة لهذا المجلد بعد</p>
-              </div>
-            )}
+                );
+              });
+            })()}
           </div>
         </div>
       </div>

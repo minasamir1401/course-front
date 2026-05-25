@@ -10,13 +10,29 @@ import {
 } from "lucide-react";
 import { logout } from "@/lib/auth";
 
-export default function SuperAdminSidebar({ isOpen: externalOpen, onClose }: { isOpen?: boolean, onClose?: () => void }) {
+export default function SuperAdminSidebar({
+  isOpen: externalOpen,
+  onToggle,
+  onClose,
+}: {
+  isOpen?: boolean;
+  onToggle?: (open: boolean) => void;
+  onClose?: () => void;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [internalOpen, setInternalOpen] = useState(false);
 
-  const isOpen = externalOpen !== undefined ? externalOpen : internalOpen;
-  const setIsOpen = externalOpen !== undefined ? (onClose || (() => { })) : setInternalOpen;
+  const isControlled = externalOpen !== undefined;
+  const isOpen = isControlled ? externalOpen : internalOpen;
+  const setIsOpen = (open: boolean) => {
+    if (isControlled) {
+      if (onToggle) onToggle(open);
+      else if (!open) onClose?.();
+      return;
+    }
+    setInternalOpen(open);
+  };
 
   const handleLogout = () => logout(router, pathname);
 
@@ -130,8 +146,8 @@ function SidebarLink({ href, icon: Icon, label, active, badge }: {
     <Link
       href={href}
       className={`flex items-center justify-between px-3 py-2.5 rounded-xl transition-all group ${active
-          ? 'bg-slate-900 text-white'
-          : 'text-slate-700 hover:bg-slate-900 hover:text-white'
+        ? 'bg-slate-900 text-white'
+        : 'text-slate-700 hover:bg-slate-900 hover:text-white'
         }`}
     >
       <div className="flex items-center gap-3">

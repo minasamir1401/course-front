@@ -5,6 +5,7 @@ interface VideoPlayerProps {
   url: string;
   initialSeconds?: number;
   onProgress?: (state: { playedSeconds: number }) => void;
+  onDuration?: (durationSeconds: number) => void;
 }
 
 function getVideoInfo(url: string): { type: 'youtube' | 'vimeo', id: string } | null {
@@ -12,15 +13,8 @@ function getVideoInfo(url: string): { type: 'youtube' | 'vimeo', id: string } | 
   const normalized = url.trim();
   
   // YouTube patterns
-  const ytPatterns = [
-    /youtube\.com\/watch\?v=([^&\s]+)/,
-    /youtu\.be\/([^?&\s]+)/,
-    /youtube\.com\/embed\/([^?&\s]+)/,
-  ];
-  for (const p of ytPatterns) {
-    const m = normalized.match(p);
-    if (m) return { type: 'youtube', id: m[1] };
-  }
+  const ytMatch = normalized.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+  if (ytMatch) return { type: 'youtube', id: ytMatch[1] };
   
   // Vimeo patterns
   const vimeoPatterns = [
@@ -34,13 +28,15 @@ function getVideoInfo(url: string): { type: 'youtube' | 'vimeo', id: string } | 
   return null;
 }
 
-export default function VideoPlayer({ url, onProgress }: VideoPlayerProps) {
+export default function VideoPlayer({ url, onProgress, onDuration }: VideoPlayerProps) {
   const youtubeRef = useRef<HTMLIFrameElement>(null);
   const vimeoContainerRef = useRef<HTMLDivElement>(null);
   const vimeoPlayerInstance = useRef<any>(null);
   
   const lastReportedTime = useRef(0);
   const onProgressRef = useRef(onProgress);
+  const onDurationRef = useRef(onDuration);
+  const lastReportedDuration = useRef(0);
   const videoInfo = getVideoInfo(url);
   
   const videoType = videoInfo?.type;
@@ -51,10 +47,23 @@ export default function VideoPlayer({ url, onProgress }: VideoPlayerProps) {
     onProgressRef.current = onProgress;
   }, [onProgress]);
 
+  useEffect(() => {
+    onDurationRef.current = onDuration;
+  }, [onDuration]);
+
   // Reset progress tracker when url changes
   useEffect(() => {
     lastReportedTime.current = 0;
+    lastReportedDuration.current = 0;
   }, [url]);
+
+  const reportDuration = useCallback((duration: number) => {
+    const rounded = Math.floor(duration || 0);
+    if (rounded > 0 && rounded !== lastReportedDuration.current) {
+      onDurationRef.current?.(rounded);
+      lastReportedDuration.current = rounded;
+    }
+  }, []);
 
   // Function to report progress to parent (no dependencies needed since we use ref)
   const reportProgress = useCallback((currentTime: number) => {
@@ -80,6 +89,9 @@ export default function VideoPlayer({ url, onProgress }: VideoPlayerProps) {
           if (data?.event === "infoDelivery" && data?.info?.currentTime !== undefined) {
             reportProgress(data.info.currentTime);
           }
+          if (data?.event === "infoDelivery" && data?.info?.duration !== undefined) {
+            reportDuration(data.info.duration);
+          }
         } catch (e) {}
       }
     };
@@ -100,7 +112,7 @@ export default function VideoPlayer({ url, onProgress }: VideoPlayerProps) {
       window.removeEventListener("message", handleMessage);
       clearInterval(syncInterval);
     };
-  }, [videoType, videoId, reportProgress]);
+  }, [videoType, videoId, reportProgress, reportDuration]);
 
   // Vimeo official SDK handling
   useEffect(() => {
@@ -123,6 +135,7 @@ export default function VideoPlayer({ url, onProgress }: VideoPlayerProps) {
       player.on('timeupdate', (data: any) => {
         reportProgress(data.seconds);
       });
+      player.getDuration().then((d: number) => reportDuration(d)).catch(() => {});
 
       vimeoPlayerInstance.current = player;
     } catch (e) {
@@ -135,7 +148,7 @@ export default function VideoPlayer({ url, onProgress }: VideoPlayerProps) {
         vimeoPlayerInstance.current = null;
       }
     };
-  }, [videoType, videoId, reportProgress]);
+  }, [videoType, videoId, reportProgress, reportDuration]);
 
   if (!videoType || !videoId) {
     return (

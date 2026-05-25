@@ -8,6 +8,7 @@ export const metadata: Metadata = {
 
 import { NotificationProvider } from "@/context/NotificationContext";
 import ImpersonationBanner from "@/components/ImpersonationBanner";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 
 export default function RootLayout({
   children,
@@ -17,10 +18,12 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl">
       <body className="font-sans bg-[#F8FAFC] text-slate-800">
-        <NotificationProvider>
-          <ImpersonationBanner />
-          {children}
-        </NotificationProvider>
+        <LanguageProvider>
+          <NotificationProvider>
+            <ImpersonationBanner />
+            {children}
+          </NotificationProvider>
+        </LanguageProvider>
       </body>
     </html>
   );
