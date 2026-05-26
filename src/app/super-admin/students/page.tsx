@@ -60,10 +60,14 @@ export default function StudentsManagement() {
       ]);
       
       if (usersRes.ok) {
-        const allUsers = await usersRes.json();
+        const allUsersData = await usersRes.json();
+        const allUsers = Array.isArray(allUsersData) ? allUsersData : (allUsersData.users || []);
         setStudents(allUsers.filter((u: any) => u.role === 'STUDENT'));
       }
-      if (schoolsRes.ok) setSchools(await schoolsRes.json());
+      if (schoolsRes.ok) {
+        const schoolsData = await schoolsRes.json();
+        setSchools(Array.isArray(schoolsData) ? schoolsData : (schoolsData.schools || []));
+      }
     } catch (error) {
       console.error("Failed to fetch data:", error);
     } finally {

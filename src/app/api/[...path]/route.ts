@@ -45,9 +45,15 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
 
     // Copy response headers
     const responseHeaders = new Headers();
+    const HEADERS_TO_SKIP = new Set([
+      'access-control-allow-origin',
+      'access-control-allow-credentials',
+      'content-encoding',
+      'content-length',
+      'transfer-encoding'
+    ]);
     backendResponse.headers.forEach((value, key) => {
-      // Skip CORS headers from backend - Next.js handles them
-      if (!['access-control-allow-origin', 'access-control-allow-credentials'].includes(key.toLowerCase())) {
+      if (!HEADERS_TO_SKIP.has(key.toLowerCase())) {
         responseHeaders.set(key, value);
       }
     });
