@@ -715,17 +715,17 @@ export default function SuperAdminNewExamPage() {
               <div className="flex gap-3">
                 <button 
                   onClick={() => handleAddQuestion('TEXT')}
-                  className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-2xl font-bold transition-all shadow-sm border border-slate-200 whitespace-nowrap shrink-0"
+                  className="flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-2xl font-bold transition-all shadow-sm border border-slate-200 whitespace-nowrap shrink-0"
                 >
-                  <Plus className="w-5 h-5 shrink-0" />
-                  <span>+ Text Slide</span>
+                  <Plus className="w-5 h-5 shrink-0 text-slate-500" />
+                  <span>Text Slide</span>
                 </button>
                 <button 
                   onClick={() => handleAddQuestion('MCQ')}
-                  className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 whitespace-nowrap shrink-0"
+                  className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 whitespace-nowrap shrink-0"
                 >
-                  <Plus className="w-5 h-5 shrink-0" />
-                  <span>+ Question Slide</span>
+                  <Plus className="w-5 h-5 shrink-0 text-white" />
+                  <span>Question Slide</span>
                 </button>
               </div>
             </div>
@@ -744,15 +744,17 @@ export default function SuperAdminNewExamPage() {
                   <div className="flex gap-4">
                     <button 
                       onClick={() => handleAddQuestion('TEXT')}
-                      className="bg-slate-100 text-slate-800 px-10 py-5 rounded-3xl font-black hover:scale-105 transition-all shadow-md border border-slate-200 whitespace-nowrap shrink-0"
+                      className="bg-slate-50 hover:bg-slate-100 text-slate-800 px-10 py-5 rounded-3xl font-black hover:scale-105 transition-all shadow-md border border-slate-200 whitespace-nowrap shrink-0 flex items-center justify-center gap-2"
                     >
-                      <span>+ Add Text Slide</span>
+                      <Plus className="w-6 h-6 shrink-0 text-slate-600" />
+                      <span>Add Text Slide</span>
                     </button>
                     <button 
                       onClick={() => handleAddQuestion('MCQ')}
-                      className="bg-[#0f0f1d] text-white px-10 py-5 rounded-3xl font-black hover:scale-105 transition-all shadow-2xl whitespace-nowrap shrink-0"
+                      className="bg-[#0f0f1d] hover:bg-[#16162a] text-white px-10 py-5 rounded-3xl font-black hover:scale-105 transition-all shadow-2xl whitespace-nowrap shrink-0 flex items-center justify-center gap-2"
                     >
-                      <span>+ Add Question Slide</span>
+                      <Plus className="w-6 h-6 shrink-0 text-indigo-400" />
+                      <span>Add Question Slide</span>
                     </button>
                   </div>
                 </div>
