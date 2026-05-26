@@ -2,30 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: 'standalone',
-  async rewrites() {
-    const backendOriginFromApiUrl = (() => {
-      const rawApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
-      if (!rawApiUrl) return '';
-      try {
-        const parsed = new URL(rawApiUrl);
-        return parsed.origin;
-      } catch {
-        return '';
-      }
-    })();
-
-    const backendOrigin =
-      process.env.BACKEND_ORIGIN ||
-      backendOriginFromApiUrl ||
-      'http://backend:5000';
-
-    return [
-      {
-        source: '/api/:path*',
-        destination: `${backendOrigin}/api/:path*`,
-      },
-    ];
-  },
+  // API proxy is handled by src/app/api/[...path]/route.ts (runtime proxy)
+  // This avoids build-time env variable issues with next.config.ts rewrites
 };
 
 export default nextConfig;
