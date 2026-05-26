@@ -693,7 +693,12 @@ export default function SuperAdminNewExamPage() {
                   )}
                 </div>
               )}
-            </div>            <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-sm">
+            </div>
+          </div>
+
+          {/* Questions Content Area */}
+          <div className="lg:col-span-8 flex flex-col gap-8">
+            <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-sm">
                <label className="text-sm font-black text-slate-400 mb-3 block uppercase tracking-widest">Exam Title</label>
                <input 
                 type="text" 
@@ -705,14 +710,14 @@ export default function SuperAdminNewExamPage() {
             </div>
 
             {/* Questions List Header */}
-            <div className="flex justify-between items-center px-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 px-4">
               <div className="flex items-center gap-3">
                 <h3 className="text-2xl font-black text-slate-800">Exam Slides ({questions.length})</h3>
                 <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-black">
                   {questions.reduce((sum, q) => sum + (q.points || 0), 0)} total points
                 </span>
               </div>
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3 w-full sm:w-auto">
                 <button 
                   onClick={() => handleAddQuestion('TEXT')}
                   className="flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-2xl font-bold transition-all shadow-sm border border-slate-200 whitespace-nowrap shrink-0"
