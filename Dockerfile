@@ -23,6 +23,12 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
+# Pass runtime environment variables needed by Next.js rewrites (next.config.ts)
+ARG NEXT_PUBLIC_API_URL
+ARG BACKEND_ORIGIN
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV BACKEND_ORIGIN=$BACKEND_ORIGIN
+
 # Copy standalone output and static files
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
