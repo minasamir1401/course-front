@@ -256,19 +256,19 @@ export default function SchoolAdminNewExamPage() {
               <button 
                 onClick={() => handleSubmit("DRAFT")}
                 disabled={saving}
-                className="px-8 py-5 rounded-2xl font-bold bg-white/5 text-white border border-white/10 hover:bg-white/10 transition-all flex items-center gap-3 disabled:opacity-50"
+                className="px-8 py-5 rounded-2xl font-bold bg-white/5 text-white border border-white/10 hover:bg-white/10 transition-all flex items-center justify-center gap-3 disabled:opacity-50 whitespace-nowrap shrink-0"
               >
-                حفظ كمسودة
-                <FileText className="w-5 h-5" />
+                <span>حفظ كمسودة</span>
+                <FileText className="w-5 h-5 shrink-0" />
               </button>
               
               <button 
                 onClick={() => handleSubmit("PUBLISHED")}
                 disabled={saving}
-                className="px-10 py-5 rounded-2xl font-black bg-indigo-600 text-white shadow-xl shadow-indigo-900/40 hover:scale-105 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                className="px-10 py-5 rounded-2xl font-black bg-indigo-600 text-white shadow-xl shadow-indigo-900/40 hover:scale-105 transition-all flex items-center justify-center gap-3 disabled:opacity-50 whitespace-nowrap shrink-0"
               >
-                {saving ? "جاري الحفظ..." : "نشر الامتحان"}
-                <Globe className="w-6 h-6" />
+                <span>{saving ? "جاري الحفظ..." : "نشر الامتحان"}</span>
+                <Globe className="w-6 h-6 shrink-0" />
               </button>
             </div>
           </div>
@@ -445,10 +445,10 @@ export default function SchoolAdminNewExamPage() {
               </div>
               <button 
                 onClick={handleAddQuestion}
-                className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+                className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 whitespace-nowrap shrink-0"
               >
-                <Plus className="w-5 h-5" />
-                إضافة سؤال جديد
+                <Plus className="w-5 h-5 shrink-0" />
+                <span>إضافة سؤال جديد</span>
               </button>
             </div>
 
@@ -465,9 +465,9 @@ export default function SchoolAdminNewExamPage() {
                   </div>
                   <button 
                     onClick={handleAddQuestion}
-                    className="bg-[#0f0f1d] text-white px-10 py-5 rounded-3xl font-black hover:scale-105 transition-all shadow-2xl"
+                    className="bg-[#0f0f1d] text-white px-10 py-5 rounded-3xl font-black hover:scale-105 transition-all shadow-2xl whitespace-nowrap shrink-0"
                   >
-                    أنشئ أول سؤال
+                    <span>أنشئ أول سؤال</span>
                   </button>
                 </div>
               )}
@@ -626,16 +626,16 @@ export default function SchoolAdminNewExamPage() {
                     <div className="flex justify-end gap-4 pt-4">
                       <button 
                         onClick={() => setShowQuestionForm(false)}
-                        className="px-8 py-4 rounded-2xl font-bold bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all"
+                        className="px-8 py-4 rounded-2xl font-bold bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all whitespace-nowrap shrink-0"
                       >
                         إلغاء
                       </button>
                       <button 
                         onClick={handleSaveQuestion}
-                        className="px-10 py-4 rounded-2xl font-black bg-indigo-600 text-white shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center gap-3"
+                        className="px-10 py-4 rounded-2xl font-black bg-indigo-600 text-white shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 whitespace-nowrap shrink-0"
                       >
-                        حفظ السؤال في القائمة
-                        <Save className="w-5 h-5" />
+                        <span>حفظ السؤال في القائمة</span>
+                        <Save className="w-5 h-5 shrink-0" />
                       </button>
                     </div>
                   </div>

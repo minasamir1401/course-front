@@ -1,12 +1,13 @@
 const getApiUrl = () => {
-  // Always prioritize the environment variable if defined
+  // In the browser (client-side): always use relative /api
+  // This routes through Next.js Route Handler proxy → no CORS issues at all
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}/api`;
+  }
+
+  // Server-side (SSR/build): use env variable or fallback to internal Docker URL
   const envUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/"/g, '').trim();
   if (envUrl) return envUrl;
-
-  // Fallback logic
-  if (typeof window !== 'undefined') {
-    return '/api';
-  }
 
   return 'http://localhost:5000/api';
 };

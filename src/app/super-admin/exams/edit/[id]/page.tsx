@@ -742,27 +742,27 @@ export default function SuperAdminEditExamPage() {
                 </div>
 
                 {/* Questions List Header */}
-                <div className="flex justify-between items-center px-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 px-4">
                   <div className="flex items-center gap-3">
                     <h3 className="text-2xl font-black text-slate-800">Exam Slides ({questions.length})</h3>
                     <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-black">
                       {questions.reduce((sum, q) => sum + (q.points || 0), 0)} total points
                     </span>
                   </div>
-                  <div className="flex gap-3">
+                  <div className="flex flex-wrap gap-3 w-full sm:w-auto">
                     <button
                       onClick={() => handleAddQuestion('TEXT')}
-                      className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-2xl font-bold transition-all shadow-sm border border-slate-200"
+                      className="flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-2xl font-bold transition-all shadow-sm border border-slate-200 whitespace-nowrap shrink-0"
                     >
-                      <Plus className="w-5 h-5" />
-                      + Text Slide
+                      <Plus className="w-5 h-5 shrink-0 text-slate-500" />
+                      <span>Text Slide</span>
                     </button>
                     <button
                       onClick={() => handleAddQuestion('MCQ')}
-                      className="flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+                      className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 whitespace-nowrap shrink-0"
                     >
-                      <Plus className="w-5 h-5" />
-                      + Question Slide
+                      <Plus className="w-5 h-5 shrink-0 text-white" />
+                      <span>Question Slide</span>
                     </button>
                   </div>
                 </div>
@@ -781,15 +781,17 @@ export default function SuperAdminEditExamPage() {
                       <div className="flex gap-4">
                         <button
                           onClick={() => handleAddQuestion('TEXT')}
-                          className="bg-slate-100 text-slate-800 px-10 py-5 rounded-3xl font-black hover:scale-105 transition-all shadow-md border border-slate-200"
+                          className="bg-slate-50 hover:bg-slate-100 text-slate-800 px-10 py-5 rounded-3xl font-black hover:scale-105 transition-all shadow-md border border-slate-200 whitespace-nowrap shrink-0 flex items-center justify-center gap-2"
                         >
-                          + Add Text Slide
+                          <Plus className="w-6 h-6 shrink-0 text-slate-600" />
+                          <span>Add Text Slide</span>
                         </button>
                         <button
                           onClick={() => handleAddQuestion('MCQ')}
-                          className="bg-[#0f0f1d] text-white px-10 py-5 rounded-3xl font-black hover:scale-105 transition-all shadow-2xl"
+                          className="bg-[#0f0f1d] hover:bg-[#16162a] text-white px-10 py-5 rounded-3xl font-black hover:scale-105 transition-all shadow-2xl whitespace-nowrap shrink-0 flex items-center justify-center gap-2"
                         >
-                          + Add Question Slide
+                          <Plus className="w-6 h-6 shrink-0 text-indigo-400" />
+                          <span>Add Question Slide</span>
                         </button>
                       </div>
                     </div>
