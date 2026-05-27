@@ -311,7 +311,7 @@
       "attendanceReport": "تقرير الحضور",
       "logout": "تسجيل الخروج"
     },
-    "students": {
+    "studentsPage": {
       "title": "إدارة الطلاب",
       "addStudent": "إضافة طالب",
       "bulkImport": "استيراد جماعي (Excel)",

@@ -187,7 +187,7 @@ export default function StudentsManagement() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 sm:mb-10">
           <h2 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-2">
             <GraduationCap className="w-6 h-6 text-blue-500" />
-            {t('superAdmin.students.title')}
+            {t('superAdmin.studentsPage.title')}
           </h2>
           <div className="flex items-center gap-3">
             {/* Bulk Import Button */}
@@ -196,11 +196,11 @@ export default function StudentsManagement() {
               className="flex items-center gap-2 border border-blue-500/30 text-blue-400 px-4 py-2.5 rounded-2xl font-bold hover:bg-blue-500/10 transition-all text-sm"
             >
               <FileSpreadsheet className="w-4 h-4" />
-              {t('superAdmin.students.bulkImport')}
+              {t('superAdmin.studentsPage.bulkImport')}
             </button>
             <button onClick={() => { resetForm(); setIsModalOpen(true); }} className="bg-blue-600 text-white px-5 py-2.5 sm:px-8 sm:py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/20 text-sm sm:text-base">
               <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-              {t('superAdmin.students.addStudent')}
+              {t('superAdmin.studentsPage.addStudent')}
             </button>
           </div>
         </div>
