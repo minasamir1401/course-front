@@ -38,16 +38,17 @@ const renderExplanation = (explanationString: string) => {
 
   if (!isJson || sections.length === 0) {
     return (
-      <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 flex gap-5 text-right">
+      <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 flex gap-5">
         <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-slate-400 shrink-0">
           <MessageCircle className="w-5 h-5" />
         </div>
-        <div>
-          <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-widest text-right">
+        <div className="flex-1">
+          <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-widest">
             شرح وتوضيح الإجابة
           </p>
           <div 
-            className="text-slate-600 leading-relaxed font-medium text-right prose prose-sm max-w-none"
+            className="text-slate-600 leading-relaxed font-medium prose prose-sm max-w-none"
+            dir="auto"
             dangerouslySetInnerHTML={{ __html: explanationString }}
           />
         </div>
@@ -56,17 +57,17 @@ const renderExplanation = (explanationString: string) => {
   }
 
   return (
-    <div className="space-y-4 text-right mt-6" dir="rtl">
+    <div className="space-y-4 mt-6">
       {sections.map((sec: any, sIdx: number) => {
         const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
         const Icon = preset.icon || MessageCircle;
         return (
-          <div key={sIdx} className={`p-6 rounded-2xl border-2 text-right ${preset.bg} ${preset.border}`} dir="auto">
+          <div key={sIdx} className={`p-6 rounded-2xl border-2 ${preset.bg} ${preset.border}`}>
             <div className={`flex items-center gap-2 mb-3 font-black ${preset.text}`}>
               <Icon className="w-5 h-5 shrink-0" />
               <span>{preset.label}</span>
             </div>
-            <div className={`prose prose-sm max-w-none text-right ${preset.text}`} dangerouslySetInnerHTML={{ __html: sec.content }} />
+            <div className={`prose prose-sm max-w-none ${preset.text}`} dir="auto" dangerouslySetInnerHTML={{ __html: sec.content }} />
           </div>
         );
       })}
@@ -315,6 +316,7 @@ export default function ExamResultPage() {
                   </div>
                   <h4 
                     className="text-xl font-bold text-slate-800 mb-8 leading-relaxed"
+                    dir="auto"
                     dangerouslySetInnerHTML={{ __html: answer.question.text }}
                   />
 

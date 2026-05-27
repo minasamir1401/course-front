@@ -35,7 +35,7 @@ export default function SuperAdminExamsPage() {
         headers: { Authorization: `Bearer ${token}` }
       });
       const schoolsData = await schoolsRes.json();
-      setSchools(Array.isArray(schoolsData) ? schoolsData : []);
+      setSchools(Array.isArray(schoolsData) ? schoolsData : (schoolsData.schools || []));
 
       // Fetch Exams with filters
       let url = `${API_URL}/exams?`;

@@ -47,7 +47,7 @@ export default function SchoolAdminNewExamPage() {
     isCentral: false,
     schoolIds: [],
     showAnswers: true,
-    resultVisibility: "SHOW_SCORE",
+    resultVisibility: "SHOW_ANSWERS",
     password: "",
     startDate: getDefaultDates().start,
     endDate: getDefaultDates().end,

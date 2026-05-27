@@ -98,7 +98,7 @@ export default function SuperAdminNewExamPage() {
     isCentral: true,
     schoolIds: [],
     showAnswers: true,
-    resultVisibility: "SHOW_SCORE",
+    resultVisibility: "SHOW_ANSWERS",
     password: "",
     startDate: getDefaultDates().start,
     endDate: getDefaultDates().end,

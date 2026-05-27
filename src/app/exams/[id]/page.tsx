@@ -453,7 +453,8 @@ export default function TakeExamPage() {
             </div>
             </div>
             <h2 
-              className="text-2xl font-bold text-slate-800 mb-8 leading-relaxed text-right animate-in fade-in duration-500"
+              className="text-2xl font-bold text-slate-800 mb-8 leading-relaxed animate-in fade-in duration-500"
+              dir="auto"
               dangerouslySetInnerHTML={{ __html: sanitizeHtml(question.text) }}
             />
             {question.imageUrl && (
@@ -521,17 +522,17 @@ export default function TakeExamPage() {
               </div>
             ) : (
               question.sections && question.sections.length > 0 && (
-                <div className="mt-8 space-y-4 text-right animate-in fade-in duration-700" dir="rtl">
+                <div className="mt-8 space-y-4 animate-in fade-in duration-700">
                   {question.sections.map((sec: any, sIdx: number) => {
                     const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
                     const Icon = preset.icon;
                     return (
-                      <div key={sIdx} className={`p-6 rounded-2xl border-2 text-right ${preset.bg} ${preset.border}`} dir="auto">
+                      <div key={sIdx} className={`p-6 rounded-2xl border-2 ${preset.bg} ${preset.border}`}>
                         <div className={`flex items-center gap-2 mb-3 font-black ${preset.text}`}>
                           <Icon className="w-5 h-5 animate-bounce-slow shrink-0" />
                           <span>{preset.label}</span>
                         </div>
-                        <div className={`prose prose-sm max-w-none text-right ${preset.text}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(sec.content) }} />
+                        <div className={`prose prose-sm max-w-none ${preset.text}`} dir="auto" dangerouslySetInnerHTML={{ __html: sanitizeHtml(sec.content) }} />
                       </div>
                     );
                   })}

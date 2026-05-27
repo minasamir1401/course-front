@@ -20,7 +20,7 @@ export default function SuperAdminSettingsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // General Platform Config States (Mockable/Saved in local storage)
-  const [brandName, setBrandName] = useState("Secure LMS");
+  const [brandName, setBrandName] = useState("Klevro");
   const [allowAutoRegister, setAllowAutoRegister] = useState(true);
   const [enableMobileApp, setEnableMobileApp] = useState(true);
 

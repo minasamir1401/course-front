@@ -251,7 +251,7 @@ export default function SuperAdminLoginPage() {
         {/* Branding */}
         <div className="mt-6 text-center flex items-center justify-center gap-2 text-slate-600 text-sm">
           <BookOpen className="w-4 h-4" />
-          <span>منصتي للتعليم الذكي</span>
+          <span>منصة Klevro للتعليم الذكي</span>
         </div>
       </div>
     </div>

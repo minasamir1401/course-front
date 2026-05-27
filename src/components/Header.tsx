@@ -108,7 +108,7 @@ export default function Header({
                 <Zap className="w-6 h-6 text-white fill-current" />
               </div>
               <div className="hidden sm:block">
-                <h2 className="text-lg font-black text-slate-900 tracking-tight leading-none mb-1 uppercase">LMS PRO</h2>
+                <h2 className="text-lg font-black text-slate-900 tracking-tight leading-none mb-1 uppercase">KLEVRO</h2>
                 <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">Premium Learning</p>
               </div>
             </div>

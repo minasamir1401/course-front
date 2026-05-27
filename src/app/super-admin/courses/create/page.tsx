@@ -293,8 +293,8 @@ export default function CreateCoursePage() {
 
   const addBlock = (source: 'slides' | 'assignments' | 'questions' = 'slides', type: 'TEXT' | 'QUESTION') => {
     const newBlock = type === 'TEXT' 
-      ? { id: Date.now() + Math.random(), type: 'TEXT', label: 'CONTENT', title: `New Content`, content: "", videoUrl: "", sections: [] }
-      : { id: Date.now() + Math.random(), type: 'QUESTION', label: 'MCQ', title: `New Question`, content: "", videoUrl: "", options: ["", "", "", ""], correctAnswer: "", sections: [] };
+      ? { id: Date.now() + Math.random(), type: 'TEXT', label: 'CONTENT', title: `New Content`, content: "", text: "", videoUrl: "", sections: [] }
+      : { id: Date.now() + Math.random(), type: 'QUESTION', label: 'MCQ', title: `New Question`, content: "", text: "", videoUrl: "", options: ["", "", "", ""], correctAnswer: "", sections: [] };
     const currentList = currentLesson[source] || [];
     setCurrentLesson({
       ...currentLesson,
@@ -304,8 +304,8 @@ export default function CreateCoursePage() {
 
   const insertBlockAt = (source: 'slides' | 'assignments' | 'questions' = 'slides', index: number, type: 'TEXT' | 'QUESTION') => {
     const newBlock = type === 'TEXT' 
-      ? { id: Date.now() + Math.random(), type: 'TEXT', label: 'CONTENT', title: `New Content`, content: "", videoUrl: "", sections: [] }
-      : { id: Date.now() + Math.random(), type: 'QUESTION', label: 'MCQ', title: `New Question`, content: "", videoUrl: "", options: ["", "", "", ""], correctAnswer: "", sections: [] };
+      ? { id: Date.now() + Math.random(), type: 'TEXT', label: 'CONTENT', title: `New Content`, content: "", text: "", videoUrl: "", sections: [] }
+      : { id: Date.now() + Math.random(), type: 'QUESTION', label: 'MCQ', title: `New Question`, content: "", text: "", videoUrl: "", options: ["", "", "", ""], correctAnswer: "", sections: [] };
     const newSlides = [...(currentLesson[source] || [])];
     newSlides.splice(index, 0, newBlock);
     setCurrentLesson({
@@ -331,6 +331,11 @@ export default function CreateCoursePage() {
   const updateBlock = (source: 'slides' | 'assignments' | 'questions' = 'slides', index: number, field: string, value: any) => {
     const newSlides = [...(currentLesson[source] || [])];
     newSlides[index] = { ...newSlides[index], [field]: value };
+    if (field === 'content') {
+      newSlides[index].text = value;
+    } else if (field === 'text') {
+      newSlides[index].content = value;
+    }
     setCurrentLesson({ ...currentLesson, [source]: newSlides });
   };
 
@@ -982,6 +987,7 @@ schoolIds: targetSchoolIds,
                           <p className="text-indigo-600/60 font-bold text-sm">Control whether students can see this lesson currently</p>
                        </div>
                        <button 
+                        type="button"
                         onClick={() => setCurrentLesson({...currentLesson, isVisible: !currentLesson.isVisible})}
                         className={`w-20 h-10 rounded-full relative transition-all duration-300 ${currentLesson.isVisible ? 'bg-indigo-600' : 'bg-slate-300'}`}
                        >
@@ -1021,47 +1027,11 @@ schoolIds: targetSchoolIds,
                   </div>
                 )}
 
-                {activeTab === 'exercises' && (
-                  <div className="space-y-8 animate-in fade-in duration-300">
-                    <div className="flex justify-between items-center mb-6">
-                       <h4 className="text-xl font-black text-slate-900">تدريبات الدرس</h4>
-                       <button 
-                         onClick={() => handleAddQuestion('exercises')}
-                         className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black flex items-center gap-2 shadow-lg hover:bg-indigo-700 transition-all"
-                       >
-                         <Plus className="w-5 h-5" /> إضافة سؤال جديد
-                       </button>
-                    </div>
-                    
-                    <div className="flex flex-col gap-4">
-                      {currentLesson.questions.map((q: any, index: number) => (
-                        <div key={index} className="bg-slate-50 border border-slate-100 rounded-3xl p-6 flex justify-between items-center hover:bg-slate-100 transition-all group shadow-sm">
-                          <div className="flex items-center gap-6 overflow-hidden">
-                            <span className="w-10 h-10 bg-white border border-slate-100 rounded-xl flex items-center justify-center text-indigo-600 font-black shadow-sm">{index + 1}</span>
-                            <div className="overflow-hidden">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded uppercase">{q.type}</span>
-                                <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded uppercase">{q.level} • {q.points} pts</span>
-                                {q.standard && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">{q.standard}</span>}
-                              </div>
-                              <div className="text-slate-700 font-bold truncate max-w-xl" dangerouslySetInnerHTML={{ __html: q.text.replace(/<[^>]*>?/gm, '').substring(0, 80) + '...' }} />
-                            </div>
-                          </div>
-                          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => handleEditQuestion('exercises', index)} className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"><Edit2 className="w-5 h-5" /></button>
-                            <button onClick={() => removeQuestion(index)} className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"><Trash2 className="w-5 h-5" /></button>
-                          </div>
-                        </div>
-                      ))}
-                      {currentLesson.questions.length === 0 && !showQuestionForm && (
-                        <div className="text-center py-12 bg-slate-50 border border-dashed border-slate-200 rounded-[40px]">
-                           <HelpCircle className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                           <p className="text-slate-400 font-bold">لا يوجد أسئلة لهذا الدرس حتى الآن.</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
+                {activeTab === 'slides' && renderSlidesBuilder('slides')}
+
+                {activeTab === 'assignments' && renderSlidesBuilder('assignments')}
+
+                {activeTab === 'exercises' && renderSlidesBuilder('questions')}
 
                 {activeTab === 'attachments' && (
                   <div className="space-y-8">
