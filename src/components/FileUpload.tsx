@@ -2,7 +2,6 @@
 
 import React, { useRef, useState, useCallback } from "react";
 import { Upload, X, FileText, Image, Film, FileArchive, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
-import { API_URL } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface FileUploadProps {
@@ -35,6 +34,19 @@ function formatBytes(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/**
+ * Returns the direct backend base URL (without /api suffix).
+ * For file uploads we bypass the Next.js proxy to avoid multipart issues.
+ * Priority: NEXT_PUBLIC_BACKEND_ORIGIN env → /api fallback (proxy)
+ */
+function getUploadEndpoint(): string {
+  // NEXT_PUBLIC_ vars are inlined at build time
+  const backendOrigin = process.env.NEXT_PUBLIC_BACKEND_ORIGIN?.replace(/\/+$/, "").trim();
+  if (backendOrigin) return `${backendOrigin}/api/upload`;
+  // Fallback: route through Next.js proxy (works locally)
+  return "/api/upload";
+}
+
 export default function FileUpload({
   onUploadSuccess,
   accept = "image/*,application/pdf,.pptx,.ppt,.docx,.doc,.zip,.xlsx",
@@ -63,7 +75,7 @@ export default function FileUpload({
       setFileSize(formatBytes(file.size));
       setFileMime(file.type);
 
-      // Preview for images
+      // Preview for images immediately (local blob URL)
       if (file.type.startsWith("image/")) {
         const reader = new FileReader();
         reader.onload = (e) => setPreviewUrl(e.target?.result as string);
@@ -80,9 +92,11 @@ export default function FileUpload({
       const formData = new FormData();
       formData.append("file", file);
 
+      const uploadUrl = getUploadEndpoint();
+
       // Use XMLHttpRequest so we can track upload progress
       const xhr = new XMLHttpRequest();
-      xhr.open("POST", `${API_URL}/upload`);
+      xhr.open("POST", uploadUrl);
       xhr.setRequestHeader("Authorization", `Bearer ${token}`);
 
       xhr.upload.onprogress = (e) => {
