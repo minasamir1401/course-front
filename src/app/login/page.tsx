@@ -25,7 +25,7 @@ export default function StudentLoginPage() {
       loginBtn: 'دخول',
       loadingBtn: 'جاري الدخول...',
       usernamePlaceholder: 'أدخل اسم المستخدم',
-      platform: 'منصتي للتعليم الذكي',
+      platform: 'منصة Klevro للتعليم الذكي',
     },
     en: {
       title: 'Students & Teachers Portal',
@@ -35,7 +35,7 @@ export default function StudentLoginPage() {
       loginBtn: 'Login',
       loadingBtn: 'Logging in...',
       usernamePlaceholder: 'Enter your username',
-      platform: 'Smart Learning Platform',
+      platform: 'Klevro Smart Learning Platform',
     }
   };
 

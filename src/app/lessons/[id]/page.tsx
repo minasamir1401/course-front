@@ -148,6 +148,7 @@ const SectionsInlineTabs = ({
         ) : (
           <div
             className={`prose prose-sm md:prose-base max-w-none leading-relaxed break-words ${preset.text}`}
+            dir="auto"
             dangerouslySetInnerHTML={{ __html: active.content }}
           />
         )}
@@ -208,12 +209,12 @@ const SlideSectionsToggle = ({ slide, slideIndex, slideSubmitted, slideAnswers, 
             <span className={`mr-auto text-lg transition-transform ${showSlideSections ? 'rotate-180' : ''}`}>▼</span>
           </button>
           {showSlideSections && (
-            <div className="p-5 rounded-2xl bg-amber-50 border-2 border-amber-200 animate-in fade-in slide-in-from-top-2 duration-300 text-start" dir="auto">
+            <div className="p-5 rounded-2xl bg-amber-50 border-2 border-amber-200 animate-in fade-in slide-in-from-top-2 duration-300">
               <div className="flex items-center gap-2 mb-3 font-black text-amber-700">
                 <HelpCircle className="w-5 h-5" />
                 <span>{SECTION_STYLE_PRESETS.HINT.label}</span>
               </div>
-              <div className="prose prose-sm max-w-none text-amber-700 text-start" dangerouslySetInnerHTML={{ __html: hintSection.content }} />
+              <div className="prose prose-sm max-w-none text-amber-700 animate-in duration-200" dir="auto" dangerouslySetInnerHTML={{ __html: hintSection.content }} />
             </div>
           )}
         </div>
@@ -224,12 +225,12 @@ const SlideSectionsToggle = ({ slide, slideIndex, slideSubmitted, slideAnswers, 
           {otherSections.map((sec: any, sIdx: number) => {
             const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
             return (
-              <div key={sec.id || sIdx} className={`p-5 rounded-2xl border-2 text-start ${preset.bg} ${preset.border}`} dir="auto">
+              <div key={sec.id || sIdx} className={`p-5 rounded-2xl border-2 ${preset.bg} ${preset.border}`}>
                 <div className={`flex items-center gap-2 mb-3 font-black ${preset.text}`}>
                   {React.createElement(preset.icon, { className: "w-5 h-5" })}
                   <span>{preset.label}</span>
                 </div>
-                <div className={`prose prose-sm max-w-none text-start ${preset.text}`} dangerouslySetInnerHTML={{ __html: sec.content }} />
+                <div className={`prose prose-sm max-w-none ${preset.text}`} dir="auto" dangerouslySetInnerHTML={{ __html: sec.content }} />
               </div>
             );
           })}
@@ -276,12 +277,12 @@ const AssignmentSectionsToggle = ({ assignment, assignmentIndex, assignmentSubmi
             <span className={`mr-auto text-lg transition-transform ${showSections ? 'rotate-180' : ''}`}>▼</span>
           </button>
           {showSections && (
-            <div className="p-5 rounded-2xl bg-amber-50 border-2 border-amber-200 animate-in fade-in slide-in-from-top-2 duration-300 text-start" dir="auto">
+            <div className="p-5 rounded-2xl bg-amber-50 border-2 border-amber-200 animate-in fade-in slide-in-from-top-2 duration-300">
               <div className="flex items-center gap-2 mb-3 font-black text-amber-700">
                 <HelpCircle className="w-5 h-5" />
                 <span>{SECTION_STYLE_PRESETS.HINT.label}</span>
               </div>
-              <div className="prose prose-sm max-w-none text-amber-700 text-start" dangerouslySetInnerHTML={{ __html: hintSection.content }} />
+              <div className="prose prose-sm max-w-none text-amber-700 animate-in duration-200" dir="auto" dangerouslySetInnerHTML={{ __html: hintSection.content }} />
             </div>
           )}
         </div>
@@ -292,12 +293,12 @@ const AssignmentSectionsToggle = ({ assignment, assignmentIndex, assignmentSubmi
           {otherSections.map((sec: any, sIdx: number) => {
             const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
             return (
-              <div key={sec.id || sIdx} className={`p-5 rounded-2xl border-2 text-start ${preset.bg} ${preset.border}`} dir="auto">
+              <div key={sec.id || sIdx} className={`p-5 rounded-2xl border-2 ${preset.bg} ${preset.border}`}>
                 <div className={`flex items-center gap-2 mb-3 font-black ${preset.text}`}>
                   {React.createElement(preset.icon, { className: "w-5 h-5" })}
                   <span>{preset.label}</span>
                 </div>
-                <div className={`prose prose-sm max-w-none text-start ${preset.text}`} dangerouslySetInnerHTML={{ __html: sec.content }} />
+                <div className={`prose prose-sm max-w-none ${preset.text}`} dir="auto" dangerouslySetInnerHTML={{ __html: sec.content }} />
               </div>
             );
           })}
@@ -345,12 +346,12 @@ const QuizSectionsToggle = ({ question, questionIndex, quizSubmitted, language }
             <span className={`mr-auto text-lg transition-transform ${showQuizSections ? 'rotate-180' : ''}`}>▼</span>
           </button>
           {showQuizSections && (
-            <div className="p-5 rounded-2xl bg-amber-50 border-2 border-amber-200 animate-in fade-in slide-in-from-top-2 duration-300 text-start" dir="auto">
+            <div className="p-5 rounded-2xl bg-amber-50 border-2 border-amber-200 animate-in fade-in slide-in-from-top-2 duration-300">
               <div className="flex items-center gap-2 mb-3 font-black text-amber-700">
                 <HelpCircle className="w-5 h-5" />
                 <span>{SECTION_STYLE_PRESETS.HINT.label}</span>
               </div>
-              <div className="prose prose-sm max-w-none text-amber-700 text-start" dangerouslySetInnerHTML={{ __html: hintSection.content }} />
+              <div className="prose prose-sm max-w-none text-amber-700 animate-in duration-200" dir="auto" dangerouslySetInnerHTML={{ __html: hintSection.content }} />
             </div>
           )}
         </div>
@@ -361,12 +362,12 @@ const QuizSectionsToggle = ({ question, questionIndex, quizSubmitted, language }
           {otherSections.map((sec: any, sIdx: number) => {
             const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
             return (
-              <div key={sec.id || sIdx} className={`p-5 rounded-2xl border-2 text-start ${preset.bg} ${preset.border}`} dir="auto">
+              <div key={sec.id || sIdx} className={`p-5 rounded-2xl border-2 ${preset.bg} ${preset.border}`}>
                 <div className={`flex items-center gap-2 mb-3 font-black ${preset.text}`}>
                   {React.createElement(preset.icon, { className: "w-5 h-5" })}
                   <span>{preset.label}</span>
                 </div>
-                <div className={`prose prose-sm max-w-none text-start ${preset.text}`} dangerouslySetInnerHTML={{ __html: sec.content }} />
+                <div className={`prose prose-sm max-w-none ${preset.text}`} dir="auto" dangerouslySetInnerHTML={{ __html: sec.content }} />
               </div>
             );
           })}

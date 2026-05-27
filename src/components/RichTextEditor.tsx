@@ -447,11 +447,8 @@ export default function RichTextEditor({ value, onChange, placeholder, className
           onInput={() => handleInput(false)}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          className="p-6 md:p-8 outline-none text-lg min-h-[150px] prose prose-slate max-w-none editor-content text-start"
+          className="p-6 md:p-8 outline-none text-lg min-h-[150px] prose prose-slate max-w-none editor-content"
           dir="auto"
-          style={{
-            textAlign: 'start',
-          }}
           suppressContentEditableWarning
         />
         <style jsx global>{`

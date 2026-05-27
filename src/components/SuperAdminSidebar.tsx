@@ -70,7 +70,7 @@ export default function SuperAdminSidebar({
               <Shield className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-base font-black text-slate-900 leading-none">LMS</h1>
+              <h1 className="text-base font-black text-slate-900 leading-none">Klevro</h1>
               <span className="text-[9px] font-black text-slate-400 uppercase tracking-[2px]">COMMAND CENTER</span>
             </div>
           </div>

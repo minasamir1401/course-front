@@ -44,7 +44,7 @@ export default function StudentSidebar() {
           <GraduationCap className="w-7 h-7 text-white" />
         </div>
         <div className="animate-in fade-in slide-in-from-right duration-500">
-          <h1 className="text-xl font-black text-slate-900 italic tracking-tighter leading-none">LMS</h1>
+          <h1 className="text-xl font-black text-slate-900 italic tracking-tighter leading-none">Klevro</h1>
           <span className="text-indigo-600 text-[10px] block font-black not-italic tracking-[2px] uppercase mt-1">Student Portal</span>
         </div>
       </div>

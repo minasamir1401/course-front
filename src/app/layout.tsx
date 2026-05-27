@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "منصتي - منصة التعليم الذكية",
+  title: "Klevro - منصة التعليم الذكية",
   description: "منصة تعليمية متكاملة لإدارة المدارس والدروس والامتحانات",
 };
 
