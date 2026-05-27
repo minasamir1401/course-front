@@ -6,19 +6,23 @@ import { useRouter } from "next/navigation";
 import { 
   Users, Plus, Search, Shield, 
   User, Mail, ChevronRight,
-  MoreVertical, Edit2, Trash2, Key, X, Building2, GraduationCap, Sparkles
+  MoreVertical, Edit2, Trash2, Key, X, Building2, GraduationCap, Sparkles, FileSpreadsheet
 } from "lucide-react";
 import Link from "next/link";
 import SuperAdminSidebar from "@/components/SuperAdminSidebar";
+import BulkStudentImport from "@/components/BulkStudentImport";
 import { useNotification } from "@/context/NotificationContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function StudentsManagement() {
   const router = useRouter();
   const { showToast, confirm } = useNotification();
+  const { t, language } = useLanguage();
   const [students, setStudents] = useState<any[]>([]);
   const [schools, setSchools] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -177,19 +181,40 @@ export default function StudentsManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a14] text-slate-200" dir="rtl">
+    <div className="min-h-screen bg-[#0a0a14] text-slate-200" dir={language === 'ar' ? 'rtl' : 'ltr'}>
       <SuperAdminSidebar />
-      <main className="lg:mr-64 p-4 sm:p-6 lg:p-8 pt-16 lg:pt-8">
+      <main className={`${language === 'ar' ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-6 lg:p-8 pt-16 lg:pt-8`}>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 sm:mb-10">
           <h2 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-2">
             <GraduationCap className="w-6 h-6 text-blue-500" />
-            إدارة الطلاب
+            {t('superAdmin.students.title')}
           </h2>
-          <button onClick={() => { resetForm(); setIsModalOpen(true); }} className="bg-blue-600 text-white px-5 py-2.5 sm:px-8 sm:py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/20 text-sm sm:text-base">
-            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-            إضافة طالب
-          </button>
+          <div className="flex items-center gap-3">
+            {/* Bulk Import Button */}
+            <button
+              onClick={() => setIsBulkImportOpen(true)}
+              className="flex items-center gap-2 border border-blue-500/30 text-blue-400 px-4 py-2.5 rounded-2xl font-bold hover:bg-blue-500/10 transition-all text-sm"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              {t('superAdmin.students.bulkImport')}
+            </button>
+            <button onClick={() => { resetForm(); setIsModalOpen(true); }} className="bg-blue-600 text-white px-5 py-2.5 sm:px-8 sm:py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/20 text-sm sm:text-base">
+              <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+              {t('superAdmin.students.addStudent')}
+            </button>
+          </div>
         </div>
+
+        {/* Bulk Import Modal */}
+        {isBulkImportOpen && (
+          <BulkStudentImport
+            onClose={() => setIsBulkImportOpen(false)}
+            onSuccess={(count) => {
+              showToast(`${t('superAdmin.bulkImport.importSuccess').replace('{n}', String(count))}`, 'success');
+              fetchData();
+            }}
+          />
+        )}
 
         <div className="mb-6 sm:mb-10 relative">
           <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />

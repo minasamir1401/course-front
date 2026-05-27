@@ -16,6 +16,7 @@ import {
 import * as XLSX from 'xlsx';
 import RichTextEditor from "@/components/RichTextEditor";
 import { compressImage } from "@/lib/image-utils";
+import FileUpload from "@/components/FileUpload";
 
 
 export default function CreateCoursePage() {
@@ -1165,53 +1166,13 @@ schoolIds: targetSchoolIds,
                   <div className="space-y-6 relative z-10">
                     {/* Cover Image Upload */}
                     <div className="space-y-3">
-                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">صورة الغلاف</label>
-                      <div className="relative group cursor-pointer">
-                        {courseData.coverImage ? (
-                          <div className="relative aspect-video w-full rounded-2xl overflow-hidden border-2 border-slate-100 group-hover:border-indigo-400 transition-all">
-                            <img src={courseData.coverImage} className="w-full h-full object-cover" alt="Cover" />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-3">
-                                <button onClick={() => setCourseData({...courseData, coverImage: ""})} className="p-2 bg-red-500 text-white rounded-xl hover:scale-110 transition-all shadow-lg"><Trash2 className="w-5 h-5" /></button>
-                                <label className="p-2 bg-indigo-600 text-white rounded-xl hover:scale-110 transition-all cursor-pointer shadow-lg">
-                                  <Upload className="w-5 h-5" />
-                                  <input type="file" className="hidden" accept="image/*" onChange={async (e: any) => {
-                                    const file = e.target.files[0];
-                                    if (file) {
-                                      const reader = new FileReader();
-                                      reader.onload = (re) => {
-                                        const result = re.target?.result as string;
-                                        if(confirm("هل تريد اعتماد هذه الصورة كغلاف؟")) {
-                                           setCourseData({...courseData, coverImage: result});
-                                        }
-                                      };
-                                      reader.readAsDataURL(file);
-                                    }
-                                  }} />
-                                </label>
-                            </div>
-                          </div>
-                        ) : (
-                          <label className="flex flex-col items-center justify-center aspect-video w-full rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-200 transition-all group cursor-pointer">
-                            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-indigo-600 shadow-sm mb-3">
-                              <Upload className="w-6 h-6" />
-                            </div>
-                            <span className="text-[10px] font-black text-slate-400 group-hover:text-indigo-600">رفع غلاف الكورس</span>
-                            <input type="file" className="hidden" accept="image/*" onChange={async (e: any) => {
-                                    const file = e.target.files[0];
-                                    if (file) {
-                                       const reader = new FileReader();
-                                       reader.onload = (re) => {
-                                          const result = re.target?.result as string;
-                                          if(confirm("هل تريد اعتماد هذه الصورة كغلاف؟")) {
-                                             setCourseData({...courseData, coverImage: result});
-                                          }
-                                       };
-                                       reader.readAsDataURL(file);
-                                    }
-                                  }} />
-                          </label>
-                        )}
-                      </div>
+                      <FileUpload
+                        label="صورة غلاف الكورس"
+                        accept="image/*"
+                        value={courseData.coverImage}
+                        onUploadSuccess={(url) => setCourseData({ ...courseData, coverImage: url })}
+                        tokenKey="super_admin_token"
+                      />
                     </div>
 
                     <div className="space-y-2">
