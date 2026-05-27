@@ -32,7 +32,7 @@ export default function LandingPage() {
               <BookOpen className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-800 leading-tight">School Learning.</h1>
+              <h1 className="text-2xl font-bold text-slate-800 leading-tight">Klevro</h1>
             </div>
           </div>
 
@@ -86,7 +86,7 @@ export default function LandingPage() {
           <h1 className="text-5xl lg:text-7xl font-extrabold text-slate-900 leading-tight mb-6">
             Discover <br />
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">
-              School Learning.
+              Klevro
             </span>
           </h1>
           <p className="text-lg lg:text-xl text-slate-500 mb-10 max-w-2xl mx-auto leading-relaxed">
@@ -207,9 +207,9 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6 text-center md:text-left">
           <div className="flex items-center justify-center md:justify-start gap-3 w-full md:w-auto">
             <BookOpen className="w-6 h-6 text-blue-500" />
-            <span className="text-xl font-bold text-white">School Learning.</span>
+            <span className="text-xl font-bold text-white">Klevro</span>
           </div>
-          <p className="text-sm w-full md:w-auto">© 2026 School Learning. All rights reserved.</p>
+          <p className="text-sm w-full md:w-auto">© 2026 Klevro. All rights reserved.</p>
           <div className="flex gap-4 justify-center w-full md:w-auto">
             <Link href="#" className="hover:text-white transition-colors">Contact Us</Link>
             <Link href="#" className="hover:text-white transition-colors">Privacy Policy</Link>
