@@ -115,6 +115,41 @@ export default function EditCoursePage() {
     return translations[grade] || grade;
   };
 
+  const getGradeCheckboxLabel = (grade: string) => {
+    if (language === 'ar') {
+      const translations: { [key: string]: string } = {
+        "الصف الأول الابتدائي": "الأول",
+        "الصف الثاني الابتدائي": "الثاني",
+        "الصف الثالث الابتدائي": "الثالث",
+        "الصف الرابع الابتدائي": "الرابع",
+        "الصف الخامس الابتدائي": "الخامس",
+        "الصف السادس الابتدائي": "السادس",
+        "الصف الأول الإعدادي": "الأول",
+        "الصف الثاني الإعدادي": "الثاني",
+        "الصف الثالث الإعدادي": "الثالث",
+        "الصف الأول الثانوي": "الأول",
+        "الصف الثاني الثانوي": "الثاني",
+        "الصف الثالث الثانوي": "الثالث"
+      };
+      return translations[grade] || grade;
+    }
+    const translations: { [key: string]: string } = {
+      "الصف الأول الابتدائي": "Gr. 1",
+      "الصف الثاني الابتدائي": "Gr. 2",
+      "الصف الثالث الابتدائي": "Gr. 3",
+      "الصف الرابع الابتدائي": "Gr. 4",
+      "الصف الخامس الابتدائي": "Gr. 5",
+      "الصف السادس الابتدائي": "Gr. 6",
+      "الصف الأول الإعدادي": "Gr. 1",
+      "الصف الثاني الإعدادي": "Gr. 2",
+      "الصف الثالث الإعدادي": "Gr. 3",
+      "الصف الأول الثانوي": "Gr. 1",
+      "الصف الثاني الثانوي": "Gr. 2",
+      "الصف الثالث الثانوي": "Gr. 3"
+    };
+    return translations[grade] || grade;
+  };
+
   const [courseData, setCourseData] = useState({
     title: "",
     description: "",
@@ -2025,7 +2060,7 @@ export default function EditCoursePage() {
                           {[
                             {
                               stage: "Elementary",
-                              title: language === 'ar' ? "المرحلة الابتدائية (Elementary)" : "Elementary School",
+                              title: language === 'ar' ? "المرحلة الابتدائية (Primary)" : "Elementary School (Primary)",
                               grades: [
                                 "الصف الأول الابتدائي", "الصف الثاني الابتدائي", "الصف الثالث الابتدائي",
                                 "الصف الرابع الابتدائي", "الصف الخامس الابتدائي", "الصف السادس الابتدائي"
@@ -2033,14 +2068,14 @@ export default function EditCoursePage() {
                             },
                             {
                               stage: "Middle School",
-                              title: language === 'ar' ? "المرحلة الإعدادية (Middle School)" : "Middle School",
+                              title: language === 'ar' ? "المرحلة الإعدادية (Prep)" : "Middle School (Prep)",
                               grades: [
                                 "الصف الأول الإعدادي", "الصف الثاني الإعدادي", "الصف الثالث الإعدادي"
                               ]
                             },
                             {
                               stage: "High School",
-                              title: language === 'ar' ? "المرحلة الثانوية (High School)" : "High School",
+                              title: language === 'ar' ? "المرحلة الثانوية (Secondary)" : "High School (Secondary)",
                               grades: [
                                 "الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"
                               ]
@@ -2085,7 +2120,7 @@ export default function EditCoursePage() {
                                       <div className={`w-5 h-5 rounded flex items-center justify-center transition-all ${courseData.grades.includes(g) ? 'bg-indigo-600 text-white' : 'bg-slate-100 border border-slate-200'}`}>
                                         {courseData.grades.includes(g) && <CheckCircle2 className="w-3.5 h-3.5" />}
                                       </div>
-                                      <span className={`text-[11px] sm:text-xs font-bold ${courseData.grades.includes(g) ? 'text-indigo-900' : 'text-slate-600'}`}>{getGradeName(g)}</span>
+                                      <span className={`text-[11px] sm:text-xs font-bold ${courseData.grades.includes(g) ? 'text-indigo-900' : 'text-slate-600'}`}>{getGradeCheckboxLabel(g)}</span>
                                       <input type="checkbox" className="hidden" checked={courseData.grades.includes(g)} onChange={(e) => {
                                         if(e.target.checked) setCourseData({...courseData, grades: [...courseData.grades, g]});
                                         else setCourseData({...courseData, grades: courseData.grades.filter(gr => gr !== g)});
