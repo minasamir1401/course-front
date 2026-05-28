@@ -158,7 +158,7 @@ export default function Header({
           <button
             onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
             className="flex w-8 h-8 sm:w-9 sm:h-9 rounded-xl items-center justify-center text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-md transition-all border border-slate-100 font-black text-[10px] uppercase bg-white/70"
-            title={language === 'ar' ? 'Switch to English' : 'التبديل للعربية'}
+            title={language === 'ar' ? 'التبديل للإنجليزية' : 'Switch to Arabic'}
           >
             {language === 'ar' ? 'EN' : 'AR'}
           </button>

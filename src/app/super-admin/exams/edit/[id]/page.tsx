@@ -96,7 +96,7 @@ export default function SuperAdminEditExamPage() {
     endDate: "",
     attemptsAllowed: 1,
     status: "PUBLISHED",
-    grades: ["Grade 1 Secondary"],
+    grades: ["Grade 1 High School"],
     skill: "Math",
     level: "Medium",
   });
@@ -119,10 +119,10 @@ export default function SuperAdminEditExamPage() {
     "SAT Math", "SAT English"
   ];
   const GRADES = [
-    "Grade 1 Primary", "Grade 2 Primary", "Grade 3 Primary",
-    "Grade 4 Primary", "Grade 5 Primary", "Grade 6 Primary",
-    "Grade 1 Preparatory", "Grade 2 Preparatory", "Grade 3 Preparatory",
-    "Grade 1 Secondary", "Grade 2 Secondary", "Grade 3 Secondary"
+    "Grade 1 Elementary", "Grade 2 Elementary", "Grade 3 Elementary",
+    "Grade 4 Elementary", "Grade 5 Elementary", "Grade 6 Elementary",
+    "Grade 1 Middle School", "Grade 2 Middle School", "Grade 3 Middle School",
+    "Grade 1 High School", "Grade 2 High School", "Grade 3 High School"
   ];
   const QUESTION_TYPES = [
     { id: "MCQ", label: "Multiple Choice (MCQ)", desc: "Select one correct answer" },
