@@ -481,6 +481,7 @@ export default function EditCoursePage() {
         const indIdx = headers.findIndex(h => h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشرات"));
         const loIdx = headers.findIndex(h => h.includes("outcome") || h.includes("ناتج") || h.includes("مخرج") || h.includes("النواتج") || h.includes("المخرجات"));
         const domainIdx = headers.findIndex(h => h.includes("domain") || h.includes("مجال") || h.includes("المجال"));
+        const lessonIdx = headers.findIndex(h => h.includes("lesson") || h.includes("درس") || h.includes("الدرس"));
 
         if (stdIdx === -1 && indIdx === -1 && loIdx === -1 && domainIdx === -1) {
           showToast("لم يتم العثور على أعمدة متوافقة (المعايير، المؤشرات، المخرجات، المجال)", "error");
@@ -494,11 +495,25 @@ export default function EditCoursePage() {
         let domainVal = "";
 
         const dataRows = rows.slice(1).filter(r => r.some(c => String(c).trim() !== ""));
-        if (dataRows.length > 0) {
-          const standardsList = dataRows.map(r => stdIdx >= 0 ? String(r[stdIdx] ?? "").trim() : "").filter(Boolean);
-          const indicatorsList = dataRows.map(r => indIdx >= 0 ? String(r[indIdx] ?? "").trim() : "").filter(Boolean);
-          const outcomesList = dataRows.map(r => loIdx >= 0 ? String(r[loIdx] ?? "").trim() : "").filter(Boolean);
-          const domainList = dataRows.map(r => domainIdx >= 0 ? String(r[domainIdx] ?? "").trim() : "").filter(Boolean);
+
+        // Smart filtering by lesson name if "Lesson" column exists and current lesson has a title
+        let filteredRows = dataRows;
+        if (lessonIdx >= 0 && currentLesson.title) {
+          const currentLessonTitleLower = currentLesson.title.trim().toLowerCase();
+          const matchingRows = dataRows.filter(r => {
+            const rowLesson = String(r[lessonIdx] ?? "").trim().toLowerCase();
+            return rowLesson && (currentLessonTitleLower.includes(rowLesson) || rowLesson.includes(currentLessonTitleLower));
+          });
+          if (matchingRows.length > 0) {
+            filteredRows = matchingRows;
+          }
+        }
+
+        if (filteredRows.length > 0) {
+          const standardsList = filteredRows.map(r => stdIdx >= 0 ? String(r[stdIdx] ?? "").trim() : "").filter(Boolean);
+          const indicatorsList = filteredRows.map(r => indIdx >= 0 ? String(r[indIdx] ?? "").trim() : "").filter(Boolean);
+          const outcomesList = filteredRows.map(r => loIdx >= 0 ? String(r[loIdx] ?? "").trim() : "").filter(Boolean);
+          const domainList = filteredRows.map(r => domainIdx >= 0 ? String(r[domainIdx] ?? "").trim() : "").filter(Boolean);
 
           standardVal = standardsList.join("\n");
           indicatorVal = indicatorsList.join("\n");
