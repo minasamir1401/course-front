@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import SuperAdminSidebar from "@/components/SuperAdminSidebar";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, AreaChart, Area, Cell, PieChart, Pie
@@ -20,6 +21,7 @@ import {
 
 export default function SuperAdminDashboard() {
   const router = useRouter();
+  const { t, language } = useLanguage();
   const [stats, setStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
@@ -70,7 +72,7 @@ export default function SuperAdminDashboard() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-10" dir="rtl">
+      <div className="space-y-10" dir={language === 'ar' ? 'rtl' : 'ltr'}>
 
         {/* Modern Dynamic Header */}
         <div className="relative overflow-hidden mb-10 rounded-[32px] bg-white border border-slate-100 shadow-sm p-8 sm:p-12">
@@ -80,8 +82,8 @@ export default function SuperAdminDashboard() {
                 <LayoutDashboard className="w-10 h-10 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight mb-2">مركز القيادة والتحكم</h1>
-                <p className="text-slate-400 text-lg font-medium max-w-xl leading-relaxed">أهلاً بك مجدداً. إليك تقرير شامل عن أداء المنصة وجميع المدارس المرتبطة بالنظام.</p>
+                <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight mb-2">{t('superAdmin.commandCenter')}</h1>
+                <p className="text-slate-400 text-lg font-medium max-w-xl leading-relaxed">{t('superAdmin.welcomeBack')}</p>
               </div>
             </div>
 
@@ -96,7 +98,7 @@ export default function SuperAdminDashboard() {
               </div>
               <button className="flex items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-2xl font-bold hover:scale-105 transition-all shadow-xl shadow-slate-900/10">
                 <Plus className="w-5 h-5" />
-                إضافة مدرسة جديدة
+                {t('superAdmin.addNewSchool')}
               </button>
             </div>
           </div>
@@ -111,39 +113,39 @@ export default function SuperAdminDashboard() {
         {/* Stats Grid - Premium Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-10">
           <StatCard
-            title="إجمالي المدارس"
+            title={t('superAdmin.totalSchools')}
             value={isLoading ? "..." : (stats?.schoolsCount || 0)}
             icon={<Building2 />}
             color="purple"
-            trend="+2 هذا الشهر"
+            trend={t('superAdmin.schoolsTrend')}
           />
           <StatCard
-            title="إجمالي الطلاب"
+            title={t('superAdmin.totalStudents')}
             value={isLoading ? "..." : (stats?.studentsCount || 0)}
             icon={<GraduationCap />}
             color="blue"
-            trend="+124 طالب جديد"
+            trend={t('superAdmin.studentsTrend')}
           />
           <StatCard
-            title="إجمالي المعلمين"
+            title={t('superAdmin.totalTeachers')}
             value={isLoading ? "..." : (stats?.teachersCount || 48)}
             icon={<Users />}
             color="amber"
-            trend="نشط الآن"
+            trend={t('superAdmin.teachersTrend')}
           />
           <StatCard
-            title="امتحانات نشطة"
+            title={t('superAdmin.activeExams')}
             value={isLoading ? "..." : (stats?.activeExams || 15)}
             icon={<ClipboardList />}
             color="emerald"
-            trend="عبر 8 مدارس"
+            trend={t('superAdmin.activeExamsTrend')}
           />
           <StatCard
-            title="امتحانات مركزية"
+            title={t('superAdmin.centralExams')}
             value={isLoading ? "..." : (stats?.centralExamsCount || 6)}
             icon={<Shield />}
             color="indigo"
-            trend="قيد التنفيذ"
+            trend={t('superAdmin.centralExamsTrend')}
           />
         </div>
 
@@ -153,8 +155,8 @@ export default function SuperAdminDashboard() {
           <div className="bg-white rounded-[32px] p-8 border border-slate-100 shadow-sm relative overflow-hidden group">
             <div className="flex justify-between items-center mb-8 relative z-10">
               <div>
-                <h3 className="text-xl font-black text-slate-900 mb-1">توزيع الطلاب</h3>
-                <p className="text-slate-400 text-sm">أكبر المدارس من حيث عدد الطلاب</p>
+                <h3 className="text-xl font-black text-slate-900 mb-1">{t('superAdmin.studentDistribution')}</h3>
+                <p className="text-slate-400 text-sm">{t('superAdmin.studentDistDesc')}</p>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-indigo-600 transition-colors">
                 <BarChart3 className="w-6 h-6" />
@@ -188,13 +190,13 @@ export default function SuperAdminDashboard() {
           <div className="bg-white rounded-[32px] p-8 border border-slate-100 shadow-sm relative overflow-hidden group">
             <div className="flex justify-between items-center mb-8 relative z-10">
               <div>
-                <h3 className="text-xl font-black text-slate-900 mb-1">نشاط المنصة</h3>
-                <p className="text-slate-400 text-sm">معدل الامتحانات والنتائج الأسبوعي</p>
+                <h3 className="text-xl font-black text-slate-900 mb-1">{t('superAdmin.platformActivity')}</h3>
+                <p className="text-slate-400 text-sm">{t('superAdmin.platformActivityDesc')}</p>
               </div>
               <div className="flex gap-2">
                 <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-bold">
                   <div className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse"></div>
-                  مباشر
+                  {t('superAdmin.live')}
                 </div>
               </div>
             </div>
@@ -227,25 +229,25 @@ export default function SuperAdminDashboard() {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-10">
           {/* Management Shortcuts */}
           <div className="xl:col-span-1 space-y-6">
-            <h3 className="text-xl font-bold text-slate-900 px-2">إجراءات سريعة</h3>
+            <h3 className="text-xl font-bold text-slate-900 px-2">{t('superAdmin.quickActions')}</h3>
 
             <QuickAction
-              title="المدارس"
-              desc="إدارة 24 مدرسة مسجلة"
+              title={t('superAdmin.schools')}
+              desc={t('superAdmin.schoolsDesc')}
               icon={<Building2 />}
               href="/super-admin/schools"
               color="from-indigo-600 to-blue-600"
             />
             <QuickAction
-              title="الامتحانات المركزية"
-              desc="إنشاء وتوزيع الاختبارات"
+              title={t('superAdmin.centralExamsAction')}
+              desc={t('superAdmin.centralExamsDesc')}
               icon={<Shield />}
               href="/super-admin/exams/new"
               color="from-blue-600 to-cyan-600"
             />
             <QuickAction
-              title="إدارة الصلاحيات"
-              desc="تعيين مشرفي الامتحانات"
+              title={t('superAdmin.permissions')}
+              desc={t('superAdmin.permissionsDesc')}
               icon={<UserCheck />}
               href="/super-admin/users"
               color="from-amber-600 to-orange-600"
@@ -255,25 +257,25 @@ export default function SuperAdminDashboard() {
           {/* Recent Schools / Activity Table */}
           <div className="xl:col-span-2 bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
             <div className="p-8 border-b border-slate-50 flex justify-between items-center">
-              <h3 className="text-xl font-black text-slate-900">آخر المدارس المسجلة</h3>
-              <Link href="/super-admin/schools" className="text-indigo-600 text-sm font-bold hover:underline">عرض الكل</Link>
+              <h3 className="text-xl font-black text-slate-900">{t('superAdmin.recentSchools')}</h3>
+              <Link href="/super-admin/schools" className="text-indigo-600 text-sm font-bold hover:underline">{t('superAdmin.viewAll')}</Link>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-right">
+              <table className="w-full" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
                 <thead>
                   <tr className="text-slate-400 text-sm border-b border-slate-50">
-                    <th className="px-8 py-5 font-bold">المدرسة</th>
-                    <th className="px-8 py-5 font-bold">المرحلة</th>
-                    <th className="px-8 py-5 font-bold">الطلاب</th>
-                    <th className="px-8 py-5 font-bold">الحالة</th>
-                    <th className="px-8 py-5 font-bold">الإجراء</th>
+                    <th className="px-8 py-5 font-bold">{t('superAdmin.schoolName')}</th>
+                    <th className="px-8 py-5 font-bold">{t('superAdmin.stage')}</th>
+                    <th className="px-8 py-5 font-bold">{t('superAdmin.students')}</th>
+                    <th className="px-8 py-5 font-bold">{t('superAdmin.status')}</th>
+                    <th className="px-8 py-5 font-bold">{t('superAdmin.action')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {[
-                    { name: 'الابتكارية الدولية', type: 'High School', students: 540, status: 'نشط', color: 'emerald' },
-                    { name: 'مدرسة المستقبل', type: 'Middle School', students: 320, status: 'نشط', color: 'emerald' },
-                    { name: 'مدارس الرواد', type: 'Primary', students: 180, status: 'موقف', color: 'red' },
+                    { name: language === 'ar' ? 'الابتكارية الدولية' : 'Al-Ibtikariya International', type: 'High School', students: 540, status: t('superAdmin.active'), color: 'emerald', isActive: true },
+                    { name: language === 'ar' ? 'مدرسة المستقبل' : 'Al-Mustaqbal School', type: 'Middle School', students: 320, status: t('superAdmin.active'), color: 'emerald', isActive: true },
+                    { name: language === 'ar' ? 'مدارس الرواد' : 'Al-Ruwwad Schools', type: 'Primary', students: 180, status: t('superAdmin.suspended'), color: 'red', isActive: false },
                   ].map((school, i) => (
                     <tr key={i} className="hover:bg-slate-50 transition-colors group">
                       <td className="px-8 py-5">
@@ -294,13 +296,13 @@ export default function SuperAdminDashboard() {
                         </div>
                       </td>
                       <td className="px-8 py-5">
-                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${school.status === 'نشط' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${school.isActive ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
                           {school.status}
                         </span>
                       </td>
                       <td className="px-8 py-5">
                         <Link
-                          href={`/super-admin/schools/${school.name === 'الابتكارية الدولية' ? 'school-1' : 'school-2'}`}
+                          href={`/super-admin/schools/school-${i+1}`}
                           className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
                         >
                           <ArrowUpRight className="w-4 h-4" />

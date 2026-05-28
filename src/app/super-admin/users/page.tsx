@@ -14,6 +14,7 @@ import SuperAdminSidebar from "@/components/SuperAdminSidebar";
 import { useNotification } from "@/context/NotificationContext";
 import { Suspense } from 'react';
 import { startImpersonation } from '@/lib/auth';
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type UserRole = 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' | 'SUPER_ADMIN' | 'EXAM_SUPERVISOR';
 
@@ -28,6 +29,7 @@ export default function UsersManagement() {
 function UsersManagementContent() {
   const router = useRouter();
   const { showToast } = useNotification();
+  const { t, language } = useLanguage();
   const [users, setUsers] = useState<any[]>([]);
   const [schools, setSchools] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -94,7 +96,7 @@ function UsersManagementContent() {
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.schoolId && formData.role !== 'SUPER_ADMIN') {
-      showToast("يرجى اختيار المدرسة", 'error');
+      showToast(t('usersPage.selectSchoolError'), 'error');
       return;
     }
 
@@ -114,20 +116,20 @@ function UsersManagementContent() {
         setIsModalOpen(false);
         setFormData({ name: "", username: "", password: "", schoolId: "", role: "SCHOOL_ADMIN", grade: "" });
         fetchData();
-        showToast("تم إنشاء المستخدم بنجاح", 'success');
+        showToast(t('usersPage.createSuccess'), 'success');
       } else {
         const data = await res.json();
-        showToast(data.error || "فشل إنشاء المستخدم", 'error');
+        showToast(data.error || t('usersPage.createFail'), 'error');
       }
     } catch (error) {
-      showToast("خطأ في الاتصال بالسيرفر", 'error');
+      showToast(t('usersPage.connError'), 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDeleteUser = async (id: string) => {
-    if (!confirm("هل أنت متأكد من حذف هذا المستخدم؟ لا يمكن التراجع عن هذا الإجراء.")) {
+    if (!confirm(t('usersPage.deleteConfirm'))) {
       return;
     }
 
@@ -140,13 +142,13 @@ function UsersManagementContent() {
 
       if (res.ok) {
         setUsers(users.filter(u => u.id !== id));
-        showToast("تم حذف المستخدم بنجاح", 'success');
+        showToast(t('usersPage.deleteSuccess'), 'success');
       } else {
         const data = await res.json();
-        showToast(data.error || "فشل حذف المستخدم", 'error');
+        showToast(data.error || t('usersPage.deleteFail'), 'error');
       }
     } catch (error) {
-      showToast("خطأ في الاتصال بالسيرفر", 'error');
+      showToast(t('usersPage.connError'), 'error');
     }
   };
 
@@ -168,6 +170,14 @@ function UsersManagementContent() {
         // Use the centralized helper to handle token switching
         startImpersonation(data.token, data.user, user.role);
         
+        // Show success toast with dynamic template
+        showToast(
+          language === 'ar' 
+            ? `تم تسجيل الدخول بنجاح كـ ${user.name}` 
+            : `Successfully logged in as ${user.name}`, 
+          'success'
+        );
+
         // Redirect
         if (user.role === 'STUDENT' || user.role === 'TEACHER') {
           router.push("/dashboard");
@@ -175,10 +185,10 @@ function UsersManagementContent() {
           router.push("/school-admin");
         }
       } else {
-        showToast("فشل الدخول كمسخدم", 'error');
+        showToast(t('usersPage.impersonateFail'), 'error');
       }
     } catch (error) {
-      showToast("خطأ في الاتصال", 'error');
+      showToast(t('usersPage.connError'), 'error');
     }
   };
 
@@ -199,29 +209,48 @@ function UsersManagementContent() {
     "الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"
   ];
 
+  const getGradeName = (grade: string) => {
+    if (language === 'ar') return grade;
+    const translations: { [key: string]: string } = {
+      "الصف الأول الابتدائي": "1st Primary",
+      "الصف الثاني الابتدائي": "2nd Primary",
+      "الصف الثالث الابتدائي": "3rd Primary",
+      "الصف الرابع الابتدائي": "4th Primary",
+      "الصف الخامس الابتدائي": "5th Primary",
+      "الصف السادس الابتدائي": "6th Primary",
+      "الصف الأول الإعدادي": "1st Prep",
+      "الصف الثاني الإعدادي": "2nd Prep",
+      "الصف الثالث الإعدادي": "3rd Prep",
+      "الصف الأول الثانوي": "1st Secondary",
+      "الصف الثاني الثانوي": "2nd Secondary",
+      "الصف الثالث الثانوي": "3rd Secondary"
+    };
+    return translations[grade] || grade;
+  };
+
   const tabs = [
-    { id: 'ALL', label: 'الكل', icon: Users },
-    { id: 'SCHOOL_ADMIN', label: 'مديري المدارس', icon: Shield },
-    { id: 'TEACHER', label: 'المعلمون', icon: User },
-    { id: 'STUDENT', label: 'الطلاب', icon: GraduationCap },
+    { id: 'ALL', label: t('usersPage.all'), icon: Users },
+    { id: 'SCHOOL_ADMIN', label: t('usersPage.schoolAdmins'), icon: Shield },
+    { id: 'TEACHER', label: t('usersPage.teachers'), icon: User },
+    { id: 'STUDENT', label: t('usersPage.students'), icon: GraduationCap },
   ];
 
   return (
-    <div className="min-h-screen bg-[#0a0a14] text-slate-200" dir="rtl">
+    <div className="min-h-screen bg-[#0a0a14] text-slate-200" dir={language === 'ar' ? 'rtl' : 'ltr'}>
       <SuperAdminSidebar />
 
-      <main className="lg:mr-64 p-8">
+      <main className={`${language === 'ar' ? 'lg:mr-64' : 'lg:ml-64'} p-8`}>
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
           <div>
-            <h2 className="text-3xl font-black text-white">إدارة المستخدمين</h2>
-            <p className="text-slate-500 mt-1">عرض وإدارة جميع مستخدمي المنصة</p>
+            <h2 className="text-3xl font-black text-white">{t('usersPage.title')}</h2>
+            <p className="text-slate-500 mt-1">{t('usersPage.subtitle')}</p>
           </div>
           <button
             onClick={() => setIsModalOpen(true)}
             className="bg-white text-black px-8 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-slate-100 transition-all shadow-lg shadow-white/5"
           >
             <Plus className="w-5 h-5" />
-            إضافة مستخدم جديد
+            {t('usersPage.addUser')}
           </button>
         </div>
 
@@ -248,13 +277,13 @@ function UsersManagementContent() {
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-10">
           <div className="md:col-span-6 relative group">
-            <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-white transition-colors" />
+            <Search className={`absolute ${language === 'ar' ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-white transition-colors`} />
             <input
               type="text"
-              placeholder="البحث عن مستخدم (الاسم أو الكود)..."
+              placeholder={t('usersPage.searchPlaceholder')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-[#0f0f1d] border border-white/5 rounded-2xl py-4 pr-12 pl-4 outline-none focus:border-white/20 transition-all text-white font-medium shadow-inner"
+              className={`w-full bg-[#0f0f1d] border border-white/5 rounded-2xl py-4 ${language === 'ar' ? 'pr-12 pl-4' : 'pl-12 pr-4'} outline-none focus:border-white/20 transition-all text-white font-medium shadow-inner`}
             />
           </div>
 
@@ -264,7 +293,7 @@ function UsersManagementContent() {
               onChange={(e) => setSelectedSchool(e.target.value)}
               className="w-full bg-[#0f0f1d] border border-white/5 rounded-2xl py-4 px-4 outline-none focus:border-white/20 transition-all text-white font-bold"
             >
-              <option value="ALL">كل المدارس</option>
+              <option value="ALL">{t('usersPage.allSchools')}</option>
               {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
@@ -276,15 +305,15 @@ function UsersManagementContent() {
                 onChange={(e) => setSelectedGrade(e.target.value)}
                 className="w-full bg-[#0f0f1d] border border-white/5 rounded-2xl py-4 px-4 outline-none focus:border-white/20 transition-all text-white font-bold appearance-none"
               >
-                <option value="ALL" className="bg-[#0a0a14] text-white">كل الصفوف الدراسية</option>
-                <optgroup label="المرحلة الابتدائية" className="bg-[#0a0a14] text-white">
-                  {GRADES.slice(0, 6).map(g => <option key={g} value={g} className="bg-[#0a0a14] text-white">{g}</option>)}
+                <option value="ALL" className="bg-[#0a0a14] text-white">{t('usersPage.allGradeLevels')}</option>
+                <optgroup label={language === 'ar' ? "المرحلة الابتدائية" : "Primary Stage"} className="bg-[#0a0a14] text-white">
+                  {GRADES.slice(0, 6).map(g => <option key={g} value={g} className="bg-[#0a0a14] text-white">{getGradeName(g)}</option>)}
                 </optgroup>
-                <optgroup label="المرحلة الإعدادية" className="bg-[#0a0a14] text-white">
-                  {GRADES.slice(6, 9).map(g => <option key={g} value={g} className="bg-[#0a0a14] text-white">{g}</option>)}
+                <optgroup label={language === 'ar' ? "المرحلة الإعدادية" : "Middle Stage"} className="bg-[#0a0a14] text-white">
+                  {GRADES.slice(6, 9).map(g => <option key={g} value={g} className="bg-[#0a0a14] text-white">{getGradeName(g)}</option>)}
                 </optgroup>
-                <optgroup label="المرحلة الثانوية" className="bg-[#0a0a14] text-white">
-                  {GRADES.slice(9, 12).map(g => <option key={g} value={g} className="bg-[#0a0a14] text-white">{g}</option>)}
+                <optgroup label={language === 'ar' ? "المرحلة الثانوية" : "Secondary Stage"} className="bg-[#0a0a14] text-white">
+                  {GRADES.slice(9, 12).map(g => <option key={g} value={g} className="bg-[#0a0a14] text-white">{getGradeName(g)}</option>)}
                 </optgroup>
               </select>
             </div>
@@ -296,23 +325,23 @@ function UsersManagementContent() {
           <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
             <div className="bg-[#0f0f1d] border border-white/10 w-full max-w-lg rounded-3xl p-8 shadow-2xl overflow-y-auto max-h-[90vh] animate-in fade-in zoom-in duration-300">
               <div className="flex justify-between items-center mb-8">
-                <h3 className="text-2xl font-bold text-white">إضافة مستخدم جديد</h3>
+                <h3 className="text-2xl font-bold text-white">{t('usersPage.addModalTitle')}</h3>
                 <button onClick={() => setIsModalOpen(false)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-500 hover:text-white transition-all"><X /></button>
               </div>
               <form onSubmit={handleAddUser} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-bold text-slate-400 mb-2">الاسم الكامل</label>
+                  <label className="block text-sm font-bold text-slate-400 mb-2">{t('usersPage.fullName')}</label>
                   <input
                     type="text" required
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-white/30 transition-all"
-                    placeholder="مثال: أحمد محمد"
+                    placeholder={language === 'ar' ? "مثال: أحمد محمد" : "e.g. John Doe"}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-slate-400 mb-2">اسم المستخدم</label>
+                    <label className="block text-sm font-bold text-slate-400 mb-2">{t('usersPage.username')}</label>
                     <input
                       type="text" required
                       value={formData.username}
@@ -323,7 +352,7 @@ function UsersManagementContent() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-slate-400 mb-2">كلمة المرور</label>
+                    <label className="block text-sm font-bold text-slate-400 mb-2">{t('usersPage.password')}</label>
                     <input
                       type="text" required
                       value={formData.password}
@@ -334,47 +363,47 @@ function UsersManagementContent() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-400 mb-2">الصلاحية</label>
+                  <label className="block text-sm font-bold text-slate-400 mb-2">{t('usersPage.role')}</label>
                   <select
                     value={formData.role}
                     onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
                     className="w-full bg-[#1a1a2e] border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-white/30 transition-all"
                   >
-                    <option value="SCHOOL_ADMIN">مدير مدرسة</option>
-                    <option value="TEACHER">مدرس</option>
-                    <option value="STUDENT">طالب</option>
-                    <option value="EXAM_SUPERVISOR">مشرف امتحانات</option>
+                    <option value="SCHOOL_ADMIN">{t('usersPage.schoolAdmin')}</option>
+                    <option value="TEACHER">{t('usersPage.teacher')}</option>
+                    <option value="STUDENT">{t('usersPage.student')}</option>
+                    <option value="EXAM_SUPERVISOR">{t('usersPage.examSupervisor')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-slate-400 mb-2">المدرسة</label>
+                  <label className="block text-sm font-bold text-slate-400 mb-2">{t('usersPage.school')}</label>
                   <select
                     required={formData.role !== 'SUPER_ADMIN'}
                     value={formData.schoolId}
                     onChange={(e) => setFormData({ ...formData, schoolId: e.target.value })}
                     className="w-full bg-[#1a1a2e] border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-white/30 transition-all"
                   >
-                    <option value="">اختر المدرسة</option>
+                    <option value="">{t('usersPage.selectSchool')}</option>
                     {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </div>
                 {formData.role === 'STUDENT' && (
                   <div>
-                    <label className="block text-sm font-bold text-slate-400 mb-2">الصف الدراسي</label>
+                    <label className="block text-sm font-bold text-slate-400 mb-2">{t('usersPage.grade')}</label>
                     <select
                       value={formData.grade}
                       onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
                       className="w-full bg-[#1a1a2e] border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-white/30 transition-all appearance-none"
                     >
-                      <option value="" className="bg-[#0a0a14] text-white">اختر الصف الدراسي</option>
-                      <optgroup label="المرحلة الابتدائية" className="bg-[#0a0a14] text-white">
-                        {GRADES.slice(0, 6).map(g => <option key={g} value={g} className="bg-[#0a0a14] text-white">{g}</option>)}
+                      <option value="" className="bg-[#0a0a14] text-white">{t('usersPage.selectGrade')}</option>
+                      <optgroup label={language === 'ar' ? "المرحلة الابتدائية" : "Primary Stage"} className="bg-[#0a0a14] text-white">
+                        {GRADES.slice(0, 6).map(g => <option key={g} value={g} className="bg-[#0a0a14] text-white">{getGradeName(g)}</option>)}
                       </optgroup>
-                      <optgroup label="المرحلة الإعدادية" className="bg-[#0a0a14] text-white">
-                        {GRADES.slice(6, 9).map(g => <option key={g} value={g} className="bg-[#0a0a14] text-white">{g}</option>)}
+                      <optgroup label={language === 'ar' ? "المرحلة الإعدادية" : "Middle Stage"} className="bg-[#0a0a14] text-white">
+                        {GRADES.slice(6, 9).map(g => <option key={g} value={g} className="bg-[#0a0a14] text-white">{getGradeName(g)}</option>)}
                       </optgroup>
-                      <optgroup label="المرحلة الثانوية" className="bg-[#0a0a14] text-white">
-                        {GRADES.slice(9, 12).map(g => <option key={g} value={g} className="bg-[#0a0a14] text-white">{g}</option>)}
+                      <optgroup label={language === 'ar' ? "المرحلة الثانوية" : "Secondary Stage"} className="bg-[#0a0a14] text-white">
+                        {GRADES.slice(9, 12).map(g => <option key={g} value={g} className="bg-[#0a0a14] text-white">{getGradeName(g)}</option>)}
                       </optgroup>
                     </select>
                   </div>
@@ -383,7 +412,7 @@ function UsersManagementContent() {
                   disabled={isSubmitting}
                   className="w-full bg-white text-black font-black py-4 rounded-xl mt-6 transition-all hover:bg-slate-100 disabled:opacity-50 shadow-xl shadow-white/5"
                 >
-                  {isSubmitting ? "جاري الحفظ..." : "إنشاء الحساب الجديد"}
+                  {isSubmitting ? t('usersPage.creatingBtn') : t('usersPage.createBtn')}
                 </button>
               </form>
             </div>
@@ -397,14 +426,14 @@ function UsersManagementContent() {
         ) : (
           <div className="bg-[#0f0f1d] rounded-3xl border border-white/5 overflow-hidden shadow-2xl">
             <div className="overflow-x-auto">
-              <table className="w-full text-right">
+              <table className={`w-full ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                 <thead>
                   <tr className="text-slate-500 text-xs uppercase tracking-widest bg-white/2">
-                    <th className="px-8 py-6">المستخدم</th>
-                    <th className="px-8 py-6">بيانات الدخول</th>
-                    <th className="px-8 py-6">الدور</th>
-                    <th className="px-8 py-6">المدرسة / الصف</th>
-                    <th className="px-8 py-6 text-center">الإجراءات</th>
+                    <th className="px-8 py-6">{t('usersPage.userHeader')}</th>
+                    <th className="px-8 py-6">{t('usersPage.loginCredentials')}</th>
+                    <th className="px-8 py-6">{t('usersPage.roleHeader')}</th>
+                    <th className="px-8 py-6">{t('usersPage.schoolGrade')}</th>
+                    <th className="px-8 py-6 text-center">{t('usersPage.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
@@ -444,12 +473,12 @@ function UsersManagementContent() {
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-2 text-slate-300 text-sm font-bold">
                             <School className="w-4 h-4 text-slate-500" />
-                            {user.school?.name || "منصة عامة"}
+                            {user.school?.name || t('usersPage.publicPlatform')}
                           </div>
                           {user.grade && (
                             <div className="flex items-center gap-2 text-slate-500 text-xs">
                               <GraduationCap className="w-4 h-4" />
-                              {user.grade}
+                              {getGradeName(user.grade)}
                             </div>
                           )}
                         </div>
@@ -462,7 +491,7 @@ function UsersManagementContent() {
                             title="Login as User"
                           >
                             <Sparkles className="w-4 h-4 group-hover/btn:animate-pulse" />
-                            <span>دخول مباشر</span>
+                            <span>{t('usersPage.directLogin')}</span>
                           </button>
                           {user.role !== 'SUPER_ADMIN' && (
                             <button 
@@ -482,7 +511,7 @@ function UsersManagementContent() {
             {filteredUsers.length === 0 && (
               <div className="text-center py-20 text-slate-500">
                 <Users className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                <p>لم يتم العثور على مستخدمين يطابقون بحثك</p>
+                <p>{t('usersPage.noUsersFound')}</p>
               </div>
             )}
           </div>

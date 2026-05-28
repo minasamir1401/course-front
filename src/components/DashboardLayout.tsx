@@ -70,7 +70,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {renderSidebar()}
 
-      <div className={`flex-1 ${hasSidebar ? "lg:mr-72" : ""} flex flex-col min-h-screen relative z-10`}>
+      <div className={`flex-1 ${hasSidebar ? (language === 'ar' ? 'lg:mr-72' : 'lg:ml-72') : ''} flex flex-col min-h-screen relative z-10`}>
         <Header
           onMenuClick={() => setIsSidebarOpen(true)}
           isMobile={isMobile}

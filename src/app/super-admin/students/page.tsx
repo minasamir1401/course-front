@@ -6,19 +6,23 @@ import { useRouter } from "next/navigation";
 import { 
   Users, Plus, Search, Shield, 
   User, Mail, ChevronRight,
-  MoreVertical, Edit2, Trash2, Key, X, Building2, GraduationCap, Sparkles
+  MoreVertical, Edit2, Trash2, Key, X, Building2, GraduationCap, Sparkles, FileSpreadsheet
 } from "lucide-react";
 import Link from "next/link";
 import SuperAdminSidebar from "@/components/SuperAdminSidebar";
+import BulkStudentImport from "@/components/BulkStudentImport";
 import { useNotification } from "@/context/NotificationContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function StudentsManagement() {
   const router = useRouter();
   const { showToast, confirm } = useNotification();
+  const { t, language } = useLanguage();
   const [students, setStudents] = useState<any[]>([]);
   const [schools, setSchools] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -94,7 +98,7 @@ export default function StudentsManagement() {
     setIsEditMode(false);
     setEditingStudentId(null);
   };
-// ... (rest of helper functions unchanged)
+
   const generateCredentials = () => {
     const randomNum = Math.floor(100000 + Math.random() * 900000);
     const newUsername = `STD${randomNum}`;
@@ -110,13 +114,13 @@ export default function StudentsManagement() {
       username: newUsername,
       password: newPassword
     });
-    showToast("تم توليد بيانات دخول جديدة", 'success');
+    showToast(t('superAdmin.studentsPage.credentialsGenerated'), 'success');
   };
 
   const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim() || !formData.username || !formData.password || !formData.schoolId) {
-      showToast("يرجى ملء جميع الحقول المطلوبة", 'error');
+      showToast(t('superAdmin.studentsPage.fillRequired'), 'error');
       return;
     }
 
@@ -139,13 +143,13 @@ export default function StudentsManagement() {
         setIsModalOpen(false);
         resetForm();
         fetchData();
-        showToast(isEditMode ? "تم تحديث بيانات الطالب بنجاح" : "تم إضافة الطالب بنجاح", 'success');
+        showToast(isEditMode ? t('superAdmin.studentsPage.updateSuccess') : t('superAdmin.studentsPage.addSuccess'), 'success');
       } else {
         const data = await res.json();
-        showToast(data.error || (isEditMode ? "فشل تحديث بيانات الطالب" : "فشل إضافة الطالب"), 'error');
+        showToast(data.error || (isEditMode ? t('superAdmin.studentsPage.deleteFail') : t('superAdmin.studentsPage.fillRequired')), 'error');
       }
     } catch (error) {
-      showToast("خطأ في الاتصال بالسيرفر", 'error');
+      showToast(t('superAdmin.studentsPage.connError'), 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -153,8 +157,8 @@ export default function StudentsManagement() {
 
   const handleDeleteStudent = async (id: string) => {
     const confirmed = await confirm(
-      "تأكيد الحذف",
-      "هل أنت متأكد من حذف هذا الطالب؟ سيتم حذف جميع بياناته ونتائجه بشكل نهائي."
+      t('superAdmin.studentsPage.deleteConfirmTitle'),
+      t('superAdmin.studentsPage.deleteConfirmMsg')
     );
     if (!confirmed) return;
 
@@ -166,39 +170,60 @@ export default function StudentsManagement() {
       });
 
       if (res.ok) {
-        showToast("تم حذف المستخدم بنجاح", 'success');
+        showToast(t('superAdmin.studentsPage.deleteSuccess'), 'success');
         fetchData();
       } else {
-        showToast("فشل حذف المستخدم", 'error');
+        showToast(t('superAdmin.studentsPage.deleteFail'), 'error');
       }
     } catch (error) {
-      showToast("خطأ في الاتصال بالسيرفر", 'error');
+      showToast(t('superAdmin.studentsPage.connError'), 'error');
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a14] text-slate-200" dir="rtl">
+    <div className="min-h-screen bg-[#0a0a14] text-slate-200" dir={language === 'ar' ? 'rtl' : 'ltr'}>
       <SuperAdminSidebar />
-      <main className="lg:mr-64 p-4 sm:p-6 lg:p-8 pt-16 lg:pt-8">
+      <main className={`${language === 'ar' ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-6 lg:p-8 pt-16 lg:pt-8`}>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 sm:mb-10">
           <h2 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-2">
             <GraduationCap className="w-6 h-6 text-blue-500" />
-            إدارة الطلاب
+            {t('superAdmin.studentsPage.title')}
           </h2>
-          <button onClick={() => { resetForm(); setIsModalOpen(true); }} className="bg-blue-600 text-white px-5 py-2.5 sm:px-8 sm:py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/20 text-sm sm:text-base">
-            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-            إضافة طالب
-          </button>
+          <div className="flex items-center gap-3">
+            {/* Bulk Import Button */}
+            <button
+              onClick={() => setIsBulkImportOpen(true)}
+              className="flex items-center gap-2 border border-blue-500/30 text-blue-400 px-4 py-2.5 rounded-2xl font-bold hover:bg-blue-500/10 transition-all text-sm"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              {t('superAdmin.studentsPage.bulkImport')}
+            </button>
+            <button onClick={() => { resetForm(); setIsModalOpen(true); }} className="bg-blue-600 text-white px-5 py-2.5 sm:px-8 sm:py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-blue-500 transition-all shadow-lg shadow-blue-500/20 text-sm sm:text-base">
+              <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+              {t('superAdmin.studentsPage.addStudent')}
+            </button>
+          </div>
         </div>
 
+        {/* Bulk Import Modal */}
+        {isBulkImportOpen && (
+          <BulkStudentImport
+            onClose={() => setIsBulkImportOpen(false)}
+            onSuccess={(count) => {
+              showToast(`${t('superAdmin.bulkImport.importSuccess').replace('{n}', String(count))}`, 'success');
+              fetchData();
+            }}
+          />
+        )}
+
         <div className="mb-6 sm:mb-10 relative">
-          <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+          <Search className={`absolute ${language === 'ar' ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500`} />
           <input 
             type="text" 
-            placeholder="البحث بالاسم أو الكود..."
+            placeholder={t('superAdmin.studentsPage.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-[#0f0f1d] border border-white/5 rounded-2xl py-4 pr-12 pl-4 outline-none focus:border-blue-500 transition-all text-white font-medium"
+            className={`w-full bg-[#0f0f1d] border border-white/5 rounded-2xl py-4 ${language === 'ar' ? 'pr-12 pl-4' : 'pl-12 pr-4'} outline-none focus:border-blue-500 transition-all text-white font-medium`}
           />
         </div>
 
@@ -206,30 +231,30 @@ export default function StudentsManagement() {
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
             <div className="bg-[#0f0f1d] border border-white/10 w-full max-w-lg rounded-3xl p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold text-white">{isEditMode ? "تعديل بيانات الطالب" : "تسجيل طالب جديد"}</h3>
+                <h3 className="text-xl font-bold text-white">{isEditMode ? t('superAdmin.studentsPage.editModal') : t('superAdmin.studentsPage.addModal')}</h3>
                 <button onClick={() => { setIsModalOpen(false); resetForm(); }} className="text-slate-500 hover:text-white"><X /></button>
               </div>
               
-              <form onSubmit={handleAddStudent} className="space-y-4">
+              <form onSubmit={handleAddStudent} className="space-y-4 text-start" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
                 <div className="space-y-4 p-4 bg-white/5 rounded-2xl border border-white/5">
-                  <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-widest">البيانات الأساسية</h4>
+                  <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-widest">{t('superAdmin.studentsPage.basicInfo')}</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-slate-400 mb-1.5">اسم الطالب</label>
-                      <input type="text" required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full bg-[#0a0a14] border border-white/10 rounded-xl py-2.5 px-4 text-white outline-none focus:border-blue-500" placeholder="الاسم الرباعي" />
+                      <label className="block text-xs font-bold text-slate-400 mb-1.5">{t('superAdmin.studentsPage.studentName')}</label>
+                      <input type="text" required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full bg-[#0a0a14] border border-white/10 rounded-xl py-2.5 px-4 text-white outline-none focus:border-blue-500" placeholder={t('superAdmin.studentsPage.fullName')} />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-slate-400 mb-1.5">المرحلة التعليمية</label>
+                      <label className="block text-xs font-bold text-slate-400 mb-1.5">{t('superAdmin.studentsPage.grade')}</label>
                       <select required value={formData.grade} onChange={(e) => setFormData({...formData, grade: e.target.value})} className="w-full bg-[#0a0a14] border border-white/10 rounded-xl py-2.5 px-4 text-white outline-none focus:border-blue-500 appearance-none">
-                        <option value="" className="bg-[#0a0a14] text-white">اختر المرحلة</option>
+                        <option value="" className="bg-[#0a0a14] text-white">{t('superAdmin.studentsPage.selectGrade')}</option>
                         {GRADES.map(g => <option key={g} value={g} className="bg-[#0a0a14] text-white">{g}</option>)}
                       </select>
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 mb-1.5">المدرسة</label>
+                    <label className="block text-xs font-bold text-slate-400 mb-1.5">{t('superAdmin.studentsPage.school')}</label>
                     <select required value={formData.schoolId} onChange={(e) => setFormData({...formData, schoolId: e.target.value})} className="w-full bg-[#0a0a14] border border-white/10 rounded-xl py-2.5 px-4 text-white outline-none focus:border-blue-500 appearance-none">
-                      <option value="">اختر المدرسة</option>
+                      <option value="">{t('superAdmin.studentsPage.selectSchool')}</option>
                       {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
                   </div>
@@ -237,30 +262,30 @@ export default function StudentsManagement() {
 
                 <div className="space-y-4 p-4 bg-white/2 rounded-2xl border border-white/5">
                    <div className="flex justify-between items-center">
-                    <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">بيانات تسجيل الدخول</h4>
+                    <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t('superAdmin.studentsPage.loginInfo')}</h4>
                     <button 
                       type="button"
                       onClick={generateCredentials}
                       className="flex items-center gap-1.5 text-[10px] font-bold text-blue-400 hover:text-blue-300 transition-colors bg-blue-500/10 px-2 py-1 rounded-lg border border-blue-500/10"
                     >
                       <Sparkles className="w-3 h-3" />
-                      توليد تلقائي
+                      {t('superAdmin.studentsPage.autoGenerate')}
                     </button>
                    </div>
                    <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-slate-400 mb-1.5">اسم المستخدم</label>
-                      <input type="text" required value={formData.username} onChange={(e) => setFormData({...formData, username: e.target.value})} className="w-full bg-[#0a0a14] border border-white/10 rounded-xl py-2.5 px-4 text-white outline-none focus:border-blue-500" placeholder="كود الطالب" dir="ltr" />
+                      <label className="block text-xs font-bold text-slate-400 mb-1.5">{t('superAdmin.studentsPage.username')}</label>
+                      <input type="text" required value={formData.username} onChange={(e) => setFormData({...formData, username: e.target.value})} className="w-full bg-[#0a0a14] border border-white/10 rounded-xl py-2.5 px-4 text-white outline-none focus:border-blue-500" placeholder={t('superAdmin.studentsPage.studentCode')} dir="ltr" />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-slate-400 mb-1.5">كلمة المرور</label>
+                      <label className="block text-xs font-bold text-slate-400 mb-1.5">{t('superAdmin.studentsPage.password')}</label>
                       <input type="text" required value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} className="w-full bg-[#0a0a14] border border-white/10 rounded-xl py-2.5 px-4 text-white outline-none focus:border-blue-500" placeholder="Password@123" />
                     </div>
                   </div>
                 </div>
 
                 <button disabled={isSubmitting} className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl mt-4 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 shadow-xl shadow-blue-900/20">
-                  {isSubmitting ? "جاري الحفظ..." : (isEditMode ? "حفظ التغييرات" : "تأكيد التسجيل")}
+                  {isSubmitting ? t('superAdmin.studentsPage.saving') : (isEditMode ? t('superAdmin.studentsPage.saveChanges') : t('superAdmin.studentsPage.confirmRegister'))}
                 </button>
               </form>
             </div>
@@ -274,14 +299,14 @@ export default function StudentsManagement() {
         ) : (
           <div className="bg-[#0f0f1d] rounded-3xl border border-white/5 overflow-hidden">
             <div className="overflow-x-auto">
-            <table className="w-full text-right min-w-[640px]">
+            <table className="w-full min-w-[640px]" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
               <thead>
                 <tr className="text-slate-500 text-[10px] font-black uppercase tracking-widest bg-white/5">
-                  <th className="px-8 py-5">الطالب</th>
-                  <th className="px-8 py-5">اسم المستخدم</th>
-                  <th className="px-8 py-5">كلمة المرور</th>
-                  <th className="px-8 py-5">المدرسة / الرابط</th>
-                  <th className="px-8 py-5">الإجراءات</th>
+                  <th className="px-8 py-5">{t('superAdmin.studentsPage.tableStudent')}</th>
+                  <th className="px-8 py-5">{t('superAdmin.studentsPage.tableUsername')}</th>
+                  <th className="px-8 py-5">{t('superAdmin.studentsPage.tablePassword')}</th>
+                  <th className="px-8 py-5">{t('superAdmin.studentsPage.tableSchool')}</th>
+                  <th className="px-8 py-5">{t('superAdmin.tableActions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">

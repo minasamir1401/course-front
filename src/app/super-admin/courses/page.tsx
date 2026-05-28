@@ -12,10 +12,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { API_URL, getFullImageUrl } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function SuperAdminCoursesPage() {
   const router = useRouter();
   const { showToast } = useNotification();
+  const { t, language } = useLanguage();
   const [courses, setCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -93,15 +95,34 @@ export default function SuperAdminCoursesPage() {
       }
     } catch (e) {
       console.error(e);
-      showToast("خطأ في تحميل الكورسات", "error");
+      showToast(t('coursesPage.errorLoading') || "Error loading courses", "error");
     } finally {
       setLoading(false);
       setLoadingMore(false);
     }
   };
 
+  const getGradeName = (grade: string) => {
+    if (language === 'ar') return grade;
+    const translations: { [key: string]: string } = {
+      "الصف الأول الابتدائي": "1st Primary",
+      "الصف الثاني الابتدائي": "2nd Primary",
+      "الصف الثالث الابتدائي": "3rd Primary",
+      "الصف الرابع الابتدائي": "4th Primary",
+      "الصف الخامس الابتدائي": "5th Primary",
+      "الصف السادس الابتدائي": "6th Primary",
+      "الصف الأول الإعدادي": "1st Prep",
+      "الصف الثاني الإعدادي": "2nd Prep",
+      "الصف الثالث الإعدادي": "3rd Prep",
+      "الصف الأول الثانوي": "1st Secondary",
+      "الصف الثاني الثانوي": "2nd Secondary",
+      "الصف الثالث الثانوي": "3rd Secondary"
+    };
+    return translations[grade] || grade;
+  };
+
   const handleDelete = async (id: string) => {
-    if (!window.confirm("هل أنت متأكد من حذف هذا الكورس المركزي؟")) return;
+    if (!window.confirm(t('coursesPage.deleteConfirm'))) return;
     try {
       const token = localStorage.getItem("super_admin_token");
       const res = await fetch(`${API_URL}/school/courses/${id}`, {
@@ -111,12 +132,14 @@ export default function SuperAdminCoursesPage() {
         }
       });
       if (res.ok) {
-        showToast("تم حذف الكورس بنجاح", "success");
+        showToast(t('coursesPage.deleteSuccess'), "success");
         setCourses(prev => prev.filter(c => c.id !== id));
         setApiStats(prev => ({ ...prev, totalCourses: prev.totalCourses - 1 }));
+      } else {
+        showToast(t('coursesPage.deleteFail'), "error");
       }
     } catch (e) {
-      showToast("حدث خطأ أثناء الحذف", "error");
+      showToast(t('coursesPage.deleteFail'), "error");
     }
   };
 
@@ -130,19 +153,19 @@ export default function SuperAdminCoursesPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 sm:space-y-10" dir="rtl">
+      <div className="space-y-6 sm:space-y-10" dir={language === 'ar' ? 'rtl' : 'ltr'}>
           
           {/* Header Section */}
           <div className="relative bg-white rounded-[20px] sm:rounded-[50px] p-4 sm:p-12 overflow-hidden shadow-sm border border-slate-100">
              <div className="relative z-10 flex flex-col lg:flex-row justify-between items-center gap-6 sm:gap-10">
-                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-8 text-center sm:text-right">
+                <div className={`flex flex-col sm:flex-row items-center gap-4 sm:gap-8 ${language === 'ar' ? 'text-right sm:items-start' : 'text-left sm:items-start'}`}>
                    <div className="w-12 h-12 sm:w-24 h-24 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-xl sm:rounded-[35px] flex items-center justify-center shadow-xl sm:shadow-2xl shadow-indigo-500/20 transform -rotate-3 hover:rotate-0 transition-all duration-500 shrink-0">
                       <Sparkles className="w-6 h-6 sm:w-12 h-12 text-white" />
                    </div>
                    <div>
-                      <h1 className="text-lg sm:text-4xl font-black text-slate-900 mb-1 sm:mb-3 tracking-tight">إدارة المناهج المركزية</h1>
+                      <h1 className="text-lg sm:text-4xl font-black text-slate-900 mb-1 sm:mb-3 tracking-tight">{t('coursesPage.title')}</h1>
                       <p className="text-slate-500 text-[10px] sm:text-lg font-medium max-w-xl leading-relaxed opacity-80">
-                         نظام إدارة المحتوى المركزي لبناء وتوزيع المناهج التعليمية الموحدة.
+                         {t('coursesPage.subtitle')}
                       </p>
                    </div>
                 </div>
@@ -152,7 +175,7 @@ export default function SuperAdminCoursesPage() {
                   className="group bg-slate-900 text-white px-6 sm:px-12 py-3 sm:py-5 rounded-xl sm:rounded-[22px] font-black text-xs sm:text-xl shadow-xl shadow-slate-900/10 hover:scale-105 transition-all flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-center"
                 >
                   <Plus className="w-4 h-4 sm:w-6 h-6 group-hover:rotate-90 transition-transform" />
-                  إنشاء منهج جديد
+                  {t('coursesPage.createCurriculum')}
                 </Link>
              </div>
              
@@ -164,15 +187,15 @@ export default function SuperAdminCoursesPage() {
           <div className="flex flex-col xl:flex-row gap-4 sm:gap-6 items-center justify-between">
              <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 w-full xl:w-auto">
                  {[
-                   { label: "إجمالي المناهج", value: stats.total, icon: Layers, color: "blue" },
-                   { label: "الدروس", value: stats.lessons, icon: Monitor, color: "indigo" },
-                   { label: "المواد", value: stats.subjects, icon: Book, color: "emerald" }
+                   { label: t('coursesPage.totalCurricula'), value: stats.total, icon: Layers, color: "blue" },
+                   { label: t('coursesPage.lessons'), value: stats.lessons, icon: Monitor, color: "indigo" },
+                   { label: t('coursesPage.subjects'), value: stats.subjects, icon: Book, color: "emerald" }
                  ].map((stat, i) => (
                    <div key={i} className="bg-white p-3 sm:p-5 px-4 sm:px-8 rounded-xl sm:rounded-[28px] border border-slate-100 shadow-sm flex items-center gap-3 sm:gap-5">
                       <div className={`w-8 h-8 sm:w-12 h-12 rounded-lg sm:rounded-2xl bg-${stat.color}-50 text-${stat.color}-600 flex items-center justify-center shrink-0`}>
                          <stat.icon className="w-4 h-4 sm:w-6 h-6" />
                       </div>
-                      <div>
+                      <div className={language === 'ar' ? 'text-right' : 'text-left'}>
                          <p className="text-[8px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{stat.label}</p>
                          <p className="text-sm sm:text-xl font-black text-slate-900 leading-tight">
                             {loadingStats ? (
@@ -188,13 +211,13 @@ export default function SuperAdminCoursesPage() {
 
               <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
                  <div className="relative flex-1 xl:w-96">
-                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-5 h-5" />
+                    <Search className={`absolute ${language === 'ar' ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-5 h-5`} />
                     <input 
                       type="text" 
-                      placeholder="ابحث..."
+                      placeholder={language === 'ar' ? "ابحث..." : "Search..."}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pr-9 sm:pr-12 pl-4 py-2.5 sm:py-4 rounded-xl sm:rounded-2xl bg-white border border-slate-200 text-[10px] sm:text-sm font-bold focus:outline-none focus:ring-4 focus:ring-indigo-600/5 transition-all"
+                      className={`w-full ${language === 'ar' ? 'pr-9 sm:pr-12 pl-4' : 'pl-9 sm:pl-12 pr-4'} py-2.5 sm:py-4 rounded-xl sm:rounded-2xl bg-white border border-slate-200 text-[10px] sm:text-sm font-bold focus:outline-none focus:ring-4 focus:ring-indigo-600/5 transition-all`}
                     />
                  </div>
                  <button className="w-full sm:w-14 h-10 sm:h-14 bg-white border border-slate-200 rounded-xl sm:rounded-2xl flex items-center justify-center text-slate-400 hover:bg-slate-50 transition-all shadow-sm">
@@ -206,8 +229,8 @@ export default function SuperAdminCoursesPage() {
           {/* Main Grid */}
           {loading ? (
              <div className="flex flex-col gap-4 sm:gap-6">
-                {[1,2,3].map(i => (
-                   <div key={i} className="bg-white h-32 rounded-[24px] sm:rounded-[30px] border border-slate-100 animate-pulse"></div>
+                {[1, 2, 3].map((n) => (
+                   <div key={n} className="bg-slate-100 animate-pulse rounded-2xl h-32 w-full"></div>
                 ))}
              </div>
           ) : filteredCourses.length === 0 ? (
@@ -215,10 +238,10 @@ export default function SuperAdminCoursesPage() {
                  <div className="w-12 h-12 sm:w-24 h-24 bg-slate-50 rounded-xl sm:rounded-[40px] flex items-center justify-center mx-auto mb-4 sm:mb-8">
                     <BookOpen className="w-6 h-6 sm:w-12 h-12 text-slate-200" />
                  </div>
-                 <h3 className="text-base sm:text-2xl font-black text-slate-900 mb-2">لا توجد مناهج</h3>
-                 <p className="text-slate-500 font-bold max-w-sm mx-auto mb-6 sm:mb-10 opacity-70 text-[10px] sm:text-base">ابدأ بإضافة أول منهج تعليمي مركزي.</p>
+                 <h3 className="text-base sm:text-2xl font-black text-slate-900 mb-2">{t('coursesPage.noCurricula')}</h3>
+                 <p className="text-slate-500 font-bold max-w-sm mx-auto mb-6 sm:mb-10 opacity-70 text-[10px] sm:text-base">{t('coursesPage.startByAdding')}</p>
                  <Link href="/super-admin/courses/create" className="bg-indigo-600 text-white px-6 sm:px-10 py-2.5 sm:py-4 rounded-xl sm:rounded-2xl font-black shadow-xl shadow-indigo-600/20 inline-block text-[10px] sm:text-base">
-                    إضافة منهج
+                    {t('coursesPage.addCurriculum')}
                  </Link>
               </div>
           ) : (
@@ -235,25 +258,25 @@ export default function SuperAdminCoursesPage() {
                               <Layers className="w-8 h-8 text-indigo-600" />
                            )}
                         </div>
-
-                        <div className="flex-1 min-w-0 w-full md:w-auto text-center md:text-right">
-                           <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-2">
-                              <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md uppercase tracking-widest shrink-0">{course.subject || "عام"}</span>
-                              <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md uppercase tracking-widest shrink-0">{course.grade || "عام"}</span>
+ 
+                        <div className={`flex-1 min-w-0 w-full md:w-auto text-center ${language === 'ar' ? 'md:text-right' : 'md:text-left'}`}>
+                           <div className={`flex flex-wrap items-center justify-center ${language === 'ar' ? 'md:justify-start' : 'md:justify-end'} gap-2 mb-2`}>
+                              <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md uppercase tracking-widest shrink-0">{course.subject || (language === 'ar' ? "عام" : "General")}</span>
+                              <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md uppercase tracking-widest shrink-0">{getGradeName(course.grade) || (language === 'ar' ? "عام" : "General")}</span>
                            </div>
                            <h3 className="text-xl sm:text-2xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors leading-tight mb-1.5 truncate">{course.title}</h3>
-                           <p className="text-slate-400 text-xs sm:text-sm font-bold line-clamp-1">{course.description || "منهج تعليمي مركزي."}</p>
+                           <p className="text-slate-400 text-xs sm:text-sm font-bold line-clamp-1">{course.description || (language === 'ar' ? "منهج تعليمي مركزي." : "Central curriculum.")}</p>
                         </div>
-
+ 
                         <div className="flex items-center gap-6 shrink-0 w-full md:w-auto justify-between md:justify-end border-t border-slate-50 md:border-none pt-4 md:pt-0">
                            <div className="flex items-center gap-4 text-xs font-black text-slate-400 uppercase tracking-widest">
                               <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
                                  <Monitor className="w-4 h-4 text-indigo-400" />
-                                 <span className="hidden sm:inline">درس</span> {course._count?.lessons || 0}
+                                 <span className="hidden sm:inline">{language === 'ar' ? "درس" : "lesson(s)"}</span> {course._count?.lessons || 0}
                               </div>
                               <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
                                  <GraduationCap className="w-4 h-4 text-blue-400" />
-                                 <span className="hidden sm:inline">طالب</span> {course._count?.enrollments || 0}
+                                 <span className="hidden sm:inline">{language === 'ar' ? "طالب" : "student(s)"}</span> {course._count?.enrollments || 0}
                               </div>
                            </div>
                            
@@ -272,7 +295,7 @@ export default function SuperAdminCoursesPage() {
                               </button>
                            </div>
                         </div>
-
+ 
                          {/* Decoration */}
                          <div className="absolute -bottom-12 -left-12 w-32 h-32 text-slate-50 group-hover:text-indigo-50/50 transition-colors duration-500 -rotate-12 pointer-events-none">
                             <Book className="w-full h-full" />
@@ -280,7 +303,7 @@ export default function SuperAdminCoursesPage() {
                       </div>
                    ))}
                 </div>
-  
+   
                 {hasMore && (
                   <div className="flex justify-center pb-10 sm:pb-20">
                      <button 
@@ -289,10 +312,10 @@ export default function SuperAdminCoursesPage() {
                        className="group bg-white border-2 border-slate-100 text-slate-600 px-10 py-4 rounded-[22px] font-black hover:border-indigo-600 hover:text-indigo-600 transition-all flex items-center gap-3 shadow-sm disabled:opacity-50 hover:shadow-xl hover:shadow-indigo-600/10"
                      >
                        {loadingMore ? (
-                         <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                          <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
                        ) : (
                          <>
-                           <span>عرض المزيد من المناهج</span>
+                           <span>{t('coursesPage.loadMore')}</span>
                            <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform" />
                          </>
                        )}
