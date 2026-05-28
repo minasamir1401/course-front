@@ -77,37 +77,37 @@ export default function CreateCoursePage() {
         "Elementary": "المرحلة الابتدائية",
         "Middle School": "المرحلة الإعدادية",
         "High School": "المرحلة الثانوية",
-        "الصف الأول الابتدائي": "المرحلة الابتدائية",
-        "الصف الثاني الابتدائي": "المرحلة الابتدائية",
-        "الصف الثالث الابتدائي": "المرحلة الابتدائية",
-        "الصف الرابع الابتدائي": "المرحلة الابتدائية",
-        "الصف الخامس الابتدائي": "المرحلة الابتدائية",
-        "الصف السادس الابتدائي": "المرحلة الابتدائية",
-        "الصف الأول الإعدادي": "المرحلة الإعدادية",
-        "الصف الثاني الإعدادي": "المرحلة الإعدادية",
-        "الصف الثالث الإعدادي": "المرحلة الإعدادية",
-        "الصف الأول الثانوي": "المرحلة الثانوية",
-        "الصف الثاني الثانوي": "المرحلة الثانوية",
-        "الصف الثالث الثانوي": "المرحلة الثانوية"
+        "الصف الأول الابتدائي": "الأول الابتدائي",
+        "الصف الثاني الابتدائي": "الثاني الابتدائي",
+        "الصف الثالث الابتدائي": "الثالث الابتدائي",
+        "الصف الرابع الابتدائي": "الرابع الابتدائي",
+        "الصف الخامس الابتدائي": "الخامس الابتدائي",
+        "الصف السادس الابتدائي": "السادس الابتدائي",
+        "الصف الأول الإعدادي": "الأول الإعدادي",
+        "الصف الثاني الإعدادي": "الثاني الإعدادي",
+        "الصف الثالث الإعدادي": "الثالث الإعدادي",
+        "الصف الأول الثانوي": "الأول الثانوي",
+        "الصف الثاني الثانوي": "الثاني الثانوي",
+        "الصف الثالث الثانوي": "الثالث الثانوي"
       };
       return translations[grade] || grade;
     }
     const translations: { [key: string]: string } = {
-      "Elementary": "Elementary",
-      "Middle School": "Middle School",
-      "High School": "High School",
-      "الصف الأول الابتدائي": "Elementary",
-      "الصف الثاني الابتدائي": "Elementary",
-      "الصف الثالث الابتدائي": "Elementary",
-      "الصف الرابع الابتدائي": "Elementary",
-      "الصف الخامس الابتدائي": "Elementary",
-      "الصف السادس الابتدائي": "Elementary",
-      "الصف الأول الإعدادي": "Middle School",
-      "الصف الثاني الإعدادي": "Middle School",
-      "الصف الثالث الإعدادي": "Middle School",
-      "الصف الأول الثانوي": "High School",
-      "الصف الثاني الثانوي": "High School",
-      "الصف الثالث الثانوي": "High School"
+      "Elementary": "Elementary Stage",
+      "Middle School": "Middle School Stage",
+      "High School": "High School Stage",
+      "الصف الأول الابتدائي": "1st Primary",
+      "الصف الثاني الابتدائي": "2nd Primary",
+      "الصف الثالث الابتدائي": "3rd Primary",
+      "الصف الرابع الابتدائي": "4th Primary",
+      "الصف الخامس الابتدائي": "5th Primary",
+      "الصف السادس الابتدائي": "6th Primary",
+      "الصف الأول الإعدادي": "1st Prep",
+      "الصف الثاني الإعدادي": "2nd Prep",
+      "الصف الثالث الإعدادي": "3rd Prep",
+      "الصف الأول الثانوي": "1st Secondary",
+      "الصف الثاني الثانوي": "2nd Secondary",
+      "الصف الثالث الثانوي": "3rd Secondary"
     };
     return translations[grade] || grade;
   };
@@ -229,9 +229,10 @@ export default function CreateCoursePage() {
   ];
 
   const GRADES = [
-    "Elementary",
-    "Middle School",
-    "High School"
+    "الصف الأول الابتدائي", "الصف الثاني الابتدائي", "الصف الثالث الابتدائي",
+    "الصف الرابع الابتدائي", "الصف الخامس الابتدائي", "الصف السادس الابتدائي",
+    "الصف الأول الإعدادي", "الصف الثاني الإعدادي", "الصف الثالث الإعدادي",
+    "الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"
   ];
 
   const QUESTION_TYPES = [
@@ -1847,21 +1848,83 @@ export default function CreateCoursePage() {
                         </select>
                       </div>
 
-                      <div className="space-y-3">
-                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{t('courseCreate.grades')}</label>
-                        <div className="grid grid-cols-2 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200 max-h-[250px] overflow-y-auto custom-scrollbar">
-                          {GRADES.map(g => (
-                            <label key={g} className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${courseData.grades.includes(g) ? 'bg-indigo-50 border-indigo-500' : 'bg-white border-transparent hover:border-slate-200'}`}>
-                              <div className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${courseData.grades.includes(g) ? 'bg-indigo-600 text-white' : 'bg-slate-100 border border-slate-200'}`}>
-                                {courseData.grades.includes(g) && <CheckCircle2 className="w-4 h-4" />}
+                      <div className="space-y-4">
+                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">{t('courseCreate.grades')}</label>
+                        <div className="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-1 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                          {[
+                            {
+                              stage: "Elementary",
+                              title: language === 'ar' ? "المرحلة الابتدائية (Elementary)" : "Elementary School",
+                              grades: [
+                                "الصف الأول الابتدائي", "الصف الثاني الابتدائي", "الصف الثالث الابتدائي",
+                                "الصف الرابع الابتدائي", "الصف الخامس الابتدائي", "الصف السادس الابتدائي"
+                              ]
+                            },
+                            {
+                              stage: "Middle School",
+                              title: language === 'ar' ? "المرحلة الإعدادية (Middle School)" : "Middle School",
+                              grades: [
+                                "الصف الأول الإعدادي", "الصف الثاني الإعدادي", "الصف الثالث الإعدادي"
+                              ]
+                            },
+                            {
+                              stage: "High School",
+                              title: language === 'ar' ? "المرحلة الثانوية (High School)" : "High School",
+                              grades: [
+                                "الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"
+                              ]
+                            }
+                          ].map((group) => {
+                            const allSelected = group.grades.every(g => courseData.grades.includes(g));
+                            
+                            return (
+                              <div key={group.stage} className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm space-y-3">
+                                <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                                  <h4 className="font-black text-sm text-slate-800 flex items-center gap-2">
+                                    <Layers className="w-4 h-4 text-indigo-600" />
+                                    {group.title}
+                                  </h4>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (allSelected) {
+                                        setCourseData({
+                                          ...courseData,
+                                          grades: courseData.grades.filter(g => !group.grades.includes(g))
+                                        });
+                                      } else {
+                                        const newGrades = [...courseData.grades];
+                                        group.grades.forEach(g => {
+                                          if (!newGrades.includes(g)) newGrades.push(g);
+                                        });
+                                        setCourseData({
+                                          ...courseData,
+                                          grades: newGrades
+                                        });
+                                      }
+                                    }}
+                                    className="text-xs font-black text-indigo-600 hover:text-indigo-700 hover:underline cursor-pointer"
+                                  >
+                                    {allSelected ? (language === 'ar' ? "إلغاء تحديد الكل" : "تحديد الكل") : (language === 'ar' ? "تحديد الكل" : "Select All")}
+                                  </button>
+                                </div>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                  {group.grades.map(g => (
+                                    <label key={g} className={`flex items-center gap-2.5 p-2.5 rounded-lg border-2 cursor-pointer transition-all ${courseData.grades.includes(g) ? 'bg-indigo-50/50 border-indigo-400' : 'bg-white border-slate-100 hover:border-slate-200'}`}>
+                                      <div className={`w-5 h-5 rounded flex items-center justify-center transition-all ${courseData.grades.includes(g) ? 'bg-indigo-600 text-white' : 'bg-slate-100 border border-slate-200'}`}>
+                                        {courseData.grades.includes(g) && <CheckCircle2 className="w-3.5 h-3.5" />}
+                                      </div>
+                                      <span className={`text-[11px] sm:text-xs font-bold ${courseData.grades.includes(g) ? 'text-indigo-900' : 'text-slate-600'}`}>{getGradeName(g)}</span>
+                                      <input type="checkbox" className="hidden" checked={courseData.grades.includes(g)} onChange={(e) => {
+                                        if(e.target.checked) setCourseData({...courseData, grades: [...courseData.grades, g]});
+                                        else setCourseData({...courseData, grades: courseData.grades.filter(gr => gr !== g)});
+                                      }} />
+                                    </label>
+                                  ))}
+                                </div>
                               </div>
-                              <span className={`text-sm font-bold ${courseData.grades.includes(g) ? 'text-indigo-900' : 'text-slate-600'}`}>{getGradeName(g)}</span>
-                              <input type="checkbox" className="hidden" checked={courseData.grades.includes(g)} onChange={(e) => {
-                                if(e.target.checked) setCourseData({...courseData, grades: [...courseData.grades, g]});
-                                else setCourseData({...courseData, grades: courseData.grades.filter(gr => gr !== g)});
-                              }} />
-                            </label>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
 
