@@ -74,11 +74,52 @@ export default function EditCoursePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [schools, setSchools] = useState<any[]>([]);
 
+  const getGradeName = (grade: string) => {
+    if (language === 'ar') {
+      const translations: { [key: string]: string } = {
+        "Elementary": "المرحلة الابتدائية",
+        "Middle School": "المرحلة الإعدادية",
+        "High School": "المرحلة الثانوية",
+        "الصف الأول الابتدائي": "المرحلة الابتدائية",
+        "الصف الثاني الابتدائي": "المرحلة الابتدائية",
+        "الصف الثالث الابتدائي": "المرحلة الابتدائية",
+        "الصف الرابع الابتدائي": "المرحلة الابتدائية",
+        "الصف الخامس الابتدائي": "المرحلة الابتدائية",
+        "الصف السادس الابتدائي": "المرحلة الابتدائية",
+        "الصف الأول الإعدادي": "المرحلة الإعدادية",
+        "الصف الثاني الإعدادي": "المرحلة الإعدادية",
+        "الصف الثالث الإعدادي": "المرحلة الإعدادية",
+        "الصف الأول الثانوي": "المرحلة الثانوية",
+        "الصف الثاني الثانوي": "المرحلة الثانوية",
+        "الصف الثالث الثانوي": "المرحلة الثانوية"
+      };
+      return translations[grade] || grade;
+    }
+    const translations: { [key: string]: string } = {
+      "Elementary": "Elementary",
+      "Middle School": "Middle School",
+      "High School": "High School",
+      "الصف الأول الابتدائي": "Elementary",
+      "الصف الثاني الابتدائي": "Elementary",
+      "الصف الثالث الابتدائي": "Elementary",
+      "الصف الرابع الابتدائي": "Elementary",
+      "الصف الخامس الابتدائي": "Elementary",
+      "الصف السادس الابتدائي": "Elementary",
+      "الصف الأول الإعدادي": "Middle School",
+      "الصف الثاني الإعدادي": "Middle School",
+      "الصف الثالث الإعدادي": "Middle School",
+      "الصف الأول الثانوي": "High School",
+      "الصف الثاني الثانوي": "High School",
+      "الصف الثالث الثانوي": "High School"
+    };
+    return translations[grade] || grade;
+  };
+
   const [courseData, setCourseData] = useState({
     title: "",
     description: "",
     coverImage: "",
-    grades: ["الصف الأول الثانوي"] as string[],
+    grades: [] as string[],
     subject: "",
     country: "مصر",
     isCentral: false,
@@ -144,10 +185,9 @@ export default function EditCoursePage() {
   }, []);
 
   const GRADES = [
-    "الصف الأول الابتدائي", "الصف الثاني الابتدائي", "الصف الثالث الابتدائي",
-    "الصف الرابع الابتدائي", "الصف الخامس الابتدائي", "الصف السادس الابتدائي",
-    "الصف الأول الإعدادي", "الصف الثاني الإعدادي", "الصف الثالث الإعدادي",
-    "الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"
+    "Elementary",
+    "Middle School",
+    "High School"
   ];
 
   const QUESTION_TYPES = [
@@ -206,7 +246,7 @@ export default function EditCoursePage() {
       });
       if (res.ok) {
         const data = await res.json();
-        let parsedGrades = ["الصف الأول الثانوي"];
+        let parsedGrades = ["High School"];
         try {
           if (data.grades && typeof data.grades === 'string') {
             parsedGrades = JSON.parse(data.grades);
@@ -216,8 +256,36 @@ export default function EditCoursePage() {
             parsedGrades = [data.grade];
           }
         } catch (e) {
-          parsedGrades = data.grade ? [data.grade] : ["الصف الأول الثانوي"];
+          parsedGrades = data.grade ? [data.grade] : ["High School"];
         }
+
+        const legacyGradeMap: { [key: string]: string } = {
+          "الصف الأول الابتدائي": "Elementary",
+          "الصف الثاني الابتدائي": "Elementary",
+          "الصف الثالث الابتدائي": "Elementary",
+          "الصف الرابع الابتدائي": "Elementary",
+          "الصف الخامس الابتدائي": "Elementary",
+          "الصف السادس الابتدائي": "Elementary",
+          "الصف الأول الإعدادي": "Middle School",
+          "الصف الثاني الإعدادي": "Middle School",
+          "الصف الثالث الإعدادي": "Middle School",
+          "الصف الأول الثانوي": "High School",
+          "الصف الثاني الثانوي": "High School",
+          "الصف الثالث الثانوي": "High School",
+          "1st Primary": "Elementary",
+          "2nd Primary": "Elementary",
+          "3rd Primary": "Elementary",
+          "4th Primary": "Elementary",
+          "5th Primary": "Elementary",
+          "6th Primary": "Elementary",
+          "1st Prep": "Middle School",
+          "2nd Prep": "Middle School",
+          "3rd Prep": "Middle School",
+          "1st Secondary": "High School",
+          "2nd Secondary": "High School",
+          "3rd Secondary": "High School"
+        };
+        parsedGrades = parsedGrades.map(g => legacyGradeMap[g] || g);
 
         setCourseData({
           title: data.title,
@@ -1862,7 +1930,15 @@ export default function EditCoursePage() {
                       <div className="flex flex-col gap-1.5">
                         <p className="font-black text-slate-800 text-sm truncate">{courseData.title || '—'}</p>
                         <div className="flex flex-wrap gap-2 mt-1">
-                          <span className="px-2 py-0.5 bg-slate-50 text-slate-500 rounded-lg text-xs font-black">{courseData.grades?.[0] || "—"}</span>
+                          {courseData.grades && courseData.grades.length > 0 ? (
+                            courseData.grades.map((g) => (
+                              <span key={g} className="px-2 py-0.5 bg-slate-50 text-slate-500 rounded-lg text-xs font-black shrink-0">
+                                {getGradeName(g)}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="px-2 py-0.5 bg-slate-50 text-slate-500 rounded-lg text-xs font-black">—</span>
+                          )}
                           {courseData.subject && <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-black">{courseData.subject}</span>}
                         </div>
                       </div>
@@ -1942,26 +2018,21 @@ export default function EditCoursePage() {
                           <option value="الكويت">الكويت</option>
                         </select>
                       </div>
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">المراحل الدراسية</label>
-                        <div className="relative group min-w-0">
-                          <select 
-                            multiple
-                            value={courseData.grades}
-                            onChange={(e) => {
-                              const options = Array.from(e.target.selectedOptions, option => option.value);
-                              setCourseData({...courseData, grades: options});
-                            }}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all text-sm appearance-none min-h-[120px]"
-                          >
-                            {GRADES.map(g => (
-                              <option key={g} value={g} className="py-2 px-2 hover:bg-indigo-50">{g}</option>
-                            ))}
-                          </select>
-                          <div className="absolute left-4 top-4 pointer-events-none text-slate-300">
-                             <ChevronDown className="w-4 h-4" />
-                          </div>
-                          <p className="text-[10px] text-slate-400 mt-2 font-bold px-1">اضغط مع الاستمرار على (Ctrl/Cmd) لتحديد مراحل متعددة</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                          {GRADES.map(g => (
+                            <label key={g} className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${courseData.grades.includes(g) ? 'bg-indigo-50 border-indigo-500' : 'bg-white border-transparent hover:border-slate-200'}`}>
+                              <div className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${courseData.grades.includes(g) ? 'bg-indigo-600 text-white' : 'bg-slate-100 border border-slate-200'}`}>
+                                {courseData.grades.includes(g) && <CheckCircle2 className="w-4 h-4" />}
+                              </div>
+                              <span className={`text-sm font-bold ${courseData.grades.includes(g) ? 'text-indigo-900' : 'text-slate-600'}`}>{getGradeName(g)}</span>
+                              <input type="checkbox" className="hidden" checked={courseData.grades.includes(g)} onChange={(e) => {
+                                if(e.target.checked) setCourseData({...courseData, grades: [...courseData.grades, g]});
+                                else setCourseData({...courseData, grades: courseData.grades.filter(gr => gr !== g)});
+                              }} />
+                            </label>
+                          ))}
                         </div>
                       </div>
 

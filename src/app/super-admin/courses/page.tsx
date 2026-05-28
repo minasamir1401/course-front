@@ -103,20 +103,42 @@ export default function SuperAdminCoursesPage() {
   };
 
   const getGradeName = (grade: string) => {
-    if (language === 'ar') return grade;
+    if (language === 'ar') {
+      const translations: { [key: string]: string } = {
+        "Elementary": "المرحلة الابتدائية",
+        "Middle School": "المرحلة الإعدادية",
+        "High School": "المرحلة الثانوية",
+        "الصف الأول الابتدائي": "المرحلة الابتدائية",
+        "الصف الثاني الابتدائي": "المرحلة الابتدائية",
+        "الصف الثالث الابتدائي": "المرحلة الابتدائية",
+        "الصف الرابع الابتدائي": "المرحلة الابتدائية",
+        "الصف الخامس الابتدائي": "المرحلة الابتدائية",
+        "الصف السادس الابتدائي": "المرحلة الابتدائية",
+        "الصف الأول الإعدادي": "المرحلة الإعدادية",
+        "الصف الثاني الإعدادي": "المرحلة الإعدادية",
+        "الصف الثالث الإعدادي": "المرحلة الإعدادية",
+        "الصف الأول الثانوي": "المرحلة الثانوية",
+        "الصف الثاني الثانوي": "المرحلة الثانوية",
+        "الصف الثالث الثانوي": "المرحلة الثانوية"
+      };
+      return translations[grade] || grade;
+    }
     const translations: { [key: string]: string } = {
-      "الصف الأول الابتدائي": "1st Elementary",
-      "الصف الثاني الابتدائي": "2nd Elementary",
-      "الصف الثالث الابتدائي": "3rd Elementary",
-      "الصف الرابع الابتدائي": "4th Elementary",
-      "الصف الخامس الابتدائي": "5th Elementary",
-      "الصف السادس الابتدائي": "6th Elementary",
-      "الصف الأول الإعدادي": "1st Middle School",
-      "الصف الثاني الإعدادي": "2nd Middle School",
-      "الصف الثالث الإعدادي": "3rd Middle School",
-      "الصف الأول الثانوي": "1st High School",
-      "الصف الثاني الثانوي": "2nd High School",
-      "الصف الثالث الثانوي": "3rd High School"
+      "Elementary": "Elementary",
+      "Middle School": "Middle School",
+      "High School": "High School",
+      "الصف الأول الابتدائي": "Elementary",
+      "الصف الثاني الابتدائي": "Elementary",
+      "الصف الثالث الابتدائي": "Elementary",
+      "الصف الرابع الابتدائي": "Elementary",
+      "الصف الخامس الابتدائي": "Elementary",
+      "الصف السادس الابتدائي": "Elementary",
+      "الصف الأول الإعدادي": "Middle School",
+      "الصف الثاني الإعدادي": "Middle School",
+      "الصف الثالث الإعدادي": "Middle School",
+      "الصف الأول الثانوي": "High School",
+      "الصف الثاني الثانوي": "High School",
+      "الصف الثالث الثانوي": "High School"
     };
     return translations[grade] || grade;
   };
