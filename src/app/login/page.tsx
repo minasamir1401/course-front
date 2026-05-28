@@ -4,40 +4,16 @@ import { API_URL } from '@/lib/api';
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, User, BookOpen, GraduationCap } from "lucide-react";
-import Link from "next/link";
-import { clearAllAuthData } from '@/lib/auth';
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function StudentLoginPage() {
   const router = useRouter();
+  const { language, setLanguage, t } = useLanguage();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
-  const [language, setLanguage] = useState<'ar' | 'en'>('ar');
-
-  const text = {
-    ar: {
-      title: 'بوابة الطلاب والمعلمين',
-      subtitle: 'سجّل دخولك للوصول إلى دروسك وامتحاناتك',
-      username: 'اسم المستخدم',
-      password: 'كلمة المرور',
-      loginBtn: 'دخول',
-      loadingBtn: 'جاري الدخول...',
-      usernamePlaceholder: 'أدخل اسم المستخدم',
-      platform: 'منصة Klevro للتعليم الذكي',
-    },
-    en: {
-      title: 'Students & Teachers Portal',
-      subtitle: 'Login to access your lessons and exams',
-      username: 'Username',
-      password: 'Password',
-      loginBtn: 'Login',
-      loadingBtn: 'Logging in...',
-      usernamePlaceholder: 'Enter your username',
-      platform: 'Klevro Smart Learning Platform',
-    }
-  };
 
   useEffect(() => {
     const token = localStorage.getItem("lms_token");
@@ -86,13 +62,13 @@ export default function StudentLoginPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "اسم المستخدم أو كلمة المرور غير صحيحة.");
+        setError(data.error || (language === 'ar' ? 'اسم المستخدم أو كلمة المرور غير صحيحة.' : 'Incorrect username or password.'));
         return;
       }
 
       // Block admin roles from using this login page
       if (data.user.role === "SUPER_ADMIN" || data.user.role === "SCHOOL_ADMIN") {
-        setError("هذه الصفحة مخصصة للطلاب والمعلمين فقط. يرجى استخدام صفحة دخول الإدارة.");
+        setError(t('login.roleErrorStudent'));
         return;
       }
 
@@ -110,13 +86,13 @@ export default function StudentLoginPage() {
       );
 
       if (data.user.role === "TEACHER") {
-        router.push("/dashboard"); // Temporarily redirect to dashboard as /teacher does not exist yet
+        router.push("/dashboard"); // Temporarily redirect to dashboard
       } else {
         router.push("/dashboard");
       }
     } catch (err: any) {
       console.error("Login error:", err);
-      setError(`خطأ في الاتصال: ${err.message || "لا يمكن الوصول للسيرفر"}`);
+      setError(t('login.connError'));
     } finally {
       setIsLoading(false);
     }
@@ -137,6 +113,7 @@ export default function StudentLoginPage() {
       >
         {language === 'ar' ? 'English' : 'العربية'}
       </button>
+
       {/* Background blobs */}
       <div className="absolute top-[-100px] right-[-100px] w-[400px] h-[400px] rounded-full opacity-20" style={{ background: "radial-gradient(circle, #3b82f6, transparent)" }} />
       <div className="absolute bottom-[-100px] left-[-100px] w-[400px] h-[400px] rounded-full opacity-20" style={{ background: "radial-gradient(circle, #8b5cf6, transparent)" }} />
@@ -149,8 +126,8 @@ export default function StudentLoginPage() {
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4" style={{ background: "linear-gradient(135deg, #3b82f6, #8b5cf6)" }}>
               <GraduationCap className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-white mb-1">{text[language].title}</h1>
-            <p className="text-blue-300 text-sm">{text[language].subtitle}</p>
+            <h1 className="text-2xl font-bold text-white mb-1">{t('login.studentTitle')}</h1>
+            <p className="text-blue-300 text-sm">{t('login.studentSubtitle')}</p>
           </div>
 
           {/* Form */}
@@ -163,7 +140,7 @@ export default function StudentLoginPage() {
               )}
 
               <div>
-                <label className="block text-sm font-semibold text-blue-200 mb-2">{text[language].username}</label>
+                <label className="block text-sm font-semibold text-blue-200 mb-2">{t('login.username')}</label>
                 <div className="relative">
                   <div className={`absolute inset-y-0 ${language === 'ar' ? 'right-0 pr-3' : 'left-0 pl-3'} flex items-center pointer-events-none`}>
                     <User className="h-5 w-5 text-slate-400" />
@@ -176,14 +153,14 @@ export default function StudentLoginPage() {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     className={`w-full ${language === 'ar' ? 'pl-4 pr-10' : 'pr-4 pl-10'} py-3 bg-white/10 border border-white/20 rounded-xl outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition-all text-white placeholder-slate-500`}
-                    placeholder={text[language].usernamePlaceholder}
+                    placeholder={t('login.usernameStudentPlaceholder')}
                     dir="ltr"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-blue-200 mb-2">{text[language].password}</label>
+                <label className="block text-sm font-semibold text-blue-200 mb-2">{t('login.password')}</label>
                 <div className="relative">
                   <div className={`absolute inset-y-0 ${language === 'ar' ? 'right-0 pr-3' : 'left-0 pl-3'} flex items-center pointer-events-none`}>
                     <Lock className="h-5 w-5 text-slate-400" />
@@ -208,7 +185,7 @@ export default function StudentLoginPage() {
                 className="w-full text-white font-bold py-3 px-4 rounded-xl transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                 style={{ background: "linear-gradient(135deg, #3b82f6, #8b5cf6)" }}
               >
-                {isLoading ? text[language].loadingBtn : text[language].loginBtn}
+                {isLoading ? t('login.loadingBtn') : t('login.loginBtn')}
               </button>
             </form>
           </div>
@@ -217,7 +194,7 @@ export default function StudentLoginPage() {
         {/* Branding */}
         <div className="mt-6 text-center flex items-center justify-center gap-2 text-slate-500 text-sm">
           <BookOpen className="w-4 h-4" />
-          <span>{text[language].platform}</span>
+          <span>{t('login.platform')}</span>
         </div>
       </div>
     </div>

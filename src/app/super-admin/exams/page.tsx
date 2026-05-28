@@ -96,18 +96,18 @@ export default function SuperAdminExamsPage() {
   const getGradeName = (grade: string) => {
     if (language === 'ar') return grade;
     const translations: { [key: string]: string } = {
-      "الصف الأول الابتدائي": "1st Primary",
-      "الصف الثاني الابتدائي": "2nd Primary",
-      "الصف الثالث الابتدائي": "3rd Primary",
-      "الصف الرابع الابتدائي": "4th Primary",
-      "الصف الخامس الابتدائي": "5th Primary",
-      "الصف السادس الابتدائي": "6th Primary",
-      "الصف الأول الإعدادي": "1st Prep",
-      "الصف الثاني الإعدادي": "2nd Prep",
-      "الصف الثالث الإعدادي": "3rd Prep",
-      "الصف الأول الثانوي": "1st Secondary",
-      "الصف الثاني الثانوي": "2nd Secondary",
-      "الصف الثالث الثانوي": "3rd Secondary"
+      "الصف الأول الابتدائي": "1st Elementary",
+      "الصف الثاني الابتدائي": "2nd Elementary",
+      "الصف الثالث الابتدائي": "3rd Elementary",
+      "الصف الرابع الابتدائي": "4th Elementary",
+      "الصف الخامس الابتدائي": "5th Elementary",
+      "الصف السادس الابتدائي": "6th Elementary",
+      "الصف الأول الإعدادي": "1st Middle School",
+      "الصف الثاني الإعدادي": "2nd Middle School",
+      "الصف الثالث الإعدادي": "3rd Middle School",
+      "الصف الأول الثانوي": "1st High School",
+      "الصف الثاني الثانوي": "2nd High School",
+      "الصف الثالث الثانوي": "3rd High School"
     };
     return translations[grade] || grade;
   };

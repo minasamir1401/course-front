@@ -5,10 +5,11 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, User, Shield, BookOpen } from "lucide-react";
 import Link from "next/link";
-import { clearAllAuthData } from '@/lib/auth';
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function SuperAdminLoginPage() {
   const router = useRouter();
+  const { language, setLanguage, t } = useLanguage();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -57,13 +58,13 @@ export default function SuperAdminLoginPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.details || data.error || "اسم المستخدم أو كلمة المرور غير صحيحة.");
+        setError(data.details || data.error || (language === 'ar' ? "اسم المستخدم أو كلمة المرور غير صحيحة." : "Incorrect username or password."));
         return;
       }
 
       // Only allow SUPER_ADMIN
       if (data.user.role !== "SUPER_ADMIN") {
-        setError("هذه الصفحة مخصصة للمدير العام فقط. يرجى استخدام الصفحة المناسبة لدورك.");
+        setError(t('login.roleErrorSuper'));
         return;
       }
 
@@ -83,7 +84,7 @@ export default function SuperAdminLoginPage() {
       router.push("/super-admin");
     } catch (err: any) {
       console.error("Login error:", err);
-      setError(`خطأ في الاتصال: ${err.message || "لا يمكن الوصول للسيرفر"}`);
+      setError(t('login.connError'));
     } finally {
       setIsLoading(false);
     }
@@ -92,11 +93,19 @@ export default function SuperAdminLoginPage() {
   return (
     <div
       className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
-      dir="rtl"
+      dir={language === 'ar' ? "rtl" : "ltr"}
       style={{
         background: "linear-gradient(135deg, #0d0d1a 0%, #1a0533 50%, #0d0d1a 100%)",
       }}
     >
+      {/* Language Switch */}
+      <button
+        onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
+        className="absolute top-6 right-6 z-50 bg-white/10 hover:bg-white/20 border border-white/20 text-white px-4 py-2 rounded-xl backdrop-blur-md font-bold transition-all"
+      >
+        {language === 'ar' ? 'English' : 'العربية'}
+      </button>
+
       {/* Background blobs */}
       <div
         className="absolute top-[-80px] right-[-80px] w-[350px] h-[350px] rounded-full opacity-25"
@@ -139,8 +148,8 @@ export default function SuperAdminLoginPage() {
             >
               <Shield className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-white mb-1">بوابة المدير العام</h1>
-            <p className="text-purple-300 text-sm">وصول مقيد — للمدير العام فقط</p>
+            <h1 className="text-2xl font-bold text-white mb-1">{t('login.superAdminTitle')}</h1>
+            <p className="text-purple-300 text-sm">{t('login.superAdminSubtitle')}</p>
           </div>
 
           {/* Warning badge */}
@@ -154,7 +163,7 @@ export default function SuperAdminLoginPage() {
               }}
             >
               <Shield className="w-4 h-4 flex-shrink-0" />
-              <span>هذه الصفحة مخصصة للمدير العام (Super Admin) فقط. أي محاولة دخول بصلاحيات مختلفة سيتم رفضها.</span>
+              <span>{t('login.superAdminAlert')}</span>
             </div>
           </div>
 
@@ -175,9 +184,9 @@ export default function SuperAdminLoginPage() {
               )}
 
               <div>
-                <label className="block text-sm font-semibold text-purple-200 mb-2">اسم المستخدم</label>
+                <label className="block text-sm font-semibold text-purple-200 mb-2">{t('login.username')}</label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                  <div className={`absolute inset-y-0 ${language === 'ar' ? 'right-0 pr-3' : 'left-0 pl-3'} flex items-center pointer-events-none`}>
                     <User className="h-5 w-5 text-slate-500" />
                   </div>
                   <input
@@ -187,21 +196,21 @@ export default function SuperAdminLoginPage() {
                     required
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="w-full pl-4 pr-10 py-3 rounded-xl outline-none transition-all text-white placeholder-slate-600"
+                    className={`w-full ${language === 'ar' ? 'pl-4 pr-10' : 'pr-4 pl-10'} py-3 rounded-xl outline-none transition-all text-white placeholder-slate-600`}
                     style={{
                       background: "rgba(255,255,255,0.07)",
                       border: "1px solid rgba(139,92,246,0.3)",
                     }}
-                    placeholder="اسم المستخدم للمدير العام"
+                    placeholder={t('login.usernameSuperPlaceholder')}
                     dir="ltr"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-purple-200 mb-2">كلمة المرور</label>
+                <label className="block text-sm font-semibold text-purple-200 mb-2">{t('login.password')}</label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                  <div className={`absolute inset-y-0 ${language === 'ar' ? 'right-0 pr-3' : 'left-0 pl-3'} flex items-center pointer-events-none`}>
                     <Lock className="h-5 w-5 text-slate-500" />
                   </div>
                   <input
@@ -211,7 +220,7 @@ export default function SuperAdminLoginPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-4 pr-10 py-3 rounded-xl outline-none transition-all text-white placeholder-slate-600"
+                    className={`w-full ${language === 'ar' ? 'pl-4 pr-10' : 'pr-4 pl-10'} py-3 rounded-xl outline-none transition-all text-white placeholder-slate-600`}
                     style={{
                       background: "rgba(255,255,255,0.07)",
                       border: "1px solid rgba(139,92,246,0.3)",
@@ -228,20 +237,20 @@ export default function SuperAdminLoginPage() {
                 className="w-full text-white font-bold py-3 px-4 rounded-xl transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-purple-900/50"
                 style={{ background: "linear-gradient(135deg, #7c3aed, #db2777)" }}
               >
-                {isLoading ? "جاري التحقق..." : "دخول المدير العام"}
+                {isLoading ? t('login.loadingBtnVerify') : t('login.loginBtnSuper')}
               </button>
             </form>
 
             {/* Navigation links */}
             <div className="mt-6 pt-5 text-center space-y-2" style={{ borderTop: "1px solid rgba(139,92,246,0.2)" }}>
-              <p className="text-xs text-slate-600">روابط أخرى</p>
+              <p className="text-xs text-slate-600">{t('login.otherLinks')}</p>
               <div className="flex justify-center gap-4 text-xs">
                 <Link href="/login" className="text-blue-400 hover:text-blue-300 transition-colors font-medium">
-                  دخول الطلاب
+                  {t('login.studentLoginLink')}
                 </Link>
                 <span className="text-slate-700">|</span>
                 <Link href="/school-admin/login" className="text-emerald-400 hover:text-emerald-300 transition-colors font-medium">
-                  دخول مدير المدرسة
+                  {t('login.schoolAdminLoginLink')}
                 </Link>
               </div>
             </div>
@@ -251,7 +260,7 @@ export default function SuperAdminLoginPage() {
         {/* Branding */}
         <div className="mt-6 text-center flex items-center justify-center gap-2 text-slate-600 text-sm">
           <BookOpen className="w-4 h-4" />
-          <span>منصة Klevro للتعليم الذكي</span>
+          <span>{t('login.platform')}</span>
         </div>
       </div>
     </div>

@@ -5,10 +5,11 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, User, Building2, BookOpen } from "lucide-react";
 import Link from "next/link";
-import { clearAllAuthData } from '@/lib/auth';
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function SchoolAdminLoginPage() {
   const router = useRouter();
+  const { language, setLanguage, t } = useLanguage();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -57,13 +58,13 @@ export default function SchoolAdminLoginPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "اسم المستخدم أو كلمة المرور غير صحيحة.");
+        setError(data.error || (language === 'ar' ? "اسم المستخدم أو كلمة المرور غير صحيحة." : "Incorrect username or password."));
         return;
       }
 
       // Only allow SCHOOL_ADMIN
       if (data.user.role !== "SCHOOL_ADMIN") {
-        setError("هذه الصفحة مخصصة لمديري المدارس فقط. يرجى استخدام الصفحة المناسبة لدورك.");
+        setError(t('login.roleErrorSchool'));
         return;
       }
 
@@ -82,7 +83,7 @@ export default function SchoolAdminLoginPage() {
 
       router.push("/school-admin");
     } catch {
-      setError("لا يمكن الاتصال بالخادم. تأكد من تشغيل الباك إند على المنفذ 5000.");
+      setError(t('login.connError'));
     } finally {
       setIsLoading(false);
     }
@@ -91,11 +92,19 @@ export default function SchoolAdminLoginPage() {
   return (
     <div
       className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
-      dir="rtl"
+      dir={language === 'ar' ? "rtl" : "ltr"}
       style={{
         background: "linear-gradient(135deg, #064e3b 0%, #065f46 50%, #064e3b 100%)",
       }}
     >
+      {/* Language Switch */}
+      <button
+        onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
+        className="absolute top-6 right-6 z-50 bg-white/10 hover:bg-white/20 border border-white/20 text-white px-4 py-2 rounded-xl backdrop-blur-md font-bold transition-all"
+      >
+        {language === 'ar' ? 'English' : 'العربية'}
+      </button>
+
       {/* Background blobs */}
       <div className="absolute top-[-100px] right-[-100px] w-[400px] h-[400px] rounded-full opacity-20" style={{ background: "radial-gradient(circle, #10b981, transparent)" }} />
       <div className="absolute bottom-[-100px] left-[-100px] w-[400px] h-[400px] rounded-full opacity-20" style={{ background: "radial-gradient(circle, #3b82f6, transparent)" }} />
@@ -108,8 +117,8 @@ export default function SchoolAdminLoginPage() {
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 bg-gradient-to-br from-emerald-400 to-teal-600 shadow-lg">
               <Building2 className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-white mb-1">بوابة مدير المدرسة</h1>
-            <p className="text-emerald-200 text-sm">أهلاً بك مجدداً في نظام إدارة المدرسة</p>
+            <h1 className="text-2xl font-bold text-white mb-1">{t('login.schoolAdminTitle')}</h1>
+            <p className="text-emerald-200 text-sm">{t('login.schoolAdminSubtitle')}</p>
           </div>
 
           {/* Form */}
@@ -122,9 +131,9 @@ export default function SchoolAdminLoginPage() {
               )}
 
               <div>
-                <label className="block text-sm font-semibold text-emerald-100 mb-2">اسم المستخدم</label>
+                <label className="block text-sm font-semibold text-emerald-100 mb-2">{t('login.username')}</label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                  <div className={`absolute inset-y-0 ${language === 'ar' ? 'right-0 pr-3' : 'left-0 pl-3'} flex items-center pointer-events-none`}>
                     <User className="h-5 w-5 text-emerald-300" />
                   </div>
                   <input
@@ -134,17 +143,17 @@ export default function SchoolAdminLoginPage() {
                     required
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="w-full pl-4 pr-10 py-3 bg-white/10 border border-white/20 rounded-xl outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 transition-all text-white placeholder-emerald-800"
-                    placeholder="اسم المستخدم للمدير"
+                    className={`w-full ${language === 'ar' ? 'pl-4 pr-10' : 'pr-4 pl-10'} py-3 bg-white/10 border border-white/20 rounded-xl outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 transition-all text-white placeholder-emerald-800`}
+                    placeholder={t('login.usernameSchoolPlaceholder')}
                     dir="ltr"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-emerald-100 mb-2">كلمة المرور</label>
+                <label className="block text-sm font-semibold text-emerald-100 mb-2">{t('login.password')}</label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                  <div className={`absolute inset-y-0 ${language === 'ar' ? 'right-0 pr-3' : 'left-0 pl-3'} flex items-center pointer-events-none`}>
                     <Lock className="h-5 w-5 text-emerald-300" />
                   </div>
                   <input
@@ -154,7 +163,7 @@ export default function SchoolAdminLoginPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-4 pr-10 py-3 bg-white/10 border border-white/20 rounded-xl outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 transition-all text-white placeholder-emerald-800"
+                    className={`w-full ${language === 'ar' ? 'pl-4 pr-10' : 'pr-4 pl-10'} py-3 bg-white/10 border border-white/20 rounded-xl outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400 transition-all text-white placeholder-emerald-800`}
                     placeholder="••••••••"
                     dir="ltr"
                   />
@@ -166,13 +175,13 @@ export default function SchoolAdminLoginPage() {
                 disabled={isLoading}
                 className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold py-3 px-4 rounded-xl transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
               >
-                {isLoading ? "جاري التحقق..." : "دخول المدير"}
+                {isLoading ? t('login.loadingBtnVerify') : t('login.loginBtnSchool')}
               </button>
             </form>
 
             <div className="mt-6 pt-4 text-center border-t border-white/10">
                <Link href="/login" className="text-emerald-300 hover:text-white transition-colors text-xs font-medium">
-                العودة لدخول الطلاب
+                {t('login.studentLoginLink')}
               </Link>
             </div>
           </div>
@@ -181,7 +190,7 @@ export default function SchoolAdminLoginPage() {
         {/* Branding */}
         <div className="mt-6 text-center flex items-center justify-center gap-2 text-emerald-200 text-sm">
           <BookOpen className="w-4 h-4" />
-          <span>منصة Klevro للتعليم الذكي</span>
+          <span>{t('login.platform')}</span>
         </div>
       </div>
     </div>

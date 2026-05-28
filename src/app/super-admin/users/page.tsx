@@ -212,18 +212,18 @@ function UsersManagementContent() {
   const getGradeName = (grade: string) => {
     if (language === 'ar') return grade;
     const translations: { [key: string]: string } = {
-      "الصف الأول الابتدائي": "1st Primary",
-      "الصف الثاني الابتدائي": "2nd Primary",
-      "الصف الثالث الابتدائي": "3rd Primary",
-      "الصف الرابع الابتدائي": "4th Primary",
-      "الصف الخامس الابتدائي": "5th Primary",
-      "الصف السادس الابتدائي": "6th Primary",
-      "الصف الأول الإعدادي": "1st Prep",
-      "الصف الثاني الإعدادي": "2nd Prep",
-      "الصف الثالث الإعدادي": "3rd Prep",
-      "الصف الأول الثانوي": "1st Secondary",
-      "الصف الثاني الثانوي": "2nd Secondary",
-      "الصف الثالث الثانوي": "3rd Secondary"
+      "الصف الأول الابتدائي": "1st Elementary",
+      "الصف الثاني الابتدائي": "2nd Elementary",
+      "الصف الثالث الابتدائي": "3rd Elementary",
+      "الصف الرابع الابتدائي": "4th Elementary",
+      "الصف الخامس الابتدائي": "5th Elementary",
+      "الصف السادس الابتدائي": "6th Elementary",
+      "الصف الأول الإعدادي": "1st Middle School",
+      "الصف الثاني الإعدادي": "2nd Middle School",
+      "الصف الثالث الإعدادي": "3rd Middle School",
+      "الصف الأول الثانوي": "1st High School",
+      "الصف الثاني الثانوي": "2nd High School",
+      "الصف الثالث الثانوي": "3rd High School"
     };
     return translations[grade] || grade;
   };
@@ -242,8 +242,8 @@ function UsersManagementContent() {
       <main className={`${language === 'ar' ? 'lg:mr-64' : 'lg:ml-64'} p-8`}>
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
           <div>
-            <h2 className="text-3xl font-black text-white">{t('usersPage.title')}</h2>
-            <p className="text-slate-500 mt-1">{t('usersPage.subtitle')}</p>
+            <h2 className="text-3xl font-black text-white break-keep">{t('usersPage.title')}</h2>
+            <p className="text-slate-500 mt-1 break-keep">{t('usersPage.subtitle')}</p>
           </div>
           <button
             onClick={() => setIsModalOpen(true)}
@@ -305,14 +305,13 @@ function UsersManagementContent() {
                 onChange={(e) => setSelectedGrade(e.target.value)}
                 className="w-full bg-[#0f0f1d] border border-white/5 rounded-2xl py-4 px-4 outline-none focus:border-white/20 transition-all text-white font-bold appearance-none"
               >
-                <option value="ALL" className="bg-[#0a0a14] text-white">{t('usersPage.allGradeLevels')}</option>
-                <optgroup label={language === 'ar' ? "المرحلة الابتدائية" : "Primary Stage"} className="bg-[#0a0a14] text-white">
+                <optgroup label={language === 'ar' ? "المرحلة الابتدائية" : "Elementary Stage"} className="bg-[#0a0a14] text-white">
                   {GRADES.slice(0, 6).map(g => <option key={g} value={g} className="bg-[#0a0a14] text-white">{getGradeName(g)}</option>)}
                 </optgroup>
-                <optgroup label={language === 'ar' ? "المرحلة الإعدادية" : "Middle Stage"} className="bg-[#0a0a14] text-white">
+                <optgroup label={language === 'ar' ? "المرحلة الإعدادية" : "Middle School Stage"} className="bg-[#0a0a14] text-white">
                   {GRADES.slice(6, 9).map(g => <option key={g} value={g} className="bg-[#0a0a14] text-white">{getGradeName(g)}</option>)}
                 </optgroup>
-                <optgroup label={language === 'ar' ? "المرحلة الثانوية" : "Secondary Stage"} className="bg-[#0a0a14] text-white">
+                <optgroup label={language === 'ar' ? "المرحلة الثانوية" : "High School Stage"} className="bg-[#0a0a14] text-white">
                   {GRADES.slice(9, 12).map(g => <option key={g} value={g} className="bg-[#0a0a14] text-white">{getGradeName(g)}</option>)}
                 </optgroup>
               </select>
@@ -396,13 +395,13 @@ function UsersManagementContent() {
                       className="w-full bg-[#1a1a2e] border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-white/30 transition-all appearance-none"
                     >
                       <option value="" className="bg-[#0a0a14] text-white">{t('usersPage.selectGrade')}</option>
-                      <optgroup label={language === 'ar' ? "المرحلة الابتدائية" : "Primary Stage"} className="bg-[#0a0a14] text-white">
+                      <optgroup label={language === 'ar' ? "المرحلة الابتدائية" : "Elementary Stage"} className="bg-[#0a0a14] text-white">
                         {GRADES.slice(0, 6).map(g => <option key={g} value={g} className="bg-[#0a0a14] text-white">{getGradeName(g)}</option>)}
                       </optgroup>
-                      <optgroup label={language === 'ar' ? "المرحلة الإعدادية" : "Middle Stage"} className="bg-[#0a0a14] text-white">
+                      <optgroup label={language === 'ar' ? "المرحلة الإعدادية" : "Middle School Stage"} className="bg-[#0a0a14] text-white">
                         {GRADES.slice(6, 9).map(g => <option key={g} value={g} className="bg-[#0a0a14] text-white">{getGradeName(g)}</option>)}
                       </optgroup>
-                      <optgroup label={language === 'ar' ? "المرحلة الثانوية" : "Secondary Stage"} className="bg-[#0a0a14] text-white">
+                      <optgroup label={language === 'ar' ? "المرحلة الثانوية" : "High School Stage"} className="bg-[#0a0a14] text-white">
                         {GRADES.slice(9, 12).map(g => <option key={g} value={g} className="bg-[#0a0a14] text-white">{getGradeName(g)}</option>)}
                       </optgroup>
                     </select>

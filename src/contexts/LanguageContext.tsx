@@ -50,11 +50,32 @@ export const LanguageProvider = ({ children }: { children: React.ReactNode }) =>
   const t = (key: string) => {
     const keys = key.split('.');
     let val: any = translations[language];
+    let found = true;
     for (const k of keys) {
-      if (val?.[k] === undefined) return key;
+      if (val?.[k] === undefined) {
+        found = false;
+        break;
+      }
       val = val[k];
     }
-    return val;
+    if (found) return val;
+
+    // Fallback lookup under "superAdmin" if not already requested
+    if (!key.startsWith('superAdmin.')) {
+      const fallbackKeys = ['superAdmin', ...keys];
+      let fallbackVal: any = translations[language];
+      let fallbackFound = true;
+      for (const k of fallbackKeys) {
+        if (fallbackVal?.[k] === undefined) {
+          fallbackFound = false;
+          break;
+        }
+        fallbackVal = fallbackVal[k];
+      }
+      if (fallbackFound) return fallbackVal;
+    }
+
+    return key;
   };
 
   if (!mounted) {
