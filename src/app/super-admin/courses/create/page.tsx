@@ -74,18 +74,18 @@ export default function CreateCoursePage() {
   const getGradeName = (grade: string) => {
     if (language === 'ar') return grade;
     const translations: { [key: string]: string } = {
-      "الصف الأول الابتدائي": "1st Elementary",
-      "الصف الثاني الابتدائي": "2nd Elementary",
-      "الصف الثالث الابتدائي": "3rd Elementary",
-      "الصف الرابع الابتدائي": "4th Elementary",
-      "الصف الخامس الابتدائي": "5th Elementary",
-      "الصف السادس الابتدائي": "6th Elementary",
-      "الصف الأول الإعدادي": "1st Middle School",
-      "الصف الثاني الإعدادي": "2nd Middle School",
-      "الصف الثالث الإعدادي": "3rd Middle School",
-      "الصف الأول الثانوي": "1st High School",
-      "الصف الثاني الثانوي": "2nd High School",
-      "الصف الثالث الثانوي": "3rd High School"
+      "الصف الأول الابتدائي": "1st Primary",
+      "الصف الثاني الابتدائي": "2nd Primary",
+      "الصف الثالث الابتدائي": "3rd Primary",
+      "الصف الرابع الابتدائي": "4th Primary",
+      "الصف الخامس الابتدائي": "5th Primary",
+      "الصف السادس الابتدائي": "6th Primary",
+      "الصف الأول الإعدادي": "1st Prep",
+      "الصف الثاني الإعدادي": "2nd Prep",
+      "الصف الثالث الإعدادي": "3rd Prep",
+      "الصف الأول الثانوي": "1st Secondary",
+      "الصف الثاني الثانوي": "2nd Secondary",
+      "الصف الثالث الثانوي": "3rd Secondary"
     };
     return translations[grade] || grade;
   };
@@ -161,6 +161,8 @@ export default function CreateCoursePage() {
   // UI States for Lesson Modal
   const [activeTab, setActiveTab] = useState<'info' | 'slides' | 'assignments' | 'exercises' | 'attachments' | 'scheduling'>('info');
   const [showQuestionForm, setShowQuestionForm] = useState(false);
+  const [isIndicatorDropdownOpen, setIsIndicatorDropdownOpen] = useState(false);
+  const [isOutcomeDropdownOpen, setIsOutcomeDropdownOpen] = useState(false);
   const [questionSource, setQuestionSource] = useState<'assignments' | 'exercises'>('exercises');
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null);
   const [tempQuestion, setTempQuestion] = useState<any>({
@@ -401,6 +403,20 @@ export default function CreateCoursePage() {
     } else {
       showToast(language === 'ar' ? "هذه الميزة قيد التطوير" : "This feature is under development", "info");
     }
+  };
+
+  const downloadMetadataTemplate = () => {
+    const wsData = [
+      ["Standard", "Indicator", "Outcome", "Domain"],
+      ["معيار 1: الفهم والاستيعاب", "مؤشر 1: يحدد المفاهيم الأساسية", "ناتج 1: أن يكون الطالب قادراً على...", "الفيزياء"],
+      ["معيار 2: التطبيق والتحليل", "مؤشر 2: يطبق القوانين الرياضية", "ناتج 2: أن يميز الطالب بين...", "الفيزياء"],
+      ["معيار 3: التفكير النقدي", "مؤشر 3: يستنتج العلاقات", "ناتج 3: أن يحلل الطالب...", "الفيزياء"]
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Metadata Template");
+    XLSX.writeFile(wb, "course_metadata_template.xlsx");
+    showToast(language === 'ar' ? "تم تحميل نموذج المعايير بنجاح" : "Metadata template downloaded successfully", "success");
   };
 
   const addBlock = (source: 'slides' | 'assignments' | 'questions' = 'slides', type: 'TEXT' | 'QUESTION') => {
@@ -1016,102 +1032,415 @@ export default function CreateCoursePage() {
                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <div className="space-y-3">
                           <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "المجال" : "Domain"}</label>
-                          <select 
-                            value={currentLesson.domain || ""}
-                            onChange={(e) => {
-                              if (e.target.value === "__NEW__") {
-                                const newDomain = prompt(language === 'ar' ? "أدخل اسم المجال الجديد:" : "Enter new domain name:");
-                                if (newDomain && newDomain.trim()) {
-                                  setCurrentLesson({...currentLesson, domain: newDomain.trim()});
+                          <div className="flex gap-2">
+                            <select 
+                              value={currentLesson.domain || ""}
+                              onChange={(e) => {
+                                if (e.target.value === "__NEW__") {
+                                  const newDomain = prompt(language === 'ar' ? "أدخل اسم المجال الجديد:" : "Enter new domain name:");
+                                  if (newDomain && newDomain.trim()) {
+                                    setCurrentLesson({...currentLesson, domain: newDomain.trim()});
+                                  }
+                                } else {
+                                    setCurrentLesson({...currentLesson, domain: e.target.value});
                                 }
-                              } else {
-                                  setCurrentLesson({...currentLesson, domain: e.target.value});
-                              }
-                            }}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none shadow-sm"
-                          >
-                            <option value="">{t('courseCreate.selectDomain') || "Select Domain..."}</option>
-                            {Array.from(new Set(lessons.map(l => l.domain).filter(Boolean))).map((domainName: any) => (
-                              <option key={domainName} value={domainName}>{domainName}</option>
-                            ))}
-                            <option value="__NEW__" className="text-indigo-600 font-bold">{language === 'ar' ? "+ إضافة مجال جديد..." : "+ Add New Domain..."}</option>
-                          </select>
+                              }}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none shadow-sm"
+                            >
+                              <option value="">{t('courseCreate.selectDomain') || "Select Domain..."}</option>
+                              {Array.from(new Set(lessons.map(l => l.domain).filter(Boolean))).map((domainName: any) => (
+                                <option key={domainName} value={domainName}>{domainName}</option>
+                              ))}
+                              <option value="__NEW__" className="text-indigo-600 font-bold">{language === 'ar' ? "+ إضافة مجال جديد..." : "+ Add New Domain..."}</option>
+                            </select>
+                            {currentLesson.domain && (
+                              <div className="flex gap-1 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newVal = prompt(language === 'ar' ? "تعديل المجال:" : "Edit Domain:", currentLesson.domain);
+                                    if (newVal !== null && newVal.trim()) {
+                                      setCurrentLesson({...currentLesson, domain: newVal.trim()});
+                                      showToast(language === 'ar' ? "تم تعديل المجال بنجاح" : "Domain updated successfully", "success");
+                                    }
+                                  }}
+                                  className="p-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl border border-indigo-100 flex items-center justify-center transition-all"
+                                  title={language === 'ar' ? "تعديل المجال" : "Edit Domain"}
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setCurrentLesson({...currentLesson, domain: ""});
+                                    showToast(language === 'ar' ? "تم إزالة المجال" : "Domain cleared", "info");
+                                  }}
+                                  className="p-3 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl border border-rose-100 flex items-center justify-center transition-all"
+                                  title={language === 'ar' ? "حذف المجال" : "Clear Domain"}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
+
                         <div className="space-y-3">
                           <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "المعايير" : "Standards"}</label>
-                          <select 
-                            value={currentLesson.standards || ""}
-                            onChange={(e) => {
-                              if (e.target.value === "__NEW__") {
-                                const newVal = prompt(language === 'ar' ? "أدخل المعيار الجديد:" : "Enter new standard:");
-                                if (newVal) setCurrentLesson({...currentLesson, standards: newVal});
-                              } else {
-                                setCurrentLesson({...currentLesson, standards: e.target.value});
-                              }
-                            }}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none"
-                          >
-                            <option value="">{t('courseCreate.selectStandard') || "Select Standard..."}</option>
-                            <option value="معيار 1: الفهم والاستيعاب">{t('courseCreate.standard1')}</option>
-                            <option value="معيار 2: التطبيق والتحليل">{t('courseCreate.standard2')}</option>
-                            <option value="معيار 3: التفكير النقدي">{t('courseCreate.standard3')}</option>
+                          <div className="flex gap-2">
+                            <select 
+                              value={currentLesson.standards || ""}
+                              onChange={(e) => {
+                                if (e.target.value === "__NEW__") {
+                                  const newVal = prompt(language === 'ar' ? "أدخل المعيار الجديد:" : "Enter new standard:");
+                                  if (newVal) setCurrentLesson({...currentLesson, standards: newVal});
+                                } else {
+                                  setCurrentLesson({...currentLesson, standards: e.target.value});
+                                }
+                              }}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none"
+                            >
+                              <option value="">{t('courseCreate.selectStandard') || "Select Standard..."}</option>
+                              <option value="معيار 1: الفهم والاستيعاب">{t('courseCreate.standard1')}</option>
+                              <option value="معيار 2: التطبيق والتحليل">{t('courseCreate.standard2')}</option>
+                              <option value="معيار 3: التفكير النقدي">{t('courseCreate.standard3')}</option>
+                              {currentLesson.standards && !["", "معيار 1: الفهم والاستيعاب", "معيار 2: التطبيق والتحليل", "معيار 3: التفكير النقدي"].includes(currentLesson.standards) && (
+                                <option value={currentLesson.standards}>{currentLesson.standards}</option>
+                              )}
+                              <option value="__NEW__" className="text-indigo-600 font-bold">{t('courseCreate.addCustomStandard') || "+ Add Custom Standard..."}</option>
+                            </select>
                             {currentLesson.standards && !["", "معيار 1: الفهم والاستيعاب", "معيار 2: التطبيق والتحليل", "معيار 3: التفكير النقدي"].includes(currentLesson.standards) && (
-                              <option value={currentLesson.standards}>{currentLesson.standards}</option>
+                              <div className="flex gap-1 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newVal = prompt(language === 'ar' ? "تعديل المعيار:" : "Edit Standard:", currentLesson.standards);
+                                    if (newVal !== null) {
+                                      setCurrentLesson({...currentLesson, standards: newVal});
+                                      showToast(language === 'ar' ? "تم تعديل المعيار بنجاح" : "Standard updated successfully", "success");
+                                    }
+                                  }}
+                                  className="p-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl border border-indigo-100 flex items-center justify-center transition-all"
+                                  title={language === 'ar' ? "تعديل المعيار" : "Edit Standard"}
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setCurrentLesson({...currentLesson, standards: ""});
+                                    showToast(language === 'ar' ? "تم حذف المعيار" : "Standard deleted", "info");
+                                  }}
+                                  className="p-3 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl border border-rose-100 flex items-center justify-center transition-all"
+                                  title={language === 'ar' ? "حذف المعيار" : "Delete Standard"}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
                             )}
-                            <option value="__NEW__" className="text-indigo-600 font-bold">{t('courseCreate.addCustomStandard') || "+ Add Custom Standard..."}</option>
-                          </select>
+                          </div>
                         </div>
-                        <div className="space-y-3">
+
+                        <div className="space-y-3 relative">
                           <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "المؤشرات" : "Indicators"}</label>
-                          <select 
-                            value={currentLesson.indicators || ""}
-                            onChange={(e) => {
-                              if (e.target.value === "__NEW__") {
-                                const newVal = prompt(language === 'ar' ? "أدخل المؤشر الجديد:" : "Enter new indicator:");
-                                if (newVal) setCurrentLesson({...currentLesson, indicators: newVal});
-                              } else {
-                                setCurrentLesson({...currentLesson, indicators: e.target.value});
-                              }
-                            }}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none"
-                          >
-                            <option value="">{t('courseCreate.selectIndicator') || "Select Indicator..."}</option>
-                            <option value="مؤشر 1: يحدد المفاهيم الأساسية">{t('courseCreate.indicator1')}</option>
-                            <option value="مؤشر 2: يطبق القوانين الرياضية">{t('courseCreate.indicator2')}</option>
-                            <option value="مؤشر 3: يستنتج العلاقات">{t('courseCreate.indicator3')}</option>
-                            {currentLesson.indicators && !["", "مؤشر 1: يحدد المفاهيم الأساسية", "مؤشر 2: يطبق القوانين الرياضية", "مؤشر 3: يستنتج العلاقات"].includes(currentLesson.indicators) && (
-                              <option value={currentLesson.indicators}>{currentLesson.indicators}</option>
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsIndicatorDropdownOpen(!isIndicatorDropdownOpen);
+                                setIsOutcomeDropdownOpen(false);
+                              }}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 font-bold text-sm outline-none focus:border-indigo-600 flex justify-between items-center shadow-sm text-right cursor-pointer"
+                            >
+                              <span className="truncate">
+                                {(() => {
+                                  const selected = (currentLesson.indicators || "").split("\n").filter(Boolean);
+                                  if (selected.length === 0) return t('courseCreate.selectIndicator') || "Select Indicator...";
+                                  return language === 'ar' 
+                                    ? `تم تحديد (${selected.length}) مؤشرات` 
+                                    : `Selected (${selected.length}) indicators`;
+                                })()}
+                              </span>
+                              <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${isIndicatorDropdownOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                            
+                            {isIndicatorDropdownOpen && (
+                              <>
+                                <div className="fixed inset-0 z-40" onClick={() => setIsIndicatorDropdownOpen(false)}></div>
+                                <div className="absolute z-50 w-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-xl max-h-72 overflow-y-auto p-3 space-y-1 animate-in fade-in slide-in-from-top-2 duration-200">
+                                  {["مؤشر 1: يحدد المفاهيم الأساسية", "مؤشر 2: يطبق القوانين الرياضية", "مؤشر 3: يستنتج العلاقات"].map((option) => {
+                                    const selected = (currentLesson.indicators || "").split("\n").filter(Boolean);
+                                    const isSelected = selected.includes(option);
+                                    return (
+                                      <label key={option} className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors text-slate-700 font-bold text-xs">
+                                        <input
+                                          type="checkbox"
+                                          checked={isSelected}
+                                          onChange={() => {
+                                            let nextList = [...selected];
+                                            if (isSelected) {
+                                              nextList = nextList.filter((x: string) => x !== option);
+                                            } else {
+                                              nextList.push(option);
+                                            }
+                                            setCurrentLesson({...currentLesson, indicators: nextList.join("\n")});
+                                          }}
+                                          className="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer shrink-0"
+                                        />
+                                        <span className="flex-1 text-right">{option}</span>
+                                      </label>
+                                    );
+                                  })}
+
+                                  {(() => {
+                                    const selected = (currentLesson.indicators || "").split("\n").filter(Boolean);
+                                    const customOpts = selected.filter((x: string) => !["مؤشر 1: يحدد المفاهيم الأساسية", "مؤشر 2: يطبق القوانين الرياضية", "مؤشر 3: يستنتج العلاقات"].includes(x));
+                                    return customOpts.map((option: string) => (
+                                      <div key={option} className="flex items-center justify-between gap-2 px-3 py-1 hover:bg-slate-50 rounded-xl text-slate-700 font-bold text-xs">
+                                        <label className="flex items-center gap-3 flex-1 cursor-pointer py-1.5">
+                                          <input
+                                            type="checkbox"
+                                            checked={true}
+                                            onChange={() => {
+                                              const nextList = selected.filter((x: string) => x !== option);
+                                              setCurrentLesson({...currentLesson, indicators: nextList.join("\n")});
+                                            }}
+                                            className="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer shrink-0"
+                                          />
+                                          <span className="flex-1 text-right truncate" title={option}>{option}</span>
+                                        </label>
+                                        <div className="flex gap-1 shrink-0">
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const newVal = prompt(language === 'ar' ? "تعديل المؤشر المخصص:" : "Edit Custom Indicator:", option);
+                                              if (newVal !== null && newVal.trim()) {
+                                                const nextList = selected.map((x: string) => x === option ? newVal.trim() : x);
+                                                setCurrentLesson({...currentLesson, indicators: nextList.join("\n")});
+                                                showToast(language === 'ar' ? "تم التعديل بنجاح" : "Updated successfully", "success");
+                                              }
+                                            }}
+                                            className="p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg transition-all"
+                                            title={language === 'ar' ? "تعديل" : "Edit"}
+                                          >
+                                            <Edit2 className="w-3.5 h-3.5" />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const nextList = selected.filter((x: string) => x !== option);
+                                              setCurrentLesson({...currentLesson, indicators: nextList.join("\n")});
+                                              showToast(language === 'ar' ? "تم إزالة المؤشر" : "Indicator removed", "info");
+                                            }}
+                                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-all"
+                                            title={language === 'ar' ? "حذف" : "Delete"}
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ));
+                                  })()}
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const newVal = prompt(language === 'ar' ? "أدخل المؤشر المخصص الجديد:" : "Enter new custom indicator:");
+                                      if (newVal && newVal.trim()) {
+                                        const selected = (currentLesson.indicators || "").split("\n").filter(Boolean);
+                                        if (!selected.includes(newVal.trim())) {
+                                          const nextList = [...selected, newVal.trim()];
+                                          setCurrentLesson({...currentLesson, indicators: nextList.join("\n")});
+                                          showToast(language === 'ar' ? "تم الإضافة بنجاح" : "Added successfully", "success");
+                                        }
+                                      }
+                                    }}
+                                    className="w-full text-right px-3 py-2 hover:bg-indigo-50/50 hover:text-indigo-600 rounded-xl cursor-pointer transition-all text-indigo-600 font-black text-xs border border-dashed border-indigo-100 mt-2 flex items-center justify-center gap-1.5"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" />
+                                    <span>{language === 'ar' ? "+ إضافة مؤشر مخصص..." : "+ Add Custom Indicator..."}</span>
+                                  </button>
+                                </div>
+                              </>
                             )}
-                            <option value="__NEW__" className="text-indigo-600 font-bold">{t('courseCreate.addCustomIndicator') || "+ Add Custom Indicator..."}</option>
-                          </select>
+                          </div>
+
+                          {(() => {
+                            const selected = (currentLesson.indicators || "").split("\n").filter(Boolean);
+                            if (selected.length === 0) return null;
+                            return (
+                              <div className="flex flex-wrap gap-1.5 mt-2">
+                                {selected.map((option: string) => (
+                                  <span key={option} className="inline-flex items-center gap-1.5 bg-indigo-50/80 text-indigo-700 px-3 py-1 rounded-xl border border-indigo-100/50 text-[10px] md:text-xs font-black shadow-sm shrink-0">
+                                    <span className="max-w-[120px] md:max-w-[200px] truncate" title={option}>{option}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const nextList = selected.filter((x: string) => x !== option);
+                                        setCurrentLesson({...currentLesson, indicators: nextList.join("\n")});
+                                      }}
+                                      className="w-4 h-4 rounded-full bg-indigo-100 text-indigo-600 hover:bg-indigo-600 hover:text-white flex items-center justify-center transition-all cursor-pointer font-bold text-[8px]"
+                                    >
+                                      ✕
+                                    </button>
+                                  </span>
+                                ))}
+                              </div>
+                            );
+                          })()}
                         </div>
-                        <div className="space-y-3">
+
+                        <div className="space-y-3 relative">
                           <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "نواتج التعلم (LOs)" : "Learning Outcomes (LOs)"}</label>
-                          <select 
-                            value={currentLesson.learningOutcomes || ""}
-                            onChange={(e) => {
-                              if (e.target.value === "__NEW__") {
-                                const newVal = prompt(language === 'ar' ? "أدخل ناتج التعلم الجديد:" : "Enter new outcome:");
-                                if (newVal) setCurrentLesson({...currentLesson, learningOutcomes: newVal});
-                              } else {
-                                setCurrentLesson({...currentLesson, learningOutcomes: e.target.value});
-                              }
-                            }}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none"
-                          >
-                            <option value="">{t('courseCreate.selectOutcome') || "Select Learning Outcome..."}</option>
-                            <option value="ناتج 1: أن يكون الطالب قادراً على...">{t('courseCreate.outcome1')}</option>
-                            <option value="ناتج 2: أن يميز الطالب بين...">{t('courseCreate.outcome2')}</option>
-                            <option value="ناتج 3: أن يحلل الطالب...">{t('courseCreate.outcome3')}</option>
-                            {currentLesson.learningOutcomes && !["", "ناتج 1: أن يكون الطالب قادراً على...", "ناتج 2: أن يميز الطالب بين...", "ناتج 3: أن يحلل الطالب..."].includes(currentLesson.learningOutcomes) && (
-                              <option value={currentLesson.learningOutcomes}>{currentLesson.learningOutcomes}</option>
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsOutcomeDropdownOpen(!isOutcomeDropdownOpen);
+                                setIsIndicatorDropdownOpen(false);
+                              }}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 font-bold text-sm outline-none focus:border-indigo-600 flex justify-between items-center shadow-sm text-right cursor-pointer"
+                            >
+                              <span className="truncate">
+                                {(() => {
+                                  const selected = (currentLesson.learningOutcomes || "").split("\n").filter(Boolean);
+                                  if (selected.length === 0) return t('courseCreate.selectOutcome') || "Select Learning Outcome...";
+                                  return language === 'ar' 
+                                    ? `تم تحديد (${selected.length}) نواتج تعلم` 
+                                    : `Selected (${selected.length}) outcomes`;
+                                })()}
+                              </span>
+                              <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${isOutcomeDropdownOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                            
+                            {isOutcomeDropdownOpen && (
+                              <>
+                                <div className="fixed inset-0 z-40" onClick={() => setIsOutcomeDropdownOpen(false)}></div>
+                                <div className="absolute z-50 w-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-xl max-h-72 overflow-y-auto p-3 space-y-1 animate-in fade-in slide-in-from-top-2 duration-200">
+                                  {["ناتج 1: أن يكون الطالب قادراً على...", "ناتج 2: أن يميز الطالب بين...", "ناتج 3: أن يحلل الطالب..."].map((option) => {
+                                    const selected = (currentLesson.learningOutcomes || "").split("\n").filter(Boolean);
+                                    const isSelected = selected.includes(option);
+                                    return (
+                                      <label key={option} className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors text-slate-700 font-bold text-xs">
+                                        <input
+                                          type="checkbox"
+                                          checked={isSelected}
+                                          onChange={() => {
+                                            let nextList = [...selected];
+                                            if (isSelected) {
+                                              nextList = nextList.filter((x: string) => x !== option);
+                                            } else {
+                                              nextList.push(option);
+                                            }
+                                            setCurrentLesson({...currentLesson, learningOutcomes: nextList.join("\n")});
+                                          }}
+                                          className="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer shrink-0"
+                                        />
+                                        <span className="flex-1 text-right">{option}</span>
+                                      </label>
+                                    );
+                                  })}
+
+                                  {(() => {
+                                    const selected = (currentLesson.learningOutcomes || "").split("\n").filter(Boolean);
+                                    const customOpts = selected.filter((x: string) => !["ناتج 1: أن يكون الطالب قادراً على...", "ناتج 2: أن يميز الطالب بين...", "ناتج 3: أن يحلل الطالب..."].includes(x));
+                                    return customOpts.map((option: string) => (
+                                      <div key={option} className="flex items-center justify-between gap-2 px-3 py-1 hover:bg-slate-50 rounded-xl text-slate-700 font-bold text-xs">
+                                        <label className="flex items-center gap-3 flex-1 cursor-pointer py-1.5">
+                                          <input
+                                            type="checkbox"
+                                            checked={true}
+                                            onChange={() => {
+                                              const nextList = selected.filter((x: string) => x !== option);
+                                              setCurrentLesson({...currentLesson, learningOutcomes: nextList.join("\n")});
+                                            }}
+                                            className="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer shrink-0"
+                                          />
+                                          <span className="flex-1 text-right truncate" title={option}>{option}</span>
+                                        </label>
+                                        <div className="flex gap-1 shrink-0">
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const newVal = prompt(language === 'ar' ? "تعديل ناتج التعلم المخصص:" : "Edit Custom Outcome:", option);
+                                              if (newVal !== null && newVal.trim()) {
+                                                const nextList = selected.map((x: string) => x === option ? newVal.trim() : x);
+                                                setCurrentLesson({...currentLesson, learningOutcomes: nextList.join("\n")});
+                                                showToast(language === 'ar' ? "تم التعديل بنجاح" : "Updated successfully", "success");
+                                              }
+                                            }}
+                                            className="p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg transition-all"
+                                            title={language === 'ar' ? "تعديل" : "Edit"}
+                                          >
+                                            <Edit2 className="w-3.5 h-3.5" />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const nextList = selected.filter((x: string) => x !== option);
+                                              setCurrentLesson({...currentLesson, learningOutcomes: nextList.join("\n")});
+                                              showToast(language === 'ar' ? "تم إزالة ناتج التعلم" : "Learning outcome removed", "info");
+                                            }}
+                                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-all"
+                                            title={language === 'ar' ? "حذف" : "Delete"}
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ));
+                                  })()}
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const newVal = prompt(language === 'ar' ? "أدخل ناتج التعلم المخصص الجديد:" : "Enter new custom learning outcome:");
+                                      if (newVal && newVal.trim()) {
+                                        const selected = (currentLesson.learningOutcomes || "").split("\n").filter(Boolean);
+                                        if (!selected.includes(newVal.trim())) {
+                                          const nextList = [...selected, newVal.trim()];
+                                          setCurrentLesson({...currentLesson, learningOutcomes: nextList.join("\n")});
+                                          showToast(language === 'ar' ? "تم الإضافة بنجاح" : "Added successfully", "success");
+                                        }
+                                      }
+                                    }}
+                                    className="w-full text-right px-3 py-2 hover:bg-indigo-50/50 hover:text-indigo-600 rounded-xl cursor-pointer transition-all text-indigo-600 font-black text-xs border border-dashed border-indigo-100 mt-2 flex items-center justify-center gap-1.5"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" />
+                                    <span>{language === 'ar' ? "+ إضافة ناتج مخصص..." : "+ Add Custom Outcome..."}</span>
+                                  </button>
+                                </div>
+                              </>
                             )}
-                            <option value="__NEW__" className="text-indigo-600 font-bold">{t('courseCreate.addCustomOutcome') || "+ Add Custom Learning Outcome..."}</option>
-                          </select>
+                          </div>
+
+                          {(() => {
+                            const selected = (currentLesson.learningOutcomes || "").split("\n").filter(Boolean);
+                            if (selected.length === 0) return null;
+                            return (
+                              <div className="flex flex-wrap gap-1.5 mt-2">
+                                {selected.map((option: string) => (
+                                  <span key={option} className="inline-flex items-center gap-1.5 bg-indigo-50/80 text-indigo-700 px-3 py-1 rounded-xl border border-indigo-100/50 text-[10px] md:text-xs font-black shadow-sm shrink-0">
+                                    <span className="max-w-[120px] md:max-w-[200px] truncate" title={option}>{option}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const nextList = selected.filter((x: string) => x !== option);
+                                        setCurrentLesson({...currentLesson, learningOutcomes: nextList.join("\n")});
+                                      }}
+                                      className="w-4 h-4 rounded-full bg-indigo-100 text-indigo-600 hover:bg-indigo-600 hover:text-white flex items-center justify-center transition-all cursor-pointer font-bold text-[8px]"
+                                    >
+                                      ✕
+                                    </button>
+                                  </span>
+                                ))}
+                              </div>
+                            );
+                          })()}
                         </div>
                        </div>
-
-                       <div className="flex justify-center mt-6">
+ 
+                       <div className="flex justify-center items-center gap-4 mt-6">
                         <input 
                           type="file" 
                           ref={metadataExcelRef} 
@@ -1122,10 +1451,18 @@ export default function CreateCoursePage() {
                         <button 
                           type="button"
                           onClick={() => handleExcelUpload('metadata')}
-                          className="flex items-center gap-2 bg-emerald-50 text-emerald-600 px-6 py-3 rounded-2xl border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all font-black text-xs"
+                          className="flex items-center gap-2 bg-emerald-50 text-emerald-600 px-6 py-3 rounded-2xl border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all font-black text-xs cursor-pointer shadow-sm"
                         >
                           <Upload className="w-4 h-4" />
                           {t('courseCreate.uploadStandardsExcel') || "Upload Standards from Excel"}
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={downloadMetadataTemplate}
+                          className="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-6 py-3 rounded-2xl border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all font-black text-xs cursor-pointer shadow-sm"
+                        >
+                          <Download className="w-4 h-4" />
+                          {language === 'ar' ? "تحميل نموذج Excel الاسترشادي" : "Download Excel Template"}
                         </button>
                        </div>
                     </div>
