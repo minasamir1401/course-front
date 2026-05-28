@@ -14,6 +14,7 @@ import Link from "next/link";
 import SuperAdminSidebar from "@/components/SuperAdminSidebar";
 import { useNotification } from "@/context/NotificationContext";
 import { startImpersonation } from '@/lib/auth';
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type TabType = 'STUDENTS' | 'TEACHERS' | 'ADMINS' | 'COURSES';
 
@@ -21,6 +22,7 @@ export default function SchoolManagementPage() {
   const { id } = useParams();
   const router = useRouter();
   const { showToast } = useNotification();
+  const { t, language } = useLanguage();
   
   const [activeTab, setActiveTab] = useState<TabType>('STUDENTS');
   const [school, setSchool] = useState<any>(null);
@@ -128,7 +130,7 @@ export default function SchoolManagementPage() {
       username: generatedUsername,
       password: generatedPassword
     }));
-    showToast("تم توليد بيانات فريدة بالإنجليزية", 'success');
+    showToast(language === 'ar' ? "تم توليد بيانات دخول فريدة بالإنجليزية" : "Unique English credentials generated", 'success');
   };
 
   const handleAdd = async (e: React.FormEvent) => {
@@ -165,23 +167,23 @@ export default function SchoolManagementPage() {
       });
 
       if (res.ok) {
-        showToast(modalMode === 'EDIT' ? "تم التعديل بنجاح" : "تمت الإضافة بنجاح", 'success');
+        showToast(modalMode === 'EDIT' ? (language === 'ar' ? "تم التعديل بنجاح" : "Updated successfully") : (language === 'ar' ? "تمت الإضافة بنجاح" : "Added successfully"), 'success');
         setIsModalOpen(false);
         setFormData({ name: "", username: "", password: "", phone: "", grade: "", specialization: "", classroomId: "", parentId: "" });
         fetchData();
       } else {
         const data = await res.json();
-        showToast(data.error || "فشل في العملية", 'error');
+        showToast(data.error || (language === 'ar' ? "فشل في العملية" : "Action failed"), 'error');
       }
     } catch (error) {
-      showToast("خطأ في الاتصال بالسيرفر", 'error');
+      showToast(language === 'ar' ? "خطأ في الاتصال بالسيرفر" : "Server connection error", 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDelete = async (userId: string) => {
-    const confirmed = window.confirm("هل أنت متأكد من حذف هذا السجل؟");
+    const confirmed = window.confirm(language === 'ar' ? "هل أنت متأكد من حذف هذا السجل؟" : "Are you sure you want to delete this record?");
     if (!confirmed) return;
 
     const token = localStorage.getItem("super_admin_token");
@@ -194,13 +196,13 @@ export default function SchoolManagementPage() {
       });
 
       if (res.ok) {
-        showToast("تم الحذف بنجاح", 'success');
+        showToast(language === 'ar' ? "تم الحذف بنجاح" : "Deleted successfully", 'success');
         fetchData();
       } else {
-        showToast("فشل الحذف", 'error');
+        showToast(language === 'ar' ? "فشل الحذف" : "Failed to delete", 'error');
       }
     } catch (error) {
-      showToast("خطأ في الاتصال", 'error');
+      showToast(language === 'ar' ? "خطأ في الاتصال" : "Connection error", 'error');
     }
   };
 
@@ -245,10 +247,10 @@ export default function SchoolManagementPage() {
           router.push("/school-admin");
         }
         
-        showToast(`تم الدخول بنجاح كـ ${user.name}`, 'success');
+        showToast(language === 'ar' ? `تم الدخول بنجاح كـ ${user.name}` : `Successfully logged in as ${user.name}`, 'success');
       }
     } catch (error) {
-      showToast("فشل الدخول كمسخدم", 'error');
+      showToast(language === 'ar' ? "فشل الدخول كمسخدم" : "Failed to impersonate user", 'error');
     }
   };
 
@@ -263,40 +265,40 @@ export default function SchoolManagementPage() {
   });
 
   return (
-    <div className="min-h-screen bg-[#0a0a14] text-slate-200" dir="rtl">
+    <div className="min-h-screen bg-[#0a0a14] text-slate-200" dir={language === 'ar' ? 'rtl' : 'ltr'}>
       <SuperAdminSidebar />
 
-      <main className="lg:mr-64 p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8 transition-all duration-300">
+      <main className={`${language === 'ar' ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8 transition-all duration-300`}>
         
         {/* Header with Navigation */}
         <div className="flex flex-col gap-6 mb-8">
           <div className="flex items-center gap-4">
             <Link href="/super-admin/schools" className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all">
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className={`w-5 h-5 ${language === 'en' ? 'rotate-180' : ''}`} />
             </Link>
             <div className="flex flex-col">
-              <h1 className="text-2xl sm:text-3xl font-black text-white">{school?.name || "إدارة المدرسة"}</h1>
+              <h1 className="text-2xl sm:text-3xl font-black text-white">{school?.name || t('superAdmin.schoolDetails.title')}</h1>
               <div className="flex items-center gap-2 text-slate-500 text-sm font-medium mt-1">
                 <Building2 className="w-4 h-4" />
-                لوحة التحكم المركزية للمدرسة
+                {t('superAdmin.schoolDetails.controlPanel')}
               </div>
             </div>
           </div>
 
           {/* School Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <StatSmall title="الطلاب" value={schoolStats?.students || 0} icon={<GraduationCap />} color="blue" />
-            <StatSmall title="المدرسين" value={schoolStats?.teachers || 0} icon={<Users />} color="purple" />
-            <StatSmall title="المشرفين" value={schoolStats?.admins || 0} icon={<Shield />} color="emerald" />
+            <StatSmall title={t('superAdmin.schoolDetails.students')} value={schoolStats?.students || 0} icon={<GraduationCap />} color="blue" />
+            <StatSmall title={t('superAdmin.schoolDetails.teachers')} value={schoolStats?.teachers || 0} icon={<Users />} color="purple" />
+            <StatSmall title={t('superAdmin.schoolDetails.admins')} value={schoolStats?.admins || 0} icon={<Shield />} color="emerald" />
           </div>
         </div>
 
         {/* Management Tabs */}
         <div className="flex overflow-x-auto gap-2 p-1 bg-white/5 rounded-2xl mb-8 no-scrollbar border border-white/5">
-          <TabButton active={activeTab === 'STUDENTS'} onClick={() => setActiveTab('STUDENTS')} icon={<GraduationCap size={18} />} label="الطلاب" />
-          <TabButton active={activeTab === 'TEACHERS'} onClick={() => setActiveTab('TEACHERS')} icon={<Users size={18} />} label="المدرسين" />
-          <TabButton active={activeTab === 'ADMINS'} onClick={() => setActiveTab('ADMINS')} icon={<Shield size={18} />} label="المشرفين والمديرين" />
-          <TabButton active={activeTab === 'COURSES'} onClick={() => setActiveTab('COURSES')} icon={<BookOpen size={18} />} label="الكورسات والمحتوى" />
+          <TabButton active={activeTab === 'STUDENTS'} onClick={() => setActiveTab('STUDENTS')} icon={<GraduationCap size={18} />} label={t('superAdmin.schoolDetails.studentsTab')} />
+          <TabButton active={activeTab === 'TEACHERS'} onClick={() => setActiveTab('TEACHERS')} icon={<Users size={18} />} label={t('superAdmin.schoolDetails.teachersTab')} />
+          <TabButton active={activeTab === 'ADMINS'} onClick={() => setActiveTab('ADMINS')} icon={<Shield size={18} />} label={t('superAdmin.schoolDetails.adminsTab')} />
+          <TabButton active={activeTab === 'COURSES'} onClick={() => setActiveTab('COURSES')} icon={<BookOpen size={18} />} label={t('superAdmin.schoolDetails.coursesTab')} />
         </div>
 
         {/* Action Bar */}
@@ -304,13 +306,13 @@ export default function SchoolManagementPage() {
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
             <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto">
               <div className="relative flex-1 min-w-[240px]">
-                <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                <Search className={`absolute ${language === 'ar' ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500`} />
                 <input 
                   type="text" 
-                  placeholder="البحث بالاسم، الكود، أو رقم الهاتف..."
+                  placeholder={t('superAdmin.schoolDetails.searchPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 pr-12 pl-4 outline-none focus:border-purple-500/50 transition-all text-white"
+                  className={`w-full bg-white/5 border border-white/10 rounded-2xl py-3 ${language === 'ar' ? 'pr-12 pl-4' : 'pl-12 pr-4'} outline-none focus:border-purple-500/50 transition-all text-white`}
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -319,24 +321,24 @@ export default function SchoolManagementPage() {
                   value={filterGrade}
                   onChange={(e) => setFilterGrade(e.target.value)}
                 >
-                  <option value="ALL" className="bg-[#0a0a14] text-white">كل المراحل</option>
-                  <optgroup label="المرحلة الثانوية" className="bg-[#0a0a14] text-white">
-                    <option value="الصف الأول الثانوي" className="text-white">الأول الثانوي</option>
-                    <option value="الصف الثاني الثانوي" className="text-white">الثاني الثانوي</option>
-                    <option value="الصف الثالث الثانوي" className="text-white">الثالث الثانوي</option>
+                  <option value="ALL" className="bg-[#0a0a14] text-white">{t('superAdmin.schoolDetails.allGrades')}</option>
+                  <optgroup label={language === 'ar' ? "المرحلة الثانوية" : "High School"} className="bg-[#0a0a14] text-white">
+                    <option value="الصف الأول الثانوي" className="text-white">{language === 'ar' ? "الأول الثانوي" : "Grade 10"}</option>
+                    <option value="الصف الثاني الثانوي" className="text-white">{language === 'ar' ? "الثاني الثانوي" : "Grade 11"}</option>
+                    <option value="الصف الثالث الثانوي" className="text-white">{language === 'ar' ? "الثالث الثانوي" : "Grade 12"}</option>
                   </optgroup>
-                  <optgroup label="المرحلة الإعدادية" className="bg-[#0a0a14] text-white">
-                    <option value="الصف الأول الإعدادي" className="text-white">الأول الإعدادي</option>
-                    <option value="الصف الثاني الإعدادي" className="text-white">الثاني الإعدادي</option>
-                    <option value="الصف الثالث الإعدادي" className="text-white">الثالث الإعدادي</option>
+                  <optgroup label={language === 'ar' ? "المرحلة الإعدادية" : "Middle School"} className="bg-[#0a0a14] text-white">
+                    <option value="الصف الأول الإعدادي" className="text-white">{language === 'ar' ? "الأول الإعدادي" : "Grade 7"}</option>
+                    <option value="الصف الثاني الإعدادي" className="text-white">{language === 'ar' ? "الثاني الإعدادي" : "Grade 8"}</option>
+                    <option value="الصف الثالث الإعدادي" className="text-white">{language === 'ar' ? "الثالث الإعدادي" : "Grade 9"}</option>
                   </optgroup>
-                  <optgroup label="المرحلة الابتدائية" className="bg-[#0a0a14] text-white">
-                    <option value="الصف الأول الابتدائي" className="text-white">الأول الابتدائي</option>
-                    <option value="الصف الثاني الابتدائي" className="text-white">الثاني الابتدائي</option>
-                    <option value="الصف الثالث الابتدائي" className="text-white">الثالث الابتدائي</option>
-                    <option value="الصف الرابع الابتدائي" className="text-white">الرابع الابتدائي</option>
-                    <option value="الصف الخامس الابتدائي" className="text-white">الخامس الابتدائي</option>
-                    <option value="الصف السادس الابتدائي" className="text-white">السادس الابتدائي</option>
+                  <optgroup label={language === 'ar' ? "المرحلة الابتدائية" : "Elementary School"} className="bg-[#0a0a14] text-white">
+                    <option value="الصف الأول الابتدائي" className="text-white">{language === 'ar' ? "الأول الابتدائي" : "Grade 1"}</option>
+                    <option value="الصف الثاني الابتدائي" className="text-white">{language === 'ar' ? "الثاني الابتدائي" : "Grade 2"}</option>
+                    <option value="الصف الثالث الابتدائي" className="text-white">{language === 'ar' ? "الثالث الابتدائي" : "Grade 3"}</option>
+                    <option value="الصف الرابع الابتدائي" className="text-white">{language === 'ar' ? "الرابع الابتدائي" : "Grade 4"}</option>
+                    <option value="الصف الخامس الابتدائي" className="text-white">{language === 'ar' ? "الخامس الابتدائي" : "Grade 5"}</option>
+                    <option value="الصف السادس الابتدائي" className="text-white">{language === 'ar' ? "السادس الابتدائي" : "Grade 6"}</option>
                   </optgroup>
                 </select>
                 <button className="p-3 rounded-xl bg-white/5 text-slate-400 hover:text-white border border-white/5">
@@ -359,7 +361,7 @@ export default function SchoolManagementPage() {
               className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-3 rounded-2xl font-black flex items-center gap-2 hover:shadow-lg hover:shadow-purple-500/20 transition-all w-full lg:w-auto justify-center"
             >
               <Plus className="w-5 h-5" />
-              {activeTab === 'STUDENTS' ? "إضافة طالب جديد" : activeTab === 'TEACHERS' ? "إضافة مدرس" : activeTab === 'COURSES' ? "إضافة كورس جديد" : "إضافة سجل جديد"}
+              {activeTab === 'STUDENTS' ? t('superAdmin.schoolDetails.addStudent') : activeTab === 'TEACHERS' ? t('superAdmin.schoolDetails.addTeacher') : activeTab === 'COURSES' ? t('superAdmin.schoolDetails.addCourse') : t('superAdmin.schoolDetails.addNewRecord')}
             </button>
           </div>
         </div>
@@ -370,7 +372,7 @@ export default function SchoolManagementPage() {
             <div className="bg-[#0f0f1d] border border-white/10 w-full max-w-xl rounded-3xl p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-bold text-white">
-                  {modalMode === 'EDIT' ? "تعديل البيانات" : (activeTab === 'STUDENTS' ? "إضافة طالب جديد" : activeTab === 'TEACHERS' ? "إضافة مدرس جديد" : "إضافة سجل جديد")}
+                  {modalMode === 'EDIT' ? t('superAdmin.schoolDetails.editInfo') : (activeTab === 'STUDENTS' ? t('superAdmin.schoolDetails.addStudent') : activeTab === 'TEACHERS' ? t('superAdmin.schoolDetails.addTeacher') : t('superAdmin.schoolDetails.addNewRecord'))}
                 </h3>
                 <button onClick={() => setIsModalOpen(false)} className="text-slate-500 hover:text-white"><X /></button>
               </div>
@@ -378,13 +380,13 @@ export default function SchoolManagementPage() {
               <form onSubmit={handleAdd} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="col-span-full">
-                    <label className="block text-sm font-bold text-slate-400 mb-1">الاسم الكامل</label>
+                    <label className="block text-sm font-bold text-slate-400 mb-1">{t('superAdmin.schoolDetails.fullName')}</label>
                     <input 
                       type="text" required
                       value={formData.name}
                       onChange={(e) => setFormData({...formData, name: e.target.value})}
                       className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-white outline-none focus:border-purple-500 transition-all"
-                      placeholder="مثال: محمد أحمد"
+                      placeholder={t('superAdmin.schoolDetails.namePlaceholder')}
                     />
                   </div>
 
@@ -396,13 +398,13 @@ export default function SchoolManagementPage() {
                         className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-purple-400 py-2 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all"
                       >
                         <Sparkles className="w-3 h-3" />
-                        توليد بيانات دخول فريدة بالإنجليزية
+                        {t('superAdmin.schoolDetails.generateCredentials')}
                       </button>
                     </div>
                   )}
 
                   <div className="relative">
-                    <label className="block text-sm font-bold text-slate-400 mb-1">اسم المستخدم</label>
+                    <label className="block text-sm font-bold text-slate-400 mb-1">{t('superAdmin.schoolDetails.username')}</label>
                     <input 
                       type="text" required
                       readOnly={modalMode === 'EDIT'}
@@ -413,70 +415,70 @@ export default function SchoolManagementPage() {
                     />
                   </div>
                   <div className="relative">
-                    <label className="block text-sm font-bold text-slate-400 mb-1">{modalMode === 'EDIT' ? "كلمة المرور الجديدة" : "كلمة المرور"}</label>
+                    <label className="block text-sm font-bold text-slate-400 mb-1">{modalMode === 'EDIT' ? t('superAdmin.schoolDetails.newPassword') : t('superAdmin.schoolDetails.password')}</label>
                     <input 
                       type="text" required={modalMode === 'ADD'}
                       value={formData.password}
                       onChange={(e) => setFormData({...formData, password: e.target.value})}
                       className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-white outline-none focus:border-purple-500 transition-all"
-                      placeholder={modalMode === 'EDIT' ? "اتركها فارغة لعدم التغيير" : "********"}
+                      placeholder={modalMode === 'EDIT' ? t('superAdmin.schoolDetails.passwordHelper') : "********"}
                     />
                   </div>
 
                   {activeTab === 'TEACHERS' && (
                     <>
                       <div className="col-span-full">
-                        <label className="block text-sm font-bold text-slate-400 mb-1">التخصص الدراسي (المادة)</label>
+                        <label className="block text-sm font-bold text-slate-400 mb-1">{t('superAdmin.schoolDetails.specialization')}</label>
                         <select 
                           required
                           value={formData.specialization}
                           onChange={(e) => setFormData({...formData, specialization: e.target.value})}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-white outline-none focus:border-purple-500 transition-all"
+                          className="w-full bg-[#0a0a14] border border-white/10 rounded-xl py-2.5 px-4 text-white outline-none focus:border-purple-500 transition-all"
                         >
-                          <option value="" className="text-black">اختر التخصص</option>
-                          <option value="اللغة العربية" className="text-black">اللغة العربية</option>
-                          <option value="اللغة الإنجليزية" className="text-black">اللغة الإنجليزية</option>
-                          <option value="الرياضيات" className="text-black">الرياضيات</option>
-                          <option value="العلوم" className="text-black">العلوم</option>
-                          <option value="الدراسات الاجتماعية" className="text-black">الدراسات الاجتماعية</option>
-                          <option value="الفيزياء" className="text-black">الفيزياء</option>
-                          <option value="الكيمياء" className="text-black">الكيمياء</option>
-                          <option value="الأحياء" className="text-black">الأحياء</option>
-                          <option value="الحاسب الآلي" className="text-black">الحاسب الآلي</option>
-                          <option value="التربية الدينية" className="text-black">التربية الدينية</option>
-                          <option value="اللغة الفرنسية" className="text-black">اللغة الفرنسية</option>
-                          <option value="اللغة الألمانية" className="text-black">اللغة الألمانية</option>
-                          <option value="اللغة الإيطالية" className="text-black">اللغة الإيطالية</option>
-                          <option value="الفلسفة" className="text-black">الفلسفة</option>
-                          <option value="علم النفس" className="text-black">علم النفس</option>
+                          <option value="" className="text-white">{t('superAdmin.schoolDetails.selectSpecialization')}</option>
+                          <option value="اللغة العربية" className="text-white">{language === 'ar' ? "اللغة العربية" : "Arabic"}</option>
+                          <option value="اللغة الإنجليزية" className="text-white">{language === 'ar' ? "اللغة الإنجليزية" : "English"}</option>
+                          <option value="الرياضيات" className="text-white">{language === 'ar' ? "الرياضيات" : "Mathematics"}</option>
+                          <option value="العلوم" className="text-white">{language === 'ar' ? "العلوم" : "Sciences"}</option>
+                          <option value="الدراسات الاجتماعية" className="text-white">{language === 'ar' ? "الدراسات الاجتماعية" : "Social Studies"}</option>
+                          <option value="الفيزياء" className="text-white">{language === 'ar' ? "الفيزياء" : "Physics"}</option>
+                          <option value="الكيمياء" className="text-white">{language === 'ar' ? "الكيمياء" : "Chemistry"}</option>
+                          <option value="الأحياء" className="text-white">{language === 'ar' ? "الأحياء" : "Biology"}</option>
+                          <option value="الحاسب الآلي" className="text-white">{language === 'ar' ? "الحاسب الآلي" : "Computer Science"}</option>
+                          <option value="التربية الدينية" className="text-white">{language === 'ar' ? "التربية الدينية" : "Religious Education"}</option>
+                          <option value="اللغة الفرنسية" className="text-white">{language === 'ar' ? "اللغة الفرنسية" : "French"}</option>
+                          <option value="اللغة الألمانية" className="text-white">{language === 'ar' ? "اللغة الألمانية" : "German"}</option>
+                          <option value="اللغة الإيطالية" className="text-white">{language === 'ar' ? "اللغة الإيطالية" : "Italian"}</option>
+                          <option value="الفلسفة" className="text-white">{language === 'ar' ? "الفلسفة" : "Philosophy"}</option>
+                          <option value="علم النفس" className="text-white">{language === 'ar' ? "علم النفس" : "Psychology"}</option>
                         </select>
                       </div>
                       <div className="col-span-full">
-                        <label className="block text-sm font-bold text-slate-400 mb-1">الصف الدراسي / المرحلة</label>
+                        <label className="block text-sm font-bold text-slate-400 mb-1">{t('superAdmin.schoolDetails.gradeLevel')}</label>
                         <select 
                           required
                           value={formData.grade}
                           onChange={(e) => setFormData({...formData, grade: e.target.value})}
                           className="w-full bg-[#0a0a14] border border-white/10 rounded-xl py-2.5 px-4 text-white outline-none focus:border-purple-500 transition-all appearance-none"
                         >
-                          <option value="" className="bg-[#0a0a14] text-white">اختر الصف</option>
-                          <optgroup label="المرحلة الثانوية" className="bg-[#0a0a14] text-white">
-                            <option value="الصف الأول الثانوي" className="text-white">الأول الثانوي</option>
-                            <option value="الصف الثاني الثانوي" className="text-white">الثاني الثانوي</option>
-                            <option value="الصف الثالث الثانوي" className="text-white">الثالث الثانوي</option>
+                          <option value="" className="bg-[#0a0a14] text-white">{t('superAdmin.schoolDetails.selectGrade')}</option>
+                          <optgroup label={language === 'ar' ? "المرحلة الثانوية" : "High School"} className="bg-[#0a0a14] text-white">
+                            <option value="الصف الأول الثانوي" className="text-white">{language === 'ar' ? "الأول الثانوي" : "Grade 10"}</option>
+                            <option value="الصف الثاني الثانوي" className="text-white">{language === 'ar' ? "الثاني الثانوي" : "Grade 11"}</option>
+                            <option value="الصف الثالث الثانوي" className="text-white">{language === 'ar' ? "الثالث الثانوي" : "Grade 12"}</option>
                           </optgroup>
-                          <optgroup label="المرحلة الإعدادية" className="bg-[#0a0a14] text-white">
-                            <option value="الصف الأول الإعدادي" className="text-white">الأول الإعدادي</option>
-                            <option value="الصف الثاني الإعدادي" className="text-white">الثاني الإعدادي</option>
-                            <option value="الصف الثالث الإعدادي" className="text-white">الثالث الإعدادي</option>
+                          <optgroup label={language === 'ar' ? "المرحلة الإعدادية" : "Middle School"} className="bg-[#0a0a14] text-white">
+                            <option value="الصف الأول الإعدادي" className="text-white">{language === 'ar' ? "الأول الإعدادي" : "Grade 7"}</option>
+                            <option value="الصف الثاني الإعدادي" className="text-white">{language === 'ar' ? "الثاني الإعدادي" : "Grade 8"}</option>
+                            <option value="الصف الثالث الإعدادي" className="text-white">{language === 'ar' ? "الثالث الإعدادي" : "Grade 9"}</option>
                           </optgroup>
-                          <optgroup label="المرحلة الابتدائية" className="bg-[#0a0a14] text-white">
-                            <option value="الصف الأول الابتدائي" className="text-white">الأول الابتدائي</option>
-                            <option value="الصف الثاني الابتدائي" className="text-white">الثاني الابتدائي</option>
-                            <option value="الصف الثالث الابتدائي" className="text-white">الثالث الابتدائي</option>
-                            <option value="الصف الرابع الابتدائي" className="text-white">الرابع الابتدائي</option>
-                            <option value="الصف الخامس الابتدائي" className="text-white">الخامس الابتدائي</option>
-                            <option value="الصف السادس الابتدائي" className="text-white">السادس الابتدائي</option>
+                          <optgroup label={language === 'ar' ? "المرحلة الابتدائية" : "Elementary School"} className="bg-[#0a0a14] text-white">
+                            <option value="الصف الأول الابتدائي" className="text-white">{language === 'ar' ? "الأول الابتدائي" : "Grade 1"}</option>
+                            <option value="الصف الثاني الابتدائي" className="text-white">{language === 'ar' ? "الثاني الابتدائي" : "Grade 2"}</option>
+                            <option value="الصف الثالث الابتدائي" className="text-white">{language === 'ar' ? "الثالث الابتدائي" : "Grade 3"}</option>
+                            <option value="الصف الرابع الابتدائي" className="text-white">{language === 'ar' ? "الرابع الابتدائي" : "Grade 4"}</option>
+                            <option value="الصف الخامس الابتدائي" className="text-white">{language === 'ar' ? "الخامس الابتدائي" : "Grade 5"}</option>
+                            <option value="الصف السادس الابتدائي" className="text-white">{language === 'ar' ? "السادس الابتدائي" : "Grade 6"}</option>
                           </optgroup>
                         </select>
                       </div>
@@ -485,44 +487,38 @@ export default function SchoolManagementPage() {
 
                   {activeTab === 'STUDENTS' && (
                     <div className="col-span-full">
-                      <label className="block text-sm font-bold text-slate-400 mb-1">الصف الدراسي</label>
+                      <label className="block text-sm font-bold text-slate-400 mb-1">{t('superAdmin.schoolDetails.gradeLevel')}</label>
                       <select 
                         required
                         value={formData.grade}
                         onChange={(e) => setFormData({...formData, grade: e.target.value})}
                         className="w-full bg-[#0a0a14] border border-white/10 rounded-xl py-2.5 px-4 text-white outline-none focus:border-purple-500 transition-all appearance-none"
                       >
-                        <option value="" className="bg-[#0a0a14] text-white">اختر الصف</option>
-                        <optgroup label="المرحلة الابتدائية" className="bg-[#0a0a14] text-white">
-                          <option value="الصف الأول الابتدائي" className="text-white">الأول الابتدائي</option>
-                          <option value="الصف الثاني الابتدائي" className="text-white">الثاني الابتدائي</option>
-                          <option value="الصف الثالث الابتدائي" className="text-white">الثالث الابتدائي</option>
-                          <option value="الصف الرابع الابتدائي" className="text-white">الرابع الابتدائي</option>
-                          <option value="الصف الخامس الابتدائي" className="text-white">الخامس الابتدائي</option>
-                          <option value="الصف السادس الابتدائي" className="text-white">السادس الابتدائي</option>
+                        <option value="" className="bg-[#0a0a14] text-white">{t('superAdmin.schoolDetails.selectGrade')}</option>
+                        <optgroup label={language === 'ar' ? "المرحلة الابتدائية" : "Elementary School"} className="bg-[#0a0a14] text-white">
+                          <option value="الصف الأول الابتدائي" className="text-white">{language === 'ar' ? "الأول الابتدائي" : "Grade 1"}</option>
+                          <option value="الصف الثاني الابتدائي" className="text-white">{language === 'ar' ? "الثاني الابتدائي" : "Grade 2"}</option>
+                          <option value="الصف الثالث الابتدائي" className="text-white">{language === 'ar' ? "الثالث الابتدائي" : "Grade 3"}</option>
+                          <option value="الصف الرابع الابتدائي" className="text-white">{language === 'ar' ? "الرابع الابتدائي" : "Grade 4"}</option>
+                          <option value="الصف الخامس الابتدائي" className="text-white">{language === 'ar' ? "الخامس الابتدائي" : "Grade 5"}</option>
+                          <option value="الصف السادس الابتدائي" className="text-white">{language === 'ar' ? "السادس الابتدائي" : "Grade 6"}</option>
                         </optgroup>
-                        <optgroup label="المرحلة الإعدادية" className="bg-[#0a0a14] text-white">
-                          <option value="الصف الأول الإعدادي" className="text-white">الأول الإعدادي</option>
-                          <option value="الصف الثاني الإعدادي" className="text-white">الثاني الإعدادي</option>
-                          <option value="الصف الثالث الإعدادي" className="text-white">الثالث الإعدادي</option>
-                        </optgroup>
-                        <optgroup label="المرحلة الثانوية" className="bg-[#0a0a14] text-white">
-                          <option value="الصف الأول الثانوي" className="text-white">الأول الثانوي</option>
-                          <option value="الصف الثاني الثانوي" className="text-white">الثاني الثانوي</option>
-                          <option value="الصف الثالث الثانوي" className="text-white">الثالث الثانوي</option>
+                        <optgroup label={language === 'ar' ? "المرحلة الثانوية" : "High School"} className="bg-[#0a0a14] text-white">
+                          <option value="الصف الأول الثانوي" className="text-white">{language === 'ar' ? "الأول الثانوي" : "Grade 10"}</option>
+                          <option value="الصف الثاني الثانوي" className="text-white">{language === 'ar' ? "الثاني الثانوي" : "Grade 11"}</option>
+                          <option value="الصف الثالث الثانوي" className="text-white">{language === 'ar' ? "الثالث الثانوي" : "Grade 12"}</option>
                         </optgroup>
                       </select>
                     </div>
                   )}
 
-
                   <div className="col-span-full">
-                    <label className="block text-sm font-bold text-slate-400 mb-1">رقم الهاتف</label>
+                    <label className="block text-sm font-bold text-slate-400 mb-1">{t('superAdmin.schoolDetails.phone')}</label>
                     <input 
                       type="text"
                       value={formData.phone}
                       onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-white outline-none focus:border-purple-500 transition-all"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-white outline-none focus:border-purple-500 transition-all text-left"
                       placeholder="01xxxxxxxxx"
                     />
                   </div>
@@ -532,34 +528,32 @@ export default function SchoolManagementPage() {
                   disabled={isSubmitting}
                   className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold py-3.5 rounded-xl mt-4 transition-all disabled:opacity-50 shadow-lg shadow-purple-500/20"
                 >
-                  {isSubmitting ? "جاري الحفظ..." : "حفظ البيانات"}
+                  {isSubmitting ? t('superAdmin.schoolDetails.saving') : t('superAdmin.schoolDetails.save')}
                 </button>
               </form>
             </div>
           </div>
         )}
-
-        {/* Content Table */}
         <div className="bg-[#0f0f1d] rounded-3xl border border-white/5 overflow-hidden shadow-2xl">
           <div className="overflow-x-auto">
-            <table className="w-full text-right border-collapse">
+            <table className={`w-full ${language === 'ar' ? 'text-right' : 'text-left'} border-collapse`}>
               <thead>
                 <tr className="bg-white/[0.02] text-slate-500 text-[10px] font-black uppercase tracking-widest border-b border-white/5">
                   {activeTab === 'COURSES' ? (
                     <>
-                      <th className="px-6 py-4">اسم الكورس</th>
-                      <th className="px-6 py-4">الصف الدراسي</th>
-                      <th className="px-6 py-4">المادة</th>
-                      <th className="px-6 py-4">عدد الدروس</th>
-                      <th className="px-6 py-4 text-center">الإجراءات</th>
+                      <th className="px-6 py-4">{t('superAdmin.schoolDetails.courseName')}</th>
+                      <th className="px-6 py-4">{t('superAdmin.schoolDetails.gradeLevel')}</th>
+                      <th className="px-6 py-4">{t('superAdmin.schoolDetails.subject')}</th>
+                      <th className="px-6 py-4">{t('superAdmin.schoolDetails.lessonsCount')}</th>
+                      <th className="px-6 py-4 text-center">{t('superAdmin.schoolDetails.actions')}</th>
                     </>
                   ) : (
                     <>
-                      <th className="px-6 py-4">المستخدم</th>
-                      <th className="px-6 py-4">بيانات الحساب</th>
-                      <th className="px-6 py-4">التفاصيل الأكاديمية</th>
-                      <th className="px-6 py-4">الحالة</th>
-                      <th className="px-6 py-4 text-center">الإجراءات</th>
+                      <th className="px-6 py-4">{t('superAdmin.schoolDetails.user')}</th>
+                      <th className="px-6 py-4">{t('superAdmin.schoolDetails.accountData')}</th>
+                      <th className="px-6 py-4">{t('superAdmin.schoolDetails.academicDetails')}</th>
+                      <th className="px-6 py-4">{t('superAdmin.schoolDetails.status')}</th>
+                      <th className="px-6 py-4 text-center">{t('superAdmin.schoolDetails.actions')}</th>
                     </>
                   )}
                 </tr>
@@ -587,7 +581,7 @@ export default function SchoolManagementPage() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2 text-slate-300 font-bold">
                         <ClipboardList className="w-4 h-4 text-purple-400" />
-                        {course._count?.lessons || 0} درس
+                        {course._count?.lessons || 0} {t('superAdmin.schoolDetails.lessons')}
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -597,7 +591,7 @@ export default function SchoolManagementPage() {
                           className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-[10px] font-black transition-all"
                         >
                           <Activity className="w-3 h-3" />
-                          <span>عرض المحتوى</span>
+                          <span>{t('superAdmin.schoolDetails.viewContent')}</span>
                         </Link>
                         <Link 
                           href={`/super-admin/courses/edit?id=${course.id}&schoolId=${id}`}
@@ -631,7 +625,7 @@ export default function SchoolManagementPage() {
                       <div className="space-y-1">
                         <div className="flex items-center gap-2 text-slate-300 text-xs font-bold">
                           <Phone className="w-3 h-3 text-purple-400" />
-                          {user.phone || "بدون هاتف"}
+                          {user.phone || t('superAdmin.schoolDetails.noPhone')}
                         </div>
                         <div className="flex items-center gap-2 text-slate-500 text-[10px]">
                           <Key className="w-3 h-3" />
@@ -642,17 +636,17 @@ export default function SchoolManagementPage() {
                     <td className="px-6 py-4">
                       <div className="space-y-1.5">
                         <span className="px-2 py-0.5 rounded-lg bg-blue-500/10 text-blue-400 text-[10px] font-black border border-blue-500/20">
-                          {user.role === 'TEACHER' ? user.specialization : user.grade || "غير محدد"}
+                          {user.role === 'TEACHER' ? user.specialization : user.grade || (language === 'ar' ? "غير محدد" : "Not Specified")}
                         </span>
                         <div className="flex items-center gap-2 text-slate-500 text-[10px]">
                           <Activity className="w-3 h-3" />
-                          {user.role === 'TEACHER' ? user.grade : user.classroom?.name || "بدون فصل"}
+                          {user.role === 'TEACHER' ? user.grade : user.classroom?.name || t('superAdmin.schoolDetails.noClassroom')}
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black ${user.status === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
-                        {user.status === 'ACTIVE' ? 'نشط' : 'متوقف'}
+                        {user.status === 'ACTIVE' ? t('superAdmin.schoolDetails.active') : t('superAdmin.schoolDetails.suspended')}
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -663,7 +657,7 @@ export default function SchoolManagementPage() {
                           title="Login as User"
                         >
                           <Sparkles className="w-3 h-3 group-hover/btn:animate-pulse" />
-                          <span>دخول مباشر</span>
+                          <span>{t('superAdmin.schoolDetails.directLogin')}</span>
                         </button>
                         
                         <div className="flex gap-1">
@@ -694,8 +688,8 @@ export default function SchoolManagementPage() {
               <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4 border border-white/5">
                 <Search className="w-10 h-10 text-slate-700" />
               </div>
-              <h3 className="text-xl font-bold text-slate-500">لا توجد بيانات مطابقة للبحث</h3>
-              <p className="text-slate-600 text-sm mt-1">تأكد من كتابة الاسم بشكل صحيح أو تغيير الفلاتر</p>
+              <h3 className="text-xl font-bold text-slate-500">{t('superAdmin.schoolDetails.noMatchingData')}</h3>
+              <p className="text-slate-600 text-sm mt-1">{t('superAdmin.schoolDetails.verifySearchFilters')}</p>
             </div>
           )}
         </div>

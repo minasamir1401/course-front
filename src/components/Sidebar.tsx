@@ -9,6 +9,7 @@ import {
   BarChart3, ShieldCheck
 } from "lucide-react";
 import { logout } from "@/lib/auth";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -20,6 +21,7 @@ interface SidebarProps {
 export default function Sidebar({ isOpen: externalIsOpen, onClose, onToggle, role }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { t, language } = useLanguage();
   const [internalIsOpen, setInternalIsOpen] = useState(false);
 
   // Use external control if provided, otherwise manage internally
@@ -45,45 +47,49 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose, onToggle, rol
 
   const navGroups = [
     {
-      title: "الرئيسية",
+      title: t('schoolAdmin.sidebar.main'),
       links: [
-        { href: "/school-admin", icon: LayoutDashboard, label: "لوحة التحكم" },
+        { href: "/school-admin", icon: LayoutDashboard, label: t('schoolAdmin.sidebar.dashboard') },
       ]
     },
     {
-      title: "إدارة الكوادر",
+      title: t('schoolAdmin.sidebar.staffManagement'),
       links: [
-        { href: "/school-admin/teachers", icon: UserCheck, label: "المعلمون" },
-        { href: "/school-admin/students", icon: GraduationCap, label: "الطلاب" },
-        { href: "/school-admin/classes", icon: Users, label: "الفصول الدراسية" },
+        { href: "/school-admin/teachers", icon: UserCheck, label: t('schoolAdmin.sidebar.teachers') },
+        { href: "/school-admin/students", icon: GraduationCap, label: t('schoolAdmin.sidebar.students') },
+        { href: "/school-admin/classes", icon: Users, label: t('schoolAdmin.sidebar.classes') },
       ]
     },
     {
-      title: "العملية التعليمية",
+      title: t('schoolAdmin.sidebar.educationProcess'),
       links: [
-        { href: "/school-admin/exams", icon: ClipboardList, label: "الامتحانات" },
-        { href: "/school-admin/courses", icon: BookOpen, label: "المقررات" },
+        { href: "/school-admin/exams", icon: ClipboardList, label: t('schoolAdmin.sidebar.exams') },
+        { href: "/school-admin/courses", icon: BookOpen, label: t('schoolAdmin.sidebar.courses') },
       ]
     },
     {
-      title: "التقارير والإحصاء",
+      title: t('schoolAdmin.sidebar.reportsAndStats'),
       links: [
-        { href: "/school-admin/reports", icon: BarChart3, label: "التقارير النهائية" },
+        { href: "/school-admin/reports", icon: BarChart3, label: t('schoolAdmin.sidebar.finalReports') },
       ]
     }
   ];
+
+  // RTL: slides from right; LTR: slides from left
+  const sidePosition = language === 'ar' ? 'right-0' : 'left-0';
+  const sideSlideOut = language === 'ar' ? 'translate-x-full' : '-translate-x-full';
 
   return (
     <>
       {/* Mobile Toggle Button */}
       <button
         onClick={handleToggle}
-        className="lg:hidden fixed top-5 end-5 z-[70] bg-indigo-600 text-white p-3 rounded-2xl shadow-xl active:scale-90 transition-all"
+        className={`lg:hidden fixed top-5 z-[70] bg-indigo-600 text-white p-3 rounded-2xl shadow-xl active:scale-90 transition-all ${language === 'ar' ? 'right-5' : 'left-5'}`}
       >
         {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
       </button>
 
-      <aside className={`fixed top-0 start-0 h-full w-72 bg-white border-e border-slate-100 z-50 transition-all duration-500 lg:translate-x-0 lg:rtl:translate-x-0 ${isOpen ? 'translate-x-0' : 'ltr:-translate-x-full rtl:translate-x-full'} shadow-[0_0_40px_rgba(0,0,0,0.03)] flex flex-col`}>
+      <aside className={`fixed top-0 ${sidePosition} h-full w-72 bg-white border-slate-100 z-50 transition-all duration-300 lg:translate-x-0 ${isOpen ? 'translate-x-0' : sideSlideOut} shadow-xl flex flex-col ${language === 'ar' ? 'border-l' : 'border-r'}`}>
 
         {/* School Identity */}
         <div className="p-8 mb-4 border-b border-slate-50">
@@ -92,17 +98,17 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose, onToggle, rol
               <ShieldCheck className="w-6 h-6 text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-xl font-black text-slate-900 tracking-tight truncate">مركز الإدارة</h1>
+              <h1 className="text-xl font-black text-slate-900 tracking-tight truncate">{t('schoolAdmin.sidebar.adminCenter')}</h1>
               <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[2px]">School Admin</p>
             </div>
           </div>
         </div>
 
         {/* Navigation Content */}
-        <nav className="flex-1 px-4 space-y-8 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 px-4 space-y-8 overflow-y-auto custom-scrollbar" dir={language === 'ar' ? 'rtl' : 'ltr'}>
           {navGroups.map((group, gIdx) => (
             <div key={gIdx} className="space-y-2">
-              <h3 className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-[3px] mb-4">{group.title}</h3>
+              <h3 className={`px-4 text-[10px] font-black text-slate-400 uppercase tracking-[3px] mb-4 text-start`}>{group.title}</h3>
               <div className="space-y-1">
                 {group.links.map((link) => (
                   <Link
@@ -119,7 +125,7 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose, onToggle, rol
                     </div>
                     <span className={`text-sm tracking-tight ${isActive(link.href) ? 'font-black' : 'font-bold'}`}>{link.label}</span>
                     {isActive(link.href) && (
-                      <div className="absolute top-0 end-0 w-1 h-full bg-white/30" />
+                      <div className={`absolute top-0 ${language === 'ar' ? 'left-0' : 'right-0'} w-1 h-full bg-white/30`} />
                     )}
                   </Link>
                 ))}
@@ -129,17 +135,17 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose, onToggle, rol
         </nav>
 
         {/* Bottom Actions */}
-        <div className="p-6 mt-auto border-t border-slate-50 bg-slate-50/50 space-y-3">
+        <div className="p-6 mt-auto border-t border-slate-50 bg-slate-50/50 space-y-3" dir={language === 'ar' ? 'rtl' : 'ltr'}>
           <button className="flex items-center gap-3 w-full px-4 py-3.5 rounded-2xl bg-white border border-slate-100 text-slate-600 hover:text-slate-900 hover:shadow-md transition-all font-bold text-sm group">
             <Settings className="w-4 h-4 text-slate-400 group-hover:rotate-90 transition-transform duration-500" />
-            <span>إعدادات المدرسة</span>
+            <span>{t('schoolAdmin.sidebar.schoolSettings')}</span>
           </button>
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 w-full px-4 py-3.5 rounded-2xl bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white transition-all font-black text-sm group"
           >
             <LogOut className="w-4 h-4 transition-transform ltr:group-hover:translate-x-1 rtl:group-hover:-translate-x-1" />
-            <span>تسجيل الخروج</span>
+            <span>{t('schoolAdmin.sidebar.logout')}</span>
           </button>
         </div>
       </aside>

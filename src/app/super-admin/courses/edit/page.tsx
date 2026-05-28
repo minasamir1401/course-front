@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { API_URL, getFullImageUrl } from '@/lib/api';
 import { useNotification } from "@/context/NotificationContext";
@@ -16,9 +16,11 @@ import {
 import * as XLSX from 'xlsx';
 import RichTextEditor from "@/components/RichTextEditor";
 import { compressImage } from "@/lib/image-utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 
 export default function EditCoursePage() {
+  const { t, language } = useLanguage();
   const SECTION_STYLE_PRESETS: Record<string, {
     icon: any;
     label: string;
@@ -450,19 +452,80 @@ export default function EditCoursePage() {
     }
   };
 
-  // Excel Upload hidden as requested
-  // Excel Upload for metadata
+  const metadataExcelRef = useRef<HTMLInputElement>(null);
+
+  const handleMetadataExcelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const wb = XLSX.read(data, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+        
+        if (rows.length < 2) {
+          showToast("الملف فارغ أو لا يحتوي على صفوف بيانات", "error");
+          return;
+        }
+
+        const headers = (rows[0] as string[]).map((h) => String(h).trim().toLowerCase());
+        
+        // Find columns matching Standard, Indicator, Outcome, Domain
+        const stdIdx = headers.findIndex(h => h.includes("standard") || h.includes("معيار") || h.includes("المعايير"));
+        const indIdx = headers.findIndex(h => h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشرات"));
+        const loIdx = headers.findIndex(h => h.includes("outcome") || h.includes("ناتج") || h.includes("مخرج") || h.includes("النواتج") || h.includes("المخرجات"));
+        const domainIdx = headers.findIndex(h => h.includes("domain") || h.includes("مجال") || h.includes("المجال"));
+
+        if (stdIdx === -1 && indIdx === -1 && loIdx === -1 && domainIdx === -1) {
+          showToast("لم يتم العثور على أعمدة متوافقة (المعايير، المؤشرات، المخرجات، المجال)", "error");
+          return;
+        }
+
+        // Combine rows or pick values
+        let standardVal = "";
+        let indicatorVal = "";
+        let outcomeVal = "";
+        let domainVal = "";
+
+        const dataRows = rows.slice(1).filter(r => r.some(c => String(c).trim() !== ""));
+        if (dataRows.length > 0) {
+          const standardsList = dataRows.map(r => stdIdx >= 0 ? String(r[stdIdx] ?? "").trim() : "").filter(Boolean);
+          const indicatorsList = dataRows.map(r => indIdx >= 0 ? String(r[indIdx] ?? "").trim() : "").filter(Boolean);
+          const outcomesList = dataRows.map(r => loIdx >= 0 ? String(r[loIdx] ?? "").trim() : "").filter(Boolean);
+          const domainList = dataRows.map(r => domainIdx >= 0 ? String(r[domainIdx] ?? "").trim() : "").filter(Boolean);
+
+          standardVal = standardsList.join("\n");
+          indicatorVal = indicatorsList.join("\n");
+          outcomeVal = outcomesList.join("\n");
+          domainVal = domainList[0] || "";
+        }
+
+        setCurrentLesson((prev: any) => ({
+          ...prev,
+          standards: standardVal || prev.standards,
+          indicators: indicatorVal || prev.indicators,
+          learningOutcomes: outcomeVal || prev.learningOutcomes,
+          domain: domainVal || prev.domain
+        }));
+
+        showToast(t('courseCreate.excelMetadataSuccess') || "Standards, indicator and domain successfully imported from Excel", "success");
+      } catch (err) {
+        console.error(err);
+        showToast(t('courseCreate.excelMetadataError') || "Error reading Excel file", "error");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = "";
+  };
+
   const handleExcelUpload = (type: 'questions' | 'metadata' | 'assignments') => {
     if (type === 'metadata') {
-       showToast("تم رفع المعايير والمخرجات من Excel بنجاح", "success");
-       setCurrentLesson({
-         ...currentLesson,
-         standards: "معيار المنهج المطور 2024",
-         indicators: "مؤشر القياس العالمي - المستوى الرابع",
-         learningOutcomes: "إتقان مهارات التفكير العليا"
-       });
+      metadataExcelRef.current?.click();
     } else {
-       showToast("هذه الميزة قيد التطوير", "info");
+      showToast("هذه الميزة قيد التطوير", "info");
     }
   };
 
@@ -1112,13 +1175,24 @@ export default function EditCoursePage() {
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">المعايير (Standards)</label>
                           <select
                             value={currentLesson.standards || ""}
-                            onChange={(e) => setCurrentLesson({ ...currentLesson, standards: e.target.value })}
+                            onChange={(e) => {
+                              if (e.target.value === "__NEW__") {
+                                const newVal = prompt("أدخل المعيار الجديد (New Standard):");
+                                if (newVal) setCurrentLesson({...currentLesson, standards: newVal});
+                              } else {
+                                setCurrentLesson({...currentLesson, standards: e.target.value});
+                              }
+                            }}
                             className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all shadow-sm appearance-none"
                           >
                             <option value="">اختر المعيار...</option>
                             <option value="معيار 1: الفهم والاستيعاب">معيار 1: الفهم والاستيعاب</option>
                             <option value="معيار 2: التطبيق والتحليل">معيار 2: التطبيق والتحليل</option>
                             <option value="معيار 3: التفكير النقدي">معيار 3: التفكير النقدي</option>
+                            {currentLesson.standards && !["", "معيار 1: الفهم والاستيعاب", "معيار 2: التطبيق والتحليل", "معيار 3: التفكير النقدي"].includes(currentLesson.standards) && (
+                              <option value={currentLesson.standards}>{currentLesson.standards}</option>
+                            )}
+                            <option value="__NEW__" className="text-indigo-600 font-bold">+ إضافة معيار جديد...</option>
                           </select>
                         </div>
 
@@ -1126,13 +1200,24 @@ export default function EditCoursePage() {
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">المؤشرات (Indicators)</label>
                           <select
                             value={currentLesson.indicators || ""}
-                            onChange={(e) => setCurrentLesson({ ...currentLesson, indicators: e.target.value })}
+                            onChange={(e) => {
+                              if (e.target.value === "__NEW__") {
+                                const newVal = prompt("أدخل المؤشر الجديد (New Indicator):");
+                                if (newVal) setCurrentLesson({...currentLesson, indicators: newVal});
+                              } else {
+                                setCurrentLesson({...currentLesson, indicators: e.target.value});
+                              }
+                            }}
                             className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all shadow-sm appearance-none"
                           >
                             <option value="">اختر المؤشر...</option>
                             <option value="مؤشر 1: يحدد المفاهيم الأساسية">مؤشر 1: يحدد المفاهيم الأساسية</option>
                             <option value="مؤشر 2: يطبق القوانين الرياضية">مؤشر 2: يطبق القوانين الرياضية</option>
                             <option value="مؤشر 3: يستنتج العلاقات">مؤشر 3: يستنتج العلاقات</option>
+                            {currentLesson.indicators && !["", "مؤشر 1: يحدد المفاهيم الأساسية", "مؤشر 2: يطبق القوانين الرياضية", "مؤشر 3: يستنتج العلاقات"].includes(currentLesson.indicators) && (
+                              <option value={currentLesson.indicators}>{currentLesson.indicators}</option>
+                            )}
+                            <option value="__NEW__" className="text-indigo-600 font-bold">+ إضافة مؤشر جديد...</option>
                           </select>
                         </div>
 
@@ -1140,19 +1225,38 @@ export default function EditCoursePage() {
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">نواتج التعلم (Outcomes)</label>
                           <select
                             value={currentLesson.learningOutcomes || ""}
-                            onChange={(e) => setCurrentLesson({ ...currentLesson, learningOutcomes: e.target.value })}
+                            onChange={(e) => {
+                              if (e.target.value === "__NEW__") {
+                                const newVal = prompt("أدخل ناتج التعلم الجديد (New Outcome):");
+                                if (newVal) setCurrentLesson({...currentLesson, learningOutcomes: newVal});
+                              } else {
+                                setCurrentLesson({...currentLesson, learningOutcomes: e.target.value});
+                              }
+                            }}
                             className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all shadow-sm appearance-none"
                           >
                             <option value="">اختر ناتج التعلم...</option>
                             <option value="ناتج 1: أن يكون الطالب قادراً على...">ناتج 1: أن يكون الطالب قادراً على...</option>
                             <option value="ناتج 2: أن يميز الطالب بين...">ناتج 2: أن يميز الطالب بين...</option>
                             <option value="ناتج 3: أن يحلل الطالب...">ناتج 3: أن يحلل الطالب...</option>
+                            {currentLesson.learningOutcomes && !["", "ناتج 1: أن يكون الطالب قادراً على...", "ناتج 2: أن يميز الطالب بين...", "ناتج 3: أن يحلل الطالب..."].includes(currentLesson.learningOutcomes) && (
+                              <option value={currentLesson.learningOutcomes}>{currentLesson.learningOutcomes}</option>
+                            )}
+                            <option value="__NEW__" className="text-indigo-600 font-bold">+ إضافة ناتج جديد...</option>
                           </select>
                         </div>
                       </div>
 
                       <div className="flex justify-center mt-6">
+                        <input 
+                          type="file" 
+                          ref={metadataExcelRef} 
+                          style={{ display: 'none' }} 
+                          accept=".xlsx,.xls" 
+                          onChange={handleMetadataExcelChange} 
+                        />
                         <button 
+                          type="button"
                           onClick={() => handleExcelUpload('metadata')}
                           className="flex items-center gap-2 bg-emerald-50 text-emerald-600 px-6 py-2.5 rounded-xl border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all font-black text-xs"
                         >
