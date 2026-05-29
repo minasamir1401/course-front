@@ -6,6 +6,7 @@ import { API_URL } from "@/lib/api";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { Clock, ChevronRight, ChevronLeft, Send, AlertCircle, HelpCircle, Lock, Play, Calendar, ShieldCheck, CheckCircle2, Target, Info, Sparkles, BookOpen, MessageSquare } from "lucide-react";
 import { useNotification } from "@/context/NotificationContext";
+import VideoPlayer from "@/components/VideoPlayer";
 
 export default function TakeExamPage() {
   const { id } = useParams();
@@ -463,6 +464,12 @@ export default function TakeExamPage() {
                 alt="Question"
                 className="max-w-full rounded-2xl mb-8 border border-slate-200 shadow-sm mx-auto"
               />
+            )}
+            
+            {question.videoUrl && (
+              <div className="relative w-full aspect-video rounded-[30px] overflow-hidden mb-8 border border-slate-100 shadow-md">
+                <VideoPlayer url={question.videoUrl} />
+              </div>
             )}
             
             {question.type !== "TEXT" ? (

@@ -74,11 +74,87 @@ export default function EditCoursePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [schools, setSchools] = useState<any[]>([]);
 
+  const getGradeName = (grade: string) => {
+    if (language === 'ar') {
+      const translations: { [key: string]: string } = {
+        "Elementary": "المرحلة الابتدائية",
+        "Middle School": "المرحلة الإعدادية",
+        "High School": "المرحلة الثانوية",
+        "الصف الأول الابتدائي": "الأول الابتدائي",
+        "الصف الثاني الابتدائي": "الثاني الابتدائي",
+        "الصف الثالث الابتدائي": "الثالث الابتدائي",
+        "الصف الرابع الابتدائي": "الرابع الابتدائي",
+        "الصف الخامس الابتدائي": "الخامس الابتدائي",
+        "الصف السادس الابتدائي": "السادس الابتدائي",
+        "الصف الأول الإعدادي": "الأول الإعدادي",
+        "الصف الثاني الإعدادي": "الثاني الإعدادي",
+        "الصف الثالث الإعدادي": "الثالث الإعدادي",
+        "الصف الأول الثانوي": "الأول الثانوي",
+        "الصف الثاني الثانوي": "الثاني الثانوي",
+        "الصف الثالث الثانوي": "الثالث الثانوي"
+      };
+      return translations[grade] || grade;
+    }
+    const translations: { [key: string]: string } = {
+      "Elementary": "Elementary Stage",
+      "Middle School": "Middle School Stage",
+      "High School": "High School Stage",
+      "الصف الأول الابتدائي": "1st Primary",
+      "الصف الثاني الابتدائي": "2nd Primary",
+      "الصف الثالث الابتدائي": "3rd Primary",
+      "الصف الرابع الابتدائي": "4th Primary",
+      "الصف الخامس الابتدائي": "5th Primary",
+      "الصف السادس الابتدائي": "6th Primary",
+      "الصف الأول الإعدادي": "1st Prep",
+      "الصف الثاني الإعدادي": "2nd Prep",
+      "الصف الثالث الإعدادي": "3rd Prep",
+      "الصف الأول الثانوي": "1st Secondary",
+      "الصف الثاني الثانوي": "2nd Secondary",
+      "الصف الثالث الثانوي": "3rd Secondary"
+    };
+    return translations[grade] || grade;
+  };
+
+  const getGradeCheckboxLabel = (grade: string) => {
+    if (language === 'ar') {
+      const translations: { [key: string]: string } = {
+        "الصف الأول الابتدائي": "الأول",
+        "الصف الثاني الابتدائي": "الثاني",
+        "الصف الثالث الابتدائي": "الثالث",
+        "الصف الرابع الابتدائي": "الرابع",
+        "الصف الخامس الابتدائي": "الخامس",
+        "الصف السادس الابتدائي": "السادس",
+        "الصف الأول الإعدادي": "الأول",
+        "الصف الثاني الإعدادي": "الثاني",
+        "الصف الثالث الإعدادي": "الثالث",
+        "الصف الأول الثانوي": "الأول",
+        "الصف الثاني الثانوي": "الثاني",
+        "الصف الثالث الثانوي": "الثالث"
+      };
+      return translations[grade] || grade;
+    }
+    const translations: { [key: string]: string } = {
+      "الصف الأول الابتدائي": "Gr. 1",
+      "الصف الثاني الابتدائي": "Gr. 2",
+      "الصف الثالث الابتدائي": "Gr. 3",
+      "الصف الرابع الابتدائي": "Gr. 4",
+      "الصف الخامس الابتدائي": "Gr. 5",
+      "الصف السادس الابتدائي": "Gr. 6",
+      "الصف الأول الإعدادي": "Gr. 1",
+      "الصف الثاني الإعدادي": "Gr. 2",
+      "الصف الثالث الإعدادي": "Gr. 3",
+      "الصف الأول الثانوي": "Gr. 1",
+      "الصف الثاني الثانوي": "Gr. 2",
+      "الصف الثالث الثانوي": "Gr. 3"
+    };
+    return translations[grade] || grade;
+  };
+
   const [courseData, setCourseData] = useState({
     title: "",
     description: "",
     coverImage: "",
-    grades: ["الصف الأول الثانوي"] as string[],
+    grades: [] as string[],
     subject: "",
     country: "مصر",
     isCentral: false,
@@ -123,11 +199,17 @@ export default function EditCoursePage() {
   const [showQuestionForm, setShowQuestionForm] = useState(false);
   const [isIndicatorDropdownOpen, setIsIndicatorDropdownOpen] = useState(false);
   const [isOutcomeDropdownOpen, setIsOutcomeDropdownOpen] = useState(false);
+  const [isStandardDropdownOpen, setIsStandardDropdownOpen] = useState(false);
+  const [isQuestionStandardOpen, setIsQuestionStandardOpen] = useState(false);
+  const [isQuestionIndicatorOpen, setIsQuestionIndicatorOpen] = useState(false);
+  const [isQuestionOutcomeOpen, setIsQuestionOutcomeOpen] = useState(false);
+  const [questionSource, setQuestionSource] = useState<'assignments' | 'questions'>('questions');
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null);
   const [tempQuestion, setTempQuestion] = useState<any>({
     text: "", type: "MCQ", options: ["", "", "", ""],
     correctAnswer: "", points: 1, skill: "General", level: "Medium",
-    learningOutcome: "", explanations: [""], correctAnswers: [], attempts: 1
+    learningOutcome: "", standard: "", indicator: "", 
+    sections: [], correctAnswers: [], attempts: 1
   });
 
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
@@ -205,7 +287,7 @@ export default function EditCoursePage() {
       });
       if (res.ok) {
         const data = await res.json();
-        let parsedGrades = ["الصف الأول الثانوي"];
+        let parsedGrades = ["High School"];
         try {
           if (data.grades && typeof data.grades === 'string') {
             parsedGrades = JSON.parse(data.grades);
@@ -215,8 +297,36 @@ export default function EditCoursePage() {
             parsedGrades = [data.grade];
           }
         } catch (e) {
-          parsedGrades = data.grade ? [data.grade] : ["الصف الأول الثانوي"];
+          parsedGrades = data.grade ? [data.grade] : ["High School"];
         }
+
+        const legacyGradeMap: { [key: string]: string } = {
+          "الصف الأول الابتدائي": "Elementary",
+          "الصف الثاني الابتدائي": "Elementary",
+          "الصف الثالث الابتدائي": "Elementary",
+          "الصف الرابع الابتدائي": "Elementary",
+          "الصف الخامس الابتدائي": "Elementary",
+          "الصف السادس الابتدائي": "Elementary",
+          "الصف الأول الإعدادي": "Middle School",
+          "الصف الثاني الإعدادي": "Middle School",
+          "الصف الثالث الإعدادي": "Middle School",
+          "الصف الأول الثانوي": "High School",
+          "الصف الثاني الثانوي": "High School",
+          "الصف الثالث الثانوي": "High School",
+          "1st Primary": "Elementary",
+          "2nd Primary": "Elementary",
+          "3rd Primary": "Elementary",
+          "4th Primary": "Elementary",
+          "5th Primary": "Elementary",
+          "6th Primary": "Elementary",
+          "1st Prep": "Middle School",
+          "2nd Prep": "Middle School",
+          "3rd Prep": "Middle School",
+          "1st Secondary": "High School",
+          "2nd Secondary": "High School",
+          "3rd Secondary": "High School"
+        };
+        parsedGrades = parsedGrades.map(g => legacyGradeMap[g] || g);
 
         setCourseData({
           title: data.title,
@@ -455,6 +565,100 @@ export default function EditCoursePage() {
   };
 
   const metadataExcelRef = useRef<HTMLInputElement>(null);
+  const questionsExcelRef = useRef<HTMLInputElement>(null);
+  const assignmentsExcelRef = useRef<HTMLInputElement>(null);
+
+  const parseQuestionsFromExcel = (rows: any[][]) => {
+    if (rows.length < 2) return [];
+    const headers = rows[0].map(h => String(h).trim().toLowerCase());
+    
+    const textIdx = headers.findIndex(h => h.includes("question") || h.includes("السؤال") || h.includes("نص السؤال"));
+    const typeIdx = headers.findIndex(h => h.includes("type") || h.includes("نوع"));
+    const opt1Idx = headers.findIndex(h => h.includes("option 1") || h.includes("الخيار 1") || h.includes("أول"));
+    const opt2Idx = headers.findIndex(h => h.includes("option 2") || h.includes("الخيار 2") || h.includes("ثاني"));
+    const opt3Idx = headers.findIndex(h => h.includes("option 3") || h.includes("الخيار 3") || h.includes("ثالث"));
+    const opt4Idx = headers.findIndex(h => h.includes("option 4") || h.includes("الخيار 4") || h.includes("رابع"));
+    const opt5Idx = headers.findIndex(h => h.includes("option 5") || h.includes("الخيار 5") || h.includes("خامس"));
+    const correctIdx = headers.findIndex(h => h.includes("correct answer") || h.includes("الإجابة الصحيحة") || h.includes("الاجابه الصحيحه"));
+    const correctsIdx = headers.findIndex(h => h.includes("correct answers") || h.includes("الإجابات") || h.includes("الاجابات"));
+    const pointsIdx = headers.findIndex(h => h.includes("points") || h.includes("الدرجة") || h.includes("الدرجه") || h.includes("النقاط"));
+    const skillIdx = headers.findIndex(h => h.includes("skill") || h.includes("المهارة") || h.includes("المهاره"));
+    const stdIdx = headers.findIndex(h => h.includes("standard") || h.includes("معيار") || h.includes("المعيار"));
+    const indIdx = headers.findIndex(h => h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشر"));
+    const loIdx = headers.findIndex(h => h.includes("outcome") || h.includes("مخرج") || h.includes("ناتج") || h.includes("التعلم"));
+    const diffIdx = headers.findIndex(h => h.includes("difficulty") || h.includes("صعوبة") || h.includes("الصعوبة"));
+    const videoIdx = headers.findIndex(h => h.includes("video") || h.includes("فيديو") || h.includes("الفيديو"));
+    const expIdx = headers.findIndex(h => h.includes("explanation") || h.includes("تفسير") || h.includes("التفسير") || h.includes("شرح"));
+
+    const parsed: any[] = [];
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row || row.every(c => String(c).trim() === "")) continue;
+
+      const qText = textIdx >= 0 ? String(row[textIdx] ?? "").trim() : "";
+      if (!qText) continue;
+
+      let qType = typeIdx >= 0 ? String(row[typeIdx] ?? "").trim().toUpperCase() : "MCQ";
+      if (qType.includes("TRUE") || qType.includes("صح") || qType.includes("T/F")) {
+        qType = "TRUE_FALSE";
+      } else if (qType.includes("MULTI") || qType.includes("تحديد") || qType.includes("متعدد")) {
+        qType = "MULTI_SELECT";
+      } else {
+        qType = "MCQ";
+      }
+
+      const options: string[] = [];
+      if (opt1Idx >= 0 && row[opt1Idx] !== "") options.push(String(row[opt1Idx]).trim());
+      if (opt2Idx >= 0 && row[opt2Idx] !== "") options.push(String(row[opt2Idx]).trim());
+      if (opt3Idx >= 0 && row[opt3Idx] !== "") options.push(String(row[opt3Idx]).trim());
+      if (opt4Idx >= 0 && row[opt4Idx] !== "") options.push(String(row[opt4Idx]).trim());
+      if (opt5Idx >= 0 && row[opt5Idx] !== "") options.push(String(row[opt5Idx]).trim());
+
+      if (options.length === 0 && qType !== 'TRUE_FALSE') {
+        options.push("Option 1", "Option 2", "Option 3", "Option 4");
+      }
+
+      const correctAnswer = correctIdx >= 0 ? String(row[correctIdx] ?? "").trim() : "";
+      const correctAnswersStr = correctsIdx >= 0 ? String(row[correctsIdx] ?? "").trim() : "";
+      const correctAnswers = correctAnswersStr ? correctAnswersStr.split(",").map(s => s.trim()).filter(Boolean) : [];
+
+      const points = pointsIdx >= 0 ? (parseInt(String(row[pointsIdx])) || 1) : 1;
+      const skill = skillIdx >= 0 ? String(row[skillIdx] ?? "").trim() : "General";
+      const standard = stdIdx >= 0 ? String(row[stdIdx] ?? "").trim() : "";
+      const indicator = indIdx >= 0 ? String(row[indIdx] ?? "").trim() : "";
+      const learningOutcome = loIdx >= 0 ? String(row[loIdx] ?? "").trim() : "";
+      const videoUrl = videoIdx >= 0 ? String(row[videoIdx] ?? "").trim() : "";
+      
+      let level = diffIdx >= 0 ? String(row[diffIdx] ?? "").trim() : "Medium";
+      if (level.toLowerCase().includes("easy") || level.includes("سهل")) level = "Easy";
+      else if (level.toLowerCase().includes("hard") || level.includes("صعب")) level = "Hard";
+      else level = "Medium";
+
+      const explanation = expIdx >= 0 ? String(row[expIdx] ?? "").trim() : "";
+      const sections = explanation ? [{ id: Date.now() + Math.random(), type: "EXPLANATION", content: explanation }] : [];
+
+      parsed.push({
+        id: Date.now() + Math.random(),
+        type: "QUESTION",
+        label: qType,
+        title: qText.substring(0, 30) + "...",
+        content: qText,
+        text: qText,
+        options,
+        correctAnswer,
+        correctAnswers,
+        points,
+        skill,
+        standard,
+        indicator,
+        learningOutcome,
+        level,
+        videoUrl,
+        sections
+      });
+    }
+    return parsed;
+  };
 
   const handleMetadataExcelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -480,6 +684,7 @@ export default function EditCoursePage() {
         const indIdx = headers.findIndex(h => h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشرات"));
         const loIdx = headers.findIndex(h => h.includes("outcome") || h.includes("ناتج") || h.includes("مخرج") || h.includes("النواتج") || h.includes("المخرجات"));
         const domainIdx = headers.findIndex(h => h.includes("domain") || h.includes("مجال") || h.includes("المجال"));
+        const lessonIdx = headers.findIndex(h => h.includes("lesson") || h.includes("درس") || h.includes("الدرس"));
 
         if (stdIdx === -1 && indIdx === -1 && loIdx === -1 && domainIdx === -1) {
           showToast("لم يتم العثور على أعمدة متوافقة (المعايير، المؤشرات، المخرجات، المجال)", "error");
@@ -493,11 +698,25 @@ export default function EditCoursePage() {
         let domainVal = "";
 
         const dataRows = rows.slice(1).filter(r => r.some(c => String(c).trim() !== ""));
-        if (dataRows.length > 0) {
-          const standardsList = dataRows.map(r => stdIdx >= 0 ? String(r[stdIdx] ?? "").trim() : "").filter(Boolean);
-          const indicatorsList = dataRows.map(r => indIdx >= 0 ? String(r[indIdx] ?? "").trim() : "").filter(Boolean);
-          const outcomesList = dataRows.map(r => loIdx >= 0 ? String(r[loIdx] ?? "").trim() : "").filter(Boolean);
-          const domainList = dataRows.map(r => domainIdx >= 0 ? String(r[domainIdx] ?? "").trim() : "").filter(Boolean);
+
+        // Smart filtering by lesson name if "Lesson" column exists and current lesson has a title
+        let filteredRows = dataRows;
+        if (lessonIdx >= 0 && currentLesson.title) {
+          const currentLessonTitleLower = currentLesson.title.trim().toLowerCase();
+          const matchingRows = dataRows.filter(r => {
+            const rowLesson = String(r[lessonIdx] ?? "").trim().toLowerCase();
+            return rowLesson && (currentLessonTitleLower.includes(rowLesson) || rowLesson.includes(currentLessonTitleLower));
+          });
+          if (matchingRows.length > 0) {
+            filteredRows = matchingRows;
+          }
+        }
+
+        if (filteredRows.length > 0) {
+          const standardsList = filteredRows.map(r => stdIdx >= 0 ? String(r[stdIdx] ?? "").trim() : "").filter(Boolean);
+          const indicatorsList = filteredRows.map(r => indIdx >= 0 ? String(r[indIdx] ?? "").trim() : "").filter(Boolean);
+          const outcomesList = filteredRows.map(r => loIdx >= 0 ? String(r[loIdx] ?? "").trim() : "").filter(Boolean);
+          const domainList = filteredRows.map(r => domainIdx >= 0 ? String(r[domainIdx] ?? "").trim() : "").filter(Boolean);
 
           standardVal = standardsList.join("\n");
           indicatorVal = indicatorsList.join("\n");
@@ -523,11 +742,119 @@ export default function EditCoursePage() {
     e.target.value = "";
   };
 
+  const handleQuestionsExcelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const wb = XLSX.read(data, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+        
+        const parsed = parseQuestionsFromExcel(rows);
+        if (parsed.length === 0) {
+          showToast(language === 'ar' ? "لم يتم العثور على أسئلة صالحة في الملف" : "No valid questions found in the file", "error");
+          return;
+        }
+
+        const newStds = Array.from(new Set(parsed.map(q => q.standard).filter(Boolean)));
+        const newInds = Array.from(new Set(parsed.map(q => q.indicator).filter(Boolean)));
+        const newLos = Array.from(new Set(parsed.map(q => q.learningOutcome).filter(Boolean)));
+
+        const currentStds = (currentLesson.standards || "").split("\n").filter(Boolean);
+        const currentInds = (currentLesson.indicators || "").split("\n").filter(Boolean);
+        const currentLos = (currentLesson.learningOutcomes || "").split("\n").filter(Boolean);
+
+        const updatedStds = Array.from(new Set([...currentStds, ...newStds])).join("\n");
+        const updatedInds = Array.from(new Set([...currentInds, ...newInds])).join("\n");
+        const updatedLos = Array.from(new Set([...currentLos, ...newLos])).join("\n");
+
+        setCurrentLesson((prev: any) => ({
+          ...prev,
+          questions: [...(prev.questions || []), ...parsed],
+          standards: updatedStds,
+          indicators: updatedInds,
+          learningOutcomes: updatedLos
+        }));
+
+        showToast(
+          language === 'ar' 
+            ? `تم استيراد ${parsed.length} سؤال بنجاح` 
+            : `Imported ${parsed.length} questions successfully`, 
+          "success"
+        );
+      } catch (err) {
+        console.error(err);
+        showToast(language === 'ar' ? "حدث خطأ أثناء قراءة ملف Excel" : "Error reading Excel file", "error");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = "";
+  };
+
+  const handleAssignmentsExcelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const wb = XLSX.read(data, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+        
+        const parsed = parseQuestionsFromExcel(rows);
+        if (parsed.length === 0) {
+          showToast(language === 'ar' ? "لم يتم العثور على واجبات صالحة في الملف" : "No valid assignments found in the file", "error");
+          return;
+        }
+
+        const newStds = Array.from(new Set(parsed.map(q => q.standard).filter(Boolean)));
+        const newInds = Array.from(new Set(parsed.map(q => q.indicator).filter(Boolean)));
+        const newLos = Array.from(new Set(parsed.map(q => q.learningOutcome).filter(Boolean)));
+
+        const currentStds = (currentLesson.standards || "").split("\n").filter(Boolean);
+        const currentInds = (currentLesson.indicators || "").split("\n").filter(Boolean);
+        const currentLos = (currentLesson.learningOutcomes || "").split("\n").filter(Boolean);
+
+        const updatedStds = Array.from(new Set([...currentStds, ...newStds])).join("\n");
+        const updatedInds = Array.from(new Set([...currentInds, ...newInds])).join("\n");
+        const updatedLos = Array.from(new Set([...currentLos, ...newLos])).join("\n");
+
+        setCurrentLesson((prev: any) => ({
+          ...prev,
+          assignments: [...(prev.assignments || []), ...parsed],
+          standards: updatedStds,
+          indicators: updatedInds,
+          learningOutcomes: updatedLos
+        }));
+
+        showToast(
+          language === 'ar' 
+            ? `تم استيراد ${parsed.length} واجب بنجاح` 
+            : `Imported ${parsed.length} assignments successfully`, 
+          "success"
+        );
+      } catch (err) {
+        console.error(err);
+        showToast(language === 'ar' ? "حدث خطأ أثناء قراءة ملف Excel" : "Error reading Excel file", "error");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = "";
+  };
+
   const handleExcelUpload = (type: 'questions' | 'metadata' | 'assignments') => {
     if (type === 'metadata') {
       metadataExcelRef.current?.click();
-    } else {
-      showToast("هذه الميزة قيد التطوير", "info");
+    } else if (type === 'questions') {
+      questionsExcelRef.current?.click();
+    } else if (type === 'assignments') {
+      assignmentsExcelRef.current?.click();
     }
   };
 
@@ -543,6 +870,78 @@ export default function EditCoursePage() {
     XLSX.utils.book_append_sheet(wb, ws, "Metadata Template");
     XLSX.writeFile(wb, "course_metadata_template.xlsx");
     showToast(language === 'ar' ? "تم تحميل نموذج المعايير بنجاح" : "Metadata template downloaded successfully", "success");
+  };
+
+  const downloadQuestionsTemplate = (type: 'questions' | 'assignments') => {
+    const wsData = [
+      [
+        language === 'ar' ? "نص السؤال" : "Question Text",
+        language === 'ar' ? "نوع السؤال" : "Question Type",
+        language === 'ar' ? "الخيار 1" : "Option 1",
+        language === 'ar' ? "الخيار 2" : "Option 2",
+        language === 'ar' ? "الخيار 3" : "Option 3",
+        language === 'ar' ? "الخيار 4" : "Option 4",
+        language === 'ar' ? "الخيار 5" : "Option 5",
+        language === 'ar' ? "الإجابة الصحيحة" : "Correct Answer",
+        language === 'ar' ? "الإجابات الصحيحة المتعددة" : "Correct Answers",
+        language === 'ar' ? "الدرجة" : "Points",
+        language === 'ar' ? "المهارة" : "Skill",
+        language === 'ar' ? "المعيار" : "Standard",
+        language === 'ar' ? "المؤشر" : "Indicator",
+        language === 'ar' ? "ناتج التعلم" : "Learning Outcome",
+        language === 'ar' ? "مستوى الصعوبة" : "Difficulty Level",
+        language === 'ar' ? "رابط الفيديو" : "Video URL",
+        language === 'ar' ? "التفسير" : "Explanation"
+      ],
+      [
+        language === 'ar' ? "ما هو ناتج 5 + 5؟" : "What is 5 + 5?",
+        "MCQ",
+        "8", "9", "10", "11", "",
+        "10", "", "1", "Math",
+        language === 'ar' ? "معيار 1: العمليات الحسابية" : "Standard 1: Operations",
+        language === 'ar' ? "مؤشر 1.1: الجمع" : "Indicator 1.1: Addition",
+        language === 'ar' ? "أن يجمع الطالب الأعداد بشكل صحيح" : "LO: Students can add numbers correctly",
+        "Easy",
+        "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        language === 'ar' ? "الجمع الصحيح هو 10 لأن 5 زائد 5 يساوي 10" : "5 + 5 is 10"
+      ],
+      [
+        language === 'ar' ? "الأرض كروية الشكل." : "The earth is round.",
+        "TRUE_FALSE",
+        "", "", "", "", "",
+        language === 'ar' ? "صحيح" : "True", "", "1", "General",
+        language === 'ar' ? "معيار 2: الجغرافيا الطبيعية" : "Standard 2: Physical Geography",
+        language === 'ar' ? "مؤشر 2.1: شكل الأرض" : "Indicator 2.1: Earth Shape",
+        language === 'ar' ? "أن يدرك شكل كوكب الأرض" : "LO: Understands planet earth's shape",
+        "Easy", "", ""
+      ],
+      [
+        language === 'ar' ? "حدد قارات العالم القديم:" : "Select the ancient world continents:",
+        "MULTI_SELECT",
+        language === 'ar' ? "آسيا" : "Asia", 
+        language === 'ar' ? "أوروبا" : "Europe", 
+        language === 'ar' ? "أفريقيا" : "Africa", 
+        language === 'ar' ? "أستراليا" : "Australia", "",
+        "",
+        language === 'ar' ? "آسيا, أوروبا, أفريقيا" : "Asia, Europe, Africa",
+        "2", "General",
+        language === 'ar' ? "معيار 3: التاريخ القديم" : "Standard 3: Ancient History",
+        language === 'ar' ? "مؤشر 3.1: القارات" : "Indicator 3.1: Continents",
+        language === 'ar' ? "أن يحدد قارات العالم القديم" : "LO: Identifies old world continents",
+        "Medium", "", ""
+      ]
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Questions Template");
+    const filename = type === 'assignments' ? "assignments_template.xlsx" : "practice_questions_template.xlsx";
+    XLSX.writeFile(wb, filename);
+    showToast(
+      language === 'ar' 
+        ? "تم تحميل نموذج الأسئلة الاسترشادي بنجاح" 
+        : "Questions template downloaded successfully", 
+      "success"
+    );
   };
 
   const addBlock = (source: 'slides' | 'assignments' | 'questions' = 'slides', type: 'TEXT' | 'QUESTION') => {
@@ -631,7 +1030,16 @@ export default function EditCoursePage() {
 
     return (
       <div className="space-y-8 animate-in fade-in duration-300">
-        <div className="flex justify-between items-center mb-4">
+        {source !== 'slides' && (
+          <input 
+            type="file" 
+            ref={source === 'assignments' ? assignmentsExcelRef : questionsExcelRef} 
+            style={{ display: 'none' }} 
+            accept=".xlsx,.xls" 
+            onChange={source === 'assignments' ? handleAssignmentsExcelChange : handleQuestionsExcelChange} 
+          />
+        )}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
           <div>
             <h4 className="text-xl font-black text-slate-900 flex items-center gap-3">
               <Layout className="w-6 h-6 text-indigo-600" />
@@ -639,7 +1047,27 @@ export default function EditCoursePage() {
             </h4>
             <p className="text-slate-400 text-sm font-bold mt-1">{headerDesc}</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
+            {source !== 'slides' && (
+              <>
+                <button 
+                  type="button"
+                  onClick={() => handleExcelUpload(source === 'assignments' ? 'assignments' : 'questions')}
+                  className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
+                >
+                  <Upload className="w-4 h-4" />
+                  {language === 'ar' ? 'استيراد Excel' : 'Import Excel'}
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => downloadQuestionsTemplate(source === 'assignments' ? 'assignments' : 'questions')}
+                  className="bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
+                >
+                  <Download className="w-4 h-4" />
+                  {language === 'ar' ? 'تحميل نموذج' : 'Template'}
+                </button>
+              </>
+            )}
             <button 
               type="button"
               onClick={() => addBlock(source, 'TEXT')}
@@ -811,6 +1239,89 @@ export default function EditCoursePage() {
                   </div>
 
                   {block.type === 'QUESTION' && (
+                    <div className="grid grid-cols-2 md:grid-cols-6 gap-4 p-6 bg-white border border-slate-200 rounded-[30px] shadow-sm mb-4">
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المعيار' : 'Standard'}</label>
+                        <select 
+                          className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
+                          value={block.standard || ""}
+                          onChange={(e) => updateBlock(source, sIdx, 'standard', e.target.value)}
+                        >
+                          <option value="">{language === 'ar' ? 'اختر المعيار...' : 'Select Standard...'}</option>
+                          {(currentLesson.standards || "").split("\n").filter(Boolean).map((s: string) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المؤشر' : 'Indicator'}</label>
+                        <select 
+                          className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
+                          value={block.indicator || ""}
+                          onChange={(e) => updateBlock(source, sIdx, 'indicator', e.target.value)}
+                        >
+                          <option value="">{language === 'ar' ? 'اختر المؤشر...' : 'Select Indicator...'}</option>
+                          {(currentLesson.indicators || "").split("\n").filter(Boolean).map((ind: string) => (
+                            <option key={ind} value={ind}>{ind}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'مخرج التعلم' : 'Learning Outcome'}</label>
+                        <select 
+                          className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
+                          value={block.learningOutcome || ""}
+                          onChange={(e) => updateBlock(source, sIdx, 'learningOutcome', e.target.value)}
+                        >
+                          <option value="">{language === 'ar' ? 'اختر مخرج التعلم...' : 'Select Learning Outcome...'}</option>
+                          {(currentLesson.learningOutcomes || "").split("\n").filter(Boolean).map((lo: string) => (
+                            <option key={lo} value={lo}>{lo}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المهارة' : 'Skill'}</label>
+                        <select 
+                          className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
+                          value={block.skill || "General"}
+                          onChange={(e) => updateBlock(source, sIdx, 'skill', e.target.value)}
+                        >
+                          <option value="General">{language === 'ar' ? 'عام' : 'General'}</option>
+                          {["Math", "Physics", "Chemistry", "Biology", "Geology", "History", "Geography", "Philosophy", "Arabic", "English", "French"].map(sk => (
+                            <option key={sk} value={sk}>{sk}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'مستوى الصعوبة' : 'Difficulty'}</label>
+                        <select 
+                          className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
+                          value={block.level || "Medium"}
+                          onChange={(e) => updateBlock(source, sIdx, 'level', e.target.value)}
+                        >
+                          <option value="Easy">{language === 'ar' ? 'سهل' : 'Easy'}</option>
+                          <option value="Medium">{language === 'ar' ? 'متوسط' : 'Medium'}</option>
+                          <option value="Hard">{language === 'ar' ? 'صعب' : 'Hard'}</option>
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'النقاط' : 'Points'}</label>
+                        <input 
+                          type="number"
+                          className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
+                          value={block.points !== undefined ? block.points : 1}
+                          onChange={(e) => updateBlock(source, sIdx, 'points', parseInt(e.target.value) || 0)}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {block.type === 'QUESTION' && (
                     <div className="bg-slate-100 p-6 rounded-2xl border border-slate-200 space-y-4">
                       <label className="text-xs font-black text-slate-500 uppercase tracking-widest block">خيارات الإجابة</label>
                       {block.label === 'TRUE_FALSE' ? (
@@ -956,50 +1467,793 @@ export default function EditCoursePage() {
     );
   };
 
-  const handleAddQuestion = () => {
+  const handleAddQuestionForSource = (source: 'assignments' | 'questions') => {
     setTempQuestion({
-      text: "", type: "MCQ", options: ["", "", "", ""],
-      correctAnswer: "", points: 1, skill: "General", level: "Medium",
-      learningOutcome: "", explanations: [""], correctAnswers: [], attempts: 1
+      id: Date.now() + Math.random(),
+      text: "",
+      type: "MCQ",
+      label: "MCQ",
+      options: ["", "", "", ""],
+      correctAnswer: "",
+      correctAnswers: [],
+      points: 1,
+      skill: "General",
+      level: "Medium",
+      standard: "",
+      indicator: "",
+      learningOutcome: "",
+      videoUrl: "",
+      sections: [],
+      attempts: 1
     });
     setEditingQuestionIndex(null);
+    setQuestionSource(source);
     setShowQuestionForm(true);
   };
 
-  const handleEditQuestion = (index: number) => {
-    setTempQuestion({ ...currentLesson.questions[index] });
+  const handleEditQuestionForSource = (source: 'assignments' | 'questions', index: number) => {
+    const list = currentLesson[source] || [];
+    const item = { ...list[index] };
+    if (!item.options) item.options = ["", "", "", ""];
+    if (!item.sections) item.sections = [];
+    if (!item.type) item.type = item.label || "MCQ";
+    setTempQuestion(item);
     setEditingQuestionIndex(index);
+    setQuestionSource(source);
     setShowQuestionForm(true);
   };
 
-  const handleSaveQuestion = () => {
+  const handleSaveQuestionForSource = (source: 'assignments' | 'questions') => {
     if (!tempQuestion.text) {
-      showToast("يرجى إدخال نص السؤال", "error");
+      showToast(language === 'ar' ? "يرجى إدخال نص السؤال" : "Please enter question text", "error");
       return;
     }
-    const newQuestions = [...currentLesson.questions];
-    if (editingQuestionIndex !== null) {
-      newQuestions[editingQuestionIndex] = tempQuestion;
-    } else {
-      newQuestions.push(tempQuestion);
+
+    if (tempQuestion.type !== 'TEXT') {
+      if (tempQuestion.type === 'TRUE_FALSE') {
+        if (!tempQuestion.correctAnswer) {
+          showToast(language === 'ar' ? "يرجى تحديد الإجابة الصحيحة" : "Please select the correct answer", "error");
+          return;
+        }
+      } else if (tempQuestion.type === 'MULTI_SELECT') {
+        const validAnswers = (tempQuestion.correctAnswers || []).filter(Boolean);
+        if (validAnswers.length === 0) {
+          showToast(language === 'ar' ? "يرجى اختيار إجابة صحيحة واحدة على الأقل" : "Please select at least one correct answer", "error");
+          return;
+        }
+      } else {
+        if (!tempQuestion.correctAnswer) {
+          showToast(language === 'ar' ? "يرجى اختيار الإجابة الصحيحة" : "Please select the correct answer", "error");
+          return;
+        }
+      }
     }
-    setCurrentLesson({ ...currentLesson, questions: newQuestions });
+
+    const newList = [...(currentLesson[source] || [])];
+    const itemToSave = {
+      ...tempQuestion,
+      label: tempQuestion.type // Ensure label is synced with type
+    };
+
+    if (editingQuestionIndex !== null) {
+      newList[editingQuestionIndex] = itemToSave;
+    } else {
+      newList.push(itemToSave);
+    }
+
+    setCurrentLesson({ ...currentLesson, [source]: newList });
     setShowQuestionForm(false);
+    setEditingQuestionIndex(null);
+    showToast(language === 'ar' ? "تم حفظ السؤال في القائمة بنجاح" : "Question saved to list successfully", "success");
   };
 
-  const handleSaveAssignment = () => {
-    if (!tempQuestion.text) {
-      showToast("يرجى إدخال نص التكليف", "error");
-      return;
+  const removeQuestionForSource = (source: 'assignments' | 'questions', index: number) => {
+    if (!confirm(language === 'ar' ? "هل أنت متأكد من حذف هذا السؤال؟" : "Are you sure you want to delete this question?")) return;
+    const newList = [...(currentLesson[source] || [])];
+    newList.splice(index, 1);
+    setCurrentLesson({ ...currentLesson, [source]: newList });
+    showToast(language === 'ar' ? "تم حذف السؤال" : "Question deleted", "info");
+  };
+
+  const moveQuestionForSource = (source: 'assignments' | 'questions', index: number, direction: 'UP' | 'DOWN') => {
+    const newList = [...(currentLesson[source] || [])];
+    const targetIndex = direction === 'UP' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newList.length) return;
+    const temp = newList[index];
+    newList[index] = newList[targetIndex];
+    newList[targetIndex] = temp;
+    setCurrentLesson({ ...currentLesson, [source]: newList });
+  };
+
+  const updateCurrentQuestionField = (field: string, value: any) => {
+    setTempQuestion((prev: any) => ({ ...prev, [field]: value }));
+  };
+
+  const updateQuestionOption = (oIdx: number, value: string) => {
+    setTempQuestion((prev: any) => {
+      const newOpts = [...prev.options];
+      const oldVal = newOpts[oIdx];
+      newOpts[oIdx] = value;
+      const updated: any = { ...prev, options: newOpts };
+      if (prev.type === 'MULTI_SELECT') {
+        const answers = prev.correctAnswers || [];
+        if (answers.includes(oldVal)) {
+          updated.correctAnswers = answers.map((a: string) => a === oldVal ? value : a);
+        }
+      } else {
+        if (prev.correctAnswer === oldVal) {
+          updated.correctAnswer = value;
+        }
+      }
+      return updated;
+    });
+  };
+
+  const toggleQuestionCorrectAnswer = (oIdx: number) => {
+    setTempQuestion((prev: any) => {
+      const opt = prev.options[oIdx];
+      if (!opt && prev.type !== 'TRUE_FALSE') return prev;
+      
+      const updated = { ...prev };
+      if (prev.type === 'MULTI_SELECT') {
+        const answers = prev.correctAnswers || [];
+        if (answers.includes(opt)) {
+          updated.correctAnswers = answers.filter((a: string) => a !== opt);
+        } else {
+          updated.correctAnswers = [...answers, opt];
+        }
+      } else {
+        updated.correctAnswer = opt;
+      }
+      return updated;
+    });
+  };
+
+  const isQuestionCorrectAnswer = (opt: string) => {
+    if (!opt) return false;
+    if (tempQuestion.type === 'MULTI_SELECT') {
+      return (tempQuestion.correctAnswers || []).includes(opt);
     }
-    const newAssignments = [...(currentLesson.assignments || [])];
-    if (editingQuestionIndex !== null) {
-      newAssignments[editingQuestionIndex] = tempQuestion;
-    } else {
-      newAssignments.push(tempQuestion);
-    }
-    setCurrentLesson({ ...currentLesson, assignments: newAssignments });
-    setShowQuestionForm(false);
+    return tempQuestion.correctAnswer === opt;
+  };
+
+  const addQuestionSection = (secType: string) => {
+    setTempQuestion((prev: any) => {
+      const sections = [...(prev.sections || [])];
+      sections.push({ id: Date.now() + Math.random(), type: secType, content: "" });
+      return { ...prev, sections };
+    });
+  };
+
+  const updateQuestionSectionContent = (idx: number, value: string) => {
+    setTempQuestion((prev: any) => {
+      const sections = [...(prev.sections || [])];
+      sections[idx] = { ...sections[idx], content: value };
+      return { ...prev, sections };
+    });
+  };
+
+  const removeQuestionSection = (idx: number) => {
+    setTempQuestion((prev: any) => {
+      const sections = [...(prev.sections || [])];
+      sections.splice(idx, 1);
+      return { ...prev, sections };
+    });
+  };
+
+  // State to track which question is expanded in the list
+  const [expandedQuestionIndex, setExpandedQuestionIndex] = useState<number | null>(null);
+
+  const renderMetadataDropdown = (
+    label: string,
+    currentValue: string,
+    field: 'standard' | 'indicator' | 'learningOutcome',
+    isOpen: boolean,
+    setIsOpen: (open: boolean) => void,
+    lessonField: 'standards' | 'indicators' | 'learningOutcomes'
+  ) => {
+    const list = (currentLesson[lessonField] || "").split("\n").filter(Boolean);
+    const selectPlaceholder = language === 'ar' ? `اختر ${label}...` : `Select ${label}...`;
+    const addCustomLabel = language === 'ar' ? `+ إضافة ${label} مخصص...` : `+ Add Custom ${label}...`;
+    const promptEnterLabel = language === 'ar' ? `أدخل ${label} المخصص الجديد:` : `Enter new custom ${label}:`;
+    const promptEditLabel = language === 'ar' ? `تعديل ${label} المخصص:` : `Edit custom ${label}:`;
+    const confirmDeleteLabel = language === 'ar' ? `هل أنت متأكد من حذف هذا ${label}؟` : `Are you sure you want to delete this ${label}?`;
+
+    return (
+      <div className="flex flex-col gap-2 relative">
+        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</label>
+        <button
+          type="button"
+          onClick={() => {
+            setIsOpen(!isOpen);
+            if (field === 'standard') {
+              setIsQuestionIndicatorOpen(false);
+              setIsQuestionOutcomeOpen(false);
+            } else if (field === 'indicator') {
+              setIsQuestionStandardOpen(false);
+              setIsQuestionOutcomeOpen(false);
+            } else {
+              setIsQuestionStandardOpen(false);
+              setIsQuestionIndicatorOpen(false);
+            }
+          }}
+          className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-700 font-bold text-xs outline-none text-right flex justify-between items-center cursor-pointer min-h-[34px]"
+        >
+          <span className="truncate">{currentValue || selectPlaceholder}</span>
+          <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+        </button>
+        
+        {isOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>
+            <div className="absolute top-full left-0 z-50 w-72 mt-1 bg-white border border-slate-150 rounded-2xl shadow-xl max-h-60 overflow-y-auto p-2 space-y-1 animate-in fade-in slide-in-from-top-1 duration-150" dir="rtl">
+              {list.map((opt: string) => (
+                <div key={opt} className="flex items-center justify-between gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-xl transition-all">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateCurrentQuestionField(field, opt);
+                      setIsOpen(false);
+                    }}
+                    className="flex-1 text-right font-bold text-slate-700 text-xs truncate"
+                  >
+                    {opt}
+                  </button>
+                  <div className="flex gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newVal = prompt(promptEditLabel, opt);
+                        if (newVal !== null && newVal.trim()) {
+                          const newList = list.map((x: string) => x === opt ? newVal.trim() : x);
+                          setCurrentLesson({ ...currentLesson, [lessonField]: newList.join("\n") });
+                          if (tempQuestion[field] === opt) {
+                            updateCurrentQuestionField(field, newVal.trim());
+                          }
+                        }
+                      }}
+                      className="p-1 text-indigo-600 hover:bg-indigo-50 rounded"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm(confirmDeleteLabel)) {
+                          const newList = list.filter((x: string) => x !== opt);
+                          setCurrentLesson({ ...currentLesson, [lessonField]: newList.join("\n") });
+                          if (tempQuestion[field] === opt) {
+                            updateCurrentQuestionField(field, "");
+                          }
+                        }
+                      }}
+                      className="p-1 text-rose-600 hover:bg-rose-50 rounded"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  const newVal = prompt(promptEnterLabel);
+                  if (newVal && newVal.trim()) {
+                    const list = (currentLesson[lessonField] || "").split("\n").filter(Boolean);
+                    if (!list.includes(newVal.trim())) {
+                      const newList = [...list, newVal.trim()];
+                      setCurrentLesson({ ...currentLesson, [lessonField]: newList.join("\n") });
+                      updateCurrentQuestionField(field, newVal.trim());
+                      setIsOpen(false);
+                    }
+                  }
+                }}
+                className="w-full text-center py-2 text-indigo-600 font-black text-xs hover:bg-indigo-50 border-t border-dashed border-slate-100 rounded-b-xl flex items-center justify-center gap-1 mt-1"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>{addCustomLabel}</span>
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
+  const renderQuestionsBuilder = (source: 'assignments' | 'questions') => {
+    const list = currentLesson[source] || [];
+    const headerLabel = source === 'assignments' 
+      ? (language === 'ar' ? 'واجبات وتكليفات الدرس (Assignments)' : 'Lesson Assignments')
+      : (language === 'ar' ? 'تدريبات وتقييمات الدرس (Quiz Me)' : 'Quiz Me Practice');
+    
+    const headerDesc = source === 'assignments'
+      ? (language === 'ar' ? 'قم بإضافة التكليفات التطبيقية والواجبات المنزلية للطلاب' : 'Add application homework and assignments for students')
+      : (language === 'ar' ? 'قم بإضافة أسئلة تدريبية تفاعلية لتقييم فهم واستيعاب الطالب' : 'Add interactive practice questions to test student understanding');
+
+    return (
+      <div className="space-y-8 animate-in fade-in duration-300">
+        <input 
+          type="file" 
+          ref={source === 'assignments' ? assignmentsExcelRef : questionsExcelRef} 
+          style={{ display: 'none' }} 
+          accept=".xlsx,.xls" 
+          onChange={source === 'assignments' ? handleAssignmentsExcelChange : handleQuestionsExcelChange} 
+        />
+        
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+          <div>
+            <h4 className="text-xl font-black text-slate-900 flex items-center gap-3">
+              <HelpCircle className="w-6 h-6 text-indigo-600" />
+              {headerLabel}
+            </h4>
+            <p className="text-slate-400 text-sm font-bold mt-1">{headerDesc}</p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button 
+              type="button"
+              onClick={() => handleExcelUpload(source === 'assignments' ? 'assignments' : 'questions')}
+              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
+            >
+              <Upload className="w-4 h-4" />
+              {language === 'ar' ? 'استيراد Excel' : 'Import Excel'}
+            </button>
+            <button 
+              type="button"
+              onClick={() => downloadQuestionsTemplate(source === 'assignments' ? 'assignments' : 'questions')}
+              className="bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
+            >
+              <Download className="w-4 h-4" />
+              {language === 'ar' ? 'تحميل نموذج' : 'Template'}
+            </button>
+            <button 
+              type="button"
+              onClick={() => handleAddQuestionForSource(source)}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all shadow-lg cursor-pointer"
+            >
+              <Plus className="w-5 h-5" />
+              {language === 'ar' ? '+ إضافة سؤال' : '+ Add Question'}
+            </button>
+          </div>
+        </div>
+
+        {/* Saved Questions Cards List */}
+        {!showQuestionForm && (
+          <div className="space-y-4">
+            {list.length === 0 ? (
+              <div className="bg-white rounded-[35px] border-4 border-dashed border-slate-100 p-16 flex flex-col items-center justify-center text-center gap-4">
+                <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300">
+                  <HelpCircle className="w-8 h-8" />
+                </div>
+                <div>
+                  <h4 className="text-xl font-black text-slate-800 mb-1">{language === 'ar' ? 'لا يوجد أسئلة مضافة' : 'No questions added yet'}</h4>
+                  <p className="text-slate-400 font-bold text-xs max-w-sm">{language === 'ar' ? 'ابدأ بإضافة سؤال جديد أو استيراده من ملف إكسيل' : 'Start by adding a new question or importing from Excel'}</p>
+                </div>
+                <button 
+                  type="button"
+                  onClick={() => handleAddQuestionForSource(source)}
+                  className="bg-indigo-50 text-indigo-600 px-8 py-3.5 rounded-2xl font-black transition-all hover:bg-indigo-100 cursor-pointer text-xs"
+                >
+                  {language === 'ar' ? '+ إضافة أول سؤال' : '+ Add First Question'}
+                </button>
+              </div>
+            ) : (
+              list.map((q: any, index: number) => (
+                <div key={q.id || index} className="bg-white rounded-[30px] border border-slate-100 shadow-sm overflow-hidden group hover:shadow-md transition-all duration-300">
+                  <div className="px-6 py-4 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-4 flex-1 overflow-hidden">
+                      <div className="flex flex-col items-center gap-1">
+                        <button type="button" onClick={() => moveQuestionForSource(source, index, 'UP')} disabled={index === 0} className="text-slate-300 hover:text-indigo-600 disabled:opacity-20 transition-colors"><ChevronUp className="w-4 h-4" /></button>
+                        <span className="w-8 h-8 bg-slate-900 text-white rounded-lg flex items-center justify-center font-black text-xs">{index + 1}</span>
+                        <button type="button" onClick={() => moveQuestionForSource(source, index, 'DOWN')} disabled={index === list.length - 1} className="text-slate-300 hover:text-indigo-600 disabled:opacity-20 transition-colors"><ChevronDown className="w-4 h-4" /></button>
+                      </div>
+                      <div className="flex flex-col flex-1 overflow-hidden">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded uppercase">
+                            {QUESTION_TYPES.find(t => t.id === q.type)?.label || q.type}
+                          </span>
+                          <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded uppercase">
+                            {q.level || "Medium"} • {q.points || 1} {language === 'ar' ? 'درجة' : 'pts'}
+                          </span>
+                          {q.standard && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">{q.standard}</span>}
+                        </div>
+                        <div 
+                          className="text-slate-700 font-bold truncate text-sm"
+                          dangerouslySetInnerHTML={{ __html: (q.text || "").replace(/<[^>]*>?/gm, '').substring(0, 120) + '...' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button 
+                        type="button"
+                        onClick={() => setExpandedQuestionIndex(expandedQuestionIndex === index ? null : index)}
+                        className="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center hover:bg-slate-100 hover:text-indigo-600 transition-all"
+                        title="Expand"
+                      >
+                        {expandedQuestionIndex === index ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => handleEditQuestionForSource(source, index)}
+                        className="w-10 h-10 bg-blue-50 text-blue-400 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"
+                        title="Edit"
+                      >
+                        <Edit2 className="w-5 h-5" />
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => removeQuestionForSource(source, index)}
+                        className="w-10 h-10 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Question details collapsible view */}
+                  {expandedQuestionIndex === index && (
+                    <div className="px-8 pb-8 pt-4 border-t border-slate-50 bg-slate-50/30 animate-in slide-in-from-top-2 duration-300">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-4">
+                          <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'نص السؤال / المحتوى:' : 'Question Content:'}</h5>
+                          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm prose prose-slate max-w-none text-sm font-bold" dangerouslySetInnerHTML={{ __html: q.text }} />
+                          
+                          {q.learningOutcome && (
+                            <div className="flex items-center gap-2 text-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-150 w-fit text-xs font-bold">
+                              <Target className="w-4 h-4" />
+                              <span>{q.learningOutcome}</span>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="space-y-4">
+                          {q.type !== 'TEXT' && (
+                            <>
+                              <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'خيارات الإجابة:' : 'Options & Correct Answer:'}</h5>
+                              <div className="space-y-2">
+                                {(q.options || []).filter(Boolean).map((opt: string, oIdx: number) => {
+                                  const isCorrect = q.type === 'MULTI_SELECT'
+                                    ? (q.correctAnswers || []).includes(opt)
+                                    : q.correctAnswer === opt;
+                                  return (
+                                    <div key={oIdx} className={`p-3 rounded-xl border flex items-center gap-3 text-xs font-bold transition-all ${isCorrect ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-white border-slate-100 text-slate-600'}`}>
+                                      <div className={`w-5 h-5 rounded-full flex items-center justify-center ${isCorrect ? 'bg-emerald-500 text-white' : 'bg-slate-100'}`}>
+                                        {isCorrect ? '✓' : ''}
+                                      </div>
+                                      <span>{opt}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </>
+                          )}
+
+                          {q.sections && q.sections.length > 0 && (
+                            <div className="space-y-3 pt-2">
+                              <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'تفسيرات وملاحظات إضافية:' : 'Explanations & Notes:'}</h5>
+                              <div className="space-y-2">
+                                {q.sections.map((sec: any, secIdx: number) => {
+                                  const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
+                                  const SectionIcon = preset.icon;
+                                  return (
+                                    <div key={secIdx} className={`p-4 rounded-xl border ${preset.container} text-xs`}>
+                                      <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider inline-flex items-center gap-1 mb-1.5 ${preset.badge}`}>
+                                        <SectionIcon className="w-3 h-3" />
+                                        {preset.label}
+                                      </span>
+                                      <div className="prose prose-slate max-w-none text-slate-700 font-bold font-sans" dangerouslySetInnerHTML={{ __html: sec.content }} />
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Premium Save Slide Form inside card list view */}
+        {showQuestionForm && (
+          <div className="bg-white rounded-[40px] border-2 border-indigo-500 shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-indigo-600 px-8 py-5 flex justify-between items-center">
+              <h4 className="text-white font-black flex items-center gap-3">
+                <Plus className="w-5 h-5" />
+                {editingQuestionIndex !== null 
+                  ? (language === 'ar' ? `تعديل السؤال #${editingQuestionIndex + 1}` : `Edit Question #${editingQuestionIndex + 1}`) 
+                  : (language === 'ar' ? 'إضافة سؤال تفاعلي جديد' : 'Add New Question')}
+              </h4>
+              <button 
+                type="button"
+                onClick={() => setShowQuestionForm(false)}
+                className="w-10 h-10 bg-white/10 text-white rounded-xl flex items-center justify-center hover:bg-white/20 transition-all"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="p-8 md:p-12 space-y-8">
+              {/* Unified Metadata & Configuration Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 p-6 bg-slate-50 border border-slate-200 rounded-[30px] shadow-sm mb-6">
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'نوع السؤال' : 'Question Type'}</label>
+                  <select 
+                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
+                    value={tempQuestion.type}
+                    onChange={(e) => {
+                      const newType = e.target.value;
+                      const updated = { ...tempQuestion, type: newType };
+                      if (newType === "TRUE_FALSE") {
+                        updated.options = ["صحيح", "خطأ", "", ""];
+                        updated.correctAnswer = "صحيح";
+                      } else if (tempQuestion.type === "TRUE_FALSE") {
+                        updated.options = ["", "", "", ""];
+                        updated.correctAnswer = "";
+                      }
+                      setTempQuestion(updated);
+                    }}
+                  >
+                    {QUESTION_TYPES.map(type => (
+                      <option key={type.id} value={type.id}>{type.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Custom Standard with CRUD */}
+                {renderMetadataDropdown(
+                  language === 'ar' ? 'المعيار' : 'Standard',
+                  tempQuestion.standard || "",
+                  'standard',
+                  isQuestionStandardOpen,
+                  setIsQuestionStandardOpen,
+                  'standards'
+                )}
+
+                {/* Custom Indicator with CRUD */}
+                {renderMetadataDropdown(
+                  language === 'ar' ? 'المؤشر' : 'Indicator',
+                  tempQuestion.indicator || "",
+                  'indicator',
+                  isQuestionIndicatorOpen,
+                  setIsQuestionIndicatorOpen,
+                  'indicators'
+                )}
+
+                {/* Custom Learning Outcome with CRUD */}
+                {renderMetadataDropdown(
+                  language === 'ar' ? 'المخرج التعليمي' : 'Learning Outcome',
+                  tempQuestion.learningOutcome || "",
+                  'learningOutcome',
+                  isQuestionOutcomeOpen,
+                  setIsQuestionOutcomeOpen,
+                  'learningOutcomes'
+                )}
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المهارة' : 'Skill'}</label>
+                  <select 
+                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
+                    value={tempQuestion.skill || "General"}
+                    onChange={(e) => updateCurrentQuestionField("skill", e.target.value)}
+                  >
+                    {["General", "Critical Thinking", "Problem Solving", "Analysis", "Application", "Math", "Physics", "Chemistry", "Biology", "Geology", "History", "Geography", "Philosophy", "Arabic", "English", "French"].map(sk => (
+                      <option key={sk} value={sk}>{sk}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'مستوى الصعوبة' : 'Difficulty'}</label>
+                  <select 
+                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
+                    value={tempQuestion.level || "Medium"}
+                    onChange={(e) => updateCurrentQuestionField("level", e.target.value)}
+                  >
+                    <option value="Easy">{language === 'ar' ? 'سهل' : 'Easy'}</option>
+                    <option value="Medium">{language === 'ar' ? 'متوسط' : 'Medium'}</option>
+                    <option value="Hard">{language === 'ar' ? 'صعب' : 'Hard'}</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'النقاط / الدرجة' : 'Points'}</label>
+                  <input 
+                    type="number"
+                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px]"
+                    value={tempQuestion.points !== undefined ? tempQuestion.points : 1}
+                    onChange={(e) => updateCurrentQuestionField("points", parseInt(e.target.value) || 0)}
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2 md:col-span-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'رابط فيديو اختياري للسؤال' : 'Optional Video Link'}</label>
+                  <input 
+                    type="url"
+                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 min-h-[34px]"
+                    value={tempQuestion.videoUrl || ""}
+                    onChange={(e) => updateCurrentQuestionField("videoUrl", e.target.value)}
+                    placeholder="YouTube or Vimeo link..."
+                  />
+                </div>
+              </div>
+
+              {/* Rich Text Editor for Question Text */}
+              <div className="flex flex-col gap-3">
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'نص السؤال أو التكليف الرئيسي' : 'Question / Assignment Prompt'}</label>
+                <RichTextEditor
+                  value={tempQuestion.text || ""}
+                  onChange={(value) => updateCurrentQuestionField("text", value)}
+                  placeholder="Write the question prompt here..."
+                />
+              </div>
+
+              {/* Explanations & dynamic blocks inside form */}
+              <div className="flex flex-col gap-5 border-t border-slate-100 pt-6">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <label className="text-xs font-black text-slate-500 uppercase tracking-widest block">{language === 'ar' ? 'تفسيرات الإجابة والكتل المساعدة' : 'Answer Explanations & Content Blocks'}</label>
+                    <p className="text-slate-400 text-[10px] font-bold mt-0.5">{language === 'ar' ? 'أضف تلميحات أو ملاحظات أو تفسيرات تفصيلية لهذا السؤال' : 'Add hints, tips, or detailed explanations'}</p>
+                  </div>
+                  <div className="relative" data-dropdown-root="true">
+                    <button 
+                      type="button"
+                      onClick={() => setOpenDropdownId(openDropdownId === 'question-sections' ? null : 'question-sections')}
+                      className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all cursor-pointer border border-indigo-100"
+                    >
+                      <Plus className="w-4 h-4" /> {language === 'ar' ? 'إضافة شريحة مساعدة' : 'Add Block'}
+                    </button>
+                    <div className={`absolute right-0 mt-2 w-56 bg-white border border-slate-100 rounded-xl shadow-xl p-2 z-50 ${openDropdownId === 'question-sections' ? "block" : "hidden"}`}>
+                      {['EXPLANATION', 'HINT', 'TIP', 'WARNING', 'KEY_INSIGHT'].map(secType => (
+                        <button
+                          key={secType}
+                          type="button"
+                          onClick={() => {
+                             addQuestionSection(secType);
+                             setOpenDropdownId(null);
+                          }}
+                          className="w-full text-right px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors flex items-center gap-2"
+                        >
+                          {React.createElement(SECTION_STYLE_PRESETS[secType]?.icon || FileText, { className: "w-4 h-4" })}
+                          <span>{SECTION_STYLE_PRESETS[secType]?.label || secType}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4">
+                  {(tempQuestion.sections || []).map((sec: any, idx: number) => {
+                    const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
+                    const IconComponent = preset.icon;
+                    return (
+                      <div key={idx} className={`p-6 rounded-3xl border-2 flex flex-col gap-4 relative group ${preset.container}`}>
+                        <div className="flex justify-between items-center">
+                          <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 ${preset.badge}`}>
+                            <IconComponent className="w-3.5 h-3.5" />
+                            {preset.label}
+                          </span>
+                          <button 
+                            type="button"
+                            onClick={() => removeQuestionSection(idx)} 
+                            className="text-red-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <RichTextEditor 
+                          value={sec.content || ""}
+                          onChange={(value) => updateQuestionSectionContent(idx, value)}
+                          placeholder="Write block content here..."
+                          className="!bg-white !border-slate-200"
+                        />
+                      </div>
+                    );
+                  })}
+                  {(tempQuestion.sections || []).length === 0 && (
+                    <div className="bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-6 text-center text-slate-400 text-xs font-bold">
+                      {language === 'ar' ? 'لا يوجد أي شرائح تفسيرية مضافة بعد.' : 'No explanations or content blocks added yet.'}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Options & Choices block */}
+              {tempQuestion.type !== "TEXT" && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-slate-100 pt-6">
+                  {tempQuestion.type === "TRUE_FALSE" ? (
+                    <>
+                      <div className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isQuestionCorrectAnswer("صحيح") ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
+                        <div 
+                          onClick={() => toggleQuestionCorrectAnswer(0)}
+                          className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isQuestionCorrectAnswer("صحيح") ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200'}`}
+                        >
+                          {isQuestionCorrectAnswer("صحيح") && <CheckCircle2 className="w-5 h-5 text-white" />}
+                        </div>
+                        <span className="font-bold text-slate-700">{language === 'ar' ? 'صحيح' : 'True'}</span>
+                      </div>
+                      <div className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isQuestionCorrectAnswer("خطأ") ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
+                        <div 
+                          onClick={() => toggleQuestionCorrectAnswer(1)}
+                          className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isQuestionCorrectAnswer("خطأ") ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200'}`}
+                        >
+                          {isQuestionCorrectAnswer("خطأ") && <CheckCircle2 className="w-5 h-5 text-white" />}
+                        </div>
+                        <span className="font-bold text-slate-700">{language === 'ar' ? 'خطأ' : 'False'}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {(tempQuestion.options || ["", "", "", ""]).map((opt: string, oIndex: number) => (
+                        <div key={oIndex} className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isQuestionCorrectAnswer(opt) && opt !== "" ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
+                          <div 
+                            onClick={() => toggleQuestionCorrectAnswer(oIndex)}
+                            className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isQuestionCorrectAnswer(opt) && opt !== "" ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200'}`}
+                          >
+                            {isQuestionCorrectAnswer(opt) && opt !== "" && <CheckCircle2 className="w-5 h-5 text-white" />}
+                          </div>
+                          <input 
+                            type="text" 
+                            placeholder={language === 'ar' ? `الخيار ${oIndex + 1}` : `Option ${oIndex + 1}`}
+                            className="bg-transparent flex-1 outline-none font-bold text-slate-700 placeholder:text-slate-300 text-sm"
+                            value={opt}
+                            onChange={(e) => updateQuestionOption(oIndex, e.target.value)}
+                          />
+                          {tempQuestion.options.length > 2 && (
+                            <button 
+                              type="button" 
+                              onClick={() => {
+                                const newOptions = [...tempQuestion.options];
+                                newOptions.splice(oIndex, 1);
+                                setTempQuestion({ ...tempQuestion, options: newOptions });
+                              }} 
+                              className="text-red-400 hover:text-red-600 transition-all"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <div 
+                        onClick={() => setTempQuestion({ ...tempQuestion, options: [...tempQuestion.options, ""] })} 
+                        className="flex items-center justify-center gap-2 p-5 rounded-[22px] border-2 border-dashed border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all cursor-pointer text-indigo-600 font-bold text-sm"
+                      >
+                        <Plus className="w-5 h-5" />
+                        {language === 'ar' ? 'إضافة خيار' : 'Add Option'}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Form Buttons */}
+              <div className="flex justify-end gap-4 pt-4 border-t border-slate-100">
+                <button 
+                  type="button"
+                  onClick={() => setShowQuestionForm(false)}
+                  className="px-8 py-4 rounded-2xl font-bold bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => handleSaveQuestionForSource(source)}
+                  className="px-10 py-4 rounded-2xl font-black bg-indigo-600 text-white shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  <span>{language === 'ar' ? 'حفظ السؤال في القائمة' : 'Save Slide to List'}</span>
+                  <Save className="w-5 h-5 shrink-0" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1219,60 +2473,166 @@ export default function EditCoursePage() {
                           </div>
                         </div>
 
-                        <div className="space-y-3">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">المعايير (Standards)</label>
-                          <div className="flex gap-2">
-                            <select
-                              value={currentLesson.standards || ""}
-                              onChange={(e) => {
-                                if (e.target.value === "__NEW__") {
-                                  const newVal = prompt("أدخل المعيار الجديد (New Standard):");
-                                  if (newVal) setCurrentLesson({...currentLesson, standards: newVal});
-                                } else {
-                                  setCurrentLesson({...currentLesson, standards: e.target.value});
-                                }
+                        <div className="space-y-3 relative">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">{language === 'ar' ? "المعايير (Standards)" : "Standards"}</label>
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsStandardDropdownOpen(!isStandardDropdownOpen);
+                                setIsIndicatorDropdownOpen(false);
+                                setIsOutcomeDropdownOpen(false);
                               }}
-                              className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all shadow-sm appearance-none"
+                              className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 flex justify-between items-center shadow-sm text-right cursor-pointer"
                             >
-                              <option value="">اختر المعيار...</option>
-                              <option value="معيار 1: الفهم والاستيعاب">معيار 1: الفهم والاستيعاب</option>
-                              <option value="معيار 2: التطبيق والتحليل">معيار 2: التطبيق والتحليل</option>
-                              <option value="معيار 3: التفكير النقدي">معيار 3: التفكير النقدي</option>
-                              {currentLesson.standards && !["", "معيار 1: الفهم والاستيعاب", "معيار 2: التطبيق والتحليل", "معيار 3: التفكير النقدي"].includes(currentLesson.standards) && (
-                                <option value={currentLesson.standards}>{currentLesson.standards}</option>
-                              )}
-                              <option value="__NEW__" className="text-indigo-600 font-bold">+ إضافة معيار جديد...</option>
-                            </select>
-                            {currentLesson.standards && !["", "معيار 1: الفهم والاستيعاب", "معيار 2: التطبيق والتحليل", "معيار 3: التفكير النقدي"].includes(currentLesson.standards) && (
-                              <div className="flex gap-1 shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const newVal = prompt(language === 'ar' ? "تعديل المعيار:" : "Edit Standard:", currentLesson.standards);
-                                    if (newVal !== null) {
-                                      setCurrentLesson({...currentLesson, standards: newVal});
-                                      showToast(language === 'ar' ? "تم تعديل المعيار بنجاح" : "Standard updated successfully", "success");
-                                    }
-                                  }}
-                                  className="p-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl border border-indigo-100 flex items-center justify-center transition-all"
-                                  title={language === 'ar' ? "تعديل المعيار" : "Edit Standard"}
-                                >
-                                  <Edit2 className="w-4 h-4" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setCurrentLesson({...currentLesson, standards: ""});
-                                    showToast(language === 'ar' ? "تم حذف المعيار" : "Standard deleted", "info");
-                                  }}
-                                  className="p-3 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl border border-rose-100 flex items-center justify-center transition-all"
-                                  title={language === 'ar' ? "حذف المعيار" : "Delete Standard"}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
+                              <span className="truncate">
+                                {(() => {
+                                  const selected = (currentLesson.standards || "").split("\n").filter(Boolean);
+                                  if (selected.length === 0) return language === 'ar' ? "اختر المعيار..." : "Select Standard...";
+                                  return language === 'ar' 
+                                    ? `تم تحديد (${selected.length}) معايير` 
+                                    : `Selected (${selected.length}) standards`;
+                                })()}
+                              </span>
+                              <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${isStandardDropdownOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                            
+                            {isStandardDropdownOpen && (
+                              <>
+                                <div className="fixed inset-0 z-40" onClick={() => setIsStandardDropdownOpen(false)}></div>
+                                <div className="absolute z-50 w-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-xl max-h-72 overflow-y-auto p-3 space-y-1 animate-in fade-in slide-in-from-top-2 duration-200">
+                                  {[
+                                    language === 'ar' ? "معيار 1: الفهم والاستيعاب" : "Standard 1: Understanding & Comprehension",
+                                    language === 'ar' ? "معيار 2: التطبيق والتحليل" : "Standard 2: Application & Analysis",
+                                    language === 'ar' ? "معيار 3: التفكير النقدي" : "Standard 3: Critical Thinking"
+                                  ].map((option) => {
+                                    const selected = (currentLesson.standards || "").split("\n").filter(Boolean);
+                                    const isSelected = selected.includes(option);
+                                    return (
+                                      <label key={option} className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors text-slate-700 font-bold text-xs">
+                                        <input
+                                          type="checkbox"
+                                          checked={isSelected}
+                                          onChange={() => {
+                                            let nextList = [...selected];
+                                            if (isSelected) {
+                                              nextList = nextList.filter((x: string) => x !== option);
+                                            } else {
+                                              nextList.push(option);
+                                            }
+                                            setCurrentLesson({...currentLesson, standards: nextList.join("\n")});
+                                          }}
+                                          className="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer shrink-0"
+                                        />
+                                        <span className="flex-1 text-right">{option}</span>
+                                      </label>
+                                    );
+                                  })}
+
+                                  {(() => {
+                                    const selected = (currentLesson.standards || "").split("\n").filter(Boolean);
+                                    const defaultOptions = [
+                                      language === 'ar' ? "معيار 1: الفهم والاستيعاب" : "Standard 1: Understanding & Comprehension",
+                                      language === 'ar' ? "معيار 2: التطبيق والتحليل" : "Standard 2: Application & Analysis",
+                                      language === 'ar' ? "معيار 3: التفكير النقدي" : "Standard 3: Critical Thinking",
+                                      "معيار 1: الفهم والاستيعاب",
+                                      "معيار 2: التطبيق والتحليل",
+                                      "معيار 3: التفكير النقدي"
+                                    ];
+                                    const customOpts = selected.filter((x: string) => !defaultOptions.includes(x));
+                                    return customOpts.map((option: string) => (
+                                      <div key={option} className="flex items-center justify-between gap-2 px-3 py-1 hover:bg-slate-50 rounded-xl text-slate-700 font-bold text-xs">
+                                        <label className="flex items-center gap-3 flex-1 cursor-pointer py-1.5">
+                                          <input
+                                            type="checkbox"
+                                            checked={true}
+                                            onChange={() => {
+                                              const nextList = selected.filter((x: string) => x !== option);
+                                              setCurrentLesson({...currentLesson, standards: nextList.join("\n")});
+                                            }}
+                                            className="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer shrink-0"
+                                          />
+                                          <span className="flex-1 text-right truncate" title={option}>{option}</span>
+                                        </label>
+                                        <div className="flex gap-1 shrink-0">
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const newVal = prompt(language === 'ar' ? "تعديل المعيار المخصص:" : "Edit Custom Standard:", option);
+                                              if (newVal !== null && newVal.trim()) {
+                                                const nextList = selected.map((x: string) => x === option ? newVal.trim() : x);
+                                                setCurrentLesson({...currentLesson, standards: nextList.join("\n")});
+                                                showToast(language === 'ar' ? "تم التعديل بنجاح" : "Updated successfully", "success");
+                                              }
+                                            }}
+                                            className="p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg transition-all"
+                                            title={language === 'ar' ? "تعديل" : "Edit"}
+                                          >
+                                            <Edit2 className="w-3.5 h-3.5" />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const nextList = selected.filter((x: string) => x !== option);
+                                              setCurrentLesson({...currentLesson, standards: nextList.join("\n")});
+                                              showToast(language === 'ar' ? "تم إزالة المعيار" : "Standard removed", "info");
+                                            }}
+                                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-all"
+                                            title={language === 'ar' ? "حذف" : "Delete"}
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ));
+                                  })()}
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const newVal = prompt(language === 'ar' ? "أدخل المعيار المخصص الجديد:" : "Enter new custom standard:");
+                                      if (newVal && newVal.trim()) {
+                                        const selected = (currentLesson.standards || "").split("\n").filter(Boolean);
+                                        if (!selected.includes(newVal.trim())) {
+                                          const nextList = [...selected, newVal.trim()];
+                                          setCurrentLesson({...currentLesson, standards: nextList.join("\n")});
+                                          showToast(language === 'ar' ? "تم الإضافة بنجاح" : "Added successfully", "success");
+                                        }
+                                      }
+                                    }}
+                                    className="w-full text-right px-3 py-2 hover:bg-indigo-50/50 hover:text-indigo-600 rounded-xl cursor-pointer transition-all text-indigo-600 font-black text-xs border border-dashed border-indigo-100 mt-2 flex items-center justify-center gap-1.5"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" />
+                                    <span>{language === 'ar' ? "+ إضافة معيار مخصص..." : "+ Add Custom Standard..."}</span>
+                                  </button>
+                                </div>
+                              </>
                             )}
                           </div>
+
+                          {(() => {
+                            const selected = (currentLesson.standards || "").split("\n").filter(Boolean);
+                            if (selected.length === 0) return null;
+                            return (
+                              <div className="flex flex-wrap gap-1.5 mt-2">
+                                {selected.map((option: string) => (
+                                  <span key={option} className="inline-flex items-center gap-1.5 bg-indigo-50/80 text-indigo-700 px-3 py-1 rounded-xl border border-indigo-100/50 text-[10px] md:text-xs font-black shadow-sm shrink-0">
+                                    <span className="max-w-[120px] md:max-w-[200px] truncate" title={option}>{option}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const nextList = selected.filter((x: string) => x !== option);
+                                        setCurrentLesson({...currentLesson, standards: nextList.join("\n")});
+                                      }}
+                                      className="w-4 h-4 rounded-full bg-indigo-100 text-indigo-600 hover:bg-indigo-600 hover:text-white flex items-center justify-center transition-all cursor-pointer font-bold text-[8px]"
+                                    >
+                                      ✕
+                                    </button>
+                                  </span>
+                                ))}
+                              </div>
+                            );
+                          })()}
                         </div>
 
                         <div className="space-y-3 relative">
@@ -1603,7 +2963,7 @@ export default function EditCoursePage() {
                   </div>
                 )}
 
-                {activeTab === 'assignments' && renderSlidesBuilder('assignments')}
+                {activeTab === 'assignments' && renderQuestionsBuilder('assignments')}
 
                 {activeTab === 'scheduling' && (
                   <div className="space-y-8 animate-in fade-in duration-300">
@@ -1654,7 +3014,7 @@ export default function EditCoursePage() {
 
                 {activeTab === 'slides' && renderSlidesBuilder('slides')}
 
-                {activeTab === 'exercises' && renderSlidesBuilder('questions')}
+                {activeTab === 'exercises' && renderQuestionsBuilder('questions')}
 
                 {activeTab === 'attachments' && (
                   <div className="space-y-8">
@@ -1740,7 +3100,15 @@ export default function EditCoursePage() {
                       <div className="flex flex-col gap-1.5">
                         <p className="font-black text-slate-800 text-sm truncate">{courseData.title || '—'}</p>
                         <div className="flex flex-wrap gap-2 mt-1">
-                          <span className="px-2 py-0.5 bg-slate-50 text-slate-500 rounded-lg text-xs font-black">{courseData.grades?.[0] || "—"}</span>
+                          {courseData.grades && courseData.grades.length > 0 ? (
+                            courseData.grades.map((g) => (
+                              <span key={g} className="px-2 py-0.5 bg-slate-50 text-slate-500 rounded-lg text-xs font-black shrink-0">
+                                {getGradeName(g)}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="px-2 py-0.5 bg-slate-50 text-slate-500 rounded-lg text-xs font-black">—</span>
+                          )}
                           {courseData.subject && <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-black">{courseData.subject}</span>}
                         </div>
                       </div>
@@ -1820,26 +3188,83 @@ export default function EditCoursePage() {
                           <option value="الكويت">الكويت</option>
                         </select>
                       </div>
-                      <div className="space-y-2">
-                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">المراحل الدراسية</label>
-                        <div className="relative group min-w-0">
-                          <select 
-                            multiple
-                            value={courseData.grades}
-                            onChange={(e) => {
-                              const options = Array.from(e.target.selectedOptions, option => option.value);
-                              setCourseData({...courseData, grades: options});
-                            }}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all text-sm appearance-none min-h-[120px]"
-                          >
-                            {GRADES.map(g => (
-                              <option key={g} value={g} className="py-2 px-2 hover:bg-indigo-50">{g}</option>
-                            ))}
-                          </select>
-                          <div className="absolute left-4 top-4 pointer-events-none text-slate-300">
-                             <ChevronDown className="w-4 h-4" />
-                          </div>
-                          <p className="text-[10px] text-slate-400 mt-2 font-bold px-1">اضغط مع الاستمرار على (Ctrl/Cmd) لتحديد مراحل متعددة</p>
+                      <div className="space-y-4">
+                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">المراحل والصفوف الدراسية</label>
+                        <div className="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-1 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                          {[
+                            {
+                              stage: "Elementary",
+                              title: language === 'ar' ? "المرحلة الابتدائية (Primary)" : "Elementary School (Primary)",
+                              grades: [
+                                "الصف الأول الابتدائي", "الصف الثاني الابتدائي", "الصف الثالث الابتدائي",
+                                "الصف الرابع الابتدائي", "الصف الخامس الابتدائي", "الصف السادس الابتدائي"
+                              ]
+                            },
+                            {
+                              stage: "Middle School",
+                              title: language === 'ar' ? "المرحلة الإعدادية (Prep)" : "Middle School (Prep)",
+                              grades: [
+                                "الصف الأول الإعدادي", "الصف الثاني الإعدادي", "الصف الثالث الإعدادي"
+                              ]
+                            },
+                            {
+                              stage: "High School",
+                              title: language === 'ar' ? "المرحلة الثانوية (Secondary)" : "High School (Secondary)",
+                              grades: [
+                                "الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"
+                              ]
+                            }
+                          ].map((group) => {
+                            const allSelected = group.grades.every(g => courseData.grades.includes(g));
+                            
+                            return (
+                              <div key={group.stage} className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm space-y-3">
+                                <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                                  <h4 className="font-black text-sm text-slate-800 flex items-center gap-2">
+                                    <Layers className="w-4 h-4 text-indigo-600" />
+                                    {group.title}
+                                  </h4>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (allSelected) {
+                                        setCourseData({
+                                          ...courseData,
+                                          grades: courseData.grades.filter(g => !group.grades.includes(g))
+                                        });
+                                      } else {
+                                        const newGrades = [...courseData.grades];
+                                        group.grades.forEach(g => {
+                                          if (!newGrades.includes(g)) newGrades.push(g);
+                                        });
+                                        setCourseData({
+                                          ...courseData,
+                                          grades: newGrades
+                                        });
+                                      }
+                                    }}
+                                    className="text-xs font-black text-indigo-600 hover:text-indigo-700 hover:underline cursor-pointer"
+                                  >
+                                    {allSelected ? (language === 'ar' ? "إلغاء تحديد الكل" : "تحديد الكل") : (language === 'ar' ? "تحديد الكل" : "Select All")}
+                                  </button>
+                                </div>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                  {group.grades.map(g => (
+                                    <label key={g} className={`flex items-center gap-2.5 p-2.5 rounded-lg border-2 cursor-pointer transition-all ${courseData.grades.includes(g) ? 'bg-indigo-50/50 border-indigo-400' : 'bg-white border-slate-100 hover:border-slate-200'}`}>
+                                      <div className={`w-5 h-5 rounded flex items-center justify-center transition-all ${courseData.grades.includes(g) ? 'bg-indigo-600 text-white' : 'bg-slate-100 border border-slate-200'}`}>
+                                        {courseData.grades.includes(g) && <CheckCircle2 className="w-3.5 h-3.5" />}
+                                      </div>
+                                      <span className={`text-[11px] sm:text-xs font-bold ${courseData.grades.includes(g) ? 'text-indigo-900' : 'text-slate-600'}`}>{getGradeCheckboxLabel(g)}</span>
+                                      <input type="checkbox" className="hidden" checked={courseData.grades.includes(g)} onChange={(e) => {
+                                        if(e.target.checked) setCourseData({...courseData, grades: [...courseData.grades, g]});
+                                        else setCourseData({...courseData, grades: courseData.grades.filter(gr => gr !== g)});
+                                      }} />
+                                    </label>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
 
