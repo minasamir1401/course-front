@@ -387,6 +387,100 @@ export default function CreateCoursePage() {
   };
 
   const metadataExcelRef = useRef<HTMLInputElement>(null);
+  const questionsExcelRef = useRef<HTMLInputElement>(null);
+  const assignmentsExcelRef = useRef<HTMLInputElement>(null);
+
+  const parseQuestionsFromExcel = (rows: any[][]) => {
+    if (rows.length < 2) return [];
+    const headers = rows[0].map(h => String(h).trim().toLowerCase());
+    
+    const textIdx = headers.findIndex(h => h.includes("question") || h.includes("السؤال") || h.includes("نص السؤال"));
+    const typeIdx = headers.findIndex(h => h.includes("type") || h.includes("نوع"));
+    const opt1Idx = headers.findIndex(h => h.includes("option 1") || h.includes("الخيار 1") || h.includes("أول"));
+    const opt2Idx = headers.findIndex(h => h.includes("option 2") || h.includes("الخيار 2") || h.includes("ثاني"));
+    const opt3Idx = headers.findIndex(h => h.includes("option 3") || h.includes("الخيار 3") || h.includes("ثالث"));
+    const opt4Idx = headers.findIndex(h => h.includes("option 4") || h.includes("الخيار 4") || h.includes("رابع"));
+    const opt5Idx = headers.findIndex(h => h.includes("option 5") || h.includes("الخيار 5") || h.includes("خامس"));
+    const correctIdx = headers.findIndex(h => h.includes("correct answer") || h.includes("الإجابة الصحيحة") || h.includes("الاجابه الصحيحه"));
+    const correctsIdx = headers.findIndex(h => h.includes("correct answers") || h.includes("الإجابات") || h.includes("الاجابات"));
+    const pointsIdx = headers.findIndex(h => h.includes("points") || h.includes("الدرجة") || h.includes("الدرجه") || h.includes("النقاط"));
+    const skillIdx = headers.findIndex(h => h.includes("skill") || h.includes("المهارة") || h.includes("المهاره"));
+    const stdIdx = headers.findIndex(h => h.includes("standard") || h.includes("معيار") || h.includes("المعيار"));
+    const indIdx = headers.findIndex(h => h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشر"));
+    const loIdx = headers.findIndex(h => h.includes("outcome") || h.includes("مخرج") || h.includes("ناتج") || h.includes("التعلم"));
+    const diffIdx = headers.findIndex(h => h.includes("difficulty") || h.includes("صعوبة") || h.includes("الصعوبة"));
+    const videoIdx = headers.findIndex(h => h.includes("video") || h.includes("فيديو") || h.includes("الفيديو"));
+    const expIdx = headers.findIndex(h => h.includes("explanation") || h.includes("تفسير") || h.includes("التفسير") || h.includes("شرح"));
+
+    const parsed: any[] = [];
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row || row.every(c => String(c).trim() === "")) continue;
+
+      const qText = textIdx >= 0 ? String(row[textIdx] ?? "").trim() : "";
+      if (!qText) continue;
+
+      let qType = typeIdx >= 0 ? String(row[typeIdx] ?? "").trim().toUpperCase() : "MCQ";
+      if (qType.includes("TRUE") || qType.includes("صح") || qType.includes("T/F")) {
+        qType = "TRUE_FALSE";
+      } else if (qType.includes("MULTI") || qType.includes("تحديد") || qType.includes("متعدد")) {
+        qType = "MULTI_SELECT";
+      } else {
+        qType = "MCQ";
+      }
+
+      const options: string[] = [];
+      if (opt1Idx >= 0 && row[opt1Idx] !== "") options.push(String(row[opt1Idx]).trim());
+      if (opt2Idx >= 0 && row[opt2Idx] !== "") options.push(String(row[opt2Idx]).trim());
+      if (opt3Idx >= 0 && row[opt3Idx] !== "") options.push(String(row[opt3Idx]).trim());
+      if (opt4Idx >= 0 && row[opt4Idx] !== "") options.push(String(row[opt4Idx]).trim());
+      if (opt5Idx >= 0 && row[opt5Idx] !== "") options.push(String(row[opt5Idx]).trim());
+
+      if (options.length === 0 && qType !== 'TRUE_FALSE') {
+        options.push("Option 1", "Option 2", "Option 3", "Option 4");
+      }
+
+      const correctAnswer = correctIdx >= 0 ? String(row[correctIdx] ?? "").trim() : "";
+      const correctAnswersStr = correctsIdx >= 0 ? String(row[correctsIdx] ?? "").trim() : "";
+      const correctAnswers = correctAnswersStr ? correctAnswersStr.split(",").map(s => s.trim()).filter(Boolean) : [];
+
+      const points = pointsIdx >= 0 ? (parseInt(String(row[pointsIdx])) || 1) : 1;
+      const skill = skillIdx >= 0 ? String(row[skillIdx] ?? "").trim() : "General";
+      const standard = stdIdx >= 0 ? String(row[stdIdx] ?? "").trim() : "";
+      const indicator = indIdx >= 0 ? String(row[indIdx] ?? "").trim() : "";
+      const learningOutcome = loIdx >= 0 ? String(row[loIdx] ?? "").trim() : "";
+      const videoUrl = videoIdx >= 0 ? String(row[videoIdx] ?? "").trim() : "";
+      
+      let level = diffIdx >= 0 ? String(row[diffIdx] ?? "").trim() : "Medium";
+      if (level.toLowerCase().includes("easy") || level.includes("سهل")) level = "Easy";
+      else if (level.toLowerCase().includes("hard") || level.includes("صعب")) level = "Hard";
+      else level = "Medium";
+
+      const explanation = expIdx >= 0 ? String(row[expIdx] ?? "").trim() : "";
+      const sections = explanation ? [{ id: Date.now() + Math.random(), type: "EXPLANATION", content: explanation }] : [];
+
+      parsed.push({
+        id: Date.now() + Math.random(),
+        type: "QUESTION",
+        label: qType,
+        title: qText.substring(0, 30) + "...",
+        content: qText,
+        text: qText,
+        options,
+        correctAnswer,
+        correctAnswers,
+        points,
+        skill,
+        standard,
+        indicator,
+        learningOutcome,
+        level,
+        videoUrl,
+        sections
+      });
+    }
+    return parsed;
+  };
 
   const handleMetadataExcelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -407,7 +501,6 @@ export default function CreateCoursePage() {
 
         const headers = (rows[0] as string[]).map((h) => String(h).trim().toLowerCase());
         
-        // Find columns matching Standard, Indicator, Outcome, Domain
         const stdIdx = headers.findIndex(h => h.includes("standard") || h.includes("معيار") || h.includes("المعايير"));
         const indIdx = headers.findIndex(h => h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشرات"));
         const loIdx = headers.findIndex(h => h.includes("outcome") || h.includes("ناتج") || h.includes("مخرج") || h.includes("النواتج") || h.includes("المخرجات"));
@@ -419,7 +512,6 @@ export default function CreateCoursePage() {
           return;
         }
 
-        // Combine rows or pick values
         let standardVal = "";
         let indicatorVal = "";
         let outcomeVal = "";
@@ -427,7 +519,6 @@ export default function CreateCoursePage() {
 
         const dataRows = rows.slice(1).filter(r => r.some(c => String(c).trim() !== ""));
         
-        // Smart filtering by lesson name if "Lesson" column exists and current lesson has a title
         let filteredRows = dataRows;
         if (lessonIdx >= 0 && currentLesson.title) {
           const currentLessonTitleLower = currentLesson.title.trim().toLowerCase();
@@ -470,11 +561,119 @@ export default function CreateCoursePage() {
     e.target.value = "";
   };
 
+  const handleQuestionsExcelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const wb = XLSX.read(data, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+        
+        const parsed = parseQuestionsFromExcel(rows);
+        if (parsed.length === 0) {
+          showToast(language === 'ar' ? "لم يتم العثور على أسئلة صالحة في الملف" : "No valid questions found in the file", "error");
+          return;
+        }
+
+        const newStds = Array.from(new Set(parsed.map(q => q.standard).filter(Boolean)));
+        const newInds = Array.from(new Set(parsed.map(q => q.indicator).filter(Boolean)));
+        const newLos = Array.from(new Set(parsed.map(q => q.learningOutcome).filter(Boolean)));
+
+        const currentStds = (currentLesson.standards || "").split("\n").filter(Boolean);
+        const currentInds = (currentLesson.indicators || "").split("\n").filter(Boolean);
+        const currentLos = (currentLesson.learningOutcomes || "").split("\n").filter(Boolean);
+
+        const updatedStds = Array.from(new Set([...currentStds, ...newStds])).join("\n");
+        const updatedInds = Array.from(new Set([...currentInds, ...newInds])).join("\n");
+        const updatedLos = Array.from(new Set([...currentLos, ...newLos])).join("\n");
+
+        setCurrentLesson((prev: any) => ({
+          ...prev,
+          questions: [...(prev.questions || []), ...parsed],
+          standards: updatedStds,
+          indicators: updatedInds,
+          learningOutcomes: updatedLos
+        }));
+
+        showToast(
+          language === 'ar' 
+            ? `تم استيراد ${parsed.length} سؤال بنجاح` 
+            : `Imported ${parsed.length} questions successfully`, 
+          "success"
+        );
+      } catch (err) {
+        console.error(err);
+        showToast(language === 'ar' ? "حدث خطأ أثناء قراءة ملف Excel" : "Error reading Excel file", "error");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = "";
+  };
+
+  const handleAssignmentsExcelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const wb = XLSX.read(data, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+        
+        const parsed = parseQuestionsFromExcel(rows);
+        if (parsed.length === 0) {
+          showToast(language === 'ar' ? "لم يتم العثور على واجبات صالحة في الملف" : "No valid assignments found in the file", "error");
+          return;
+        }
+
+        const newStds = Array.from(new Set(parsed.map(q => q.standard).filter(Boolean)));
+        const newInds = Array.from(new Set(parsed.map(q => q.indicator).filter(Boolean)));
+        const newLos = Array.from(new Set(parsed.map(q => q.learningOutcome).filter(Boolean)));
+
+        const currentStds = (currentLesson.standards || "").split("\n").filter(Boolean);
+        const currentInds = (currentLesson.indicators || "").split("\n").filter(Boolean);
+        const currentLos = (currentLesson.learningOutcomes || "").split("\n").filter(Boolean);
+
+        const updatedStds = Array.from(new Set([...currentStds, ...newStds])).join("\n");
+        const updatedInds = Array.from(new Set([...currentInds, ...newInds])).join("\n");
+        const updatedLos = Array.from(new Set([...currentLos, ...newLos])).join("\n");
+
+        setCurrentLesson((prev: any) => ({
+          ...prev,
+          assignments: [...(prev.assignments || []), ...parsed],
+          standards: updatedStds,
+          indicators: updatedInds,
+          learningOutcomes: updatedLos
+        }));
+
+        showToast(
+          language === 'ar' 
+            ? `تم استيراد ${parsed.length} واجب بنجاح` 
+            : `Imported ${parsed.length} assignments successfully`, 
+          "success"
+        );
+      } catch (err) {
+        console.error(err);
+        showToast(language === 'ar' ? "حدث خطأ أثناء قراءة ملف Excel" : "Error reading Excel file", "error");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = "";
+  };
+
   const handleExcelUpload = (type: 'questions' | 'metadata' | 'assignments') => {
     if (type === 'metadata') {
       metadataExcelRef.current?.click();
-    } else {
-      showToast(language === 'ar' ? "هذه الميزة قيد التطوير" : "This feature is under development", "info");
+    } else if (type === 'questions') {
+      questionsExcelRef.current?.click();
+    } else if (type === 'assignments') {
+      assignmentsExcelRef.current?.click();
     }
   };
 
@@ -490,6 +689,78 @@ export default function CreateCoursePage() {
     XLSX.utils.book_append_sheet(wb, ws, "Metadata Template");
     XLSX.writeFile(wb, "course_metadata_template.xlsx");
     showToast(language === 'ar' ? "تم تحميل نموذج المعايير بنجاح" : "Metadata template downloaded successfully", "success");
+  };
+
+  const downloadQuestionsTemplate = (type: 'questions' | 'assignments') => {
+    const wsData = [
+      [
+        language === 'ar' ? "نص السؤال" : "Question Text",
+        language === 'ar' ? "نوع السؤال" : "Question Type",
+        language === 'ar' ? "الخيار 1" : "Option 1",
+        language === 'ar' ? "الخيار 2" : "Option 2",
+        language === 'ar' ? "الخيار 3" : "Option 3",
+        language === 'ar' ? "الخيار 4" : "Option 4",
+        language === 'ar' ? "الخيار 5" : "Option 5",
+        language === 'ar' ? "الإجابة الصحيحة" : "Correct Answer",
+        language === 'ar' ? "الإجابات الصحيحة المتعددة" : "Correct Answers",
+        language === 'ar' ? "الدرجة" : "Points",
+        language === 'ar' ? "المهارة" : "Skill",
+        language === 'ar' ? "المعيار" : "Standard",
+        language === 'ar' ? "المؤشر" : "Indicator",
+        language === 'ar' ? "ناتج التعلم" : "Learning Outcome",
+        language === 'ar' ? "مستوى الصعوبة" : "Difficulty Level",
+        language === 'ar' ? "رابط الفيديو" : "Video URL",
+        language === 'ar' ? "التفسير" : "Explanation"
+      ],
+      [
+        language === 'ar' ? "ما هو ناتج 5 + 5؟" : "What is 5 + 5?",
+        "MCQ",
+        "8", "9", "10", "11", "",
+        "10", "", "1", "Math",
+        language === 'ar' ? "معيار 1: العمليات الحسابية" : "Standard 1: Operations",
+        language === 'ar' ? "مؤشر 1.1: الجمع" : "Indicator 1.1: Addition",
+        language === 'ar' ? "أن يجمع الطالب الأعداد بشكل صحيح" : "LO: Students can add numbers correctly",
+        "Easy",
+        "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        language === 'ar' ? "الجمع الصحيح هو 10 لأن 5 زائد 5 يساوي 10" : "5 + 5 is 10"
+      ],
+      [
+        language === 'ar' ? "الأرض كروية الشكل." : "The earth is round.",
+        "TRUE_FALSE",
+        "", "", "", "", "",
+        language === 'ar' ? "صحيح" : "True", "", "1", "General",
+        language === 'ar' ? "معيار 2: الجغرافيا الطبيعية" : "Standard 2: Physical Geography",
+        language === 'ar' ? "مؤشر 2.1: شكل الأرض" : "Indicator 2.1: Earth Shape",
+        language === 'ar' ? "أن يدرك شكل كوكب الأرض" : "LO: Understands planet earth's shape",
+        "Easy", "", ""
+      ],
+      [
+        language === 'ar' ? "حدد قارات العالم القديم:" : "Select the ancient world continents:",
+        "MULTI_SELECT",
+        language === 'ar' ? "آسيا" : "Asia", 
+        language === 'ar' ? "أوروبا" : "Europe", 
+        language === 'ar' ? "أفريقيا" : "Africa", 
+        language === 'ar' ? "أستراليا" : "Australia", "",
+        "",
+        language === 'ar' ? "آسيا, أوروبا, أفريقيا" : "Asia, Europe, Africa",
+        "2", "General",
+        language === 'ar' ? "معيار 3: التاريخ القديم" : "Standard 3: Ancient History",
+        language === 'ar' ? "مؤشر 3.1: القارات" : "Indicator 3.1: Continents",
+        language === 'ar' ? "أن يحدد قارات العالم القديم" : "LO: Identifies old world continents",
+        "Medium", "", ""
+      ]
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Questions Template");
+    const filename = type === 'assignments' ? "assignments_template.xlsx" : "practice_questions_template.xlsx";
+    XLSX.writeFile(wb, filename);
+    showToast(
+      language === 'ar' 
+        ? "تم تحميل نموذج الأسئلة الاسترشادي بنجاح" 
+        : "Questions template downloaded successfully", 
+      "success"
+    );
   };
 
   const addBlock = (source: 'slides' | 'assignments' | 'questions' = 'slides', type: 'TEXT' | 'QUESTION') => {
@@ -583,7 +854,16 @@ export default function CreateCoursePage() {
 
     return (
       <div className="space-y-8">
-        <div className="flex justify-between items-center mb-4">
+        {source !== 'slides' && (
+          <input 
+            type="file" 
+            ref={source === 'assignments' ? assignmentsExcelRef : questionsExcelRef} 
+            style={{ display: 'none' }} 
+            accept=".xlsx,.xls" 
+            onChange={source === 'assignments' ? handleAssignmentsExcelChange : handleQuestionsExcelChange} 
+          />
+        )}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
           <div>
             <h4 className="text-xl font-black text-slate-900 flex items-center gap-3">
               <Layout className="w-6 h-6 text-indigo-600" />
@@ -591,7 +871,27 @@ export default function CreateCoursePage() {
             </h4>
             <p className="text-slate-400 text-sm font-bold mt-1">{headerDesc}</p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
+            {source !== 'slides' && (
+              <>
+                <button 
+                  type="button"
+                  onClick={() => handleExcelUpload(source === 'assignments' ? 'assignments' : 'questions')}
+                  className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
+                >
+                  <Upload className="w-4 h-4" />
+                  {language === 'ar' ? 'استيراد Excel' : 'Import Excel'}
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => downloadQuestionsTemplate(source === 'assignments' ? 'assignments' : 'questions')}
+                  className="bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
+                >
+                  <Download className="w-4 h-4" />
+                  {language === 'ar' ? 'تحميل نموذج' : 'Template'}
+                </button>
+              </>
+            )}
             <button 
               type="button"
               onClick={() => addBlock(source, 'TEXT')}
@@ -761,6 +1061,89 @@ export default function CreateCoursePage() {
                       className="!bg-white !border-slate-200"
                     />
                   </div>
+
+                  {block.type === 'QUESTION' && (
+                    <div className="grid grid-cols-2 md:grid-cols-6 gap-4 p-6 bg-white border border-slate-200 rounded-[30px] shadow-sm">
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المعيار' : 'Standard'}</label>
+                        <select 
+                          className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
+                          value={block.standard || ""}
+                          onChange={(e) => updateBlock(source, sIdx, 'standard', e.target.value)}
+                        >
+                          <option value="">{language === 'ar' ? 'اختر المعيار...' : 'Select Standard...'}</option>
+                          {(currentLesson.standards || "").split("\n").filter(Boolean).map((s: string) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المؤشر' : 'Indicator'}</label>
+                        <select 
+                          className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
+                          value={block.indicator || ""}
+                          onChange={(e) => updateBlock(source, sIdx, 'indicator', e.target.value)}
+                        >
+                          <option value="">{language === 'ar' ? 'اختر المؤشر...' : 'Select Indicator...'}</option>
+                          {(currentLesson.indicators || "").split("\n").filter(Boolean).map((ind: string) => (
+                            <option key={ind} value={ind}>{ind}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'مخرج التعلم' : 'Learning Outcome'}</label>
+                        <select 
+                          className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
+                          value={block.learningOutcome || ""}
+                          onChange={(e) => updateBlock(source, sIdx, 'learningOutcome', e.target.value)}
+                        >
+                          <option value="">{language === 'ar' ? 'اختر مخرج التعلم...' : 'Select Learning Outcome...'}</option>
+                          {(currentLesson.learningOutcomes || "").split("\n").filter(Boolean).map((lo: string) => (
+                            <option key={lo} value={lo}>{lo}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المهارة' : 'Skill'}</label>
+                        <select 
+                          className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
+                          value={block.skill || "General"}
+                          onChange={(e) => updateBlock(source, sIdx, 'skill', e.target.value)}
+                        >
+                          <option value="General">{language === 'ar' ? 'عام' : 'General'}</option>
+                          {["Math", "Physics", "Chemistry", "Biology", "Geology", "History", "Geography", "Philosophy", "Arabic", "English", "French"].map(sk => (
+                            <option key={sk} value={sk}>{sk}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'مستوى الصعوبة' : 'Difficulty'}</label>
+                        <select 
+                          className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
+                          value={block.level || "Medium"}
+                          onChange={(e) => updateBlock(source, sIdx, 'level', e.target.value)}
+                        >
+                          <option value="Easy">{language === 'ar' ? 'سهل' : 'Easy'}</option>
+                          <option value="Medium">{language === 'ar' ? 'متوسط' : 'Medium'}</option>
+                          <option value="Hard">{language === 'ar' ? 'صعب' : 'Hard'}</option>
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'النقاط' : 'Points'}</label>
+                        <input 
+                          type="number"
+                          className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
+                          value={block.points !== undefined ? block.points : 1}
+                          onChange={(e) => updateBlock(source, sIdx, 'points', parseInt(e.target.value) || 0)}
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   {block.type === 'QUESTION' && (
                     <div className="bg-slate-100 p-6 rounded-2xl border border-slate-200 space-y-4">
