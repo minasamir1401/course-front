@@ -59,7 +59,11 @@ export default function BackupsPage() {
         const data = await res.json();
         // The API returns { backups: [...] } or an array
         const list = Array.isArray(data) ? data : (data.backups || []);
-        setBackups(list);
+        const mapped = list.map((b: any) => ({
+          ...b,
+          name: b.filename || b.name || "backup.json"
+        }));
+        setBackups(mapped);
       } else {
         showToast(language === 'ar' ? "فشل في تحميل قائمة النسخ الاحتياطية" : "Failed to load backups list", "error");
       }
