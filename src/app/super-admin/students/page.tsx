@@ -183,7 +183,7 @@ export default function StudentsManagement() {
   return (
     <div className="min-h-screen bg-[#0a0a14] text-slate-200" dir={language === 'ar' ? 'rtl' : 'ltr'}>
       <SuperAdminSidebar />
-      <main className={`${language === 'ar' ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-6 lg:p-8 pt-16 lg:pt-8`}>
+      <main className={`${language === 'ar' ? 'lg:mr-72' : 'lg:ml-72'} p-4 sm:p-6 lg:p-8 pt-16 lg:pt-8`}>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6 sm:mb-10">
           <h2 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-2">
             <GraduationCap className="w-6 h-6 text-blue-500" />

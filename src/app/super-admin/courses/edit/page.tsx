@@ -2339,10 +2339,10 @@ export default function EditCoursePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900" dir="rtl">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900" dir={language === 'ar' ? 'rtl' : 'ltr'}>
       <SuperAdminSidebar />
 
-      <main className="lg:mr-64 p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8">
+      <main className={`${language === 'ar' ? 'lg:mr-72' : 'lg:ml-72'} p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8`}>
         {isLessonModalOpen ? (
           <div className="max-w-6xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="bg-white border border-slate-200 w-full rounded-[40px] shadow-2xl overflow-hidden">
