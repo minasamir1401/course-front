@@ -14,7 +14,7 @@ interface FileUploadProps {
   /** Initial value (already-uploaded URL) */
   value?: string;
   /** Token to use for auth header (defaults to super_admin_token → lms_token fallback) */
-  tokenKey?: "super_admin_token" | "lms_token";
+  tokenKey?: "super_admin_token" | "lms_token" | "school_admin_token";
   /** Extra class on the outer wrapper */
   className?: string;
 }
