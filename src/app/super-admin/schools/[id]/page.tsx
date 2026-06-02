@@ -268,7 +268,7 @@ export default function SchoolManagementPage() {
     <div className="min-h-screen bg-[#0a0a14] text-slate-200" dir={language === 'ar' ? 'rtl' : 'ltr'}>
       <SuperAdminSidebar />
 
-      <main className={`${language === 'ar' ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8 transition-all duration-300`}>
+      <main className={`${language === 'ar' ? 'lg:mr-72' : 'lg:ml-72'} p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8 transition-all duration-300`}>
         
         {/* Header with Navigation */}
         <div className="flex flex-col gap-6 mb-8">

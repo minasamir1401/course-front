@@ -5,13 +5,16 @@ import SuperAdminLayout from '../layout';
 import SuperAdminSidebar from '@/components/SuperAdminSidebar';
 import ExamAttendanceReport from '@/components/ExamReport';
 import { FileText } from 'lucide-react';
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function SuperAdminReportsPage() {
+  const { language } = useLanguage();
+
   return (
     <SuperAdminLayout>
-      <div className="min-h-screen bg-slate-50" dir="rtl">
+      <div className="min-h-screen bg-slate-50" dir={language === 'ar' ? 'rtl' : 'ltr'}>
         <SuperAdminSidebar />
-        <main className="lg:mr-64 p-6 md:p-8">
+        <main className={`${language === 'ar' ? 'lg:mr-72' : 'lg:ml-72'} p-6 md:p-8`}>
           <div className="max-w-7xl mx-auto space-y-8">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
               <div>

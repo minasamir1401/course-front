@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { API_URL } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface ClassItem {
   id: string;
@@ -19,6 +20,7 @@ interface ClassItem {
 }
 
 export default function SchoolAdminClassesPage() {
+  const { t, language } = useLanguage();
   const { showToast, confirm } = useNotification();
   const [schoolId, setSchoolId] = useState("");
   const [schoolName, setSchoolName] = useState("مدرستك");
@@ -65,7 +67,6 @@ export default function SchoolAdminClassesPage() {
       }
     } catch (e) {
       console.error(e);
-      // Show mock data if endpoint doesn't exist yet
       setClasses([]);
     } finally {
       setLoading(false);
@@ -90,7 +91,7 @@ export default function SchoolAdminClassesPage() {
   const handleAddClass = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.grade) {
-      showToast("يرجى ملء اسم الفصل والمرحلة الدراسية", "error");
+      showToast(t('schoolAdmin.classesPage.fillRequired'), "error");
       return;
     }
 
@@ -103,20 +104,23 @@ export default function SchoolAdminClassesPage() {
       });
 
       if (res.ok) {
-        showToast("تم إنشاء الفصل بنجاح", "success");
+        showToast(t('schoolAdmin.classesPage.createSuccess'), "success");
         setIsModalOpen(false);
         setFormData({ name: "", grade: "", subject: "", teacherName: "" });
         fetchClasses(schoolId);
       } else {
-        showToast("فشل إنشاء الفصل", "error");
+        showToast(t('schoolAdmin.classesPage.createFail'), "error");
       }
     } catch (e) {
-      showToast("خطأ في الاتصال", "error");
+      showToast(t('schoolAdmin.classesPage.connError'), "error");
     }
   };
 
   const handleDeleteClass = async (id: string) => {
-    const confirmed = await confirm("تأكيد الحذف", "هل أنت متأكد من حذف هذا الفصل؟");
+    const confirmed = await confirm(
+      t('schoolAdmin.classesPage.deleteConfirmTitle'),
+      t('schoolAdmin.classesPage.deleteConfirmMsg')
+    );
     if (!confirmed) return;
 
     try {
@@ -126,13 +130,13 @@ export default function SchoolAdminClassesPage() {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
-        showToast("تم حذف الفصل بنجاح", "success");
+        showToast(t('schoolAdmin.classesPage.deleteSuccess'), "success");
         fetchClasses(schoolId);
       } else {
-        showToast("فشل حذف الفصل", "error");
+        showToast(t('schoolAdmin.classesPage.deleteFail'), "error");
       }
     } catch (e) {
-      showToast("خطأ في الاتصال", "error");
+      showToast(t('schoolAdmin.classesPage.connError'), "error");
     }
   };
 
@@ -149,7 +153,7 @@ export default function SchoolAdminClassesPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-8 rtl" dir="rtl">
+      <div className="flex flex-col gap-8" dir={language === 'ar' ? 'rtl' : 'ltr'}>
 
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-center bg-white p-10 rounded-[40px] shadow-sm border border-slate-100 gap-6">
@@ -158,7 +162,7 @@ export default function SchoolAdminClassesPage() {
               <Layout className="w-8 h-8 text-orange-600" />
             </div>
             <div>
-              <h2 className="text-3xl font-black text-slate-900 leading-tight">إدارة الفصول الدراسية</h2>
+              <h2 className="text-3xl font-black text-slate-900 leading-tight">{t('schoolAdmin.classesPage.title')}</h2>
               <p className="text-slate-500 font-medium opacity-80">{schoolName}</p>
             </div>
           </div>
@@ -168,17 +172,17 @@ export default function SchoolAdminClassesPage() {
             className="w-full md:w-auto bg-orange-500 text-white px-10 py-4 rounded-2xl font-black shadow-xl shadow-orange-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
           >
             <Plus className="w-6 h-6" /> 
-            إنشاء فصل جديد
+            {t('schoolAdmin.classesPage.createClass')}
           </button>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            { label: "الأول الثانوي", count: classes.filter(c => c.grade === "الصف الأول الثانوي").length, color: "blue" },
-            { label: "الثاني الثانوي", count: classes.filter(c => c.grade === "الصف الثاني الثانوي").length, color: "purple" },
-            { label: "الثالث الثانوي", count: classes.filter(c => c.grade === "الصف الثالث الثانوي").length, color: "emerald" },
-            { label: "الإجمالي", count: classes.length, color: "orange" },
+            { label: t('schoolAdmin.classesPage.firstSecondary'), count: classes.filter(c => c.grade === "الصف الأول الثانوي").length },
+            { label: t('schoolAdmin.classesPage.secondSecondary'), count: classes.filter(c => c.grade === "الصف الثاني الثانوي").length },
+            { label: t('schoolAdmin.classesPage.thirdSecondary'), count: classes.filter(c => c.grade === "الصف الثالث الثانوي").length },
+            { label: t('schoolAdmin.classesPage.total'), count: classes.length },
           ].map(s => (
             <div key={s.label} className="bg-white rounded-[25px] border border-slate-100 p-6 text-center shadow-sm">
               <p className="text-3xl font-black text-slate-800">{s.count}</p>
@@ -190,37 +194,43 @@ export default function SchoolAdminClassesPage() {
         {/* Classes Grid */}
         <div className="bg-white rounded-[40px] border border-slate-100 shadow-sm p-8">
           <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-            <h3 className="text-xl font-black text-slate-800">قائمة الفصول ({filtered.length})</h3>
+            <h3 className="text-xl font-black text-slate-800">
+              {t('schoolAdmin.classesPage.classesList').replace('{count}', String(filtered.length))}
+            </h3>
             <div className="relative w-full md:w-80">
               <input
                 type="text"
-                placeholder="ابحث عن فصل..."
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pr-12 pl-4 outline-none focus:border-orange-500 transition-all font-bold"
+                placeholder={t('schoolAdmin.classesPage.searchPlaceholder')}
+                className={`w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 outline-none focus:border-orange-500 transition-all font-bold ${
+                  language === 'ar' ? 'pr-12 pl-4' : 'pl-12 pr-4'
+                }`}
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
               />
-              <Search className="w-5 h-5 text-slate-400 absolute right-4 top-3" />
+              <Search className={`w-5 h-5 text-slate-400 absolute top-3.5 ${
+                language === 'ar' ? 'right-4' : 'left-4'
+              }`} />
             </div>
           </div>
 
           {loading ? (
-            <div className="py-20 text-center animate-pulse text-slate-400 font-bold">جاري التحميل...</div>
+            <div className="py-20 text-center animate-pulse text-slate-400 font-bold">{t('schoolAdmin.teachersPage.loading')}</div>
           ) : filtered.length === 0 ? (
             <div className="py-20 text-center border-2 border-dashed border-slate-100 rounded-[30px]">
               <Layout className="w-16 h-16 text-slate-200 mx-auto mb-4" />
-              <h4 className="text-xl font-black text-slate-400">لا توجد فصول دراسية</h4>
+              <h4 className="text-xl font-black text-slate-400">{t('schoolAdmin.classesPage.noClasses')}</h4>
               <button
                 onClick={() => setIsModalOpen(true)}
                 className="mt-4 bg-orange-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-orange-600 transition-all"
               >
-                أنشئ أول فصل الآن
+                {t('schoolAdmin.classesPage.createFirstClass')}
               </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filtered.map(cls => (
                 <div key={cls.id} className="bg-white border border-slate-100 rounded-[30px] p-6 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-orange-50 rounded-full -mr-12 -mt-12 group-hover:bg-orange-100 transition-colors" />
+                  <div className={`absolute top-0 ${language === 'ar' ? 'right-0 -mr-12' : 'left-0 -ml-12'} w-24 h-24 bg-orange-50 rounded-full -mt-12 group-hover:bg-orange-100 transition-colors`} />
                   <div className="relative z-10">
                     <div className="flex justify-between items-start mb-4">
                       <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center font-black text-lg">
@@ -234,7 +244,7 @@ export default function SchoolAdminClassesPage() {
                     <p className="text-xs text-slate-400 font-bold mb-4">{cls.subject}</p>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-xs text-slate-500">
-                        <Users className="w-3.5 h-3.5" /> {cls.studentsCount || 0} طالب
+                        <Users className="w-3.5 h-3.5" /> {t('schoolAdmin.classesPage.studentsCount').replace('{count}', String(cls.studentsCount || 0))}
                       </div>
                       {cls.teacherName && (
                         <div className="flex items-center gap-2 text-xs text-slate-500">
@@ -246,6 +256,7 @@ export default function SchoolAdminClassesPage() {
                       <button
                         onClick={() => handleDeleteClass(cls.id)}
                         className="text-slate-300 hover:text-red-500 transition-colors"
+                        title={t('schoolAdmin.teachersPage.deleteTooltip')}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -263,17 +274,17 @@ export default function SchoolAdminClassesPage() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-lg rounded-[40px] p-10 shadow-2xl animate-in zoom-in-95">
             <div className="flex justify-between items-center mb-8">
-              <h3 className="text-2xl font-black text-slate-800">إنشاء فصل دراسي جديد</h3>
+              <h3 className="text-2xl font-black text-slate-800">{t('schoolAdmin.classesPage.modalTitle')}</h3>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-800"><X /></button>
             </div>
 
             <form onSubmit={handleAddClass} className="space-y-6">
               <div className="space-y-2">
-                <label className="text-sm font-black text-slate-500">اسم الفصل</label>
+                <label className="text-sm font-black text-slate-500">{t('schoolAdmin.classesPage.className')}</label>
                 <input
                   type="text" required
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 outline-none focus:border-orange-500 font-bold transition-all"
-                  placeholder="مثال: الفصل A"
+                  placeholder={t('schoolAdmin.classesPage.classPlaceholder')}
                   value={formData.name}
                   onChange={e => setFormData({ ...formData, name: e.target.value })}
                 />
@@ -281,14 +292,14 @@ export default function SchoolAdminClassesPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-black text-slate-500">المرحلة الدراسية</label>
+                  <label className="text-sm font-black text-slate-500">{t('schoolAdmin.classesPage.grade')}</label>
                   <select
                     required
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 outline-none focus:border-orange-500 font-black text-slate-900 transition-all appearance-none"
                     value={formData.grade}
                     onChange={e => setFormData({ ...formData, grade: e.target.value })}
                   >
-                    <option value="" className="bg-white text-slate-900">اختر المرحلة</option>
+                    <option value="" className="bg-white text-slate-900">{t('schoolAdmin.classesPage.selectGrade')}</option>
                     {[
                       "الصف الأول الابتدائي", "الصف الثاني الابتدائي", "الصف الثالث الابتدائي",
                       "الصف الرابع الابتدائي", "الصف الخامس الابتدائي", "الصف السادس الابتدائي",
@@ -300,11 +311,11 @@ export default function SchoolAdminClassesPage() {
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-black text-slate-500">المادة</label>
+                  <label className="text-sm font-black text-slate-500">{t('schoolAdmin.classesPage.subject')}</label>
                   <input
                     type="text"
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 outline-none focus:border-orange-500 font-bold transition-all"
-                    placeholder="مثال: SAT Math"
+                    placeholder={t('schoolAdmin.classesPage.subjectPlaceholder')}
                     value={formData.subject}
                     onChange={e => setFormData({ ...formData, subject: e.target.value })}
                   />
@@ -312,14 +323,14 @@ export default function SchoolAdminClassesPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-black text-slate-500">اسم المدرس المسؤول</label>
+                <label className="text-sm font-black text-slate-500">{t('schoolAdmin.classesPage.teacherName')}</label>
                 {teachers.length > 0 ? (
                   <select
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 outline-none focus:border-orange-500 font-bold appearance-none transition-all"
                     value={formData.teacherName}
                     onChange={e => setFormData({ ...formData, teacherName: e.target.value })}
                   >
-                    <option value="">اختر مدرساً (اختياري)</option>
+                    <option value="">{t('schoolAdmin.classesPage.selectTeacherOptional')}</option>
                     {teachers.map(t => (
                       <option key={t.id} value={t.name}>{t.name} - {t.subject}</option>
                     ))}
@@ -328,7 +339,7 @@ export default function SchoolAdminClassesPage() {
                   <input
                     type="text"
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 outline-none focus:border-orange-500 font-bold transition-all"
-                    placeholder="اكتب اسم المدرس"
+                    placeholder={t('schoolAdmin.classesPage.writeTeacherPlaceholder')}
                     value={formData.teacherName}
                     onChange={e => setFormData({ ...formData, teacherName: e.target.value })}
                   />
@@ -339,7 +350,7 @@ export default function SchoolAdminClassesPage() {
                 type="submit"
                 className="w-full bg-orange-500 text-white font-black py-5 rounded-2xl shadow-xl hover:bg-orange-600 hover:scale-105 transition-all"
               >
-                إنشاء الفصل الآن
+                {t('schoolAdmin.classesPage.submitBtn')}
               </button>
             </form>
           </div>

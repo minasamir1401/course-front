@@ -6,15 +6,16 @@ import {
   Users, Search, CheckCircle, GraduationCap, Shield, Info, RefreshCw
 } from "lucide-react";
 import { API_URL } from "@/lib/api";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function SchoolAdminStudentsPage() {
+  const { t, language } = useLanguage();
   const [schoolName, setSchoolName] = useState("مدرستك");
   const [schoolId, setSchoolId] = useState("");
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     username: "",
@@ -22,13 +23,6 @@ export default function SchoolAdminStudentsPage() {
     grade: ""
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const GRADES = [
-    "الصف الأول الابتدائي", "الصف الثاني الابتدائي", "الصف الثالث الابتدائي",
-    "الصف الرابع الابتدائي", "الصف الخامس الابتدائي", "الصف السادس الابتدائي",
-    "الصف الأول الإعدادي", "الصف الثاني الإعدادي", "الصف الثالث الإعدادي",
-    "الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"
-  ];
 
   useEffect(() => {
     try {
@@ -45,44 +39,6 @@ export default function SchoolAdminStudentsPage() {
       console.error(e);
     }
   }, []);
-
-  const handleAddStudent = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name || !formData.username || !formData.password || !formData.grade) {
-      alert("يرجى ملء جميع الحقول");
-      return;
-    }
-
-    setIsSubmitting(true);
-    const token = localStorage.getItem("school_admin_token");
-    try {
-      const res = await fetch(`${API_URL}/admin/users`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          ...formData,
-          role: "STUDENT",
-          schoolId: schoolId
-        })
-      });
-
-      if (res.ok) {
-        setIsModalOpen(false);
-        setFormData({ name: "", username: "", password: "", grade: "" });
-        fetchStudents(schoolId);
-      } else {
-        const data = await res.json();
-        alert(data.error || "فشل إضافة الطالب");
-      }
-    } catch (e) {
-      alert("خطأ في الاتصال");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const fetchStudents = async (sId: string) => {
     setLoading(true);
@@ -107,11 +63,11 @@ export default function SchoolAdminStudentsPage() {
         const data = await res.json();
         setStudents(Array.isArray(data) ? data : (data.users || []));
       } else {
-        setError("فشل جلب البيانات.");
+        setError(t('schoolAdmin.studentsPage.fetchFail'));
       }
     } catch (e: any) {
       clearTimeout(timeoutId);
-      setError("خطأ في الاتصال.");
+      setError(t('schoolAdmin.studentsPage.connError'));
     } finally {
       setLoading(false);
     }
@@ -124,7 +80,7 @@ export default function SchoolAdminStudentsPage() {
 
   return (
     <DashboardLayout>
-      <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans rtl" dir="rtl">
+      <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans" dir={language === 'ar' ? 'rtl' : 'ltr'}>
         
         {/* Header */}
         <div className="hidden md:flex flex-col md:flex-row justify-between items-center bg-white p-6 md:p-8 rounded-3xl md:rounded-[32px] shadow-sm border border-slate-100 gap-6 mb-6 md:mb-8">
@@ -132,9 +88,11 @@ export default function SchoolAdminStudentsPage() {
             <div className="w-12 h-12 md:w-16 md:h-16 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
               <Users className="w-6 h-6 md:w-8 md:h-8" />
             </div>
-            <div>
-              <h2 className="text-xl md:text-3xl font-black text-slate-900 leading-tight">سجل الطلاب</h2>
-              <p className="text-slate-500 text-xs md:text-lg font-medium opacity-80">إدارة الطلاب المسجلين في {schoolName}</p>
+            <div className={language === 'ar' ? 'text-right' : 'text-left'}>
+              <h2 className="text-xl md:text-3xl font-black text-slate-900 leading-tight">{t('schoolAdmin.studentsPage.title')}</h2>
+              <p className="text-slate-500 text-xs md:text-lg font-medium opacity-80">
+                {t('schoolAdmin.studentsPage.subtitle').replace('{schoolName}', schoolName)}
+              </p>
             </div>
           </div>
           
@@ -148,14 +106,12 @@ export default function SchoolAdminStudentsPage() {
           </div>
         </div>
 
-
-
         {/* Search and Table */}
         <div className="bg-white rounded-[24px] md:rounded-[32px] border border-slate-100 shadow-sm overflow-hidden p-4 md:p-8">
           <div className="flex flex-col md:flex-row justify-between items-center mb-6 md:mb-8 gap-4 md:gap-6">
             <div className="flex justify-between items-center w-full md:w-auto">
               <h3 className="text-base md:text-xl font-black text-slate-900 flex items-center gap-2 md:gap-3">
-                 الطلاب المسجلين
+                 {t('schoolAdmin.studentsPage.registeredStudents')}
                  <span className="text-[10px] md:text-xs bg-blue-50 text-blue-600 px-2 md:px-3 py-1 rounded-full font-bold">{filteredStudents.length}</span>
               </h3>
               <div className="flex md:hidden gap-2">
@@ -167,31 +123,35 @@ export default function SchoolAdminStudentsPage() {
             <div className="relative w-full md:w-96">
               <input 
                 type="text" 
-                placeholder="بحث..." 
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pr-11 pl-4 outline-none focus:border-blue-500 transition-all font-bold text-xs md:text-sm"
+                placeholder={t('schoolAdmin.studentsPage.searchPlaceholder')}
+                className={`w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 outline-none focus:border-blue-500 transition-all font-bold text-xs md:text-sm ${
+                  language === 'ar' ? 'pr-11 pl-4' : 'pl-11 pr-4'
+                }`}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
-              <Search className="w-4 h-4 md:w-5 md:h-5 text-slate-300 absolute right-4 top-1/2 -translate-y-1/2" />
+              <Search className={`w-4 h-4 md:w-5 md:h-5 text-slate-300 absolute top-1/2 -translate-y-1/2 ${
+                language === 'ar' ? 'right-4' : 'left-4'
+              }`} />
             </div>
           </div>
 
           <div className="overflow-x-auto">
-             <table className="w-full text-right">
+             <table className={`w-full ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                 <thead>
                    <tr className="text-slate-400 text-[11px] font-black uppercase tracking-widest bg-slate-50/50">
-                      <th className="px-6 py-5 rounded-r-2xl">الطالب</th>
-                      <th className="px-6 py-5">اسم المستخدم</th>
-                      <th className="px-6 py-5">المرحلة</th>
-                      <th className="px-6 py-5">تاريخ الانضمام</th>
-                      <th className="px-6 py-5 rounded-l-2xl">الحالة</th>
+                      <th className={`px-6 py-5 ${language === 'ar' ? 'rounded-r-2xl' : 'rounded-l-2xl'}`}>{t('schoolAdmin.studentsPage.table.student')}</th>
+                      <th className="px-6 py-5">{t('schoolAdmin.studentsPage.table.username')}</th>
+                      <th className="px-6 py-5">{t('schoolAdmin.studentsPage.table.grade')}</th>
+                      <th className="px-6 py-5">{t('schoolAdmin.studentsPage.table.joinDate')}</th>
+                      <th className={`px-6 py-5 ${language === 'ar' ? 'rounded-l-2xl' : 'rounded-r-2xl'}`}>{t('schoolAdmin.studentsPage.table.status')}</th>
                    </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                    {loading ? (
-                     <tr><td colSpan={5} className="py-20 text-center text-slate-400 font-bold">جاري التحميل...</td></tr>
+                     <tr><td colSpan={5} className="py-20 text-center text-slate-400 font-bold">{error || t('schoolAdmin.studentsPage.loading')}</td></tr>
                    ) : filteredStudents.length === 0 ? (
-                     <tr><td colSpan={5} className="py-20 text-center text-slate-400 font-bold">لا يوجد طلاب</td></tr>
+                     <tr><td colSpan={5} className="py-20 text-center text-slate-400 font-bold">{t('schoolAdmin.studentsPage.noStudents')}</td></tr>
                    ) : filteredStudents.map((student) => (
                      <tr key={student.id} className="hover:bg-slate-50/50 transition-colors group">
                         <td className="px-6 py-5">
@@ -207,11 +167,11 @@ export default function SchoolAdminStudentsPage() {
                            <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[10px] font-black">{student.grade || "غير محدد"}</span>
                         </td>
                         <td className="px-6 py-5 text-slate-500 text-xs font-bold">
-                           {student.createdAt ? new Date(student.createdAt).toLocaleDateString('ar-EG') : "—"}
+                           {student.createdAt ? new Date(student.createdAt).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US') : "—"}
                         </td>
                         <td className="px-6 py-5">
                            <span className="flex items-center gap-1.5 text-emerald-600 font-black text-[10px]">
-                              <CheckCircle className="w-3 h-3" /> نشط
+                              <CheckCircle className="w-3 h-3" /> {t('schoolAdmin.studentsPage.statusActive')}
                            </span>
                         </td>
                      </tr>

@@ -80,7 +80,7 @@ export default function ExamSupervisorsManagement() {
   return (
     <div className="min-h-screen bg-[#070710] text-slate-200" dir={language === 'ar' ? 'rtl' : 'ltr'}>
       <SuperAdminSidebar />
-      <main className={`${language === 'ar' ? 'lg:mr-64' : 'lg:ml-64'} p-4 sm:p-6 lg:p-8 pt-16 lg:pt-8`}>
+      <main className={`${language === 'ar' ? 'lg:mr-72' : 'lg:ml-72'} p-4 sm:p-6 lg:p-8 pt-16 lg:pt-8`}>
  
         {/* Header */}
         <div className="relative bg-gradient-to-br from-[#1a1a3a] to-[#0d0d1e] rounded-[40px] p-8 sm:p-12 overflow-hidden border border-white/5 mb-10 shadow-2xl">
