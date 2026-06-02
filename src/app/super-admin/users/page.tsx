@@ -200,6 +200,7 @@ function UsersManagementContent() {
   };
 
   const filteredUsers = users.filter((u: any) => {
+    if (u.role === 'SUPER_ADMIN') return false;
     const matchesSearch = u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                          u.username.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesTab = activeTab === 'ALL' || u.role === activeTab;
