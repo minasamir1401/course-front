@@ -43,7 +43,8 @@ export default function SchoolAdminCoursesPage() {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
-        setCourses(await res.json());
+        const data = await res.json();
+        setCourses(Array.isArray(data) ? data : (data.courses || []));
       }
     } catch (error) {
       console.error("Failed to fetch courses");
