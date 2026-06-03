@@ -352,7 +352,7 @@ export default function EditCoursePage() {
           country: data.country || "مصر",
           isCentral: data.isCentral,
           schoolId: data.schoolId || "",
-          schoolIds: data.schools ? data.schools.map((s: any) => s.id) : (data.schoolId ? [data.schoolId] : [])
+          schoolIds: (data.schools && data.schools.length > 0) ? data.schools.map((s: any) => s.id) : (data.schoolId ? [data.schoolId] : [])
         });
         
         setExams(data.exams || []);
