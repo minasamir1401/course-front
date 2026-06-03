@@ -3,8 +3,10 @@
 import React, { useState, useEffect } from "react";
 import { API_URL } from "@/lib/api";
 import { CheckCircle2, XCircle, Search, Filter, Loader2, Download, Building2, GraduationCap, ClipboardList } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "SCHOOL_ADMIN" }) {
+  const { language } = useLanguage();
   const [schools, setSchools] = useState<any[]>([]);
   const [exams, setExams] = useState<any[]>([]);
   
@@ -17,18 +19,18 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
   const [error, setError] = useState("");
 
   const grades = [
-    { value: "الصف الأول الابتدائي", label: "الصف الأول الابتدائي" },
-    { value: "الصف الثاني الابتدائي", label: "الصف الثاني الابتدائي" },
-    { value: "الصف الثالث الابتدائي", label: "الصف الثالث الابتدائي" },
-    { value: "الصف الرابع الابتدائي", label: "الصف الرابع الابتدائي" },
-    { value: "الصف الخامس الابتدائي", label: "الصف الخامس الابتدائي" },
-    { value: "الصف السادس الابتدائي", label: "الصف السادس الابتدائي" },
-    { value: "الصف الأول الإعدادي", label: "الصف الأول الإعدادي" },
-    { value: "الصف الثاني الإعدادي", label: "الصف الثاني الإعدادي" },
-    { value: "الصف الثالث الإعدادي", label: "الصف الثالث الإعدادي" },
-    { value: "الصف الأول الثانوي", label: "الصف الأول الثانوي" },
-    { value: "الصف الثاني الثانوي", label: "الصف الثاني الثانوي" },
-    { value: "الصف الثالث الثانوي", label: "الصف الثالث الثانوي" },
+    { value: "الصف الأول الابتدائي", label: language === 'ar' ? "الصف الأول الابتدائي" : "1st Primary" },
+    { value: "الصف الثاني الابتدائي", label: language === 'ar' ? "الصف الثاني الابتدائي" : "2nd Primary" },
+    { value: "الصف الثالث الابتدائي", label: language === 'ar' ? "الصف الثالث الابتدائي" : "3rd Primary" },
+    { value: "الصف الرابع الابتدائي", label: language === 'ar' ? "الصف الرابع الابتدائي" : "4th Primary" },
+    { value: "الصف الخامس الابتدائي", label: language === 'ar' ? "الصف الخامس الابتدائي" : "5th Primary" },
+    { value: "الصف السادس الابتدائي", label: language === 'ar' ? "الصف السادس الابتدائي" : "6th Primary" },
+    { value: "الصف الأول الإعدادي", label: language === 'ar' ? "الصف الأول الإعدادي" : "1st Prep" },
+    { value: "الصف الثاني الإعدادي", label: language === 'ar' ? "الصف الثاني الإعدادي" : "2nd Prep" },
+    { value: "الصف الثالث الإعدادي", label: language === 'ar' ? "الصف الثالث الإعدادي" : "3rd Prep" },
+    { value: "الصف الأول الثانوي", label: language === 'ar' ? "الصف الأول الثانوي" : "1st Secondary" },
+    { value: "الصف الثاني الثانوي", label: language === 'ar' ? "الصف الثاني الثانوي" : "2nd Secondary" },
+    { value: "الصف الثالث الثانوي", label: language === 'ar' ? "الصف الثالث الثانوي" : "3rd Secondary" },
   ];
 
   const getToken = () => {
@@ -96,7 +98,7 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
 
   const generateReport = async () => {
     if (!selectedSchool || !selectedGrade || !selectedExam) {
-      setError("الرجاء اختيار المدرسة والصف والامتحان");
+      setError(language === 'ar' ? "الرجاء اختيار المدرسة والصف والامتحان" : "Please select school, grade, and exam");
       return;
     }
 
@@ -108,7 +110,7 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "فشل في جلب التقرير");
+      if (!res.ok) throw new Error(data.error || (language === 'ar' ? "فشل في جلب التقرير" : "Failed to fetch report"));
       setReportData(data);
     } catch (err: any) {
       setError(err.message);
@@ -127,21 +129,21 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
       <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
         <h2 className="text-xl font-black text-slate-800 mb-6 flex items-center gap-3">
           <Filter className="w-6 h-6 text-indigo-600" />
-          تحديد التقرير
+          {language === 'ar' ? "تحديد التقرير" : "Report Selection"}
         </h2>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {role === "SUPER_ADMIN" && (
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-slate-400" /> المدرسة
+                <Building2 className="w-4 h-4 text-slate-400" /> {language === 'ar' ? "المدرسة" : "School"}
               </label>
               <select 
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
                 value={selectedSchool}
                 onChange={(e) => setSelectedSchool(e.target.value)}
               >
-                <option value="">-- اختر المدرسة --</option>
+                <option value="">-- {language === 'ar' ? "اختر المدرسة" : "Select School"} --</option>
                 {Array.isArray(schools) && schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             </div>
@@ -149,7 +151,7 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
 
           <div>
             <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
-              <GraduationCap className="w-4 h-4 text-slate-400" /> الصف الدراسي
+              <GraduationCap className="w-4 h-4 text-slate-400" /> {language === 'ar' ? "الصف الدراسي" : "Grade Level"}
             </label>
             <select 
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
@@ -157,14 +159,14 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
               onChange={(e) => setSelectedGrade(e.target.value)}
               disabled={role === "SUPER_ADMIN" && !selectedSchool}
             >
-              <option value="">-- اختر الصف --</option>
+              <option value="">-- {language === 'ar' ? "اختر الصف" : "Select Grade"} --</option>
               {grades.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
             </select>
           </div>
 
           <div>
             <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
-              <ClipboardList className="w-4 h-4 text-slate-400" /> الامتحان
+              <ClipboardList className="w-4 h-4 text-slate-400" /> {language === 'ar' ? "الامتحان" : "Exam"}
             </label>
             <select 
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
@@ -172,7 +174,7 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
               onChange={(e) => setSelectedExam(e.target.value)}
               disabled={!selectedGrade || exams.length === 0}
             >
-              <option value="">-- اختر الامتحان --</option>
+              <option value="">-- {language === 'ar' ? "اختر الامتحان" : "Select Exam"} --</option>
               {Array.isArray(exams) && exams.map(e => <option key={e.id} value={e.id}>{e.title}</option>)}
             </select>
           </div>
@@ -191,7 +193,7 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-md flex items-center gap-2 disabled:opacity-50"
           >
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
-            عرض التقرير
+            {language === 'ar' ? "عرض التقرير" : "Show Report"}
           </button>
         </div>
       </div>
@@ -199,16 +201,16 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
       {reportData && (
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
           <div className="flex justify-between items-center mb-8">
-            <h2 className="text-2xl font-black text-slate-800">نتائج التقرير</h2>
+            <h2 className="text-2xl font-black text-slate-800">{language === 'ar' ? "نتائج التقرير" : "Report Results"}</h2>
             <div className="flex gap-4">
               <div className="px-4 py-2 bg-green-50 text-green-700 rounded-lg font-bold text-sm">
-                امتحنوا: {reportData.attended.length}
+                {language === 'ar' ? "امتحنوا" : "Attended"}: {reportData.attended.length}
               </div>
               <div className="px-4 py-2 bg-red-50 text-red-700 rounded-lg font-bold text-sm">
-                لم يمتحنوا: {reportData.missed.length}
+                {language === 'ar' ? "لم يمتحنوا" : "Missed"}: {reportData.missed.length}
               </div>
               <div className="px-4 py-2 bg-slate-50 text-slate-700 rounded-lg font-bold text-sm">
-                الإجمالي: {reportData.total}
+                {language === 'ar' ? "الإجمالي" : "Total"}: {reportData.total}
               </div>
             </div>
           </div>
@@ -218,11 +220,13 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
             <div>
               <h3 className="text-lg font-bold text-green-600 flex items-center gap-2 mb-4">
                 <CheckCircle2 className="w-5 h-5" />
-                الطلاب الذين أدوا الامتحان
+                {language === 'ar' ? "الطلاب الذين أدوا الامتحان" : "Students who took the exam"}
               </h3>
               <div className="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden">
                 {reportData.attended.length === 0 ? (
-                  <div className="p-8 text-center text-slate-500 font-bold">لا يوجد طلاب أدوا الامتحان</div>
+                  <div className="p-8 text-center text-slate-500 font-bold">
+                    {language === 'ar' ? "لا يوجد طلاب أدوا الامتحان" : "No students took the exam"}
+                  </div>
                 ) : (
                   <div className="divide-y divide-slate-100">
                     {Array.isArray(reportData.attended) && reportData.attended.map(student => (
@@ -233,7 +237,7 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
                         </div>
                         <div className="text-left">
                           <p className="font-black text-green-600 text-lg">{student.percentage}%</p>
-                          <p className="text-xs text-slate-400">الدرجة: {student.score}</p>
+                          <p className="text-xs text-slate-400">{language === 'ar' ? "الدرجة" : "Score"}: {student.score}</p>
                         </div>
                       </div>
                     ))}
@@ -246,11 +250,13 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
             <div>
               <h3 className="text-lg font-bold text-red-600 flex items-center gap-2 mb-4">
                 <XCircle className="w-5 h-5" />
-                الطلاب الذين لم يؤدوا الامتحان
+                {language === 'ar' ? "الطلاب الذين لم يؤدوا الامتحان" : "Students who did not take the exam"}
               </h3>
               <div className="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden">
                 {reportData.missed.length === 0 ? (
-                  <div className="p-8 text-center text-slate-500 font-bold">جميع الطلاب أدوا الامتحان</div>
+                  <div className="p-8 text-center text-slate-500 font-bold">
+                    {language === 'ar' ? "جميع الطلاب أدوا الامتحان" : "All students took the exam"}
+                  </div>
                 ) : (
                   <div className="divide-y divide-slate-100">
                     {Array.isArray(reportData.missed) && reportData.missed.map(student => (
@@ -260,7 +266,7 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
                           <p className="text-xs text-slate-500">{student.username}</p>
                         </div>
                         <div className="px-3 py-1 bg-red-100 text-red-700 rounded-lg text-xs font-bold">
-                          غائب
+                          {language === 'ar' ? "غائب" : "Absent"}
                         </div>
                       </div>
                     ))}

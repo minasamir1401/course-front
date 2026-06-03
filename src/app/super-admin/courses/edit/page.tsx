@@ -534,6 +534,7 @@ export default function EditCoursePage() {
           schoolId: targetSchoolIds.length > 0 ? targetSchoolIds[0] : null,
           schoolIds: targetSchoolIds,
           lessons: newLessons.map((l) => ({
+            id: l.id,
             title: l.title,
             domain: l.domain || null,
             videoUrl: l.videoUrl || null,
@@ -2281,6 +2282,7 @@ export default function EditCoursePage() {
           schoolId: targetSchoolIds.length > 0 ? targetSchoolIds[0] : null,
           schoolIds: targetSchoolIds,
           lessons: lessons.map((l) => ({
+            id: l.id,
             title: l.title,
             domain: l.domain || null,
             videoUrl: l.videoUrl || null,
