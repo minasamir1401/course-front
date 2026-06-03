@@ -503,6 +503,11 @@ export default function SchoolManagementPage() {
                           <option value="الصف الخامس الابتدائي" className="text-white">{language === 'ar' ? "الخامس الابتدائي" : "Grade 5"}</option>
                           <option value="الصف السادس الابتدائي" className="text-white">{language === 'ar' ? "السادس الابتدائي" : "Grade 6"}</option>
                         </optgroup>
+                        <optgroup label={language === 'ar' ? "المرحلة الإعدادية" : "Middle School"} className="bg-[#0a0a14] text-white">
+                          <option value="الصف الأول الإعدادي" className="text-white">{language === 'ar' ? "الأول الإعدادي" : "Grade 7"}</option>
+                          <option value="الصف الثاني الإعدادي" className="text-white">{language === 'ar' ? "الثاني الإعدادي" : "Grade 8"}</option>
+                          <option value="الصف الثالث الإعدادي" className="text-white">{language === 'ar' ? "الثالث الإعدادي" : "Grade 9"}</option>
+                        </optgroup>
                         <optgroup label={language === 'ar' ? "المرحلة الثانوية" : "High School"} className="bg-[#0a0a14] text-white">
                           <option value="الصف الأول الثانوي" className="text-white">{language === 'ar' ? "الأول الثانوي" : "Grade 10"}</option>
                           <option value="الصف الثاني الثانوي" className="text-white">{language === 'ar' ? "الثاني الثانوي" : "Grade 11"}</option>
