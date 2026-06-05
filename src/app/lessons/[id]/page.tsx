@@ -519,7 +519,9 @@ export default function LessonPlayerPage() {
 
   const fetchData = async () => {
     try {
-      const token = localStorage.getItem("lms_token") || localStorage.getItem("super_admin_token");
+      const token = localStorage.getItem("lms_token") || 
+                    localStorage.getItem("super_admin_token") || 
+                    localStorage.getItem("school_admin_token");
       if (!token) {
         router.push("/login");
         return;
@@ -595,8 +597,11 @@ export default function LessonPlayerPage() {
   };
 
   const handleProgressUpdate = async (state: { playedSeconds: number }) => {
+    if (searchParams.get('preview') === 'true') return; // Do not save progress in preview mode
     try {
-      const token = localStorage.getItem("lms_token") || localStorage.getItem("super_admin_token");
+      const token = localStorage.getItem("lms_token") || 
+                    localStorage.getItem("super_admin_token") || 
+                    localStorage.getItem("school_admin_token");
       if (!token) return;
 
       await fetch(`${API_URL}/progress/lesson/${lessonId}`, {
@@ -690,6 +695,22 @@ export default function LessonPlayerPage() {
   return (
     <DashboardLayout>
       <div className="max-w-[1600px] mx-auto space-y-6 md:space-y-12 pb-24 overflow-x-hidden px-1 sm:px-0" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+
+        {/* Preview Banner */}
+        {searchParams.get('preview') === 'true' && (
+          <div className="bg-gradient-to-r from-amber-500 to-orange-600 text-white p-5 rounded-3xl flex flex-col sm:flex-row items-center justify-between shadow-lg font-black text-sm gap-4 animate-in slide-in-from-top duration-300">
+            <div className="flex items-center gap-3">
+              <Sparkles className="w-6 h-6 animate-pulse text-amber-200" />
+              <span>{language === 'ar' ? 'وضع المعاينة النشط (لن يتم تسجيل المشاهدة أو نتائج التمارين في قاعدة البيانات)' : 'Active Preview Mode (Progress and exercise results will not be recorded in database)'}</span>
+            </div>
+            <button 
+              onClick={() => window.close()} 
+              className="bg-white/20 hover:bg-white text-white hover:text-orange-600 px-6 py-2.5 rounded-2xl transition-all text-xs font-black shadow-inner"
+            >
+              {language === 'ar' ? 'إغلاق المعاينة' : 'Close Preview'}
+            </button>
+          </div>
+        )}
 
         {/* ── TOP HEADER BAR ── */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-6 px-1 sm:px-2">
