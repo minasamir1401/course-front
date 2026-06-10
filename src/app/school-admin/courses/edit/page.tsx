@@ -3117,8 +3117,8 @@ export default function EditCoursePage() {
                         <p className="font-black text-slate-800 text-sm truncate">{courseData.title || '—'}</p>
                         <div className="flex flex-wrap gap-2 mt-1">
                           {courseData.grades && courseData.grades.length > 0 ? (
-                            courseData.grades.map((g) => (
-                              <span key={g} className="px-2 py-0.5 bg-slate-50 text-slate-500 rounded-lg text-xs font-black shrink-0">
+                            Array.from(new Set(courseData.grades)).map((g, index) => (
+                              <span key={`${g}-${index}`} className="px-2 py-0.5 bg-slate-50 text-slate-500 rounded-lg text-xs font-black shrink-0">
                                 {getGradeName(g)}
                               </span>
                             ))

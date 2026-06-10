@@ -4,13 +4,14 @@ import React, { useState, useEffect } from "react";
 import {
   Search, Bell, Menu, ChevronDown, LogOut, Settings,
   User, ArrowLeftCircle, Sparkles,
-  Globe, Zap
+  Globe, Zap, Building2
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { logout, stopImpersonation } from "@/lib/auth";
 import { LucideIcon } from "lucide-react";
+import { API_URL } from '@/lib/api';
 
 interface NavLink {
   label: string;
@@ -42,6 +43,11 @@ export default function Header({
   const [scrolled, setScrolled] = useState(false);
   const { t, language, setLanguage } = useLanguage();
 
+  const [schools, setSchools] = useState<any[]>([]);
+  const [showSchoolDropdown, setShowSchoolDropdown] = useState(false);
+  const [currentSchoolName, setCurrentSchoolName] = useState<string>("");
+  const [schoolSearchQuery, setSchoolSearchQuery] = useState("");
+
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
@@ -70,15 +76,54 @@ export default function Header({
         setUserName(name);
         setUserInitials(name.charAt(0));
         const roles: Record<string, string> = {
-          SUPER_ADMIN: "مدير النظام",
-          SCHOOL_ADMIN: "مدير مدرسة",
-          TEACHER: "معلم",
-          STUDENT: "طالب",
+          SUPER_ADMIN: language === 'ar' ? "مدير النظام" : "System Admin",
+          SCHOOL_ADMIN: language === 'ar' ? "مدير مدرسة" : "School Admin",
+          TEACHER: language === 'ar' ? "معلم" : "Teacher",
+          STUDENT: language === 'ar' ? "طالب" : "Student",
         };
-        setUserRoleName(roles[user.role] || "مستخدم");
+        setUserRoleName(roles[user.role] || (language === 'ar' ? "مستخدم" : "User"));
       } catch (_) { }
     }
+  }, [pathname, language]);
+
+  useEffect(() => {
+    const isSuperAdmin = pathname?.startsWith("/super-admin");
+    const token = localStorage.getItem("super_admin_token");
+    if (isSuperAdmin && token) {
+      const fetchSchools = async () => {
+        try {
+          const res = await fetch(API_URL + "/admin/schools", {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const list = Array.isArray(data) ? data : (data.schools || []);
+            setSchools(list);
+          }
+        } catch (error) {
+          console.error("Failed to fetch schools in Header:", error);
+        }
+      };
+      fetchSchools();
+    } else {
+      setSchools([]);
+    }
   }, [pathname]);
+
+  useEffect(() => {
+    if (pathname && schools.length > 0) {
+      const match = pathname.match(/\/super-admin\/schools\/([^/]+)/);
+      if (match) {
+        const activeSchoolId = match[1];
+        const schoolObj = schools.find((s) => s.id === activeSchoolId);
+        if (schoolObj) {
+          setCurrentSchoolName(schoolObj.name);
+          return;
+        }
+      }
+    }
+    setCurrentSchoolName("");
+  }, [pathname, schools]);
 
   const handleLogout = () => logout(router, pathname ?? undefined);
 
@@ -94,7 +139,7 @@ export default function Header({
         <div className="flex items-center gap-3 xl:gap-8 flex-1 min-w-0">
 
           {/* Brand / Title Section */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 shrink-0">
             {!isStudent && (
               <button
                 onClick={onMenuClick}
@@ -113,6 +158,76 @@ export default function Header({
               </div>
             </div>
           </div>
+
+          {/* School Switcher Dropdown for Superadmin */}
+          {pathname?.startsWith("/super-admin") && schools.length > 0 && (
+            <div className="relative z-50">
+              <button
+                onClick={() => setShowSchoolDropdown(!showSchoolDropdown)}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/80 border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all text-xs font-black text-slate-800 cursor-pointer"
+              >
+                <Building2 className="w-4 h-4 text-indigo-600" />
+                <span className="max-w-[120px] sm:max-w-[180px] truncate">
+                  {currentSchoolName || (language === 'ar' ? "انتقال سريع لمدرسة..." : "Switch school...")}
+                </span>
+                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${showSchoolDropdown ? "rotate-180 text-indigo-600" : ""}`} />
+              </button>
+
+              {showSchoolDropdown && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowSchoolDropdown(false)} />
+                  <div className={`absolute top-[calc(100%+8px)] ${language === 'ar' ? 'right-0' : 'left-0'} z-50 w-72 bg-white rounded-2xl border border-slate-100 shadow-2xl p-3 animate-in fade-in slide-in-from-top-2 duration-200`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+                    <div className="relative mb-3">
+                      <Search className={`absolute ${language === 'ar' ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400`} />
+                      <input
+                        type="text"
+                        placeholder={language === 'ar' ? "ابحث عن مدرسة..." : "Search school..."}
+                        value={schoolSearchQuery}
+                        onChange={(e) => setSchoolSearchQuery(e.target.value)}
+                        className={`w-full bg-slate-50 border border-slate-200 rounded-xl py-2 ${language === 'ar' ? 'pr-9 pl-3' : 'pl-9 pr-3'} text-xs font-bold outline-none focus:bg-white focus:border-indigo-500 text-slate-900`}
+                      />
+                    </div>
+                    <div className="max-h-60 overflow-y-auto space-y-1 custom-scrollbar">
+                      <button
+                        onClick={() => {
+                          setShowSchoolDropdown(false);
+                          router.push("/super-admin/schools");
+                        }}
+                        className={`w-full px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-slate-50 ${language === 'ar' ? 'text-right' : 'text-left'} ${!currentSchoolName ? "text-indigo-600 bg-indigo-50/50" : "text-slate-600"}`}
+                      >
+                        <Building2 className="w-4 h-4 shrink-0" />
+                        <span>{language === 'ar' ? "إدارة جميع المدارس" : "Manage All Schools"}</span>
+                      </button>
+                      
+                      <div className="h-px bg-slate-100 my-1" />
+
+                      {schools
+                        .filter((s) => s.name.toLowerCase().includes(schoolSearchQuery.toLowerCase()))
+                        .map((school) => {
+                          const isActive = currentSchoolName === school.name;
+                          return (
+                            <button
+                              key={school.id}
+                              onClick={() => {
+                                setShowSchoolDropdown(false);
+                                router.push(`/super-admin/schools/${school.id}`);
+                              }}
+                              className={`w-full px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-between hover:bg-slate-50 ${language === 'ar' ? 'text-right' : 'text-left'} ${isActive ? "text-indigo-600 bg-indigo-50/50" : "text-slate-600"}`}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Building2 className="w-4 h-4 shrink-0" />
+                                <span className="truncate">{school.name}</span>
+                              </div>
+                              {isActive && <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 shrink-0" />}
+                            </button>
+                          );
+                        })}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
           {/* ── DESKTOP NAV (Students) ── */}
           {isStudent && !isMobile && (
