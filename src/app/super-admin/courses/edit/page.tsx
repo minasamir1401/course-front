@@ -300,33 +300,35 @@ export default function EditCoursePage() {
           parsedGrades = data.grade ? [data.grade] : ["High School"];
         }
 
-        const legacyGradeMap: { [key: string]: string } = {
-          "الصف الأول الابتدائي": "Elementary",
-          "الصف الثاني الابتدائي": "Elementary",
-          "الصف الثالث الابتدائي": "Elementary",
-          "الصف الرابع الابتدائي": "Elementary",
-          "الصف الخامس الابتدائي": "Elementary",
-          "الصف السادس الابتدائي": "Elementary",
-          "الصف الأول الإعدادي": "Middle School",
-          "الصف الثاني الإعدادي": "Middle School",
-          "الصف الثالث الإعدادي": "Middle School",
-          "الصف الأول الثانوي": "High School",
-          "الصف الثاني الثانوي": "High School",
-          "الصف الثالث الثانوي": "High School",
-          "1st Primary": "Elementary",
-          "2nd Primary": "Elementary",
-          "3rd Primary": "Elementary",
-          "4th Primary": "Elementary",
-          "5th Primary": "Elementary",
-          "6th Primary": "Elementary",
-          "1st Prep": "Middle School",
-          "2nd Prep": "Middle School",
-          "3rd Prep": "Middle School",
-          "1st Secondary": "High School",
-          "2nd Secondary": "High School",
-          "3rd Secondary": "High School"
+        const forwardGradeMap: { [key: string]: string } = {
+          "1st Primary": "الصف الأول الابتدائي",
+          "2nd Primary": "الصف الثاني الابتدائي",
+          "3rd Primary": "الصف الثالث الابتدائي",
+          "4th Primary": "الصف الرابع الابتدائي",
+          "5th Primary": "الصف الخامس الابتدائي",
+          "6th Primary": "الصف السادس الابتدائي",
+          "1st Prep": "الصف الأول الإعدادي",
+          "2nd Prep": "الصف الثاني الإعدادي",
+          "3rd Prep": "الصف الثالث الإعدادي",
+          "1st Secondary": "الصف الأول الثانوي",
+          "2nd Secondary": "الصف الثاني الثانوي",
+          "3rd Secondary": "الصف الثالث الثانوي",
         };
-        parsedGrades = parsedGrades.map(g => legacyGradeMap[g] || g);
+        
+        let expandedGrades: string[] = [];
+        parsedGrades.forEach(g => {
+          const mapped = forwardGradeMap[g] || g;
+          if (mapped === "Elementary") {
+            expandedGrades.push("الصف الأول الابتدائي", "الصف الثاني الابتدائي", "الصف الثالث الابتدائي", "الصف الرابع الابتدائي", "الصف الخامس الابتدائي", "الصف السادس الابتدائي");
+          } else if (mapped === "Middle School") {
+            expandedGrades.push("الصف الأول الإعدادي", "الصف الثاني الإعدادي", "الصف الثالث الإعدادي");
+          } else if (mapped === "High School") {
+            expandedGrades.push("الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي");
+          } else {
+            expandedGrades.push(mapped);
+          }
+        });
+        parsedGrades = Array.from(new Set(expandedGrades));
 
         setCourseData({
           title: data.title,
