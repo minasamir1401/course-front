@@ -72,6 +72,8 @@ export default function EditCoursePage() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
   const [schools, setSchools] = useState<any[]>([]);
 
   const getGradeName = (grade: string) => {
@@ -415,6 +417,7 @@ export default function EditCoursePage() {
         if (data.exams) {
           setExams(data.exams);
         }
+        setTimeout(() => setHasUnsavedChanges(false), 1000);
       }
     } catch (error) {
       showToast("خطأ في الاتصال", "error");
@@ -432,7 +435,7 @@ export default function EditCoursePage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ courseId }) // Link this exam to this course
+        body: JSON.stringify({ courseId }) 
       });
       
       if (res.ok) {
@@ -443,6 +446,40 @@ export default function EditCoursePage() {
       showToast("فشل الربط", "error");
     }
   };
+
+  useEffect(() => {
+    if (courseId) {
+      const token = localStorage.getItem("school_admin_token");
+      if (token) fetchCourseData(token, courseId);
+    }
+  }, [courseId, schoolIdParam]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setHasUnsavedChanges(true);
+    }
+  }, [courseData, lessons, currentLesson]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  useEffect(() => {
+    if (!hasUnsavedChanges || isSubmitting || isLoading) return;
+    
+    const timer = setTimeout(() => {
+      handleSubmit(undefined, true);
+    }, 60000);
+    
+    return () => clearTimeout(timer);
+  }, [hasUnsavedChanges, isSubmitting, isLoading, courseData, lessons]);
 
   const handleRemoveLesson = (index: number) => {
     const newLessons = [...lessons];
@@ -2274,8 +2311,8 @@ export default function EditCoursePage() {
     );
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent, isAutoSave = false) => {
+    if (e) e.preventDefault();
     if (!courseData.title) {
       showToast("يرجى إدخال عنوان الكورس", "error");
       return;
@@ -2320,15 +2357,22 @@ export default function EditCoursePage() {
       });
 
       if (res.ok) {
-        showToast("تم تحديث الكورس بنجاح", 'success');
-        router.push(`/school-admin/courses`);
+        setHasUnsavedChanges(false);
+        if (!isAutoSave) {
+          showToast("تم تحديث الكورس بنجاح", 'success');
+          router.push(`/school-admin/courses`);
+        } else {
+          setLastAutoSave(new Date());
+        }
       } else {
         const data = await res.json().catch(() => ({}));
         showToast(data.error || data.details || "فشل تحديث الكورس", 'error');
       }
     } catch (error: any) {
       console.error("Course update error:", error);
-      showToast(error.message || "خطأ في الاتصال بالخادم", 'error');
+      if (!isAutoSave) {
+        showToast(error.message || "خطأ في الاتصال بالخادم", 'error');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -3084,9 +3128,13 @@ export default function EditCoursePage() {
                   <p className="text-slate-400 text-lg mt-1 font-bold">تحديث محتوى وهيكل الكورس التعليمي</p>
                 </div>
               </div>
-              <div className="flex gap-3">
-                <button onClick={handleDeleteCourse} className="bg-red-50 text-red-600 px-8 py-4 rounded-2xl font-black flex items-center gap-2 hover:bg-red-600 hover:text-white transition-all border border-red-100"><Trash2 size={20} /> حذف</button>
-                <button onClick={handleSubmit} disabled={isSubmitting} className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-10 py-4 rounded-2xl font-black flex items-center gap-3 hover:scale-105 shadow-xl shadow-indigo-600/20 disabled:opacity-50 transition-all">{isSubmitting ? "جاري الحفظ..." : "حفظ التعديلات"}<Save className="w-6 h-6" /></button>
+              <div className="flex gap-3 items-center">
+                {lastAutoSave && (
+                  <span className="text-xs text-slate-400 font-bold hidden md:inline-block">
+                    {language === 'ar' ? 'آخر حفظ تلقائي:' : 'Last auto-save:'} {lastAutoSave.toLocaleTimeString()}
+                  </span>
+                )}
+                <button onClick={(e) => handleSubmit(e)} disabled={isSubmitting} className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-10 py-4 rounded-2xl font-black flex items-center gap-3 hover:scale-105 shadow-xl shadow-indigo-600/20 disabled:opacity-50 transition-all">{isSubmitting ? "جاري الحفظ..." : "حفظ التعديلات"}<Save className="w-6 h-6" /></button>
               </div>
             </div>
 
@@ -3316,6 +3364,15 @@ export default function EditCoursePage() {
                       </button>
                     </div>
                   )}
+                </div>
+
+                <div className="bg-red-50/50 rounded-[28px] border border-red-100 p-6 flex flex-col items-center justify-center gap-3">
+                   <p className="text-xs font-bold text-red-500 text-center">
+                     {language === 'ar' ? 'منطقة الخطر' : 'Danger Zone'}
+                   </p>
+                   <button onClick={handleDeleteCourse} className="w-full bg-red-100 text-red-600 px-8 py-3.5 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-red-600 hover:text-white transition-all border border-red-200">
+                     <Trash2 size={20} /> {language === 'ar' ? 'حذف الكورس بالكامل' : 'Delete Course'}
+                   </button>
                 </div>
               </div>
 

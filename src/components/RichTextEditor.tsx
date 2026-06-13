@@ -358,8 +358,8 @@ export default function RichTextEditor({ value, onChange, placeholder, className
       )}
 
       {activeModal === 'image' && (
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 bg-white border border-slate-200 p-6 rounded-3xl shadow-2xl min-w-[350px] animate-in zoom-in-95 duration-200 rtl" dir="rtl">
-          <div className="flex justify-between items-center mb-6">
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 bg-white border border-slate-200 p-4 rounded-3xl shadow-2xl min-w-[350px] animate-in zoom-in-95 duration-200 rtl" dir="rtl">
+          <div className="flex justify-between items-center mb-3">
             <h4 className="font-black text-slate-800 flex items-center gap-2">
               <ImageIcon className="w-5 h-5 text-indigo-600" />
               إعدادات الصورة
@@ -367,7 +367,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
             <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
           </div>
           
-          <div className="space-y-6 mb-8">
+          <div className="space-y-3 mb-4">
             <div className="flex flex-col gap-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">العرض (%)</label>
               <div className="flex items-center gap-4">
@@ -406,7 +406,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
 
           <button
             onClick={handleInsertImage}
-            className="w-full bg-indigo-600 text-white py-4 rounded-xl font-black shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+            className="w-full bg-indigo-600 text-white py-2.5 rounded-xl font-black shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
           >
             {editingImage ? 'تحديث الإعدادات' : 'إدراج الصورة'}
           </button>
@@ -440,14 +440,14 @@ export default function RichTextEditor({ value, onChange, placeholder, className
           </button>
         </div>
       )}
-      <div className="relative min-h-[150px] bg-white group">
+      <div className="relative min-h-[300px] bg-white group">
         <div
           ref={editorRef}
           contentEditable
           onInput={() => handleInput(false)}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          className="p-6 md:p-8 outline-none text-lg min-h-[150px] prose prose-slate max-w-none editor-content"
+          className="p-6 md:p-8 outline-none text-lg min-h-[300px] prose prose-slate max-w-none editor-content"
           dir="auto"
           suppressContentEditableWarning
         />

@@ -5,7 +5,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { 
   Building2, Plus, Search, ChevronRight,
-  Trash2, Shield, X, Sparkles,
+  Trash2, Shield, X, Sparkles, Edit,
   GraduationCap, Users, Heart
 } from "lucide-react";
 import Link from "next/link";
@@ -88,6 +88,91 @@ export default function SchoolsManagement() {
       } else {
         const data = await res.json();
         showToast(data.error || t('superAdmin.schoolsPage.createFail') || 'Failed to create school', 'error');
+      }
+    } catch (error) {
+      showToast(t('superAdmin.schoolsPage.connError') || 'Connection error', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedSchool, setSelectedSchool] = useState<any>(null);
+  const [editFormData, setEditFormData] = useState({
+    name: "",
+    adminName: "",
+    adminUsername: "",
+    adminPassword: "",
+    adminId: ""
+  });
+
+  const openEditModal = (school: any) => {
+    const admin = school.users?.[0];
+    setSelectedSchool(school);
+    setEditFormData({
+      name: school.name,
+      adminName: admin ? admin.name : "",
+      adminUsername: admin ? admin.username : "",
+      adminPassword: "", // Empty to keep same
+      adminId: admin ? admin.id : ""
+    });
+    setEditModalOpen(true);
+  };
+
+  const handleEditSchool = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedSchool) return;
+
+    setIsSubmitting(true);
+    const token = localStorage.getItem("super_admin_token");
+    let hasError = false;
+
+    try {
+      // 1. Update School Name
+      const schoolRes = await fetch(`${API_URL}/admin/schools/${selectedSchool.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ name: editFormData.name })
+      });
+
+      if (!schoolRes.ok) {
+        hasError = true;
+      }
+
+      // 2. Update Admin User if adminId exists
+      if (editFormData.adminId) {
+        const payload: any = {
+          name: editFormData.adminName,
+          username: editFormData.adminUsername
+        };
+        if (editFormData.adminPassword) {
+          payload.password = editFormData.adminPassword;
+        }
+
+        const userRes = await fetch(`${API_URL}/admin/users/${editFormData.adminId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!userRes.ok) {
+          hasError = true;
+        }
+      }
+
+      if (!hasError) {
+        showToast(language === 'ar' ? 'تم تحديث بيانات المدرسة بنجاح' : 'School updated successfully', 'success');
+        setEditModalOpen(false);
+        fetchSchools();
+      } else {
+        showToast(language === 'ar' ? 'حدث خطأ أثناء التحديث' : 'Error updating school or admin', 'error');
+        fetchSchools();
       }
     } catch (error) {
       showToast(t('superAdmin.schoolsPage.connError') || 'Connection error', 'error');
@@ -385,6 +470,14 @@ export default function SchoolsManagement() {
                           </Link>
 
                           <button 
+                            onClick={() => openEditModal(school)}
+                            className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-all cursor-pointer border border-slate-100"
+                            title={language === 'ar' ? "تعديل المدرسة" : "Edit School"}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+
+                          <button 
                             onClick={() => handleDeleteSchool(school.id)}
                             className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center text-rose-600 hover:bg-rose-500 hover:text-white transition-all cursor-pointer border border-rose-100"
                             title={language === 'ar' ? "حذف المدرسة" : "Delete School"}
@@ -405,6 +498,83 @@ export default function SchoolsManagement() {
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* Edit School Modal */}
+        {editModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+            <div className="bg-white border border-slate-100 w-full max-w-lg rounded-3xl p-6 sm:p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-black text-slate-900">{language === 'ar' ? 'تعديل بيانات المدرسة' : 'Edit School'}</h3>
+                <button onClick={() => setEditModalOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors"><X className="w-6 h-6" /></button>
+              </div>
+              <form onSubmit={handleEditSchool} className="space-y-6 text-start" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-4">
+                  <h4 className="text-xs font-black text-indigo-600 uppercase tracking-widest">{t('superAdmin.schoolsPage.schoolDetailsGroup')}</h4>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-500 mb-1">{t('superAdmin.schoolsPage.schoolName')}</label>
+                    <input 
+                      type="text" required
+                      value={editFormData.name}
+                      onChange={(e) => setEditFormData({...editFormData, name: e.target.value})}
+                      className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-800 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all"
+                    />
+                  </div>
+                </div>
+
+                {editFormData.adminId && (
+                  <div className="p-4 rounded-2xl bg-indigo-50/30 border border-indigo-100 space-y-4">
+                    <h4 className="text-xs font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2">
+                      <Shield className="w-4 h-4" /> {t('superAdmin.schoolsPage.adminDetailsGroup')}
+                    </h4>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-500 mb-1">{t('superAdmin.schoolsPage.adminName')}</label>
+                      <input 
+                        type="text" required
+                        value={editFormData.adminName}
+                        onChange={(e) => setEditFormData({...editFormData, adminName: e.target.value})}
+                        className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-800 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-bold text-slate-500 mb-1">{t('superAdmin.schoolsPage.adminUsername')}</label>
+                        <input 
+                          type="text" required
+                          value={editFormData.adminUsername}
+                          onChange={(e) => setEditFormData({...editFormData, adminUsername: e.target.value})}
+                          className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-800 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all"
+                          dir="ltr"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-slate-500 mb-1">
+                          {t('superAdmin.schoolsPage.adminPassword')}
+                          <span className="text-[10px] text-slate-400 font-normal ml-1 mr-1">
+                            ({language === 'ar' ? 'اختياري' : 'Optional'})
+                          </span>
+                        </label>
+                        <input 
+                          type="text"
+                          value={editFormData.adminPassword}
+                          onChange={(e) => setEditFormData({...editFormData, adminPassword: e.target.value})}
+                          className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-800 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all"
+                          placeholder="********"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <button 
+                  disabled={isSubmitting}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl transition-all disabled:opacity-50 shadow-lg shadow-indigo-600/10 active:scale-95 cursor-pointer"
+                >
+                  {isSubmitting ? (language === 'ar' ? 'جاري الحفظ...' : 'Saving...') : (language === 'ar' ? 'حفظ التعديلات' : 'Save Changes')}
+                </button>
+              </form>
             </div>
           </div>
         )}
