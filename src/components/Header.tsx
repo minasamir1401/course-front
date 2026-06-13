@@ -143,7 +143,7 @@ export default function Header({
             {!isStudent && (
               <button
                 onClick={onMenuClick}
-                className="lg:hidden p-3 rounded-2xl bg-white/50 hover:bg-white text-slate-600 transition-all border border-slate-200/40"
+                className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-white/50 hover:bg-white text-slate-600 transition-all border border-slate-200/40"
               >
                 <Menu className="w-5 h-5" />
               </button>

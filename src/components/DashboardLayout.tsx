@@ -32,8 +32,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     setMounted(true);
-    const onResize = () => setIsMobile(window.innerWidth < 1024);
+    const onResize = () => {
+      const mobile = window.innerWidth < 1024;
+      setIsMobile(mobile);
+    };
     onResize();
+    setIsSidebarOpen(window.innerWidth >= 1024);
     window.addEventListener("resize", onResize);
 
     const pathKey = isSuperAdmin ? "super_admin_user" : isSchoolAdmin ? "school_admin_user" : "lms_user";
@@ -70,9 +74,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {renderSidebar()}
 
-      <div className={`flex-1 ${hasSidebar ? (language === 'ar' ? 'lg:mr-72' : 'lg:ml-72') : ''} flex flex-col min-h-screen relative z-10`}>
+      <div className={`flex-1 ${hasSidebar && isSidebarOpen && !isMobile ? (language === 'ar' ? 'lg:mr-72' : 'lg:ml-72') : ''} flex flex-col min-h-screen relative z-10 transition-all duration-300`}>
         <Header
-          onMenuClick={() => setIsSidebarOpen(true)}
+          onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)}
           isMobile={isMobile}
           isStudent={isStudent}
           pathname={pathname}
