@@ -3132,7 +3132,7 @@ export default function EditCoursePage() {
               </div>
               <div className="flex gap-3 items-center">
                 
-                <div className="flex items-center gap-3 bg-slate-100 px-4 py-2 rounded-2xl border border-slate-200 ml-4 hidden md:flex">
+                <div className="flex items-center gap-3 bg-slate-100 px-4 py-2 rounded-2xl border border-slate-200 ml-4">
                   <span className="text-sm font-bold text-slate-600">الحفظ التلقائي</span>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" className="sr-only peer" checked={isAutoSaveEnabled} onChange={(e) => {
