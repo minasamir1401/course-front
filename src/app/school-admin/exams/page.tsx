@@ -172,100 +172,76 @@ export default function ExamsListPage() {
             <p className="font-black text-slate-400 animate-pulse text-lg">{t('schoolAdmin.examsPage.loading')}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="flex flex-col gap-4">
             {filteredExams.map((exam: any) => (
-              <div key={exam.id} className="bg-white rounded-[40px] border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-slate-200 transition-all group flex flex-col relative overflow-hidden">
-                {/* Status Badge */}
-                <div className={`absolute top-6 ${language === 'ar' ? 'left-6' : 'right-6'} z-10`}>
-                   <div className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm border ${
-                     exam.status === 'DRAFT' 
-                     ? 'bg-amber-50 text-amber-600 border-amber-100' 
-                     : 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                   }`}>
-                     {exam.status === 'DRAFT' ? t('schoolAdmin.examsPage.draft') : t('schoolAdmin.examsPage.published')}
-                   </div>
+              <div key={exam.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all p-4 sm:p-6 flex flex-col md:flex-row items-center gap-6 group">
+                
+                {/* Icon & Status */}
+                <div className="flex flex-col items-center gap-2 shrink-0">
+                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${exam.isCentral ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'}`}>
+                    <Tag className="w-7 h-7" />
+                  </div>
+                  <div className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
+                    exam.status === 'DRAFT' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'
+                  }`}>
+                    {exam.status === 'DRAFT' ? t('schoolAdmin.examsPage.draft') : t('schoolAdmin.examsPage.published')}
+                  </div>
                 </div>
 
-                <div className="p-8 pt-12 flex-1 flex flex-col">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${exam.isCentral ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'}`}>
-                      <Tag className="w-6 h-6" />
-                    </div>
-                    <div className={`flex flex-col ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
-                         {exam.category || (exam.isCentral ? t('schoolAdmin.examsPage.central') : t('schoolAdmin.examsPage.school'))}
-                       </span>
-                       <span className="text-xs font-bold text-slate-600 leading-none">
-                         {exam.grade || "عام"}
-                       </span>
-                    </div>
-                  </div>
-
-                  <h3 className="text-2xl font-black text-slate-800 mb-3 group-hover:text-indigo-600 transition-colors line-clamp-1">{exam.title}</h3>
-                  <p className="text-slate-500 font-medium text-sm mb-8 line-clamp-2 leading-relaxed">{exam.description || 'لا يوجد وصف متاح لهذا الامتحان.'}</p>
-
-                  <div className="grid grid-cols-3 gap-3 mb-8">
-                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center gap-3">
-                      <Clock className="w-5 h-5 text-indigo-500" />
-                      <span className="text-sm font-black text-slate-700">
-                        {t('schoolAdmin.examsPage.mins').replace('{n}', String(exam.duration))}
+                {/* Main Info */}
+                <div className={`flex-1 min-w-0 flex flex-col w-full md:w-auto ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-slate-100 px-2 py-1 rounded-md">
+                      {exam.category || (exam.isCentral ? t('schoolAdmin.examsPage.central') : t('schoolAdmin.examsPage.school'))}
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-500 bg-slate-50 border border-slate-100 px-2 py-1 rounded-md">
+                      {exam.grade || "عام"}
+                    </span>
+                    {exam.password && (
+                      <span className="text-[10px] font-bold text-indigo-600 flex items-center gap-1 bg-indigo-50 border border-indigo-100 px-2 py-1 rounded-md">
+                        <Lock className="w-3 h-3" /> محمي
                       </span>
-                    </div>
-                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center gap-3">
-                      <BookOpen className="w-5 h-5 text-indigo-500" />
-                      <span className="text-sm font-black text-slate-700">
-                        {t('schoolAdmin.examsPage.questions').replace('{n}', String(exam._count?.questions || 0))}
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => handleUpdateAttempts(exam.id, exam.attemptsAllowed || 1)}
-                      title={t('schoolAdmin.examsPage.attemptsTooltip')}
-                      className="bg-amber-50 p-4 rounded-2xl border border-amber-100 flex items-center gap-2 hover:bg-amber-100 transition-all cursor-pointer group/attempts"
-                    >
-                      <Hash className="w-4 h-4 text-amber-500 group-hover/attempts:rotate-12 transition-transform" />
-                      <span className="text-sm font-black text-amber-700">{formatAttempts(exam.attemptsAllowed || 1)}</span>
-                    </button>
+                    )}
                   </div>
-
-                  <div className="flex flex-col gap-3 mt-auto">
-                    <Link 
-                      href={`/school-admin/exams/edit/${exam.id}`}
-                      className="flex-1 bg-slate-50 text-slate-600 py-4 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-slate-100 transition-all border border-slate-100"
-                    >
-                      <FileEdit className="w-5 h-5" />
-                      {t('schoolAdmin.examsPage.edit')}
-                    </Link>
+                  <h3 className="text-xl font-black text-slate-800 truncate mb-1 group-hover:text-indigo-600 transition-colors">{exam.title}</h3>
+                  <p className="text-slate-500 text-sm truncate">{exam.description || 'لا يوجد وصف متاح لهذا الامتحان.'}</p>
+                  
+                  <div className="flex flex-wrap items-center gap-4 mt-4">
+                    <div className="flex items-center gap-1.5 text-slate-600 text-xs font-bold bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                      <Clock className="w-4 h-4 text-indigo-500" />
+                      {t('schoolAdmin.examsPage.mins').replace('{n}', String(exam.duration))}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-slate-600 text-xs font-bold bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                      <BookOpen className="w-4 h-4 text-indigo-500" />
+                      {t('schoolAdmin.examsPage.questions').replace('{n}', String(exam._count?.questions || 0))}
+                    </div>
                     <button 
-                      onClick={() => handleDelete(exam.id)}
-                      className="w-14 bg-rose-50 text-rose-600 py-4 rounded-2xl font-black flex items-center justify-center hover:bg-rose-100 transition-all border border-rose-100"
-                      title={t('schoolAdmin.teachersPage.deleteTooltip')}
+                      onClick={() => handleUpdateAttempts(exam.id, exam.attemptsAllowed || 1)} 
+                      title={t('schoolAdmin.examsPage.attemptsTooltip')}
+                      className="flex items-center gap-1.5 text-amber-700 hover:text-amber-800 text-xs font-bold cursor-pointer transition-colors bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-100"
                     >
-                      <Trash2 className="w-6 h-6" />
+                      <Hash className="w-4 h-4 text-amber-500" />
+                      {formatAttempts(exam.attemptsAllowed || 1)} محاولات
                     </button>
-                    <Link 
-                      href={`/school-admin/exams/results/${exam.id}`}
-                      className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all"
-                    >
-                      <BarChart3 className="w-5 h-5" />
-                      {t('schoolAdmin.examsPage.analysis')}
-                    </Link>
+                    <div className={`flex items-center gap-1.5 text-slate-400 text-xs font-medium border-slate-200 ${language === 'ar' ? 'border-r pr-4 mr-2' : 'border-l pl-4 ml-2'}`}>
+                      <Calendar className="w-4 h-4" />
+                      {new Date(exam.createdAt).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US')}
+                    </div>
                   </div>
                 </div>
 
-                {/* Date/Password Indicators */}
-                <div className="px-8 py-4 bg-slate-50/50 border-t border-slate-50 flex justify-between items-center">
-                   <div className="flex items-center gap-2 text-slate-400">
-                     <Calendar className="w-3.5 h-3.5" />
-                     <span className="text-[10px] font-bold">
-                       {new Date(exam.createdAt).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US')}
-                     </span>
-                   </div>
-                   {exam.password && (
-                     <div className="flex items-center gap-1.5 text-indigo-600">
-                        <Lock className="w-3.5 h-3.5" />
-                        <span className="text-[10px] font-black uppercase">محمي</span>
-                     </div>
-                   )}
+                {/* Actions */}
+                <div className="flex items-center gap-2 shrink-0 w-full md:w-auto mt-4 md:mt-0 justify-end md:justify-start border-t border-slate-100 md:border-none pt-4 md:pt-0">
+                  <Link href={`/school-admin/exams/edit/${exam.id}`} className="p-3 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-100 hover:text-indigo-600 transition-colors border border-slate-100" title={t('schoolAdmin.examsPage.edit')}>
+                    <FileEdit className="w-5 h-5" />
+                  </Link>
+                  <button onClick={() => handleDelete(exam.id)} className="p-3 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 transition-colors border border-rose-100" title={t('schoolAdmin.teachersPage.deleteTooltip')}>
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                  <Link href={`/school-admin/exams/results/${exam.id}`} className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors flex items-center gap-2 shadow-lg shadow-indigo-100">
+                    <BarChart3 className="w-5 h-5" />
+                    <span className="hidden sm:inline">{t('schoolAdmin.examsPage.analysis')}</span>
+                  </Link>
                 </div>
               </div>
             ))}
