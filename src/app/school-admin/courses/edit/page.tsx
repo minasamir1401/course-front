@@ -3139,7 +3139,7 @@ export default function EditCoursePage() {
                       const checked = e.target.checked;
                       setIsAutoSaveEnabled(checked);
                       if (checked) {
-                        showToast("تم تفعيل الحفظ التلقائي (سيتم حفظ مسودة دورياً)", "warning");
+                        showToast("تم تفعيل الحفظ التلقائي (سيتم حفظ مسودة دورياً)", "info");
                       } else {
                         showToast("تم إيقاف الحفظ التلقائي", "error");
                       }
