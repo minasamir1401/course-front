@@ -24,6 +24,8 @@ export default function SchoolAdminEditExamPage() {
   const { showToast } = useNotification();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isAutoSaveEnabled, setIsAutoSaveEnabled] = useState(true);
+  const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
 
   // UI States
   const [showQuestionForm, setShowQuestionForm] = useState(false);
@@ -586,7 +588,7 @@ export default function SchoolAdminEditExamPage() {
     return question.correctAnswer === option;
   };
 
-  const handleSubmit = async (statusOverride: string | null = null) => {
+  const handleSubmit = async (statusOverride: string | null = null, isAutoSave = false) => {
     if (!examInfo.title) {
       showToast("يرجى إدخال عنوان الامتحان", 'error');
       return;

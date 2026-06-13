@@ -74,6 +74,7 @@ export default function EditCoursePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
+  const [isAutoSaveEnabled, setIsAutoSaveEnabled] = useState(true);
   const [schools, setSchools] = useState<any[]>([]);
 
   const getGradeName = (grade: string) => {
@@ -3129,6 +3130,15 @@ export default function EditCoursePage() {
                 </div>
               </div>
               <div className="flex gap-3 items-center">
+                
+                <div className="flex items-center gap-3 bg-slate-100 px-4 py-2 rounded-2xl border border-slate-200 ml-4 hidden md:flex">
+                  <span className="text-sm font-bold text-slate-600">الحفظ التلقائي</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" checked={isAutoSaveEnabled} onChange={(e) => setIsAutoSaveEnabled(e.target.checked)} />
+                    <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                  </label>
+                </div>
+
                 {lastAutoSave && (
                   <span className="text-xs text-slate-400 font-bold hidden md:inline-block">
                     {language === 'ar' ? 'آخر حفظ تلقائي:' : 'Last auto-save:'} {lastAutoSave.toLocaleTimeString()}

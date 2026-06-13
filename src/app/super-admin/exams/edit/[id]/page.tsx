@@ -23,6 +23,8 @@ export default function SuperAdminEditExamPage() {
   const { showToast } = useNotification();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isAutoSaveEnabled, setIsAutoSaveEnabled] = useState(true);
+  const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
   const [schools, setSchools] = useState<any[]>([]);
   const [fetchingSchools, setFetchingSchools] = useState(true);
   const [fetchError, setFetchError] = useState("");
@@ -635,7 +637,7 @@ export default function SuperAdminEditExamPage() {
     });
   };
 
-  const handleSubmit = async (statusOverride: string | null = null) => {
+  const handleSubmit = async (statusOverride: string | null = null, isAutoSave = false) => {
     if (!examInfo.title) {
       showToast("يرجى إدخال عنوان الاختبار", 'error');
       return;
@@ -674,8 +676,12 @@ export default function SuperAdminEditExamPage() {
       });
 
       if (res.ok) {
-        showToast("تم تحديث الاختبار بنجاح!", 'success');
-        router.push("/super-admin/exams");
+        if (!isAutoSave) {
+          showToast("تم تحديث الاختبار بنجاح!", 'success');
+          router.push(filePath.includes('super') ? "/super-admin/exams" : "/school-admin/exams");
+        } else {
+          setLastAutoSave(new Date());
+        }
       } else {
         let errMessage = "Failed to update exam";
         try {
