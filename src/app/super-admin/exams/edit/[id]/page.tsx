@@ -625,15 +625,15 @@ export default function SuperAdminEditExamPage() {
   };
 
   const toggleSubject = (subject: string) => {
-    const currentالمواد الدراسية = examInfo.subjects || [];
-    const nextالمواد الدراسية = currentالمواد الدراسية.includes(subject)
-      ? currentالمواد الدراسية.filter((item: string) => item !== subject)
-      : [...currentالمواد الدراسية, subject];
+    const currentSubjects = examInfo.subjects || [];
+    const nextSubjects = currentSubjects.includes(subject)
+      ? currentSubjects.filter((item: string) => item !== subject)
+      : [...currentSubjects, subject];
 
     setExamInfo({
       ...examInfo,
-      subjects: nextالمواد الدراسية,
-      category: nextالمواد الدراسية[0] || ""
+      subjects: nextSubjects,
+      category: nextSubjects[0] || ""
     });
   };
 
