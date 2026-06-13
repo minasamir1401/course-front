@@ -2428,8 +2428,6 @@ export default function EditCoursePage() {
                   { id: 'info', label: 'الأهداف والبيانات', icon: Target },
                   { id: 'scheduling', label: 'الجدولة والظهور', icon: Clock },
                   { id: 'slides', label: 'محتوى الشرح', icon: Layout },
-                  { id: 'assignments', label: 'التكليفات (Assignments)', icon: FileText },
-                  { id: 'exercises', label: 'التدريبات', icon: HelpCircle },
                   { id: 'attachments', label: 'المرفقات', icon: FileJson },
                 ].map(tab => (
                   <button
