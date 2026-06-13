@@ -678,7 +678,7 @@ export default function SuperAdminEditExamPage() {
       if (res.ok) {
         if (!isAutoSave) {
           showToast("تم تحديث الاختبار بنجاح!", 'success');
-          router.push(filePath.includes('super') ? "/super-admin/exams" : "/school-admin/exams");
+          router.push("/super-admin/exams");
         } else {
           setLastAutoSave(new Date());
         }
