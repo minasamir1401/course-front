@@ -681,6 +681,7 @@ export default function SuperAdminEditExamPage() {
           router.push("/super-admin/exams");
         } else {
           setLastAutoSave(new Date());
+          showToast("تم الحفظ التلقائي بنجاح", "success");
         }
       } else {
         let errMessage = "Failed to update exam";
