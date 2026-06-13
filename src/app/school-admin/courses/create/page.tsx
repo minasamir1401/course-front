@@ -2275,7 +2275,7 @@ export default function CreateCoursePage() {
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as any)}
                     className={`flex-1 py-5 flex items-center justify-center gap-3 font-black text-sm transition-all ${
-                      activeTab === tab.id ? 'text-indigo-600 bg-white border-b-2 border-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
+                      activeTab === tab.id ? 'text-indigo-600 bg-white border-b-2 border-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-500'
                     }`}
                   >
                     <tab.icon className="w-5 h-5" />

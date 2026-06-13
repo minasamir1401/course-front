@@ -733,14 +733,14 @@ export default function SchoolAdminNewExamPage() {
               <button 
                 onClick={() => handleSubmit("DRAFT")}
                 disabled={saving}
-                className="px-8 py-5 rounded-2xl font-bold bg-white/5 text-white border border-white/10 hover:bg-white/10 transition-all flex items-center justify-center gap-3 disabled:opacity-50 whitespace-nowrap shrink-0 cursor-pointer"
+                className="px-8 py-5 rounded-2xl font-bold bg-slate-50 text-white border border-slate-200 hover:bg-white/10 transition-all flex items-center justify-center gap-3 disabled:opacity-50 whitespace-nowrap shrink-0 cursor-pointer"
               >
                 <span>{t('schoolAdmin.examsNewPage.saveDraft')}</span>
                 <FileText className="w-5 h-5 shrink-0" />
               </button>
               
-                            <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-2xl border border-white/10 mr-4">
-                <span className="text-sm font-bold text-white">الحفظ التلقائي</span>
+                            <div className="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-2xl border border-slate-200 mr-4">
+                <span className="text-sm font-bold text-slate-700">الحفظ التلقائي</span>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" className="sr-only peer" checked={isAutoSaveEnabled} onChange={(e) => {
                     setIsAutoSaveEnabled(e.target.checked);
@@ -750,11 +750,11 @@ export default function SchoolAdminNewExamPage() {
                       showToast("تم إيقاف الحفظ التلقائي", "info");
                     }
                   }} />
-                  <div className="w-11 h-6 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500"></div>
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500"></div>
                 </label>
               </div>
               {lastAutoSave && (
-                <div className="text-xs font-bold text-white/70 bg-white/5 px-3 py-2 rounded-xl border border-white/10 flex items-center gap-2">
+                <div className="text-xs font-bold text-slate-500 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 flex items-center gap-2">
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -804,7 +804,7 @@ export default function SchoolAdminNewExamPage() {
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{t('schoolAdmin.examsNewPage.stage')}</label>
                     <select 
-                      className="w-full bg-[#0a0a14] border border-white/10 rounded-xl px-4 py-3 outline-none font-bold text-white text-sm focus:ring-2 focus:ring-indigo-500/20 appearance-none"
+                      className="w-full bg-[#0a0a14] border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-white text-sm focus:ring-2 focus:ring-indigo-500/20 appearance-none"
                       value={examInfo.grade}
                       onChange={(e) => setExamInfo({...examInfo, grade: e.target.value})}
                     >
