@@ -2,7 +2,7 @@
 
 import React from 'react';
 import SuperAdminLayout from '../layout';
-import SuperAdminSidebar from '@/components/SuperAdminSidebar';
+import DashboardLayout from '@/components/DashboardLayout';
 import ExamAttendanceReport from '@/components/ExamReport';
 import { FileText } from 'lucide-react';
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -12,9 +12,9 @@ export default function SuperAdminReportsPage() {
 
   return (
     <SuperAdminLayout>
-      <div className="min-h-screen bg-slate-50" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-        <SuperAdminSidebar />
-        <main className={`${language === 'ar' ? 'lg:mr-72' : 'lg:ml-72'} p-6 md:p-8`}>
+      <DashboardLayout>
+        <div className="min-h-screen bg-slate-50" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+          <div className="p-6 md:p-8">
           <div className="max-w-7xl mx-auto space-y-8">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
               <div>
@@ -28,8 +28,9 @@ export default function SuperAdminReportsPage() {
 
             <ExamAttendanceReport role="SUPER_ADMIN" />
           </div>
-        </main>
-      </div>
+            </div>
+          </div>
+      </DashboardLayout>
     </SuperAdminLayout>
   );
 }

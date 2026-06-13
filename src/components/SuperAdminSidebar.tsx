@@ -95,7 +95,6 @@ export default function SuperAdminSidebar({
             <p className="px-3 py-1 text-[10px] font-black text-slate-400 uppercase tracking-[2px]">{t('superAdmin.sidebar.centralExams')}</p>
             <SidebarLink href="/super-admin/exams" icon={ClipboardList} label={t('superAdmin.sidebar.allExams')} active={isActive('/super-admin/exams')} />
             <SidebarLink href="/super-admin/exams/new" icon={BookOpen} label={t('superAdmin.sidebar.createNew')} active={isActive('/super-admin/exams/new')} />
-            <SidebarLink href="/super-admin/exam-supervisors" icon={UserCheck} label={t('superAdmin.sidebar.supervisors')} active={isActive('/super-admin/exam-supervisors')} />
           </div>
 
           {/* COURSES */}
