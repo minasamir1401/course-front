@@ -177,6 +177,9 @@ export default function CreateCoursePage() {
   };
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isAutoSaveEnabled, setIsAutoSaveEnabled] = useState(false);
+  const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
+  const [createdId, setCreatedId] = useState<string | null>(null);
   const [schools, setSchools] = useState<any[]>([]);
   const [schoolName, setSchoolName] = useState<string>("");
   
@@ -2077,6 +2080,80 @@ export default function CreateCoursePage() {
     );
   };
 
+  // Auto-save interval
+  useEffect(() => {
+    if (!isAutoSaveEnabled) return;
+    
+    const interval = setInterval(async () => {
+      try {
+        const token = localStorage.getItem("school_admin_token");
+        const userStr = localStorage.getItem("school_admin_user");
+        if (!token || !userStr) return;
+        const user = JSON.parse(userStr);
+        const targetSchoolId = user.schoolId;
+
+        const lessonsPayload = lessons.map((l) => ({
+          title: l.title,
+          domain: l.domain || null,
+          videoUrl: l.videoUrl || null,
+          summary: l.summary || null,
+          notes: l.notes || null,
+          standards: l.standards || null,
+          indicators: l.indicators || null,
+          learningOutcomes: l.learningOutcomes || null,
+          isVisible: l.isVisible !== undefined ? l.isVisible : true,
+          publishDate: l.publishDate ? new Date(l.publishDate).toISOString() : null,
+          cutOffDate: l.cutOffDate ? new Date(l.cutOffDate).toISOString() : null,
+          attachments: JSON.stringify(l.attachments || []),
+          slides: JSON.stringify(l.slides || []),
+          questions: JSON.stringify(l.questions || []),
+          assignments: JSON.stringify(l.assignments || [])
+        }));
+
+        const subjectString = courseData.subjects.join(", ");
+        
+        const payload = {
+          title: courseData.title || "مسودة كورس بدون عنوان",
+          description: courseData.description,
+          coverImage: courseData.coverImage || null,
+          grades: courseData.grades,
+          subject: subjectString || "غير محدد",
+          country: courseData.country,
+          isCentral: false,
+          schoolId: targetSchoolId,
+          schoolIds: [targetSchoolId],
+          lessons: lessonsPayload
+        };
+
+        const method = createdId ? "PUT" : "POST";
+        const url = createdId 
+          ? `${API_URL}/school/courses/${createdId}`
+          : `${API_URL}/school/courses`;
+
+        const res = await fetch(url, {
+          method,
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (!createdId && data.course?.id) {
+             setCreatedId(data.course.id);
+          }
+          setLastAutoSave(new Date());
+        }
+      } catch (err) {
+        console.error("Auto save failed", err);
+      }
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [isAutoSaveEnabled, createdId, courseData, lessons]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!courseData.title) {
@@ -2119,8 +2196,14 @@ export default function CreateCoursePage() {
 
       const subjectString = courseData.subjects.join(", ");
 
-      const res = await fetch(`${API_URL}/school/courses`, {
-        method: "POST",
+      
+      const method = createdId ? "PUT" : "POST";
+      const url = createdId 
+        ? `${API_URL}/school/courses/${createdId}`
+        : `${API_URL}/school/courses`;
+
+      const res = await fetch(url, {
+        method,
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json"

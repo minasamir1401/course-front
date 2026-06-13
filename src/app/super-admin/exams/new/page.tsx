@@ -24,6 +24,9 @@ export default function SuperAdminNewExamPage() {
   const { showToast } = useNotification();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [isAutoSaveEnabled, setIsAutoSaveEnabled] = useState(false);
+  const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
+  const [createdId, setCreatedId] = useState<string | null>(null);
   const [schools, setSchools] = useState<any[]>([]);
   const [fetchingSchools, setFetchingSchools] = useState(true);
   const [fetchError, setFetchError] = useState("");
@@ -598,6 +601,57 @@ export default function SuperAdminNewExamPage() {
     });
   };
 
+  // Auto-save interval
+  useEffect(() => {
+    if (!isAutoSaveEnabled) return;
+    
+    const interval = setInterval(async () => {
+      try {
+        const token = localStorage.getItem("super_admin_token");
+        if (!token) return;
+
+        const questionsPayload = questions.map(q => ({
+          ...q,
+          explanation: JSON.stringify(q.sections || [])
+        }));
+        
+        const payload = {
+          ...examInfo,
+          title: examInfo.title || "مسودة اختبار بدون عنوان",
+          category: examInfo.subjects?.[0] || "غير محدد",
+          status: "DRAFT",
+          questions: questionsPayload
+        };
+
+        const method = createdId ? "PUT" : "POST";
+        const url = createdId 
+          ? `${API_URL}/exams/${createdId}`
+          : `${API_URL}/exams`;
+
+        const res = await fetch(url, {
+          method,
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (!createdId && data.exam?.id) {
+             setCreatedId(data.exam.id);
+          }
+          setLastAutoSave(new Date());
+        }
+      } catch (err) {
+        console.error("Auto save failed", err);
+      }
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [isAutoSaveEnabled, createdId, examInfo, questions]);
+
   const handleSubmit = async (status: string = "PUBLISHED") => {
     if (!examInfo.title) {
       showToast("يرجى إدخال عنوان الاختبار", 'error');
@@ -622,8 +676,14 @@ export default function SuperAdminNewExamPage() {
         explanation: JSON.stringify(q.sections || [])
       }));
 
-      const res = await fetch(`${API_URL}/exams`, {
-        method: "POST",
+      
+        const method = createdId ? "PUT" : "POST";
+        const url = createdId 
+          ? `${API_URL}/exams/${createdId}`
+          : `${API_URL}/exams`;
+
+        const res = await fetch(url, {
+          method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -683,6 +743,30 @@ export default function SuperAdminNewExamPage() {
                 <FileText className="w-5 h-5 shrink-0" />
               </button>
               
+                            <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-2xl border border-white/10 mr-4">
+                <span className="text-sm font-bold text-white">الحفظ التلقائي</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" className="sr-only peer" checked={isAutoSaveEnabled} onChange={(e) => {
+                    setIsAutoSaveEnabled(e.target.checked);
+                    if (e.target.checked) {
+                      showToast("تم تفعيل الحفظ التلقائي (سيتم حفظ مسودة دورياً)", "info");
+                    } else {
+                      showToast("تم إيقاف الحفظ التلقائي", "info");
+                    }
+                  }} />
+                  <div className="w-11 h-6 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500"></div>
+                </label>
+              </div>
+              {lastAutoSave && (
+                <div className="text-xs font-bold text-white/70 bg-white/5 px-3 py-2 rounded-xl border border-white/10 flex items-center gap-2">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  <span dir="ltr">{lastAutoSave.toLocaleTimeString()}</span>
+                  <span>آخر حفظ:</span>
+                </div>
+              )}
               <button 
                 onClick={() => handleSubmit("PUBLISHED")}
                 disabled={saving}
