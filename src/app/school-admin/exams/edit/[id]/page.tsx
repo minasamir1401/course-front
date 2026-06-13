@@ -348,7 +348,7 @@ export default function SchoolAdminEditExamPage() {
     e.target.value = "";
   };
 
-  const downloadQuestionsTemplate = () => {
+  const downloadQuestionsنموذج = () => {
     const wsData = [
       [
         "Question Text",
@@ -361,7 +361,7 @@ export default function SchoolAdminEditExamPage() {
         "Correct Answer",
         "Correct Answers",
         "Points",
-        "Skill",
+        "المهارة",
         "Standard",
         "Indicator",
         "Learning Outcome",
@@ -394,7 +394,7 @@ export default function SchoolAdminEditExamPage() {
     ];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Questions Template");
+    XLSX.utils.book_append_sheet(wb, ws, "Questions نموذج");
     XLSX.writeFile(wb, "exams_questions_template.xlsx");
     showToast("تم تحميل نموذج الأسئلة بنجاح", "success");
   };
@@ -871,7 +871,7 @@ export default function SchoolAdminEditExamPage() {
                   <span>استيراد Excel</span>
                 </button>
                 <button 
-                  onClick={downloadQuestionsTemplate}
+                  onClick={downloadQuestionsنموذج}
                   className="flex items-center justify-center gap-2 bg-sky-50 hover:bg-sky-100 text-sky-700 px-5 py-2.5 rounded-2xl font-bold transition-all shadow-sm border border-sky-200 whitespace-nowrap shrink-0 cursor-pointer text-xs"
                 >
                   <Download className="w-4 h-4 shrink-0" />
