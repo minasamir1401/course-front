@@ -2614,29 +2614,7 @@ export default function EditCoursePage() {
                             )}
                           </div>
 
-                          {(() => {
-                            const selected = (currentLesson.standards || "").split("\n").filter(Boolean);
-                            if (selected.length === 0) return null;
-                            return (
-                              <div className="flex flex-wrap gap-1.5 mt-2">
-                                {selected.map((option: string) => (
-                                  <span key={option} className="inline-flex items-center gap-1.5 bg-indigo-50/80 text-indigo-700 px-3 py-1 rounded-xl border border-indigo-100/50 text-[10px] md:text-xs font-black shadow-sm shrink-0">
-                                    <span className="max-w-[120px] md:max-w-[200px] truncate" title={option}>{option}</span>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        const nextList = selected.filter((x: string) => x !== option);
-                                        setCurrentLesson({...currentLesson, standards: nextList.join("\n")});
-                                      }}
-                                      className="w-4 h-4 rounded-full bg-indigo-100 text-indigo-600 hover:bg-indigo-600 hover:text-white flex items-center justify-center transition-all cursor-pointer font-bold text-[8px]"
-                                    >
-                                      ✕
-                                    </button>
-                                  </span>
-                                ))}
-                              </div>
-                            );
-                          })()}
+
                         </div>
 
                         <div className="space-y-3 relative">
@@ -2763,29 +2741,7 @@ export default function EditCoursePage() {
                             )}
                           </div>
 
-                          {(() => {
-                            const selected = (currentLesson.indicators || "").split("\n").filter(Boolean);
-                            if (selected.length === 0) return null;
-                            return (
-                              <div className="flex flex-wrap gap-1.5 mt-2">
-                                {selected.map((option: string) => (
-                                  <span key={option} className="inline-flex items-center gap-1.5 bg-indigo-50/80 text-indigo-700 px-3 py-1 rounded-xl border border-indigo-100/50 text-[10px] md:text-xs font-black shadow-sm shrink-0">
-                                    <span className="max-w-[120px] md:max-w-[200px] truncate" title={option}>{option}</span>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        const nextList = selected.filter((x: string) => x !== option);
-                                        setCurrentLesson({...currentLesson, indicators: nextList.join("\n")});
-                                      }}
-                                      className="w-4 h-4 rounded-full bg-indigo-100 text-indigo-600 hover:bg-indigo-600 hover:text-white flex items-center justify-center transition-all cursor-pointer font-bold text-[8px]"
-                                    >
-                                      ✕
-                                    </button>
-                                  </span>
-                                ))}
-                              </div>
-                            );
-                          })()}
+
                         </div>
 
                         <div className="space-y-3 relative">
@@ -2912,29 +2868,7 @@ export default function EditCoursePage() {
                             )}
                           </div>
 
-                          {(() => {
-                            const selected = (currentLesson.learningOutcomes || "").split("\n").filter(Boolean);
-                            if (selected.length === 0) return null;
-                            return (
-                              <div className="flex flex-wrap gap-1.5 mt-2">
-                                {selected.map((option: string) => (
-                                  <span key={option} className="inline-flex items-center gap-1.5 bg-indigo-50/80 text-indigo-700 px-3 py-1 rounded-xl border border-indigo-100/50 text-[10px] md:text-xs font-black shadow-sm shrink-0">
-                                    <span className="max-w-[120px] md:max-w-[200px] truncate" title={option}>{option}</span>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        const nextList = selected.filter((x: string) => x !== option);
-                                        setCurrentLesson({...currentLesson, learningOutcomes: nextList.join("\n")});
-                                      }}
-                                      className="w-4 h-4 rounded-full bg-indigo-100 text-indigo-600 hover:bg-indigo-600 hover:text-white flex items-center justify-center transition-all cursor-pointer font-bold text-[8px]"
-                                    >
-                                      ✕
-                                    </button>
-                                  </span>
-                                ))}
-                              </div>
-                            );
-                          })()}
+
                         </div>
                       </div>
 
