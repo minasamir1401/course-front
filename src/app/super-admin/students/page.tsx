@@ -364,7 +364,6 @@ export default function StudentsManagement() {
             </div>
           </div>
         )}
-        )}
         </div>
       </div>
     </DashboardLayout>
