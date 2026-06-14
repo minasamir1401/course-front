@@ -59,7 +59,7 @@ export async function compressImage(file: File, maxWidth = 1200, maxHeight = 120
  * Uploads a file to the server and returns its URL.
  */
 export async function uploadFileToServer(file: File): Promise<string> {
-  const token = localStorage.getItem("lms_token") || "";
+  const token = localStorage.getItem("super_admin_token") || localStorage.getItem("school_admin_token") || localStorage.getItem("lms_token") || "";
   const formData = new FormData();
   formData.append("file", file);
 
