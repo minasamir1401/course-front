@@ -3335,16 +3335,20 @@ export default function EditCoursePage() {
                 {/* Content Navigation Tabs */}
                 <div className="bg-white p-2 rounded-[30px] border border-slate-100 shadow-sm flex gap-2">
                    {[
-                     { id: 'lessons', label: 'الدروس والمحاضرات', icon: Layers, color: 'indigo' },
-                     { id: 'quizzes', label: 'الاختبارات القصيرة', icon: HelpCircle, color: 'orange' },
-                     { id: 'assignments', label: 'التكليفات والمهام', icon: FileText, color: 'emerald' },
+                     { id: 'lessons', label: language === 'ar' ? 'الدروس والمحاضرات' : 'Lessons & Lectures', icon: Layers, color: 'indigo' },
+                     { id: 'quizzes', label: language === 'ar' ? 'الاختبارات القصيرة' : 'Quizzes', icon: HelpCircle, color: 'orange' },
+                     { id: 'assignments', label: language === 'ar' ? 'التكليفات والمهام' : 'Assignments & Tasks', icon: FileText, color: 'emerald' },
                    ].map(tab => (
                      <button
                        key={tab.id}
                        onClick={() => setActiveContentTab(tab.id as any)}
                        className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-2xl font-black transition-all ${
                          activeContentTab === tab.id 
-                         ? `bg-${tab.color}-600 text-white shadow-lg shadow-${tab.color}-600/20` 
+                         ? `${
+                             tab.id === 'lessons' ? 'bg-indigo-600 text-white shadow-indigo-600/20' :
+                             tab.id === 'quizzes' ? 'bg-orange-600 text-black shadow-orange-600/20' :
+                             'bg-emerald-600 text-white shadow-emerald-600/20'
+                           } shadow-lg` 
                          : 'text-slate-400 hover:bg-slate-50'
                        }`}
                      >
@@ -3356,23 +3360,24 @@ export default function EditCoursePage() {
 
                 <div className="flex justify-between items-center bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
                   <h3 className="text-2xl font-black text-slate-900 flex items-center gap-4">
-                    {activeContentTab === 'lessons' && <><Layers className="w-8 h-8 text-indigo-600" /> الدروس والمحاضرات</>}
-                    {activeContentTab === 'quizzes' && <><HelpCircle className="w-8 h-8 text-orange-500" /> الاختبارات والتقييمات</>}
-                    {activeContentTab === 'assignments' && <><FileText className="w-8 h-8 text-emerald-500" /> التكليفات الدراسية</>}
+                    {activeContentTab === 'lessons' && <><Layers className="w-8 h-8 text-indigo-600" /> {language === 'ar' ? "الدروس والمحاضرات" : "Lessons & Lectures"}</>}
+                    {activeContentTab === 'quizzes' && <><HelpCircle className="w-8 h-8 text-orange-500" /> {language === 'ar' ? "الاختبارات والتقييمات" : "Quizzes & Assessments"}</>}
+                    {activeContentTab === 'assignments' && <><FileText className="w-8 h-8 text-emerald-500" /> {language === 'ar' ? "التكليفات الدراسية" : "Assignments"}</>}
                   </h3>
                   <button 
                     onClick={() => {
                       if (activeContentTab === 'lessons') openAddLessonModal();
-                      else showToast("سيتم تفعيل إنشاء الاختبارات/التكليفات قريباً", "info");
+                      else showToast(language === 'ar' ? "سيتم تفعيل إنشاء الاختبارات/التكليفات قريباً" : "Creating quizzes/assignments will be activated soon", "info");
                     }} 
-                    className={`px-8 py-4 rounded-2xl font-black flex items-center gap-3 transition-all shadow-xl text-white ${
-                      activeContentTab === 'lessons' ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20' :
-                      activeContentTab === 'quizzes' ? 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/20' :
-                      'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20'
+                    className={`px-8 py-4 rounded-2xl font-black flex items-center gap-3 transition-all shadow-xl ${
+                      activeContentTab === 'lessons' ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20 text-white' :
+                      activeContentTab === 'quizzes' ? 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/20 text-black' :
+                      'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20 text-white'
                     }`}
                   >
                     <Plus size={24} /> 
-                    إضافة {activeContentTab === 'lessons' ? 'درس' : activeContentTab === 'quizzes' ? 'اختبار' : 'تكليف'}
+                    {language === 'ar' ? "إضافة " : "Add "}
+                    {activeContentTab === 'lessons' ? (language === 'ar' ? 'درس' : 'Lesson') : activeContentTab === 'quizzes' ? (language === 'ar' ? 'اختبار' : 'Quiz') : (language === 'ar' ? 'تكليف' : 'Assignment')}
                   </button>
                   {activeContentTab !== 'lessons' && (
                     <button 
@@ -3380,7 +3385,7 @@ export default function EditCoursePage() {
                       className="px-6 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black flex items-center gap-3 hover:bg-slate-200 transition-all border border-slate-200"
                     >
                       <Layers className="w-5 h-5" />
-                      ربط من البنك المركزي
+                      {language === 'ar' ? "ربط من البنك المركزي" : "Link from Central Bank"}
                     </button>
                   )}
                 </div>
@@ -3392,8 +3397,8 @@ export default function EditCoursePage() {
                         <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center">
                             <BookOpen className="w-10 h-10" />
                         </div>
-                        <p className="font-black text-xl">لا يوجد دروس في هذا الكورس بعد</p>
-                        <button onClick={openAddLessonModal} className="text-indigo-600 font-bold hover:underline">أضف درسك الأول الآن</button>
+                        <p className="font-black text-xl">{language === 'ar' ? "لا يوجد دروس في هذا الكورس بعد" : "No lessons in this course yet"}</p>
+                        <button onClick={openAddLessonModal} className="text-indigo-600 font-bold hover:underline">{language === 'ar' ? "أضف درسك الأول الآن" : "Add your first lesson now"}</button>
                       </div>
                     ) : (
                       lessons.map((lesson, index) => (
@@ -3411,17 +3416,19 @@ export default function EditCoursePage() {
                               <div className="flex flex-wrap items-center gap-3 mt-2">
                                 <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase ${lesson.isVisible ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'}`}>
                                     {lesson.isVisible ? <Eye className="w-3 h-3" /> : <X className="w-3 h-3" />}
-                                    {lesson.isVisible ? 'مرئي للطلاب' : 'مخفي عن الطلاب'}
+                                    {lesson.isVisible ? (language === 'ar' ? 'مرئي للطلاب' : 'Visible to students') : (language === 'ar' ? 'مخفي عن الطلاب' : 'Hidden from students')}
                                 </div>
                                 {lesson.publishDate && (
                                   <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black uppercase">
                                       <Clock className="w-3 h-3" />
-                                      مجدول: {new Date(lesson.publishDate).toLocaleDateString('ar-EG')}
+                                      {language === 'ar' 
+                                        ? `مجدول: ${new Date(lesson.publishDate).toLocaleDateString('ar-EG')}` 
+                                        : `Scheduled: ${new Date(lesson.publishDate).toLocaleDateString('en-US')}`}
                                   </div>
                                 )}
                                 <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 text-slate-400 text-[10px] font-black uppercase">
                                     <Monitor className="w-3 h-3" />
-                                    {lesson.slides?.length || 0} شرائح
+                                    {lesson.slides?.length || 0} {language === 'ar' ? 'شرائح' : 'slides'}
                                 </div>
                               </div>
                             </div>
@@ -3432,17 +3439,17 @@ export default function EditCoursePage() {
                             <button 
                               onClick={() => window.open(`/lessons/${lesson.id}?preview=true`, '_blank')} 
                               className="flex items-center gap-2 bg-slate-50 text-slate-400 px-5 py-3 rounded-2xl font-black text-sm hover:bg-indigo-600 hover:text-white transition-all border border-slate-100"
-                              title="معاينة الدرس"
+                              title={language === 'ar' ? "معاينة الدرس" : "Preview Lesson"}
                             >
                               <Eye size={18} />
-                              معاينة
+                              {language === 'ar' ? "معاينة" : "Preview"}
                             </button>
                             <button 
                               onClick={() => openEditLessonModal(index)} 
                               className="flex items-center gap-2 bg-blue-50 text-blue-600 px-5 py-3 rounded-2xl font-black text-sm hover:bg-blue-600 hover:text-white transition-all border border-blue-100"
                             >
                               <Edit2 size={18} />
-                              تعديل
+                              {language === 'ar' ? "تعديل" : "Edit"}
                             </button>
                             <button 
                               onClick={() => handleRemoveLesson(index)} 
@@ -3508,8 +3515,8 @@ export default function EditCoursePage() {
             <div className="bg-white w-full max-w-2xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
                 <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                   <div>
-                    <h3 className="text-2xl font-black text-slate-900">بنك الأسئلة المركزي</h3>
-                    <p className="text-slate-400 text-xs font-bold mt-1">اختر المحتوى الذي ترغب في ربطه بهذا الكورس</p>
+                    <h3 className="text-2xl font-black text-slate-900">{language === 'ar' ? "بنك الأسئلة المركزي" : "Central Question Bank"}</h3>
+                    <p className="text-slate-400 text-xs font-bold mt-1">{language === 'ar' ? "اختر المحتوى الذي ترغب في ربطه بهذا الكورس" : "Select content you want to link to this course"}</p>
                   </div>
                   <button onClick={() => setIsBankModalOpen(false)} className="p-3 hover:bg-slate-200 rounded-2xl transition-all">
                       <X size={24} />
@@ -3518,7 +3525,7 @@ export default function EditCoursePage() {
                 
                 <div className="flex-1 overflow-y-auto p-8 space-y-4 custom-scrollbar">
                   {bankItems.length === 0 ? (
-                    <div className="text-center py-12 text-slate-400 font-bold">لا توجد عناصر متاحة في البنك المركزي حالياً.</div>
+                    <div className="text-center py-12 text-slate-400 font-bold">{language === 'ar' ? "لا توجد عناصر متاحة في البنك المركزي حالياً." : "No items currently available in the central bank."}</div>
                   ) : (
                     bankItems.map((item) => (
                       <div key={item.id} className="p-5 border border-slate-100 rounded-3xl flex items-center justify-between hover:border-indigo-200 hover:bg-indigo-50/30 transition-all group">
@@ -3529,9 +3536,9 @@ export default function EditCoursePage() {
                             <div className="text-right">
                                 <div className="font-black text-slate-900">{item.title}</div>
                                 <div className="text-[10px] text-slate-400 font-bold mt-1 flex gap-3">
-                                  <span>{item.type === 'ASSIGNMENT' ? 'تكليف' : 'اختبار'}</span>
+                                  <span>{item.type === 'ASSIGNMENT' ? (language === 'ar' ? 'تكليف' : 'Assignment') : (language === 'ar' ? 'اختبار' : 'Quiz')}</span>
                                   <span>•</span>
-                                  <span>{item._count?.questions || 0} سؤال</span>
+                                  <span>{item._count?.questions || 0} {language === 'ar' ? 'سؤال' : 'questions'}</span>
                                 </div>
                             </div>
                           </div>
@@ -3542,7 +3549,7 @@ export default function EditCoursePage() {
                             }}
                             className="px-5 py-2 bg-indigo-600 text-white rounded-xl font-black text-xs hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
                           >
-                            ربط الآن
+                            {language === 'ar' ? "ربط الآن" : "Link Now"}
                           </button>
                       </div>
                     ))
@@ -3558,8 +3565,8 @@ export default function EditCoursePage() {
             <div className="bg-white w-full max-w-3xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
                 <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-orange-50/50">
                   <div>
-                    <h3 className="text-2xl font-black text-slate-900">بنك الأسئلة المركزي</h3>
-                    <p className="text-slate-400 text-xs font-bold mt-1">اختر الأسئلة التي ترغب في إضافتها لهذا الدرس</p>
+                    <h3 className="text-2xl font-black text-slate-900">{language === 'ar' ? "بنك الأسئلة المركزي" : "Central Question Bank"}</h3>
+                    <p className="text-slate-400 text-xs font-bold mt-1">{language === 'ar' ? "اختر الأسئلة التي ترغب في إضافتها لهذا الدرس" : "Select questions you want to add to this lesson"}</p>
                   </div>
                   <button onClick={() => setIsQuestionBankModalOpen(false)} className="p-3 hover:bg-slate-200 rounded-2xl transition-all">
                       <X size={24} />
@@ -3568,18 +3575,18 @@ export default function EditCoursePage() {
                 
                 <div className="flex-1 overflow-y-auto p-8 space-y-4 custom-scrollbar">
                   {bankQuestions.length === 0 ? (
-                    <div className="text-center py-12 text-slate-400 font-bold">لا توجد أسئلة متاحة في البنك المركزي حالياً.</div>
+                    <div className="text-center py-12 text-slate-400 font-bold">{language === 'ar' ? "لا توجد أسئلة متاحة في البنك المركزي حالياً." : "No questions currently available in the central bank."}</div>
                   ) : (
                     bankQuestions.map((q, idx) => (
                       <div key={idx} className="p-6 border border-slate-100 rounded-3xl flex flex-col gap-4 hover:border-orange-200 hover:bg-orange-50/20 transition-all group">
                           <div className="flex items-start justify-between gap-4">
                             <div className="text-right flex-1">
-                                <div className="text-[10px] text-orange-500 font-black uppercase mb-1">{q.exam?.title || 'بنك الأسئلة'}</div>
+                                <div className="text-[10px] text-orange-500 font-black uppercase mb-1">{q.exam?.title || (language === 'ar' ? 'بنك الأسئلة' : 'Question Bank')}</div>
                                 <div className="font-black text-slate-900 text-lg leading-relaxed" dangerouslySetInnerHTML={{ __html: q.text }}></div>
                                 <div className="flex flex-wrap gap-2 mt-3">
-                                  <span className="px-2 py-1 bg-slate-100 rounded-lg text-[10px] font-black text-slate-500 uppercase">{q.type === 'MCQ' ? 'اختيار من متعدد' : q.type}</span>
+                                  <span className="px-2 py-1 bg-slate-100 rounded-lg text-[10px] font-black text-slate-500 uppercase">{q.type === 'MCQ' ? (language === 'ar' ? 'اختيار من متعدد' : 'MCQ') : q.type}</span>
                                   <span className="px-2 py-1 bg-slate-100 rounded-lg text-[10px] font-black text-slate-500 uppercase">{q.level}</span>
-                                  <span className="px-2 py-1 bg-slate-100 rounded-lg text-[10px] font-black text-slate-500 uppercase">{q.points} نقاط</span>
+                                  <span className="px-2 py-1 bg-slate-100 rounded-lg text-[10px] font-black text-slate-500 uppercase">{q.points} {language === 'ar' ? 'نقاط' : 'pts'}</span>
                                 </div>
                             </div>
                             <button 
