@@ -6,7 +6,7 @@ import {
   AlignLeft, AlignCenter, AlignRight,
   Type, Eraser, Palette, Heading1, Heading2,
   ChevronDown, Image as ImageIcon, Table, Sigma, X,
-  Highlighter
+  Highlighter, Trash2
 } from "lucide-react";
 import { compressImage, uploadFileToServer } from "@/lib/image-utils";
 
@@ -26,6 +26,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
   const [mathFormula, setMathFormula] = useState("x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}");
   const [imageSettings, setImageSettings] = useState({ src: "", width: "100", align: "center" as 'left' | 'center' | 'right' });
   const [editingImage, setEditingImage] = useState<HTMLImageElement | null>(null);
+  const [imageRect, setImageRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
 
   const COLORS = [
     { name: 'Default', color: '#000000' },
@@ -127,6 +128,8 @@ export default function RichTextEditor({ value, onChange, placeholder, className
           align: (img.style.float as any) || 'center'
         });
         setActiveModal('image');
+      } else {
+        setEditingImage(null);
       }
     };
 
@@ -136,6 +139,41 @@ export default function RichTextEditor({ value, onChange, placeholder, className
       return () => editor.removeEventListener('click', handleEditorClick);
     }
   }, []);
+
+  useEffect(() => {
+    if (editingImage && editorRef.current) {
+      const updatePosition = () => {
+        const imgEl = editingImage;
+        const container = editorRef.current?.parentElement;
+        if (container) {
+          const imgRect = imgEl.getBoundingClientRect();
+          const containerRect = container.getBoundingClientRect();
+          setImageRect({
+            top: imgRect.top - containerRect.top,
+            left: imgRect.left - containerRect.left,
+            width: imgRect.width,
+            height: imgRect.height,
+          });
+        }
+      };
+
+      updatePosition();
+      
+      window.addEventListener('resize', updatePosition);
+      editorRef.current.addEventListener('scroll', updatePosition);
+      
+      const observer = new MutationObserver(updatePosition);
+      observer.observe(editorRef.current, { attributes: true, childList: true, subtree: true });
+      
+      return () => {
+        window.removeEventListener('resize', updatePosition);
+        editorRef.current?.removeEventListener('scroll', updatePosition);
+        observer.disconnect();
+      };
+    } else {
+      setImageRect(null);
+    }
+  }, [editingImage]);
 
   const handleInsertTable = () => {
     const rows = parseInt(tableConfig.rows) || 3;
@@ -159,6 +197,36 @@ export default function RichTextEditor({ value, onChange, placeholder, className
       execCommand('insertHTML', mathHtml);
     }
     setActiveModal(null);
+  };
+
+  const handleDeleteImage = () => {
+    if (editingImage) {
+      try {
+        const range = document.createRange();
+        range.selectNode(editingImage);
+        const selection = window.getSelection();
+        if (selection) {
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+        document.execCommand('delete', false);
+      } catch (e) {
+        editingImage.remove();
+      }
+      setEditingImage(null);
+      setActiveModal(null);
+      handleInput(true);
+    }
+  };
+
+  const handleStripAllImages = () => {
+    if (confirm("هل أنت متأكد من حذف جميع الصور من هذا النص؟")) {
+      if (editorRef.current) {
+        const imgs = Array.from(editorRef.current.querySelectorAll('img'));
+        imgs.forEach(img => img.remove());
+        handleInput(true);
+      }
+    }
   };
 
   const handleInput = (immediate = false) => {
@@ -355,6 +423,14 @@ export default function RichTextEditor({ value, onChange, placeholder, className
         <div className="w-px h-6 bg-slate-200 mx-1" />
 
         <ToolButton onClick={insertImage} icon={ImageIcon} title="إدراج صورة" />
+        {editingImage && (
+          <ToolButton
+            onClick={handleDeleteImage}
+            icon={Trash2}
+            title="حذف الصورة المحددة"
+            className="text-red-500 hover:bg-red-50 hover:text-red-600 animate-in fade-in duration-200"
+          />
+        )}
         <ToolButton onClick={() => setActiveModal('table')} icon={Table} title="إدراج جدول" />
         <ToolButton onClick={() => setActiveModal('math')} icon={Sigma} title="إدراج معادلة" />
         <div className="w-px h-6 bg-slate-200 mx-1" />
@@ -397,6 +473,15 @@ export default function RichTextEditor({ value, onChange, placeholder, className
           onClick={() => execCommand('removeFormat')}
           icon={Eraser}
           title="مسح التنسيق"
+          className="hover:text-red-500 hover:bg-red-50"
+        />
+
+        <div className="w-px h-6 bg-slate-200 mx-1" />
+
+        <ToolButton
+          onClick={handleStripAllImages}
+          icon={Trash2}
+          title="حذف جميع الصور"
           className="hover:text-red-500 hover:bg-red-50"
         />
       </div>
@@ -493,6 +578,17 @@ export default function RichTextEditor({ value, onChange, placeholder, className
           >
             {editingImage ? 'تحديث الإعدادات' : 'إدراج الصورة'}
           </button>
+
+          {editingImage && (
+            <button
+              type="button"
+              onClick={handleDeleteImage}
+              className="w-full bg-red-500 text-white py-2.5 rounded-xl font-black shadow-lg shadow-red-200 hover:bg-red-600 transition-all flex items-center justify-center gap-2 mt-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              حذف الصورة
+            </button>
+          )}
         </div>
       )}
       {activeModal === 'math' && (
@@ -559,6 +655,23 @@ export default function RichTextEditor({ value, onChange, placeholder, className
             padding: 8px;
           }
         `}</style>
+
+        {imageRect && (
+          <button
+            type="button"
+            onClick={handleDeleteImage}
+            style={{
+              position: 'absolute',
+              top: `${imageRect.top + 8}px`,
+              left: `${imageRect.left + imageRect.width - 40}px`,
+              zIndex: 30,
+            }}
+            className="w-8 h-8 bg-red-500 hover:bg-red-600 active:bg-red-700 text-white rounded-full shadow-lg hover:scale-110 active:scale-95 flex items-center justify-center cursor-pointer transition-all duration-200 border border-white"
+            title="حذف الصورة"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
 
         {!value && !isFocused && (
           <div className="absolute top-6 right-6 md:top-8 md:right-8 text-slate-300 pointer-events-none text-lg italic transition-opacity group-hover:opacity-60">
