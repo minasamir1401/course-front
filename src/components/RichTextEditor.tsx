@@ -8,7 +8,7 @@ import {
   ChevronDown, Image as ImageIcon, Table, Sigma, X,
   Highlighter
 } from "lucide-react";
-import { compressImage } from "@/lib/image-utils";
+import { compressImage, uploadFileToServer } from "@/lib/image-utils";
 
 interface RichTextEditorProps {
   value: string;
@@ -181,6 +181,56 @@ export default function RichTextEditor({ value, onChange, placeholder, className
   const handleBlur = () => {
     setIsFocused(false);
     handleInput(true);
+  };
+
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf("image") !== -1) {
+        e.preventDefault();
+        const file = items[i].getAsFile();
+        if (!file) continue;
+        
+        try {
+          const uploadedUrl = await uploadFileToServer(file);
+          execCommand('insertHTML', `<img src="${uploadedUrl}" style="max-width: 100%; height: auto; border-radius: 12px; margin: 10px auto; display: block;" />&nbsp;`);
+        } catch (err) {
+          console.error("Failed to upload pasted image:", err);
+        }
+      }
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    const items = e.dataTransfer?.items;
+    if (!items) return;
+
+    let hasImage = false;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf("image") !== -1) {
+        hasImage = true;
+        break;
+      }
+    }
+
+    if (hasImage) {
+      e.preventDefault();
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf("image") !== -1) {
+          const file = items[i].getAsFile();
+          if (!file) continue;
+          
+          try {
+            const uploadedUrl = await uploadFileToServer(file);
+            execCommand('insertHTML', `<img src="${uploadedUrl}" style="max-width: 100%; height: auto; border-radius: 12px; margin: 10px auto; display: block;" />&nbsp;`);
+          } catch (err) {
+            console.error("Failed to upload dropped image:", err);
+          }
+        }
+      }
+    }
   };
 
   const ToolButton = ({
@@ -435,6 +485,8 @@ export default function RichTextEditor({ value, onChange, placeholder, className
           onInput={() => handleInput(false)}
           onFocus={handleFocus}
           onBlur={handleBlur}
+          onPaste={handlePaste}
+          onDrop={handleDrop}
           className="p-6 md:p-8 outline-none text-lg min-h-[300px] prose prose-slate max-w-none editor-content"
           dir="auto"
           suppressContentEditableWarning
