@@ -187,9 +187,11 @@ export default function RichTextEditor({ value, onChange, placeholder, className
     const items = e.clipboardData?.items;
     if (!items) return;
 
+    let handled = false;
     for (let i = 0; i < items.length; i++) {
       if (items[i].type.indexOf("image") !== -1) {
         e.preventDefault();
+        handled = true;
         const file = items[i].getAsFile();
         if (!file) continue;
         
@@ -198,6 +200,49 @@ export default function RichTextEditor({ value, onChange, placeholder, className
           execCommand('insertHTML', `<img src="${uploadedUrl}" style="max-width: 100%; height: auto; border-radius: 12px; margin: 10px auto; display: block;" />&nbsp;`);
         } catch (err) {
           console.error("Failed to upload pasted image:", err);
+        }
+      }
+    }
+
+    if (!handled) {
+      const htmlData = e.clipboardData.getData("text/html");
+      if (htmlData && htmlData.includes("data:image/")) {
+        e.preventDefault();
+        
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(htmlData, "text/html");
+        const images = Array.from(doc.querySelectorAll('img[src^="data:image/"]')) as HTMLImageElement[];
+        
+        if (images.length > 0) {
+          // Show some visual feedback that images are processing
+          const processingId = `processing-${Date.now()}`;
+          execCommand('insertHTML', `<span id="${processingId}" style="color: #6366f1; font-style: italic;">جاري رفع الصور...</span>`);
+          
+          for (const img of images) {
+            try {
+              // Convert base64 to File
+              const res = await fetch(img.src);
+              const blob = await res.blob();
+              const file = new File([blob], `pasted-${Date.now()}.png`, { type: blob.type });
+              
+              // Upload to server
+              const uploadedUrl = await uploadFileToServer(file);
+              img.src = uploadedUrl;
+            } catch (err) {
+              console.error("Failed to upload embedded image:", err);
+              // Fallback: clear the src so we don't save huge base64
+              img.src = "";
+            }
+          }
+          
+          // Replace processing text with actual HTML
+          if (editorRef.current) {
+            const processingNode = editorRef.current.querySelector(`#${processingId}`);
+            if (processingNode) {
+              processingNode.outerHTML = doc.body.innerHTML;
+              handleInput(true);
+            }
+          }
         }
       }
     }
