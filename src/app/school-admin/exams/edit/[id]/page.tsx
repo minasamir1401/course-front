@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, Suspense } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { 
   Save, Plus, Trash2, Image as ImageIcon, CheckCircle, HelpCircle, 
@@ -12,6 +12,8 @@ import {
 import { API_URL } from "@/lib/api";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { Suspense } from "react";
 import { useNotification } from "@/context/NotificationContext";
 import RichTextEditor from "@/components/RichTextEditor";
 import * as XLSX from 'xlsx';
@@ -34,15 +36,16 @@ export default function SchoolAdminEditExamPage() {
 }
 
 function SchoolAdminEditExamPageContent() {
-  const router = useRouter();
+    const router = useRouter();
   const { id } = useParams();
   const searchParams = useSearchParams();
   const courseIdParam = searchParams.get('courseId');
   const { showToast } = useNotification();
+  const { t, language } = useLanguage();
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [isAutoSaveEnabled, setIsAutoSaveEnabled] = useState(true);
   const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
+  const [saving, setSaving] = useState(false);
 
   // UI States
   const [showQuestionForm, setShowQuestionForm] = useState(false);
@@ -213,7 +216,12 @@ function SchoolAdminEditExamPageContent() {
     },
   };
 
-  const SKILLS = [
+    const SKILLS = language === 'ar' ? [
+    "الرياضيات", "الفيزياء", "الكيمياء", "الأحياء", "الجيولوجيا", "الميكانيكا",
+    "التاريخ", "الجغرافيا", "الفلسفة", "علم النفس", "الاقتصاد", "الإحصاء",
+    "الحاسب الآلي", "اللغة العربية", "اللغة الإنجليزية", "اللغة الفرنسية", "اللغة الألمانية", "اللغة الإيطالية",
+    "التربية الدينية", "التربية الوطنية", "SAT Reading", "SAT Writing"
+  ] : [
     "Math", "Physics", "Chemistry", "Biology", "Geology", "Mechanics",
     "History", "Geography", "Philosophy", "Psychology", "Economics", "Statistics",
     "Computer Science", "Arabic", "English", "French", "German", "Italian",
@@ -367,7 +375,7 @@ function SchoolAdminEditExamPageContent() {
     e.target.value = "";
   };
 
-  const downloadQuestionsنموذج = () => {
+  const downloadQuestionsTemplate = () => {
     const wsData = [
       [
         "Question Text",
@@ -380,7 +388,7 @@ function SchoolAdminEditExamPageContent() {
         "Correct Answer",
         "Correct Answers",
         "Points",
-        "المهارة",
+        "Skill",
         "Standard",
         "Indicator",
         "Learning Outcome",
@@ -413,7 +421,7 @@ function SchoolAdminEditExamPageContent() {
     ];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Questions نموذج");
+    XLSX.utils.book_append_sheet(wb, ws, "Questions Template");
     XLSX.writeFile(wb, "exams_questions_template.xlsx");
     showToast("تم تحميل نموذج الأسئلة بنجاح", "success");
   };
@@ -445,7 +453,6 @@ function SchoolAdminEditExamPageContent() {
       if (res.ok) {
         setExamInfo({
           ...data,
-          courseId: data.courseId || courseIdParam || undefined,
           grade: data.grade || "الصف الأول الثانوي",
           category: data.category || "اللغة العربية",
           resultVisibility: data.resultVisibility || "SHOW_ANSWERS",
@@ -606,6 +613,17 @@ function SchoolAdminEditExamPageContent() {
     return question.correctAnswer === option;
   };
 
+    // Auto-save interval
+  useEffect(() => {
+    if (!isAutoSaveEnabled) return;
+    
+    const interval = setInterval(() => {
+      handleSubmit(null, true);
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [isAutoSaveEnabled, examInfo, questions]);
+
   const handleSubmit = async (statusOverride: string | null = null, isAutoSave = false) => {
     if (!examInfo.title) {
       showToast("يرجى إدخال عنوان الامتحان", 'error');
@@ -640,12 +658,7 @@ function SchoolAdminEditExamPageContent() {
 
       if (res.ok) {
         showToast("تم تحديث الامتحان بنجاح!", 'success');
-        const targetCourseId = examInfo.courseId || courseIdParam;
-        if (targetCourseId) {
-          router.push(`/school-admin/courses/edit?id=${targetCourseId}`);
-        } else {
-          router.push("/school-admin/exams");
-        }
+        router.push("/school-admin/exams");
       } else {
         const err = await res.json();
         showToast(err.error || "خطأ في التحديث", 'error');
@@ -896,7 +909,7 @@ function SchoolAdminEditExamPageContent() {
                   <span>استيراد Excel</span>
                 </button>
                 <button 
-                  onClick={downloadQuestionsنموذج}
+                  onClick={downloadQuestionsTemplate}
                   className="flex items-center justify-center gap-2 bg-sky-50 hover:bg-sky-100 text-sky-700 px-5 py-2.5 rounded-2xl font-bold transition-all shadow-sm border border-sky-200 whitespace-nowrap shrink-0 cursor-pointer text-xs"
                 >
                   <Download className="w-4 h-4 shrink-0" />

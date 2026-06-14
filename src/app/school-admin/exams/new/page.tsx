@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, Suspense } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { 
   Save, Plus, Trash2, Image as ImageIcon, CheckCircle, HelpCircle, 
@@ -16,6 +16,7 @@ import VideoPlayer from "@/components/VideoPlayer";
 import { API_URL } from "@/lib/api";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -35,7 +36,7 @@ export default function SchoolAdminNewExamPage() {
 }
 
 function SchoolAdminNewExamPageContent() {
-  const router = useRouter();
+    const router = useRouter();
   const searchParams = useSearchParams();
   const courseIdParam = searchParams.get('courseId');
   const typeParam = searchParams.get('type');
@@ -95,15 +96,6 @@ function SchoolAdminNewExamPageContent() {
     }));
   }, [language]);
 
-  useEffect(() => {
-    if (typeParam) {
-      setExamInfo((prev: any) => ({ ...prev, type: typeParam }));
-    }
-    if (courseIdParam) {
-      setExamInfo((prev: any) => ({ ...prev, courseId: courseIdParam }));
-    }
-  }, [typeParam, courseIdParam]);
-
   const QUESTION_TYPES = [
     { id: "MCQ", label: t('schoolAdmin.examsNewPage.mcq'), desc: t('schoolAdmin.examsNewPage.mcqDesc') },
     { id: "TRUE_FALSE", label: t('schoolAdmin.examsNewPage.trueFalse'), desc: t('schoolAdmin.examsNewPage.trueFalseDesc') },
@@ -155,7 +147,12 @@ function SchoolAdminNewExamPageContent() {
     },
   };
 
-  const SKILLS = [
+    const SKILLS = language === 'ar' ? [
+    "الرياضيات", "الفيزياء", "الكيمياء", "الأحياء", "الجيولوجيا", "الميكانيكا",
+    "التاريخ", "الجغرافيا", "الفلسفة", "علم النفس", "الاقتصاد", "الإحصاء",
+    "الحاسب الآلي", "اللغة العربية", "اللغة الإنجليزية", "اللغة الفرنسية", "اللغة الألمانية", "اللغة الإيطالية",
+    "التربية الدينية", "التربية الوطنية", "SAT Reading", "SAT Writing"
+  ] : [
     "Math", "Physics", "Chemistry", "Biology", "Geology", "Mechanics",
     "History", "Geography", "Philosophy", "Psychology", "Economics", "Statistics",
     "Computer Science", "Arabic", "English", "French", "German", "Italian",
@@ -419,7 +416,7 @@ function SchoolAdminNewExamPageContent() {
     e.target.value = "";
   };
 
-  const downloadQuestionsنموذج = () => {
+  const downloadQuestionsTemplate = () => {
     const wsData = [
       [
         t('schoolAdmin.examsNewPage.questionText'),
@@ -485,7 +482,7 @@ function SchoolAdminNewExamPageContent() {
     ];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Questions نموذج");
+    XLSX.utils.book_append_sheet(wb, ws, "Questions Template");
     XLSX.writeFile(wb, "exams_questions_template.xlsx");
     showToast(t('schoolAdmin.examsNewPage.templateSuccess'), "success");
   };
@@ -630,7 +627,7 @@ function SchoolAdminNewExamPageContent() {
     return question.correctAnswer === option;
   };
 
-  // Auto-save interval
+    // Auto-save interval
   useEffect(() => {
     if (!isAutoSaveEnabled) return;
     
@@ -649,8 +646,10 @@ function SchoolAdminNewExamPageContent() {
         
         const payload = {
           ...examInfo,
-          title: examInfo.title || "مسودة اختبار بدون عنوان",
-          category: examInfo.subjects?.[0] || "غير محدد",
+          title: examInfo.title || (language === 'ar' 
+            ? (examInfo.type === 'ASSIGNMENT' ? "مسودة تكليف بدون عنوان" : "مسودة اختبار بدون عنوان")
+            : (examInfo.type === 'ASSIGNMENT' ? "Untitled Assignment Draft" : "Untitled Exam Draft")),
+          category: examInfo.category || "Arabic",
           status: "DRAFT",
           schoolId: targetSchoolId,
           schoolIds: [targetSchoolId],
@@ -660,8 +659,8 @@ function SchoolAdminNewExamPageContent() {
 
         const method = createdId ? "PUT" : "POST";
         const url = createdId 
-          ? `${API_URL}/school/exams/${createdId}`
-          : `${API_URL}/school/exams`;
+          ? `${API_URL}/exams/${createdId}`
+          : `${API_URL}/exams`;
 
         const res = await fetch(url, {
           method,
@@ -685,7 +684,7 @@ function SchoolAdminNewExamPageContent() {
     }, 60000);
 
     return () => clearInterval(interval);
-  }, [isAutoSaveEnabled, createdId, examInfo, questions]);
+  }, [isAutoSaveEnabled, createdId, examInfo, questions, language]);
 
   const handleSubmit = async (status: string = "PUBLISHED") => {
     if (!examInfo.title) {
@@ -708,8 +707,10 @@ function SchoolAdminNewExamPageContent() {
         explanation: JSON.stringify(q.sections || [])
       }));
 
-      const res = await fetch(`${API_URL}/exams`, {
-        method: "POST",
+            const method = createdId ? "PUT" : "POST";
+      const url = createdId ? `${API_URL}/exams/${createdId}` : `${API_URL}/exams`;
+      const res = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -724,12 +725,7 @@ function SchoolAdminNewExamPageContent() {
 
       if (res.ok) {
         showToast(status === "DRAFT" ? t('schoolAdmin.examsNewPage.draftSuccess') : t('schoolAdmin.examsNewPage.publishedSuccess'), 'success');
-        const targetCourseId = examInfo.courseId || courseIdParam;
-        if (targetCourseId) {
-          router.push(`/school-admin/courses/edit?id=${targetCourseId}`);
-        } else {
-          router.push("/school-admin/exams");
-        }
+        router.push("/school-admin/exams");
       } else {
         const err = await res.json();
         showToast(err.error || t('schoolAdmin.examsNewPage.saveError'), 'error');
@@ -765,42 +761,18 @@ function SchoolAdminNewExamPageContent() {
               <button 
                 onClick={() => handleSubmit("DRAFT")}
                 disabled={saving}
-                className="px-8 py-5 rounded-2xl font-bold bg-slate-50 text-white border border-slate-200 hover:bg-white/10 transition-all flex items-center justify-center gap-3 disabled:opacity-50 whitespace-nowrap shrink-0 cursor-pointer"
+                className="px-8 py-5 rounded-2xl font-bold bg-white/5 text-white border border-white/10 hover:bg-white/10 transition-all flex items-center justify-center gap-3 disabled:opacity-50 whitespace-nowrap shrink-0 cursor-pointer"
               >
                 <span>{t('schoolAdmin.examsNewPage.saveDraft')}</span>
                 <FileText className="w-5 h-5 shrink-0" />
               </button>
               
-                            <div className="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-2xl border border-slate-200 mr-4">
-                <span className="text-sm font-bold text-slate-700">الحفظ التلقائي</span>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" className="sr-only peer" checked={isAutoSaveEnabled} onChange={(e) => {
-                    setIsAutoSaveEnabled(e.target.checked);
-                    if (e.target.checked) {
-                      showToast("تم تفعيل الحفظ التلقائي (سيتم حفظ مسودة دورياً)", "info");
-                    } else {
-                      showToast("تم إيقاف الحفظ التلقائي", "info");
-                    }
-                  }} />
-                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500"></div>
-                </label>
-              </div>
-              {lastAutoSave && (
-                <div className="text-xs font-bold text-slate-500 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 flex items-center gap-2">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                  </span>
-                  <span dir="ltr">{lastAutoSave.toLocaleTimeString()}</span>
-                  <span>آخر حفظ:</span>
-                </div>
-              )}
               <button 
                 onClick={() => handleSubmit("PUBLISHED")}
                 disabled={saving}
-                className="px-10 py-5 rounded-2xl font-black bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-xl shadow-indigo-900/40 hover:scale-105 transition-all flex items-center justify-center gap-3 disabled:opacity-50 whitespace-nowrap shrink-0"
+                className="px-10 py-5 rounded-2xl font-black bg-indigo-600 text-white shadow-xl shadow-indigo-900/40 hover:scale-105 transition-all flex items-center justify-center gap-3 disabled:opacity-50 whitespace-nowrap shrink-0 cursor-pointer"
               >
-                <span>{saving ? "Processing..." : "نشر الاختبار"}</span>
+                <span>{saving ? t('schoolAdmin.examsNewPage.saving') : t('schoolAdmin.examsNewPage.publishExam')}</span>
                 <Globe className="w-6 h-6 shrink-0" />
               </button>
             </div>
@@ -836,7 +808,7 @@ function SchoolAdminNewExamPageContent() {
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{t('schoolAdmin.examsNewPage.stage')}</label>
                     <select 
-                      className="w-full bg-[#0a0a14] border border-slate-200 rounded-xl px-4 py-3 outline-none font-bold text-white text-sm focus:ring-2 focus:ring-indigo-500/20 appearance-none"
+                      className="w-full bg-[#0a0a14] border border-white/10 rounded-xl px-4 py-3 outline-none font-bold text-white text-sm focus:ring-2 focus:ring-indigo-500/20 appearance-none"
                       value={examInfo.grade}
                       onChange={(e) => setExamInfo({...examInfo, grade: e.target.value})}
                     >
@@ -992,11 +964,11 @@ function SchoolAdminNewExamPageContent() {
                   <span>{t('schoolAdmin.examsNewPage.importExcel')}</span>
                 </button>
                 <button 
-                  onClick={downloadQuestionsنموذج}
+                  onClick={downloadQuestionsTemplate}
                   className="flex items-center justify-center gap-2 bg-sky-50 hover:bg-sky-100 text-sky-700 px-5 py-2.5 rounded-2xl font-bold transition-all shadow-sm border border-sky-200 whitespace-nowrap shrink-0 cursor-pointer text-xs"
                 >
                   <Download className="w-4 h-4 shrink-0" />
-                  <span>{t('schoolAdmin.examsNewPage.downloadنموذج')}</span>
+                  <span>{t('schoolAdmin.examsNewPage.downloadTemplate')}</span>
                 </button>
                 <button 
                   onClick={() => handleAddQuestion('TEXT')}

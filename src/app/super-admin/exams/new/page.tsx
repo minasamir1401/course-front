@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, Suspense } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { 
   Save, Plus, Trash2, Image as ImageIcon, CheckCircle, HelpCircle, 
@@ -17,6 +17,8 @@ import VideoPlayer from "@/components/VideoPlayer";
 import { API_URL } from "@/lib/api";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { Suspense } from "react";
 import { useNotification } from "@/context/NotificationContext";
 
 export default function SuperAdminNewExamPage() {
@@ -35,16 +37,17 @@ export default function SuperAdminNewExamPage() {
 }
 
 function SuperAdminNewExamPageContent() {
-  const router = useRouter();
+    const router = useRouter();
   const searchParams = useSearchParams();
   const courseIdParam = searchParams.get('courseId');
   const typeParam = searchParams.get('type');
   const { showToast } = useNotification();
+  const { t, language } = useLanguage();
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [isAutoSaveEnabled, setIsAutoSaveEnabled] = useState(false);
   const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
   const [createdId, setCreatedId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [schools, setSchools] = useState<any[]>([]);
   const [fetchingSchools, setFetchingSchools] = useState(true);
   const [fetchError, setFetchError] = useState("");
@@ -111,7 +114,7 @@ function SuperAdminNewExamPageContent() {
     };
   };
 
-  const [examInfo, setExamInfo] = useState<any>({
+    const [examInfo, setExamInfo] = useState<any>({
     title: "",
     description: "",
     category: "اللغة العربية",
@@ -146,25 +149,41 @@ function SuperAdminNewExamPageContent() {
     { id: "MCQ", label: "Multiple Choice (MCQ)", desc: "Select one correct answer" },
     { id: "TRUE_FALSE", label: "True / False", desc: "Select true or false statement" },
     { id: "MULTI_SELECT", label: "Multi-Select", desc: "Select one or more correct answers" },
-    { id: "TEXT", label: "شريحة نصية", desc: "A text block for explanation or summary (No answer required)" }
+    { id: "TEXT", label: "Text Slide", desc: "A text block for explanation or summary (No answer required)" }
   ];
 
   const [questions, setQuestions] = useState<any[]>([]);
 
-  const CATEGORIES = [
+    const CATEGORIES = language === 'ar' ? [
+    "اللغة العربية", "اللغة الإنجليزية", "اللغة الفرنسية", "اللغة الألمانية", "اللغة الإيطالية",
+    "الرياضيات", "الفيزياء", "الكيمياء", "الأحياء", "الجيولوجيا", "الميكانيكا",
+    "التاريخ", "الجغرافيا", "الفلسفة", "علم النفس", "الاقتصاد", "الإحصاء",
+    "التربية الدينية", "التربية الوطنية", "الحاسب الآلي",
+    "SAT Math", "SAT English"
+  ] : [
     "Arabic", "English", "French", "German", "Italian",
     "Mathematics", "Physics", "Chemistry", "Biology", "Geology", "Mechanics",
     "History", "Geography", "Philosophy", "Psychology", "Economics", "Statistics",
     "Religious Education", "National Education", "Computer Science",
     "SAT Math", "SAT English"
   ];
-  const GRADES = [
+  const GRADES = language === 'ar' ? [
+    "الصف الأول الابتدائي", "الصف الثاني الابتدائي", "الصف الثالث الابتدائي",
+    "الصف الرابع الابتدائي", "الصف الخامس الابتدائي", "الصف السادس الابتدائي",
+    "الصف الأول الإعدادي", "الصف الثاني الإعدادي", "الصف الثالث الإعدادي",
+    "الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"
+  ] : [
     "Grade 1 Elementary", "Grade 2 Elementary", "Grade 3 Elementary",
     "Grade 4 Elementary", "Grade 5 Elementary", "Grade 6 Elementary",
     "Grade 1 Middle School", "Grade 2 Middle School", "Grade 3 Middle School",
     "Grade 1 High School", "Grade 2 High School", "Grade 3 High School"
   ];
-  const SKILLS = [
+    const SKILLS = language === 'ar' ? [
+    "الرياضيات", "الفيزياء", "الكيمياء", "الأحياء", "الجيولوجيا", "الميكانيكا",
+    "التاريخ", "الجغرافيا", "الفلسفة", "علم النفس", "الاقتصاد", "الإحصاء",
+    "الحاسب الآلي", "اللغة العربية", "اللغة الإنجليزية", "اللغة الفرنسية", "اللغة الألمانية", "اللغة الإيطالية",
+    "التربية الدينية", "التربية الوطنية", "SAT Reading", "SAT Writing"
+  ] : [
     "Math", "Physics", "Chemistry", "Biology", "Geology", "Mechanics",
     "History", "Geography", "Philosophy", "Psychology", "Economics", "Statistics",
     "Computer Science", "Arabic", "English", "French", "German", "Italian",
@@ -180,10 +199,10 @@ function SuperAdminNewExamPageContent() {
   ];
 
   const VISIBILITY_OPTIONS = [
-    { id: "SHOW_SCORE", label: "الدرجة فقط", desc: "سيرى الطالب مجموع درجاته فقط", icon: Eye },
-    { id: "SHOW_ANSWERS", label: "عرض الإجابات الصحيحة", desc: "يمكن للطالب مراجعة كل سؤال مع نموذج الإجابة الصحيح", icon: CheckCircle },
-    { id: "SHOW_MARK_ONLY", label: "عرض صح/خطأ فقط", desc: "سيرى الطالب الإجابات الصحيحة والخاطئة، ولكن ليس نموذج الإجابة الصحيح", icon: HelpCircle },
-    { id: "HIDE_ALL", label: "إخفاء جميع النتائج", desc: "لن يتم عرض أي نتائج حتى تقوم بتغيير هذه السياسة", icon: EyeOff },
+    { id: "SHOW_SCORE", label: "Score Only", desc: "Student will only see their total score", icon: Eye },
+    { id: "SHOW_ANSWERS", label: "Show Correct Answers", desc: "Student can review each question with the correct model answer", icon: CheckCircle },
+    { id: "SHOW_MARK_ONLY", label: "Show Correct/Incorrect Only", desc: "Student will see which answers were right or wrong, but not the correct model", icon: HelpCircle },
+    { id: "HIDE_ALL", label: "Hide All Results", desc: "No results will be shown until you change this policy", icon: EyeOff },
   ];
 
   const [customLearningOutcomes, setCustomLearningOutcomes] = useState<string[]>(() => {
@@ -400,7 +419,7 @@ function SuperAdminNewExamPageContent() {
     e.target.value = "";
   };
 
-  const downloadQuestionsنموذج = () => {
+  const downloadQuestionsTemplate = () => {
     const wsData = [
       [
         "Question Text",
@@ -413,7 +432,7 @@ function SuperAdminNewExamPageContent() {
         "Correct Answer",
         "Correct Answers",
         "Points",
-        "المهارة",
+        "Skill",
         "Standard",
         "Indicator",
         "Learning Outcome",
@@ -446,7 +465,7 @@ function SuperAdminNewExamPageContent() {
     ];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Questions نموذج");
+    XLSX.utils.book_append_sheet(wb, ws, "Questions Template");
     XLSX.writeFile(wb, "exams_questions_template.xlsx");
     showToast("Questions template downloaded successfully", "success");
   };
@@ -628,7 +647,7 @@ function SuperAdminNewExamPageContent() {
     });
   };
 
-  // Auto-save interval
+    // Auto-save interval
   useEffect(() => {
     if (!isAutoSaveEnabled) return;
     
@@ -644,7 +663,9 @@ function SuperAdminNewExamPageContent() {
         
         const payload = {
           ...examInfo,
-          title: examInfo.title || "مسودة اختبار بدون عنوان",
+          title: examInfo.title || (language === 'ar' 
+            ? (examInfo.type === 'ASSIGNMENT' ? "مسودة تكليف بدون عنوان" : "مسودة اختبار بدون عنوان")
+            : (examInfo.type === 'ASSIGNMENT' ? "Untitled Assignment Draft" : "Untitled Exam Draft")),
           category: examInfo.subjects?.[0] || "غير محدد",
           status: "DRAFT",
           questions: questionsPayload
@@ -677,21 +698,21 @@ function SuperAdminNewExamPageContent() {
     }, 60000);
 
     return () => clearInterval(interval);
-  }, [isAutoSaveEnabled, createdId, examInfo, questions]);
+  }, [isAutoSaveEnabled, createdId, examInfo, questions, language]);
 
   const handleSubmit = async (status: string = "PUBLISHED") => {
     if (!examInfo.title) {
-      showToast("يرجى إدخال عنوان الاختبار", 'error');
+      showToast("Please enter the exam title", 'error');
       return;
     }
 
     if (!examInfo.subjects || examInfo.subjects.length === 0) {
-      showToast("يرجى اختيار مادة واحدة على الأقل", 'error');
+      showToast("Please select at least one subject", 'error');
       return;
     }
 
     if (questions.length === 0) {
-      showToast("يرجى إضافة سؤال أو شريحة واحدة على الأقل", 'error');
+      showToast("Please add at least one question or slide", 'error');
       return;
     }
 
@@ -703,14 +724,10 @@ function SuperAdminNewExamPageContent() {
         explanation: JSON.stringify(q.sections || [])
       }));
 
-      
-        const method = createdId ? "PUT" : "POST";
-        const url = createdId 
-          ? `${API_URL}/exams/${createdId}`
-          : `${API_URL}/exams`;
-
-        const res = await fetch(url, {
-          method,
+            const method = createdId ? "PUT" : "POST";
+      const url = createdId ? `${API_URL}/exams/${createdId}` : `${API_URL}/exams`;
+      const res = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -720,12 +737,7 @@ function SuperAdminNewExamPageContent() {
 
       if (res.ok) {
         showToast(status === "DRAFT" ? "Draft saved successfully!" : "Exam published successfully!", 'success');
-        const targetCourseId = examInfo.courseId || courseIdParam;
-        if (targetCourseId) {
-          router.push(`/super-admin/courses/edit?id=${targetCourseId}`);
-        } else {
-          router.push("/super-admin/exams");
-        }
+        router.push("/super-admin/exams");
       } else {
         let errMessage = "Failed to add exam";
         try {
@@ -746,8 +758,8 @@ function SuperAdminNewExamPageContent() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="max-w-7xl mx-auto flex flex-col gap-10 pb-20 rtl" dir="rtl">
+        <DashboardLayout>
+      <div className={`max-w-7xl mx-auto flex flex-col gap-10 pb-20 ${language === 'ar' ? 'rtl' : 'ltr'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
         {/* Command Center Header */}
         <div className="bg-[#0f0f1d] p-8 md:p-12 rounded-[40px] shadow-2xl relative overflow-hidden border border-white/5">
           <div className="relative z-10 flex flex-col lg:flex-row justify-between items-center gap-8">
@@ -766,24 +778,24 @@ function SuperAdminNewExamPageContent() {
             </div>
             
             <div className="flex flex-wrap gap-4 w-full lg:w-auto justify-center">
-              <button 
+                            <button 
                 onClick={() => handleSubmit("DRAFT")}
                 disabled={saving}
                 className="px-8 py-5 rounded-2xl font-bold bg-white/5 text-white border border-white/10 hover:bg-white/10 transition-all flex items-center justify-center gap-3 disabled:opacity-50 whitespace-nowrap shrink-0"
               >
-                <span>حفظ كمسودة</span>
+                <span>{language === 'ar' ? "حفظ كمسودة" : "Save as Draft"}</span>
                 <FileText className="w-5 h-5 shrink-0" />
               </button>
               
-                            <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-2xl border border-white/10 mr-4">
-                <span className="text-sm font-bold text-white">الحفظ التلقائي</span>
+              <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-2xl border border-white/10 mr-4">
+                <span className="text-sm font-bold text-white">{language === 'ar' ? "الحفظ التلقائي" : "Auto Save"}</span>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" className="sr-only peer" checked={isAutoSaveEnabled} onChange={(e) => {
                     setIsAutoSaveEnabled(e.target.checked);
                     if (e.target.checked) {
-                      showToast("تم تفعيل الحفظ التلقائي (سيتم حفظ مسودة دورياً)", "info");
+                      showToast(language === 'ar' ? "تم تفعيل الحفظ التلقائي (سيتم حفظ مسودة دورياً)" : "Auto-save enabled (will save draft periodically)", "info");
                     } else {
-                      showToast("تم إيقاف الحفظ التلقائي", "info");
+                      showToast(language === 'ar' ? "تم إيقاف الحفظ التلقائي" : "Auto-save disabled", "info");
                     }
                   }} />
                   <div className="w-11 h-6 bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500"></div>
@@ -796,15 +808,16 @@ function SuperAdminNewExamPageContent() {
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                   </span>
                   <span dir="ltr">{lastAutoSave.toLocaleTimeString()}</span>
-                  <span>آخر حفظ:</span>
+                  <span>{language === 'ar' ? "آخر حفظ:" : "Last Auto Save:"}</span>
                 </div>
               )}
+              
               <button 
                 onClick={() => handleSubmit("PUBLISHED")}
                 disabled={saving}
                 className="px-10 py-5 rounded-2xl font-black bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-xl shadow-indigo-900/40 hover:scale-105 transition-all flex items-center justify-center gap-3 disabled:opacity-50 whitespace-nowrap shrink-0"
               >
-                <span>{saving ? "Processing..." : "نشر الاختبار"}</span>
+                                <span>{saving ? "Processing..." : (language === 'ar' ? (examInfo.type === 'ASSIGNMENT' ? "نشر التكليف" : "نشر الاختبار") : (examInfo.type === 'ASSIGNMENT' ? "Publish Assignment" : "Publish Exam"))}</span>
                 <Globe className="w-6 h-6 shrink-0" />
               </button>
             </div>
@@ -819,14 +832,14 @@ function SuperAdminNewExamPageContent() {
           <div className="lg:col-span-4 flex flex-col gap-6">
             {/* General Info Card */}
             <div className="bg-white p-8 rounded-[35px] border border-slate-100 shadow-sm flex flex-col gap-8">
-              <h3 className="font-black text-slate-800 flex items-center gap-3 text-lg border-b border-slate-50 pb-6">
+                            <h3 className="font-black text-slate-800 flex items-center gap-3 text-lg border-b border-slate-50 pb-6">
                 <Settings className="w-6 h-6 text-indigo-600" />
-                الإعدادات العامة
+                {language === 'ar' ? "الإعدادات العامة" : "General Settings"}
               </h3>
 
               <div className="space-y-6">
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest">المواد الدراسية</label>
+                                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "المواد الدراسية" : "Subjects"}</label>
                   <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 max-h-[170px] overflow-y-auto custom-scrollbar flex flex-wrap gap-2">
                     {CATEGORIES.map(cat => (
                       <label key={cat} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer transition-all ${examInfo.subjects.includes(cat) ? 'bg-indigo-100 border-indigo-300 text-indigo-900 shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
@@ -841,12 +854,16 @@ function SuperAdminNewExamPageContent() {
                       </label>
                     ))}
                   </div>
-                  <p className="text-[9px] text-slate-400 font-bold px-1">يمكنك اختيار أكثر من مادة لهذا الاختبار.</p>
+                                    <p className="text-[9px] text-slate-400 font-bold px-1">
+                    {language === 'ar' 
+                      ? (examInfo.type === 'ASSIGNMENT' ? "يمكنك اختيار أكثر من مادة لهذا التكليف." : "يمكنك اختيار أكثر من مادة لهذا الاختبار.") 
+                      : (examInfo.type === 'ASSIGNMENT' ? "You can select multiple subjects for this assignment." : "You can select multiple subjects for this exam.")}
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col gap-2">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">المراحل الدراسية</label>
+                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "المراحل الدراسية" : "Grade Levels"}</label>
                     <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 max-h-[120px] overflow-y-auto custom-scrollbar flex flex-wrap gap-2">
                       {GRADES.map(g => (
                         <label key={g} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer transition-all ${examInfo.grades.includes(g) ? 'bg-indigo-100 border-indigo-300 text-indigo-900 shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
@@ -861,7 +878,7 @@ function SuperAdminNewExamPageContent() {
                     </div>
                   </div>
                   <div className="flex flex-col gap-2">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">المدة (بالدقائق)</label>
+                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? (examInfo.type === 'ASSIGNMENT' ? "المدة (بالدقائق)" : "مدة الاختبار (بالدقائق)") : (examInfo.type === 'ASSIGNMENT' ? "Duration (min)" : "Exam Duration (min)")}</label>
                     <div className="relative">
                       <input 
                         type="number"
@@ -875,7 +892,7 @@ function SuperAdminNewExamPageContent() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest">كلمة مرور الاختبار (اختياري)</label>
+                                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? (examInfo.type === 'ASSIGNMENT' ? "كلمة مرور التكليف (اختياري)" : "كلمة مرور الاختبار (اختياري)") : (examInfo.type === 'ASSIGNMENT' ? "Assignment Password (Optional)" : "Exam Password (Optional)")}</label>
                   <div className="relative">
                     <input 
                       type="text"
@@ -889,7 +906,7 @@ function SuperAdminNewExamPageContent() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">المهارة</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Skill</label>
                   <select 
                     className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5 font-bold text-slate-700 text-sm appearance-none"
                     value={examInfo.skill}
@@ -902,7 +919,7 @@ function SuperAdminNewExamPageContent() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">سياسة عرض النتائج</label>
+                                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">{language === 'ar' ? (examInfo.type === 'ASSIGNMENT' ? "سياسة ظهور التقييم للطلاب" : "سياسة ظهور نتائج الاختبار") : (examInfo.type === 'ASSIGNMENT' ? "Submission & Grading Policy" : "Result Visibility Policy")}</label>
                   <div className="flex flex-col gap-3">
                     {VISIBILITY_OPTIONS.map((opt) => (
                       <label key={opt.id} className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${examInfo.resultVisibility === opt.id ? 'bg-indigo-50 border-indigo-500 shadow-sm' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
@@ -918,8 +935,8 @@ function SuperAdminNewExamPageContent() {
                           <opt.icon className="w-5 h-5" />
                         </div>
                         <div className="flex flex-col">
-                          <span className={`text-sm font-black ${examInfo.resultVisibility === opt.id ? 'text-indigo-900' : 'text-slate-700'}`}>{opt.label}</span>
-                          <span className="text-[10px] font-bold text-slate-400">{opt.desc}</span>
+                          <span className={`text-sm font-black ${examInfo.resultVisibility === opt.id ? 'text-indigo-900' : 'text-slate-700'}`}>{language === 'ar' ? (opt.id === 'SHOW_SCORE' ? "الدرجة فقط" : opt.id === 'SHOW_ANSWERS' ? "عرض الإجابات الصحيحة" : opt.id === 'SHOW_MARK_ONLY' ? "عرض صح/خطأ فقط" : "إخفاء جميع النتائج") : opt.label}</span>
+                           <span className="text-[10px] font-bold text-slate-400">{language === 'ar' ? (opt.id === 'SHOW_SCORE' ? "سيرى الطالب الدرجة النهائية فقط" : opt.id === 'SHOW_ANSWERS' ? "يمكن للطالب مراجعة كل سؤال مع نموذج الإجابة الصحيحة" : opt.id === 'SHOW_MARK_ONLY' ? "سيرى الطالب الإجابات الصحيحة والخاطئة فقط، دون عرض نموذج الإجابة الصحيحة" : "لن يتم عرض أي نتائج أو درجات للطلاب حتى تقوم بتغيير هذه السياسة") : opt.desc}</span>
                         </div>
                       </label>
                     ))}
@@ -930,15 +947,15 @@ function SuperAdminNewExamPageContent() {
 
             {/* Scheduling Card */}
             <div className="bg-white p-8 rounded-[35px] border border-slate-100 shadow-sm flex flex-col gap-8">
-              <h3 className="font-black text-slate-800 flex items-center gap-3 text-lg border-b border-slate-50 pb-6">
+                            <h3 className="font-black text-slate-800 flex items-center gap-3 text-lg border-b border-slate-50 pb-6">
                 <Calendar className="w-6 h-6 text-indigo-600" />
-                Scheduling & Control
+                {language === 'ar' ? "الجدولة والتحكم" : "Scheduling & Control"}
               </h3>
 
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-2">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Start Date</label>
+                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "تاريخ ووقت البدء" : "Start Date"}</label>
                     <input 
                       type="datetime-local"
                       className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 outline-none font-bold text-slate-700 text-xs focus:ring-2 focus:ring-indigo-500/20"
@@ -947,7 +964,7 @@ function SuperAdminNewExamPageContent() {
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">End Date</label>
+                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "تاريخ ووقت الانتهاء" : "End Date"}</label>
                     <input 
                       type="datetime-local"
                       className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 outline-none font-bold text-slate-700 text-xs focus:ring-2 focus:ring-indigo-500/20"
@@ -958,16 +975,16 @@ function SuperAdminNewExamPageContent() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Allowed Attempts</label>
+                                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "المحاولات المسموح بها" : "Allowed Attempts"}</label>
                   <select 
                     className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 outline-none font-bold text-slate-700 text-sm focus:ring-2 focus:ring-indigo-500/20"
                     value={examInfo.attemptsAllowed}
                     onChange={(e) => setExamInfo({...examInfo, attemptsAllowed: parseInt(e.target.value)})}
                   >
-                    <option value={1}>1 Attempt Only</option>
-                    <option value={2}>2 Attempts</option>
-                    <option value={3}>3 Attempts</option>
-                    <option value={999}>Unlimited</option>
+                                        <option value={1}>{language === 'ar' ? "محاولة واحدة فقط" : "1 Attempt Only"}</option>
+                    <option value={2}>{language === 'ar' ? "محاولتان" : "2 Attempts"}</option>
+                    <option value={3}>{language === 'ar' ? "3 محاولات" : "3 Attempts"}</option>
+                    <option value={999}>{language === 'ar' ? "غير محدود" : "Unlimited"}</option>
                   </select>
                 </div>
               </div>
@@ -976,24 +993,24 @@ function SuperAdminNewExamPageContent() {
             {/* School Selection Card */}
             <div className="bg-white p-8 rounded-[35px] border border-slate-100 shadow-sm flex flex-col gap-6">
               <div className="flex justify-between items-center border-b border-slate-50 pb-4">
-                <h3 className="font-black text-slate-800 flex items-center gap-3 text-lg">
+                                <h3 className="font-black text-slate-800 flex items-center gap-3 text-lg">
                   <Globe className="w-6 h-6 text-indigo-600" />
-                  Target Schools
+                  {language === 'ar' ? "المدارس المستهدفة" : "Target Schools"}
                 </h3>
               </div>
 
               <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1.5 rounded-2xl">
-                <button 
+                                <button 
                   onClick={() => setExamInfo({...examInfo, isCentral: true})}
                   className={`py-3 rounded-xl font-bold text-xs transition-all ${examInfo.isCentral ? 'bg-white text-indigo-600 shadow-sm border border-indigo-100' : 'text-slate-500'}`}
                 >
-                  All Schools (Central)
+                  {language === 'ar' ? "جميع المدارس (مركزي)" : "All Schools (Central)"}
                 </button>
                 <button 
                   onClick={() => setExamInfo({...examInfo, isCentral: false})}
                   className={`py-3 rounded-xl font-bold text-xs transition-all ${!examInfo.isCentral ? 'bg-white text-indigo-600 shadow-sm border border-indigo-100' : 'text-slate-500'}`}
                 >
-                  Specific Schools
+                  {language === 'ar' ? "مدارس محددة" : "Specific Schools"}
                 </button>
               </div>
 
@@ -1002,7 +1019,7 @@ function SuperAdminNewExamPageContent() {
                   {fetchingSchools ? (
                     <div className="flex flex-col items-center justify-center py-12 gap-3 text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
                       <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-                      <span className="text-xs font-bold">Loading target schools...</span>
+                                            <span className="text-xs font-bold">{language === 'ar' ? "جاري تحميل المدارس المستهدفة..." : "Loading target schools..."}</span>
                     </div>
                   ) : fetchError ? (
                     <div className="flex flex-col items-center justify-center py-10 gap-4 text-center bg-red-50 rounded-2xl border border-red-100">
@@ -1029,9 +1046,9 @@ function SuperAdminNewExamPageContent() {
                   ) : (
                     <>
                       <div className="flex justify-between items-center px-2 mb-3">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select schools from list:</label>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "اختر المدارس من القائمة:" : "Select schools from list:"}</label>
                         <button onClick={handleSelectAll} className="text-[10px] font-black text-indigo-600 hover:underline">
-                          {examInfo.schoolIds.length === schools.length ? "Deselect All" : "Select All Schools"}
+                          {examInfo.schoolIds.length === schools.length ? (language === 'ar' ? "إلغاء تحديد الكل" : "Deselect All") : (language === 'ar' ? "تحديد جميع المدارس" : "Select All Schools")}
                         </button>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-50 border border-slate-100 rounded-2xl p-4 max-h-[250px] overflow-y-auto custom-scrollbar">
@@ -1058,11 +1075,11 @@ function SuperAdminNewExamPageContent() {
           {/* Questions Content Area */}
           <div className="lg:col-span-8 flex flex-col gap-8">
             <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-sm">
-               <label className="text-sm font-black text-slate-400 mb-3 block uppercase tracking-widest">عنوان الاختبار</label>
+                              <label className="text-sm font-black text-slate-400 mb-3 block uppercase tracking-widest">{language === 'ar' ? (examInfo.type === 'ASSIGNMENT' ? "عنوان التكليف" : "عنوان الاختبار") : (examInfo.type === 'ASSIGNMENT' ? "Assignment Title" : "Exam Title")}</label>
                <input 
                 type="text" 
                 className="w-full bg-slate-50 border border-slate-100 rounded-[25px] px-8 py-6 text-2xl md:text-3xl font-black outline-none focus:ring-4 focus:ring-indigo-500/5 focus:bg-white focus:border-indigo-500 transition-all text-slate-800"
-                placeholder="أدخل عنوان الاختبار هنا..."
+                                placeholder={language === 'ar' ? (examInfo.type === 'ASSIGNMENT' ? "أدخل عنوان التكليف هنا..." : "أدخل عنوان الاختبار هنا...") : (examInfo.type === 'ASSIGNMENT' ? "Enter assignment title here..." : "Enter exam title here...")}
                 value={examInfo.title}
                 onChange={(e) => setExamInfo({...examInfo, title: e.target.value})}
               />
@@ -1071,9 +1088,9 @@ function SuperAdminNewExamPageContent() {
             {/* Questions List Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 px-4">
               <div className="flex items-center gap-3">
-                <h3 className="text-2xl font-black text-slate-800">شرائح الاختبار ({questions.length})</h3>
+                <h3 className="text-2xl font-black text-slate-800">Exam Slides ({questions.length})</h3>
                 <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-black">
-                  {questions.reduce((sum, q) => sum + (q.points || 0), 0)} إجمالي النقاط
+                  {questions.reduce((sum, q) => sum + (q.points || 0), 0)} total points
                 </span>
               </div>
               <div className="flex flex-wrap gap-3 w-full sm:w-auto">
@@ -1089,28 +1106,28 @@ function SuperAdminNewExamPageContent() {
                   className="flex items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-5 py-2.5 rounded-2xl font-bold transition-all shadow-sm border border-emerald-200 whitespace-nowrap shrink-0 cursor-pointer text-xs"
                 >
                   <Upload className="w-4 h-4 shrink-0" />
-                  <span>استيراد إكسيل</span>
+                  <span>{language === 'ar' ? "استيراد من إكسيل" : "Import Excel"}</span>
                 </button>
                 <button 
-                  onClick={downloadQuestionsنموذج}
+                  onClick={downloadQuestionsTemplate}
                   className="flex items-center justify-center gap-2 bg-sky-50 hover:bg-sky-100 text-sky-700 px-5 py-2.5 rounded-2xl font-bold transition-all shadow-sm border border-sky-200 whitespace-nowrap shrink-0 cursor-pointer text-xs"
                 >
                   <Download className="w-4 h-4 shrink-0" />
-                  <span>نموذج</span>
+                  <span>{language === 'ar' ? "تحميل نموذج" : "Template"}</span>
                 </button>
                 <button 
                   onClick={() => handleAddQuestion('TEXT')}
                   className="flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-2xl font-bold transition-all shadow-sm border border-slate-200 whitespace-nowrap shrink-0 cursor-pointer text-xs"
                 >
                   <Plus className="w-4 h-4 shrink-0 text-slate-500" />
-                  <span>شريحة نصية</span>
+                  <span>{language === 'ar' ? "شريحة نصية" : "Text Slide"}</span>
                 </button>
                 <button 
                   onClick={() => handleAddQuestion('MCQ')}
                   className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 whitespace-nowrap shrink-0 cursor-pointer text-xs"
                 >
                   <Plus className="w-4 h-4 shrink-0 text-white" />
-                  <span>شريحة سؤال</span>
+                  <span>{language === 'ar' ? "شريحة سؤال" : "Question Slide"}</span>
                 </button>
               </div>
             </div>
@@ -1123,8 +1140,12 @@ function SuperAdminNewExamPageContent() {
                     <HelpCircle className="w-12 h-12" />
                   </div>
                   <div>
-                    <h4 className="text-2xl font-black text-slate-800 mb-2">لا توجد شرائح بعد</h4>
-                    <p className="text-slate-400 font-medium max-w-sm">ابدأ بإضافة أول شريحة نصية أو سؤال لهذا الاختبار.</p>
+                                    <h4 className="text-2xl font-black text-slate-800 mb-2">{language === 'ar' ? "لا توجد شرائح بعد" : "No slides yet"}</h4>
+                <p className="text-slate-400 font-medium max-w-sm">
+                  {language === 'ar' 
+                    ? (examInfo.type === 'ASSIGNMENT' ? "ابدأ بإضافة أول شريحة نصية أو شريحة سؤال لهذا التكليف." : "ابدأ بإضافة أول شريحة نصية أو شريحة سؤال لهذا الاختبار.") 
+                    : (examInfo.type === 'ASSIGNMENT' ? "Start by adding your first text slide or question slide for this assignment." : "Start by adding your first text slide or question slide for this exam.")}
+                </p>
                   </div>
                   <div className="flex gap-4">
                     <button 
@@ -1132,14 +1153,14 @@ function SuperAdminNewExamPageContent() {
                       className="bg-slate-50 hover:bg-slate-100 text-slate-800 px-10 py-5 rounded-3xl font-black hover:scale-105 transition-all shadow-md border border-slate-200 whitespace-nowrap shrink-0 flex items-center justify-center gap-2"
                     >
                       <Plus className="w-6 h-6 shrink-0 text-slate-600" />
-                      <span>Add شريحة نصية</span>
+                      <span>{language === 'ar' ? "إضافة شريحة نصية" : "Add Text Slide"}</span>
                     </button>
                     <button 
                       onClick={() => handleAddQuestion('MCQ')}
                       className="bg-[#0f0f1d] hover:bg-[#16162a] text-white px-10 py-5 rounded-3xl font-black hover:scale-105 transition-all shadow-2xl whitespace-nowrap shrink-0 flex items-center justify-center gap-2"
                     >
                       <Plus className="w-6 h-6 shrink-0 text-indigo-400" />
-                      <span>Add شريحة سؤال</span>
+                      <span>{language === 'ar' ? "إضافة شريحة سؤال" : "Add Question Slide"}</span>
                     </button>
                   </div>
                 </div>
@@ -1151,7 +1172,7 @@ function SuperAdminNewExamPageContent() {
                   <div className="bg-indigo-600 px-8 py-5 flex justify-between items-center">
                     <h4 className="text-white font-black flex items-center gap-3">
                       <Edit3 className="w-5 h-5" />
-                      {editingIndex !== null ? `Edit Slide / Question #${editingIndex + 1}` : "Add Slide / Question"}
+                                            {editingIndex !== null ? (language === 'ar' ? `تعديل الشريحة #${editingIndex + 1}` : `Edit Slide #${editingIndex + 1}`) : (language === 'ar' ? "إضافة شريحة جديدة" : "Add New Slide")}
                     </h4>
                     <button 
                       onClick={() => setShowQuestionForm(false)}
@@ -1164,8 +1185,8 @@ function SuperAdminNewExamPageContent() {
                   <div className="p-8 md:p-12 space-y-8">
                     {/* Unified Metadata & Configuration Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 p-6 bg-slate-50 border border-slate-200 rounded-[30px] shadow-sm mb-6">
-                      <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Slide Type</label>
+                                            <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "نوع الشريحة" : "Slide Type"}</label>
                         <select 
                           className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
                           value={currentQuestion.type}
@@ -1190,8 +1211,8 @@ function SuperAdminNewExamPageContent() {
                       </div>
 
                       {/* Custom Standard with CRUD */}
-                      <div className="flex flex-col gap-2 relative">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Standard</label>
+                                            <div className="flex flex-col gap-2 relative">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "المعيار" : "Standard"}</label>
                         <button
                           type="button"
                           onClick={() => {
@@ -1201,7 +1222,7 @@ function SuperAdminNewExamPageContent() {
                           }}
                           className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-700 font-bold text-xs outline-none text-right flex justify-between items-center cursor-pointer min-h-[34px]"
                         >
-                          <span className="truncate">{currentQuestion.standard || "Select Standard..."}</span>
+                                                    <span className="truncate">{currentQuestion.standard || (language === 'ar' ? "اختر المعيار..." : "Select Standard...")}</span>
                           <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                         </button>
                         
@@ -1273,8 +1294,8 @@ function SuperAdminNewExamPageContent() {
                       </div>
 
                       {/* Custom Indicator with CRUD */}
-                      <div className="flex flex-col gap-2 relative">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Indicator</label>
+                                            <div className="flex flex-col gap-2 relative">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "المؤشر" : "Indicator"}</label>
                         <button
                           type="button"
                           onClick={() => {
@@ -1284,7 +1305,7 @@ function SuperAdminNewExamPageContent() {
                           }}
                           className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-700 font-bold text-xs outline-none text-right flex justify-between items-center cursor-pointer min-h-[34px]"
                         >
-                          <span className="truncate">{currentQuestion.indicator || "Select Indicator..."}</span>
+                                                    <span className="truncate">{currentQuestion.indicator || (language === 'ar' ? "اختر المؤشر..." : "Select Indicator...")}</span>
                           <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                         </button>
                         
@@ -1356,8 +1377,8 @@ function SuperAdminNewExamPageContent() {
                       </div>
 
                       {/* Custom Learning Outcome with CRUD */}
-                      <div className="flex flex-col gap-2 relative">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Learning Outcome</label>
+                                            <div className="flex flex-col gap-2 relative">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "ناتج التعلم" : "Learning Outcome"}</label>
                         <button
                           type="button"
                           onClick={() => {
@@ -1391,7 +1412,7 @@ function SuperAdminNewExamPageContent() {
                                     <button
                                       type="button"
                                       onClick={() => {
-                                        const newVal = prompt("Edit Custom ناتج التعلم:", opt);
+                                        const newVal = prompt("Edit Custom Learning Outcome:", opt);
                                         if (newVal !== null && newVal.trim()) {
                                           setCustomLearningOutcomes(prev => prev.map(x => x === opt ? newVal.trim() : x));
                                           if (currentQuestion.learningOutcome === opt) {
@@ -1439,7 +1460,7 @@ function SuperAdminNewExamPageContent() {
                       </div>
 
                       <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">المهارة</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Skill</label>
                         <select 
                           className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
                           value={currentQuestion.skill}
@@ -1451,8 +1472,8 @@ function SuperAdminNewExamPageContent() {
                         </select>
                       </div>
 
-                      <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Difficulty Level</label>
+                                            <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "مستوى الصعوبة" : "Difficulty Level"}</label>
                         <select 
                           className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
                           value={currentQuestion.level}
@@ -1626,17 +1647,17 @@ function SuperAdminNewExamPageContent() {
                     )}
 
                     <div className="flex justify-end gap-4 pt-4 border-t border-slate-100">
-                      <button 
+                                            <button
                         onClick={() => setShowQuestionForm(false)}
                         className="px-8 py-4 rounded-2xl font-bold bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all whitespace-nowrap shrink-0"
                       >
-                        Cancel
+                        {language === 'ar' ? "إلغاء" : "Cancel"}
                       </button>
                       <button 
                         onClick={handleSaveQuestion}
                         className="px-10 py-4 rounded-2xl font-black bg-indigo-600 text-white shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 whitespace-nowrap shrink-0"
                       >
-                        <span>Save Slide to List</span>
+                                                <span>{language === 'ar' ? "حفظ الشريحة" : "Save Slide"}</span>
                         <Save className="w-5 h-5 shrink-0" />
                       </button>
                     </div>
@@ -1679,21 +1700,21 @@ function SuperAdminNewExamPageContent() {
                         <button 
                           onClick={() => setPreviewQuestion(q)}
                           className="w-10 h-10 bg-indigo-50 text-indigo-400 rounded-xl flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all"
-                          title="معاينة الطالب"
+                          title={language === 'ar' ? "معاينة الطالب" : "Student Preview"}
                         >
                           <Play className="w-5 h-5" />
                         </button>
                         <button 
                           onClick={() => handleEditQuestion(index)}
                           className="w-10 h-10 bg-blue-50 text-blue-400 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"
-                          title="تعديل"
+                          title={language === 'ar' ? "تعديل" : "Edit"}
                         >
                           <Edit3 className="w-5 h-5" />
                         </button>
                         <button 
                           onClick={() => removeQuestion(index)}
                           className="w-10 h-10 bg-red-50 text-red-400 rounded-xl flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"
-                          title="حذف"
+                          title={language === 'ar' ? "حذف" : "Delete"}
                         >
                           <Trash2 className="w-5 h-5" />
                         </button>
@@ -1705,19 +1726,19 @@ function SuperAdminNewExamPageContent() {
                       <div className="px-8 pb-8 pt-4 border-t border-slate-50 bg-slate-50/30 animate-in slide-in-from-top-2 duration-300">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                           <div className="space-y-4">
-                            <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">محتوى الشريحة:</h5>
+                                                        <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "محتوى الشريحة:" : "Slide Content:"}</h5>
                             <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm prose prose-slate max-w-none" dangerouslySetInnerHTML={{ __html: sanitizeHtml(q.text) }} />
                             
                             {q.learningOutcome && (
                               <div className="flex items-center gap-2 text-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-100 w-fit">
                                 <Target className="w-4 h-4" />
-                                <span className="text-[10px] font-black uppercase">ناتج التعلم: {q.learningOutcome}</span>
+                                                                <span className="text-[10px] font-black uppercase">{language === 'ar' ? "ناتج التعلم:" : "Learning Outcome:"} {q.learningOutcome}</span>
                               </div>
                             )}
                           </div>
                           
                           <div className="space-y-4">
-                            <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">الخيارات:</h5>
+                                                        <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "الخيارات:" : "Options:"}</h5>
                             <div className="flex flex-col gap-2">
                               {q.type === "MCQ" || q.type === "MULTI_SELECT" ? (
                                 q.options.filter((o: string) => o).map((opt: string, i: number) => (
@@ -1737,7 +1758,7 @@ function SuperAdminNewExamPageContent() {
                                   );
                                 })
                               ) : (
-                                <div className="text-xs font-bold text-slate-400">شريحة محتوى (لا تتطلب إجابات)</div>
+                                                          <div className="text-xs font-bold text-slate-400">{language === 'ar' ? "شريحة محتوى (لا تتطلب إجابات)" : "Content slide (No answers required)"}</div>
                               )}
                             </div>
                           </div>
@@ -1754,7 +1775,7 @@ function SuperAdminNewExamPageContent() {
 
       {/* Student Preview Modal */}
       {previewQuestion && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10 rtl" dir="rtl">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10 ltr" dir="ltr">
           <div className="absolute inset-0 bg-[#0f0f1d]/80 backdrop-blur-xl" onClick={() => setPreviewQuestion(null)}></div>
           <div className="relative bg-white w-full max-w-4xl h-full max-h-[85vh] rounded-[50px] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
             {/* Modal Header */}
@@ -1791,7 +1812,7 @@ function SuperAdminNewExamPageContent() {
                   {previewQuestion.learningOutcome && (
                     <div className="flex items-center gap-3 text-indigo-600 bg-indigo-50 px-6 py-3 rounded-2xl border border-indigo-100 w-fit">
                       <Target className="w-5 h-5" />
-                      <span className="text-xs font-black uppercase tracking-widest">ناتج التعلم: {previewQuestion.learningOutcome}</span>
+                                        <span className="text-xs font-black uppercase tracking-widest">{language === 'ar' ? "ناتج التعلم:" : "Learning Outcome:"} {previewQuestion.learningOutcome}</span>
                     </div>
                   )}
 
@@ -1832,15 +1853,15 @@ function SuperAdminNewExamPageContent() {
                </div>
             </div>
 
-            {/* Modal Footer */}
-            <div className="p-8 border-t border-slate-100 bg-slate-50/50 flex justify-center">
-               <button 
-                onClick={() => setPreviewQuestion(null)}
-                className="bg-indigo-600 text-white px-12 py-4 rounded-2xl font-black shadow-xl shadow-indigo-100 hover:scale-105 transition-all"
-               >
-                 Close Preview
-               </button>
-            </div>
+                         {/* Modal Footer */}
+             <div className="p-8 border-t border-slate-100 bg-slate-50/50 flex justify-center">
+                <button 
+                 onClick={() => setPreviewQuestion(null)}
+                 className="bg-indigo-600 text-white px-12 py-4 rounded-2xl font-black shadow-xl shadow-indigo-100 hover:scale-105 transition-all"
+                >
+                  {language === 'ar' ? "إغلاق المعاينة" : "Close Preview"}
+                </button>
+             </div>
           </div>
         </div>
       )}
