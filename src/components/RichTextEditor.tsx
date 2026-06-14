@@ -74,25 +74,13 @@ export default function RichTextEditor({ value, onChange, placeholder, className
       const file = e.target.files[0];
       if (file) {
         try {
-          // Use client-side compression (max 1200px, 70% quality)
-          const compressedContent = await compressImage(file, 1200, 1200, 0.7);
-          setImageSettings({ src: compressedContent, width: "100", align: "center" });
+          const uploadedUrl = await uploadFileToServer(file);
+          setImageSettings({ src: uploadedUrl, width: "100", align: "center" });
           setEditingImage(null);
           setActiveModal('image');
         } catch (error) {
-          console.error("Compression failed:", error);
-          // Fallback to original if compression fails
-          const reader = new FileReader();
-          reader.onload = (readerEvent) => {
-            const content = readerEvent.target?.result as string;
-            setImageSettings({ src: content, width: "100", align: "center" });
-            setEditingImage(null);
-            setActiveModal('image');
-          };
-          reader.onerror = () => {
-             alert("حدث خطأ أثناء رفع الصورة. يرجى التأكد من أن الملف سليم.");
-          };
-          reader.readAsDataURL(file);
+          console.error("Upload failed:", error);
+          alert("Failed to upload image. Please try again.");
         }
       }
     };

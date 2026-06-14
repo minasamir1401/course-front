@@ -3146,15 +3146,17 @@ export default function EditCoursePage() {
                                     <input type="file" className="hidden" accept="image/*" onChange={async (e: any) => {
                                       const file = e.target.files[0];
                                       if (file) {
-                                        const reader = new FileReader();
-                                        reader.onload = (re) => {
-                                          const res = re.target?.result as string;
+                                        try {
+                                          const { uploadFileToServer } = await import("@/lib/image-utils");
+                                          const url = await uploadFileToServer(file);
                                           if(confirm("هل تريد اعتماد هذه الصورة كغلاف جديد؟")) {
-                                             setCourseData({...courseData, coverImage: res});
+                                             setCourseData({...courseData, coverImage: url});
                                              showToast("تم تحديث صورة الغلاف بنجاح", "success");
                                           }
-                                        };
-                                        reader.readAsDataURL(file);
+                                        } catch (error) {
+                                          console.error("Upload error:", error);
+                                          showToast("فشل رفع الصورة، حاول مرة أخرى", "error");
+                                        }
                                       }
                                     }} />
                                  </label>
@@ -3169,14 +3171,16 @@ export default function EditCoursePage() {
                               <input type="file" className="hidden" accept="image/*" onChange={async (e: any) => {
                                       const file = e.target.files[0];
                                       if (file) {
-                                        const reader = new FileReader();
-                                        reader.onload = (re) => {
-                                          const res = re.target?.result as string;
+                                        try {
+                                          const { uploadFileToServer } = await import("@/lib/image-utils");
+                                          const url = await uploadFileToServer(file);
                                           if(confirm("تأكيد اعتماد هذه الصورة كغلاف؟")) {
-                                             setCourseData({...courseData, coverImage: res});
+                                             setCourseData({...courseData, coverImage: url});
                                           }
-                                        };
-                                        reader.readAsDataURL(file);
+                                        } catch (error) {
+                                          console.error("Upload error:", error);
+                                          showToast("فشل رفع الصورة، حاول مرة أخرى", "error");
+                                        }
                                       }
                                     }} />
                             </label>

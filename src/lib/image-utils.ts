@@ -1,3 +1,5 @@
+import { API_URL } from "./api";
+
 /**
  * Compresses an image file using Canvas.
  * @param file The image file to compress.
@@ -51,4 +53,28 @@ export async function compressImage(file: File, maxWidth = 1200, maxHeight = 120
     };
     reader.onerror = (err) => reject(err);
   });
+}
+
+/**
+ * Uploads a file to the server and returns its URL.
+ */
+export async function uploadFileToServer(file: File): Promise<string> {
+  const token = localStorage.getItem("lms_token") || "";
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch(`${API_URL}/upload`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to upload file to server");
+  }
+
+  const data = await res.json();
+  return data.url;
 }
