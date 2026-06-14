@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { 
   Save, Plus, Trash2, Image as ImageIcon, CheckCircle, HelpCircle, 
@@ -16,11 +16,29 @@ import VideoPlayer from "@/components/VideoPlayer";
 
 import { API_URL } from "@/lib/api";
 import { sanitizeHtml } from "@/lib/sanitize";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useNotification } from "@/context/NotificationContext";
 
 export default function SuperAdminNewExamPage() {
+  return (
+    <Suspense fallback={
+      <DashboardLayout>
+        <div className="h-[70vh] flex flex-col items-center justify-center gap-6 text-slate-400">
+           <div className="w-20 h-20 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+           <p className="font-black text-2xl animate-pulse">جاري التحميل...</p>
+        </div>
+      </DashboardLayout>
+    }>
+      <SuperAdminNewExamPageContent />
+    </Suspense>
+  );
+}
+
+function SuperAdminNewExamPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const courseIdParam = searchParams.get('courseId');
+  const typeParam = searchParams.get('type');
   const { showToast } = useNotification();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -114,6 +132,15 @@ export default function SuperAdminNewExamPage() {
     skill: "Math",
     level: "Medium",
   });
+
+  useEffect(() => {
+    if (typeParam) {
+      setExamInfo((prev: any) => ({ ...prev, type: typeParam }));
+    }
+    if (courseIdParam) {
+      setExamInfo((prev: any) => ({ ...prev, courseId: courseIdParam }));
+    }
+  }, [typeParam, courseIdParam]);
 
   const QUESTION_TYPES = [
     { id: "MCQ", label: "Multiple Choice (MCQ)", desc: "Select one correct answer" },
@@ -693,7 +720,12 @@ export default function SuperAdminNewExamPage() {
 
       if (res.ok) {
         showToast(status === "DRAFT" ? "Draft saved successfully!" : "Exam published successfully!", 'success');
-        router.push("/super-admin/exams");
+        const targetCourseId = examInfo.courseId || courseIdParam;
+        if (targetCourseId) {
+          router.push(`/super-admin/courses/edit?id=${targetCourseId}`);
+        } else {
+          router.push("/super-admin/exams");
+        }
       } else {
         let errMessage = "Failed to add exam";
         try {

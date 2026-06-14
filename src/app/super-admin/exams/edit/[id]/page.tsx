@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import {
   Save, Plus, Trash2, Image as ImageIcon, CheckCircle, HelpCircle,
@@ -11,15 +11,32 @@ import {
 } from "lucide-react";
 import { API_URL } from "@/lib/api";
 import { sanitizeHtml } from "@/lib/sanitize";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { useNotification } from "@/context/NotificationContext";
 import RichTextEditor from "@/components/RichTextEditor";
 import * as XLSX from 'xlsx';
 import VideoPlayer from "@/components/VideoPlayer";
 
 export default function SuperAdminEditExamPage() {
+  return (
+    <Suspense fallback={
+      <DashboardLayout>
+        <div className="h-[70vh] flex flex-col items-center justify-center gap-6 text-slate-400">
+           <div className="w-20 h-20 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+           <p className="font-black text-2xl animate-pulse">جاري التحميل...</p>
+        </div>
+      </DashboardLayout>
+    }>
+      <SuperAdminEditExamPageContent />
+    </Suspense>
+  );
+}
+
+function SuperAdminEditExamPageContent() {
   const router = useRouter();
   const { id } = useParams();
+  const searchParams = useSearchParams();
+  const courseIdParam = searchParams.get('courseId');
   const { showToast } = useNotification();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -438,6 +455,7 @@ export default function SuperAdminEditExamPage() {
       if (examRes.ok) {
         setExamInfo({
           ...examData,
+          courseId: examData.courseId || courseIdParam || undefined,
           schoolIds: examData.schools?.map((s: any) => s.id) || [],
           grades: examData.grades ? JSON.parse(examData.grades) : [examData.grade || GRADES[0]],
           subjects: examData.subjects ? JSON.parse(examData.subjects) : [examData.category || CATEGORIES[0]],
@@ -678,7 +696,12 @@ export default function SuperAdminEditExamPage() {
       if (res.ok) {
         if (!isAutoSave) {
           showToast("تم تحديث الاختبار بنجاح!", 'success');
-          router.push("/super-admin/exams");
+          const targetCourseId = examInfo.courseId || courseIdParam;
+          if (targetCourseId) {
+            router.push(`/super-admin/courses/edit?id=${targetCourseId}`);
+          } else {
+            router.push("/super-admin/exams");
+          }
         } else {
           setLastAutoSave(new Date());
           showToast("تم الحفظ التلقائي بنجاح", "success");

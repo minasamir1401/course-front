@@ -3366,8 +3366,13 @@ export default function EditCoursePage() {
                   </h3>
                   <button 
                     onClick={() => {
-                      if (activeContentTab === 'lessons') openAddLessonModal();
-                      else showToast(language === 'ar' ? "سيتم تفعيل إنشاء الاختبارات/التكليفات قريباً" : "Creating quizzes/assignments will be activated soon", "info");
+                      if (activeContentTab === 'lessons') {
+                        openAddLessonModal();
+                      } else if (activeContentTab === 'quizzes') {
+                        router.push(`/school-admin/exams/new?courseId=${courseId}&type=Quiz`);
+                      } else {
+                        router.push(`/school-admin/exams/new?courseId=${courseId}&type=ASSIGNMENT`);
+                      }
                     }} 
                     className={`px-8 py-4 rounded-2xl font-black flex items-center gap-3 transition-all shadow-xl ${
                       activeContentTab === 'lessons' ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20 text-white' :
@@ -3496,7 +3501,12 @@ export default function EditCoursePage() {
                                        </div>
                                     </div>
                                  </div>
-                                 <button className="p-2 text-slate-400 hover:text-indigo-600 transition-all"><Edit2 size={16} /></button>
+                                 <button 
+                                   onClick={() => router.push(`/school-admin/exams/edit/${exam.id}?courseId=${courseId}`)}
+                                   className="p-2 text-slate-400 hover:text-indigo-600 transition-all"
+                                 >
+                                   <Edit2 size={16} />
+                                 </button>
                               </div>
                             ))
                           )}

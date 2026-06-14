@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { 
   Save, Plus, Trash2, Image as ImageIcon, CheckCircle, HelpCircle, 
@@ -15,12 +15,30 @@ import VideoPlayer from "@/components/VideoPlayer";
 
 import { API_URL } from "@/lib/api";
 import { sanitizeHtml } from "@/lib/sanitize";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function SchoolAdminNewExamPage() {
+  return (
+    <Suspense fallback={
+      <DashboardLayout>
+        <div className="h-[70vh] flex flex-col items-center justify-center gap-6 text-slate-400">
+           <div className="w-20 h-20 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+           <p className="font-black text-2xl animate-pulse">جاري التحميل...</p>
+        </div>
+      </DashboardLayout>
+    }>
+      <SchoolAdminNewExamPageContent />
+    </Suspense>
+  );
+}
+
+function SchoolAdminNewExamPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const courseIdParam = searchParams.get('courseId');
+  const typeParam = searchParams.get('type');
   const { showToast } = useNotification();
   const { t, language } = useLanguage();
   const [saving, setSaving] = useState(false);
@@ -76,6 +94,15 @@ export default function SchoolAdminNewExamPage() {
       endDate: dates.end,
     }));
   }, [language]);
+
+  useEffect(() => {
+    if (typeParam) {
+      setExamInfo((prev: any) => ({ ...prev, type: typeParam }));
+    }
+    if (courseIdParam) {
+      setExamInfo((prev: any) => ({ ...prev, courseId: courseIdParam }));
+    }
+  }, [typeParam, courseIdParam]);
 
   const QUESTION_TYPES = [
     { id: "MCQ", label: t('schoolAdmin.examsNewPage.mcq'), desc: t('schoolAdmin.examsNewPage.mcqDesc') },
@@ -697,7 +724,12 @@ export default function SchoolAdminNewExamPage() {
 
       if (res.ok) {
         showToast(status === "DRAFT" ? t('schoolAdmin.examsNewPage.draftSuccess') : t('schoolAdmin.examsNewPage.publishedSuccess'), 'success');
-        router.push("/school-admin/exams");
+        const targetCourseId = examInfo.courseId || courseIdParam;
+        if (targetCourseId) {
+          router.push(`/school-admin/courses/edit?id=${targetCourseId}`);
+        } else {
+          router.push("/school-admin/exams");
+        }
       } else {
         const err = await res.json();
         showToast(err.error || t('schoolAdmin.examsNewPage.saveError'), 'error');
