@@ -59,15 +59,7 @@ export default function SuperAdminSidebar({
 
   return (
     <>
-      {/* Mobile Toggle */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={`lg:hidden fixed top-5 z-[70] bg-slate-900 text-white p-3 rounded-2xl shadow-2xl active:scale-90 transition-all ${language === 'ar' ? 'right-5' : 'left-5'}`}
-      >
-        {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-      </button>
-
-      <aside className={`fixed top-0 ${sidePosition} h-full w-72 bg-white border-slate-100 z-50 transition-all duration-300 lg:translate-x-0 ${isOpen ? 'translate-x-0' : sideSlideOut} shadow-xl flex flex-col ${language === 'ar' ? 'border-l' : 'border-r'}`}>
+      <aside className={`fixed top-0 ${sidePosition} h-full w-72 bg-white border-slate-100 z-50 transition-transform duration-300 ${isOpen ? 'translate-x-0' : sideSlideOut} shadow-xl flex flex-col ${language === 'ar' ? 'border-l' : 'border-r'}`}>
 
         {/* Brand Logo */}
         <div className="px-6 py-8 border-b border-slate-100">
@@ -103,7 +95,6 @@ export default function SuperAdminSidebar({
             <p className="px-3 py-1 text-[10px] font-black text-slate-400 uppercase tracking-[2px]">{t('superAdmin.sidebar.centralExams')}</p>
             <SidebarLink href="/super-admin/exams" icon={ClipboardList} label={t('superAdmin.sidebar.allExams')} active={isActive('/super-admin/exams')} />
             <SidebarLink href="/super-admin/exams/new" icon={BookOpen} label={t('superAdmin.sidebar.createNew')} active={isActive('/super-admin/exams/new')} />
-            <SidebarLink href="/super-admin/exam-supervisors" icon={UserCheck} label={t('superAdmin.sidebar.supervisors')} active={isActive('/super-admin/exam-supervisors')} />
           </div>
 
           {/* COURSES */}

@@ -7,7 +7,7 @@ import {
   Users, Plus, Search, Shield,
   User, ChevronRight,
   Trash2, Key, X, GraduationCap, School,
-  Sparkles
+  Sparkles, Edit
 } from "lucide-react";
 import Link from "next/link";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -132,6 +132,60 @@ function UsersManagementContent() {
     }
   };
 
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+
+  const openEditModal = (user: any) => {
+    setSelectedUser(user);
+    setFormData({
+      name: user.name,
+      username: user.username,
+      password: "", // Leave empty unless changing
+      schoolId: user.schoolId || "",
+      role: user.role,
+      grade: user.grade || ""
+    });
+    setEditModalOpen(true);
+  };
+
+  const handleEditUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser) return;
+    if (!formData.schoolId && formData.role !== 'SUPER_ADMIN') {
+      showToast(t('usersPage.selectSchoolError') || 'Please select a school', 'error');
+      return;
+    }
+
+    setIsSubmitting(true);
+    const token = localStorage.getItem("super_admin_token");
+    try {
+      const payload: any = { ...formData };
+      if (!payload.password) delete payload.password; // Don't send empty password
+
+      const res = await fetch(`${API_URL}/admin/users/${selectedUser.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        setEditModalOpen(false);
+        fetchData();
+        showToast(language === 'ar' ? 'تم تحديث المستخدم بنجاح' : 'User updated successfully', 'success');
+      } else {
+        const data = await res.json();
+        showToast(data.error || (language === 'ar' ? 'فشل تحديث المستخدم' : 'Failed to update user'), 'error');
+      }
+    } catch (error) {
+      showToast(t('usersPage.connError') || 'Connection error', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleDeleteUser = async (id: string) => {
     const confirmed = await confirm(
       language === 'ar' ? 'تأكيد الحذف' : 'Confirm Delete',
@@ -200,6 +254,7 @@ function UsersManagementContent() {
   };
 
   const filteredUsers = users.filter((u: any) => {
+    if (u.role === 'SUPER_ADMIN') return false;
     const matchesSearch = u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                          u.username.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesTab = activeTab === 'ALL' || u.role === activeTab;
@@ -520,6 +575,13 @@ function UsersManagementContent() {
                               <Sparkles className="w-4 h-4 group-hover/btn:animate-pulse" />
                               <span>{t('usersPage.directLogin')}</span>
                             </button>
+                            <button 
+                              onClick={() => openEditModal(user)}
+                              className="w-10 h-10 rounded-xl bg-slate-50 hover:bg-indigo-50 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-all border border-slate-100 cursor-pointer"
+                              title={language === 'ar' ? 'تعديل' : 'Edit'}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
                             {user.role !== 'SUPER_ADMIN' && (
                               <button 
                                 onClick={() => handleDeleteUser(user.id)}
@@ -583,6 +645,13 @@ function UsersManagementContent() {
 
                   <div className="flex items-center justify-end gap-2 pt-2">
                     <button 
+                      onClick={() => openEditModal(user)}
+                      className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-all cursor-pointer"
+                      title={language === 'ar' ? 'تعديل' : 'Edit'}
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button 
                       onClick={() => handleImpersonate(user)}
                       className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl text-xs font-black transition-all shadow-md shadow-indigo-600/10 cursor-pointer"
                     >
@@ -609,6 +678,100 @@ function UsersManagementContent() {
               </div>
             )}
           </>
+        )}
+
+        {/* Edit User Modal */}
+        {editModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+            <div className="bg-white border border-slate-100 w-full max-w-lg rounded-3xl p-6 sm:p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-black text-slate-900">{language === 'ar' ? 'تعديل بيانات المستخدم' : 'Edit User Data'}</h3>
+                <button onClick={() => setEditModalOpen(false)} className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors"><X className="w-5 h-5" /></button>
+              </div>
+              <form onSubmit={handleEditUser} className="space-y-5" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
+                <div>
+                  <label className="block text-sm font-bold text-slate-500 mb-2">{t('usersPage.fullName')}</label>
+                  <input
+                    type="text" required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-800 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold text-slate-500 mb-2">{t('usersPage.username')}</label>
+                    <input
+                      type="text" required
+                      value={formData.username}
+                      onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-800 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all"
+                      dir="ltr"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-500 mb-2">
+                      {t('usersPage.password')}
+                      <span className="text-[10px] text-slate-400 font-normal ml-2 mr-2">
+                        ({language === 'ar' ? 'اختياري' : 'Optional'})
+                      </span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-800 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all"
+                      placeholder="********"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-500 mb-2">{t('usersPage.role')}</label>
+                  <select
+                    value={formData.role}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
+                    className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-800 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all"
+                  >
+                    <option value="SCHOOL_ADMIN">{t('usersPage.schoolAdmin')}</option>
+                    <option value="TEACHER">{t('usersPage.teacher')}</option>
+                    <option value="STUDENT">{t('usersPage.student')}</option>
+                    <option value="EXAM_SUPERVISOR">{t('usersPage.examSupervisor')}</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-500 mb-2">{t('usersPage.school')}</label>
+                  <select
+                    required={formData.role !== 'SUPER_ADMIN'}
+                    value={formData.schoolId}
+                    onChange={(e) => setFormData({ ...formData, schoolId: e.target.value })}
+                    className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-800 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all"
+                  >
+                    <option value="">{t('usersPage.selectSchool')}</option>
+                    {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
+                {formData.role === 'STUDENT' && (
+                  <div>
+                    <label className="block text-sm font-bold text-slate-500 mb-2">{t('usersPage.grade')}</label>
+                    <select
+                      value={formData.grade}
+                      onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
+                      className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-800 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all"
+                    >
+                      <option value="">{t('usersPage.selectGrade')}</option>
+                      {GRADES.map(g => <option key={g} value={g}>{getGradeName(g)}</option>)}
+                    </select>
+                  </div>
+                )}
+                <button
+                  disabled={isSubmitting}
+                  className="w-full bg-indigo-600 text-white font-black py-4 rounded-xl mt-6 transition-all hover:bg-indigo-700 disabled:opacity-50 shadow-xl shadow-indigo-600/10 active:scale-95"
+                >
+                  {isSubmitting ? (language === 'ar' ? 'جاري الحفظ...' : 'Saving...') : (language === 'ar' ? 'حفظ التعديلات' : 'Save Changes')}
+                </button>
+              </form>
+            </div>
+          </div>
         )}
       </div>
     </DashboardLayout>

@@ -81,15 +81,7 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose, onToggle, rol
 
   return (
     <>
-      {/* Mobile Toggle Button */}
-      <button
-        onClick={handleToggle}
-        className={`lg:hidden fixed top-5 z-[70] bg-indigo-600 text-white p-3 rounded-2xl shadow-xl active:scale-90 transition-all ${language === 'ar' ? 'right-5' : 'left-5'}`}
-      >
-        {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-      </button>
-
-      <aside className={`fixed top-0 ${sidePosition} h-full w-72 bg-white border-slate-100 z-50 transition-all duration-300 lg:translate-x-0 ${isOpen ? 'translate-x-0' : sideSlideOut} shadow-xl flex flex-col ${language === 'ar' ? 'border-l' : 'border-r'}`}>
+      <aside className={`fixed top-0 ${sidePosition} h-full w-72 bg-white border-slate-100 z-50 transition-transform duration-300 ${isOpen ? 'translate-x-0' : sideSlideOut} shadow-xl flex flex-col ${language === 'ar' ? 'border-l' : 'border-r'}`}>
 
         {/* School Identity */}
         <div className="p-8 mb-4 border-b border-slate-50">
@@ -159,9 +151,10 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose, onToggle, rol
       )}
 
       <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.05); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.2); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.5); }
       `}</style>
     </>
   );

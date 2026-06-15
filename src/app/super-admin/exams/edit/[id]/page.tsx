@@ -11,17 +11,39 @@ import {
 } from "lucide-react";
 import { API_URL } from "@/lib/api";
 import { sanitizeHtml } from "@/lib/sanitize";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { Suspense } from "react";
 import { useNotification } from "@/context/NotificationContext";
 import RichTextEditor from "@/components/RichTextEditor";
 import * as XLSX from 'xlsx';
 import VideoPlayer from "@/components/VideoPlayer";
 
 export default function SuperAdminEditExamPage() {
-  const router = useRouter();
+  return (
+    <Suspense fallback={
+      <DashboardLayout>
+        <div className="h-[70vh] flex flex-col items-center justify-center gap-6 text-slate-400">
+           <div className="w-20 h-20 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+           <p className="font-black text-2xl animate-pulse">جاري التحميل...</p>
+        </div>
+      </DashboardLayout>
+    }>
+      <SuperAdminEditExamPageContent />
+    </Suspense>
+  );
+}
+
+function SuperAdminEditExamPageContent() {
+    const router = useRouter();
   const { id } = useParams();
+  const searchParams = useSearchParams();
+  const courseIdParam = searchParams.get('courseId');
   const { showToast } = useNotification();
+  const { t, language } = useLanguage();
   const [loading, setLoading] = useState(true);
+  const [isAutoSaveEnabled, setIsAutoSaveEnabled] = useState(true);
+  const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
   const [saving, setSaving] = useState(false);
   const [schools, setSchools] = useState<any[]>([]);
   const [fetchingSchools, setFetchingSchools] = useState(true);
@@ -115,14 +137,25 @@ export default function SuperAdminEditExamPage() {
     sections: [{ type: "EXPLANATION", content: "" }], imageUrl: "", correctAnswers: [],
   });
 
-  const CATEGORIES = [
+    const CATEGORIES = language === 'ar' ? [
+    "اللغة العربية", "اللغة الإنجليزية", "اللغة الفرنسية", "اللغة الألمانية", "اللغة الإيطالية",
+    "الرياضيات", "الفيزياء", "الكيمياء", "الأحياء", "الجيولوجيا", "الميكانيكا",
+    "التاريخ", "الجغرافيا", "الفلسفة", "علم النفس", "الاقتصاد", "الإحصاء",
+    "التربية الدينية", "التربية الوطنية", "الحاسب الآلي",
+    "SAT Math", "SAT English"
+  ] : [
     "Arabic", "English", "French", "German", "Italian",
     "Mathematics", "Physics", "Chemistry", "Biology", "Geology", "Mechanics",
     "History", "Geography", "Philosophy", "Psychology", "Economics", "Statistics",
     "Religious Education", "National Education", "Computer Science",
     "SAT Math", "SAT English"
   ];
-  const GRADES = [
+  const GRADES = language === 'ar' ? [
+    "الصف الأول الابتدائي", "الصف الثاني الابتدائي", "الصف الثالث الابتدائي",
+    "الصف الرابع الابتدائي", "الصف الخامس الابتدائي", "الصف السادس الابتدائي",
+    "الصف الأول الإعدادي", "الصف الثاني الإعدادي", "الصف الثالث الإعدادي",
+    "الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"
+  ] : [
     "Grade 1 Elementary", "Grade 2 Elementary", "Grade 3 Elementary",
     "Grade 4 Elementary", "Grade 5 Elementary", "Grade 6 Elementary",
     "Grade 1 Middle School", "Grade 2 Middle School", "Grade 3 Middle School",
@@ -135,7 +168,12 @@ export default function SuperAdminEditExamPage() {
     { id: "TEXT", label: "Text Slide", desc: "A text block for explanation or summary (No answer required)" }
   ];
 
-  const SKILLS = [
+    const SKILLS = language === 'ar' ? [
+    "الرياضيات", "الفيزياء", "الكيمياء", "الأحياء", "الجيولوجيا", "الميكانيكا",
+    "التاريخ", "الجغرافيا", "الفلسفة", "علم النفس", "الاقتصاد", "الإحصاء",
+    "الحاسب الآلي", "اللغة العربية", "اللغة الإنجليزية", "اللغة الفرنسية", "اللغة الألمانية", "اللغة الإيطالية",
+    "التربية الدينية", "التربية الوطنية", "SAT Reading", "SAT Writing"
+  ] : [
     "Math", "Physics", "Chemistry", "Biology", "Geology", "Mechanics",
     "History", "Geography", "Philosophy", "Psychology", "Economics", "Statistics",
     "Computer Science", "Arabic", "English", "French", "German", "Italian",
@@ -635,7 +673,18 @@ export default function SuperAdminEditExamPage() {
     });
   };
 
-  const handleSubmit = async (statusOverride: string | null = null) => {
+    // Auto-save interval
+  useEffect(() => {
+    if (!isAutoSaveEnabled) return;
+    
+    const interval = setInterval(() => {
+      handleSubmit(null, true);
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [isAutoSaveEnabled, examInfo, questions]);
+
+  const handleSubmit = async (statusOverride: string | null = null, isAutoSave = false) => {
     if (!examInfo.title) {
       showToast("Please enter the exam title", 'error');
       return;
@@ -705,8 +754,8 @@ export default function SuperAdminEditExamPage() {
   );
 
   return (
-    <DashboardLayout>
-      <div className="max-w-7xl mx-auto flex flex-col gap-10 pb-20 ltr" dir="ltr">
+        <DashboardLayout>
+      <div className={`max-w-7xl mx-auto flex flex-col gap-10 pb-20 ${language === 'ar' ? 'rtl' : 'ltr'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
         {/* Command Center Header */}
         <div className="bg-[#0f0f1d] p-8 md:p-12 rounded-[40px] shadow-2xl relative overflow-hidden border border-white/5">
           <div className="relative z-10 flex flex-col lg:flex-row justify-between items-center gap-8">
@@ -760,14 +809,14 @@ export default function SuperAdminEditExamPage() {
 
             {/* General Info Card */}
             <div className="bg-white p-8 rounded-[35px] border border-slate-100 shadow-sm flex flex-col gap-8">
-              <h3 className="font-black text-slate-800 flex items-center gap-3 text-lg border-b border-slate-50 pb-6">
+                            <h3 className="font-black text-slate-800 flex items-center gap-3 text-lg border-b border-slate-50 pb-6">
                 <Settings className="w-6 h-6 text-indigo-600" />
-                General Settings
+                {language === 'ar' ? "الإعدادات العامة" : "General Settings"}
               </h3>
 
               <div className="space-y-6">
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Subjects</label>
+                                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "المواد الدراسية" : "Subjects"}</label>
                   <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 max-h-[170px] overflow-y-auto custom-scrollbar flex flex-wrap gap-2">
                     {CATEGORIES.map(cat => (
                       <label key={cat} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer transition-all ${examInfo.subjects.includes(cat) ? 'bg-indigo-100 border-indigo-300 text-indigo-900 shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
@@ -782,12 +831,16 @@ export default function SuperAdminEditExamPage() {
                       </label>
                     ))}
                   </div>
-                  <p className="text-[9px] text-slate-400 font-bold px-1">You can select multiple subjects for this exam.</p>
+                                    <p className="text-[9px] text-slate-400 font-bold px-1">
+                    {language === 'ar' 
+                      ? (examInfo.type === 'ASSIGNMENT' ? "يمكنك اختيار أكثر من مادة لهذا التكليف." : "يمكنك اختيار أكثر من مادة لهذا الاختبار.") 
+                      : (examInfo.type === 'ASSIGNMENT' ? "You can select multiple subjects for this assignment." : "You can select multiple subjects for this exam.")}
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col gap-2">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Grade Levels</label>
+                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "المراحل الدراسية" : "Grade Levels"}</label>
                     <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 max-h-[120px] overflow-y-auto custom-scrollbar flex flex-wrap gap-2">
                       {GRADES.map(g => (
                         <label key={g} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border cursor-pointer transition-all ${examInfo.grades.includes(g) ? 'bg-indigo-100 border-indigo-300 text-indigo-900 shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
@@ -802,7 +855,7 @@ export default function SuperAdminEditExamPage() {
                     </div>
                   </div>
                   <div className="flex flex-col gap-2">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Duration (min)</label>
+                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? (examInfo.type === 'ASSIGNMENT' ? "المدة (بالدقائق)" : "مدة الاختبار (بالدقائق)") : (examInfo.type === 'ASSIGNMENT' ? "Duration (min)" : "Exam Duration (min)")}</label>
                     <div className="relative">
                       <input
                         type="number"
@@ -816,7 +869,7 @@ export default function SuperAdminEditExamPage() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Exam Password (Optional)</label>
+                                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? (examInfo.type === 'ASSIGNMENT' ? "كلمة مرور التكليف (اختياري)" : "كلمة مرور الاختبار (اختياري)") : (examInfo.type === 'ASSIGNMENT' ? "Assignment Password (Optional)" : "Exam Password (Optional)")}</label>
                   <div className="relative">
                     <input
                       type="text"
@@ -843,7 +896,7 @@ export default function SuperAdminEditExamPage() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Result Visibility Policy</label>
+                                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">{language === 'ar' ? (examInfo.type === 'ASSIGNMENT' ? "سياسة ظهور التقييم للطلاب" : "سياسة ظهور نتائج الاختبار") : (examInfo.type === 'ASSIGNMENT' ? "Submission & Grading Policy" : "Result Visibility Policy")}</label>
                   <div className="flex flex-col gap-3">
                     {VISIBILITY_OPTIONS.map((opt) => (
                       <label key={opt.id} className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${examInfo.resultVisibility === opt.id ? 'bg-indigo-50 border-indigo-500 shadow-sm' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
@@ -966,11 +1019,11 @@ export default function SuperAdminEditExamPage() {
             {!showQuestionForm && (
               <>
                 <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-sm">
-                  <label className="text-sm font-black text-slate-400 mb-3 block uppercase tracking-widest">Exam Title</label>
+                                 <label className="text-sm font-black text-slate-400 mb-3 block uppercase tracking-widest">{language === 'ar' ? (examInfo.type === 'ASSIGNMENT' ? "عنوان التكليف" : "عنوان الاختبار") : (examInfo.type === 'ASSIGNMENT' ? "Assignment Title" : "Exam Title")}</label>
                   <input
                     type="text"
                     className="w-full bg-slate-50 border border-slate-100 rounded-[25px] px-8 py-6 text-2xl md:text-3xl font-black outline-none focus:ring-4 focus:ring-indigo-500/5 focus:bg-white focus:border-indigo-500 transition-all text-slate-800"
-                    placeholder="Enter exam title here..."
+                                    placeholder={language === 'ar' ? (examInfo.type === 'ASSIGNMENT' ? "أدخل عنوان التكليف هنا..." : "أدخل عنوان الاختبار هنا...") : (examInfo.type === 'ASSIGNMENT' ? "Enter assignment title here..." : "Enter exam title here...")}
                     value={examInfo.title || ""}
                     onChange={(e) => setExamInfo({ ...examInfo, title: e.target.value })}
                   />
@@ -997,28 +1050,28 @@ export default function SuperAdminEditExamPage() {
                       className="flex items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-5 py-2.5 rounded-2xl font-bold transition-all shadow-sm border border-emerald-200 whitespace-nowrap shrink-0 cursor-pointer text-xs"
                     >
                       <Upload className="w-4 h-4 shrink-0" />
-                      <span>Import Excel</span>
+                      <span>{language === 'ar' ? "استيراد من إكسيل" : "Import Excel"}</span>
                     </button>
                     <button 
                       onClick={downloadQuestionsTemplate}
                       className="flex items-center justify-center gap-2 bg-sky-50 hover:bg-sky-100 text-sky-700 px-5 py-2.5 rounded-2xl font-bold transition-all shadow-sm border border-sky-200 whitespace-nowrap shrink-0 cursor-pointer text-xs"
                     >
                       <Download className="w-4 h-4 shrink-0" />
-                      <span>Template</span>
+                      <span>{language === 'ar' ? "تحميل نموذج" : "Template"}</span>
                     </button>
                     <button
                       onClick={() => handleAddQuestion('TEXT')}
                       className="flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-2xl font-bold transition-all shadow-sm border border-slate-200 whitespace-nowrap shrink-0 cursor-pointer text-xs"
                     >
                       <Plus className="w-4 h-4 shrink-0 text-slate-500" />
-                      <span>Text Slide</span>
+                      <span>{language === 'ar' ? "شريحة نصية" : "Text Slide"}</span>
                     </button>
                     <button
                       onClick={() => handleAddQuestion('MCQ')}
                       className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 whitespace-nowrap shrink-0 cursor-pointer text-xs"
                     >
                       <Plus className="w-4 h-4 shrink-0 text-white" />
-                      <span>Question Slide</span>
+                      <span>{language === 'ar' ? "شريحة سؤال" : "Question Slide"}</span>
                     </button>
                   </div>
                 </div>
@@ -1031,8 +1084,12 @@ export default function SuperAdminEditExamPage() {
                         <HelpCircle className="w-12 h-12" />
                       </div>
                       <div>
-                        <h4 className="text-2xl font-black text-slate-800 mb-2">No slides yet</h4>
-                        <p className="text-slate-400 font-medium max-w-sm">Start by adding your first text slide or question slide for this exam.</p>
+                                        <h4 className="text-2xl font-black text-slate-800 mb-2">{language === 'ar' ? "لا توجد شرائح بعد" : "No slides yet"}</h4>
+                <p className="text-slate-400 font-medium max-w-sm">
+                  {language === 'ar' 
+                    ? (examInfo.type === 'ASSIGNMENT' ? "ابدأ بإضافة أول شريحة نصية أو شريحة سؤال لهذا التكليف." : "ابدأ بإضافة أول شريحة نصية أو شريحة سؤال لهذا الاختبار.") 
+                    : (examInfo.type === 'ASSIGNMENT' ? "Start by adding your first text slide or question slide for this assignment." : "Start by adding your first text slide or question slide for this exam.")}
+                </p>
                       </div>
                       <div className="flex gap-4">
                         <button
@@ -1040,14 +1097,14 @@ export default function SuperAdminEditExamPage() {
                           className="bg-slate-50 hover:bg-slate-100 text-slate-800 px-10 py-5 rounded-3xl font-black hover:scale-105 transition-all shadow-md border border-slate-200 whitespace-nowrap shrink-0 flex items-center justify-center gap-2"
                         >
                           <Plus className="w-6 h-6 shrink-0 text-slate-600" />
-                          <span>Add Text Slide</span>
+                          <span>{language === 'ar' ? "إضافة شريحة نصية" : "Add Text Slide"}</span>
                         </button>
                         <button
                           onClick={() => handleAddQuestion('MCQ')}
                           className="bg-[#0f0f1d] hover:bg-[#16162a] text-white px-10 py-5 rounded-3xl font-black hover:scale-105 transition-all shadow-2xl whitespace-nowrap shrink-0 flex items-center justify-center gap-2"
                         >
                           <Plus className="w-6 h-6 shrink-0 text-indigo-400" />
-                          <span>Add Question Slide</span>
+                          <span>{language === 'ar' ? "إضافة شريحة سؤال" : "Add Question Slide"}</span>
                         </button>
                       </div>
                     </div>
@@ -1088,21 +1145,21 @@ export default function SuperAdminEditExamPage() {
                             <button
                               onClick={() => setPreviewQuestion(q)}
                               className="w-10 h-10 bg-indigo-50 text-indigo-400 rounded-xl flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all"
-                              title="Student Preview"
+                              title={language === 'ar' ? "معاينة الطالب" : "Student Preview"}
                             >
                               <Play className="w-5 h-5" />
                             </button>
                             <button
                               onClick={() => handleEditQuestion(index)}
                               className="w-10 h-10 bg-blue-50 text-blue-400 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"
-                              title="Edit"
+                              title={language === 'ar' ? "تعديل" : "Edit"}
                             >
                               <Edit3 className="w-5 h-5" />
                             </button>
                             <button
                               onClick={() => removeQuestion(index)}
                               className="w-10 h-10 bg-red-50 text-red-400 rounded-xl flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"
-                              title="Delete"
+                              title={language === 'ar' ? "حذف" : "Delete"}
                             >
                               <Trash2 className="w-5 h-5" />
                             </button>
@@ -1114,19 +1171,19 @@ export default function SuperAdminEditExamPage() {
                           <div className="px-8 pb-8 pt-4 border-t border-slate-50 bg-slate-50/30 animate-in slide-in-from-top-2 duration-300">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                               <div className="space-y-4">
-                                <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">Slide Content:</h5>
+                                                            <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "محتوى الشريحة:" : "Slide Content:"}</h5>
                                 <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm prose prose-slate max-w-none" dangerouslySetInnerHTML={{ __html: sanitizeHtml(q.text) }} />
 
                                 {q.learningOutcome && (
                                   <div className="flex items-center gap-2 text-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-100 w-fit">
                                     <Target className="w-4 h-4" />
-                                    <span className="text-[10px] font-black uppercase">Learning Outcome: {q.learningOutcome}</span>
+                                                                    <span className="text-[10px] font-black uppercase">{language === 'ar' ? "ناتج التعلم:" : "Learning Outcome:"} {q.learningOutcome}</span>
                                   </div>
                                 )}
                               </div>
 
                               <div className="space-y-4">
-                                <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">Options:</h5>
+                                                            <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "الخيارات:" : "Options:"}</h5>
                                 <div className="flex flex-col gap-2">
                                   {q.type === "MCQ" || q.type === "MULTI_SELECT" ? (
                                     q.options.filter((o: string) => o).map((opt: string, i: number) => (
@@ -1146,7 +1203,7 @@ export default function SuperAdminEditExamPage() {
                                       );
                                     })
                                   ) : (
-                                    <div className="text-xs font-bold text-slate-400">Content slide (No answers required)</div>
+                                                              <div className="text-xs font-bold text-slate-400">{language === 'ar' ? "شريحة محتوى (لا تتطلب إجابات)" : "Content slide (No answers required)"}</div>
                                   )}
                                 </div>
                               </div>
@@ -1166,7 +1223,7 @@ export default function SuperAdminEditExamPage() {
                 <div className="bg-indigo-600 px-8 py-5 flex justify-between items-center">
                   <h4 className="text-white font-black flex items-center gap-3">
                     <Edit3 className="w-5 h-5" />
-                    {editingIndex !== null ? `Edit Slide / Question #${editingIndex + 1}` : "Add Slide / Question"}
+                                          {editingIndex !== null ? (language === 'ar' ? `تعديل الشريحة #${editingIndex + 1}` : `Edit Slide #${editingIndex + 1}`) : (language === 'ar' ? "إضافة شريحة جديدة" : "Add New Slide")}
                   </h4>
                   <button
                     onClick={() => setShowQuestionForm(false)}
@@ -1179,8 +1236,8 @@ export default function SuperAdminEditExamPage() {
                 <div className="p-8 md:p-12 space-y-8">
                     {/* Unified Metadata & Configuration Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 p-6 bg-slate-50 border border-slate-200 rounded-[30px] shadow-sm mb-6">
-                      <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Slide Type</label>
+                                            <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "نوع الشريحة" : "Slide Type"}</label>
                         <select 
                           className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
                           value={currentQuestion.type}
@@ -1205,8 +1262,8 @@ export default function SuperAdminEditExamPage() {
                       </div>
 
                       {/* Custom Standard with CRUD */}
-                      <div className="flex flex-col gap-2 relative">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Standard</label>
+                                            <div className="flex flex-col gap-2 relative">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "المعيار" : "Standard"}</label>
                         <button
                           type="button"
                           onClick={() => {
@@ -1216,7 +1273,7 @@ export default function SuperAdminEditExamPage() {
                           }}
                           className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-700 font-bold text-xs outline-none text-right flex justify-between items-center cursor-pointer min-h-[34px]"
                         >
-                          <span className="truncate">{currentQuestion.standard || "Select Standard..."}</span>
+                                                    <span className="truncate">{currentQuestion.standard || (language === 'ar' ? "اختر المعيار..." : "Select Standard...")}</span>
                           <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                         </button>
                         
@@ -1288,8 +1345,8 @@ export default function SuperAdminEditExamPage() {
                       </div>
 
                       {/* Custom Indicator with CRUD */}
-                      <div className="flex flex-col gap-2 relative">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Indicator</label>
+                                            <div className="flex flex-col gap-2 relative">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "المؤشر" : "Indicator"}</label>
                         <button
                           type="button"
                           onClick={() => {
@@ -1299,7 +1356,7 @@ export default function SuperAdminEditExamPage() {
                           }}
                           className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-700 font-bold text-xs outline-none text-right flex justify-between items-center cursor-pointer min-h-[34px]"
                         >
-                          <span className="truncate">{currentQuestion.indicator || "Select Indicator..."}</span>
+                                                    <span className="truncate">{currentQuestion.indicator || (language === 'ar' ? "اختر المؤشر..." : "Select Indicator...")}</span>
                           <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                         </button>
                         
@@ -1371,8 +1428,8 @@ export default function SuperAdminEditExamPage() {
                       </div>
 
                       {/* Custom Learning Outcome with CRUD */}
-                      <div className="flex flex-col gap-2 relative">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Learning Outcome</label>
+                                            <div className="flex flex-col gap-2 relative">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "ناتج التعلم" : "Learning Outcome"}</label>
                         <button
                           type="button"
                           onClick={() => {
@@ -1466,8 +1523,8 @@ export default function SuperAdminEditExamPage() {
                         </select>
                       </div>
 
-                      <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Difficulty Level</label>
+                                            <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "مستوى الصعوبة" : "Difficulty Level"}</label>
                         <select 
                           className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
                           value={currentQuestion.level}
@@ -1701,7 +1758,7 @@ export default function SuperAdminEditExamPage() {
                   {previewQuestion.learningOutcome && (
                     <div className="flex items-center gap-3 text-indigo-600 bg-indigo-50 px-6 py-3 rounded-2xl border border-indigo-100 w-fit">
                       <Target className="w-5 h-5" />
-                      <span className="text-xs font-black uppercase tracking-widest">Learning Outcome: {previewQuestion.learningOutcome}</span>
+                                        <span className="text-xs font-black uppercase tracking-widest">{language === 'ar' ? "ناتج التعلم:" : "Learning Outcome:"} {previewQuestion.learningOutcome}</span>
                     </div>
                   )}
 
@@ -1742,15 +1799,15 @@ export default function SuperAdminEditExamPage() {
                </div>
             </div>
 
-            {/* Modal Footer */}
-            <div className="p-8 border-t border-slate-100 bg-slate-50/50 flex justify-center">
-               <button
-                onClick={() => setPreviewQuestion(null)}
-                className="bg-indigo-600 text-white px-12 py-4 rounded-2xl font-black shadow-xl shadow-indigo-100 hover:scale-105 transition-all"
-               >
-                 Close Preview
-               </button>
-            </div>
+                         {/* Modal Footer */}
+             <div className="p-8 border-t border-slate-100 bg-slate-50/50 flex justify-center">
+                <button 
+                 onClick={() => setPreviewQuestion(null)}
+                 className="bg-indigo-600 text-white px-12 py-4 rounded-2xl font-black shadow-xl shadow-indigo-100 hover:scale-105 transition-all"
+                >
+                  {language === 'ar' ? "إغلاق المعاينة" : "Close Preview"}
+                </button>
+             </div>
           </div>
         </div>
       )}

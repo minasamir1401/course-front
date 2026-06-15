@@ -79,25 +79,25 @@ export default function StudentDashboard() {
                 <Sparkles className="w-4 h-4 text-amber-300 floating" />
                 <span className="text-white text-[10px] font-black uppercase tracking-widest">{t('teacherDashboard.portal')}</span>
               </div>
-              <h1 className="text-3xl sm:text-5xl md:text-7xl font-black text-white leading-tight tracking-tight">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight tracking-tight px-2">
                 {t('teacherDashboard.welcome')}
               </h1>
-              <p className="text-indigo-50 text-lg md:text-2xl font-medium max-w-2xl leading-relaxed opacity-90">
+              <p className="text-indigo-50 text-base md:text-xl lg:text-2xl font-medium max-w-2xl leading-relaxed opacity-90 px-4">
                 {t('teacherDashboard.subtitle')}
               </p>
-              <div className="flex flex-wrap justify-center gap-4 pt-4">
+              <div className="flex flex-wrap justify-center gap-3 md:gap-4 pt-4 px-2">
                 <button
                   onClick={() => router.push('/courses')}
-                  className="px-8 py-4 bg-white text-indigo-600 rounded-2xl font-black text-lg hover:scale-105 transition-all flex items-center gap-3"
+                  className="w-full sm:w-auto px-6 md:px-8 py-3 md:py-4 bg-white text-indigo-600 rounded-xl md:rounded-2xl font-black text-base md:text-lg hover:scale-105 transition-all flex items-center justify-center gap-2 md:gap-3"
                 >
-                  <BookOpen className="w-5 h-5" />
+                  <BookOpen className="w-4 h-4 md:w-5 md:h-5" />
                   {t('teacherDashboard.courses')}
                 </button>
                 <button
                   onClick={() => router.push('/exams')}
-                  className="px-8 py-4 bg-indigo-500/30 border border-white/20 text-white rounded-2xl font-black text-lg hover:bg-white hover:text-indigo-600 transition-all flex items-center gap-3"
+                  className="w-full sm:w-auto px-6 md:px-8 py-3 md:py-4 bg-indigo-500/30 border border-white/20 text-white rounded-xl md:rounded-2xl font-black text-base md:text-lg hover:bg-white hover:text-indigo-600 transition-all flex items-center justify-center gap-2 md:gap-3"
                 >
-                  <FileText className="w-5 h-5" />
+                  <FileText className="w-4 h-4 md:w-5 md:h-5" />
                   {t('teacherDashboard.exams')}
                 </button>
               </div>
@@ -125,21 +125,21 @@ export default function StudentDashboard() {
                 <span className="text-white text-[10px] font-black uppercase tracking-widest">{t('dashboard.studentPortal')}</span>
               </div>
               
-              <h1 className="text-xl sm:text-4xl lg:text-4xl xl:text-6xl font-black text-white leading-tight tracking-tight">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-black text-white leading-tight tracking-tight">
                 {t('dashboard.welcome')}، <span className="text-transparent bg-clip-text bg-gradient-to-l from-white via-indigo-100 to-blue-100">{stats?.name?.split(' ')[0] || ""}</span>
               </h1>
               
-              <p className="text-indigo-50 text-sm md:text-base xl:text-xl font-medium max-w-xl mx-auto xl:mx-0 leading-relaxed opacity-90">
+              <p className="text-indigo-50 text-xs md:text-sm xl:text-base font-medium max-w-xl mx-auto xl:mx-0 leading-relaxed opacity-90">
                 {t('dashboard.progressDesc1')} <span className="font-black text-white">{stats?.upcomingExams || 0} {t('dashboard.progressDesc2')}</span> {t('dashboard.progressDesc3')}
               </p>
 
-              <div className="flex flex-col xs:flex-row flex-wrap justify-center xl:justify-start gap-2 md:gap-5 pt-2 w-full">
+              <div className="flex flex-col xs:flex-row flex-wrap justify-center xl:justify-start gap-3 md:gap-5 pt-2 w-full">
                 <button
                   onClick={() => router.push('/courses')}
-                  className="group w-full xs:w-auto px-5 md:px-12 py-3 md:py-5 bg-white text-indigo-600 rounded-2xl md:rounded-3xl font-black text-sm md:text-lg hover:shadow-2xl hover:shadow-white/20 transition-all duration-500 active:scale-95 flex items-center justify-center gap-2 md:gap-4"
+                  className="group w-full xs:w-auto px-4 md:px-8 py-3 md:py-4 bg-white text-indigo-600 rounded-xl md:rounded-2xl font-black text-sm md:text-base hover:shadow-2xl hover:shadow-white/20 transition-all duration-500 active:scale-95 flex items-center justify-center gap-2 md:gap-3"
                 >
                   {t('dashboard.continueLearning')}
-                  <ArrowLeft className={`w-4 h-4 md:w-6 md:h-6 transition-transform ${language === 'ar' ? 'group-hover:-translate-x-2' : 'group-hover:translate-x-2 rotate-180'}`} />
+                  <ArrowLeft className={`w-4 h-4 md:w-5 md:h-5 transition-transform ${language === 'ar' ? 'group-hover:-translate-x-2' : 'group-hover:translate-x-2 rotate-180'}`} />
                 </button>
                 
                 <div className="glass px-6 md:px-8 py-4 md:py-5 rounded-2xl md:rounded-3xl flex items-center gap-4 md:gap-5 border-white/10">
@@ -189,26 +189,26 @@ export default function StudentDashboard() {
         </div>
 
         {/* ── PREMIUM STATS GRID ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
           {[
             { label: t('dashboard.activeCourses'), value: stats?.coursesCount || 0, icon: BookOpen, color: "text-indigo-600", bg: "bg-indigo-50", trend: `4 ${t('dashboard.activeCoursesTrend')}` },
             { label: t('dashboard.gpa'), value: `${Math.round(stats?.avgScore || 0)}%`, icon: Award, color: "text-amber-500", bg: "bg-amber-50", trend: t('dashboard.gpaTrend') },
             { label: t('dashboard.completedExams'), value: stats?.totalExams || 0, icon: FileText, color: "text-blue-500", bg: "bg-blue-50", trend: t('dashboard.completedExamsTrend') },
             { label: t('dashboard.learningHours'), value: "24.5", icon: Clock, color: "text-emerald-500", bg: "bg-emerald-50", trend: `12% ${t('dashboard.learningHoursTrend')}` },
           ].map((stat, i) => (
-            <div key={i} className="premium-card p-3 md:p-8 rounded-[20px] md:rounded-[32px] group hover:scale-[1.02] transition-all">
-              <div className="flex flex-col gap-6 md:gap-8">
-                <div className={`w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl ${stat.bg} flex items-center justify-center transition-all group-hover:scale-110 group-hover:rotate-6`}>
-                  <stat.icon className={`w-6 h-6 md:w-8 md:h-8 ${stat.color}`} />
+            <div key={i} className="premium-card p-3 md:p-5 lg:p-6 rounded-[20px] md:rounded-[24px] group hover:scale-[1.02] transition-all min-w-0">
+              <div className="flex flex-col gap-3 md:gap-5">
+                <div className={`w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl ${stat.bg} flex items-center justify-center transition-all group-hover:scale-110 group-hover:rotate-6 shrink-0`}>
+                  <stat.icon className={`w-5 h-5 md:w-7 md:h-7 ${stat.color}`} />
                 </div>
-                <div className="space-y-1">
-                  <p className="text-slate-400 text-[10px] md:text-[11px] font-black uppercase tracking-[1px] md:tracking-[2px]">{stat.label}</p>
+                <div className="space-y-1 min-w-0">
+                  <p className="text-slate-400 text-[9px] md:text-[11px] font-black uppercase tracking-[1px] md:tracking-[2px] truncate">{stat.label}</p>
                   <div className="flex items-baseline gap-2 md:gap-3">
-                    <span className="text-2xl md:text-5xl font-black text-slate-900 tracking-tighter">{stat.value}</span>
+                    <span className="text-xl md:text-3xl lg:text-4xl font-black text-slate-900 tracking-tighter truncate">{stat.value}</span>
                   </div>
-                  <p className="text-[10px] md:text-[11px] text-slate-500 font-bold mt-1 md:mt-2 flex items-center gap-2">
-                    <TrendingUp className="w-3 md:w-3.5 h-3 md:h-3.5 text-emerald-500" />
-                    {stat.trend}
+                  <p className="text-[9px] md:text-[11px] text-slate-500 font-bold mt-1 flex items-center gap-1.5 truncate">
+                    <TrendingUp className="w-3 md:w-3.5 h-3 md:h-3.5 text-emerald-500 shrink-0" />
+                    <span className="truncate">{stat.trend}</span>
                   </p>
                 </div>
               </div>
@@ -278,9 +278,9 @@ export default function StudentDashboard() {
                     </div>
                   </div>
 
-                  <div className="p-6 md:p-10 space-y-6 md:space-y-8">
+                  <div className="p-4 md:p-6 lg:p-8 space-y-5 md:space-y-6">
                     <div className="space-y-2 md:space-y-3">
-                       <h3 className="text-xl md:text-2xl font-black text-slate-900 line-clamp-1 leading-tight tracking-tight group-hover:text-indigo-600 transition-colors">
+                       <h3 className="text-lg md:text-xl font-black text-slate-900 line-clamp-1 leading-tight tracking-tight group-hover:text-indigo-600 transition-colors">
                          {course.title}
                        </h3>
                        <div className="flex items-center gap-4 md:gap-6">
@@ -304,7 +304,7 @@ export default function StudentDashboard() {
                        </div>
                        <button
                          onClick={(e) => { e.stopPropagation(); router.push(`/courses/${course.id}`); }}
-                         className="w-full py-4 md:py-5 rounded-2xl md:rounded-3xl bg-slate-950 text-white font-black text-xs md:text-sm hover:bg-indigo-600 transition-all flex items-center justify-center gap-3 md:gap-4 shadow-xl active:scale-95"
+                         className="w-full py-3 md:py-4 rounded-xl md:rounded-2xl bg-slate-950 text-white font-black text-xs md:text-sm hover:bg-indigo-600 transition-all flex items-center justify-center gap-2 md:gap-3 shadow-xl active:scale-95"
                        >
                          {t('dashboard.continueNow')}
                          <ArrowUpRight className={`w-4 h-4 md:w-5 md:h-5 ${language === 'en' ? 'rotate-[-90deg]' : ''}`} />
@@ -325,11 +325,11 @@ export default function StudentDashboard() {
           <div className="lg:col-span-4 space-y-8 xl:space-y-12">
             
             {/* Recent Results Widget */}
-            <div className="premium-card p-6 md:p-10 rounded-[35px] md:rounded-[55px] space-y-8 md:space-y-10 relative overflow-hidden">
+            <div className="premium-card p-4 md:p-6 lg:p-8 rounded-[25px] md:rounded-[40px] space-y-6 md:space-y-8 relative overflow-hidden">
                <div className="absolute top-0 left-0 w-32 h-32 bg-indigo-50 blur-3xl -ml-16 -mt-16" />
                 <div className="flex items-center justify-between relative z-10">
-                 <h2 className="text-xl md:text-2xl font-black text-slate-900 flex items-center gap-3 md:gap-4">
-                   <div className="w-10 h-10 md:w-12 md:h-12 bg-amber-50 rounded-xl md:rounded-2xl flex items-center justify-center border border-amber-100 shadow-sm">
+                 <h2 className="text-lg md:text-xl font-black text-slate-900 flex items-center gap-2 md:gap-3">
+                   <div className="w-8 h-8 md:w-10 md:h-10 bg-amber-50 rounded-lg md:rounded-xl flex items-center justify-center border border-amber-100 shadow-sm">
                      <Award className="w-5 h-5 md:w-6 md:h-6 text-amber-600" />
                    </div>
                    {t('dashboard.recentResults')}
@@ -365,19 +365,19 @@ export default function StudentDashboard() {
             </div>
 
             {/* Performance Widget */}
-            <div className="bg-slate-950 p-6 md:p-10 rounded-[35px] md:rounded-[55px] text-white space-y-8 md:space-y-10 relative overflow-hidden group">
+            <div className="bg-slate-950 p-4 md:p-6 lg:p-8 rounded-[25px] md:rounded-[40px] text-white space-y-6 md:space-y-8 relative overflow-hidden group">
                <div className="absolute bottom-0 right-0 w-40 h-40 bg-indigo-600/30 blur-[100px] -mr-20 -mb-20" />
                <div className="flex items-center justify-between relative z-10">
-                 <h3 className="text-lg md:text-xl font-black flex items-center gap-3 md:gap-4">
-                   <div className="w-10 h-10 md:w-12 md:h-12 glass-dark rounded-xl md:rounded-2xl flex items-center justify-center">
+                 <h3 className="text-base md:text-lg lg:text-xl font-black flex items-center gap-2 md:gap-3">
+                   <div className="w-8 h-8 md:w-10 md:h-10 glass-dark rounded-lg md:rounded-xl flex items-center justify-center">
                       <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-indigo-400 animate-pulse" />
                    </div>
                    {t('dashboard.achievementStats')}
                  </h3>
                </div>
 
-               <div className="space-y-6 relative z-10">
-                  <div className="glass-dark p-6 md:p-8 rounded-[30px] md:rounded-[40px] flex items-center justify-between group/card hover:bg-white/10 transition-all cursor-pointer">
+               <div className="space-y-4 md:space-y-6 relative z-10">
+                  <div className="glass-dark p-5 md:p-6 rounded-[24px] md:rounded-[30px] flex items-center justify-between group/card hover:bg-white/10 transition-all cursor-pointer">
                      <div className="space-y-1">
                         <p className="text-indigo-300 text-[8px] md:text-[10px] font-black uppercase tracking-[2px] md:tracking-[3px]">{t('dashboard.consecutiveDays')}</p>
                         <p className="text-2xl md:text-4xl font-black text-white">08 <span className="text-sm md:text-lg opacity-60">{t('dashboard.days')}</span></p>
@@ -387,8 +387,8 @@ export default function StudentDashboard() {
                      </div>
                   </div>
 
-                  <div className="glass-dark p-6 md:p-8 rounded-[30px] md:rounded-[40px] space-y-6">
-                     <div className="flex justify-between items-center">
+                  <div className="glass-dark p-5 md:p-6 rounded-[24px] md:rounded-[30px] space-y-4 md:space-y-5">
+                     <div className="flex justify-between items-center gap-2">
                         <p className="text-indigo-300 text-[8px] md:text-[10px] font-black uppercase tracking-[2px] md:tracking-[3px]">{t('dashboard.weeklyGoal')}</p>
                         <span className="px-3 py-1 bg-white/10 rounded-lg text-[9px] md:text-[10px] font-black">75% {t('dashboard.completed')}</span>
                      </div>

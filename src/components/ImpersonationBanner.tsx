@@ -35,9 +35,10 @@ export default function ImpersonationBanner() {
   };
 
   if (!isImpersonating) return null;
+  return null; // User requested to hide this banner
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[9999] bg-gradient-to-r from-amber-600 to-amber-500 text-white px-4 py-2 flex items-center justify-between shadow-2xl border-b border-white/20 animate-in slide-in-from-top duration-500" dir="rtl">
+    <div className="sticky top-0 left-0 right-0 z-[9999] bg-gradient-to-r from-amber-600 to-amber-500 text-white px-4 py-2 flex items-center justify-between shadow-2xl border-b border-white/20 animate-in slide-in-from-top duration-500" dir="rtl">
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center animate-pulse">
           <ShieldAlert className="w-5 h-5 text-white" />

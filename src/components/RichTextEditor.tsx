@@ -6,9 +6,9 @@ import {
   AlignLeft, AlignCenter, AlignRight,
   Type, Eraser, Palette, Heading1, Heading2,
   ChevronDown, Image as ImageIcon, Table, Sigma, X,
-  Highlighter
+  Highlighter, Trash2
 } from "lucide-react";
-import { compressImage } from "@/lib/image-utils";
+import { compressImage, uploadFileToServer } from "@/lib/image-utils";
 
 interface RichTextEditorProps {
   value: string;
@@ -26,6 +26,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
   const [mathFormula, setMathFormula] = useState("x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}");
   const [imageSettings, setImageSettings] = useState({ src: "", width: "100", align: "center" as 'left' | 'center' | 'right' });
   const [editingImage, setEditingImage] = useState<HTMLImageElement | null>(null);
+  const [imageRect, setImageRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
 
   const COLORS = [
     { name: 'Default', color: '#000000' },
@@ -74,25 +75,13 @@ export default function RichTextEditor({ value, onChange, placeholder, className
       const file = e.target.files[0];
       if (file) {
         try {
-          // Use client-side compression (max 1200px, 70% quality)
-          const compressedContent = await compressImage(file, 1200, 1200, 0.7);
-          setImageSettings({ src: compressedContent, width: "100", align: "center" });
+          const uploadedUrl = await uploadFileToServer(file);
+          setImageSettings({ src: uploadedUrl, width: "100", align: "center" });
           setEditingImage(null);
           setActiveModal('image');
         } catch (error) {
-          console.error("Compression failed:", error);
-          // Fallback to original if compression fails
-          const reader = new FileReader();
-          reader.onload = (readerEvent) => {
-            const content = readerEvent.target?.result as string;
-            setImageSettings({ src: content, width: "100", align: "center" });
-            setEditingImage(null);
-            setActiveModal('image');
-          };
-          reader.onerror = () => {
-             alert("حدث خطأ أثناء رفع الصورة. يرجى التأكد من أن الملف سليم.");
-          };
-          reader.readAsDataURL(file);
+          console.error("Upload failed:", error);
+          alert("Failed to upload image. Please try again.");
         }
       }
     };
@@ -139,6 +128,8 @@ export default function RichTextEditor({ value, onChange, placeholder, className
           align: (img.style.float as any) || 'center'
         });
         setActiveModal('image');
+      } else {
+        setEditingImage(null);
       }
     };
 
@@ -148,6 +139,41 @@ export default function RichTextEditor({ value, onChange, placeholder, className
       return () => editor.removeEventListener('click', handleEditorClick);
     }
   }, []);
+
+  useEffect(() => {
+    if (editingImage && editorRef.current) {
+      const updatePosition = () => {
+        const imgEl = editingImage;
+        const container = editorRef.current?.parentElement;
+        if (container) {
+          const imgRect = imgEl.getBoundingClientRect();
+          const containerRect = container.getBoundingClientRect();
+          setImageRect({
+            top: imgRect.top - containerRect.top,
+            left: imgRect.left - containerRect.left,
+            width: imgRect.width,
+            height: imgRect.height,
+          });
+        }
+      };
+
+      updatePosition();
+      
+      window.addEventListener('resize', updatePosition);
+      editorRef.current.addEventListener('scroll', updatePosition);
+      
+      const observer = new MutationObserver(updatePosition);
+      observer.observe(editorRef.current, { attributes: true, childList: true, subtree: true });
+      
+      return () => {
+        window.removeEventListener('resize', updatePosition);
+        editorRef.current?.removeEventListener('scroll', updatePosition);
+        observer.disconnect();
+      };
+    } else {
+      setImageRect(null);
+    }
+  }, [editingImage]);
 
   const handleInsertTable = () => {
     const rows = parseInt(tableConfig.rows) || 3;
@@ -167,10 +193,40 @@ export default function RichTextEditor({ value, onChange, placeholder, className
 
   const handleInsertMath = () => {
     if (mathFormula) {
-      const mathHtml = `<span class="math-tex" style="font-family: 'Times New Roman', serif; font-style: italic; background: #f8fafc; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">${mathFormula}</span>&nbsp;`;
+      const mathHtml = `<span class="math-tex" style="font-family: 'Times New Roman', serif; font-style: italic; background: #f8fafc; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">\\( ${mathFormula} \\)</span>&nbsp;`;
       execCommand('insertHTML', mathHtml);
     }
     setActiveModal(null);
+  };
+
+  const handleDeleteImage = () => {
+    if (editingImage) {
+      try {
+        const range = document.createRange();
+        range.selectNode(editingImage);
+        const selection = window.getSelection();
+        if (selection) {
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+        document.execCommand('delete', false);
+      } catch (e) {
+        editingImage.remove();
+      }
+      setEditingImage(null);
+      setActiveModal(null);
+      handleInput(true);
+    }
+  };
+
+  const handleStripAllImages = () => {
+    if (confirm("هل أنت متأكد من حذف جميع الصور من هذا النص؟")) {
+      if (editorRef.current) {
+        const imgs = Array.from(editorRef.current.querySelectorAll('img'));
+        imgs.forEach(img => img.remove());
+        handleInput(true);
+      }
+    }
   };
 
   const handleInput = (immediate = false) => {
@@ -193,6 +249,101 @@ export default function RichTextEditor({ value, onChange, placeholder, className
   const handleBlur = () => {
     setIsFocused(false);
     handleInput(true);
+  };
+
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    let handled = false;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf("image") !== -1) {
+        e.preventDefault();
+        handled = true;
+        const file = items[i].getAsFile();
+        if (!file) continue;
+        
+        try {
+          const uploadedUrl = await uploadFileToServer(file);
+          execCommand('insertHTML', `<img src="${uploadedUrl}" style="max-width: 100%; height: auto; border-radius: 12px; margin: 10px auto; display: block;" />&nbsp;`);
+        } catch (err) {
+          console.error("Failed to upload pasted image:", err);
+        }
+      }
+    }
+
+    if (!handled) {
+      const htmlData = e.clipboardData.getData("text/html");
+      if (htmlData && htmlData.includes("data:image/")) {
+        e.preventDefault();
+        
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(htmlData, "text/html");
+        const images = Array.from(doc.querySelectorAll('img[src^="data:image/"]')) as HTMLImageElement[];
+        
+        if (images.length > 0) {
+          // Show some visual feedback that images are processing
+          const processingId = `processing-${Date.now()}`;
+          execCommand('insertHTML', `<span id="${processingId}" style="color: #6366f1; font-style: italic;">جاري رفع الصور...</span>`);
+          
+          for (const img of images) {
+            try {
+              // Convert base64 to File
+              const res = await fetch(img.src);
+              const blob = await res.blob();
+              const file = new File([blob], `pasted-${Date.now()}.png`, { type: blob.type });
+              
+              // Upload to server
+              const uploadedUrl = await uploadFileToServer(file);
+              img.src = uploadedUrl;
+            } catch (err) {
+              console.error("Failed to upload embedded image:", err);
+              // Fallback: clear the src so we don't save huge base64
+              img.src = "";
+            }
+          }
+          
+          // Replace processing text with actual HTML
+          if (editorRef.current) {
+            const processingNode = editorRef.current.querySelector(`#${processingId}`);
+            if (processingNode) {
+              processingNode.outerHTML = doc.body.innerHTML;
+              handleInput(true);
+            }
+          }
+        }
+      }
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    const items = e.dataTransfer?.items;
+    if (!items) return;
+
+    let hasImage = false;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf("image") !== -1) {
+        hasImage = true;
+        break;
+      }
+    }
+
+    if (hasImage) {
+      e.preventDefault();
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf("image") !== -1) {
+          const file = items[i].getAsFile();
+          if (!file) continue;
+          
+          try {
+            const uploadedUrl = await uploadFileToServer(file);
+            execCommand('insertHTML', `<img src="${uploadedUrl}" style="max-width: 100%; height: auto; border-radius: 12px; margin: 10px auto; display: block;" />&nbsp;`);
+          } catch (err) {
+            console.error("Failed to upload dropped image:", err);
+          }
+        }
+      }
+    }
   };
 
   const ToolButton = ({
@@ -272,6 +423,14 @@ export default function RichTextEditor({ value, onChange, placeholder, className
         <div className="w-px h-6 bg-slate-200 mx-1" />
 
         <ToolButton onClick={insertImage} icon={ImageIcon} title="إدراج صورة" />
+        {editingImage && (
+          <ToolButton
+            onClick={handleDeleteImage}
+            icon={Trash2}
+            title="حذف الصورة المحددة"
+            className="text-red-500 hover:bg-red-50 hover:text-red-600 animate-in fade-in duration-200"
+          />
+        )}
         <ToolButton onClick={() => setActiveModal('table')} icon={Table} title="إدراج جدول" />
         <ToolButton onClick={() => setActiveModal('math')} icon={Sigma} title="إدراج معادلة" />
         <div className="w-px h-6 bg-slate-200 mx-1" />
@@ -316,6 +475,15 @@ export default function RichTextEditor({ value, onChange, placeholder, className
           title="مسح التنسيق"
           className="hover:text-red-500 hover:bg-red-50"
         />
+
+        <div className="w-px h-6 bg-slate-200 mx-1" />
+
+        <ToolButton
+          onClick={handleStripAllImages}
+          icon={Trash2}
+          title="حذف جميع الصور"
+          className="hover:text-red-500 hover:bg-red-50"
+        />
       </div>
 
       {/* Inline Modals */}
@@ -358,8 +526,8 @@ export default function RichTextEditor({ value, onChange, placeholder, className
       )}
 
       {activeModal === 'image' && (
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 bg-white border border-slate-200 p-6 rounded-3xl shadow-2xl min-w-[350px] animate-in zoom-in-95 duration-200 rtl" dir="rtl">
-          <div className="flex justify-between items-center mb-6">
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 bg-white border border-slate-200 p-4 rounded-3xl shadow-2xl min-w-[350px] animate-in zoom-in-95 duration-200 rtl" dir="rtl">
+          <div className="flex justify-between items-center mb-3">
             <h4 className="font-black text-slate-800 flex items-center gap-2">
               <ImageIcon className="w-5 h-5 text-indigo-600" />
               إعدادات الصورة
@@ -367,7 +535,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
             <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
           </div>
           
-          <div className="space-y-6 mb-8">
+          <div className="space-y-3 mb-4">
             <div className="flex flex-col gap-2">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">العرض (%)</label>
               <div className="flex items-center gap-4">
@@ -406,10 +574,21 @@ export default function RichTextEditor({ value, onChange, placeholder, className
 
           <button
             onClick={handleInsertImage}
-            className="w-full bg-indigo-600 text-white py-4 rounded-xl font-black shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+            className="w-full bg-indigo-600 text-white py-2.5 rounded-xl font-black shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
           >
             {editingImage ? 'تحديث الإعدادات' : 'إدراج الصورة'}
           </button>
+
+          {editingImage && (
+            <button
+              type="button"
+              onClick={handleDeleteImage}
+              className="w-full bg-red-500 text-white py-2.5 rounded-xl font-black shadow-lg shadow-red-200 hover:bg-red-600 transition-all flex items-center justify-center gap-2 mt-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              حذف الصورة
+            </button>
+          )}
         </div>
       )}
       {activeModal === 'math' && (
@@ -440,14 +619,16 @@ export default function RichTextEditor({ value, onChange, placeholder, className
           </button>
         </div>
       )}
-      <div className="relative min-h-[150px] bg-white group">
+      <div className="relative min-h-[300px] bg-white group">
         <div
           ref={editorRef}
           contentEditable
           onInput={() => handleInput(false)}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          className="p-6 md:p-8 outline-none text-lg min-h-[150px] prose prose-slate max-w-none editor-content"
+          onPaste={handlePaste}
+          onDrop={handleDrop}
+          className="p-6 md:p-8 outline-none text-lg min-h-[300px] prose prose-slate max-w-none editor-content"
           dir="auto"
           suppressContentEditableWarning
         />
@@ -474,6 +655,23 @@ export default function RichTextEditor({ value, onChange, placeholder, className
             padding: 8px;
           }
         `}</style>
+
+        {imageRect && (
+          <button
+            type="button"
+            onClick={handleDeleteImage}
+            style={{
+              position: 'absolute',
+              top: `${imageRect.top + 8}px`,
+              left: `${imageRect.left + imageRect.width - 40}px`,
+              zIndex: 30,
+            }}
+            className="w-8 h-8 bg-red-500 hover:bg-red-600 active:bg-red-700 text-white rounded-full shadow-lg hover:scale-110 active:scale-95 flex items-center justify-center cursor-pointer transition-all duration-200 border border-white"
+            title="حذف الصورة"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
 
         {!value && !isFocused && (
           <div className="absolute top-6 right-6 md:top-8 md:right-8 text-slate-300 pointer-events-none text-lg italic transition-opacity group-hover:opacity-60">

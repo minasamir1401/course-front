@@ -15,15 +15,37 @@ import VideoPlayer from "@/components/VideoPlayer";
 
 import { API_URL } from "@/lib/api";
 import { sanitizeHtml } from "@/lib/sanitize";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function SchoolAdminNewExamPage() {
-  const router = useRouter();
+  return (
+    <Suspense fallback={
+      <DashboardLayout>
+        <div className="h-[70vh] flex flex-col items-center justify-center gap-6 text-slate-400">
+           <div className="w-20 h-20 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+           <p className="font-black text-2xl animate-pulse">جاري التحميل...</p>
+        </div>
+      </DashboardLayout>
+    }>
+      <SchoolAdminNewExamPageContent />
+    </Suspense>
+  );
+}
+
+function SchoolAdminNewExamPageContent() {
+    const router = useRouter();
+  const searchParams = useSearchParams();
+  const courseIdParam = searchParams.get('courseId');
+  const typeParam = searchParams.get('type');
   const { showToast } = useNotification();
   const { t, language } = useLanguage();
   const [saving, setSaving] = useState(false);
+  const [isAutoSaveEnabled, setIsAutoSaveEnabled] = useState(false);
+  const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
+  const [createdId, setCreatedId] = useState<string | null>(null);
 
   // UI States
   const [showQuestionForm, setShowQuestionForm] = useState(false);
@@ -125,7 +147,12 @@ export default function SchoolAdminNewExamPage() {
     },
   };
 
-  const SKILLS = [
+    const SKILLS = language === 'ar' ? [
+    "الرياضيات", "الفيزياء", "الكيمياء", "الأحياء", "الجيولوجيا", "الميكانيكا",
+    "التاريخ", "الجغرافيا", "الفلسفة", "علم النفس", "الاقتصاد", "الإحصاء",
+    "الحاسب الآلي", "اللغة العربية", "اللغة الإنجليزية", "اللغة الفرنسية", "اللغة الألمانية", "اللغة الإيطالية",
+    "التربية الدينية", "التربية الوطنية", "SAT Reading", "SAT Writing"
+  ] : [
     "Math", "Physics", "Chemistry", "Biology", "Geology", "Mechanics",
     "History", "Geography", "Philosophy", "Psychology", "Economics", "Statistics",
     "Computer Science", "Arabic", "English", "French", "German", "Italian",
@@ -600,6 +627,65 @@ export default function SchoolAdminNewExamPage() {
     return question.correctAnswer === option;
   };
 
+    // Auto-save interval
+  useEffect(() => {
+    if (!isAutoSaveEnabled) return;
+    
+    const interval = setInterval(async () => {
+      try {
+        const token = localStorage.getItem("school_admin_token");
+        const userStr = localStorage.getItem("school_admin_user");
+        if (!token || !userStr) return;
+        const user = JSON.parse(userStr);
+        const targetSchoolId = user.schoolId;
+
+        const questionsPayload = questions.map(q => ({
+          ...q,
+          explanation: JSON.stringify(q.sections || [])
+        }));
+        
+        const payload = {
+          ...examInfo,
+          title: examInfo.title || (language === 'ar' 
+            ? (examInfo.type === 'ASSIGNMENT' ? "مسودة تكليف بدون عنوان" : "مسودة اختبار بدون عنوان")
+            : (examInfo.type === 'ASSIGNMENT' ? "Untitled Assignment Draft" : "Untitled Exam Draft")),
+          category: examInfo.category || "Arabic",
+          status: "DRAFT",
+          schoolId: targetSchoolId,
+          schoolIds: [targetSchoolId],
+          isCentral: false,
+          questions: questionsPayload
+        };
+
+        const method = createdId ? "PUT" : "POST";
+        const url = createdId 
+          ? `${API_URL}/exams/${createdId}`
+          : `${API_URL}/exams`;
+
+        const res = await fetch(url, {
+          method,
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (!createdId && data.exam?.id) {
+             setCreatedId(data.exam.id);
+          }
+          setLastAutoSave(new Date());
+        }
+      } catch (err) {
+        console.error("Auto save failed", err);
+      }
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [isAutoSaveEnabled, createdId, examInfo, questions, language]);
+
   const handleSubmit = async (status: string = "PUBLISHED") => {
     if (!examInfo.title) {
       showToast(t('schoolAdmin.examsNewPage.titleRequired'), 'error');
@@ -621,8 +707,10 @@ export default function SchoolAdminNewExamPage() {
         explanation: JSON.stringify(q.sections || [])
       }));
 
-      const res = await fetch(`${API_URL}/exams`, {
-        method: "POST",
+            const method = createdId ? "PUT" : "POST";
+      const url = createdId ? `${API_URL}/exams/${createdId}` : `${API_URL}/exams`;
+      const res = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,

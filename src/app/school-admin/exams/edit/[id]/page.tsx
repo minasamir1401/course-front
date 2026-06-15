@@ -11,7 +11,9 @@ import {
 } from "lucide-react";
 import { API_URL } from "@/lib/api";
 import { sanitizeHtml } from "@/lib/sanitize";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { Suspense } from "react";
 import { useNotification } from "@/context/NotificationContext";
 import RichTextEditor from "@/components/RichTextEditor";
 import * as XLSX from 'xlsx';
@@ -19,10 +21,30 @@ import VideoPlayer from "@/components/VideoPlayer";
 
 
 export default function SchoolAdminEditExamPage() {
-  const router = useRouter();
+  return (
+    <Suspense fallback={
+      <DashboardLayout>
+        <div className="h-[70vh] flex flex-col items-center justify-center gap-6 text-slate-400">
+           <div className="w-20 h-20 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+           <p className="font-black text-2xl animate-pulse">جاري التحميل...</p>
+        </div>
+      </DashboardLayout>
+    }>
+      <SchoolAdminEditExamPageContent />
+    </Suspense>
+  );
+}
+
+function SchoolAdminEditExamPageContent() {
+    const router = useRouter();
   const { id } = useParams();
+  const searchParams = useSearchParams();
+  const courseIdParam = searchParams.get('courseId');
   const { showToast } = useNotification();
+  const { t, language } = useLanguage();
   const [loading, setLoading] = useState(true);
+  const [isAutoSaveEnabled, setIsAutoSaveEnabled] = useState(true);
+  const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
   const [saving, setSaving] = useState(false);
 
   // UI States
@@ -194,7 +216,12 @@ export default function SchoolAdminEditExamPage() {
     },
   };
 
-  const SKILLS = [
+    const SKILLS = language === 'ar' ? [
+    "الرياضيات", "الفيزياء", "الكيمياء", "الأحياء", "الجيولوجيا", "الميكانيكا",
+    "التاريخ", "الجغرافيا", "الفلسفة", "علم النفس", "الاقتصاد", "الإحصاء",
+    "الحاسب الآلي", "اللغة العربية", "اللغة الإنجليزية", "اللغة الفرنسية", "اللغة الألمانية", "اللغة الإيطالية",
+    "التربية الدينية", "التربية الوطنية", "SAT Reading", "SAT Writing"
+  ] : [
     "Math", "Physics", "Chemistry", "Biology", "Geology", "Mechanics",
     "History", "Geography", "Philosophy", "Psychology", "Economics", "Statistics",
     "Computer Science", "Arabic", "English", "French", "German", "Italian",
@@ -586,7 +613,18 @@ export default function SchoolAdminEditExamPage() {
     return question.correctAnswer === option;
   };
 
-  const handleSubmit = async (statusOverride: string | null = null) => {
+    // Auto-save interval
+  useEffect(() => {
+    if (!isAutoSaveEnabled) return;
+    
+    const interval = setInterval(() => {
+      handleSubmit(null, true);
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [isAutoSaveEnabled, examInfo, questions]);
+
+  const handleSubmit = async (statusOverride: string | null = null, isAutoSave = false) => {
     if (!examInfo.title) {
       showToast("يرجى إدخال عنوان الامتحان", 'error');
       return;

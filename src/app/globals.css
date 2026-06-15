@@ -74,6 +74,10 @@
 }
 
 @layer base {
+  html, body {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
   body {
     @apply bg-mesh min-h-screen text-slate-900;
     overflow-wrap: break-word;
@@ -88,7 +92,7 @@
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 14px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;

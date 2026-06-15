@@ -92,7 +92,7 @@ export default function SchoolAdminCoursesPage() {
             </div>
             
             <button 
-              onClick={() => router.push('/super-admin/courses/create?schoolId=' + schoolId)}
+              onClick={() => router.push('/school-admin/courses/create')}
               className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black flex items-center gap-3 hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/20 hover:scale-[1.02] active:scale-[0.98]"
             >
               <Plus className="w-6 h-6" />
@@ -168,7 +168,7 @@ export default function SchoolAdminCoursesPage() {
                <h3 className="text-2xl font-black text-slate-900 mb-3">{t('schoolAdmin.coursesPage.noCourses')}</h3>
                <p className="text-slate-500 font-bold max-w-sm mx-auto mb-8 opacity-70">{t('schoolAdmin.coursesPage.noCoursesDesc')}</p>
                <button 
-                 onClick={() => router.push('/super-admin/courses/create?schoolId=' + schoolId)}
+                 onClick={() => router.push('/school-admin/courses/create')}
                  className="bg-indigo-600 text-white px-10 py-4 rounded-2xl font-black shadow-xl shadow-indigo-600/20"
                >
                  {t('schoolAdmin.coursesPage.addFirstCourse')}
@@ -184,7 +184,7 @@ export default function SchoolAdminCoursesPage() {
                        </div>
                        <div className="flex gap-2">
                          <button 
-                           onClick={() => router.push(`/super-admin/courses/edit?id=${course.id}&schoolId=${schoolId}`)}
+                           onClick={() => router.push(`/school-admin/courses/edit?id=${course.id}`)}
                            className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-all border border-slate-100"
                          >
                            <Edit2 className="w-5 h-5" />

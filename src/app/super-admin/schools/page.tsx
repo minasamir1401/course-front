@@ -5,7 +5,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { 
   Building2, Plus, Search, ChevronRight,
-  Trash2, Shield, X, Sparkles,
+  Trash2, Shield, X, Sparkles, Edit,
   GraduationCap, Users, Heart
 } from "lucide-react";
 import Link from "next/link";
@@ -88,6 +88,91 @@ export default function SchoolsManagement() {
       } else {
         const data = await res.json();
         showToast(data.error || t('superAdmin.schoolsPage.createFail') || 'Failed to create school', 'error');
+      }
+    } catch (error) {
+      showToast(t('superAdmin.schoolsPage.connError') || 'Connection error', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedSchool, setSelectedSchool] = useState<any>(null);
+  const [editFormData, setEditFormData] = useState({
+    name: "",
+    adminName: "",
+    adminUsername: "",
+    adminPassword: "",
+    adminId: ""
+  });
+
+  const openEditModal = (school: any) => {
+    const admin = school.users?.[0];
+    setSelectedSchool(school);
+    setEditFormData({
+      name: school.name,
+      adminName: admin ? admin.name : "",
+      adminUsername: admin ? admin.username : "",
+      adminPassword: "", // Empty to keep same
+      adminId: admin ? admin.id : ""
+    });
+    setEditModalOpen(true);
+  };
+
+  const handleEditSchool = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedSchool) return;
+
+    setIsSubmitting(true);
+    const token = localStorage.getItem("super_admin_token");
+    let hasError = false;
+
+    try {
+      // 1. Update School Name
+      const schoolRes = await fetch(`${API_URL}/admin/schools/${selectedSchool.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ name: editFormData.name })
+      });
+
+      if (!schoolRes.ok) {
+        hasError = true;
+      }
+
+      // 2. Update Admin User if adminId exists
+      if (editFormData.adminId) {
+        const payload: any = {
+          name: editFormData.adminName,
+          username: editFormData.adminUsername
+        };
+        if (editFormData.adminPassword) {
+          payload.password = editFormData.adminPassword;
+        }
+
+        const userRes = await fetch(`${API_URL}/admin/users/${editFormData.adminId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!userRes.ok) {
+          hasError = true;
+        }
+      }
+
+      if (!hasError) {
+        showToast(language === 'ar' ? 'تم تحديث بيانات المدرسة بنجاح' : 'School updated successfully', 'success');
+        setEditModalOpen(false);
+        fetchSchools();
+      } else {
+        showToast(language === 'ar' ? 'حدث خطأ أثناء التحديث' : 'Error updating school or admin', 'error');
+        fetchSchools();
       }
     } catch (error) {
       showToast(t('superAdmin.schoolsPage.connError') || 'Connection error', 'error');
@@ -274,116 +359,223 @@ export default function SchoolsManagement() {
           </div>
         )}
 
-        {/* Schools List */}
+        {/* Schools List - converted from cards to a beautiful row list */}
         {isLoading ? (
           <div className="flex justify-center py-20">
             <div className="animate-spin w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full"></div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {schools.length > 0 ? schools.filter((s: any) => s.name.toLowerCase().includes(searchTerm.toLowerCase())).map((school: any) => (
-              <div key={school.id} className="bg-white rounded-[32px] border border-slate-100 p-6 hover:shadow-xl hover:border-indigo-100 transition-all duration-300 group flex flex-col justify-between">
-                <div>
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
-                      <Building2 className="w-8 h-8" />
-                    </div>
-                    <button 
-                      onClick={() => handleDeleteSchool(school.id)}
-                      className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center text-rose-600 hover:bg-rose-500 hover:text-white transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-xl font-black text-slate-900">{school.name}</h3>
-                    <Link 
-                      href={`/super-admin/schools/${school.id}`}
-                      className="text-xs font-black text-indigo-600 hover:text-indigo-700 transition-colors flex items-center gap-1"
-                    >
-                      <span>{t('superAdmin.schoolsPage.manage')}</span>
-                      <ChevronRight className={`w-3.5 h-3.5 ${language === 'ar' ? '' : 'rotate-180'}`} />
-                    </Link>
-                  </div>
-                  
-                  <div className="space-y-4 mb-6 text-start" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
-                    <div className="grid grid-cols-2 gap-2 mb-4">
-                      <div className="flex items-center gap-2 text-xs font-bold text-slate-600 bg-slate-50 border border-slate-100/50 p-2.5 rounded-xl">
-                        <GraduationCap className="w-4 h-4 text-blue-500" />
-                        <span>{t('superAdmin.schoolsPage.studentsCount')}: {school.stats?.students || 0}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs font-bold text-slate-600 bg-slate-50 border border-slate-100/50 p-2.5 rounded-xl">
-                        <Users className="w-4 h-4 text-purple-500" />
-                        <span>{t('superAdmin.schoolsPage.teachersCount')}: {school.stats?.teachers || 0}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs font-bold text-slate-600 bg-slate-50 border border-slate-100/50 p-2.5 rounded-xl">
-                        <Building2 className="w-4 h-4 text-emerald-500" />
-                        <span>{t('superAdmin.schoolsPage.classesCount')}: {school.stats?.classrooms || 0}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs font-bold text-slate-600 bg-slate-50 border border-slate-100/50 p-2.5 rounded-xl">
-                        <Heart className="w-4 h-4 text-pink-500" />
-                        <span>{t('superAdmin.schoolsPage.parentsCount')}: {school.stats?.parents || 0}</span>
-                      </div>
-                    </div>
-
-                    {/* Admin Credentials Display */}
-                    {school.users?.[0] && (
-                      <div className="mt-4 pt-4 border-t border-slate-100">
-                        <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-3">{t('superAdmin.schoolsPage.adminLoginInfo')}</p>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-[10px] font-bold text-slate-400 mb-1">{t('superAdmin.schoolsPage.adminUsername')}</label>
-                            <input 
-                              readOnly
-                              className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-700 outline-none font-mono"
-                              value={school.users?.[0]?.username || "N/A"}
-                              dir="ltr"
-                            />
+          <div className="bg-white rounded-[32px] border border-slate-100 overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className={`w-full ${language === 'ar' ? 'text-right' : 'text-left'} border-collapse`}>
+                <thead>
+                  <tr className="bg-slate-50/75 text-slate-500 text-[10px] font-black uppercase tracking-widest border-b border-slate-100">
+                    <th className="px-6 py-4">{language === 'ar' ? "المدرسة" : "School"}</th>
+                    <th className="px-6 py-4">{language === 'ar' ? "الإحصائيات" : "Statistics"}</th>
+                    <th className="px-6 py-4">{language === 'ar' ? "بيانات الدخول (المدير)" : "Principal Account"}</th>
+                    <th className="px-6 py-4 text-center">{language === 'ar' ? "الإجراءات" : "Actions"}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {schools.length > 0 ? schools.filter((s: any) => s.name.toLowerCase().includes(searchTerm.toLowerCase())).map((school: any) => (
+                    <tr key={school.id} className="hover:bg-slate-50/50 transition-colors group">
+                      {/* School Name & Info */}
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                            <Building2 className="w-6.5 h-6.5" />
                           </div>
                           <div>
-                            <label className="block text-[10px] font-bold text-slate-400 mb-1">{t('superAdmin.schoolsPage.adminPassword')}</label>
-                            <input 
-                              readOnly
-                              className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-amber-600 outline-none font-bold"
-                              value={school.users?.[0]?.plainPassword || "123456"}
-                            />
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="text-base font-black text-slate-900 leading-tight">{school.name}</h3>
+                              <span className="text-[10px] font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md" dir="ltr">
+                                {language === 'ar' ? "معرف: " : "ID: "}{school.id.slice(0, 8)}
+                              </span>
+                            </div>
+                            <span className="text-xs text-slate-400 font-mono mt-1 block" dir="ltr">
+                              Subdomain: {school.subdomain || `${school.id.slice(0, 8)}.klevro.tech`}
+                            </span>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      </td>
+
+                      {/* Statistics Badges */}
+                      <td className="px-6 py-5">
+                        <div className="flex flex-wrap gap-2">
+                          <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-600 bg-slate-50 border border-slate-100 p-1.5 rounded-lg">
+                            <GraduationCap className="w-3.5 h-3.5 text-blue-500" />
+                            <span>{t('superAdmin.schoolsPage.studentsCount')}: {school.stats?.students || 0}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-600 bg-slate-50 border border-slate-100 p-1.5 rounded-lg">
+                            <Users className="w-3.5 h-3.5 text-purple-500" />
+                            <span>{t('superAdmin.schoolsPage.teachersCount')}: {school.stats?.teachers || 0}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-600 bg-slate-50 border border-slate-100 p-1.5 rounded-lg">
+                            <Building2 className="w-3.5 h-3.5 text-emerald-500" />
+                            <span>{t('superAdmin.schoolsPage.classesCount')}: {school.stats?.classrooms || 0}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-600 bg-slate-50 border border-slate-100 p-1.5 rounded-lg">
+                            <Heart className="w-3.5 h-3.5 text-pink-500" />
+                            <span>{t('superAdmin.schoolsPage.parentsCount')}: {school.stats?.parents || 0}</span>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Principal Credentials */}
+                      <td className="px-6 py-5">
+                        {school.users?.[0] ? (
+                          <div className="flex items-center gap-2 max-w-[240px]">
+                            <div className="w-1/2">
+                              <label className="block text-[9px] font-bold text-slate-400 mb-0.5">{t('superAdmin.schoolsPage.adminUsername')}</label>
+                              <input 
+                                readOnly
+                                onClick={(e) => { (e.target as HTMLInputElement).select(); }}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-lg py-1 px-2 text-[10px] text-slate-700 outline-none font-mono text-center cursor-pointer"
+                                value={school.users[0].username || "N/A"}
+                                dir="ltr"
+                              />
+                            </div>
+                            <div className="w-1/2">
+                              <label className="block text-[9px] font-bold text-slate-400 mb-0.5">{t('superAdmin.schoolsPage.adminPassword')}</label>
+                              <input 
+                                readOnly
+                                onClick={(e) => { (e.target as HTMLInputElement).select(); }}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-lg py-1 px-2 text-[10px] text-amber-600 outline-none font-bold text-center cursor-pointer"
+                                value={school.users[0].plainPassword || "123456"}
+                                dir="ltr"
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-400 font-bold">{language === 'ar' ? "لا يوجد مسؤول" : "No Principal Account"}</span>
+                        )}
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-6 py-5">
+                        <div className="flex items-center justify-center gap-2">
+                          <button 
+                            onClick={() => handleImpersonate(school)}
+                            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-xl text-[10px] font-black transition-all shadow-lg shadow-indigo-600/10 active:scale-95 group/btn cursor-pointer"
+                          >
+                            <Sparkles className="w-3.5 h-3.5 group-hover/btn:animate-pulse" />
+                            <span>{t('superAdmin.schoolsPage.directLogin')}</span>
+                          </button>
+                          
+                          <Link 
+                            href={`/super-admin/schools/${school.id}`}
+                            className="bg-slate-50 hover:bg-slate-100 text-slate-600 px-3.5 py-2 rounded-xl text-[10px] font-bold border border-slate-200/50 transition-all text-center"
+                          >
+                            {language === 'ar' ? "لوحة التحكم" : "Dashboard"}
+                          </Link>
+
+                          <button 
+                            onClick={() => openEditModal(school)}
+                            className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-all cursor-pointer border border-slate-100"
+                            title={language === 'ar' ? "تعديل المدرسة" : "Edit School"}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+
+                          <button 
+                            onClick={() => handleDeleteSchool(school.id)}
+                            className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center text-rose-600 hover:bg-rose-500 hover:text-white transition-all cursor-pointer border border-rose-100"
+                            title={language === 'ar' ? "حذف المدرسة" : "Delete School"}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan={4} className="text-center py-20 bg-white">
+                        <Building2 className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                        <h3 className="text-xl font-bold text-slate-400">{t('superAdmin.schoolsPage.noSchools')}</h3>
+                        <button onClick={() => setIsModalOpen(true)} className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-bold mt-4 hover:bg-indigo-700 transition-all cursor-pointer">{t('superAdmin.schoolsPage.addSchool')}</button>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Edit School Modal */}
+        {editModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+            <div className="bg-white border border-slate-100 w-full max-w-lg rounded-3xl p-6 sm:p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-black text-slate-900">{language === 'ar' ? 'تعديل بيانات المدرسة' : 'Edit School'}</h3>
+                <button onClick={() => setEditModalOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors"><X className="w-6 h-6" /></button>
+              </div>
+              <form onSubmit={handleEditSchool} className="space-y-6 text-start" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-4">
+                  <h4 className="text-xs font-black text-indigo-600 uppercase tracking-widest">{t('superAdmin.schoolsPage.schoolDetailsGroup')}</h4>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-500 mb-1">{t('superAdmin.schoolsPage.schoolName')}</label>
+                    <input 
+                      type="text" required
+                      value={editFormData.name}
+                      onChange={(e) => setEditFormData({...editFormData, name: e.target.value})}
+                      className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-800 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all"
+                    />
                   </div>
                 </div>
 
-                <div className="pt-6 border-t border-slate-100 flex flex-col gap-3 mt-auto">
-                  <div className="flex justify-between items-center">
-                    <div className="flex flex-col text-start">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">School ID</span>
-                      <span className="text-[10px] text-slate-400 font-mono">{school.id.slice(0, 8)}</span>
+                {editFormData.adminId && (
+                  <div className="p-4 rounded-2xl bg-indigo-50/30 border border-indigo-100 space-y-4">
+                    <h4 className="text-xs font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2">
+                      <Shield className="w-4 h-4" /> {t('superAdmin.schoolsPage.adminDetailsGroup')}
+                    </h4>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-500 mb-1">{t('superAdmin.schoolsPage.adminName')}</label>
+                      <input 
+                        type="text" required
+                        value={editFormData.adminName}
+                        onChange={(e) => setEditFormData({...editFormData, adminName: e.target.value})}
+                        className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-800 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all"
+                      />
                     </div>
-                    <button 
-                      onClick={() => handleImpersonate(school)}
-                      className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-black transition-all shadow-lg shadow-indigo-600/10 active:scale-95 group/btn cursor-pointer"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 group-hover/btn:animate-pulse" />
-                      <span>{t('superAdmin.schoolsPage.directLogin')}</span>
-                    </button>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-bold text-slate-500 mb-1">{t('superAdmin.schoolsPage.adminUsername')}</label>
+                        <input 
+                          type="text" required
+                          value={editFormData.adminUsername}
+                          onChange={(e) => setEditFormData({...editFormData, adminUsername: e.target.value})}
+                          className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-800 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all"
+                          dir="ltr"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-slate-500 mb-1">
+                          {t('superAdmin.schoolsPage.adminPassword')}
+                          <span className="text-[10px] text-slate-400 font-normal ml-1 mr-1">
+                            ({language === 'ar' ? 'اختياري' : 'Optional'})
+                          </span>
+                        </label>
+                        <input 
+                          type="text"
+                          value={editFormData.adminPassword}
+                          onChange={(e) => setEditFormData({...editFormData, adminPassword: e.target.value})}
+                          className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-4 text-slate-800 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50 transition-all"
+                          placeholder="********"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <Link 
-                    href={`/super-admin/schools/${school.id}`}
-                    className="w-full bg-slate-50 hover:bg-slate-100 text-slate-600 py-3 rounded-xl text-center text-xs font-bold border border-slate-100 transition-all"
-                  >
-                    {t('superAdmin.schoolsPage.openFullDashboard')}
-                  </Link>
-                </div>
-              </div>
-            )) : (
-              <div className="col-span-full text-center py-20 bg-white rounded-3xl border border-slate-100 shadow-sm">
-                <Building2 className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-slate-400">{t('superAdmin.schoolsPage.noSchools')}</h3>
-                <button onClick={() => setIsModalOpen(true)} className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-bold mt-4 hover:bg-indigo-700 transition-all cursor-pointer">{t('superAdmin.schoolsPage.addSchool')}</button>
-              </div>
-            )}
+                )}
+
+                <button 
+                  disabled={isSubmitting}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl transition-all disabled:opacity-50 shadow-lg shadow-indigo-600/10 active:scale-95 cursor-pointer"
+                >
+                  {isSubmitting ? (language === 'ar' ? 'جاري الحفظ...' : 'Saving...') : (language === 'ar' ? 'حفظ التعديلات' : 'Save Changes')}
+                </button>
+              </form>
+            </div>
           </div>
         )}
       </div>
