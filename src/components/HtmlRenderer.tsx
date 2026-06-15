@@ -8,7 +8,7 @@ import 'katex/dist/katex.min.css';
 interface HtmlRendererProps {
   html: string;
   className?: string;
-  tag?: keyof JSX.IntrinsicElements;
+  tag?: React.ElementType;
 }
 
 export default function HtmlRenderer({ html, className = "", tag: Tag = "div" }: HtmlRendererProps) {
