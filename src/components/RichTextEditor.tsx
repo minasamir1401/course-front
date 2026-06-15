@@ -193,7 +193,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
 
   const handleInsertMath = () => {
     if (mathFormula) {
-      const mathHtml = `<span class="math-tex" style="font-family: 'Times New Roman', serif; font-style: italic; background: #f8fafc; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">${mathFormula}</span>&nbsp;`;
+      const mathHtml = `<span class="math-tex" style="font-family: 'Times New Roman', serif; font-style: italic; background: #f8fafc; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">\\( ${mathFormula} \\)</span>&nbsp;`;
       execCommand('insertHTML', mathHtml);
     }
     setActiveModal(null);

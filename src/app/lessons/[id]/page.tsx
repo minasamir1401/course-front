@@ -18,6 +18,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 
 const VideoPlayer = dynamic(() => import('@/components/VideoPlayer'), { ssr: false });
 const Confetti = dynamic(() => import('react-confetti'), { ssr: false });
+import HtmlRenderer from '@/components/HtmlRenderer';
 
 const QuestionFeedback = ({ isCorrect, correctAnswer, language }: any) => {
   if (!isCorrect) {
@@ -146,11 +147,10 @@ const SectionsInlineTabs = ({
             </p>
           </div>
         ) : (
-          <div
-            className={`prose prose-sm md:prose-base max-w-none leading-relaxed break-words ${preset.text}`}
-            dir="auto"
-            dangerouslySetInnerHTML={{ __html: active.content }}
-          />
+            <HtmlRenderer
+              html={active.content}
+              className={`prose prose-sm md:prose-base max-w-none leading-relaxed break-words ${preset.text}`}
+            />
         )}
       </div>
     </div>
@@ -171,6 +171,61 @@ const getQuestionOptions = (q: any, language: string) => {
   return [];
 };
 
+const SectionAccordion = ({ sec, preset }: { sec: any; preset: any }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <div className="space-y-3">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`w-full flex items-center gap-3 px-5 py-3 rounded-2xl ${preset.bg} border-2 ${preset.border} hover:opacity-80 transition-all font-black ${preset.text} text-sm`}
+      >
+        {React.createElement(preset.icon, { className: "w-5 h-5" })}
+        <span>{preset.label}</span>
+        <span className={`mr-auto text-lg transition-transform ${isOpen ? 'rotate-180' : ''}`}>▼</span>
+      </button>
+      {isOpen && (
+        <div className={`p-5 rounded-2xl ${preset.bg} border-2 ${preset.border} animate-in fade-in slide-in-from-top-2 duration-300`}>
+          <div className={`flex items-center gap-2 mb-3 font-black ${preset.text}`}>
+            {React.createElement(preset.icon, { className: "w-5 h-5" })}
+            <span>{preset.label}</span>
+          </div>
+          <HtmlRenderer html={sec.content} className={`prose prose-sm max-w-none ${preset.text}`} />
+        </div>
+      )}
+    </div>
+  );
+};
+
+const WelcomeGadgetCard = ({ item, t }: { item: any; t: any }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <div className="bg-slate-50/50 border border-slate-100 p-6 md:p-8 rounded-[35px] hover:bg-white hover:shadow-xl transition-all duration-500 group flex flex-col">
+      <div 
+        className="cursor-pointer flex flex-col items-start"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div className="flex w-full items-center justify-between mb-4">
+          <div className={`w-14 h-14 ${item.bg} ${item.color} rounded-2xl flex items-center justify-center group-hover:rotate-12 transition-transform shadow-sm`}>
+            {React.createElement(item.icon, { className: "w-7 h-7" })}
+          </div>
+          <button className={`w-8 h-8 flex items-center justify-center rounded-xl bg-slate-100 text-slate-400 hover:text-slate-600 transition-transform ${isOpen ? 'rotate-180' : ''}`}>
+            ▼
+          </button>
+        </div>
+        <h3 className="text-xl font-black text-slate-900 tracking-tight">{item.title}</h3>
+      </div>
+      
+      {isOpen && (
+        <div className="mt-4 pt-4 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="text-sm md:text-base text-slate-600 leading-relaxed font-bold whitespace-pre-wrap">
+            {item.content || t('lesson.plannedGoals')}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const SlideSectionsToggle = ({ slide, slideIndex, slideSubmitted, slideAnswers, language }: { slide: any; slideIndex: number; slideSubmitted: Record<number, boolean>; slideAnswers: Record<number, any>; language: string }) => {
   const SECTION_STYLE_PRESETS: Record<string, any> = {
     HINT: { icon: HelpCircle, bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", label: language === 'ar' ? "تلميح" : "Hint" },
@@ -189,53 +244,16 @@ const SlideSectionsToggle = ({ slide, slideIndex, slideSubmitted, slideAnswers, 
   if (filteredSections.length === 0) return null;
   
   const isSubmitted = !isQuestionLike(slide) || slideSubmitted[slideIndex];
-  const hintSection = filteredSections.find((s: any) => s.type === 'HINT');
-  const otherSections = isSubmitted 
-    ? filteredSections.filter((s: any) => s.type !== 'HINT')
-    : [];
+  const sectionsToShow = filteredSections.filter((sec: any) => sec.type === 'HINT' || isSubmitted);
 
-  if (!hintSection && otherSections.length === 0) return null;
+  if (sectionsToShow.length === 0) return null;
   
   return (
     <div className="mt-6 w-full max-w-4xl space-y-4">
-      {hintSection && (
-        <div className="space-y-3">
-          <button
-            onClick={() => setShowSlideSections(!showSlideSections)}
-            className="w-full flex items-center gap-3 px-5 py-3 rounded-2xl bg-amber-50 border-2 border-amber-200 hover:bg-amber-100 transition-all font-black text-amber-700 text-sm"
-          >
-            <HelpCircle className="w-5 h-5" />
-            <span>{SECTION_STYLE_PRESETS.HINT.label}</span>
-            <span className={`mr-auto text-lg transition-transform ${showSlideSections ? 'rotate-180' : ''}`}>▼</span>
-          </button>
-          {showSlideSections && (
-            <div className="p-5 rounded-2xl bg-amber-50 border-2 border-amber-200 animate-in fade-in slide-in-from-top-2 duration-300">
-              <div className="flex items-center gap-2 mb-3 font-black text-amber-700">
-                <HelpCircle className="w-5 h-5" />
-                <span>{SECTION_STYLE_PRESETS.HINT.label}</span>
-              </div>
-              <div className="prose prose-sm max-w-none text-amber-700 animate-in duration-200" dir="auto" dangerouslySetInnerHTML={{ __html: hintSection.content }} />
-            </div>
-          )}
-        </div>
-      )}
-      
-      {otherSections.length > 0 && (
-        <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-500">
-          {otherSections.map((sec: any, sIdx: number) => {
-            const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
-            return (
-              <div key={sec.id || sIdx} className={`p-5 rounded-2xl border-2 ${preset.bg} ${preset.border}`}>
-                <div className={`flex items-center gap-2 mb-3 font-black ${preset.text}`}>
-                  {React.createElement(preset.icon, { className: "w-5 h-5" })}
-                  <span>{preset.label}</span>
-                </div>
-                <div className={`prose prose-sm max-w-none ${preset.text}`} dir="auto" dangerouslySetInnerHTML={{ __html: sec.content }} />
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {sectionsToShow.map((sec: any, idx: number) => {
+        const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
+        return <SectionAccordion key={sec.id || idx} sec={sec} preset={preset} />;
+      })}
     </div>
   );
 };
@@ -256,54 +274,16 @@ const AssignmentSectionsToggle = ({ assignment, assignmentIndex, assignmentSubmi
   const filteredSections = assignment.sections.filter((sec: any) => sec.type !== 'FEEDBACK');
   if (filteredSections.length === 0) return null;
   const isSubmitted = assignmentSubmitted[assignmentIndex] || !isQuestionLike(assignment);
-  
-  const hintSection = filteredSections.find((s: any) => s.type === 'HINT');
-  const otherSections = isSubmitted
-    ? filteredSections.filter((s: any) => s.type !== 'HINT')
-    : [];
+  const sectionsToShow = filteredSections.filter((sec: any) => sec.type === 'HINT' || isSubmitted);
 
-  if (!hintSection && otherSections.length === 0) return null;
+  if (sectionsToShow.length === 0) return null;
   
   return (
     <div className="mt-4 space-y-4">
-      {hintSection && (
-        <div className="space-y-3">
-          <button
-            onClick={() => setShowSections(!showSections)}
-            className="w-full flex items-center gap-3 px-5 py-3 rounded-2xl bg-amber-50 border-2 border-amber-200 hover:bg-amber-100 transition-all font-black text-amber-700 text-sm"
-          >
-            <HelpCircle className="w-5 h-5" />
-            <span>{SECTION_STYLE_PRESETS.HINT.label}</span>
-            <span className={`mr-auto text-lg transition-transform ${showSections ? 'rotate-180' : ''}`}>▼</span>
-          </button>
-          {showSections && (
-            <div className="p-5 rounded-2xl bg-amber-50 border-2 border-amber-200 animate-in fade-in slide-in-from-top-2 duration-300">
-              <div className="flex items-center gap-2 mb-3 font-black text-amber-700">
-                <HelpCircle className="w-5 h-5" />
-                <span>{SECTION_STYLE_PRESETS.HINT.label}</span>
-              </div>
-              <div className="prose prose-sm max-w-none text-amber-700 animate-in duration-200" dir="auto" dangerouslySetInnerHTML={{ __html: hintSection.content }} />
-            </div>
-          )}
-        </div>
-      )}
-      
-      {otherSections.length > 0 && (
-        <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-500">
-          {otherSections.map((sec: any, sIdx: number) => {
-            const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
-            return (
-              <div key={sec.id || sIdx} className={`p-5 rounded-2xl border-2 ${preset.bg} ${preset.border}`}>
-                <div className={`flex items-center gap-2 mb-3 font-black ${preset.text}`}>
-                  {React.createElement(preset.icon, { className: "w-5 h-5" })}
-                  <span>{preset.label}</span>
-                </div>
-                <div className={`prose prose-sm max-w-none ${preset.text}`} dir="auto" dangerouslySetInnerHTML={{ __html: sec.content }} />
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {sectionsToShow.map((sec: any, idx: number) => {
+        const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
+        return <SectionAccordion key={sec.id || idx} sec={sec} preset={preset} />;
+      })}
     </div>
   );
 };
@@ -326,53 +306,16 @@ const QuizSectionsToggle = ({ question, questionIndex, quizSubmitted, language }
   if (filteredSections.length === 0) return null;
   
   const isSubmitted = quizSubmitted[questionIndex];
-  const hintSection = filteredSections.find((s: any) => s.type === 'HINT');
-  const otherSections = isSubmitted 
-    ? filteredSections.filter((s: any) => s.type !== 'HINT')
-    : [];
+  const sectionsToShow = filteredSections.filter((sec: any) => sec.type === 'HINT' || isSubmitted);
     
-  if (!hintSection && otherSections.length === 0) return null;
+  if (sectionsToShow.length === 0) return null;
 
   return (
     <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2">
-      {hintSection && (
-        <div className="space-y-3">
-          <button
-            onClick={() => setShowQuizSections(!showQuizSections)}
-            className="w-full flex items-center gap-3 px-5 py-3 rounded-2xl bg-amber-50 border-2 border-amber-200 hover:bg-amber-100 transition-all font-black text-amber-700 text-sm"
-          >
-            <HelpCircle className="w-5 h-5" />
-            <span>{SECTION_STYLE_PRESETS.HINT.label}</span>
-            <span className={`mr-auto text-lg transition-transform ${showQuizSections ? 'rotate-180' : ''}`}>▼</span>
-          </button>
-          {showQuizSections && (
-            <div className="p-5 rounded-2xl bg-amber-50 border-2 border-amber-200 animate-in fade-in slide-in-from-top-2 duration-300">
-              <div className="flex items-center gap-2 mb-3 font-black text-amber-700">
-                <HelpCircle className="w-5 h-5" />
-                <span>{SECTION_STYLE_PRESETS.HINT.label}</span>
-              </div>
-              <div className="prose prose-sm max-w-none text-amber-700 animate-in duration-200" dir="auto" dangerouslySetInnerHTML={{ __html: hintSection.content }} />
-            </div>
-          )}
-        </div>
-      )}
-      
-      {otherSections.length > 0 && (
-        <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-500">
-          {otherSections.map((sec: any, sIdx: number) => {
-            const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
-            return (
-              <div key={sec.id || sIdx} className={`p-5 rounded-2xl border-2 ${preset.bg} ${preset.border}`}>
-                <div className={`flex items-center gap-2 mb-3 font-black ${preset.text}`}>
-                  {React.createElement(preset.icon, { className: "w-5 h-5" })}
-                  <span>{preset.label}</span>
-                </div>
-                <div className={`prose prose-sm max-w-none ${preset.text}`} dir="auto" dangerouslySetInnerHTML={{ __html: sec.content }} />
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {sectionsToShow.map((sec: any, idx: number) => {
+        const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
+        return <SectionAccordion key={sec.id || idx} sec={sec} preset={preset} />;
+      })}
     </div>
   );
 };
@@ -847,13 +790,7 @@ export default function LessonPlayerPage() {
                     { title: t('lesson.indicators'), icon: TrendingUp, content: lesson.indicators, color: "text-purple-600", bg: "bg-purple-50" },
                     { title: t('lesson.outcomes'), icon: Award, content: lesson.learningOutcomes, color: "text-emerald-600", bg: "bg-emerald-50" },
                   ].map((item, i) => (
-                    <div key={i} className="bg-slate-50/50 border border-slate-100 p-6 md:p-8 rounded-[35px] hover:bg-white hover:shadow-xl transition-all duration-500 group">
-                      <div className={`w-14 h-14 ${item.bg} ${item.color} rounded-2xl flex items-center justify-center mb-4 group-hover:rotate-12 transition-transform shadow-sm`}>
-                        <item.icon className="w-7 h-7" />
-                      </div>
-                      <h3 className="text-xl font-black text-slate-900 mb-3 tracking-tight">{item.title}</h3>
-                      <p className="text-sm md:text-base text-slate-600 leading-relaxed font-bold">{item.content || t('lesson.plannedGoals')}</p>
-                    </div>
+                    <WelcomeGadgetCard key={i} item={item} t={t} />
                   ))}
                 </div>
 
@@ -896,10 +833,9 @@ export default function LessonPlayerPage() {
                       />
                     </div>
                   )}
-                  <div
+                  <HtmlRenderer
+                    html={lesson.slides[currentSlideIndex].content}
                     className="text-base md:text-xl text-slate-600 leading-[1.8] max-w-5xl font-bold prose prose-indigo break-words w-full animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150 text-start"
-                    dir="auto"
-                    dangerouslySetInnerHTML={{ __html: lesson.slides[currentSlideIndex].content }}
                   />
 
 
@@ -1030,7 +966,7 @@ export default function LessonPlayerPage() {
                           </span>
                           <h3 className="font-black text-slate-900 text-lg">{as.type === 'QUESTION' ? t('lesson.requiredAssignment') : t('lesson.requiredAssignment')}</h3>
                         </div>
-                        <div className="text-slate-600 text-lg leading-relaxed prose prose-indigo mb-6 text-start" dir="auto" dangerouslySetInnerHTML={{ __html: as.text }} />
+                        <HtmlRenderer html={as.text} className="text-slate-600 text-lg leading-relaxed prose prose-indigo mb-6 text-start" />
 
                         {isQuestionLike(as) && (as.options || []).filter(Boolean).length > 0 && (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
@@ -1193,7 +1129,7 @@ export default function LessonPlayerPage() {
                           </div>
                         </div>
 
-                        <h3 className="text-lg md:text-2xl font-black text-slate-900 mb-8 leading-relaxed tracking-tight break-words w-full text-start" dir="auto" dangerouslySetInnerHTML={{ __html: lesson.questions[currentQuestionIndex].text }} />
+                        <HtmlRenderer html={lesson.questions[currentQuestionIndex].text} tag="h3" className="text-lg md:text-2xl font-black text-slate-900 mb-8 leading-relaxed tracking-tight break-words w-full text-start" />
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-4 mb-6">
                           {(lesson.questions[currentQuestionIndex].options || []).filter(Boolean).map((opt: string, oIdx: number) => {
@@ -1445,7 +1381,7 @@ export default function LessonPlayerPage() {
                               return (
                                 <div key={qIdx} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs">
                                   <span className="font-bold text-slate-700 truncate max-w-[70%]">
-                                    {language === 'ar' ? 'سؤال' : 'Question'} {qIdx + 1}: <span className="font-normal text-slate-500" dangerouslySetInnerHTML={{ __html: q.text }} />
+                                    {language === 'ar' ? 'سؤال' : 'Question'} {qIdx + 1}: <HtmlRenderer html={q.text} tag="span" className="font-normal text-slate-500" />
                                   </span>
                                   <span className={`px-2 py-1 rounded-lg font-black ${isCorrect ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
                                     {isCorrect ? (language === 'ar' ? 'صحيحة ✓' : 'Correct ✓') : (language === 'ar' ? 'خاطئة ✗' : 'Wrong ✗')}

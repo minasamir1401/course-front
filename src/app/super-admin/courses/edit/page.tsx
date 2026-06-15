@@ -3339,7 +3339,7 @@ export default function EditCoursePage() {
                       </div>
 
                       <button onClick={() => setCourseSettingsCollapsed(true)} className="w-full py-3 rounded-2xl bg-slate-900 text-white font-black text-sm hover:bg-indigo-600 transition-all flex items-center justify-center gap-2">
-                        <CheckCircle2 className="w-4 h-4" /> {language === 'ar' ? "حفظ الإعدادات" : "Save Settings"}
+                        <CheckCircle2 className="w-4 h-4" /> {language === 'ar' ? "تأكيد وطي الإعدادات" : "Confirm & Collapse"}
                       </button>
                     </div>
                   )}
