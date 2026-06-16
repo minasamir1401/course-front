@@ -87,10 +87,22 @@ export default function RichTextEditor({ value, onChange, placeholder, className
             mf.addEventListener('input', () => {
               setMathFormula(mf.value);
             });
+            
+            mf.addEventListener('focusin', () => {
+              if ((window as any).mathVirtualKeyboard) {
+                (window as any).mathVirtualKeyboard.show();
+              }
+            });
 
             mathContainerRef.current.innerHTML = '';
             mathContainerRef.current.appendChild(mf);
             mf.focus();
+            
+            setTimeout(() => {
+              if ((window as any).mathVirtualKeyboard) {
+                (window as any).mathVirtualKeyboard.show();
+              }
+            }, 200);
           }).catch(err => console.error("Failed to load mathlive", err));
         }
       }, 50);
