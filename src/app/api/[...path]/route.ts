@@ -3,6 +3,12 @@ import { NextRequest, NextResponse } from 'next/server';
 // Runtime proxy: forwards all /api/* requests to the backend
 // This runs at REQUEST TIME (not build time), so env vars are always available
 const getBackendBase = () => {
+  // Always prefer internal Docker routing for backend to bypass NAT hairpinning issues
+  // in production (e.g., Dokploy / Docker Swarm)
+  if (process.env.NODE_ENV === 'production') {
+    return process.env.INTERNAL_BACKEND_URL || 'http://backend:5000';
+  }
+
   // Priority 1: BACKEND_ORIGIN env var
   const origin = process.env.BACKEND_ORIGIN?.replace(/\/+$/, '').trim();
   if (origin) return origin;
@@ -28,7 +34,9 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
   const headers = new Headers();
   req.headers.forEach((value, key) => {
     // Skip host header to avoid conflicts
-    if (key.toLowerCase() !== 'host') {
+    // Skip content-length header to prevent multer 'request aborted' errors when streaming multipart/form-data
+    const lowerKey = key.toLowerCase();
+    if (lowerKey !== 'host' && lowerKey !== 'content-length') {
       headers.set(key, value);
     }
   });
