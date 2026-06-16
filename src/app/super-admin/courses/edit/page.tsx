@@ -17,6 +17,7 @@ import * as XLSX from 'xlsx';
 import RichTextEditor from "@/components/RichTextEditor";
 import { compressImage } from "@/lib/image-utils";
 import { useLanguage } from "@/contexts/LanguageContext";
+import MathInput from "@/components/MathInput";
 
 
 export default function EditCoursePage() {
@@ -1371,13 +1372,12 @@ export default function EditCoursePage() {
                                 >
                                   {isSelected && opt && <CheckCircle2 className="w-4 h-4 text-white" />}
                                 </div>
-                                <input 
-                                  type="text"
+                                <MathInput 
                                   value={opt}
-                                  onChange={(e) => {
+                                  onChange={(val) => {
                                     const newOpts = [...(block.options || ["", "", "", ""])];
                                     const oldVal = newOpts[oIdx];
-                                    const newVal = e.target.value;
+                                    const newVal = val;
                                     newOpts[oIdx] = newVal;
                                     
                                     const newBlock = { ...block, options: newOpts };
@@ -1391,8 +1391,8 @@ export default function EditCoursePage() {
                                     newSlides[sIdx] = newBlock;
                                     setCurrentLesson({ ...currentLesson, [source]: newSlides });
                                   }}
-                                  placeholder={`خيار ${oIdx + 1}`}
-                                  className="bg-transparent outline-none font-bold text-slate-700 flex-1"
+                                  placeholder={language === 'ar' ? `خيار ${oIdx + 1}` : `Option ${oIdx + 1}`}
+                                  className="bg-transparent flex-1"
                                 />
                                 {block.options.length > 2 && (
                                   <button type="button" onClick={() => {

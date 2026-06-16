@@ -537,7 +537,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
 
       {/* Inline Modals */}
       {activeModal === 'table' && (
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 bg-white border border-slate-200 p-6 rounded-3xl shadow-2xl min-w-[300px] animate-in zoom-in-95 duration-200 rtl" dir="rtl">
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 bg-white border border-slate-200 p-6 rounded-3xl shadow-2xl min-w-[300px] max-h-[85vh] overflow-y-auto custom-scrollbar animate-in zoom-in-95 duration-200 rtl" dir="rtl">
           <div className="flex justify-between items-center mb-4">
             <h4 className="font-black text-slate-800 flex items-center gap-2">
               <Table className="w-5 h-5 text-indigo-600" />
@@ -575,7 +575,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
       )}
 
       {activeModal === 'image' && (
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 bg-white border border-slate-200 p-4 rounded-3xl shadow-2xl min-w-[350px] animate-in zoom-in-95 duration-200 rtl" dir="rtl">
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 bg-white border border-slate-200 p-4 rounded-3xl shadow-2xl min-w-[350px] max-h-[85vh] overflow-y-auto custom-scrollbar animate-in zoom-in-95 duration-200 rtl" dir="rtl">
           <div className="flex justify-between items-center mb-3">
             <h4 className="font-black text-slate-800 flex items-center gap-2">
               <ImageIcon className="w-5 h-5 text-indigo-600" />
@@ -641,7 +641,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
         </div>
       )}
       {activeModal === 'math' && (
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 bg-white border border-slate-200 p-6 rounded-3xl shadow-2xl min-w-[400px] animate-in zoom-in-95 duration-200 rtl" dir="rtl">
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 bg-white border border-slate-200 p-6 rounded-3xl shadow-2xl min-w-[400px] max-h-[85vh] overflow-y-auto custom-scrollbar animate-in zoom-in-95 duration-200 rtl" dir="rtl">
           <div className="flex justify-between items-center mb-4">
             <h4 className="font-black text-slate-800 flex items-center gap-2">
               <Sigma className="w-5 h-5 text-indigo-600" />

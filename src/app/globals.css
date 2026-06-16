@@ -92,15 +92,57 @@
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 14px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #f1f5f9;
+  border-radius: 5px;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(99, 102, 241, 0.1);
-  border-radius: 10px;
+  background: #cbd5e1;
+  border-radius: 5px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(99, 102, 241, 0.2);
+  background: #94a3b8;
 }
+
+/* Styling for lists in RichTextEditor and student slides */
+.prose ul, .editor-content ul {
+  list-style: disc inside !important;
+  margin-left: 2rem !important;
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+  padding-left: 1rem !important;
+}
+
+.prose ol, .editor-content ol {
+  list-style: decimal inside !important;
+  margin-left: 2rem !important;
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+  padding-left: 1rem !important;
+}
+
+[dir="rtl"] .prose ul, [dir="rtl"] .editor-content ul {
+  list-style: disc inside !important;
+  margin-left: 0 !important;
+  margin-right: 2rem !important;
+  padding-left: 0 !important;
+  padding-right: 1rem !important;
+}
+
+[dir="rtl"] .prose ol, [dir="rtl"] .editor-content ol {
+  list-style: decimal inside !important;
+  margin-left: 0 !important;
+  margin-right: 2rem !important;
+  padding-left: 0 !important;
+  padding-right: 1rem !important;
+}
+
+.prose li, .editor-content li {
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.25rem !important;
+  display: list-item !important;
+}
+

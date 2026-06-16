@@ -6,6 +6,7 @@ import { API_URL } from "@/lib/api";
 import { CheckCircle2, XCircle, ChevronRight, ChevronLeft, LayoutDashboard, RefreshCw, Award, Target, Clock, MessageCircle, Lock, EyeOff, HelpCircle, Info, AlertCircle, Sparkles, BookOpen, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { useNotification } from "@/context/NotificationContext";
+import HtmlRenderer from "@/components/HtmlRenderer";
 
 const renderExplanation = (explanationString: string) => {
   if (!explanationString) return null;
@@ -361,7 +362,7 @@ export default function ExamResultPage() {
 
                         return (
                           <div key={oIdx} className={`p-5 rounded-2xl border-2 transition-all flex items-center justify-between ${bgClass}`}>
-                            <span className={`font-bold ${textClass}`}>{opt}</span>
+                            <span className={`font-bold ${textClass}`}><HtmlRenderer html={opt} tag="span" /></span>
                             {icon}
                           </div>
                         );

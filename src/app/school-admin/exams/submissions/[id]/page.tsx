@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useNotification } from "@/context/NotificationContext";
+import HtmlRenderer from "@/components/HtmlRenderer";
 
 export default function SchoolAdminSubmissionDetailsPage() {
   const { id } = useParams();
@@ -195,7 +196,7 @@ export default function SchoolAdminSubmissionDetailsPage() {
 
                       return (
                         <div key={oIdx} className={`p-5 rounded-2xl border-2 transition-all flex items-center justify-between ${bgClass}`}>
-                          <span className={`font-bold ${textClass}`}>{opt}</span>
+                          <span className={`font-bold ${textClass}`}><HtmlRenderer html={opt} tag="span" /></span>
                           {icon}
                         </div>
                       );

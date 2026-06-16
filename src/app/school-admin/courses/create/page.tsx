@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -18,6 +18,7 @@ import * as XLSX from 'xlsx';
 import RichTextEditor from "@/components/RichTextEditor";
 import { compressImage } from "@/lib/image-utils";
 import FileUpload from "@/components/FileUpload";
+import MathInput from "@/components/MathInput";
 
 
 export default function CreateCoursePage() {
@@ -1193,16 +1194,15 @@ export default function CreateCoursePage() {
                                 >
                                   {isSelected && opt && <CheckCircle2 className="w-4 h-4 text-white" />}
                                 </div>
-                                <input 
-                                  type="text"
+                                <MathInput 
                                   value={opt}
-                                  onChange={(e) => {
+                                  onChange={(val) => {
                                     const newOpts = [...(block.options || [])];
-                                    newOpts[oIdx] = e.target.value;
+                                    newOpts[oIdx] = val;
                                     updateBlock(source, sIdx, 'options', newOpts);
                                   }}
                                   placeholder={language === 'ar' ? `الخيار ${oIdx + 1}` : `Option ${oIdx + 1}`}
-                                  className="bg-transparent outline-none font-bold text-slate-700 flex-1"
+                                  className="bg-transparent flex-1"
                                 />
                                 {block.options.length > 2 && (
                                   <button type="button" onClick={() => {
@@ -2021,12 +2021,11 @@ export default function CreateCoursePage() {
                           >
                             {isQuestionCorrectAnswer(opt) && opt !== "" && <CheckCircle2 className="w-5 h-5 text-white" />}
                           </div>
-                          <input 
-                            type="text" 
+                          <MathInput 
                             placeholder={language === 'ar' ? `الخيار ${oIndex + 1}` : `Option ${oIndex + 1}`}
-                            className="bg-transparent flex-1 outline-none font-bold text-slate-700 placeholder:text-slate-300 text-sm"
+                            className="bg-transparent flex-1"
                             value={opt}
-                            onChange={(e) => updateQuestionOption(oIndex, e.target.value)}
+                            onChange={(val) => updateQuestionOption(oIndex, val)}
                           />
                           {tempQuestion.options.length > 2 && (
                             <button 

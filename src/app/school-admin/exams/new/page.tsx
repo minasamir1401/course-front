@@ -19,6 +19,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import MathInput from "@/components/MathInput";
+import HtmlRenderer from "@/components/HtmlRenderer";
 
 export default function SchoolAdminNewExamPage() {
   return (
@@ -1472,12 +1474,11 @@ function SchoolAdminNewExamPageContent() {
                                 >
                                   {isCorrectAnswer(currentQuestion, opt) && opt !== "" && <CheckCircle className="w-5 h-5 text-white" />}
                                 </div>
-                                <input 
-                                  type="text" 
+                                <MathInput 
                                   placeholder={t('schoolAdmin.examsNewPage.optionLabel').replace('{n}', String(oIndex + 1))}
-                                  className="bg-transparent flex-1 outline-none font-bold text-slate-700 placeholder:text-slate-300 animate-all duration-300"
+                                  className="bg-transparent flex-1"
                                   value={opt}
-                                  onChange={(e) => updateOption(oIndex, e.target.value)}
+                                  onChange={(val) => updateOption(oIndex, val)}
                                 />
                                 {currentQuestion.options.length > 2 && (
                                   <button onClick={() => {
@@ -1698,7 +1699,7 @@ function SchoolAdminNewExamPageContent() {
                         <div className="w-7 h-7 rounded-full border-2 border-slate-200 group-hover:border-indigo-600 flex items-center justify-center transition-all">
                           <div className="w-3 h-3 bg-indigo-600 rounded-full opacity-0 group-hover:opacity-100 transition-all"></div>
                         </div>
-                        <span className="text-xl font-bold text-slate-700 group-hover:text-indigo-900">{option}</span>
+                        <span className="text-xl font-bold text-slate-700 group-hover:text-indigo-900"><HtmlRenderer html={option} tag="span" /></span>
                       </button>
                     ))}
                   </div>

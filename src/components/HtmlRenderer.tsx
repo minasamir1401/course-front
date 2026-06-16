@@ -27,10 +27,12 @@ export default function HtmlRenderer({ html, className = "", tag: Tag = "div" }:
     }
   }, [html]);
 
+  const combinedClassName = className.includes("prose") ? className : `prose ${className}`.trim();
+
   return (
     <Tag 
       ref={containerRef as any} 
-      className={className} 
+      className={combinedClassName} 
       dangerouslySetInnerHTML={{ __html: html }} 
       dir="auto" 
     />
