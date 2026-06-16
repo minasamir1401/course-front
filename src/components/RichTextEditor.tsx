@@ -29,6 +29,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
   const [imageSettings, setImageSettings] = useState({ src: "", width: "100", align: "center" as 'left' | 'center' | 'right' });
   const [editingImage, setEditingImage] = useState<HTMLImageElement | null>(null);
   const [imageRect, setImageRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
+  const mathContainerRef = useRef<HTMLDivElement>(null);
 
   const COLORS = [
     { name: 'Default', color: '#000000' },
@@ -59,6 +60,42 @@ export default function RichTextEditor({ value, onChange, placeholder, className
       }
     };
   }, []);
+
+  // Initialize MathLive visually when modal opens
+  useEffect(() => {
+    let mf: any = null;
+    if (activeModal === 'math') {
+      // Need a small timeout to ensure the ref is attached to the DOM before appending
+      const timer = setTimeout(() => {
+        if (mathContainerRef.current) {
+          import('mathlive').then(({ MathfieldElement }) => {
+            if (!mathContainerRef.current) return;
+            mf = new MathfieldElement();
+            mf.value = mathFormula;
+            
+            // Match the styles of the previous textarea
+            mf.style.width = '100%';
+            mf.style.padding = '12px 16px';
+            mf.style.borderRadius = '0.75rem';
+            mf.style.border = '1px solid #e2e8f0';
+            mf.style.backgroundColor = '#f8fafc';
+            mf.style.outline = 'none';
+            mf.style.minHeight = '100px';
+            mf.style.fontSize = '24px';
+            
+            mf.addEventListener('input', () => {
+              setMathFormula(mf.value);
+            });
+
+            mathContainerRef.current.innerHTML = '';
+            mathContainerRef.current.appendChild(mf);
+            mf.focus();
+          }).catch(err => console.error("Failed to load mathlive", err));
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [activeModal]);
 
   const execCommand = (command: string, cmdValue?: string) => {
     if (editorRef.current) {
@@ -610,14 +647,9 @@ export default function RichTextEditor({ value, onChange, placeholder, className
             <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
           </div>
           <div className="flex flex-col gap-3 mb-6">
-            <textarea
-              value={mathFormula}
-              onChange={(e) => setMathFormula(e.target.value)}
-              placeholder="مثال: 2^{-3} = \\frac{1}{8} أو E=mc²"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 font-mono text-sm min-h-[100px]"
-            />
+            <div ref={mathContainerRef} className="w-full" dir="ltr" />
             <p className="text-[10px] text-slate-400 leading-relaxed">
-              * سيتم إدراج المعادلة كنص منسق. يمكنك استخدام رموز LaTeX المعروفة.
+              * استخدم الأزرار التفاعلية لكتابة المعادلة بدلاً من كتابة الكود، ويمكنك التحرك باستخدام الأسهم.
             </p>
           </div>
           <button
