@@ -9,6 +9,8 @@ import {
   Highlighter, Trash2
 } from "lucide-react";
 import { compressImage, uploadFileToServer } from "@/lib/image-utils";
+import katex from "katex";
+import "katex/dist/katex.min.css";
 
 interface RichTextEditorProps {
   value: string;
@@ -193,8 +195,15 @@ export default function RichTextEditor({ value, onChange, placeholder, className
 
   const handleInsertMath = () => {
     if (mathFormula) {
-      const mathHtml = `<span class="math-tex" style="font-family: 'Times New Roman', serif; font-style: italic; background: #f8fafc; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">\\( ${mathFormula} \\)</span>&nbsp;`;
-      execCommand('insertHTML', mathHtml);
+      try {
+        const renderedMath = katex.renderToString(mathFormula, { throwOnError: false });
+        const mathHtml = `<span class="math-tex inline-block mx-1 align-middle" contenteditable="false" data-latex="${mathFormula.replace(/"/g, '&quot;')}">${renderedMath}</span>&nbsp;`;
+        execCommand('insertHTML', mathHtml);
+      } catch (err) {
+        console.error("KaTeX rendering error", err);
+        const mathHtml = `<span class="math-tex" style="font-family: 'Times New Roman', serif; font-style: italic; background: #f8fafc; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">\\( ${mathFormula} \\)</span>&nbsp;`;
+        execCommand('insertHTML', mathHtml);
+      }
     }
     setActiveModal(null);
   };
@@ -604,7 +613,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
             <textarea
               value={mathFormula}
               onChange={(e) => setMathFormula(e.target.value)}
-              placeholder="مثال: E=mc²"
+              placeholder="مثال: 2^{-3} = \\frac{1}{8} أو E=mc²"
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 font-mono text-sm min-h-[100px]"
             />
             <p className="text-[10px] text-slate-400 leading-relaxed">
