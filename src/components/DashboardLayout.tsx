@@ -74,7 +74,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {renderSidebar()}
 
-      <div className={`flex-1 ${hasSidebar && isSidebarOpen && !isMobile ? (language === 'ar' ? 'lg:mr-72' : 'lg:ml-72') : ''} flex flex-col min-h-screen relative z-10 transition-all duration-300`}>
+      <div className={`flex-1 min-w-0 w-full ${hasSidebar && isSidebarOpen && !isMobile ? (language === 'ar' ? 'lg:mr-72' : 'lg:ml-72') : ''} flex flex-col min-h-screen relative z-10 transition-all duration-300`}>
         <Header
           onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)}
           isMobile={isMobile}
