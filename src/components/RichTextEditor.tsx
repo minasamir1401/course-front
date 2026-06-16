@@ -82,6 +82,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
             mf.style.outline = 'none';
             mf.style.minHeight = '100px';
             mf.style.fontSize = '24px';
+            mf.mathVirtualKeyboardPolicy = 'manual';
             
             mf.addEventListener('input', () => {
               setMathFormula(mf.value);
@@ -647,9 +648,16 @@ export default function RichTextEditor({ value, onChange, placeholder, className
             <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
           </div>
           <div className="flex flex-col gap-3 mb-6">
+            <div className="flex flex-wrap gap-2 mb-1 justify-center bg-slate-50 p-2.5 rounded-2xl border border-slate-200 shadow-sm">
+              <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf) { mf.insert('\\frac{#?}{#?}'); mf.focus(); } }} className="px-3 py-2 bg-white border border-slate-200 rounded-xl shadow-sm text-sm font-black text-slate-700 hover:border-indigo-400 hover:text-indigo-600 transition-all flex items-center gap-1"><span className="text-lg">½</span> كسر</button>
+              <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf) { mf.insert('^{#?}'); mf.focus(); } }} className="px-3 py-2 bg-white border border-slate-200 rounded-xl shadow-sm text-sm font-black text-slate-700 hover:border-indigo-400 hover:text-indigo-600 transition-all flex items-center gap-1"><span className="text-lg">x²</span> أُس</button>
+              <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf) { mf.insert('\\sqrt{#?}'); mf.focus(); } }} className="px-3 py-2 bg-white border border-slate-200 rounded-xl shadow-sm text-sm font-black text-slate-700 hover:border-indigo-400 hover:text-indigo-600 transition-all flex items-center gap-1"><span className="text-lg">√</span> جذر</button>
+              <div className="w-px h-8 bg-slate-200 mx-1"></div>
+              <button onClick={() => { (window as any).mathVirtualKeyboard?.show(); }} className="px-4 py-2 bg-indigo-100 border border-indigo-200 text-indigo-700 rounded-xl shadow-sm text-sm font-black hover:bg-indigo-200 transition-all flex items-center gap-2">⌨️ إظهار الآلة الحاسبة</button>
+            </div>
             <div ref={mathContainerRef} className="w-full" dir="ltr" />
-            <p className="text-[10px] text-slate-400 leading-relaxed">
-              * استخدم الأزرار التفاعلية لكتابة المعادلة بدلاً من كتابة الكود، ويمكنك التحرك باستخدام الأسهم.
+            <p className="text-[10px] text-slate-400 leading-relaxed font-bold">
+              * اضغط على الأزرار بالأعلى لإدراج (كسر، أس، جذر) واملأ المربعات الفارغة، أو افتح الآلة الحاسبة للمزيد من الرموز!
             </p>
           </div>
           <button
