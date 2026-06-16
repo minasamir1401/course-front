@@ -84,25 +84,15 @@ export default function RichTextEditor({ value, onChange, placeholder, className
             mf.style.fontSize = '24px';
             mf.mathVirtualKeyboardPolicy = 'manual';
             
+            mf.mathVirtualKeyboardPolicy = 'manual';
+            
             mf.addEventListener('input', () => {
               setMathFormula(mf.value);
-            });
-            
-            mf.addEventListener('focusin', () => {
-              if ((window as any).mathVirtualKeyboard) {
-                (window as any).mathVirtualKeyboard.show();
-              }
             });
 
             mathContainerRef.current.innerHTML = '';
             mathContainerRef.current.appendChild(mf);
             mf.focus();
-            
-            setTimeout(() => {
-              if ((window as any).mathVirtualKeyboard) {
-                (window as any).mathVirtualKeyboard.show();
-              }
-            }, 200);
           }).catch(err => console.error("Failed to load mathlive", err));
         }
       }, 50);
@@ -655,22 +645,50 @@ export default function RichTextEditor({ value, onChange, placeholder, className
           <div className="flex justify-between items-center mb-4">
             <h4 className="font-black text-slate-800 flex items-center gap-2">
               <Sigma className="w-5 h-5 text-indigo-600" />
-              إدراج معادلة LaTeX
+              إدراج معادلة رياضية
             </h4>
             <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
           </div>
           <div className="flex flex-col gap-3 mb-6">
-            <div className="flex flex-wrap gap-2 mb-1 justify-center bg-slate-50 p-2.5 rounded-2xl border border-slate-200 shadow-sm">
-              <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf) { mf.insert('\\frac{#?}{#?}'); mf.focus(); } }} className="px-3 py-2 bg-white border border-slate-200 rounded-xl shadow-sm text-sm font-black text-slate-700 hover:border-indigo-400 hover:text-indigo-600 transition-all flex items-center gap-1"><span className="text-lg">½</span> كسر</button>
-              <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf) { mf.insert('^{#?}'); mf.focus(); } }} className="px-3 py-2 bg-white border border-slate-200 rounded-xl shadow-sm text-sm font-black text-slate-700 hover:border-indigo-400 hover:text-indigo-600 transition-all flex items-center gap-1"><span className="text-lg">x²</span> أُس</button>
-              <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf) { mf.insert('\\sqrt{#?}'); mf.focus(); } }} className="px-3 py-2 bg-white border border-slate-200 rounded-xl shadow-sm text-sm font-black text-slate-700 hover:border-indigo-400 hover:text-indigo-600 transition-all flex items-center gap-1"><span className="text-lg">√</span> جذر</button>
-              <div className="w-px h-8 bg-slate-200 mx-1"></div>
-              <button onClick={() => { (window as any).mathVirtualKeyboard?.show(); }} className="px-4 py-2 bg-indigo-100 border border-indigo-200 text-indigo-700 rounded-xl shadow-sm text-sm font-black hover:bg-indigo-200 transition-all flex items-center gap-2">⌨️ إظهار الآلة الحاسبة</button>
+            {/* Custom Embedded Keypad */}
+            <div className="bg-slate-100 p-3 rounded-2xl shadow-inner flex flex-col gap-2">
+              {/* Top Row: Arrows & Backspace */}
+              <div className="flex justify-between gap-2">
+                <div className="flex gap-1.5">
+                  <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.executeCommand('moveToPreviousChar'); mf.focus(); } }} className="w-10 h-10 bg-white rounded-lg shadow-sm font-bold text-lg hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all">←</button>
+                  <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.executeCommand('moveUp'); mf.focus(); } }} className="w-10 h-10 bg-white rounded-lg shadow-sm font-bold text-lg hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all">↑</button>
+                  <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.executeCommand('moveDown'); mf.focus(); } }} className="w-10 h-10 bg-white rounded-lg shadow-sm font-bold text-lg hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all">↓</button>
+                  <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.executeCommand('moveToNextChar'); mf.focus(); } }} className="w-10 h-10 bg-white rounded-lg shadow-sm font-bold text-lg hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all">→</button>
+                </div>
+                <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.executeCommand('deleteBackward'); mf.focus(); } }} className="w-14 h-10 bg-red-100 text-red-600 rounded-lg shadow-sm font-bold hover:bg-red-200 active:scale-95 transition-all">⌫ مسح</button>
+              </div>
+              
+              {/* Middle Row: Functions */}
+              <div className="flex gap-2">
+                <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert('\\frac{#?}{#?}'); mf.focus(); } }} className="flex-1 py-2 bg-indigo-50 text-indigo-700 rounded-lg shadow-sm font-black hover:bg-indigo-100 active:scale-95 transition-all text-sm">½ كسر</button>
+                <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert('^{#?}'); mf.focus(); } }} className="flex-1 py-2 bg-indigo-50 text-indigo-700 rounded-lg shadow-sm font-black hover:bg-indigo-100 active:scale-95 transition-all text-sm">x² أُس</button>
+                <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert('\\sqrt{#?}'); mf.focus(); } }} className="flex-1 py-2 bg-indigo-50 text-indigo-700 rounded-lg shadow-sm font-black hover:bg-indigo-100 active:scale-95 transition-all text-sm">√ جذر</button>
+                <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert('\\left(#?\\right)'); mf.focus(); } }} className="flex-1 py-2 bg-indigo-50 text-indigo-700 rounded-lg shadow-sm font-black hover:bg-indigo-100 active:scale-95 transition-all text-sm">( ) أقواس</button>
+              </div>
+
+              {/* Bottom Grid: Numbers & Operators */}
+              <div className="grid grid-cols-4 gap-2">
+                {['7', '8', '9', '+'].map(btn => (
+                  <button key={btn} onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert(btn); mf.focus(); } }} className="py-2.5 bg-white rounded-lg shadow-sm font-bold text-xl hover:bg-slate-50 text-slate-700 active:scale-95 transition-all">{btn}</button>
+                ))}
+                {['4', '5', '6', '-'].map(btn => (
+                  <button key={btn} onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert(btn); mf.focus(); } }} className="py-2.5 bg-white rounded-lg shadow-sm font-bold text-xl hover:bg-slate-50 text-slate-700 active:scale-95 transition-all">{btn}</button>
+                ))}
+                {['1', '2', '3', '*'].map(btn => (
+                  <button key={btn} onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert(btn === '*' ? '\\cdot' : btn); mf.focus(); } }} className="py-2.5 bg-white rounded-lg shadow-sm font-bold text-xl hover:bg-slate-50 text-slate-700 active:scale-95 transition-all">{btn === '*' ? '×' : btn}</button>
+                ))}
+                {['0', '.', '=', '/'].map(btn => (
+                  <button key={btn} onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert(btn === '/' ? '\\div' : btn); mf.focus(); } }} className="py-2.5 bg-white rounded-lg shadow-sm font-bold text-xl hover:bg-slate-50 text-slate-700 active:scale-95 transition-all">{btn === '/' ? '÷' : btn}</button>
+                ))}
+              </div>
             </div>
-            <div ref={mathContainerRef} className="w-full" dir="ltr" />
-            <p className="text-[10px] text-slate-400 leading-relaxed font-bold">
-              * اضغط على الأزرار بالأعلى لإدراج (كسر، أس، جذر) واملأ المربعات الفارغة، أو افتح الآلة الحاسبة للمزيد من الرموز!
-            </p>
+
+            <div ref={mathContainerRef} className="w-full mt-2" dir="ltr" />
           </div>
           <button
             onClick={handleInsertMath}
