@@ -15,6 +15,7 @@ export default function ExamsListPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("all");
+  const [assessmentType, setAssessmentType] = useState("all");
 
   useEffect(() => {
     fetchExams();
@@ -111,7 +112,12 @@ export default function ExamsListPage() {
   }, [filterType]);
 
   const filteredExams = exams.filter((exam: any) => {
-    return exam.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = exam.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = assessmentType === "all" 
+      || exam.type?.toUpperCase() === assessmentType.toUpperCase()
+      // If filtering for Exams, also include items without a type since default is Quiz/Exam
+      || (assessmentType === "Exam" && !exam.type);
+    return matchesSearch && matchesType;
   });
 
   return (
@@ -153,7 +159,17 @@ export default function ExamsListPage() {
             <Search className={`w-6 h-6 text-slate-300 absolute top-4.5 ${language === 'ar' ? 'right-4' : 'left-4'}`} />
           </div>
           
-          <div className="flex gap-4">
+          <div className="flex gap-4 flex-wrap">
+            <select 
+              className="bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 outline-none focus:ring-4 focus:ring-indigo-500/5 focus:bg-white focus:border-indigo-500 transition-all font-bold text-slate-700 min-w-[180px]"
+              value={assessmentType}
+              onChange={(e) => setAssessmentType(e.target.value)}
+            >
+              <option value="all">{language === 'ar' ? "كل الأنواع" : "All Types"}</option>
+              <option value="Exam">{language === 'ar' ? "اختبارات (Exams)" : "Exams"}</option>
+              <option value="Quiz">{language === 'ar' ? "اختبارات قصيرة (Quizzes)" : "Quizzes"}</option>
+              <option value="Assignment">{language === 'ar' ? "تكليفات (Assignments)" : "Assignments"}</option>
+            </select>
             <select 
               className="bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 outline-none focus:ring-4 focus:ring-indigo-500/5 focus:bg-white focus:border-indigo-500 transition-all font-bold text-slate-700 min-w-[200px]"
               value={filterType}
@@ -193,6 +209,15 @@ export default function ExamsListPage() {
                   <div className="flex flex-wrap items-center gap-2 mb-2">
                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-slate-100 px-2 py-1 rounded-md">
                       {exam.category || (exam.isCentral ? t('schoolAdmin.examsPage.central') : t('schoolAdmin.examsPage.school'))}
+                    </span>
+                    <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md ${
+                      exam.type === 'Quiz' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
+                      exam.type === 'Assignment' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' :
+                      'bg-indigo-100 text-indigo-700 border border-indigo-200'
+                    }`}>
+                      {exam.type === 'Quiz' ? (language === 'ar' ? 'كويز' : 'Quiz') :
+                       exam.type === 'Assignment' ? (language === 'ar' ? 'تكليف' : 'Assignment') :
+                       (language === 'ar' ? 'اختبار' : 'Exam')}
                     </span>
                     <span className="text-[10px] font-bold text-slate-500 bg-slate-50 border border-slate-100 px-2 py-1 rounded-md">
                       {exam.grade || "عام"}

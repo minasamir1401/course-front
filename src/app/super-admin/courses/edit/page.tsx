@@ -3689,12 +3689,12 @@ export default function EditCoursePage() {
                        </div>
                        
                        <div className="w-full max-w-2xl space-y-3">
-                          {exams.filter(e => activeContentTab === 'quizzes' ? e.type !== 'ASSIGNMENT' : e.type === 'ASSIGNMENT').length === 0 ? (
+                          {exams.filter(e => activeContentTab === 'quizzes' ? e.type?.toUpperCase() !== 'ASSIGNMENT' : e.type?.toUpperCase() === 'ASSIGNMENT').length === 0 ? (
                             <div className="p-8 border-2 border-dashed border-slate-100 rounded-3xl text-slate-400 font-bold">
                                لا يوجد {activeContentTab === 'quizzes' ? 'اختبارات' : 'تكليفات'} مرتبطة بهذا الكورس حالياً.
                             </div>
                           ) : (
-                            exams.filter(e => activeContentTab === 'quizzes' ? e.type !== 'ASSIGNMENT' : e.type === 'ASSIGNMENT').map((exam, idx) => (
+                            exams.filter(e => activeContentTab === 'quizzes' ? e.type?.toUpperCase() !== 'ASSIGNMENT' : e.type?.toUpperCase() === 'ASSIGNMENT').map((exam, idx) => (
                               <div key={idx} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
                                  <div className="flex items-center gap-4">
                                     <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-900 font-black border border-slate-100">
