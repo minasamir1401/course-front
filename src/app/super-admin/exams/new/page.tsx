@@ -46,7 +46,7 @@ function SuperAdminNewExamPageContent() {
   const { showToast } = useNotification();
   const { t, language } = useLanguage();
   const [loading, setLoading] = useState(false);
-  const [isAutoSaveEnabled, setIsAutoSaveEnabled] = useState(false);
+  const [isAutoSaveEnabled, setIsAutoSaveEnabled] = useState(true);
   const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
   const [createdId, setCreatedId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -693,9 +693,14 @@ function SuperAdminNewExamPageContent() {
              setCreatedId(data.exam.id);
           }
           setLastAutoSave(new Date());
+        } else {
+          const message = await res.text().catch(() => "");
+          console.error("Auto-save failed:", message);
+          showToast(language === 'ar' ? "فشل الحفظ التلقائي للاختبار. تأكد من الاتصال ثم احفظ يدوياً." : "Exam auto-save failed. Check your connection, then save manually.", "error");
         }
       } catch (err) {
         console.error("Auto save failed", err);
+        showToast(language === 'ar' ? "فشل الحفظ التلقائي للاختبار. تأكد من الاتصال ثم احفظ يدوياً." : "Exam auto-save failed. Check your connection, then save manually.", "error");
       }
     }, 60000);
 
@@ -1869,5 +1874,4 @@ function SuperAdminNewExamPageContent() {
     </DashboardLayout>
   );
 }
-
 

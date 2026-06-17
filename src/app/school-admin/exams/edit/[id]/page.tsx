@@ -628,16 +628,22 @@ function SchoolAdminEditExamPageContent() {
 
   const handleSubmit = async (statusOverride: string | null = null, isAutoSave = false) => {
     if (!examInfo.title) {
-      showToast("يرجى إدخال عنوان الامتحان", 'error');
+      if (!isAutoSave) {
+        showToast("يرجى إدخال عنوان الامتحان", 'error');
+      }
       return;
     }
 
     if (questions.length === 0) {
-      showToast("يرجى إضافة سؤال واحد على الأقل", 'error');
+      if (!isAutoSave) {
+        showToast("يرجى إضافة سؤال واحد على الأقل", 'error');
+      }
       return;
     }
 
-    setSaving(true);
+    if (!isAutoSave) {
+      setSaving(true);
+    }
     try {
       const token = localStorage.getItem("school_admin_token");
       const questionsPayload = questions.map(q => ({
@@ -659,16 +665,32 @@ function SchoolAdminEditExamPageContent() {
       });
 
       if (res.ok) {
-        showToast("تم تحديث الامتحان بنجاح!", 'success');
-        router.push("/school-admin/exams");
+        if (isAutoSave) {
+          setLastAutoSave(new Date());
+        } else {
+          showToast("تم تحديث الامتحان بنجاح!", 'success');
+          router.push("/school-admin/exams");
+        }
       } else {
-        const err = await res.json();
-        showToast(err.error || "خطأ في التحديث", 'error');
+        if (!isAutoSave) {
+          const err = await res.json();
+          showToast(err.error || "خطأ في التحديث", 'error');
+        } else {
+          console.error("Auto-save failed:", await res.text());
+          showToast(language === 'ar' ? "فشل الحفظ التلقائي للاختبار. تأكد من الاتصال ثم احفظ يدوياً." : "Exam auto-save failed. Check your connection, then save manually.", "error");
+        }
       }
     } catch (error) {
-      showToast("حدث خطأ غير متوقع", 'error');
+      if (!isAutoSave) {
+        showToast("حدث خطأ غير متوقع", 'error');
+      } else {
+        console.error("Auto-save error:", error);
+        showToast(language === 'ar' ? "فشل الحفظ التلقائي للاختبار. تأكد من الاتصال ثم احفظ يدوياً." : "Exam auto-save failed. Check your connection, then save manually.", "error");
+      }
     } finally {
-      setSaving(false);
+      if (!isAutoSave) {
+        setSaving(false);
+      }
     }
   };
 

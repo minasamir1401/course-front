@@ -10,7 +10,7 @@ import {
   HelpCircle, BookOpen, Save, Layers, Edit2, X,
   ChevronDown, ChevronUp, Play, Layout, Target,
   CheckCircle2, AlertCircle, Upload, Download, Settings,
-  Eye, Monitor, ListOrdered, FileJson, Clock,
+  Eye, Monitor, ListOrdered, FileJson, FileDown, Clock,
   Lightbulb, MessageSquareQuote, TriangleAlert, Search, CheckCircle
 } from "lucide-react";
 import * as XLSX from 'xlsx';
@@ -30,37 +30,37 @@ export default function EditCoursePage() {
   }> = {
     HINT: {
       icon: Lightbulb,
-      label: "Hint",
+      label: language === 'ar' ? "تلميح" : "Hint",
       container: "bg-yellow-50/70 border-yellow-200",
       badge: "bg-yellow-100 text-yellow-700",
     },
     TIP: {
       icon: Lightbulb,
-      label: "Tip",
+      label: language === 'ar' ? "نصيحة" : "Tip",
       container: "bg-sky-50/70 border-sky-200",
       badge: "bg-sky-100 text-sky-700",
     },
     WARNING: {
       icon: TriangleAlert,
-      label: "Warning",
+      label: language === 'ar' ? "تحذير" : "Warning",
       container: "bg-rose-50/70 border-rose-200",
       badge: "bg-rose-100 text-rose-700",
     },
     KEY_INSIGHT: {
       icon: Search,
-      label: "Key Insight",
+      label: language === 'ar' ? "رؤية رئيسية" : "Key Insight",
       container: "bg-indigo-50/70 border-indigo-200",
       badge: "bg-indigo-100 text-indigo-700",
     },
     FEEDBACK: {
       icon: MessageSquareQuote,
-      label: "Feedback",
+      label: language === 'ar' ? "ملاحظات" : "Feedback",
       container: "bg-emerald-50/70 border-emerald-200",
       badge: "bg-emerald-100 text-emerald-700",
     },
     EXPLANATION: {
       icon: CheckCircle,
-      label: "Explanation",
+      label: language === 'ar' ? "تفسير" : "Explanation",
       container: "bg-amber-50/70 border-amber-200",
       badge: "bg-amber-100 text-amber-700",
     },
@@ -74,6 +74,9 @@ export default function EditCoursePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [schools, setSchools] = useState<any[]>([]);
+  const [isAutoSaveEnabled, setIsAutoSaveEnabled] = useState(true);
+  const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const getGradeName = (grade: string) => {
     if (language === 'ar') {
@@ -189,7 +192,7 @@ export default function EditCoursePage() {
     isVisible: true,
     publishDate: "",
     cutOffDate: "",
-    slides: [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: "المقدمة", content: "", sections: [] }],
+    slides: [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? "المقدمة" : "Introduction", content: "", sections: [] }],
     questions: [],
     assignments: [],
     attachments: []
@@ -233,9 +236,9 @@ export default function EditCoursePage() {
   ];
 
   const QUESTION_TYPES = [
-    { id: "MCQ", label: "اختيار من متعدد" },
-    { id: "TRUE_FALSE", label: "صح وخطأ" },
-    { id: "MULTI_SELECT", label: "اختيار متعدد" }
+    { id: "MCQ", label: language === 'ar' ? "اختيار من متعدد" : "Multiple Choice" },
+    { id: "TRUE_FALSE", label: language === 'ar' ? "صح وخطأ" : "True / False" },
+    { id: "MULTI_SELECT", label: language === 'ar' ? "اختيار متعدد" : "Multi Select" }
   ];
 
   useEffect(() => {
@@ -316,7 +319,7 @@ export default function EditCoursePage() {
           "3rd Secondary": "الصف الثالث الثانوي",
         };
         
-        let expandedGrades: string[] = [];
+        const expandedGrades: string[] = [];
         parsedGrades.forEach(g => {
           const mapped = forwardGradeMap[g] || g;
           if (mapped === "Elementary") {
@@ -365,7 +368,7 @@ export default function EditCoursePage() {
 
           try {
             parsedSlides = typeof l.slides === 'string' ? JSON.parse(l.slides) : (l.slides || []);
-          } catch (e) { parsedSlides = [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: "المقدمة", content: "", sections: [] }]; }
+          } catch (e) { parsedSlides = [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? "المقدمة" : "Introduction", content: "", sections: [] }]; }
 
           return {
             ...l,
@@ -393,7 +396,7 @@ export default function EditCoursePage() {
               return { ...q, explanations: parsedExps };
             }) : [],
             attachments: Array.isArray(parsedAttachments) ? parsedAttachments : [],
-            slides: Array.isArray(parsedSlides) && parsedSlides.length ? parsedSlides : [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: "المقدمة", content: "", sections: [] }]
+            slides: Array.isArray(parsedSlides) && parsedSlides.length ? parsedSlides : [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? "المقدمة" : "Introduction", content: "", sections: [] }]
           };
         }));
 
@@ -408,6 +411,33 @@ export default function EditCoursePage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!isLoading) {
+      setHasUnsavedChanges(true);
+    }
+  }, [courseData, lessons, currentLesson]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  useEffect(() => {
+    if (!hasUnsavedChanges || isSubmitting || isLoading || !isAutoSaveEnabled) return;
+    
+    const timer = setTimeout(() => {
+      handleSubmit(undefined, true);
+    }, 60000);
+    
+    return () => clearTimeout(timer);
+  }, [hasUnsavedChanges, isSubmitting, isLoading, courseData, lessons, isAutoSaveEnabled, isLessonModalOpen, currentLesson, editingLessonIndex]);
 
   const linkExamToCourse = async (examId: string) => {
     try {
@@ -441,7 +471,7 @@ export default function EditCoursePage() {
     setCurrentLesson({
       title: "", domain: "", videoUrl: "", summary: "", notes: "", standards: "", indicators: "", learningOutcomes: "",
       isVisible: true, publishDate: "", cutOffDate: "",
-      slides: [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: "المقدمة", content: "", sections: [] }],
+      slides: [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? "المقدمة" : "Introduction", content: "", sections: [] }],
       questions: [],
       assignments: [],
       attachments: []
@@ -453,7 +483,7 @@ export default function EditCoursePage() {
   const openEditLessonModal = (index: number) => {
     setEditingLessonIndex(index);
     const lessonToEdit = { ...lessons[index] };
-    if (!lessonToEdit.slides || lessonToEdit.slides.length === 0) lessonToEdit.slides = [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: "المقدمة", content: "", sections: [] }];
+    if (!lessonToEdit.slides || lessonToEdit.slides.length === 0) lessonToEdit.slides = [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? "المقدمة" : "Introduction", content: "", sections: [] }];
     setCurrentLesson(lessonToEdit);
     setActiveTab('info');
     setIsLessonModalOpen(true);
@@ -1436,7 +1466,7 @@ export default function EditCoursePage() {
                             <RichTextEditor 
                               value={sec.content}
                               onChange={(val) => updateSection(source, sIdx, secIdx, val)}
-                              placeholder={`محتوى الـ ${sec.type}...`}
+                              placeholder={language === 'ar' ? `محتوى الـ ${sec.type}...` : `${sec.type} content...`}
                               className="!bg-white"
                             />
                           </div>
@@ -2269,10 +2299,12 @@ export default function EditCoursePage() {
     );
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent, isAutoSave = false) => {
+    if (e) e.preventDefault();
     if (!courseData.title) {
-      showToast(language === 'ar' ? "يرجى إدخال عنوان الكورس" : "Please enter course title", "error");
+      if (!isAutoSave) {
+        showToast(language === 'ar' ? "يرجى إدخال عنوان الكورس" : "Please enter course title", "error");
+      }
       return;
     }
 
@@ -2281,6 +2313,34 @@ export default function EditCoursePage() {
 
     try {
       const targetSchoolIds = (courseData.schoolIds || []).filter(Boolean);
+
+      const finalLessons = [...lessons];
+      if (isLessonModalOpen && currentLesson.title) {
+        if (editingLessonIndex !== null) {
+          finalLessons[editingLessonIndex] = currentLesson;
+        } else {
+          finalLessons.push(currentLesson);
+        }
+      }
+
+      const lessonsPayload = finalLessons.map((l) => ({
+        id: l.id,
+        title: l.title,
+        domain: l.domain || null,
+        videoUrl: l.videoUrl || null,
+        summary: l.summary || null,
+        notes: l.notes || null,
+        standards: l.standards || null,
+        indicators: l.indicators || null,
+        learningOutcomes: l.learningOutcomes || null,
+        isVisible: l.isVisible !== undefined ? l.isVisible : true,
+        publishDate: l.publishDate ? new Date(l.publishDate).toISOString() : null,
+        cutOffDate: l.cutOffDate ? new Date(l.cutOffDate).toISOString() : null,
+        attachments: JSON.stringify(l.attachments || []),
+        slides: JSON.stringify(l.slides || []),
+        questions: JSON.stringify(l.questions || []),
+        assignments: JSON.stringify(l.assignments || [])
+      }));
 
       const res = await fetch(`${API_URL}/school/courses/${courseId}`, {
         method: 'PUT',
@@ -2293,44 +2353,159 @@ export default function EditCoursePage() {
           isCentral: targetSchoolIds.length === 0,
           schoolId: targetSchoolIds.length > 0 ? targetSchoolIds[0] : null,
           schoolIds: targetSchoolIds,
-          lessons: lessons.map((l) => ({
-            id: l.id,
-            title: l.title,
-            domain: l.domain || null,
-            videoUrl: l.videoUrl || null,
-            summary: l.summary || null,
-            notes: l.notes || null,
-            standards: l.standards || null,
-            indicators: l.indicators || null,
-            learningOutcomes: l.learningOutcomes || null,
-            isVisible: l.isVisible !== undefined ? l.isVisible : true,
-            publishDate: l.publishDate ? new Date(l.publishDate).toISOString() : null,
-            cutOffDate: l.cutOffDate ? new Date(l.cutOffDate).toISOString() : null,
-            attachments: JSON.stringify(l.attachments || []),
-            slides: JSON.stringify(l.slides || []),
-            questions: JSON.stringify(l.questions || []),
-            assignments: JSON.stringify(l.assignments || [])
-          }))
+          lessons: lessonsPayload
         })
       });
 
       if (res.ok) {
-        showToast("تم تحديث الكورس بنجاح", 'success');
-        router.push(`/super-admin/courses`);
+        const data = await res.json();
+        if (data && data.lessons) {
+          const parsedLessons = data.lessons.map((l: any) => {
+            let parsedQuestions = [];
+            let parsedAssignments = [];
+            let parsedAttachments = [];
+            let parsedSlides = [];
+
+            try {
+              parsedQuestions = typeof l.questions === 'string' ? JSON.parse(l.questions) : (l.questions || []);
+            } catch (e) { parsedQuestions = []; }
+
+            try {
+              parsedAssignments = typeof l.assignments === 'string' ? JSON.parse(l.assignments) : (l.assignments || []);
+            } catch (e) { parsedAssignments = []; }
+
+            try {
+              parsedAttachments = typeof l.attachments === 'string' ? JSON.parse(l.attachments) : (l.attachments || []);
+            } catch (e) { parsedAttachments = []; }
+
+            try {
+              parsedSlides = typeof l.slides === 'string' ? JSON.parse(l.slides) : (l.slides || []);
+            } catch (e) { parsedSlides = [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? "المقدمة" : "Introduction", content: "", sections: [] }]; }
+
+            return {
+              ...l,
+              isVisible: l.isVisible !== undefined ? l.isVisible : true,
+              publishDate: l.publishDate ? new Date(new Date(l.publishDate).getTime() - new Date(l.publishDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
+              cutOffDate: l.cutOffDate ? new Date(new Date(l.cutOffDate).getTime() - new Date(l.cutOffDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
+              questions: Array.isArray(parsedQuestions) ? parsedQuestions.map(q => {
+                let parsedExps = [""];
+                try {
+                  parsedExps = typeof q.explanation === 'string' && q.explanation.startsWith('[') ? JSON.parse(q.explanation) : (q.explanations || [""]);
+                  if (!Array.isArray(parsedExps)) parsedExps = [q.explanation || ""];
+                } catch (e) {
+                  parsedExps = [q.explanation || ""];
+                }
+                return { ...q, explanations: parsedExps };
+              }) : [],
+              assignments: Array.isArray(parsedAssignments) ? parsedAssignments.map(q => {
+                let parsedExps = [""];
+                try {
+                  parsedExps = typeof q.explanation === 'string' && q.explanation.startsWith('[') ? JSON.parse(q.explanation) : (q.explanations || [""]);
+                  if (!Array.isArray(parsedExps)) parsedExps = [q.explanation || ""];
+                } catch (e) {
+                  parsedExps = [q.explanation || ""];
+                }
+                return { ...q, explanations: parsedExps };
+              }) : [],
+              attachments: Array.isArray(parsedAttachments) ? parsedAttachments : [],
+              slides: Array.isArray(parsedSlides) && parsedSlides.length ? parsedSlides : [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? "المقدمة" : "Introduction", content: "", sections: [] }]
+            };
+          });
+
+          // Adjust editing indexes if modal is open
+          if (isLessonModalOpen) {
+            let idx = editingLessonIndex;
+            if (idx === null) {
+              idx = parsedLessons.length - 1;
+              setEditingLessonIndex(idx);
+            }
+            if (idx >= 0 && idx < parsedLessons.length) {
+              setCurrentLesson((prev: any) => ({
+                ...prev,
+                id: parsedLessons[idx].id,
+                slides: prev.slides.map((s: any, sIdx: number) => {
+                  const serverSlide = parsedLessons[idx].slides?.[sIdx];
+                  return serverSlide ? { ...s, id: serverSlide.id } : s;
+                }),
+                questions: prev.questions.map((q: any, qIdx: number) => {
+                  const serverQ = parsedLessons[idx].questions?.[qIdx];
+                  return serverQ ? { ...q, id: serverQ.id } : q;
+                }),
+                assignments: prev.assignments.map((a: any, aIdx: number) => {
+                  const serverA = parsedLessons[idx].assignments?.[aIdx];
+                  return serverA ? { ...a, id: serverA.id } : a;
+                })
+              }));
+            }
+            // Set all lessons with backend IDs
+            setLessons(parsedLessons.map((pl: any, plIdx: number) => {
+              if (plIdx === idx) {
+                return {
+                  ...pl,
+                  title: currentLesson.title,
+                  domain: currentLesson.domain,
+                  videoUrl: currentLesson.videoUrl,
+                  summary: currentLesson.summary,
+                  notes: currentLesson.notes,
+                  standards: currentLesson.standards,
+                  indicators: currentLesson.indicators,
+                  learningOutcomes: currentLesson.learningOutcomes,
+                  isVisible: currentLesson.isVisible,
+                  publishDate: currentLesson.publishDate,
+                  cutOffDate: currentLesson.cutOffDate,
+                  slides: currentLesson.slides.map((s: any, sIdx: number) => {
+                    const serverSlide = pl.slides?.[sIdx];
+                    return serverSlide ? { ...s, id: serverSlide.id } : s;
+                  }),
+                  questions: currentLesson.questions.map((q: any, qIdx: number) => {
+                    const serverQ = pl.questions?.[qIdx];
+                    return serverQ ? { ...q, id: serverQ.id } : q;
+                  }),
+                  assignments: currentLesson.assignments.map((a: any, aIdx: number) => {
+                    const serverA = pl.assignments?.[aIdx];
+                    return serverA ? { ...a, id: serverA.id } : a;
+                  })
+                };
+              }
+              return pl;
+            }));
+          } else {
+            setLessons(parsedLessons);
+          }
+        }
+
+        setTimeout(() => setHasUnsavedChanges(false), 1000);
+
+        if (!isAutoSave) {
+          showToast(language === 'ar' ? "تم تحديث الكورس بنجاح" : "Course updated successfully", 'success');
+          router.push(`/super-admin/courses`);
+        } else {
+          setLastAutoSave(new Date());
+          // Keep auto-save silent so it does not interrupt the editor while typing.
+        }
       } else {
-        const data = await res.json().catch(() => ({}));
-        showToast(data.error || data.details || "فشل تحديث الكورس", 'error');
+        if (!isAutoSave) {
+          const data = await res.json().catch(() => ({}));
+          showToast(data.error || data.details || (language === 'ar' ? "فشل تحديث الكورس" : "Failed to update course"), 'error');
+        } else {
+          console.error("Auto-save failed:", await res.text());
+          showToast(language === 'ar' ? "فشل الحفظ التلقائي. تأكد من الاتصال ثم احفظ يدوياً." : "Auto-save failed. Check your connection, then save manually.", "error");
+        }
       }
     } catch (error: any) {
       console.error("Course update error:", error);
-      showToast(error.message || "خطأ في الاتصال بالخادم", 'error');
+      if (!isAutoSave) {
+        showToast(error.message || (language === 'ar' ? "خطأ في الاتصال بالخادم" : "Connection error"), 'error');
+      } else {
+        showToast(language === 'ar' ? "فشل الحفظ التلقائي. تأكد من الاتصال ثم احفظ يدوياً." : "Auto-save failed. Check your connection, then save manually.", "error");
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDeleteCourse = async () => {
-    if (!window.confirm("هل أنت متأكد من حذف هذا الكورس نهائياً؟")) return;
+    if (!window.confirm(language === 'ar' ? "هل أنت متأكد من حذف هذا الكورس نهائياً؟" : "Are you sure you want to permanently delete this course?")) return;
     const token = localStorage.getItem("super_admin_token");
     try {
       const res = await fetch(`${API_URL}/school/courses/${courseId}`, {
@@ -2338,10 +2513,10 @@ export default function EditCoursePage() {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
-        showToast("تم حذف الكورس بنجاح", 'success');
+        showToast(language === 'ar' ? "تم حذف الكورس بنجاح" : "Course deleted successfully", 'success');
         router.back();
       }
-    } catch (error) { showToast("خطأ في الاتصال", "error"); }
+    } catch (error) { showToast(language === 'ar' ? "خطأ في الاتصال" : "Connection error", "error"); }
   };
 
   if (isLoading) {
@@ -2357,8 +2532,8 @@ export default function EditCoursePage() {
       <div className="min-h-screen bg-[#f8fafc] text-slate-900" dir={language === 'ar' ? 'rtl' : 'ltr'}>
         <div className="p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8">
         {isLessonModalOpen ? (
-          <div className="max-w-6xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="bg-white border border-slate-200 w-full rounded-[40px] shadow-2xl overflow-hidden">
+          <div className="max-w-6xl mx-auto w-full h-[calc(100vh-2rem)] sm:h-[calc(100vh-3rem)] animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-white border border-slate-200 w-full h-full rounded-[28px] sm:rounded-[40px] shadow-2xl overflow-hidden flex flex-col">
               <div className="bg-indigo-600 p-8 flex justify-between items-center">
                 <div>
                   <h3 className="text-2xl font-black text-white flex items-center gap-3">
@@ -2372,7 +2547,7 @@ export default function EditCoursePage() {
                 </button>
               </div>
 
-              <div className="flex border-b border-slate-100 bg-slate-50">
+              <div className="flex border-b border-slate-100 bg-slate-50 overflow-x-auto shrink-0 custom-scrollbar">
                 {[
                   { id: 'info', label: language === 'ar' ? 'الأهداف والبيانات' : 'Goals & Info', icon: Target },
                   { id: 'scheduling', label: language === 'ar' ? 'الجدولة والظهور' : 'Scheduling & Visibility', icon: Clock },
@@ -2393,7 +2568,7 @@ export default function EditCoursePage() {
                 ))}
               </div>
 
-              <div className="p-8 sm:p-12 overflow-y-auto max-h-[70vh] custom-scrollbar bg-white">
+              <div className="flex-1 min-h-0 p-5 sm:p-8 lg:p-12 overflow-y-auto custom-scrollbar overscroll-contain bg-white">
                 {activeTab === 'info' && (
                   <div className="space-y-10">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -3041,9 +3216,31 @@ export default function EditCoursePage() {
                   </p>
                 </div>
               </div>
-              <div className="flex gap-3">
+              <div className="flex gap-3 items-center">
+                <div className="flex items-center gap-3 bg-slate-100 px-4 py-2 rounded-2xl border border-slate-200 ml-4">
+                  <span className="text-sm font-bold text-slate-600">{language === 'ar' ? "الحفظ التلقائي" : "Auto-Save"}</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" checked={isAutoSaveEnabled} onChange={(e) => {
+                      const checked = e.target.checked;
+                      setIsAutoSaveEnabled(checked);
+                      if (checked) {
+                        showToast(language === 'ar' ? "تم تفعيل الحفظ التلقائي (سيتم حفظ مسودة دورياً)" : "Auto-save enabled (draft will be saved periodically)", "info");
+                      } else {
+                        showToast(language === 'ar' ? "تم إيقاف الحفظ التلقائي" : "Auto-save disabled", "error");
+                      }
+                    }} />
+                    <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                  </label>
+                </div>
+
+                {lastAutoSave && (
+                  <span className="text-xs text-slate-400 font-bold hidden md:inline-block font-sans">
+                    {language === 'ar' ? 'آخر حفظ تلقائي:' : 'Last auto-save:'} {lastAutoSave.toLocaleTimeString()}
+                  </span>
+                )}
+                
                 <button onClick={handleDeleteCourse} className="bg-red-50 text-red-600 px-8 py-4 rounded-2xl font-black flex items-center gap-2 hover:bg-red-600 hover:text-white transition-all border border-red-100"><Trash2 size={20} /> {language === 'ar' ? "حذف" : "Delete"}</button>
-                <button onClick={handleSubmit} disabled={isSubmitting} className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-10 py-4 rounded-2xl font-black flex items-center gap-3 hover:scale-105 shadow-xl shadow-indigo-600/20 disabled:opacity-50 transition-all">
+                <button onClick={(e) => handleSubmit(e)} disabled={isSubmitting} className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-10 py-4 rounded-2xl font-black flex items-center gap-3 hover:scale-105 shadow-xl shadow-indigo-600/20 disabled:opacity-50 transition-all">
                   {isSubmitting 
                     ? (language === 'ar' ? "جاري الحفظ..." : "Saving...") 
                     : (language === 'ar' ? "حفظ التعديلات" : "Save Changes")}

@@ -271,8 +271,8 @@ export default function SchoolAdminClassesPage() {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-lg rounded-[40px] p-10 shadow-2xl animate-in zoom-in-95">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto custom-scrollbar">
+          <div className="bg-white w-full max-w-lg rounded-[28px] sm:rounded-[40px] p-5 sm:p-10 shadow-2xl animate-in zoom-in-95 my-4 sm:my-8 max-h-[calc(100vh-2rem)] overflow-y-auto custom-scrollbar">
             <div className="flex justify-between items-center mb-8">
               <h3 className="text-2xl font-black text-slate-800">{t('schoolAdmin.classesPage.modalTitle')}</h3>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-800"><X /></button>

@@ -10,7 +10,7 @@ import {
   HelpCircle, BookOpen, Save, Layers, Edit2, X,
   ChevronDown, ChevronUp, Play, Layout, Target,
   CheckCircle2, AlertCircle, Upload, Download, Settings,
-  Eye, Monitor, ListOrdered, FileJson, Clock,
+  Eye, Monitor, ListOrdered, FileJson, FileDown, Clock,
   Lightbulb, MessageSquareQuote, TriangleAlert, Search, CheckCircle
 } from "lucide-react";
 import * as XLSX from 'xlsx';
@@ -30,37 +30,37 @@ export default function EditCoursePage() {
   }> = {
     HINT: {
       icon: Lightbulb,
-      label: "Hint",
+      label: language === 'ar' ? "تلميح" : "Hint",
       container: "bg-yellow-50/70 border-yellow-200",
       badge: "bg-yellow-100 text-yellow-700",
     },
     TIP: {
       icon: Lightbulb,
-      label: "Tip",
+      label: language === 'ar' ? "نصيحة" : "Tip",
       container: "bg-sky-50/70 border-sky-200",
       badge: "bg-sky-100 text-sky-700",
     },
     WARNING: {
       icon: TriangleAlert,
-      label: "Warning",
+      label: language === 'ar' ? "تحذير" : "Warning",
       container: "bg-rose-50/70 border-rose-200",
       badge: "bg-rose-100 text-rose-700",
     },
     KEY_INSIGHT: {
       icon: Search,
-      label: "Key Insight",
+      label: language === 'ar' ? "رؤية رئيسية" : "Key Insight",
       container: "bg-indigo-50/70 border-indigo-200",
       badge: "bg-indigo-100 text-indigo-700",
     },
     FEEDBACK: {
       icon: MessageSquareQuote,
-      label: "Feedback",
+      label: language === 'ar' ? "ملاحظات" : "Feedback",
       container: "bg-emerald-50/70 border-emerald-200",
       badge: "bg-emerald-100 text-emerald-700",
     },
     EXPLANATION: {
       icon: CheckCircle,
-      label: "Explanation",
+      label: language === 'ar' ? "تفسير" : "Explanation",
       container: "bg-amber-50/70 border-amber-200",
       badge: "bg-amber-100 text-amber-700",
     },
@@ -192,7 +192,7 @@ export default function EditCoursePage() {
     isVisible: true,
     publishDate: "",
     cutOffDate: "",
-    slides: [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: "المقدمة", content: "", sections: [] }],
+    slides: [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? "المقدمة" : "Introduction", content: "", sections: [] }],
     questions: [],
     assignments: [],
     attachments: []
@@ -236,9 +236,9 @@ export default function EditCoursePage() {
   ];
 
   const QUESTION_TYPES = [
-    { id: "MCQ", label: "اختيار من متعدد" },
-    { id: "TRUE_FALSE", label: "صح وخطأ" },
-    { id: "MULTI_SELECT", label: "اختيار متعدد" }
+    { id: "MCQ", label: language === 'ar' ? "اختيار من متعدد" : "Multiple Choice" },
+    { id: "TRUE_FALSE", label: language === 'ar' ? "صح وخطأ" : "True / False" },
+    { id: "MULTI_SELECT", label: language === 'ar' ? "اختيار متعدد" : "Multi Select" }
   ];
 
   const [schoolName, setSchoolName] = useState("");
@@ -334,7 +334,7 @@ export default function EditCoursePage() {
           "3rd Secondary": "الصف الثالث الثانوي",
         };
         
-        let expandedGrades: string[] = [];
+        const expandedGrades: string[] = [];
         parsedGrades.forEach(g => {
           const mapped = forwardGradeMap[g] || g;
           if (mapped === "Elementary") {
@@ -383,7 +383,7 @@ export default function EditCoursePage() {
 
           try {
             parsedSlides = typeof l.slides === 'string' ? JSON.parse(l.slides) : (l.slides || []);
-          } catch (e) { parsedSlides = [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: "المقدمة", content: "", sections: [] }]; }
+          } catch (e) { parsedSlides = [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? "المقدمة" : "Introduction", content: "", sections: [] }]; }
 
           return {
             ...l,
@@ -411,7 +411,7 @@ export default function EditCoursePage() {
               return { ...q, explanations: parsedExps };
             }) : [],
             attachments: Array.isArray(parsedAttachments) ? parsedAttachments : [],
-            slides: Array.isArray(parsedSlides) && parsedSlides.length ? parsedSlides : [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: "المقدمة", content: "", sections: [] }]
+            slides: Array.isArray(parsedSlides) && parsedSlides.length ? parsedSlides : [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? "المقدمة" : "Introduction", content: "", sections: [] }]
           };
         }));
 
@@ -422,7 +422,7 @@ export default function EditCoursePage() {
         setTimeout(() => setHasUnsavedChanges(false), 1000);
       }
     } catch (error) {
-      showToast("خطأ في الاتصال", "error");
+      showToast(language === 'ar' ? "خطأ في الاتصال" : "Connection error", "error");
     } finally {
       setIsLoading(false);
     }
@@ -441,11 +441,11 @@ export default function EditCoursePage() {
       });
       
       if (res.ok) {
-        showToast("تم ربط المحتوى بنجاح", "success");
+        showToast(language === 'ar' ? "تم ربط المحتوى بنجاح" : "Content linked successfully", "success");
         if(token) fetchCourseData(token, courseId!);
       }
     } catch (e) {
-      showToast("فشل الربط", "error");
+      showToast(language === 'ar' ? "فشل الربط" : "Linking failed", "error");
     }
   };
 
@@ -474,14 +474,14 @@ export default function EditCoursePage() {
   }, [hasUnsavedChanges]);
 
   useEffect(() => {
-    if (!hasUnsavedChanges || isSubmitting || isLoading) return;
+    if (!hasUnsavedChanges || isSubmitting || isLoading || !isAutoSaveEnabled) return;
     
     const timer = setTimeout(() => {
       handleSubmit(undefined, true);
     }, 60000);
     
     return () => clearTimeout(timer);
-  }, [hasUnsavedChanges, isSubmitting, isLoading, courseData, lessons]);
+  }, [hasUnsavedChanges, isSubmitting, isLoading, courseData, lessons, isAutoSaveEnabled, isLessonModalOpen, currentLesson, editingLessonIndex]);
 
   const handleRemoveLesson = (index: number) => {
     const newLessons = [...lessons];
@@ -494,7 +494,7 @@ export default function EditCoursePage() {
     setCurrentLesson({
       title: "", domain: "", videoUrl: "", summary: "", notes: "", standards: "", indicators: "", learningOutcomes: "",
       isVisible: true, publishDate: "", cutOffDate: "",
-      slides: [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: "المقدمة", content: "", sections: [] }],
+      slides: [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? "المقدمة" : "Introduction", content: "", sections: [] }],
       questions: [],
       assignments: [],
       attachments: []
@@ -506,7 +506,7 @@ export default function EditCoursePage() {
   const openEditLessonModal = (index: number) => {
     setEditingLessonIndex(index);
     const lessonToEdit = { ...lessons[index] };
-    if (!lessonToEdit.slides || lessonToEdit.slides.length === 0) lessonToEdit.slides = [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: "المقدمة", content: "", sections: [] }];
+    if (!lessonToEdit.slides || lessonToEdit.slides.length === 0) lessonToEdit.slides = [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? "المقدمة" : "Introduction", content: "", sections: [] }];
     setCurrentLesson(lessonToEdit);
     setActiveTab('info');
     setIsLessonModalOpen(true);
@@ -523,12 +523,12 @@ export default function EditCoursePage() {
         setIsBankModalOpen(true);
       }
     } catch (e) {
-      showToast("فشل فتح بنك الأسئلة", "error");
+      showToast(language === 'ar' ? "فشل فتح بنك الأسئلة" : "Failed to open question bank", "error");
     }
   };
 
   const openQuestionBankModal = async () => {
-    showToast("جاري فتح بنك الأسئلة المركزي...", "info");
+    showToast(language === 'ar' ? "جاري فتح بنك الأسئلة المركزي..." : "Opening central question bank...", "info");
     try {
       const token = localStorage.getItem("school_admin_token");
       const res = await fetch(`${API_URL}/bank/questions`, {
@@ -539,7 +539,7 @@ export default function EditCoursePage() {
         setIsQuestionBankModalOpen(true);
       }
     } catch (e) {
-      showToast("فشل فتح بنك الأسئلة", "error");
+      showToast(language === 'ar' ? "فشل فتح بنك الأسئلة" : "Failed to open question bank", "error");
     }
   };
 
@@ -556,12 +556,12 @@ export default function EditCoursePage() {
       level: q.level
     });
     setCurrentLesson({ ...currentLesson, questions: newQuestions });
-    showToast("تم إضافة السؤال للدرس", "success");
+    showToast(language === 'ar' ? "تم إضافة السؤال للدرس" : "Question added to lesson", "success");
   };
 
   const saveLesson = async () => {
     if (!currentLesson.title) {
-      showToast("يجب إدخال عنوان الدرس", "error");
+      showToast(language === 'ar' ? "يجب إدخال عنوان الدرس" : "Lesson title is required", "error");
       return;
     }
     const newLessons = [...lessons];
@@ -611,13 +611,13 @@ export default function EditCoursePage() {
       });
 
       if (res.ok) {
-        showToast("تم حفظ الدرس ونشره تلقائياً ✅", "success");
+        showToast(language === 'ar' ? "تم حفظ الدرس ونشره تلقائياً ✅" : "Lesson saved and published automatically ✅", "success");
       } else {
-        showToast("تم الحفظ محلياً لكن فشل النشر - تأكد من الاتصال", "error");
+        showToast(language === 'ar' ? "تم الحفظ محلياً لكن فشل النشر - تأكد من الاتصال" : "Saved locally but publish failed - check connection", "error");
       }
     } catch (error: any) {
       console.error("Auto-save error:", error);
-      showToast("تم الحفظ محلياً لكن فشل النشر", "error");
+      showToast(language === 'ar' ? "تم الحفظ محلياً لكن فشل النشر" : "Saved locally but publish failed", "error");
     }
   };
 
@@ -730,7 +730,7 @@ export default function EditCoursePage() {
         const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
         
         if (rows.length < 2) {
-          showToast("الملف فارغ أو لا يحتوي على صفوف بيانات", "error");
+          showToast(language === 'ar' ? "الملف فارغ أو لا يحتوي على صفوف بيانات" : "File is empty or contains no data rows", "error");
           return;
         }
 
@@ -744,7 +744,7 @@ export default function EditCoursePage() {
         const lessonIdx = headers.findIndex(h => h.includes("lesson") || h.includes("درس") || h.includes("الدرس"));
 
         if (stdIdx === -1 && indIdx === -1 && loIdx === -1 && domainIdx === -1) {
-          showToast("لم يتم العثور على أعمدة متوافقة (المعايير، المؤشرات، المخرجات، المجال)", "error");
+          showToast(language === 'ar' ? "لم يتم العثور على أعمدة متوافقة (المعايير، المؤشرات، المخرجات، المجال)" : "No matching columns found (Standards, Indicators, Outcomes, Domain)", "error");
           return;
         }
 
@@ -1022,7 +1022,7 @@ export default function EditCoursePage() {
       ...currentLesson,
       [source]: newSlides
     });
-    showToast("تم إدراج الشريحة بنجاح", "success");
+    showToast(language === 'ar' ? "تم إدراج الشريحة بنجاح" : "Slide inserted successfully", "success");
   };
 
   const moveBlock = (source: 'slides' | 'assignments' | 'questions' = 'slides', index: number, direction: 'UP' | 'DOWN') => {
@@ -1210,7 +1210,7 @@ export default function EditCoursePage() {
                           value={block.title || ""}
                           onChange={(e) => updateBlock(source, sIdx, 'title', e.target.value)}
                           className="bg-transparent text-slate-900 font-black outline-none border-b border-transparent focus:border-indigo-600 px-2 py-1 w-full md:w-48 placeholder:text-slate-400"
-                          placeholder={block.type === 'TEXT' ? "عنوان الوحدة (اختياري)" : "عنوان السؤال (اختياري)"}
+                          placeholder={block.type === 'TEXT' ? (language === 'ar' ? "عنوان الوحدة (اختياري)" : "Unit title (optional)") : (language === 'ar' ? "عنوان السؤال (اختياري)" : "Question title (optional)")}
                         />
                       </div>
                     </div>
@@ -1282,7 +1282,7 @@ export default function EditCoursePage() {
                       type="url"
                       value={block.videoUrl || ""}
                       onChange={(e) => updateBlock(source, sIdx, 'videoUrl', e.target.value)}
-                      placeholder="أضف رابط يوتيوب أو فيميو هنا..."
+                      placeholder={language === 'ar' ? "أضف رابط يوتيوب أو فيميو هنا..." : "Add YouTube or Vimeo link here..."}
                       className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 font-bold"
                     />
                   </div>
@@ -1290,7 +1290,7 @@ export default function EditCoursePage() {
                     <RichTextEditor 
                       value={block.content}
                       onChange={(val) => updateBlock(source, sIdx, 'content', val)}
-                      placeholder={block.type === 'TEXT' ? "اكتب محتوى الشرح هنا..." : "اكتب نص السؤال هنا..."}
+                      placeholder={block.type === 'TEXT' ? (language === 'ar' ? "اكتب محتوى الشرح هنا..." : "Write explanation content here...") : (language === 'ar' ? "اكتب نص السؤال هنا..." : "Write question text here...")}
                       className="!bg-white !border-slate-200"
                     />
                   </div>
@@ -1479,7 +1479,7 @@ export default function EditCoursePage() {
                             <RichTextEditor 
                               value={sec.content}
                               onChange={(val) => updateSection(source, sIdx, secIdx, val)}
-                              placeholder={`محتوى الـ ${sec.type}...`}
+                              placeholder={language === 'ar' ? `محتوى الـ ${sec.type}...` : `${sec.type} content...`}
                               className="!bg-white"
                             />
                           </div>
@@ -2314,7 +2314,9 @@ export default function EditCoursePage() {
   const handleSubmit = async (e?: React.FormEvent, isAutoSave = false) => {
     if (e) e.preventDefault();
     if (!courseData.title) {
-      showToast("يرجى إدخال عنوان الكورس", "error");
+      if (!isAutoSave) {
+        showToast(language === 'ar' ? "يرجى إدخال عنوان الكورس" : "Please enter the course title", "error");
+      }
       return;
     }
 
@@ -2323,6 +2325,34 @@ export default function EditCoursePage() {
 
     try {
       const targetSchoolIds = (courseData.schoolIds || []).filter(Boolean);
+
+      const finalLessons = [...lessons];
+      if (isLessonModalOpen && currentLesson.title) {
+        if (editingLessonIndex !== null) {
+          finalLessons[editingLessonIndex] = currentLesson;
+        } else {
+          finalLessons.push(currentLesson);
+        }
+      }
+
+      const lessonsPayload = finalLessons.map((l) => ({
+        id: l.id,
+        title: l.title,
+        domain: l.domain || null,
+        videoUrl: l.videoUrl || null,
+        summary: l.summary || null,
+        notes: l.notes || null,
+        standards: l.standards || null,
+        indicators: l.indicators || null,
+        learningOutcomes: l.learningOutcomes || null,
+        isVisible: l.isVisible !== undefined ? l.isVisible : true,
+        publishDate: l.publishDate ? new Date(l.publishDate).toISOString() : null,
+        cutOffDate: l.cutOffDate ? new Date(l.cutOffDate).toISOString() : null,
+        attachments: JSON.stringify(l.attachments || []),
+        slides: JSON.stringify(l.slides || []),
+        questions: JSON.stringify(l.questions || []),
+        assignments: JSON.stringify(l.assignments || [])
+      }));
 
       const res = await fetch(`${API_URL}/school/courses/${courseId}`, {
         method: 'PUT',
@@ -2335,44 +2365,151 @@ export default function EditCoursePage() {
           isCentral: targetSchoolIds.length === 0,
           schoolId: targetSchoolIds.length > 0 ? targetSchoolIds[0] : null,
           schoolIds: targetSchoolIds,
-          lessons: lessons.map((l) => ({
-            id: l.id,
-            title: l.title,
-            domain: l.domain || null,
-            videoUrl: l.videoUrl || null,
-            summary: l.summary || null,
-            notes: l.notes || null,
-            standards: l.standards || null,
-            indicators: l.indicators || null,
-            learningOutcomes: l.learningOutcomes || null,
-            isVisible: l.isVisible !== undefined ? l.isVisible : true,
-            publishDate: l.publishDate ? new Date(l.publishDate).toISOString() : null,
-            cutOffDate: l.cutOffDate ? new Date(l.cutOffDate).toISOString() : null,
-            attachments: JSON.stringify(l.attachments || []),
-            slides: JSON.stringify(l.slides || []),
-            questions: JSON.stringify(l.questions || []),
-            assignments: JSON.stringify(l.assignments || [])
-          }))
+          lessons: lessonsPayload
         })
       });
 
       if (res.ok) {
-        setHasUnsavedChanges(false);
+        const data = await res.json();
+        if (data && data.lessons) {
+          const parsedLessons = data.lessons.map((l: any) => {
+            let parsedQuestions = [];
+            let parsedAssignments = [];
+            let parsedAttachments = [];
+            let parsedSlides = [];
+
+            try {
+              parsedQuestions = typeof l.questions === 'string' ? JSON.parse(l.questions) : (l.questions || []);
+            } catch (e) { parsedQuestions = []; }
+
+            try {
+              parsedAssignments = typeof l.assignments === 'string' ? JSON.parse(l.assignments) : (l.assignments || []);
+            } catch (e) { parsedAssignments = []; }
+
+            try {
+              parsedAttachments = typeof l.attachments === 'string' ? JSON.parse(l.attachments) : (l.attachments || []);
+            } catch (e) { parsedAttachments = []; }
+
+            try {
+              parsedSlides = typeof l.slides === 'string' ? JSON.parse(l.slides) : (l.slides || []);
+            } catch (e) { parsedSlides = [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? "المقدمة" : "Introduction", content: "", sections: [] }]; }
+
+            return {
+              ...l,
+              isVisible: l.isVisible !== undefined ? l.isVisible : true,
+              publishDate: l.publishDate ? new Date(new Date(l.publishDate).getTime() - new Date(l.publishDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
+              cutOffDate: l.cutOffDate ? new Date(new Date(l.cutOffDate).getTime() - new Date(l.cutOffDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
+              questions: Array.isArray(parsedQuestions) ? parsedQuestions.map(q => {
+                let parsedExps = [""];
+                try {
+                  parsedExps = typeof q.explanation === 'string' && q.explanation.startsWith('[') ? JSON.parse(q.explanation) : (q.explanations || [""]);
+                  if (!Array.isArray(parsedExps)) parsedExps = [q.explanation || ""];
+                } catch (e) {
+                  parsedExps = [q.explanation || ""];
+                }
+                return { ...q, explanations: parsedExps };
+              }) : [],
+              assignments: Array.isArray(parsedAssignments) ? parsedAssignments.map(q => {
+                let parsedExps = [""];
+                try {
+                  parsedExps = typeof q.explanation === 'string' && q.explanation.startsWith('[') ? JSON.parse(q.explanation) : (q.explanations || [""]);
+                  if (!Array.isArray(parsedExps)) parsedExps = [q.explanation || ""];
+                } catch (e) {
+                  parsedExps = [q.explanation || ""];
+                }
+                return { ...q, explanations: parsedExps };
+              }) : [],
+              attachments: Array.isArray(parsedAttachments) ? parsedAttachments : [],
+              slides: Array.isArray(parsedSlides) && parsedSlides.length ? parsedSlides : [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? "المقدمة" : "Introduction", content: "", sections: [] }]
+            };
+          });
+
+          // Adjust editing indexes if modal is open
+          if (isLessonModalOpen) {
+            let idx = editingLessonIndex;
+            if (idx === null) {
+              idx = parsedLessons.length - 1;
+              setEditingLessonIndex(idx);
+            }
+            if (idx >= 0 && idx < parsedLessons.length) {
+              setCurrentLesson((prev: any) => ({
+                ...prev,
+                id: parsedLessons[idx].id,
+                slides: prev.slides.map((s: any, sIdx: number) => {
+                  const serverSlide = parsedLessons[idx].slides?.[sIdx];
+                  return serverSlide ? { ...s, id: serverSlide.id } : s;
+                }),
+                questions: prev.questions.map((q: any, qIdx: number) => {
+                  const serverQ = parsedLessons[idx].questions?.[qIdx];
+                  return serverQ ? { ...q, id: serverQ.id } : q;
+                }),
+                assignments: prev.assignments.map((a: any, aIdx: number) => {
+                  const serverA = parsedLessons[idx].assignments?.[aIdx];
+                  return serverA ? { ...a, id: serverA.id } : a;
+                })
+              }));
+            }
+            // Set all lessons with backend IDs
+            setLessons(parsedLessons.map((pl: any, plIdx: number) => {
+              if (plIdx === idx) {
+                return {
+                  ...pl,
+                  title: currentLesson.title,
+                  domain: currentLesson.domain,
+                  videoUrl: currentLesson.videoUrl,
+                  summary: currentLesson.summary,
+                  notes: currentLesson.notes,
+                  standards: currentLesson.standards,
+                  indicators: currentLesson.indicators,
+                  learningOutcomes: currentLesson.learningOutcomes,
+                  isVisible: currentLesson.isVisible,
+                  publishDate: currentLesson.publishDate,
+                  cutOffDate: currentLesson.cutOffDate,
+                  slides: currentLesson.slides.map((s: any, sIdx: number) => {
+                    const serverSlide = pl.slides?.[sIdx];
+                    return serverSlide ? { ...s, id: serverSlide.id } : s;
+                  }),
+                  questions: currentLesson.questions.map((q: any, qIdx: number) => {
+                    const serverQ = pl.questions?.[qIdx];
+                    return serverQ ? { ...q, id: serverQ.id } : q;
+                  }),
+                  assignments: currentLesson.assignments.map((a: any, aIdx: number) => {
+                    const serverA = pl.assignments?.[aIdx];
+                    return serverA ? { ...a, id: serverA.id } : a;
+                  })
+                };
+              }
+              return pl;
+            }));
+          } else {
+            setLessons(parsedLessons);
+          }
+        }
+        
+        setTimeout(() => setHasUnsavedChanges(false), 1000);
+        
         if (!isAutoSave) {
-          showToast("تم تحديث الكورس بنجاح", 'success');
+          showToast(language === 'ar' ? "تم تحديث الكورس بنجاح" : "Course updated successfully", 'success');
           router.push(`/school-admin/courses`);
         } else {
           setLastAutoSave(new Date());
-          showToast("تم الحفظ التلقائي بنجاح", "success");
+          // Keep auto-save silent so it does not interrupt the editor while typing.
         }
       } else {
-        const data = await res.json().catch(() => ({}));
-        showToast(data.error || data.details || "فشل تحديث الكورس", 'error');
+        if (!isAutoSave) {
+          const data = await res.json().catch(() => ({}));
+          showToast(data.error || data.details || (language === 'ar' ? "فشل تحديث الكورس" : "Failed to update course"), 'error');
+        } else {
+          console.error("Auto-save failed:", await res.text());
+          showToast(language === 'ar' ? "فشل الحفظ التلقائي. تأكد من الاتصال ثم احفظ يدوياً." : "Auto-save failed. Check your connection, then save manually.", "error");
+        }
       }
     } catch (error: any) {
       console.error("Course update error:", error);
       if (!isAutoSave) {
-        showToast(error.message || "خطأ في الاتصال بالخادم", 'error');
+        showToast(error.message || (language === 'ar' ? "خطأ في الاتصال بالخادم" : "Server connection error"), 'error');
+      } else {
+        showToast(language === 'ar' ? "فشل الحفظ التلقائي. تأكد من الاتصال ثم احفظ يدوياً." : "Auto-save failed. Check your connection, then save manually.", "error");
       }
     } finally {
       setIsSubmitting(false);
@@ -2380,7 +2517,7 @@ export default function EditCoursePage() {
   };
 
   const handleDeleteCourse = async () => {
-    if (!window.confirm("هل أنت متأكد من حذف هذا الكورس نهائياً؟")) return;
+    if (!window.confirm(language === 'ar' ? "هل أنت متأكد من حذف هذا الكورس نهائياً؟" : "Are you sure you want to permanently delete this course?")) return;
     const token = localStorage.getItem("school_admin_token");
     try {
       const res = await fetch(`${API_URL}/school/courses/${courseId}`, {
@@ -2388,10 +2525,10 @@ export default function EditCoursePage() {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
-        showToast("تم حذف الكورس بنجاح", 'success');
+        showToast(language === 'ar' ? "تم حذف الكورس بنجاح" : "Course deleted successfully", 'success');
         router.back();
       }
-    } catch (error) { showToast("خطأ في الاتصال", "error"); }
+    } catch (error) { showToast(language === 'ar' ? "خطأ في الاتصال" : "Connection error", "error"); }
   };
 
   if (isLoading) {
@@ -2407,27 +2544,29 @@ export default function EditCoursePage() {
       <div className="min-h-screen bg-[#f8fafc] -mt-6 -mx-6 p-4 md:p-8" dir={language === 'ar' ? 'rtl' : 'ltr'}>
         <main className="max-w-[1600px] mx-auto">
         {isLessonModalOpen ? (
-          <div className="max-w-6xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="bg-white border border-slate-200 w-full rounded-[40px] shadow-2xl overflow-hidden">
+          <div className="max-w-6xl mx-auto w-full h-[calc(100vh-2rem)] sm:h-[calc(100vh-3rem)] animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-white border border-slate-200 w-full h-full rounded-[28px] sm:rounded-[40px] shadow-2xl overflow-hidden flex flex-col">
               <div className="bg-indigo-600 p-8 flex justify-between items-center">
                 <div>
                   <h3 className="text-2xl font-black text-white flex items-center gap-3">
                     <Edit2 className="w-8 h-8" />
-                    {editingLessonIndex !== null ? `تعديل الدرس: ${currentLesson.title}` : "إضافة درس جديد"}
+                    {editingLessonIndex !== null ? (language === 'ar' ? `تعديل الدرس: ${currentLesson.title}` : `Edit Lesson: ${currentLesson.title}`) : (language === 'ar' ? "إضافة درس جديد" : "Add New Lesson")}
                   </h3>
-                  <p className="text-indigo-100/60 mt-1 font-bold">قم بتحديث محتوى الدرس والأنشطة التفاعلية</p>
+                  <p className="text-indigo-100/60 mt-1 font-bold">{language === 'ar' ? "قم بتحديث محتوى الدرس والأنشطة التفاعلية" : "Update lesson content and interactive activities"}</p>
                 </div>
                 <button onClick={() => setIsLessonModalOpen(false)} className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-all">
                   <X className="w-6 h-6" />
                 </button>
               </div>
 
-              <div className="flex border-b border-slate-100 bg-slate-50">
+              <div className="flex border-b border-slate-100 bg-slate-50 overflow-x-auto shrink-0 custom-scrollbar">
                 {[
-                  { id: 'info', label: 'الأهداف والبيانات', icon: Target },
-                  { id: 'scheduling', label: 'الجدولة والظهور', icon: Clock },
-                  { id: 'slides', label: 'محتوى الشرح', icon: Layout },
-                  { id: 'attachments', label: 'المرفقات', icon: FileJson },
+                  { id: 'info', label: language === 'ar' ? 'الأهداف والبيانات' : 'Goals & Info', icon: Target },
+                  { id: 'scheduling', label: language === 'ar' ? 'الجدولة والظهور' : 'Scheduling & Visibility', icon: Clock },
+                  { id: 'slides', label: language === 'ar' ? 'محتوى الشرح' : 'Explanation Content', icon: Layout },
+                  { id: 'assignments', label: language === 'ar' ? 'التكليفات (Assignments)' : 'Assignments', icon: FileText },
+                  { id: 'exercises', label: language === 'ar' ? 'التدريبات' : 'Exercises', icon: HelpCircle },
+                  { id: 'attachments', label: language === 'ar' ? 'المرفقات' : 'Attachments', icon: FileJson },
                 ].map(tab => (
                   <button
                     key={tab.id}
@@ -2441,22 +2580,22 @@ export default function EditCoursePage() {
                 ))}
               </div>
 
-              <div className="p-8 sm:p-12 overflow-y-auto max-h-[70vh] custom-scrollbar bg-white">
+              <div className="flex-1 min-h-0 p-5 sm:p-8 lg:p-12 overflow-y-auto custom-scrollbar overscroll-contain bg-white">
                 {activeTab === 'info' && (
                   <div className="space-y-10">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div>
-                        <label className="text-xs font-black text-slate-400 uppercase mb-3 block tracking-widest">عنوان الدرس</label>
+                        <label className="text-xs font-black text-slate-400 uppercase mb-3 block tracking-widest">{language === 'ar' ? "عنوان الدرس" : "Lesson Title"}</label>
                         <input
                           type="text"
-                          placeholder="مثال: مقدمة في علم الفيزياء"
+                          placeholder={language === 'ar' ? "مثال: مقدمة في علم الفيزياء" : "e.g. Introduction to Physics"}
                           value={currentLesson.title || ""}
                           onChange={(e) => setCurrentLesson({ ...currentLesson, title: e.target.value })}
                           className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 text-lg font-bold outline-none focus:border-indigo-600 focus:bg-white transition-all shadow-sm"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-black text-slate-400 uppercase mb-3 block tracking-widest">رابط الفيديو (YouTube)</label>
+                        <label className="text-xs font-black text-slate-400 uppercase mb-3 block tracking-widest">{language === 'ar' ? "رابط الفيديو (YouTube)" : "Video Link (YouTube)"}</label>
                         <div className="relative">
                           <input
                             type="text"
@@ -2476,17 +2615,17 @@ export default function EditCoursePage() {
                         <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-100">
                            <Target className="w-5 h-5 text-white" />
                         </div>
-                        المعايير والمخرجات الأكاديمية
+                        {language === 'ar' ? "المعايير والمخرجات الأكاديمية" : "Academic Standards & Outcomes"}
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <div className="space-y-3">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">المجال (Domain)</label>
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">{language === 'ar' ? "المجال (Domain)" : "Domain"}</label>
                           <div className="flex gap-2">
                             <select
                               value={currentLesson.domain || ""}
                               onChange={(e) => {
                                 if (e.target.value === "__NEW__") {
-                                  const newDomain = prompt("أدخل اسم المجال الجديد (New Domain Name):");
+                                  const newDomain = prompt(language === 'ar' ? "أدخل اسم المجال الجديد:" : "Enter new domain name:");
                                   if (newDomain && newDomain.trim()) {
                                     setCurrentLesson({ ...currentLesson, domain: newDomain.trim() });
                                   }
@@ -2496,11 +2635,11 @@ export default function EditCoursePage() {
                               }}
                               className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all shadow-sm appearance-none"
                             >
-                              <option value="">اختر المجال...</option>
+                              <option value="">{language === 'ar' ? "اختر المجال..." : "Select Domain..."}</option>
                               {Array.from(new Set(lessons.map(l => l.domain).filter(Boolean))).map((domainName: any) => (
                                 <option key={domainName} value={domainName}>{domainName}</option>
                               ))}
-                              <option value="__NEW__" className="text-indigo-600 font-bold">+ إضافة مجال جديد...</option>
+                              <option value="__NEW__" className="text-indigo-600 font-bold">{language === 'ar' ? "+ إضافة مجال جديد..." : "+ Add New Domain..."}</option>
                             </select>
                             {currentLesson.domain && (
                               <div className="flex gap-1 shrink-0">
@@ -2675,7 +2814,7 @@ export default function EditCoursePage() {
                         </div>
 
                         <div className="space-y-3 relative">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">المؤشرات (Indicators)</label>
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">{language === 'ar' ? "المؤشرات (Indicators)" : "Indicators"}</label>
                           <div className="relative">
                             <button
                               type="button"
@@ -2688,7 +2827,7 @@ export default function EditCoursePage() {
                               <span className="truncate">
                                 {(() => {
                                   const selected = (currentLesson.indicators || "").split("\n").filter(Boolean);
-                                  if (selected.length === 0) return "اختر المؤشر...";
+                                  if (selected.length === 0) return language === 'ar' ? "اختر المؤشر..." : "Select Indicator...";
                                   return language === 'ar' 
                                     ? `تم تحديد (${selected.length}) مؤشرات` 
                                     : `Selected (${selected.length}) indicators`;
@@ -2701,7 +2840,11 @@ export default function EditCoursePage() {
                               <>
                                 <div className="fixed inset-0 z-40" onClick={() => setIsIndicatorDropdownOpen(false)}></div>
                                 <div className="absolute z-50 w-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-xl max-h-72 overflow-y-auto p-3 space-y-1 animate-in fade-in slide-in-from-top-2 duration-200">
-                                  {["مؤشر 1: يحدد المفاهيم الأساسية", "مؤشر 2: يطبق القوانين الرياضية", "مؤشر 3: يستنتج العلاقات"].map((option) => {
+                                  {[
+                                    language === 'ar' ? "مؤشر 1: يحدد المفاهيم الأساسية" : "Indicator 1: Identifies basic concepts",
+                                    language === 'ar' ? "مؤشر 2: يطبق القوانين الرياضية" : "Indicator 2: Applies mathematical laws",
+                                    language === 'ar' ? "مؤشر 3: يستنتج العلاقات" : "Indicator 3: Deduces relationships"
+                                  ].map((option) => {
                                     const selected = (currentLesson.indicators || "").split("\n").filter(Boolean);
                                     const isSelected = selected.includes(option);
                                     return (
@@ -2727,7 +2870,15 @@ export default function EditCoursePage() {
 
                                   {(() => {
                                     const selected = (currentLesson.indicators || "").split("\n").filter(Boolean);
-                                    const customOpts = selected.filter((x: string) => !["مؤشر 1: يحدد المفاهيم الأساسية", "مؤشر 2: يطبق القوانين الرياضية", "مؤشر 3: يستنتج العلاقات"].includes(x));
+                                    const defaultOptions = [
+                                      "مؤشر 1: يحدد المفاهيم الأساسية",
+                                      "مؤشر 2: يطبق القوانين الرياضية",
+                                      "مؤشر 3: يستنتج العلاقات",
+                                      language === 'ar' ? "مؤشر 1: يحدد المفاهيم الأساسية" : "Indicator 1: Identifies basic concepts",
+                                      language === 'ar' ? "مؤشر 2: يطبق القوانين الرياضية" : "Indicator 2: Applies mathematical laws",
+                                      language === 'ar' ? "مؤشر 3: يستنتج العلاقات" : "Indicator 3: Deduces relationships"
+                                    ];
+                                    const customOpts = selected.filter((x: string) => !defaultOptions.includes(x));
                                     return customOpts.map((option: string) => (
                                       <div key={option} className="flex items-center justify-between gap-2 px-3 py-1 hover:bg-slate-50 rounded-xl text-slate-700 font-bold text-xs">
                                         <label className="flex items-center gap-3 flex-1 cursor-pointer py-1.5">
@@ -2802,7 +2953,7 @@ export default function EditCoursePage() {
                         </div>
 
                         <div className="space-y-3 relative">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">نواتج التعلم (Outcomes)</label>
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">{language === 'ar' ? "نواتج التعلم (Outcomes)" : "Learning Outcomes"}</label>
                           <div className="relative">
                             <button
                               type="button"
@@ -2815,7 +2966,7 @@ export default function EditCoursePage() {
                               <span className="truncate">
                                 {(() => {
                                   const selected = (currentLesson.learningOutcomes || "").split("\n").filter(Boolean);
-                                  if (selected.length === 0) return "اختر ناتج التعلم...";
+                                  if (selected.length === 0) return language === 'ar' ? "اختر ناتج التعلم..." : "Select Learning Outcome...";
                                   return language === 'ar' 
                                     ? `تم تحديد (${selected.length}) نواتج تعلم` 
                                     : `Selected (${selected.length}) outcomes`;
@@ -2828,7 +2979,11 @@ export default function EditCoursePage() {
                               <>
                                 <div className="fixed inset-0 z-40" onClick={() => setIsOutcomeDropdownOpen(false)}></div>
                                 <div className="absolute z-50 w-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-xl max-h-72 overflow-y-auto p-3 space-y-1 animate-in fade-in slide-in-from-top-2 duration-200">
-                                  {["ناتج 1: أن يكون الطالب قادراً على...", "ناتج 2: أن يميز الطالب بين...", "ناتج 3: أن يحلل الطالب..."].map((option) => {
+                                  {[
+                                    language === 'ar' ? "ناتج 1: أن يكون الطالب قادراً على..." : "Outcome 1: Student should be able to...",
+                                    language === 'ar' ? "ناتج 2: أن يميز الطالب بين..." : "Outcome 2: Student should distinguish between...",
+                                    language === 'ar' ? "ناتج 3: أن يحلل الطالب..." : "Outcome 3: Student should analyze..."
+                                  ].map((option) => {
                                     const selected = (currentLesson.learningOutcomes || "").split("\n").filter(Boolean);
                                     const isSelected = selected.includes(option);
                                     return (
@@ -2854,7 +3009,15 @@ export default function EditCoursePage() {
 
                                   {(() => {
                                     const selected = (currentLesson.learningOutcomes || "").split("\n").filter(Boolean);
-                                    const customOpts = selected.filter((x: string) => !["ناتج 1: أن يكون الطالب قادراً على...", "ناتج 2: أن يميز الطالب بين...", "ناتج 3: أن يحلل الطالب..."].includes(x));
+                                    const defaultOptions = [
+                                      "ناتج 1: أن يكون الطالب قادراً على...",
+                                      "ناتج 2: أن يميز الطالب بين...",
+                                      "ناتج 3: أن يحلل الطالب...",
+                                      language === 'ar' ? "ناتج 1: أن يكون الطالب قادراً على..." : "Outcome 1: Student should be able to...",
+                                      language === 'ar' ? "ناتج 2: أن يميز الطالب بين..." : "Outcome 2: Student should distinguish between...",
+                                      language === 'ar' ? "ناتج 3: أن يحلل الطالب..." : "Outcome 3: Student should analyze..."
+                                    ];
+                                    const customOpts = selected.filter((x: string) => !defaultOptions.includes(x));
                                     return customOpts.map((option: string) => (
                                       <div key={option} className="flex items-center justify-between gap-2 px-3 py-1 hover:bg-slate-50 rounded-xl text-slate-700 font-bold text-xs">
                                         <label className="flex items-center gap-3 flex-1 cursor-pointer py-1.5">
@@ -2943,7 +3106,7 @@ export default function EditCoursePage() {
                           className="flex items-center gap-2 bg-emerald-50 text-emerald-600 px-6 py-2.5 rounded-xl border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all font-black text-xs cursor-pointer shadow-sm"
                         >
                           <Upload className="w-4 h-4" />
-                          رفع المعايير من Excel
+                          {language === 'ar' ? "رفع المعايير من Excel" : "Upload standards from Excel"}
                         </button>
                         <button 
                           type="button"
@@ -2951,7 +3114,7 @@ export default function EditCoursePage() {
                           className="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-6 py-2.5 rounded-xl border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all font-black text-xs cursor-pointer shadow-sm"
                         >
                           <Download className="w-4 h-4" />
-                          تحميل نموذج Excel الاسترشادي
+                          {language === 'ar' ? "تحميل نموذج Excel الاسترشادي" : "Download guide Excel template"}
                         </button>
                       </div>
                     </div>
@@ -3026,7 +3189,7 @@ export default function EditCoursePage() {
                           </div>
                           <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block px-1">اسم الملف</label>
-                            <input type="text" value={att.name} onChange={(e) => { const atts = [...currentLesson.attachments]; atts[attIdx].name = e.target.value; setCurrentLesson({ ...currentLesson, attachments: atts }); }} className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold text-sm outline-none focus:border-indigo-600" placeholder="مثال: كتاب الفيزياء الأساسي" />
+                            <input type="text" value={att.name} onChange={(e) => { const atts = [...currentLesson.attachments]; atts[attIdx].name = e.target.value; setCurrentLesson({ ...currentLesson, attachments: atts }); }} className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold text-sm outline-none focus:border-indigo-600" placeholder={language === 'ar' ? "مثال: كتاب الفيزياء الأساسي" : "e.g. Basic Physics Book"} />
                           </div>
                           <div className="flex gap-3">
                             <div className="w-32 space-y-2">
@@ -3064,15 +3227,15 @@ export default function EditCoursePage() {
               <div className="flex gap-3 items-center">
                 
                 <div className="flex items-center gap-3 bg-slate-100 px-4 py-2 rounded-2xl border border-slate-200 ml-4">
-                  <span className="text-sm font-bold text-slate-600">الحفظ التلقائي</span>
+                  <span className="text-sm font-bold text-slate-600">{language === 'ar' ? 'الحفظ التلقائي' : 'Auto-save'}</span>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" className="sr-only peer" checked={isAutoSaveEnabled} onChange={(e) => {
                       const checked = e.target.checked;
                       setIsAutoSaveEnabled(checked);
                       if (checked) {
-                        showToast("تم تفعيل الحفظ التلقائي (سيتم حفظ مسودة دورياً)", "info");
+                        showToast(language === 'ar' ? "تم تفعيل الحفظ التلقائي (سيتم حفظ مسودة دورياً)" : "Auto-save enabled (drafts will be saved periodically)", "info");
                       } else {
-                        showToast("تم إيقاف الحفظ التلقائي", "error");
+                        showToast(language === 'ar' ? "تم إيقاف الحفظ التلقائي" : "Auto-save disabled", "error");
                       }
                     }} />
                     <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
@@ -3084,7 +3247,7 @@ export default function EditCoursePage() {
                     {language === 'ar' ? 'آخر حفظ تلقائي:' : 'Last auto-save:'} {lastAutoSave.toLocaleTimeString()}
                   </span>
                 )}
-                <button onClick={(e) => handleSubmit(e)} disabled={isSubmitting} className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-10 py-4 rounded-2xl font-black flex items-center gap-3 hover:scale-105 shadow-xl shadow-indigo-600/20 disabled:opacity-50 transition-all">{isSubmitting ? "جاري الحفظ..." : "حفظ التعديلات"}<Save className="w-6 h-6" /></button>
+                <button onClick={(e) => handleSubmit(e)} disabled={isSubmitting} className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-10 py-4 rounded-2xl font-black flex items-center gap-3 hover:scale-105 shadow-xl shadow-indigo-600/20 disabled:opacity-50 transition-all">{isSubmitting ? (language === 'ar' ? "جاري الحفظ..." : "Saving...") : (language === 'ar' ? "حفظ التعديلات" : "Save Changes")}<Save className="w-6 h-6" /></button>
               </div>
             </div>
 
@@ -3150,11 +3313,11 @@ export default function EditCoursePage() {
                                           const url = await uploadFileToServer(file);
                                           if(confirm("هل تريد اعتماد هذه الصورة كغلاف جديد؟")) {
                                              setCourseData({...courseData, coverImage: url});
-                                             showToast("تم تحديث صورة الغلاف بنجاح", "success");
+                                             showToast(language === 'ar' ? "تم تحديث صورة الغلاف بنجاح" : "Cover image updated successfully", "success");
                                           }
                                         } catch (error) {
                                           console.error("Upload error:", error);
-                                          showToast("فشل رفع الصورة، حاول مرة أخرى", "error");
+                                           showToast(language === 'ar' ? "فشل رفع الصورة، حاول مرة أخرى" : "Failed to upload image, please try again", "error");
                                         }
                                       }
                                     }} />
@@ -3166,7 +3329,7 @@ export default function EditCoursePage() {
                               <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-indigo-600 shadow-sm mb-3">
                                 <Upload className="w-6 h-6" />
                               </div>
-                              <span className="text-xs font-black text-slate-400 group-hover:text-indigo-600">اضغط لرفع غلاف الكورس</span>
+                              <span className="text-xs font-black text-slate-400 group-hover:text-indigo-600">{language === 'ar' ? 'اضغط لرفع غلاف الكورس' : 'Click to upload course cover'}</span>
                               <input type="file" className="hidden" accept="image/*" onChange={async (e: any) => {
                                       const file = e.target.files[0];
                                       if (file) {
@@ -3178,7 +3341,7 @@ export default function EditCoursePage() {
                                           }
                                         } catch (error) {
                                           console.error("Upload error:", error);
-                                          showToast("فشل رفع الصورة، حاول مرة أخرى", "error");
+                                           showToast(language === 'ar' ? "فشل رفع الصورة، حاول مرة أخرى" : "Failed to upload image, please try again", "error");
                                         }
                                       }
                                     }} />
