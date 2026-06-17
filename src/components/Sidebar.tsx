@@ -81,7 +81,7 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose, onToggle, rol
 
   return (
     <>
-      <aside className={`fixed top-0 ${sidePosition} h-full w-72 bg-white border-slate-100 z-50 transition-transform duration-300 ${isOpen ? 'translate-x-0' : sideSlideOut} shadow-xl flex flex-col ${language === 'ar' ? 'border-l' : 'border-r'}`}>
+      <aside className={`fixed top-0 ${sidePosition} h-full w-[280px] max-w-[85vw] bg-white border-slate-100 z-50 transition-transform duration-300 ${isOpen ? 'translate-x-0' : sideSlideOut} shadow-xl flex flex-col ${language === 'ar' ? 'border-l' : 'border-r'}`}>
 
         {/* School Identity */}
         <div className="p-8 mb-4 border-b border-slate-50">

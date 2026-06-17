@@ -7,7 +7,11 @@ const getBackendBase = () => {
   const origin = process.env.BACKEND_ORIGIN?.replace(/\/+$/, '').trim();
   if (origin) return origin;
 
-  // Priority 2: Extract origin from NEXT_PUBLIC_API_URL
+  // Priority 2: Explicit internal Docker URL, if configured by the deployment
+  const internalOrigin = process.env.INTERNAL_BACKEND_URL?.replace(/\/+$/, '').trim();
+  if (internalOrigin) return internalOrigin;
+
+  // Priority 3: Extract origin from NEXT_PUBLIC_API_URL
   const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/"/g, '').trim();
   if (apiUrl) {
     try {
@@ -15,7 +19,7 @@ const getBackendBase = () => {
     } catch {}
   }
 
-  // Priority 3: Docker internal fallback
+  // Priority 4: Docker internal fallback for docker-compose deployments
   return 'http://backend:5000';
 };
 
@@ -28,20 +32,23 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
   const headers = new Headers();
   req.headers.forEach((value, key) => {
     // Skip host header to avoid conflicts
-    if (key.toLowerCase() !== 'host') {
+    // Skip content-length header to prevent multer 'request aborted' errors when streaming multipart/form-data
+    const lowerKey = key.toLowerCase();
+    if (lowerKey !== 'host' && lowerKey !== 'content-length') {
       headers.set(key, value);
     }
   });
 
   try {
-    const backendResponse = await fetch(targetUrl, {
+    const requestInit: RequestInit & { duplex: 'half' } = {
       method: req.method,
       headers,
       body: req.method !== 'GET' && req.method !== 'HEAD' ? req.body : undefined,
       duplex: 'half',
-      // @ts-ignore
       redirect: 'follow',
-    } as RequestInit);
+    };
+
+    const backendResponse = await fetch(targetUrl, requestInit);
 
     // Copy response headers
     const responseHeaders = new Headers();

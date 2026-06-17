@@ -59,7 +59,7 @@ export default function SuperAdminSidebar({
 
   return (
     <>
-      <aside className={`fixed top-0 ${sidePosition} h-full w-72 bg-white border-slate-100 z-50 transition-transform duration-300 ${isOpen ? 'translate-x-0' : sideSlideOut} shadow-xl flex flex-col ${language === 'ar' ? 'border-l' : 'border-r'}`}>
+      <aside className={`fixed top-0 ${sidePosition} h-full w-[280px] max-w-[85vw] bg-white border-slate-100 z-50 transition-transform duration-300 ${isOpen ? 'translate-x-0' : sideSlideOut} shadow-xl flex flex-col ${language === 'ar' ? 'border-l' : 'border-r'}`}>
 
         {/* Brand Logo */}
         <div className="px-6 py-8 border-b border-slate-100">

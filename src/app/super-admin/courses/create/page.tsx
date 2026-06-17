@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import * as XLSX from 'xlsx';
 import RichTextEditor from "@/components/RichTextEditor";
+import MathInput from "@/components/MathInput";
 import { compressImage } from "@/lib/image-utils";
 import FileUpload from "@/components/FileUpload";
 
@@ -177,7 +178,7 @@ export default function CreateCoursePage() {
   };
 
   const [isLoading, setIsLoading] = useState(false);
-    const [isAutoSaveEnabled, setIsAutoSaveEnabled] = useState(false);
+    const [isAutoSaveEnabled, setIsAutoSaveEnabled] = useState(true);
     const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
     const [createdId, setCreatedId] = useState<string | null>(null);
   const [schools, setSchools] = useState<any[]>([]);
@@ -1188,16 +1189,15 @@ export default function CreateCoursePage() {
                                 >
                                   {isSelected && opt && <CheckCircle2 className="w-4 h-4 text-white" />}
                                 </div>
-                                <input 
-                                  type="text"
+                                <MathInput 
                                   value={opt}
-                                  onChange={(e) => {
+                                  onChange={(val) => {
                                     const newOpts = [...(block.options || [])];
-                                    newOpts[oIdx] = e.target.value;
+                                    newOpts[oIdx] = val;
                                     updateBlock(source, sIdx, 'options', newOpts);
                                   }}
                                   placeholder={language === 'ar' ? `الخيار ${oIdx + 1}` : `Option ${oIdx + 1}`}
-                                  className="bg-transparent outline-none font-bold text-slate-700 flex-1"
+                                  className="bg-transparent flex-1"
                                 />
                                 {block.options.length > 2 && (
                                   <button type="button" onClick={() => {
@@ -2016,12 +2016,11 @@ export default function CreateCoursePage() {
                           >
                             {isQuestionCorrectAnswer(opt) && opt !== "" && <CheckCircle2 className="w-5 h-5 text-white" />}
                           </div>
-                          <input 
-                            type="text" 
+                          <MathInput 
                             placeholder={language === 'ar' ? `الخيار ${oIndex + 1}` : `Option ${oIndex + 1}`}
-                            className="bg-transparent flex-1 outline-none font-bold text-slate-700 placeholder:text-slate-300 text-sm"
+                            className="bg-transparent flex-1"
                             value={opt}
-                            onChange={(e) => updateQuestionOption(oIndex, e.target.value)}
+                            onChange={(val) => updateQuestionOption(oIndex, val)}
                           />
                           {tempQuestion.options.length > 2 && (
                             <button 
@@ -2076,76 +2075,211 @@ export default function CreateCoursePage() {
   };
 
   // Auto-save interval
-    useEffect(() => {
-      if (!isAutoSaveEnabled) return;
-      
-      const interval = setInterval(async () => {
-        try {
-          const token = localStorage.getItem("super_admin_token");
-          if (!token) return;
+  useEffect(() => {
+    if (!isAutoSaveEnabled) return;
+    
+    const interval = setInterval(async () => {
+      try {
+        const token = localStorage.getItem("super_admin_token");
+        if (!token) return;
 
-          const lessonsPayload = lessons.map((l) => ({
-            title: l.title,
-            domain: l.domain || null,
-            videoUrl: l.videoUrl || null,
-            summary: l.summary || null,
-            notes: l.notes || null,
-            standards: l.standards || null,
-            indicators: l.indicators || null,
-            learningOutcomes: l.learningOutcomes || null,
-            isVisible: l.isVisible !== undefined ? l.isVisible : true,
-            publishDate: l.publishDate ? new Date(l.publishDate).toISOString() : null,
-            cutOffDate: l.cutOffDate ? new Date(l.cutOffDate).toISOString() : null,
-            attachments: JSON.stringify(l.attachments || []),
-            slides: JSON.stringify(l.slides || []),
-            questions: JSON.stringify(l.questions || []),
-            assignments: JSON.stringify(l.assignments || [])
-          }));
-
-          const subjectString = courseData.subjects.join(", ");
-          
-          const payload = {
-            title: courseData.title || "مسودة كورس مركزي بدون عنوان",
-            description: courseData.description,
-            coverImage: courseData.coverImage || null,
-            grades: courseData.grades,
-            subject: subjectString || "غير محدد",
-            country: courseData.country,
-            isCentral: true,
-            schoolIds: courseData.schoolIds,
-            lessons: lessonsPayload
-          };
-
-          const method = createdId ? "PUT" : "POST";
-          const url = createdId 
-            ? `${API_URL}/admin/courses/${createdId}`
-            : `${API_URL}/admin/courses`;
-
-          const res = await fetch(url, {
-            method,
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify(payload)
-          });
-
-          if (res.ok) {
-            const data = await res.json();
-            if (!createdId && data.course?.id) {
-               setCreatedId(data.course.id);
-            }
-            setLastAutoSave(new Date());
+        const finalLessons = [...lessons];
+        if (isLessonModalOpen && currentLesson.title) {
+          if (editingLessonIndex !== null) {
+            finalLessons[editingLessonIndex] = currentLesson;
+          } else {
+            finalLessons.push(currentLesson);
           }
-        } catch (err) {
-          console.error("Auto save failed", err);
         }
-      }, 60000);
 
-      return () => clearInterval(interval);
-    }, [isAutoSaveEnabled, createdId, courseData, lessons]);
+        const lessonsPayload = finalLessons.map((l) => ({
+          id: l.id,
+          title: l.title,
+          domain: l.domain || null,
+          videoUrl: l.videoUrl || null,
+          summary: l.summary || null,
+          notes: l.notes || null,
+          standards: l.standards || null,
+          indicators: l.indicators || null,
+          learningOutcomes: l.learningOutcomes || null,
+          isVisible: l.isVisible !== undefined ? l.isVisible : true,
+          publishDate: l.publishDate ? new Date(l.publishDate).toISOString() : null,
+          cutOffDate: l.cutOffDate ? new Date(l.cutOffDate).toISOString() : null,
+          attachments: JSON.stringify(l.attachments || []),
+          slides: JSON.stringify(l.slides || []),
+          questions: JSON.stringify(l.questions || []),
+          assignments: JSON.stringify(l.assignments || [])
+        }));
 
-    const handleSubmit = async (e: React.FormEvent) => {
+        const subjectString = courseData.subjects.join(", ");
+        const targetSchoolIds = (courseData.schoolIds || []).filter(Boolean);
+        const isCentral = targetSchoolIds.length === 0;
+        
+        const payload = {
+          title: courseData.title || "مسودة كورس مركزي بدون عنوان",
+          description: courseData.description,
+          coverImage: courseData.coverImage || null,
+          grades: courseData.grades,
+          subject: subjectString || "غير محدد",
+          country: courseData.country,
+          isCentral,
+          schoolId: targetSchoolIds.length > 0 ? targetSchoolIds[0] : null,
+          schoolIds: targetSchoolIds,
+          lessons: lessonsPayload
+        };
+
+        const method = createdId ? "PUT" : "POST";
+        const url = createdId 
+          ? `${API_URL}/school/courses/${createdId}`
+          : `${API_URL}/school/courses`;
+
+        const res = await fetch(url, {
+          method,
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const serverId = data.id || data.course?.id;
+          if (!createdId && serverId) {
+             setCreatedId(serverId);
+          }
+          if (data && data.lessons) {
+            const parsedLessons = data.lessons.map((l: any) => {
+              let parsedQuestions = [];
+              let parsedAssignments = [];
+              let parsedAttachments = [];
+              let parsedSlides = [];
+
+              try {
+                parsedQuestions = typeof l.questions === 'string' ? JSON.parse(l.questions) : (l.questions || []);
+              } catch (e) { parsedQuestions = []; }
+
+              try {
+                parsedAssignments = typeof l.assignments === 'string' ? JSON.parse(l.assignments) : (l.assignments || []);
+              } catch (e) { parsedAssignments = []; }
+
+              try {
+                parsedAttachments = typeof l.attachments === 'string' ? JSON.parse(l.attachments) : (l.attachments || []);
+              } catch (e) { parsedAttachments = []; }
+
+              try {
+                parsedSlides = typeof l.slides === 'string' ? JSON.parse(l.slides) : (l.slides || []);
+              } catch (e) { parsedSlides = [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? "المقدمة" : "Introduction", content: "", sections: [] }]; }
+
+              return {
+                ...l,
+                isVisible: l.isVisible !== undefined ? l.isVisible : true,
+                publishDate: l.publishDate ? new Date(new Date(l.publishDate).getTime() - new Date(l.publishDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
+                cutOffDate: l.cutOffDate ? new Date(new Date(l.cutOffDate).getTime() - new Date(l.cutOffDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
+                questions: Array.isArray(parsedQuestions) ? parsedQuestions.map(q => {
+                  let parsedExps = [""];
+                  try {
+                    parsedExps = typeof q.explanation === 'string' && q.explanation.startsWith('[') ? JSON.parse(q.explanation) : (q.explanations || [""]);
+                    if (!Array.isArray(parsedExps)) parsedExps = [q.explanation || ""];
+                  } catch (e) {
+                    parsedExps = [q.explanation || ""];
+                  }
+                  return { ...q, explanations: parsedExps };
+                }) : [],
+                assignments: Array.isArray(parsedAssignments) ? parsedAssignments.map(q => {
+                  let parsedExps = [""];
+                  try {
+                    parsedExps = typeof q.explanation === 'string' && q.explanation.startsWith('[') ? JSON.parse(q.explanation) : (q.explanations || [""]);
+                    if (!Array.isArray(parsedExps)) parsedExps = [q.explanation || ""];
+                  } catch (e) {
+                    parsedExps = [q.explanation || ""];
+                  }
+                  return { ...q, explanations: parsedExps };
+                }) : [],
+                attachments: Array.isArray(parsedAttachments) ? parsedAttachments : [],
+                slides: Array.isArray(parsedSlides) && parsedSlides.length ? parsedSlides : [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? "المقدمة" : "Introduction", content: "", sections: [] }]
+              };
+            });
+
+            // Adjust editing indexes if modal is open
+            if (isLessonModalOpen) {
+              let idx = editingLessonIndex;
+              if (idx === null) {
+                idx = parsedLessons.length - 1;
+                setEditingLessonIndex(idx);
+              }
+              if (idx >= 0 && idx < parsedLessons.length) {
+                // Keep current state edits so we don't overwrite user actively typing, 
+                // but preserve backend-assigned IDs (UUIDs)
+                setCurrentLesson((prev: any) => ({
+                  ...prev,
+                  id: parsedLessons[idx].id,
+                  slides: prev.slides.map((s: any, sIdx: number) => {
+                    const serverSlide = parsedLessons[idx].slides?.[sIdx];
+                    return serverSlide ? { ...s, id: serverSlide.id } : s;
+                  }),
+                  questions: prev.questions.map((q: any, qIdx: number) => {
+                    const serverQ = parsedLessons[idx].questions?.[qIdx];
+                    return serverQ ? { ...q, id: serverQ.id } : q;
+                  }),
+                  assignments: prev.assignments.map((a: any, aIdx: number) => {
+                    const serverA = parsedLessons[idx].assignments?.[aIdx];
+                    return serverA ? { ...a, id: serverA.id } : a;
+                  })
+                }));
+              }
+              // Set all lessons with backend IDs
+              setLessons(parsedLessons.map((pl: any, plIdx: number) => {
+                if (plIdx === idx) {
+                  return {
+                    ...pl,
+                    title: currentLesson.title,
+                    domain: currentLesson.domain,
+                    videoUrl: currentLesson.videoUrl,
+                    summary: currentLesson.summary,
+                    notes: currentLesson.notes,
+                    standards: currentLesson.standards,
+                    indicators: currentLesson.indicators,
+                    learningOutcomes: currentLesson.learningOutcomes,
+                    isVisible: currentLesson.isVisible,
+                    publishDate: currentLesson.publishDate,
+                    cutOffDate: currentLesson.cutOffDate,
+                    slides: currentLesson.slides.map((s: any, sIdx: number) => {
+                      const serverSlide = pl.slides?.[sIdx];
+                      return serverSlide ? { ...s, id: serverSlide.id } : s;
+                    }),
+                    questions: currentLesson.questions.map((q: any, qIdx: number) => {
+                      const serverQ = pl.questions?.[qIdx];
+                      return serverQ ? { ...q, id: serverQ.id } : q;
+                    }),
+                    assignments: currentLesson.assignments.map((a: any, aIdx: number) => {
+                      const serverA = pl.assignments?.[aIdx];
+                      return serverA ? { ...a, id: serverA.id } : a;
+                    })
+                  };
+                }
+                return pl;
+              }));
+            } else {
+              setLessons(parsedLessons);
+            }
+          }
+          setLastAutoSave(new Date());
+        } else {
+          const message = await res.text().catch(() => "");
+          console.error("Auto-save failed:", message);
+          showToast(language === 'ar' ? "فشل الحفظ التلقائي. تأكد من الاتصال ثم احفظ يدوياً." : "Auto-save failed. Check your connection, then save manually.", "error");
+        }
+      } catch (err) {
+        console.error("Auto save failed", err);
+        showToast(language === 'ar' ? "فشل الحفظ التلقائي. تأكد من الاتصال ثم احفظ يدوياً." : "Auto-save failed. Check your connection, then save manually.", "error");
+      }
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [isAutoSaveEnabled, createdId, courseData, lessons, isLessonModalOpen, currentLesson, editingLessonIndex]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!courseData.title) {
       showToast(t('courseCreate.titleRequired') || "Please enter a course title", "error");
@@ -2160,7 +2294,17 @@ export default function CreateCoursePage() {
     const token = localStorage.getItem("super_admin_token");
     
     try {
-      const lessonsPayload = lessons.map((l) => ({
+      const finalLessons = [...lessons];
+      if (isLessonModalOpen && currentLesson.title) {
+        if (editingLessonIndex !== null) {
+          finalLessons[editingLessonIndex] = currentLesson;
+        } else {
+          finalLessons.push(currentLesson);
+        }
+      }
+
+      const lessonsPayload = finalLessons.map((l) => ({
+        id: l.id,
         title: l.title,
         domain: l.domain || null,
         videoUrl: l.videoUrl || null,
@@ -2182,8 +2326,13 @@ export default function CreateCoursePage() {
       const targetSchoolIds = (courseData.schoolIds || []).filter(Boolean);
       const isCentral = targetSchoolIds.length === 0;
 
-      const res = await fetch(`${API_URL}/school/courses`, {
-        method: "POST",
+      const method = createdId ? "PUT" : "POST";
+      const url = createdId 
+        ? `${API_URL}/school/courses/${createdId}`
+        : `${API_URL}/school/courses`;
+
+      const res = await fetch(url, {
+        method,
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json"
@@ -2227,8 +2376,8 @@ export default function CreateCoursePage() {
     <DashboardLayout>
       <div dir={language === 'ar' ? 'rtl' : 'ltr'}>
         {isLessonModalOpen ? (
-          <div className="max-w-6xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="bg-white border border-slate-200 w-full rounded-[40px] shadow-2xl overflow-hidden">
+          <div className="max-w-6xl mx-auto w-full h-[calc(100vh-2rem)] sm:h-[calc(100vh-3rem)] animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-white border border-slate-200 w-full h-full rounded-[28px] sm:rounded-[40px] shadow-2xl overflow-hidden flex flex-col">
               {/* Modal Header */}
               <div className="bg-slate-900 p-8 flex justify-between items-center">
                 <div>
@@ -2244,7 +2393,7 @@ export default function CreateCoursePage() {
               </div>
 
               {/* Modal Tabs */}
-              <div className="flex border-b border-slate-100 bg-slate-50/50">
+              <div className="flex border-b border-slate-100 bg-slate-50/50 overflow-x-auto shrink-0 custom-scrollbar">
                 {[
                   { id: 'info', label: language === 'ar' ? "الأهداف والمعلومات" : "Objectives & Info", icon: Target },
                   { id: 'scheduling', label: language === 'ar' ? "الجدولة والظهور" : "Scheduling & Visibility", icon: Clock },
@@ -2266,7 +2415,7 @@ export default function CreateCoursePage() {
                 ))}
               </div>
 
-              <div className="p-8 sm:p-12 overflow-y-auto max-h-[70vh] custom-scrollbar">
+              <div className="flex-1 min-h-0 p-5 sm:p-8 lg:p-12 overflow-y-auto custom-scrollbar overscroll-contain">
                 {activeTab === 'info' && (
                   <div className="space-y-10">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from 'react';
-// @ts-ignore
+// @ts-expect-error katex auto-render does not ship TypeScript declarations.
 import renderMathInElement from 'katex/dist/contrib/auto-render';
 import 'katex/dist/katex.min.css';
 
@@ -27,10 +27,12 @@ export default function HtmlRenderer({ html, className = "", tag: Tag = "div" }:
     }
   }, [html]);
 
+  const combinedClassName = className.includes("prose") ? className : `prose ${className}`.trim();
+
   return (
     <Tag 
       ref={containerRef as any} 
-      className={className} 
+      className={combinedClassName} 
       dangerouslySetInnerHTML={{ __html: html }} 
       dir="auto" 
     />

@@ -18,6 +18,8 @@ import { useNotification } from "@/context/NotificationContext";
 import RichTextEditor from "@/components/RichTextEditor";
 import * as XLSX from 'xlsx';
 import VideoPlayer from "@/components/VideoPlayer";
+import MathInput from "@/components/MathInput";
+import HtmlRenderer from "@/components/HtmlRenderer";
 
 
 export default function SchoolAdminEditExamPage() {
@@ -626,16 +628,22 @@ function SchoolAdminEditExamPageContent() {
 
   const handleSubmit = async (statusOverride: string | null = null, isAutoSave = false) => {
     if (!examInfo.title) {
-      showToast("يرجى إدخال عنوان الامتحان", 'error');
+      if (!isAutoSave) {
+        showToast("يرجى إدخال عنوان الامتحان", 'error');
+      }
       return;
     }
 
     if (questions.length === 0) {
-      showToast("يرجى إضافة سؤال واحد على الأقل", 'error');
+      if (!isAutoSave) {
+        showToast("يرجى إضافة سؤال واحد على الأقل", 'error');
+      }
       return;
     }
 
-    setSaving(true);
+    if (!isAutoSave) {
+      setSaving(true);
+    }
     try {
       const token = localStorage.getItem("school_admin_token");
       const questionsPayload = questions.map(q => ({
@@ -657,16 +665,32 @@ function SchoolAdminEditExamPageContent() {
       });
 
       if (res.ok) {
-        showToast("تم تحديث الامتحان بنجاح!", 'success');
-        router.push("/school-admin/exams");
+        if (isAutoSave) {
+          setLastAutoSave(new Date());
+        } else {
+          showToast("تم تحديث الامتحان بنجاح!", 'success');
+          router.push("/school-admin/exams");
+        }
       } else {
-        const err = await res.json();
-        showToast(err.error || "خطأ في التحديث", 'error');
+        if (!isAutoSave) {
+          const err = await res.json();
+          showToast(err.error || "خطأ في التحديث", 'error');
+        } else {
+          console.error("Auto-save failed:", await res.text());
+          showToast(language === 'ar' ? "فشل الحفظ التلقائي للاختبار. تأكد من الاتصال ثم احفظ يدوياً." : "Exam auto-save failed. Check your connection, then save manually.", "error");
+        }
       }
     } catch (error) {
-      showToast("حدث خطأ غير متوقع", 'error');
+      if (!isAutoSave) {
+        showToast("حدث خطأ غير متوقع", 'error');
+      } else {
+        console.error("Auto-save error:", error);
+        showToast(language === 'ar' ? "فشل الحفظ التلقائي للاختبار. تأكد من الاتصال ثم احفظ يدوياً." : "Exam auto-save failed. Check your connection, then save manually.", "error");
+      }
     } finally {
-      setSaving(false);
+      if (!isAutoSave) {
+        setSaving(false);
+      }
     }
   };
 
@@ -1415,12 +1439,11 @@ function SchoolAdminEditExamPageContent() {
                                 >
                                   {isCorrectAnswer(currentQuestion, opt) && opt !== "" && <CheckCircle className="w-5 h-5 text-white" />}
                                 </div>
-                                <input 
-                                  type="text" 
+                                <MathInput 
                                   placeholder={`الخيار ${oIndex + 1}`}
-                                  className="bg-transparent flex-1 outline-none font-bold text-slate-700 placeholder:text-slate-300 animate-all duration-300"
+                                  className="bg-transparent flex-1"
                                   value={opt}
-                                  onChange={(e) => updateOption(oIndex, e.target.value)}
+                                  onChange={(val) => updateOption(oIndex, val)}
                                 />
                                 {currentQuestion.options.length > 2 && (
                                   <button onClick={() => {
@@ -1639,7 +1662,7 @@ function SchoolAdminEditExamPageContent() {
                         <div className="w-7 h-7 rounded-full border-2 border-slate-200 group-hover:border-indigo-600 flex items-center justify-center transition-all">
                           <div className="w-3 h-3 bg-indigo-600 rounded-full opacity-0 group-hover:opacity-100 transition-all"></div>
                         </div>
-                        <span className="text-xl font-bold text-slate-700 group-hover:text-indigo-900">{option}</span>
+                        <span className="text-xl font-bold text-slate-700 group-hover:text-indigo-900"><HtmlRenderer html={option} tag="span" /></span>
                       </button>
                     ))}
                   </div>

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -177,7 +177,7 @@ export default function CreateCoursePage() {
   };
 
   const [isLoading, setIsLoading] = useState(false);
-  const [isAutoSaveEnabled, setIsAutoSaveEnabled] = useState(false);
+  const [isAutoSaveEnabled, setIsAutoSaveEnabled] = useState(true);
   const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
   const [createdId, setCreatedId] = useState<string | null>(null);
   const [schools, setSchools] = useState<any[]>([]);
@@ -2092,7 +2092,17 @@ export default function CreateCoursePage() {
         const user = JSON.parse(userStr);
         const targetSchoolId = user.schoolId;
 
-        const lessonsPayload = lessons.map((l) => ({
+        const finalLessons = [...lessons];
+        if (isLessonModalOpen && currentLesson.title) {
+          if (editingLessonIndex !== null) {
+            finalLessons[editingLessonIndex] = currentLesson;
+          } else {
+            finalLessons.push(currentLesson);
+          }
+        }
+
+        const lessonsPayload = finalLessons.map((l) => ({
+          id: l.id,
           title: l.title,
           domain: l.domain || null,
           videoUrl: l.videoUrl || null,
@@ -2141,18 +2151,140 @@ export default function CreateCoursePage() {
 
         if (res.ok) {
           const data = await res.json();
-          if (!createdId && data.course?.id) {
-             setCreatedId(data.course.id);
+          const serverId = data.id || data.course?.id;
+          if (!createdId && serverId) {
+             setCreatedId(serverId);
+          }
+          if (data && data.lessons) {
+            const parsedLessons = data.lessons.map((l: any) => {
+              let parsedQuestions = [];
+              let parsedAssignments = [];
+              let parsedAttachments = [];
+              let parsedSlides = [];
+
+              try {
+                parsedQuestions = typeof l.questions === 'string' ? JSON.parse(l.questions) : (l.questions || []);
+              } catch (e) { parsedQuestions = []; }
+
+              try {
+                parsedAssignments = typeof l.assignments === 'string' ? JSON.parse(l.assignments) : (l.assignments || []);
+              } catch (e) { parsedAssignments = []; }
+
+              try {
+                parsedAttachments = typeof l.attachments === 'string' ? JSON.parse(l.attachments) : (l.attachments || []);
+              } catch (e) { parsedAttachments = []; }
+
+              try {
+                parsedSlides = typeof l.slides === 'string' ? JSON.parse(l.slides) : (l.slides || []);
+              } catch (e) { parsedSlides = [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? "المقدمة" : "Introduction", content: "", sections: [] }]; }
+
+              return {
+                ...l,
+                isVisible: l.isVisible !== undefined ? l.isVisible : true,
+                publishDate: l.publishDate ? new Date(new Date(l.publishDate).getTime() - new Date(l.publishDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
+                cutOffDate: l.cutOffDate ? new Date(new Date(l.cutOffDate).getTime() - new Date(l.cutOffDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
+                questions: Array.isArray(parsedQuestions) ? parsedQuestions.map(q => {
+                  let parsedExps = [""];
+                  try {
+                    parsedExps = typeof q.explanation === 'string' && q.explanation.startsWith('[') ? JSON.parse(q.explanation) : (q.explanations || [""]);
+                    if (!Array.isArray(parsedExps)) parsedExps = [q.explanation || ""];
+                  } catch (e) {
+                    parsedExps = [q.explanation || ""];
+                  }
+                  return { ...q, explanations: parsedExps };
+                }) : [],
+                assignments: Array.isArray(parsedAssignments) ? parsedAssignments.map(q => {
+                  let parsedExps = [""];
+                  try {
+                    parsedExps = typeof q.explanation === 'string' && q.explanation.startsWith('[') ? JSON.parse(q.explanation) : (q.explanations || [""]);
+                    if (!Array.isArray(parsedExps)) parsedExps = [q.explanation || ""];
+                  } catch (e) {
+                    parsedExps = [q.explanation || ""];
+                  }
+                  return { ...q, explanations: parsedExps };
+                }) : [],
+                attachments: Array.isArray(parsedAttachments) ? parsedAttachments : [],
+                slides: Array.isArray(parsedSlides) && parsedSlides.length ? parsedSlides : [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? "المقدمة" : "Introduction", content: "", sections: [] }]
+              };
+            });
+
+            // Adjust editing indexes if modal is open
+            if (isLessonModalOpen) {
+              let idx = editingLessonIndex;
+              if (idx === null) {
+                idx = parsedLessons.length - 1;
+                setEditingLessonIndex(idx);
+              }
+              if (idx >= 0 && idx < parsedLessons.length) {
+                // Keep current state edits so we don't overwrite user actively typing, 
+                // but preserve backend-assigned IDs (UUIDs)
+                setCurrentLesson((prev: any) => ({
+                  ...prev,
+                  id: parsedLessons[idx].id,
+                  slides: prev.slides.map((s: any, sIdx: number) => {
+                    const serverSlide = parsedLessons[idx].slides?.[sIdx];
+                    return serverSlide ? { ...s, id: serverSlide.id } : s;
+                  }),
+                  questions: prev.questions.map((q: any, qIdx: number) => {
+                    const serverQ = parsedLessons[idx].questions?.[qIdx];
+                    return serverQ ? { ...q, id: serverQ.id } : q;
+                  }),
+                  assignments: prev.assignments.map((a: any, aIdx: number) => {
+                    const serverA = parsedLessons[idx].assignments?.[aIdx];
+                    return serverA ? { ...a, id: serverA.id } : a;
+                  })
+                }));
+              }
+              // Set all lessons with backend IDs
+              setLessons(parsedLessons.map((pl: any, plIdx: number) => {
+                if (plIdx === idx) {
+                  return {
+                    ...pl,
+                    title: currentLesson.title,
+                    domain: currentLesson.domain,
+                    videoUrl: currentLesson.videoUrl,
+                    summary: currentLesson.summary,
+                    notes: currentLesson.notes,
+                    standards: currentLesson.standards,
+                    indicators: currentLesson.indicators,
+                    learningOutcomes: currentLesson.learningOutcomes,
+                    isVisible: currentLesson.isVisible,
+                    publishDate: currentLesson.publishDate,
+                    cutOffDate: currentLesson.cutOffDate,
+                    slides: currentLesson.slides.map((s: any, sIdx: number) => {
+                      const serverSlide = pl.slides?.[sIdx];
+                      return serverSlide ? { ...s, id: serverSlide.id } : s;
+                    }),
+                    questions: currentLesson.questions.map((q: any, qIdx: number) => {
+                      const serverQ = pl.questions?.[qIdx];
+                      return serverQ ? { ...q, id: serverQ.id } : q;
+                    }),
+                    assignments: currentLesson.assignments.map((a: any, aIdx: number) => {
+                      const serverA = pl.assignments?.[aIdx];
+                      return serverA ? { ...a, id: serverA.id } : a;
+                    })
+                  };
+                }
+                return pl;
+              }));
+            } else {
+              setLessons(parsedLessons);
+            }
           }
           setLastAutoSave(new Date());
+        } else {
+          const message = await res.text().catch(() => "");
+          console.error("Auto-save failed:", message);
+          showToast(language === 'ar' ? "فشل الحفظ التلقائي. تأكد من الاتصال ثم احفظ يدوياً." : "Auto-save failed. Check your connection, then save manually.", "error");
         }
       } catch (err) {
         console.error("Auto save failed", err);
+        showToast(language === 'ar' ? "فشل الحفظ التلقائي. تأكد من الاتصال ثم احفظ يدوياً." : "Auto-save failed. Check your connection, then save manually.", "error");
       }
     }, 60000);
 
     return () => clearInterval(interval);
-  }, [isAutoSaveEnabled, createdId, courseData, lessons]);
+  }, [isAutoSaveEnabled, createdId, courseData, lessons, isLessonModalOpen, currentLesson, editingLessonIndex]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2176,7 +2308,17 @@ export default function CreateCoursePage() {
     const targetSchoolId = user.schoolId;
     
     try {
-      const lessonsPayload = lessons.map((l) => ({
+      const finalLessons = [...lessons];
+      if (isLessonModalOpen && currentLesson.title) {
+        if (editingLessonIndex !== null) {
+          finalLessons[editingLessonIndex] = currentLesson;
+        } else {
+          finalLessons.push(currentLesson);
+        }
+      }
+
+      const lessonsPayload = finalLessons.map((l) => ({
+        id: l.id,
         title: l.title,
         domain: l.domain || null,
         videoUrl: l.videoUrl || null,
@@ -2195,7 +2337,6 @@ export default function CreateCoursePage() {
       }));
 
       const subjectString = courseData.subjects.join(", ");
-
       
       const method = createdId ? "PUT" : "POST";
       const url = createdId 
@@ -2245,8 +2386,8 @@ export default function CreateCoursePage() {
     <DashboardLayout>
       <div dir={language === 'ar' ? 'rtl' : 'ltr'}>
         {isLessonModalOpen ? (
-          <div className="max-w-6xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="bg-white border border-slate-200 w-full rounded-[40px] shadow-2xl overflow-hidden">
+          <div className="max-w-6xl mx-auto w-full h-[calc(100vh-2rem)] sm:h-[calc(100vh-3rem)] animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-white border border-slate-200 w-full h-full rounded-[28px] sm:rounded-[40px] shadow-2xl overflow-hidden flex flex-col">
               {/* Modal Header */}
               <div className="bg-slate-900 p-8 flex justify-between items-center">
                 <div>
@@ -2262,7 +2403,7 @@ export default function CreateCoursePage() {
               </div>
 
               {/* Modal Tabs */}
-              <div className="flex border-b border-slate-100 bg-slate-50/50">
+              <div className="flex border-b border-slate-100 bg-slate-50/50 overflow-x-auto shrink-0 custom-scrollbar">
                 {[
                   { id: 'info', label: language === 'ar' ? "الأهداف والمعلومات" : "Objectives & Info", icon: Target },
                   { id: 'scheduling', label: language === 'ar' ? "الجدولة والظهور" : "Scheduling & Visibility", icon: Clock },
@@ -2284,7 +2425,7 @@ export default function CreateCoursePage() {
                 ))}
               </div>
 
-              <div className="p-8 sm:p-12 overflow-y-auto max-h-[70vh] custom-scrollbar">
+              <div className="flex-1 min-h-0 p-5 sm:p-8 lg:p-12 overflow-y-auto custom-scrollbar overscroll-contain">
                 {activeTab === 'info' && (
                   <div className="space-y-10">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -2560,7 +2701,11 @@ export default function CreateCoursePage() {
                               <>
                                 <div className="fixed inset-0 z-40" onClick={() => setIsIndicatorDropdownOpen(false)}></div>
                                 <div className="absolute z-50 w-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-xl max-h-72 overflow-y-auto p-3 space-y-1 animate-in fade-in slide-in-from-top-2 duration-200">
-                                  {["مؤشر 1: يحدد المفاهيم الأساسية", "مؤشر 2: يطبق القوانين الرياضية", "مؤشر 3: يستنتج العلاقات"].map((option) => {
+                                  {[
+                                    language === 'ar' ? "مؤشر 1: يحدد المفاهيم الأساسية" : "Indicator 1: Identifies core concepts",
+                                    language === 'ar' ? "مؤشر 2: يطبق القوانين الرياضية" : "Indicator 2: Applies mathematical laws",
+                                    language === 'ar' ? "مؤشر 3: يستنتج العلاقات" : "Indicator 3: Infers relationships"
+                                  ].map((option) => {
                                     const selected = (currentLesson.indicators || "").split("\n").filter(Boolean);
                                     const isSelected = selected.includes(option);
                                     return (
@@ -2586,7 +2731,15 @@ export default function CreateCoursePage() {
 
                                   {(() => {
                                     const selected = (currentLesson.indicators || "").split("\n").filter(Boolean);
-                                    const customOpts = selected.filter((x: string) => !["مؤشر 1: يحدد المفاهيم الأساسية", "مؤشر 2: يطبق القوانين الرياضية", "مؤشر 3: يستنتج العلاقات"].includes(x));
+                                    const defaultOptions = [
+                                      language === 'ar' ? "مؤشر 1: يحدد المفاهيم الأساسية" : "Indicator 1: Identifies core concepts",
+                                      language === 'ar' ? "مؤشر 2: يطبق القوانين الرياضية" : "Indicator 2: Applies mathematical laws",
+                                      language === 'ar' ? "مؤشر 3: يستنتج العلاقات" : "Indicator 3: Infers relationships",
+                                      "مؤشر 1: يحدد المفاهيم الأساسية",
+                                      "مؤشر 2: يطبق القوانين الرياضية",
+                                      "مؤشر 3: يستنتج العلاقات"
+                                    ];
+                                    const customOpts = selected.filter((x: string) => !defaultOptions.includes(x));
                                     return customOpts.map((option: string) => (
                                       <div key={option} className="flex items-center justify-between gap-2 px-3 py-1 hover:bg-slate-50 rounded-xl text-slate-700 font-bold text-xs">
                                         <label className="flex items-center gap-3 flex-1 cursor-pointer py-1.5">
@@ -2709,7 +2862,11 @@ export default function CreateCoursePage() {
                               <>
                                 <div className="fixed inset-0 z-40" onClick={() => setIsOutcomeDropdownOpen(false)}></div>
                                 <div className="absolute z-50 w-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-xl max-h-72 overflow-y-auto p-3 space-y-1 animate-in fade-in slide-in-from-top-2 duration-200">
-                                  {["ناتج 1: أن يكون الطالب قادراً على...", "ناتج 2: أن يميز الطالب بين...", "ناتج 3: أن يحلل الطالب..."].map((option) => {
+                                  {[
+                                    language === 'ar' ? "ناتج 1: أن يكون الطالب قادراً على..." : "Outcome 1: Student will be able to...",
+                                    language === 'ar' ? "ناتج 2: أن يميز الطالب بين..." : "Outcome 2: Student will distinguish between...",
+                                    language === 'ar' ? "ناتج 3: أن يحلل الطالب..." : "Outcome 3: Student will analyze..."
+                                  ].map((option) => {
                                     const selected = (currentLesson.learningOutcomes || "").split("\n").filter(Boolean);
                                     const isSelected = selected.includes(option);
                                     return (
@@ -2735,7 +2892,15 @@ export default function CreateCoursePage() {
 
                                   {(() => {
                                     const selected = (currentLesson.learningOutcomes || "").split("\n").filter(Boolean);
-                                    const customOpts = selected.filter((x: string) => !["ناتج 1: أن يكون الطالب قادراً على...", "ناتج 2: أن يميز الطالب بين...", "ناتج 3: أن يحلل الطالب..."].includes(x));
+                                    const defaultOptions = [
+                                      language === 'ar' ? "ناتج 1: أن يكون الطالب قادراً على..." : "Outcome 1: Student will be able to...",
+                                      language === 'ar' ? "ناتج 2: أن يميز الطالب بين..." : "Outcome 2: Student will distinguish between...",
+                                      language === 'ar' ? "ناتج 3: أن يحلل الطالب..." : "Outcome 3: Student will analyze...",
+                                      "ناتج 1: أن يكون الطالب قادراً على...",
+                                      "ناتج 2: أن يميز الطالب بين...",
+                                      "ناتج 3: أن يحلل الطالب..."
+                                    ];
+                                    const customOpts = selected.filter((x: string) => !defaultOptions.includes(x));
                                     return customOpts.map((option: string) => (
                                       <div key={option} className="flex items-center justify-between gap-2 px-3 py-1 hover:bg-slate-50 rounded-xl text-slate-700 font-bold text-xs">
                                         <label className="flex items-center gap-3 flex-1 cursor-pointer py-1.5">

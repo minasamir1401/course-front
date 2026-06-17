@@ -18,6 +18,8 @@ import { useNotification } from "@/context/NotificationContext";
 import RichTextEditor from "@/components/RichTextEditor";
 import * as XLSX from 'xlsx';
 import VideoPlayer from "@/components/VideoPlayer";
+import MathInput from "@/components/MathInput";
+import HtmlRenderer from "@/components/HtmlRenderer";
 
 export default function SuperAdminEditExamPage() {
   return (
@@ -686,21 +688,29 @@ function SuperAdminEditExamPageContent() {
 
   const handleSubmit = async (statusOverride: string | null = null, isAutoSave = false) => {
     if (!examInfo.title) {
-      showToast("Please enter the exam title", 'error');
+      if (!isAutoSave) {
+        showToast("Please enter the exam title", 'error');
+      }
       return;
     }
 
     if (!examInfo.subjects || examInfo.subjects.length === 0) {
-      showToast("Please select at least one subject", 'error');
+      if (!isAutoSave) {
+        showToast("Please select at least one subject", 'error');
+      }
       return;
     }
 
     if (questions.length === 0) {
-      showToast("Please add at least one question or slide", 'error');
+      if (!isAutoSave) {
+        showToast("Please add at least one question or slide", 'error');
+      }
       return;
     }
 
-    setSaving(true);
+    if (!isAutoSave) {
+      setSaving(true);
+    }
     try {
       const token = localStorage.getItem("super_admin_token") || localStorage.getItem("lms_token") || localStorage.getItem("token");
       const questionsPayload = questions.map(q => ({
@@ -723,24 +733,40 @@ function SuperAdminEditExamPageContent() {
       });
 
       if (res.ok) {
-        showToast("Exam updated successfully!", 'success');
-        router.push("/super-admin/exams");
-      } else {
-        let errMessage = "Failed to update exam";
-        try {
-          const err = await res.json();
-          errMessage = err.error || errMessage;
-        } catch (e) {
-          if (res.status === 413) errMessage = "Payload Too Large. Please reduce image sizes.";
-          else errMessage = `Server Error: ${res.status}`;
+        if (isAutoSave) {
+          setLastAutoSave(new Date());
+        } else {
+          showToast("Exam updated successfully!", 'success');
+          router.push("/super-admin/exams");
         }
-        showToast(errMessage, 'error');
+      } else {
+        if (!isAutoSave) {
+          let errMessage = "Failed to update exam";
+          try {
+            const err = await res.json();
+            errMessage = err.error || errMessage;
+          } catch (e) {
+            if (res.status === 413) errMessage = "Payload Too Large. Please reduce image sizes.";
+            else errMessage = `Server Error: ${res.status}`;
+          }
+          showToast(errMessage, 'error');
+        } else {
+          console.error("Auto-save failed:", await res.text());
+          showToast(language === 'ar' ? "فشل الحفظ التلقائي للاختبار. تأكد من الاتصال ثم احفظ يدوياً." : "Exam auto-save failed. Check your connection, then save manually.", "error");
+        }
       }
     } catch (error) {
-      console.error("Exam save error:", error);
-      showToast("An unexpected error occurred. Please check your connection.", 'error');
+      if (!isAutoSave) {
+        console.error("Exam save error:", error);
+        showToast("An unexpected error occurred. Please check your connection.", 'error');
+      } else {
+        console.error("Auto-save error:", error);
+        showToast(language === 'ar' ? "فشل الحفظ التلقائي للاختبار. تأكد من الاتصال ثم احفظ يدوياً." : "Exam auto-save failed. Check your connection, then save manually.", "error");
+      }
     } finally {
-      setSaving(false);
+      if (!isAutoSave) {
+        setSaving(false);
+      }
     }
   };
 
@@ -1672,12 +1698,11 @@ function SuperAdminEditExamPageContent() {
                               >
                                 {isCorrectAnswer(currentQuestion, opt) && opt !== "" && <CheckCircle className="w-5 h-5 text-white" />}
                               </div>
-                              <input
-                                type="text"
+                              <MathInput 
                                 placeholder={`Option ${oIndex + 1}`}
-                                className="bg-transparent flex-1 outline-none font-bold text-slate-700 placeholder:text-slate-300"
+                                className="bg-transparent flex-1"
                                 value={opt}
-                                onChange={(e) => updateOption(oIndex, e.target.value)}
+                                onChange={(val) => updateOption(oIndex, val)}
                               />
                               {currentQuestion.options.length > 2 && (
                                 <button onClick={() => {
@@ -1791,7 +1816,7 @@ function SuperAdminEditExamPageContent() {
                           <div className="w-7 h-7 rounded-full border-2 border-slate-200 group-hover:border-indigo-600 flex items-center justify-center transition-all">
                             <div className="w-3 h-3 bg-indigo-600 rounded-full opacity-0 group-hover:opacity-100 transition-all"></div>
                           </div>
-                          <span className="text-xl font-bold text-slate-700 group-hover:text-indigo-900">{option}</span>
+                          <span className="text-xl font-bold text-slate-700 group-hover:text-indigo-900"><HtmlRenderer html={option} tag="span" /></span>
                         </button>
                       ))}
                     </div>

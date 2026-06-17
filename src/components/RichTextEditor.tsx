@@ -9,6 +9,8 @@ import {
   Highlighter, Trash2
 } from "lucide-react";
 import { compressImage, uploadFileToServer } from "@/lib/image-utils";
+import katex from "katex";
+import "katex/dist/katex.min.css";
 
 interface RichTextEditorProps {
   value: string;
@@ -27,6 +29,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
   const [imageSettings, setImageSettings] = useState({ src: "", width: "100", align: "center" as 'left' | 'center' | 'right' });
   const [editingImage, setEditingImage] = useState<HTMLImageElement | null>(null);
   const [imageRect, setImageRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
+  const mathContainerRef = useRef<HTMLDivElement>(null);
 
   const COLORS = [
     { name: 'Default', color: '#000000' },
@@ -57,6 +60,47 @@ export default function RichTextEditor({ value, onChange, placeholder, className
       }
     };
   }, []);
+
+  // Initialize MathLive visually when modal opens
+  useEffect(() => {
+    let mf: any = null;
+    if (activeModal === 'math') {
+      // Need a small timeout to ensure the ref is attached to the DOM before appending
+      const timer = setTimeout(() => {
+        if (mathContainerRef.current) {
+          import('mathlive').then(({ MathfieldElement }) => {
+            if (!mathContainerRef.current) return;
+            mf = new MathfieldElement();
+            mf.value = mathFormula;
+            
+            // Match the styles of the previous textarea
+            mf.style.width = '100%';
+            mf.style.padding = '12px 16px';
+            mf.style.borderRadius = '0.75rem';
+            mf.style.border = '1px solid #e2e8f0';
+            mf.style.backgroundColor = '#f8fafc';
+            mf.style.outline = 'none';
+            mf.style.minHeight = '84px';
+            mf.style.maxHeight = '180px';
+            mf.style.overflowY = 'auto';
+            mf.style.fontSize = 'clamp(18px, 5vw, 24px)';
+            mf.mathVirtualKeyboardPolicy = 'manual';
+            
+            mf.mathVirtualKeyboardPolicy = 'manual';
+            
+            mf.addEventListener('input', () => {
+              setMathFormula(mf.value);
+            });
+
+            mathContainerRef.current.innerHTML = '';
+            mathContainerRef.current.appendChild(mf);
+            mf.focus();
+          }).catch(err => console.error("Failed to load mathlive", err));
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [activeModal]);
 
   const execCommand = (command: string, cmdValue?: string) => {
     if (editorRef.current) {
@@ -193,8 +237,15 @@ export default function RichTextEditor({ value, onChange, placeholder, className
 
   const handleInsertMath = () => {
     if (mathFormula) {
-      const mathHtml = `<span class="math-tex" style="font-family: 'Times New Roman', serif; font-style: italic; background: #f8fafc; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">\\( ${mathFormula} \\)</span>&nbsp;`;
-      execCommand('insertHTML', mathHtml);
+      try {
+        const renderedMath = katex.renderToString(mathFormula, { throwOnError: false });
+        const mathHtml = `<span class="math-tex inline-block mx-1 align-middle" contenteditable="false" data-latex="${mathFormula.replace(/"/g, '&quot;')}">${renderedMath}</span>&nbsp;`;
+        execCommand('insertHTML', mathHtml);
+      } catch (err) {
+        console.error("KaTeX rendering error", err);
+        const mathHtml = `<span class="math-tex" style="font-family: 'Times New Roman', serif; font-style: italic; background: #f8fafc; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">\\( ${mathFormula} \\)</span>&nbsp;`;
+        execCommand('insertHTML', mathHtml);
+      }
     }
     setActiveModal(null);
   };
@@ -488,7 +539,8 @@ export default function RichTextEditor({ value, onChange, placeholder, className
 
       {/* Inline Modals */}
       {activeModal === 'table' && (
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 bg-white border border-slate-200 p-6 rounded-3xl shadow-2xl min-w-[300px] animate-in zoom-in-95 duration-200 rtl" dir="rtl">
+        <div className="fixed inset-0 z-[10000] bg-slate-900/40 backdrop-blur-[2px] p-3 sm:p-6 overflow-y-auto custom-scrollbar" onClick={() => setActiveModal(null)}>
+        <div className="relative mx-auto my-3 sm:my-8 bg-white border border-slate-200 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-[320px] max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-4rem)] overflow-y-auto custom-scrollbar animate-in zoom-in-95 duration-200 rtl" dir="rtl" onClick={(e) => e.stopPropagation()}>
           <div className="flex justify-between items-center mb-4">
             <h4 className="font-black text-slate-800 flex items-center gap-2">
               <Table className="w-5 h-5 text-indigo-600" />
@@ -523,10 +575,12 @@ export default function RichTextEditor({ value, onChange, placeholder, className
             تأكيد الإدراج
           </button>
         </div>
+        </div>
       )}
 
       {activeModal === 'image' && (
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 bg-white border border-slate-200 p-4 rounded-3xl shadow-2xl min-w-[350px] animate-in zoom-in-95 duration-200 rtl" dir="rtl">
+        <div className="fixed inset-0 z-[10000] bg-slate-900/40 backdrop-blur-[2px] p-3 sm:p-6 overflow-y-auto custom-scrollbar" onClick={() => setActiveModal(null)}>
+        <div className="relative mx-auto my-3 sm:my-8 bg-white border border-slate-200 p-4 rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-[380px] max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-4rem)] overflow-y-auto custom-scrollbar animate-in zoom-in-95 duration-200 rtl" dir="rtl" onClick={(e) => e.stopPropagation()}>
           <div className="flex justify-between items-center mb-3">
             <h4 className="font-black text-slate-800 flex items-center gap-2">
               <ImageIcon className="w-5 h-5 text-indigo-600" />
@@ -590,26 +644,58 @@ export default function RichTextEditor({ value, onChange, placeholder, className
             </button>
           )}
         </div>
+        </div>
       )}
       {activeModal === 'math' && (
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 bg-white border border-slate-200 p-6 rounded-3xl shadow-2xl min-w-[400px] animate-in zoom-in-95 duration-200 rtl" dir="rtl">
+        <div className="fixed inset-0 z-[10000] bg-slate-900/40 backdrop-blur-[2px] p-3 sm:p-6 overflow-y-auto custom-scrollbar" onClick={() => setActiveModal(null)}>
+        <div className="relative mx-auto my-3 sm:my-8 bg-white border border-slate-200 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-[400px] max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-4rem)] overflow-y-auto custom-scrollbar animate-in zoom-in-95 duration-200 rtl" dir="rtl" onClick={(e) => e.stopPropagation()}>
           <div className="flex justify-between items-center mb-4">
             <h4 className="font-black text-slate-800 flex items-center gap-2">
               <Sigma className="w-5 h-5 text-indigo-600" />
-              إدراج معادلة LaTeX
+              إدراج معادلة رياضية
             </h4>
             <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
           </div>
           <div className="flex flex-col gap-3 mb-6">
-            <textarea
-              value={mathFormula}
-              onChange={(e) => setMathFormula(e.target.value)}
-              placeholder="مثال: E=mc²"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 font-mono text-sm min-h-[100px]"
-            />
-            <p className="text-[10px] text-slate-400 leading-relaxed">
-              * سيتم إدراج المعادلة كنص منسق. يمكنك استخدام رموز LaTeX المعروفة.
-            </p>
+            {/* Custom Embedded Keypad */}
+            <div className="bg-slate-100 p-2 sm:p-3 rounded-2xl shadow-inner flex flex-col gap-2">
+              {/* Top Row: Arrows & Backspace */}
+              <div className="flex justify-between gap-2">
+                <div className="flex gap-1 sm:gap-1.5">
+                  <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.executeCommand('moveToPreviousChar'); mf.focus(); } }} className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-lg shadow-sm font-bold text-base sm:text-lg hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all">←</button>
+                  <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.executeCommand('moveUp'); mf.focus(); } }} className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-lg shadow-sm font-bold text-base sm:text-lg hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all">↑</button>
+                  <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.executeCommand('moveDown'); mf.focus(); } }} className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-lg shadow-sm font-bold text-base sm:text-lg hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all">↓</button>
+                  <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.executeCommand('moveToNextChar'); mf.focus(); } }} className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-lg shadow-sm font-bold text-base sm:text-lg hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all">→</button>
+                </div>
+                <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.executeCommand('deleteBackward'); mf.focus(); } }} className="w-14 h-8 sm:h-10 bg-red-100 text-red-600 rounded-lg shadow-sm font-bold hover:bg-red-200 active:scale-95 transition-all text-xs sm:text-sm">⌫ مسح</button>
+              </div>
+              
+              {/* Middle Row: Functions */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert('\\frac{#?}{#?}'); mf.focus(); } }} className="py-2 bg-indigo-50 text-indigo-700 rounded-lg shadow-sm font-black hover:bg-indigo-100 active:scale-95 transition-all text-xs sm:text-sm">½ كسر</button>
+                <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert('^{#?}'); mf.focus(); } }} className="py-2 bg-indigo-50 text-indigo-700 rounded-lg shadow-sm font-black hover:bg-indigo-100 active:scale-95 transition-all text-xs sm:text-sm">x² أُس</button>
+                <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert('\\sqrt{#?}'); mf.focus(); } }} className="py-2 bg-indigo-50 text-indigo-700 rounded-lg shadow-sm font-black hover:bg-indigo-100 active:scale-95 transition-all text-xs sm:text-sm">√ جذر</button>
+                <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert('\\left(#?\\right)'); mf.focus(); } }} className="py-2 bg-indigo-50 text-indigo-700 rounded-lg shadow-sm font-black hover:bg-indigo-100 active:scale-95 transition-all text-xs sm:text-sm">( ) أقواس</button>
+              </div>
+
+              {/* Bottom Grid: Numbers & Operators */}
+              <div className="grid grid-cols-4 gap-2">
+                {['7', '8', '9', '+'].map(btn => (
+                  <button key={btn} onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert(btn); mf.focus(); } }} className="py-2 sm:py-2.5 bg-white rounded-lg shadow-sm font-bold text-base sm:text-xl hover:bg-slate-50 text-slate-700 active:scale-95 transition-all">{btn}</button>
+                ))}
+                {['4', '5', '6', '-'].map(btn => (
+                  <button key={btn} onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert(btn); mf.focus(); } }} className="py-2 sm:py-2.5 bg-white rounded-lg shadow-sm font-bold text-base sm:text-xl hover:bg-slate-50 text-slate-700 active:scale-95 transition-all">{btn}</button>
+                ))}
+                {['1', '2', '3', '*'].map(btn => (
+                  <button key={btn} onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert(btn === '*' ? '\\cdot' : btn); mf.focus(); } }} className="py-2 sm:py-2.5 bg-white rounded-lg shadow-sm font-bold text-base sm:text-xl hover:bg-slate-50 text-slate-700 active:scale-95 transition-all">{btn === '*' ? '×' : btn}</button>
+                ))}
+                {['0', '.', '=', '/'].map(btn => (
+                  <button key={btn} onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert(btn === '/' ? '\\div' : btn); mf.focus(); } }} className="py-2 sm:py-2.5 bg-white rounded-lg shadow-sm font-bold text-base sm:text-xl hover:bg-slate-50 text-slate-700 active:scale-95 transition-all">{btn === '/' ? '÷' : btn}</button>
+                ))}
+              </div>
+            </div>
+
+            <div ref={mathContainerRef} className="w-full mt-2" dir="ltr" />
           </div>
           <button
             onClick={handleInsertMath}
@@ -617,6 +703,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
           >
             إدراج المعادلة
           </button>
+        </div>
         </div>
       )}
       <div className="relative min-h-[300px] bg-white group">

@@ -20,6 +20,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Suspense } from "react";
 import { useNotification } from "@/context/NotificationContext";
+import MathInput from "@/components/MathInput";
+import HtmlRenderer from "@/components/HtmlRenderer";
 
 export default function SuperAdminNewExamPage() {
   return (
@@ -44,7 +46,7 @@ function SuperAdminNewExamPageContent() {
   const { showToast } = useNotification();
   const { t, language } = useLanguage();
   const [loading, setLoading] = useState(false);
-  const [isAutoSaveEnabled, setIsAutoSaveEnabled] = useState(false);
+  const [isAutoSaveEnabled, setIsAutoSaveEnabled] = useState(true);
   const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
   const [createdId, setCreatedId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -691,9 +693,14 @@ function SuperAdminNewExamPageContent() {
              setCreatedId(data.exam.id);
           }
           setLastAutoSave(new Date());
+        } else {
+          const message = await res.text().catch(() => "");
+          console.error("Auto-save failed:", message);
+          showToast(language === 'ar' ? "فشل الحفظ التلقائي للاختبار. تأكد من الاتصال ثم احفظ يدوياً." : "Exam auto-save failed. Check your connection, then save manually.", "error");
         }
       } catch (err) {
         console.error("Auto save failed", err);
+        showToast(language === 'ar' ? "فشل الحفظ التلقائي للاختبار. تأكد من الاتصال ثم احفظ يدوياً." : "Exam auto-save failed. Check your connection, then save manually.", "error");
       }
     }, 60000);
 
@@ -1621,13 +1628,12 @@ function SuperAdminNewExamPageContent() {
                                 >
                                   {isCorrectAnswer(currentQuestion, opt) && opt !== "" && <CheckCircle className="w-5 h-5 text-white" />}
                                 </div>
-                                <input 
-                                  type="text" 
-                                  placeholder={`Option ${oIndex + 1}`}
-                                  className="bg-transparent flex-1 outline-none font-bold text-slate-700 placeholder:text-slate-300"
-                                  value={opt}
-                                  onChange={(e) => updateOption(oIndex, e.target.value)}
-                                />
+                                 <MathInput 
+                                   placeholder={`Option ${oIndex + 1}`}
+                                   className="bg-transparent flex-1"
+                                   value={opt}
+                                   onChange={(val) => updateOption(oIndex, val)}
+                                 />
                                 {currentQuestion.options.length > 2 && (
                                   <button onClick={() => {
                                     const newOptions = [...currentQuestion.options];
@@ -1845,7 +1851,7 @@ function SuperAdminNewExamPageContent() {
                           <div className="w-7 h-7 rounded-full border-2 border-slate-200 group-hover:border-indigo-600 flex items-center justify-center transition-all">
                             <div className="w-3 h-3 bg-indigo-600 rounded-full opacity-0 group-hover:opacity-100 transition-all"></div>
                           </div>
-                          <span className="text-xl font-bold text-slate-700 group-hover:text-indigo-900">{option}</span>
+                          <span className="text-xl font-bold text-slate-700 group-hover:text-indigo-900"><HtmlRenderer html={option} tag="span" /></span>
                         </button>
                       ))}
                     </div>
@@ -1868,5 +1874,4 @@ function SuperAdminNewExamPageContent() {
     </DashboardLayout>
   );
 }
-
 

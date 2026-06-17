@@ -297,7 +297,7 @@ export default function StudentsManagement() {
             <div className="animate-spin w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full"></div>
           </div>
         ) : (
-          <div className="bg-[#0f0f1d] rounded-3xl border border-white/5 overflow-hidden">
+          <div className="bg-[#0f0f1d] rounded-3xl border border-white/5 overflow-x-auto w-full max-w-[100vw]">
             <div className="overflow-x-auto">
             <table className="w-full min-w-[640px]" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
               <thead>

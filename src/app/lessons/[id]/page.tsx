@@ -807,7 +807,7 @@ export default function LessonPlayerPage() {
             )}
 
             {currentStage === 'slides' && (
-              <div className="premium-card rounded-[48px] overflow-hidden flex flex-col group mx-auto w-full max-w-5xl">
+              <div className="premium-card rounded-3xl overflow-hidden flex flex-col group mx-auto w-full max-w-4xl">
                 <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between px-8 shrink-0">
                   <div className="flex items-center gap-3 text-slate-400 font-black text-xs uppercase tracking-widest">
                     <Layout className="w-4 h-4" />
@@ -818,12 +818,12 @@ export default function LessonPlayerPage() {
                   </div>
                 </div>
 
-                <div className="p-8 md:p-12 flex flex-col items-center text-center w-full">
-                  <h3 className="text-2xl md:text-4xl font-black text-slate-900 mb-6 leading-tight tracking-tight animate-in fade-in slide-in-from-top-4 duration-500">
-                    {lesson.slides[currentSlideIndex].id === 'intro-video-slide'
-                      ? (language === 'ar' ? "فيديو مقدمة الدرس" : "Lesson Introduction Video")
-                      : lesson.slides[currentSlideIndex].title}
-                  </h3>
+                <div className="p-5 md:p-8 flex flex-col items-center text-center w-full">
+                  {lesson.slides[currentSlideIndex].id === 'intro-video-slide' && (
+                    <h3 className="text-2xl md:text-4xl font-black text-slate-900 mb-6 leading-tight tracking-tight animate-in fade-in slide-in-from-top-4 duration-500">
+                      {language === 'ar' ? "فيديو مقدمة الدرس" : "Lesson Introduction Video"}
+                    </h3>
+                  )}
                   {lesson.slides[currentSlideIndex].videoUrl && (
                     <div className="w-full max-w-4xl mx-auto mb-8 rounded-[35px] overflow-hidden shadow-2xl border border-slate-100 relative aspect-video" style={{ aspectRatio: '16/9' }}>
                       <VideoPlayer
@@ -867,7 +867,9 @@ export default function LessonPlayerPage() {
                             className={`relative p-6 rounded-3xl border-4 text-right transition-all group overflow-hidden ${isSelected ? (isCorrect ? 'border-emerald-500 bg-emerald-50' : isWrong ? 'border-red-500 bg-red-50' : 'border-indigo-500 bg-indigo-50') : 'border-slate-100 bg-white hover:border-indigo-200'} ${isSubmitted && !isSelected && !isCorrect ? 'opacity-50' : ''}`}
                             disabled={isSubmitted}
                           >
-                            <span className={`text-xl font-bold ${isSelected ? (isCorrect ? 'text-emerald-700' : isWrong ? 'text-red-700' : 'text-indigo-700') : 'text-slate-700'}`}>{opt}</span>
+                            <span className={`text-xl font-bold ${isSelected ? (isCorrect ? 'text-emerald-700' : isWrong ? 'text-red-700' : 'text-indigo-700') : 'text-slate-700'}`}>
+                              <HtmlRenderer html={opt} tag="span" />
+                            </span>
                             {isSelected && !isSubmitted && <CheckCircle2 className="absolute top-1/2 left-6 -translate-y-1/2 w-8 h-8 text-indigo-500" />}
                             {isCorrect && <CheckCircle2 className="absolute top-1/2 left-6 -translate-y-1/2 w-8 h-8 text-emerald-500" />}
                             {isWrong && <X className="absolute top-1/2 left-6 -translate-y-1/2 w-8 h-8 text-red-500" />}
@@ -909,7 +911,7 @@ export default function LessonPlayerPage() {
                   />
                 </div>
 
-                <div className="p-6 border-t border-slate-100 bg-slate-50/30 flex justify-between items-center gap-6 shrink-0">
+                <div className="p-6 border-t border-slate-100 bg-slate-50/30 flex justify-between items-center gap-6 shrink-0" dir="rtl">
                   <button
                     onClick={() => {
                       if (currentSlideIndex > 0) {
@@ -992,7 +994,9 @@ export default function LessonPlayerPage() {
                                   className={`relative p-5 rounded-3xl border-4 text-right transition-all group overflow-hidden ${isSelected ? (isCorrect ? 'border-emerald-500 bg-emerald-50' : isWrong ? 'border-red-500 bg-red-50' : 'border-indigo-500 bg-indigo-50') : 'border-slate-100 bg-white hover:border-indigo-200'} ${isSubmitted && !isSelected && !isCorrect ? 'opacity-50' : ''}`}
                                   disabled={isSubmitted}
                                 >
-                                  <span className={`text-lg font-bold ${isSelected ? (isCorrect ? 'text-emerald-700' : isWrong ? 'text-red-700' : 'text-indigo-700') : 'text-slate-700'}`}>{opt}</span>
+                                  <span className={`text-lg font-bold ${isSelected ? (isCorrect ? 'text-emerald-700' : isWrong ? 'text-red-700' : 'text-indigo-700') : 'text-slate-700'}`}>
+                                    <HtmlRenderer html={opt} tag="span" />
+                                  </span>
                                   {isSelected && !isSubmitted && <CheckCircle2 className="absolute top-1/2 left-4 -translate-y-1/2 w-6 h-6 text-indigo-500" />}
                                   {isCorrect && <CheckCircle2 className="absolute top-1/2 left-4 -translate-y-1/2 w-6 h-6 text-emerald-500" />}
                                   {isWrong && <X className="absolute top-1/2 left-4 -translate-y-1/2 w-6 h-6 text-red-500" />}
@@ -1147,7 +1151,9 @@ export default function LessonPlayerPage() {
                                 className={`p-5 md:p-6 rounded-[25px] border-4 text-start transition-all duration-300 font-black text-sm md:text-base relative break-words overflow-hidden ${isSelected ? (isCorrect ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : isWrong ? 'border-red-500 bg-red-50 text-red-700' : 'bg-indigo-600 border-white text-white shadow-xl shadow-indigo-100') : 'bg-white border-slate-50 text-slate-600 hover:border-indigo-200'} ${isSubmitted && !isSelected && !isCorrect ? 'opacity-50' : ''}`}
                               >
                                 <div className="flex items-center justify-between gap-4">
-                                  <span className={`flex-1 break-words leading-relaxed ${isSelected && !isSubmitted ? 'text-white' : ''}`}>{opt}</span>
+                                  <span className={`flex-1 break-words leading-relaxed ${isSelected && !isSubmitted ? 'text-white' : ''}`}>
+                                    <HtmlRenderer html={opt} tag="span" />
+                                  </span>
                                   <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${isSelected && !isSubmitted ? 'border-white bg-white/20' : isCorrect ? 'border-emerald-500 bg-emerald-500 text-white' : isWrong ? 'border-red-500 bg-red-500 text-white' : 'border-slate-200'}`}>
                                     {isSelected && !isSubmitted && <CheckCircle2 className="w-4 h-4" />}
                                     {isCorrect && <CheckCircle2 className="w-4 h-4" />}

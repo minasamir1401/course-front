@@ -365,7 +365,7 @@ export default function SchoolsManagement() {
             <div className="animate-spin w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full"></div>
           </div>
         ) : (
-          <div className="bg-white rounded-[32px] border border-slate-100 overflow-hidden shadow-sm">
+          <div className="bg-white rounded-[32px] border border-slate-100 overflow-x-auto w-full max-w-[100vw] shadow-sm">
             <div className="overflow-x-auto">
               <table className={`w-full ${language === 'ar' ? 'text-right' : 'text-left'} border-collapse`}>
                 <thead>
