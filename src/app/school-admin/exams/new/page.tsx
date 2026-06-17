@@ -22,7 +22,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import MathInput from "@/components/MathInput";
 import HtmlRenderer from "@/components/HtmlRenderer";
 
-export default function SchoolAdminNewExamPage() {
+export default function SchoolAdminNewExamPage({ presetType, presetCourseId }: { presetType?: 'Exam' | 'Quiz' | 'Assignment', presetCourseId?: string }) {
   return (
     <Suspense fallback={
       <DashboardLayout>
@@ -32,16 +32,16 @@ export default function SchoolAdminNewExamPage() {
         </div>
       </DashboardLayout>
     }>
-      <SchoolAdminNewExamPageContent />
+      <SchoolAdminNewExamPageContent presetType={presetType} presetCourseId={presetCourseId} />
     </Suspense>
   );
 }
 
-function SchoolAdminNewExamPageContent() {
+export function SchoolAdminNewExamPageContent({ presetType, presetCourseId }: { presetType?: 'Exam' | 'Quiz' | 'Assignment', presetCourseId?: string }) {
     const router = useRouter();
   const searchParams = useSearchParams();
-  const courseIdParam = searchParams.get('courseId');
-  const typeParam = searchParams.get('type');
+  const courseIdParam = presetCourseId || searchParams.get('courseId');
+  const typeParam = presetType || searchParams.get('type');
   const { showToast } = useNotification();
   const { t, language } = useLanguage();
   const [saving, setSaving] = useState(false);
@@ -66,11 +66,14 @@ function SchoolAdminNewExamPageContent() {
     };
   };
 
+  const normalizedType = typeParam === 'Quiz' ? 'Quiz' : (typeParam === 'ASSIGNMENT' || typeParam === 'Assignment' ? 'Assignment' : 'Exam');
+
   const [examInfo, setExamInfo] = useState<any>({
     title: "",
     description: "",
     category: "اللغة العربية",
-    type: "Exam",
+    type: normalizedType,
+    courseId: courseIdParam || undefined,
     duration: 60,
     passingScore: 50,
     isCentral: false,
@@ -732,7 +735,11 @@ function SchoolAdminNewExamPageContent() {
 
       if (res.ok) {
         showToast(status === "DRAFT" ? t('schoolAdmin.examsNewPage.draftSuccess') : t('schoolAdmin.examsNewPage.publishedSuccess'), 'success');
-        router.push("/school-admin/exams");
+        if (courseIdParam) {
+          router.push(`/school-admin/courses/edit/${courseIdParam}`);
+        } else {
+          router.push("/school-admin/exams");
+        }
       } else {
         const err = await res.json();
         showToast(err.error || t('schoolAdmin.examsNewPage.saveError'), 'error');
@@ -756,11 +763,19 @@ function SchoolAdminNewExamPageContent() {
                   <BookOpen className="w-8 h-8 text-indigo-400" />
                 </div>
                 <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight">
-                  {t('schoolAdmin.examsNewPage.title')}
+                  {examInfo.type === 'Quiz'
+                    ? t('schoolAdmin.examsNewPage.titleQuiz')
+                    : examInfo.type === 'Assignment'
+                    ? t('schoolAdmin.examsNewPage.titleAssignment')
+                    : t('schoolAdmin.examsNewPage.title')}
                 </h2>
               </div>
               <p className="text-indigo-200/60 mt-2 text-lg font-medium max-w-2xl leading-relaxed">
-                {t('schoolAdmin.examsNewPage.subtitle')}
+                {examInfo.type === 'Quiz'
+                  ? t('schoolAdmin.examsNewPage.subtitleQuiz')
+                  : examInfo.type === 'Assignment'
+                  ? t('schoolAdmin.examsNewPage.subtitleAssignment')
+                  : t('schoolAdmin.examsNewPage.subtitle')}
               </p>
             </div>
             
@@ -779,7 +794,15 @@ function SchoolAdminNewExamPageContent() {
                 disabled={saving}
                 className="px-10 py-5 rounded-2xl font-black bg-indigo-600 text-white shadow-xl shadow-indigo-900/40 hover:scale-105 transition-all flex items-center justify-center gap-3 disabled:opacity-50 whitespace-nowrap shrink-0 cursor-pointer"
               >
-                <span>{saving ? t('schoolAdmin.examsNewPage.saving') : t('schoolAdmin.examsNewPage.publishExam')}</span>
+                <span>
+                  {saving 
+                    ? t('schoolAdmin.examsNewPage.saving') 
+                    : examInfo.type === 'Quiz'
+                    ? t('schoolAdmin.examsNewPage.publishQuiz')
+                    : examInfo.type === 'Assignment'
+                    ? t('schoolAdmin.examsNewPage.publishAssignment')
+                    : t('schoolAdmin.examsNewPage.publishExam')}
+                </span>
                 <Globe className="w-6 h-6 shrink-0" />
               </button>
             </div>
@@ -794,7 +817,11 @@ function SchoolAdminNewExamPageContent() {
             <div className="bg-white p-8 rounded-[35px] border border-slate-100 shadow-sm flex flex-col gap-8">
               <h3 className={`font-black text-slate-800 flex items-center gap-3 text-lg border-b border-slate-50 pb-6 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                 <Settings className="w-6 h-6 text-indigo-600" />
-                {t('schoolAdmin.examsNewPage.examSettings')}
+                {examInfo.type === 'Quiz'
+                  ? t('schoolAdmin.examsNewPage.quizSettings')
+                  : examInfo.type === 'Assignment'
+                  ? t('schoolAdmin.examsNewPage.assignmentSettings')
+                  : t('schoolAdmin.examsNewPage.examSettings')}
               </h3>
 
               <div className="space-y-6">
@@ -937,11 +964,21 @@ function SchoolAdminNewExamPageContent() {
           {/* Questions Content Area */}
           <div className="lg:col-span-8 flex flex-col gap-8">
             <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-sm">
-               <label className="text-sm font-black text-slate-400 mb-3 block uppercase tracking-widest">{t('schoolAdmin.examsNewPage.examTitleLabel')}</label>
+               <label className="text-sm font-black text-slate-400 mb-3 block uppercase tracking-widest">
+                 {examInfo.type === 'Quiz'
+                   ? t('schoolAdmin.examsNewPage.quizTitleLabel')
+                   : examInfo.type === 'Assignment'
+                   ? t('schoolAdmin.examsNewPage.assignmentTitleLabel')
+                   : t('schoolAdmin.examsNewPage.examTitleLabel')}
+               </label>
                <input 
                 type="text" 
                 className="w-full bg-slate-50 border border-slate-100 rounded-[25px] px-8 py-6 text-2xl md:text-3xl font-black outline-none focus:ring-4 focus:ring-indigo-500/5 focus:bg-white focus:border-indigo-500 transition-all text-slate-800"
-                placeholder={t('schoolAdmin.examsNewPage.examTitlePlaceholder')}
+                placeholder={examInfo.type === 'Quiz'
+                  ? t('schoolAdmin.examsNewPage.quizTitlePlaceholder')
+                  : examInfo.type === 'Assignment'
+                  ? t('schoolAdmin.examsNewPage.assignmentTitlePlaceholder')
+                  : t('schoolAdmin.examsNewPage.examTitlePlaceholder')}
                 value={examInfo.title}
                 onChange={(e) => setExamInfo({...examInfo, title: e.target.value})}
               />
@@ -950,7 +987,13 @@ function SchoolAdminNewExamPageContent() {
             {/* Questions List Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 px-4">
               <div className="flex items-center gap-3">
-                <h3 className="text-2xl font-black text-slate-800">{t('schoolAdmin.examsNewPage.examSlides').replace('{n}', String(questions.length))}</h3>
+                <h3 className="text-2xl font-black text-slate-800">
+                  {(examInfo.type === 'Quiz'
+                    ? t('schoolAdmin.examsNewPage.quizSlides')
+                    : examInfo.type === 'Assignment'
+                    ? t('schoolAdmin.examsNewPage.assignmentSlides')
+                    : t('schoolAdmin.examsNewPage.examSlides')).replace('{n}', String(questions.length))}
+                </h3>
                 <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-black">
                   {t('schoolAdmin.examsNewPage.totalPoints').replace('{n}', String(questions.reduce((sum, q) => sum + (q.points || 0), 0)))}
                 </span>

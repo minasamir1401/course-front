@@ -3,13 +3,13 @@ import { NextRequest, NextResponse } from 'next/server';
 // Runtime proxy: forwards all /api/* requests to the backend
 // This runs at REQUEST TIME (not build time), so env vars are always available
 const getBackendBase = () => {
-  // Priority 1: BACKEND_ORIGIN env var
-  const origin = process.env.BACKEND_ORIGIN?.replace(/\/+$/, '').trim();
-  if (origin) return origin;
-
-  // Priority 2: Explicit internal Docker URL, if configured by the deployment
+  // Priority 1: Explicit internal Docker URL, if configured by the deployment (avoids DNS/loopback issues)
   const internalOrigin = process.env.INTERNAL_BACKEND_URL?.replace(/\/+$/, '').trim();
   if (internalOrigin) return internalOrigin;
+
+  // Priority 2: BACKEND_ORIGIN env var
+  const origin = process.env.BACKEND_ORIGIN?.replace(/\/+$/, '').trim();
+  if (origin) return origin;
 
   // Priority 3: Extract origin from NEXT_PUBLIC_API_URL
   const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/"/g, '').trim();
