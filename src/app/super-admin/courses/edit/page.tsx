@@ -18,6 +18,7 @@ import RichTextEditor from "@/components/RichTextEditor";
 import { compressImage } from "@/lib/image-utils";
 import { useLanguage } from "@/contexts/LanguageContext";
 import MathInput from "@/components/MathInput";
+import SuperAdminNewExamPage from "../../exams/new/page";
 
 
 export default function EditCoursePage() {
@@ -169,6 +170,7 @@ export default function EditCoursePage() {
   const [lessons, setLessons] = useState<any[]>([]);
   const [exams, setExams] = useState<any[]>([]);
   const [activeContentTab, setActiveContentTab] = useState<'lessons' | 'quizzes' | 'assignments'>('lessons');
+  const [inlineExamType, setInlineExamType] = useState<'Quiz' | 'Assignment' | null>(null);
   const [isLessonModalOpen, setIsLessonModalOpen] = useState(false);
   const [isBankModalOpen, setIsBankModalOpen] = useState(false);
   const [isQuestionBankModalOpen, setIsQuestionBankModalOpen] = useState(false);
@@ -409,6 +411,24 @@ export default function EditCoursePage() {
       showToast(language === 'ar' ? "خطأ في الاتصال" : "Connection error", "error");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const refreshCourseExams = async () => {
+    const token = localStorage.getItem("super_admin_token");
+    if (!token || !courseId) return;
+
+    try {
+      const res = await fetch(`${API_URL}/courses/${courseId}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setExams(data.exams || []);
+      }
+    } catch (error) {
+      console.error("Failed to refresh course exams", error);
     }
   };
 
@@ -3551,10 +3571,13 @@ export default function EditCoursePage() {
                      { id: 'quizzes', label: language === 'ar' ? 'الاختبارات القصيرة' : 'Quizzes', icon: HelpCircle, color: 'orange' },
                      { id: 'assignments', label: language === 'ar' ? 'التكليفات والمهام' : 'Assignments & Tasks', icon: FileText, color: 'emerald' },
                    ].map(tab => (
-                     <button
-                       key={tab.id}
-                       onClick={() => setActiveContentTab(tab.id as any)}
-                       className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-2xl font-black transition-all ${
+                      <button
+                        key={tab.id}
+                        onClick={() => {
+                          setInlineExamType(null);
+                          setActiveContentTab(tab.id as any);
+                        }}
+                        className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-2xl font-black transition-all ${
                          activeContentTab === tab.id 
                          ? `bg-${tab.color}-600 ${tab.color === 'orange' ? 'text-black' : 'text-white'} shadow-lg shadow-${tab.color}-600/20` 
                          : 'text-slate-400 hover:bg-slate-50'
@@ -3566,6 +3589,19 @@ export default function EditCoursePage() {
                    ))}
                 </div>
 
+                {inlineExamType ? (
+                  <SuperAdminNewExamPage
+                    embedded
+                    presetType={inlineExamType}
+                    presetCourseId={courseId || undefined}
+                    onCancel={() => setInlineExamType(null)}
+                    onSaved={() => {
+                      setInlineExamType(null);
+                      refreshCourseExams();
+                    }}
+                  />
+                ) : (
+                  <>
                 <div className="flex justify-between items-center bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
                   <h3 className="text-2xl font-black text-slate-900 flex items-center gap-4">
                     {activeContentTab === 'lessons' && <><Layers className="w-8 h-8 text-indigo-600" /> {language === 'ar' ? "الدروس والمحاضرات" : "Lessons & Lectures"}</>}
@@ -3577,9 +3613,9 @@ export default function EditCoursePage() {
                       if (activeContentTab === 'lessons') {
                         openAddLessonModal();
                       } else if (activeContentTab === 'quizzes') {
-                        router.push(`/super-admin/quizzes/new?courseId=${courseId}`);
+                        setInlineExamType('Quiz');
                       } else {
-                        router.push(`/super-admin/assignments/new?courseId=${courseId}`);
+                        setInlineExamType('Assignment');
                       }
                     }} 
                     className={`px-8 py-4 rounded-2xl font-black flex items-center gap-3 transition-all shadow-xl text-white ${
@@ -3730,6 +3766,8 @@ export default function EditCoursePage() {
                     </div>
                   )}
                 </div>
+                  </>
+                )}
               </div>
             </div>
           </div>

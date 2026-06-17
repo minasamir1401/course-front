@@ -23,22 +23,38 @@ import { useNotification } from "@/context/NotificationContext";
 import MathInput from "@/components/MathInput";
 import HtmlRenderer from "@/components/HtmlRenderer";
 
-export default function SuperAdminNewExamPage({ presetType, presetCourseId }: { presetType?: 'Exam' | 'Quiz' | 'Assignment', presetCourseId?: string }) {
+type NewExamPageProps = {
+  presetType?: 'Exam' | 'Quiz' | 'Assignment';
+  presetCourseId?: string;
+  embedded?: boolean;
+  onCancel?: () => void;
+  onSaved?: () => void;
+};
+
+export default function SuperAdminNewExamPage({ presetType, presetCourseId, embedded = false, onCancel, onSaved }: NewExamPageProps) {
+  const fallback = (
+    <div className="h-[70vh] flex flex-col items-center justify-center gap-6 text-slate-400">
+       <div className="w-20 h-20 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+       <p className="font-black text-2xl animate-pulse">جاري التحميل...</p>
+    </div>
+  );
+
+  if (embedded) {
+    return (
+      <Suspense fallback={fallback}>
+        <SuperAdminNewExamPageContent presetType={presetType} presetCourseId={presetCourseId} embedded onCancel={onCancel} onSaved={onSaved} />
+      </Suspense>
+    );
+  }
+
   return (
-    <Suspense fallback={
-      <DashboardLayout>
-        <div className="h-[70vh] flex flex-col items-center justify-center gap-6 text-slate-400">
-           <div className="w-20 h-20 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-           <p className="font-black text-2xl animate-pulse">جاري التحميل...</p>
-        </div>
-      </DashboardLayout>
-    }>
+    <Suspense fallback={<DashboardLayout>{fallback}</DashboardLayout>}>
       <SuperAdminNewExamPageContent presetType={presetType} presetCourseId={presetCourseId} />
     </Suspense>
   );
 }
 
-export function SuperAdminNewExamPageContent({ presetType, presetCourseId }: { presetType?: 'Exam' | 'Quiz' | 'Assignment', presetCourseId?: string }) {
+export function SuperAdminNewExamPageContent({ presetType, presetCourseId, embedded = false, onCancel, onSaved }: NewExamPageProps) {
     const router = useRouter();
   const searchParams = useSearchParams();
   const courseIdParam = presetCourseId || searchParams.get('courseId');
@@ -747,7 +763,9 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId }: { p
 
       if (res.ok) {
         showToast(status === "DRAFT" ? "Draft saved successfully!" : "Exam published successfully!", 'success');
-        if (courseIdParam) {
+        if (embedded) {
+          onSaved?.();
+        } else if (courseIdParam) {
           router.push(`/super-admin/courses/edit/${courseIdParam}`);
         } else {
           router.push("/super-admin/exams");
@@ -771,8 +789,8 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId }: { p
     }
   };
 
-  return (
-        <DashboardLayout>
+  const content = (
+    <>
       <div className={`max-w-7xl mx-auto flex flex-col gap-10 pb-20 ${language === 'ar' ? 'rtl' : 'ltr'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
         {/* Command Center Header */}
         <div className="bg-[#0f0f1d] p-8 md:p-12 rounded-[40px] shadow-2xl relative overflow-hidden border border-white/5">
@@ -792,7 +810,18 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId }: { p
             </div>
             
             <div className="flex flex-wrap gap-4 w-full lg:w-auto justify-center">
-                            <button 
+              {embedded && (
+                <button
+                  onClick={onCancel}
+                  disabled={saving}
+                  className="px-8 py-5 rounded-2xl font-bold bg-white/5 text-white border border-white/10 hover:bg-white/10 transition-all flex items-center justify-center gap-3 disabled:opacity-50 whitespace-nowrap shrink-0"
+                >
+                  <span>{language === 'ar' ? "رجوع للكورس" : "Back to Course"}</span>
+                  <ArrowRight className="w-5 h-5 shrink-0" />
+                </button>
+              )}
+
+                              <button 
                 onClick={() => handleSubmit("DRAFT")}
                 disabled={saving}
                 className="px-8 py-5 rounded-2xl font-bold bg-white/5 text-white border border-white/10 hover:bg-white/10 transition-all flex items-center justify-center gap-3 disabled:opacity-50 whitespace-nowrap shrink-0"
@@ -1878,6 +1907,16 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId }: { p
           </div>
         </div>
       )}
+    </>
+  );
+
+  if (embedded) {
+    return content;
+  }
+
+  return (
+    <DashboardLayout>
+      {content}
     </DashboardLayout>
   );
 }
