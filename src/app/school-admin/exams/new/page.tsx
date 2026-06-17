@@ -22,7 +22,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import MathInput from "@/components/MathInput";
 import HtmlRenderer from "@/components/HtmlRenderer";
 
-export default function SchoolAdminNewExamPage() {
+export default function SchoolAdminNewExamPage({ presetType, presetCourseId }: { presetType?: 'Exam' | 'Quiz' | 'Assignment', presetCourseId?: string }) {
   return (
     <Suspense fallback={
       <DashboardLayout>
@@ -32,16 +32,16 @@ export default function SchoolAdminNewExamPage() {
         </div>
       </DashboardLayout>
     }>
-      <SchoolAdminNewExamPageContent />
+      <SchoolAdminNewExamPageContent presetType={presetType} presetCourseId={presetCourseId} />
     </Suspense>
   );
 }
 
-function SchoolAdminNewExamPageContent() {
+export function SchoolAdminNewExamPageContent({ presetType, presetCourseId }: { presetType?: 'Exam' | 'Quiz' | 'Assignment', presetCourseId?: string }) {
     const router = useRouter();
   const searchParams = useSearchParams();
-  const courseIdParam = searchParams.get('courseId');
-  const typeParam = searchParams.get('type');
+  const courseIdParam = presetCourseId || searchParams.get('courseId');
+  const typeParam = presetType || searchParams.get('type');
   const { showToast } = useNotification();
   const { t, language } = useLanguage();
   const [saving, setSaving] = useState(false);
@@ -66,11 +66,14 @@ function SchoolAdminNewExamPageContent() {
     };
   };
 
+  const normalizedType = typeParam === 'Quiz' ? 'Quiz' : (typeParam === 'ASSIGNMENT' || typeParam === 'Assignment' ? 'Assignment' : 'Exam');
+
   const [examInfo, setExamInfo] = useState<any>({
     title: "",
     description: "",
     category: "اللغة العربية",
-    type: "Exam",
+    type: normalizedType,
+    courseId: courseIdParam || undefined,
     duration: 60,
     passingScore: 50,
     isCentral: false,
@@ -732,7 +735,11 @@ function SchoolAdminNewExamPageContent() {
 
       if (res.ok) {
         showToast(status === "DRAFT" ? t('schoolAdmin.examsNewPage.draftSuccess') : t('schoolAdmin.examsNewPage.publishedSuccess'), 'success');
-        router.push("/school-admin/exams");
+        if (courseIdParam) {
+          router.push(`/school-admin/courses/edit/${courseIdParam}`);
+        } else {
+          router.push("/school-admin/exams");
+        }
       } else {
         const err = await res.json();
         showToast(err.error || t('schoolAdmin.examsNewPage.saveError'), 'error');

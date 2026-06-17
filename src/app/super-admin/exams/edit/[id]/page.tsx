@@ -21,7 +21,7 @@ import VideoPlayer from "@/components/VideoPlayer";
 import MathInput from "@/components/MathInput";
 import HtmlRenderer from "@/components/HtmlRenderer";
 
-export default function SuperAdminEditExamPage() {
+export default function SuperAdminEditExamPage({ presetType }: { presetType?: 'Exam' | 'Quiz' | 'Assignment' }) {
   return (
     <Suspense fallback={
       <DashboardLayout>
@@ -31,12 +31,12 @@ export default function SuperAdminEditExamPage() {
         </div>
       </DashboardLayout>
     }>
-      <SuperAdminEditExamPageContent />
+      <SuperAdminEditExamPageContent presetType={presetType} />
     </Suspense>
   );
 }
 
-function SuperAdminEditExamPageContent() {
+export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Exam' | 'Quiz' | 'Assignment' }) {
     const router = useRouter();
   const { id } = useParams();
   const searchParams = useSearchParams();
@@ -736,8 +736,17 @@ function SuperAdminEditExamPageContent() {
         if (isAutoSave) {
           setLastAutoSave(new Date());
         } else {
-          showToast("Exam updated successfully!", 'success');
-          router.push("/super-admin/exams");
+          const successMsg = examInfo.type === 'Quiz' 
+            ? (language === 'ar' ? "تم تحديث الكويز بنجاح!" : "Quiz updated successfully!")
+            : examInfo.type === 'Assignment'
+            ? (language === 'ar' ? "تم تحديث التكليف بنجاح!" : "Assignment updated successfully!")
+            : (language === 'ar' ? "تم تحديث الامتحان بنجاح!" : "Exam updated successfully!");
+          showToast(successMsg, 'success');
+          if (courseIdParam || examInfo.courseId) {
+            router.push(`/super-admin/courses/edit/${courseIdParam || examInfo.courseId}`);
+          } else {
+            router.push("/super-admin/exams");
+          }
         }
       } else {
         if (!isAutoSave) {

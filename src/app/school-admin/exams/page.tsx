@@ -257,7 +257,11 @@ export default function ExamsListPage() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-2 shrink-0 w-full md:w-auto mt-4 md:mt-0 justify-end md:justify-start border-t border-slate-100 md:border-none pt-4 md:pt-0">
-                  <Link href={`/school-admin/exams/edit/${exam.id}`} className="p-3 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-100 hover:text-indigo-600 transition-colors border border-slate-100" title={t('schoolAdmin.examsPage.edit')}>
+                  <Link href={
+                      exam.type === 'Quiz' ? `/school-admin/quizzes/edit/${exam.id}` :
+                      exam.type === 'Assignment' ? `/school-admin/assignments/edit/${exam.id}` :
+                      `/school-admin/exams/edit/${exam.id}`
+                    } className="p-3 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-100 hover:text-indigo-600 transition-colors border border-slate-100" title={t('schoolAdmin.examsPage.edit')}>
                     <FileEdit className="w-5 h-5" />
                   </Link>
                   <button onClick={() => handleDelete(exam.id)} className="p-3 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 transition-colors border border-rose-100" title={t('schoolAdmin.teachersPage.deleteTooltip')}>

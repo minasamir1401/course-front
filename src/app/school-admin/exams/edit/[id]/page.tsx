@@ -22,7 +22,7 @@ import MathInput from "@/components/MathInput";
 import HtmlRenderer from "@/components/HtmlRenderer";
 
 
-export default function SchoolAdminEditExamPage() {
+export default function SchoolAdminEditExamPage({ presetType }: { presetType?: 'Exam' | 'Quiz' | 'Assignment' }) {
   return (
     <Suspense fallback={
       <DashboardLayout>
@@ -32,12 +32,12 @@ export default function SchoolAdminEditExamPage() {
         </div>
       </DashboardLayout>
     }>
-      <SchoolAdminEditExamPageContent />
+      <SchoolAdminEditExamPageContent presetType={presetType} />
     </Suspense>
   );
 }
 
-function SchoolAdminEditExamPageContent() {
+export function SchoolAdminEditExamPageContent({ presetType }: { presetType?: 'Exam' | 'Quiz' | 'Assignment' }) {
     const router = useRouter();
   const { id } = useParams();
   const searchParams = useSearchParams();
@@ -668,8 +668,17 @@ function SchoolAdminEditExamPageContent() {
         if (isAutoSave) {
           setLastAutoSave(new Date());
         } else {
-          showToast("تم تحديث الامتحان بنجاح!", 'success');
-          router.push("/school-admin/exams");
+          const successMsg = examInfo.type === 'Quiz' 
+            ? (language === 'ar' ? "تم تحديث الكويز بنجاح!" : "Quiz updated successfully!")
+            : examInfo.type === 'Assignment'
+            ? (language === 'ar' ? "تم تحديث التكليف بنجاح!" : "Assignment updated successfully!")
+            : (language === 'ar' ? "تم تحديث الامتحان بنجاح!" : "Exam updated successfully!");
+          showToast(successMsg, 'success');
+          if (courseIdParam || examInfo.courseId) {
+            router.push(`/school-admin/courses/edit/${courseIdParam || examInfo.courseId}`);
+          } else {
+            router.push("/school-admin/exams");
+          }
         }
       } else {
         if (!isAutoSave) {

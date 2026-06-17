@@ -336,7 +336,11 @@ export default function SuperAdminExamsPage() {
                         {t('examsPage.reports')}
                       </Link>
                       <Link
-                        href={`/super-admin/exams/edit/${exam.id}`}
+                        href={
+                          exam.type === 'Quiz' ? `/super-admin/quizzes/edit/${exam.id}` :
+                          exam.type === 'Assignment' ? `/super-admin/assignments/edit/${exam.id}` :
+                          `/super-admin/exams/edit/${exam.id}`
+                        }
                         className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-indigo-50 hover:text-indigo-600 transition-all border border-slate-100"
                         title={language === 'ar' ? "تعديل الامتحان" : "Edit Exam"}
                       >

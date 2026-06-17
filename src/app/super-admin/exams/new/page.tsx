@@ -23,7 +23,7 @@ import { useNotification } from "@/context/NotificationContext";
 import MathInput from "@/components/MathInput";
 import HtmlRenderer from "@/components/HtmlRenderer";
 
-export default function SuperAdminNewExamPage() {
+export default function SuperAdminNewExamPage({ presetType, presetCourseId }: { presetType?: 'Exam' | 'Quiz' | 'Assignment', presetCourseId?: string }) {
   return (
     <Suspense fallback={
       <DashboardLayout>
@@ -33,16 +33,16 @@ export default function SuperAdminNewExamPage() {
         </div>
       </DashboardLayout>
     }>
-      <SuperAdminNewExamPageContent />
+      <SuperAdminNewExamPageContent presetType={presetType} presetCourseId={presetCourseId} />
     </Suspense>
   );
 }
 
-function SuperAdminNewExamPageContent() {
+export function SuperAdminNewExamPageContent({ presetType, presetCourseId }: { presetType?: 'Exam' | 'Quiz' | 'Assignment', presetCourseId?: string }) {
     const router = useRouter();
   const searchParams = useSearchParams();
-  const courseIdParam = searchParams.get('courseId');
-  const typeParam = searchParams.get('type');
+  const courseIdParam = presetCourseId || searchParams.get('courseId');
+  const typeParam = presetType || searchParams.get('type');
   const { showToast } = useNotification();
   const { t, language } = useLanguage();
   const [loading, setLoading] = useState(false);
@@ -116,11 +116,14 @@ function SuperAdminNewExamPageContent() {
     };
   };
 
-    const [examInfo, setExamInfo] = useState<any>({
+  const normalizedType = typeParam === 'Quiz' ? 'Quiz' : (typeParam === 'ASSIGNMENT' || typeParam === 'Assignment' ? 'Assignment' : 'Exam');
+
+  const [examInfo, setExamInfo] = useState<any>({
     title: "",
     description: "",
     category: "اللغة العربية",
-    type: "Exam",
+    type: normalizedType,
+    courseId: courseIdParam || undefined,
     duration: 60,
     passingScore: 50,
     isCentral: true,
@@ -744,7 +747,11 @@ function SuperAdminNewExamPageContent() {
 
       if (res.ok) {
         showToast(status === "DRAFT" ? "Draft saved successfully!" : "Exam published successfully!", 'success');
-        router.push("/super-admin/exams");
+        if (courseIdParam) {
+          router.push(`/super-admin/courses/edit/${courseIdParam}`);
+        } else {
+          router.push("/super-admin/exams");
+        }
       } else {
         let errMessage = "Failed to add exam";
         try {

@@ -3577,9 +3577,9 @@ export default function EditCoursePage() {
                       if (activeContentTab === 'lessons') {
                         openAddLessonModal();
                       } else if (activeContentTab === 'quizzes') {
-                        router.push(`/super-admin/exams/new?courseId=${courseId}&type=Quiz`);
+                        router.push(`/super-admin/quizzes/new?courseId=${courseId}`);
                       } else {
-                        router.push(`/super-admin/exams/new?courseId=${courseId}&type=ASSIGNMENT`);
+                        router.push(`/super-admin/assignments/new?courseId=${courseId}`);
                       }
                     }} 
                     className={`px-8 py-4 rounded-2xl font-black flex items-center gap-3 transition-all shadow-xl text-white ${
@@ -3710,7 +3710,15 @@ export default function EditCoursePage() {
                                     </div>
                                  </div>
                                  <button 
-                                   onClick={() => router.push(`/super-admin/exams/edit/${exam.id}?courseId=${courseId}`)}
+                                   onClick={() => {
+                                      if (exam.type === 'Quiz') {
+                                        router.push(`/super-admin/quizzes/edit/${exam.id}?courseId=${courseId}`);
+                                      } else if (exam.type === 'Assignment') {
+                                        router.push(`/super-admin/assignments/edit/${exam.id}?courseId=${courseId}`);
+                                      } else {
+                                        router.push(`/super-admin/exams/edit/${exam.id}?courseId=${courseId}`);
+                                      }
+                                    }}
                                    className="p-2 text-slate-400 hover:text-indigo-600 transition-all"
                                  >
                                    <Edit2 size={16} />
