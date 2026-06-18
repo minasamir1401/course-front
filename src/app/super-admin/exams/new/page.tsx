@@ -23,38 +23,22 @@ import { useNotification } from "@/context/NotificationContext";
 import MathInput from "@/components/MathInput";
 import HtmlRenderer from "@/components/HtmlRenderer";
 
-type NewExamPageProps = {
-  presetType?: 'Exam' | 'Quiz' | 'Assignment';
-  presetCourseId?: string;
-  embedded?: boolean;
-  onCancel?: () => void;
-  onSaved?: () => void;
-};
-
-export default function SuperAdminNewExamPage({ presetType, presetCourseId, embedded = false, onCancel, onSaved }: NewExamPageProps) {
-  const fallback = (
-    <div className="h-[70vh] flex flex-col items-center justify-center gap-6 text-slate-400">
-       <div className="w-20 h-20 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-       <p className="font-black text-2xl animate-pulse">جاري التحميل...</p>
-    </div>
-  );
-
-  if (embedded) {
-    return (
-      <Suspense fallback={fallback}>
-        <SuperAdminNewExamPageContent presetType={presetType} presetCourseId={presetCourseId} embedded onCancel={onCancel} onSaved={onSaved} />
-      </Suspense>
-    );
-  }
-
+export default function SuperAdminNewExamPage({ presetType, presetCourseId }: { presetType?: 'Exam' | 'Quiz' | 'Assignment', presetCourseId?: string }) {
   return (
-    <Suspense fallback={<DashboardLayout>{fallback}</DashboardLayout>}>
+    <Suspense fallback={
+      <DashboardLayout>
+        <div className="h-[70vh] flex flex-col items-center justify-center gap-6 text-slate-400">
+           <div className="w-20 h-20 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+           <p className="font-black text-2xl animate-pulse">جاري التحميل...</p>
+        </div>
+      </DashboardLayout>
+    }>
       <SuperAdminNewExamPageContent presetType={presetType} presetCourseId={presetCourseId} />
     </Suspense>
   );
 }
 
-export function SuperAdminNewExamPageContent({ presetType, presetCourseId, embedded = false, onCancel, onSaved }: NewExamPageProps) {
+export function SuperAdminNewExamPageContent({ presetType, presetCourseId }: { presetType?: 'Exam' | 'Quiz' | 'Assignment', presetCourseId?: string }) {
     const router = useRouter();
   const searchParams = useSearchParams();
   const courseIdParam = presetCourseId || searchParams.get('courseId');
@@ -292,7 +276,7 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId, embed
 
   const [currentQuestion, setCurrentQuestion] = useState<any>({
     text: "", type: "MCQ", options: ["", "", "", ""],
-    correctAnswer: "", points: 1, skill: "Math", level: "Medium",
+    correctAnswer: "", points: 1, skill: "Math", level: "Medium", dok: "",
     standard: "",
     indicator: "",
     learningOutcome: "",
@@ -333,6 +317,7 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId, embed
     const indIdx = headers.findIndex(h => h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشر"));
     const loIdx = headers.findIndex(h => h.includes("outcome") || h.includes("مخرج") || h.includes("ناتج") || h.includes("التعلم"));
     const diffIdx = headers.findIndex(h => h.includes("difficulty") || h.includes("صعوبة") || h.includes("الصعوبة"));
+    const dokIdx = headers.findIndex(h => h.includes("dok"));
     const videoIdx = headers.findIndex(h => h.includes("video") || h.includes("فيديو") || h.includes("الفيديو"));
     const expIdx = headers.findIndex(h => h.includes("explanation") || h.includes("تفسير") || h.includes("التفسير") || h.includes("شرح"));
 
@@ -380,6 +365,9 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId, embed
       else if (level.toLowerCase().includes("hard") || level.includes("صعب")) level = "Hard";
       else level = "Medium";
 
+      const dokRaw = dokIdx >= 0 ? String(row[dokIdx] ?? "").trim() : "";
+      const dok = ["DOK 1", "DOK 2", "DOK 3", "DOK 4"].includes(dokRaw) ? dokRaw : "";
+
       const explanation = expIdx >= 0 ? String(row[expIdx] ?? "").trim() : "";
       const sections = explanation ? [{ id: Date.now() + Math.random(), type: "EXPLANATION", content: explanation }] : [];
 
@@ -395,6 +383,7 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId, embed
         indicator,
         learningOutcome,
         level,
+        dok,
         videoUrl,
         sections
       });
@@ -458,6 +447,7 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId, embed
         "Indicator",
         "Learning Outcome",
         "Difficulty Level",
+        "DOK",
         "Video URL",
         "Explanation"
       ],
@@ -469,7 +459,7 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId, embed
         "Standard 1: Operations",
         "Indicator 1.1: Addition",
         "Outcome 1: Solve additions",
-        "Easy",
+        "Easy", "DOK 1",
         "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
         "5 + 5 equals 10"
       ],
@@ -481,7 +471,7 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId, embed
         "Standard 2: Earth Shape",
         "Indicator 2.1: Planets",
         "Outcome 2: Physical shape",
-        "Easy", "", ""
+        "Easy", "DOK 2", "", ""
       ]
     ];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
@@ -522,7 +512,7 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId, embed
   const handleAddQuestion = (type: string = 'MCQ') => {
     setCurrentQuestion({
       text: "", type, options: type === 'TRUE_FALSE' ? ["صحيح", "خطأ", "", ""] : ["", "", "", ""],
-      correctAnswer: "", points: type === 'TEXT' ? 0 : 1, skill: "Math", level: "Medium",
+      correctAnswer: "", points: type === 'TEXT' ? 0 : 1, skill: "Math", level: "Medium", dok: "",
       standard: "",
       learningOutcome: "",
       sections: [{ type: "EXPLANATION", content: "" }], imageUrl: "", correctAnswers: [],
@@ -763,9 +753,7 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId, embed
 
       if (res.ok) {
         showToast(status === "DRAFT" ? "Draft saved successfully!" : "Exam published successfully!", 'success');
-        if (embedded) {
-          onSaved?.();
-        } else if (courseIdParam) {
+        if (courseIdParam) {
           router.push(`/super-admin/courses/edit/${courseIdParam}`);
         } else {
           router.push("/super-admin/exams");
@@ -789,8 +777,8 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId, embed
     }
   };
 
-  const content = (
-    <>
+  return (
+        <DashboardLayout>
       <div className={`max-w-7xl mx-auto flex flex-col gap-10 pb-20 ${language === 'ar' ? 'rtl' : 'ltr'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
         {/* Command Center Header */}
         <div className="bg-[#0f0f1d] p-8 md:p-12 rounded-[40px] shadow-2xl relative overflow-hidden border border-white/5">
@@ -810,18 +798,7 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId, embed
             </div>
             
             <div className="flex flex-wrap gap-4 w-full lg:w-auto justify-center">
-              {embedded && (
-                <button
-                  onClick={onCancel}
-                  disabled={saving}
-                  className="px-8 py-5 rounded-2xl font-bold bg-white/5 text-white border border-white/10 hover:bg-white/10 transition-all flex items-center justify-center gap-3 disabled:opacity-50 whitespace-nowrap shrink-0"
-                >
-                  <span>{language === 'ar' ? "رجوع للكورس" : "Back to Course"}</span>
-                  <ArrowRight className="w-5 h-5 shrink-0" />
-                </button>
-              )}
-
-                              <button 
+                            <button 
                 onClick={() => handleSubmit("DRAFT")}
                 disabled={saving}
                 className="px-8 py-5 rounded-2xl font-bold bg-white/5 text-white border border-white/10 hover:bg-white/10 transition-all flex items-center justify-center gap-3 disabled:opacity-50 whitespace-nowrap shrink-0"
@@ -1528,6 +1505,21 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId, embed
                         </select>
                       </div>
 
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "عمق المعرفة (DOK)" : "Depth of Knowledge (DOK)"}</label>
+                        <select 
+                          className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
+                          value={currentQuestion.dok || ""}
+                          onChange={(e) => updateCurrentQuestion("dok", e.target.value)}
+                        >
+                          <option value="">None</option>
+                          <option value="DOK 1">DOK 1</option>
+                          <option value="DOK 2">DOK 2</option>
+                          <option value="DOK 3">DOK 3</option>
+                          <option value="DOK 4">DOK 4</option>
+                        </select>
+                      </div>
+
                       {currentQuestion.type !== 'TEXT' && (
                         <div className="flex flex-col gap-2">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Points</label>
@@ -1689,7 +1681,7 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId, embed
                     )}
 
                     <div className="flex justify-end gap-4 pt-4 border-t border-slate-100">
-                                            <button
+                      <button
                         onClick={() => setShowQuestionForm(false)}
                         className="px-8 py-4 rounded-2xl font-bold bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all whitespace-nowrap shrink-0"
                       >
@@ -1699,7 +1691,7 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId, embed
                         onClick={handleSaveQuestion}
                         className="px-10 py-4 rounded-2xl font-black bg-indigo-600 text-white shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 whitespace-nowrap shrink-0"
                       >
-                                                <span>{language === 'ar' ? "حفظ الشريحة" : "Save Slide"}</span>
+                        <span>{language === 'ar' ? "حفظ الشريحة" : "Save Slide"}</span>
                         <Save className="w-5 h-5 shrink-0" />
                       </button>
                     </div>
@@ -1721,7 +1713,7 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId, embed
                         <div className="flex flex-col flex-1 overflow-hidden">
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded uppercase">{QUESTION_TYPES.find(t => t.id === q.type)?.label}</span>
-                            <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded uppercase">{q.level} • {q.points} {q.points === 1 ? "point" : "points"}</span>
+                            <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded uppercase">{q.level} {q.dok ? `• ${q.dok}` : ''} • {q.points} {q.points === 1 ? "point" : "points"}</span>
                             {q.standard && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">{q.standard}</span>}
                           </div>
                           <div 
@@ -1768,19 +1760,19 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId, embed
                       <div className="px-8 pb-8 pt-4 border-t border-slate-50 bg-slate-50/30 animate-in slide-in-from-top-2 duration-300">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                           <div className="space-y-4">
-                                                        <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "محتوى الشريحة:" : "Slide Content:"}</h5>
+                            <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "محتوى الشريحة:" : "Slide Content:"}</h5>
                             <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm prose prose-slate max-w-none" dangerouslySetInnerHTML={{ __html: sanitizeHtml(q.text) }} />
                             
                             {q.learningOutcome && (
                               <div className="flex items-center gap-2 text-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-100 w-fit">
                                 <Target className="w-4 h-4" />
-                                                                <span className="text-[10px] font-black uppercase">{language === 'ar' ? "ناتج التعلم:" : "Learning Outcome:"} {q.learningOutcome}</span>
+                                <span className="text-[10px] font-black uppercase">{language === 'ar' ? "ناتج التعلم:" : "Learning Outcome:"} {q.learningOutcome}</span>
                               </div>
                             )}
                           </div>
                           
                           <div className="space-y-4">
-                                                        <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "الخيارات:" : "Options:"}</h5>
+                            <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "الخيارات:" : "Options:"}</h5>
                             <div className="flex flex-col gap-2">
                               {q.type === "MCQ" || q.type === "MULTI_SELECT" ? (
                                 q.options.filter((o: string) => o).map((opt: string, i: number) => (
@@ -1800,7 +1792,7 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId, embed
                                   );
                                 })
                               ) : (
-                                                          <div className="text-xs font-bold text-slate-400">{language === 'ar' ? "شريحة محتوى (لا تتطلب إجابات)" : "Content slide (No answers required)"}</div>
+                                <div className="text-xs font-bold text-slate-400">{language === 'ar' ? "شريحة محتوى (لا تتطلب إجابات)" : "Content slide (No answers required)"}</div>
                               )}
                             </div>
                           </div>
@@ -1907,16 +1899,6 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId, embed
           </div>
         </div>
       )}
-    </>
-  );
-
-  if (embedded) {
-    return content;
-  }
-
-  return (
-    <DashboardLayout>
-      {content}
     </DashboardLayout>
   );
 }

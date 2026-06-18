@@ -131,7 +131,7 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
 
   const [currentQuestion, setCurrentQuestion] = useState<any>({
     text: "", type: "MCQ", options: ["", "", "", ""],
-    correctAnswer: "", points: 1, skill: "Math", level: "Medium",
+    correctAnswer: "", points: 1, skill: "Math", level: "Medium", dok: "",
     standard: "",
     indicator: "",
     learningOutcome: "",
@@ -286,6 +286,7 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
     const indIdx = headers.findIndex(h => h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشر"));
     const loIdx = headers.findIndex(h => h.includes("outcome") || h.includes("مخرج") || h.includes("ناتج") || h.includes("التعلم"));
     const diffIdx = headers.findIndex(h => h.includes("difficulty") || h.includes("صعوبة") || h.includes("الصعوبة"));
+    const dokIdx = headers.findIndex(h => h.includes("dok"));
     const videoIdx = headers.findIndex(h => h.includes("video") || h.includes("فيديو") || h.includes("الفيديو"));
     const expIdx = headers.findIndex(h => h.includes("explanation") || h.includes("تفسير") || h.includes("التفسير") || h.includes("شرح"));
 
@@ -333,6 +334,9 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
       else if (level.toLowerCase().includes("hard") || level.includes("صعب")) level = "Hard";
       else level = "Medium";
 
+      const dokRaw = dokIdx >= 0 ? String(row[dokIdx] ?? "").trim() : "";
+      const dok = ["DOK 1", "DOK 2", "DOK 3", "DOK 4"].includes(dokRaw) ? dokRaw : "";
+
       const explanation = expIdx >= 0 ? String(row[expIdx] ?? "").trim() : "";
       const sections = explanation ? [{ id: Date.now() + Math.random(), type: "EXPLANATION", content: explanation }] : [];
 
@@ -348,6 +352,7 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
         indicator,
         learningOutcome,
         level,
+        dok,
         videoUrl,
         sections
       });
@@ -411,6 +416,7 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
         "Indicator",
         "Learning Outcome",
         "Difficulty Level",
+        "DOK",
         "Video URL",
         "Explanation"
       ],
@@ -423,6 +429,7 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
         "Indicator 1.1: Addition",
         "Outcome 1: Solve additions",
         "Easy",
+        "DOK 1",
         "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
         "5 + 5 equals 10"
       ],
@@ -434,7 +441,7 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
         "Standard 2: Earth Shape",
         "Indicator 2.1: Planets",
         "Outcome 2: Physical shape",
-        "Easy", "", ""
+        "Easy", "DOK 2", "", ""
       ]
     ];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
@@ -529,7 +536,7 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
   const handleAddQuestion = (type: string = 'MCQ') => {
     setCurrentQuestion({
       text: "", type, options: type === 'TRUE_FALSE' ? ["صحيح", "خطأ", "", ""] : ["", "", "", ""],
-      correctAnswer: "", points: type === 'TEXT' ? 0 : 1, skill: "Math", level: "Medium",
+      correctAnswer: "", points: type === 'TEXT' ? 0 : 1, skill: "Math", level: "Medium", dok: "",
       standard: "",
       learningOutcome: "",
       sections: [{ type: "EXPLANATION", content: "" }], imageUrl: "", correctAnswers: [],
@@ -1159,7 +1166,7 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
                             <div className="flex flex-col flex-1 overflow-hidden">
                               <div className="flex items-center gap-2 mb-1 flex-wrap">
                                 <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded uppercase">{QUESTION_TYPES.find(t => t.id === q.type)?.label}</span>
-                                <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded uppercase">{q.level} • {q.points} {q.points === 1 ? "point" : "points"}</span>
+                                <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded uppercase">{q.level} {q.dok ? `• ${q.dok}` : ''} • {q.points} {q.points === 1 ? "point" : "points"}</span>
                                 {q.standard && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">{q.standard}</span>}
                               </div>
                               <div
@@ -1571,6 +1578,21 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
                         </select>
                       </div>
 
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">DOK</label>
+                        <select 
+                          className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
+                          value={currentQuestion.dok || ""}
+                          onChange={(e) => updateCurrentQuestion("dok", e.target.value)}
+                        >
+                          <option value="">— Select DOK —</option>
+                          <option value="DOK 1">DOK 1</option>
+                          <option value="DOK 2">DOK 2</option>
+                          <option value="DOK 3">DOK 3</option>
+                          <option value="DOK 4">DOK 4</option>
+                        </select>
+                      </div>
+
                       {currentQuestion.type !== 'TEXT' && (
                         <div className="flex flex-col gap-2">
                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Points</label>
@@ -1785,7 +1807,7 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
                       {QUESTION_TYPES.find(t => t.id === previewQuestion.type)?.label || previewQuestion.type}
                     </span>
                     <span className="bg-slate-100 text-slate-600 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider">
-                      {previewQuestion.skill} | {previewQuestion.level}
+                      {previewQuestion.skill} | {previewQuestion.level}{previewQuestion.dok ? ` | ${previewQuestion.dok}` : ''}
                     </span>
                   </div>
 

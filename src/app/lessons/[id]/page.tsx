@@ -157,16 +157,23 @@ const SectionsInlineTabs = ({
   );
 };
 
+const normalizeAnswerGlobal = (value: any) => {
+  const norm = String(value ?? '').trim().toLowerCase();
+  if (norm === 'true') return 'صحيح';
+  if (norm === 'false') return 'خطأ';
+  return norm;
+};
+
 const isQuestionLike = (item: any) =>
   item?.type === 'QUESTION' || item?.type === 'MCQ' || item?.type === 'TRUE_FALSE' || item?.type === 'MULTI_SELECT' || item?.label === 'MULTI_SELECT';
 
 const getQuestionOptions = (q: any, language: string) => {
   if (!q) return [];
-  if (Array.isArray(q.options) && q.options.filter(Boolean).length > 0) {
-    return q.options.filter(Boolean);
-  }
   if (q.type === 'TRUE_FALSE') {
     return [language === 'ar' ? 'صحيح' : 'True', language === 'ar' ? 'خطأ' : 'False'];
+  }
+  if (Array.isArray(q.options) && q.options.filter(Boolean).length > 0) {
+    return q.options.filter(Boolean);
   }
   return [];
 };
@@ -354,7 +361,7 @@ export default function LessonPlayerPage() {
   const [attemptedMaxScore, setAttemptedMaxScore] = useState(0);
   const [actualVideoDuration, setActualVideoDuration] = useState<number>(0);
 
-  const normalizeAnswer = (value: any) => String(value ?? '').trim().toLowerCase();
+  const normalizeAnswer = (value: any) => normalizeAnswerGlobal(value);
 
   // Dynamic Score Calculation across Slides, Assignments, and Exercises
   useEffect(() => {
@@ -847,7 +854,7 @@ export default function LessonPlayerPage() {
                         const isMulti = lesson.slides[currentSlideIndex].label === 'MULTI_SELECT';
                         const isSelected = isMulti ? (slideAnswers[currentSlideIndex] || []).includes(opt) : slideAnswers[currentSlideIndex] === opt;
                         const isSubmitted = slideSubmitted[currentSlideIndex];
-                        const isCorrect = isSubmitted && (isMulti ? (lesson.slides[currentSlideIndex].correctAnswers || []).includes(opt) : ((!lesson.slides[currentSlideIndex].correctAnswer && isSelected) || opt === lesson.slides[currentSlideIndex].correctAnswer));
+                        const isCorrect = isSubmitted && (isMulti ? (lesson.slides[currentSlideIndex].correctAnswers || []).includes(opt) : ((!lesson.slides[currentSlideIndex].correctAnswer && isSelected) || normalizeAnswerGlobal(opt) === normalizeAnswerGlobal(lesson.slides[currentSlideIndex].correctAnswer)));
                         const isWrong = isSubmitted && isSelected && !isCorrect;
 
                         return (
@@ -890,7 +897,7 @@ export default function LessonPlayerPage() {
                   {slideSubmitted[currentSlideIndex] && isQuestionLike(lesson.slides[currentSlideIndex]) && (() => {
                     const isMulti = lesson.slides[currentSlideIndex].label === 'MULTI_SELECT';
                     const studentAnswers = slideAnswers[currentSlideIndex] || (isMulti ? [] : '');
-                    const isCorrect = isMulti ? studentAnswers.length === (lesson.slides[currentSlideIndex].correctAnswers || []).length && studentAnswers.every((a: string) => (lesson.slides[currentSlideIndex].correctAnswers || []).includes(a)) : slideAnswers[currentSlideIndex] === lesson.slides[currentSlideIndex].correctAnswer;
+                    const isCorrect = isMulti ? studentAnswers.length === (lesson.slides[currentSlideIndex].correctAnswers || []).length && studentAnswers.every((a: string) => (lesson.slides[currentSlideIndex].correctAnswers || []).includes(a)) : (!lesson.slides[currentSlideIndex].correctAnswer || normalizeAnswerGlobal(slideAnswers[currentSlideIndex]) === normalizeAnswerGlobal(lesson.slides[currentSlideIndex].correctAnswer));
                     return (
                       <div className="mt-8 w-full max-w-4xl">
                         <QuestionFeedback
@@ -970,12 +977,12 @@ export default function LessonPlayerPage() {
                         </div>
                         <HtmlRenderer html={as.text} className="text-slate-600 text-lg leading-relaxed prose prose-indigo mb-6 text-start" />
 
-                        {isQuestionLike(as) && (as.options || []).filter(Boolean).length > 0 && (
+                        {isQuestionLike(as) && getQuestionOptions(as, language).length > 0 && (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-                            {(as.options || []).filter(Boolean).map((opt: string, oIdx: number) => {
+                            {getQuestionOptions(as, language).map((opt: string, oIdx: number) => {
                               const isMulti = as.type === 'MULTI_SELECT' || as.label === 'MULTI_SELECT';
                               const isSelected = isMulti ? (assignmentAnswers[idx] || []).includes(opt) : assignmentAnswers[idx] === opt;
-                              const isCorrect = isSubmitted && (isMulti ? (as.correctAnswers || []).includes(opt) : ((!as.correctAnswer && isSelected) || opt === as.correctAnswer));
+                              const isCorrect = isSubmitted && (isMulti ? (as.correctAnswers || []).includes(opt) : ((!as.correctAnswer && isSelected) || normalizeAnswerGlobal(opt) === normalizeAnswerGlobal(as.correctAnswer)));
                               const isWrong = isSubmitted && isSelected && !isCorrect;
                               return (
                                 <button
@@ -1017,7 +1024,7 @@ export default function LessonPlayerPage() {
                         {isSubmitted && isQuestionLike(as) && (() => {
                           const isMulti = as.type === 'MULTI_SELECT' || as.label === 'MULTI_SELECT';
                           const studentAnswers = assignmentAnswers[idx] || (isMulti ? [] : '');
-                          const isCorrect = isMulti ? studentAnswers.length === (as.correctAnswers || []).length && studentAnswers.every((a: string) => (as.correctAnswers || []).includes(a)) : (!as.correctAnswer || assignmentAnswers[idx] === as.correctAnswer);
+                          const isCorrect = isMulti ? studentAnswers.length === (as.correctAnswers || []).length && studentAnswers.every((a: string) => (as.correctAnswers || []).includes(a)) : (!as.correctAnswer || normalizeAnswerGlobal(assignmentAnswers[idx]) === normalizeAnswerGlobal(as.correctAnswer));
                           return (
                             <div className="mt-8">
                               <QuestionFeedback
@@ -1136,11 +1143,11 @@ export default function LessonPlayerPage() {
                         <HtmlRenderer html={lesson.questions[currentQuestionIndex].text} tag="h3" className="text-lg md:text-2xl font-black text-slate-900 mb-8 leading-relaxed tracking-tight break-words w-full text-start" />
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-4 mb-6">
-                          {(lesson.questions[currentQuestionIndex].options || []).filter(Boolean).map((opt: string, oIdx: number) => {
+                          {getQuestionOptions(lesson.questions[currentQuestionIndex], language).map((opt: string, oIdx: number) => {
                             const isMulti = lesson.questions[currentQuestionIndex].type === 'MULTI_SELECT';
                             const isSelected = isMulti ? (answers[currentQuestionIndex] || []).includes(opt) : answers[currentQuestionIndex] === opt;
                             const isSubmitted = quizSubmitted[currentQuestionIndex];
-                            const isCorrect = isSubmitted && (isMulti ? (lesson.questions[currentQuestionIndex].correctAnswers || []).includes(opt) : ((!lesson.questions[currentQuestionIndex].correctAnswer && isSelected) || opt === lesson.questions[currentQuestionIndex].correctAnswer));
+                            const isCorrect = isSubmitted && (isMulti ? (lesson.questions[currentQuestionIndex].correctAnswers || []).includes(opt) : ((!lesson.questions[currentQuestionIndex].correctAnswer && isSelected) || normalizeAnswerGlobal(opt) === normalizeAnswerGlobal(lesson.questions[currentQuestionIndex].correctAnswer)));
                             const isWrong = isSubmitted && isSelected && !isCorrect;
 
                             return (
@@ -1177,7 +1184,7 @@ export default function LessonPlayerPage() {
                         {quizSubmitted[currentQuestionIndex] && (() => {
                           const isMulti = lesson.questions[currentQuestionIndex].type === 'MULTI_SELECT';
                           const studentAnswers = answers[currentQuestionIndex] || (isMulti ? [] : '');
-                          const isCorrect = isMulti ? studentAnswers.length === (lesson.questions[currentQuestionIndex].correctAnswers || []).length && studentAnswers.every((a: string) => (lesson.questions[currentQuestionIndex].correctAnswers || []).includes(a)) : (!lesson.questions[currentQuestionIndex].correctAnswer || answers[currentQuestionIndex] === lesson.questions[currentQuestionIndex].correctAnswer);
+                          const isCorrect = isMulti ? studentAnswers.length === (lesson.questions[currentQuestionIndex].correctAnswers || []).length && studentAnswers.every((a: string) => (lesson.questions[currentQuestionIndex].correctAnswers || []).includes(a)) : (!lesson.questions[currentQuestionIndex].correctAnswer || normalizeAnswerGlobal(answers[currentQuestionIndex]) === normalizeAnswerGlobal(lesson.questions[currentQuestionIndex].correctAnswer));
                           return (
                             <div className="mt-4 animate-in fade-in slide-in-from-top-2">
                               <QuestionFeedback

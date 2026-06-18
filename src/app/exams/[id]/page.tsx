@@ -8,11 +8,13 @@ import { Clock, ChevronRight, ChevronLeft, Send, AlertCircle, HelpCircle, Lock, 
 import { useNotification } from "@/context/NotificationContext";
 import VideoPlayer from "@/components/VideoPlayer";
 import HtmlRenderer from "@/components/HtmlRenderer";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function TakeExamPage() {
   const { id } = useParams();
   const router = useRouter();
   const { showToast } = useNotification();
+  const { language } = useLanguage();
 
   const SECTION_STYLE_PRESETS: Record<string, any> = {
     HINT: { icon: HelpCircle, bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", label: "Hint" },
@@ -512,17 +514,20 @@ export default function TakeExamPage() {
                   })
                 ) : (
                   <div className="flex gap-4">
-                    {["صحيح", "خطأ"].map((option) => (
+                    {[
+                      { value: "صحيح", label: language === 'ar' ? "صحيح" : "True" },
+                      { value: "خطأ", label: language === 'ar' ? "خطأ" : "False" }
+                    ].map((option) => (
                       <button
-                        key={option}
-                        onClick={() => handleSelectAnswer(option)}
+                        key={option.value}
+                        onClick={() => handleSelectAnswer(option.value)}
                         className={`flex-1 py-6 rounded-2xl border-2 font-bold text-xl transition-all ${
-                          selectedAnswer === option
+                          selectedAnswer === option.value
                             ? "bg-indigo-50 border-indigo-600 text-indigo-900"
                             : "bg-white border-slate-100 text-slate-500 hover:bg-slate-50"
                         }`}
                       >
-                        {option}
+                        {option.label}
                       </button>
                     ))}
                   </div>
