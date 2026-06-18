@@ -232,7 +232,7 @@ export default function CreateCoursePage() {
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null);
   const [tempQuestion, setTempQuestion] = useState<any>({
     text: "", type: "MCQ", options: ["", "", "", ""],
-    correctAnswer: "", points: 1, skill: "General", level: "Medium",
+    correctAnswer: "", points: 1, skill: "General", level: "Medium", dok: "",
     learningOutcome: "", standard: "", indicator: "", 
     sections: [], correctAnswers: [], attempts: 1
   });
@@ -420,6 +420,7 @@ export default function CreateCoursePage() {
     const indIdx = headers.findIndex(h => h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشر"));
     const loIdx = headers.findIndex(h => h.includes("outcome") || h.includes("مخرج") || h.includes("ناتج") || h.includes("التعلم"));
     const diffIdx = headers.findIndex(h => h.includes("difficulty") || h.includes("صعوبة") || h.includes("الصعوبة"));
+    const dokIdx = headers.findIndex(h => h.includes("dok"));
     const videoIdx = headers.findIndex(h => h.includes("video") || h.includes("فيديو") || h.includes("الفيديو"));
     const expIdx = headers.findIndex(h => h.includes("explanation") || h.includes("تفسير") || h.includes("التفسير") || h.includes("شرح"));
 
@@ -467,6 +468,9 @@ export default function CreateCoursePage() {
       else if (level.toLowerCase().includes("hard") || level.includes("صعب")) level = "Hard";
       else level = "Medium";
 
+      const dokRaw = dokIdx >= 0 ? String(row[dokIdx] ?? "").trim() : "";
+      const dok = ["DOK 1", "DOK 2", "DOK 3", "DOK 4"].includes(dokRaw) ? dokRaw : "";
+
       const explanation = expIdx >= 0 ? String(row[expIdx] ?? "").trim() : "";
       const sections = explanation ? [{ id: Date.now() + Math.random(), type: "EXPLANATION", content: explanation }] : [];
 
@@ -486,6 +490,7 @@ export default function CreateCoursePage() {
         indicator,
         learningOutcome,
         level,
+        dok,
         videoUrl,
         sections
       });
@@ -720,6 +725,7 @@ export default function CreateCoursePage() {
         language === 'ar' ? "المؤشر" : "Indicator",
         language === 'ar' ? "ناتج التعلم" : "Learning Outcome",
         language === 'ar' ? "مستوى الصعوبة" : "Difficulty Level",
+        "DOK",
         language === 'ar' ? "رابط الفيديو" : "Video URL",
         language === 'ar' ? "التفسير" : "Explanation"
       ],
@@ -731,7 +737,7 @@ export default function CreateCoursePage() {
         language === 'ar' ? "معيار 1: العمليات الحسابية" : "Standard 1: Operations",
         language === 'ar' ? "مؤشر 1.1: الجمع" : "Indicator 1.1: Addition",
         language === 'ar' ? "أن يجمع الطالب الأعداد بشكل صحيح" : "LO: Students can add numbers correctly",
-        "Easy",
+        "Easy", "DOK 1",
         "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
         language === 'ar' ? "الجمع الصحيح هو 10 لأن 5 زائد 5 يساوي 10" : "5 + 5 is 10"
       ],
@@ -743,7 +749,7 @@ export default function CreateCoursePage() {
         language === 'ar' ? "معيار 2: الجغرافيا الطبيعية" : "Standard 2: Physical Geography",
         language === 'ar' ? "مؤشر 2.1: شكل الأرض" : "Indicator 2.1: Earth Shape",
         language === 'ar' ? "أن يدرك شكل كوكب الأرض" : "LO: Understands planet earth's shape",
-        "Easy", "", ""
+        "Easy", "DOK 2", "", ""
       ],
       [
         language === 'ar' ? "حدد قارات العالم القديم:" : "Select the ancient world continents:",
@@ -758,7 +764,7 @@ export default function CreateCoursePage() {
         language === 'ar' ? "معيار 3: التاريخ القديم" : "Standard 3: Ancient History",
         language === 'ar' ? "مؤشر 3.1: القارات" : "Indicator 3.1: Continents",
         language === 'ar' ? "أن يحدد قارات العالم القديم" : "LO: Identifies old world continents",
-        "Medium", "", ""
+        "Medium", "", "", ""
       ]
     ];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
@@ -1303,6 +1309,7 @@ export default function CreateCoursePage() {
       points: 1,
       skill: "General",
       level: "Medium",
+      dok: "",
       standard: "",
       indicator: "",
       learningOutcome: "",
@@ -1676,7 +1683,7 @@ export default function CreateCoursePage() {
                             {QUESTION_TYPES.find(t => t.id === q.type)?.label || q.type}
                           </span>
                           <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded uppercase">
-                            {q.level || "Medium"} • {q.points || 1} {language === 'ar' ? 'درجة' : 'pts'}
+                            {q.level || "Medium"} {q.dok ? `• ${q.dok}` : ''} • {q.points || 1} {language === 'ar' ? 'درجة' : 'pts'}
                           </span>
                           {q.standard && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">{q.standard}</span>}
                         </div>
@@ -1882,6 +1889,21 @@ export default function CreateCoursePage() {
                     <option value="Easy">{language === 'ar' ? 'سهل' : 'Easy'}</option>
                     <option value="Medium">{language === 'ar' ? 'متوسط' : 'Medium'}</option>
                     <option value="Hard">{language === 'ar' ? 'صعب' : 'Hard'}</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'عمق المعرفة (DOK)' : 'Depth of Knowledge (DOK)'}</label>
+                  <select 
+                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
+                    value={tempQuestion.dok || ""}
+                    onChange={(e) => updateCurrentQuestionField("dok", e.target.value)}
+                  >
+                    <option value="">{language === 'ar' ? 'بلا تحديد' : 'None'}</option>
+                    <option value="DOK 1">DOK 1</option>
+                    <option value="DOK 2">DOK 2</option>
+                    <option value="DOK 3">DOK 3</option>
+                    <option value="DOK 4">DOK 4</option>
                   </select>
                 </div>
 
