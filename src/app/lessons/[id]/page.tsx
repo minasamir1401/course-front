@@ -844,6 +844,13 @@ export default function LessonPlayerPage() {
                     html={lesson.slides[currentSlideIndex].content}
                     className="text-base md:text-xl text-slate-600 leading-[1.8] max-w-5xl font-bold prose prose-indigo break-words w-full animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150 text-start"
                   />
+                  {isQuestionLike(lesson.slides[currentSlideIndex]) && lesson.slides[currentSlideIndex].dok && (
+                    <div className="w-full max-w-4xl text-start mt-2">
+                      <span className="px-3 py-1.5 bg-yellow-50 text-yellow-700 border border-yellow-100 rounded-lg text-xs font-bold uppercase tracking-wider">
+                        {language === 'ar' ? `عمق المعرفة: ${lesson.slides[currentSlideIndex].dok}` : `DOK: ${lesson.slides[currentSlideIndex].dok}`}
+                      </span>
+                    </div>
+                  )}
 
 
 
@@ -973,7 +980,14 @@ export default function LessonPlayerPage() {
                           <span className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center font-black">
                             {idx + 1}
                           </span>
-                          <h3 className="font-black text-slate-900 text-lg">{as.type === 'QUESTION' ? t('lesson.requiredAssignment') : t('lesson.requiredAssignment')}</h3>
+                          <div className="flex flex-col text-start">
+                            <h3 className="font-black text-slate-900 text-lg">{as.type === 'QUESTION' ? t('lesson.requiredAssignment') : t('lesson.requiredAssignment')}</h3>
+                            {as.dok && (
+                              <span className="px-2.5 py-1 bg-yellow-50 text-yellow-700 border border-yellow-100 rounded-lg text-[10px] font-bold uppercase tracking-wider w-fit mt-1">
+                                {language === 'ar' ? `عمق المعرفة: ${as.dok}` : `DOK: ${as.dok}`}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <HtmlRenderer html={as.text} className="text-slate-600 text-lg leading-relaxed prose prose-indigo mb-6 text-start" />
 
@@ -1110,6 +1124,11 @@ export default function LessonPlayerPage() {
                             {lesson.questions[currentQuestionIndex].level && (
                               <span className="px-3 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs md:text-sm font-bold uppercase tracking-wider max-w-full break-words whitespace-normal text-right">
                                 {t('lesson.level')}: {lesson.questions[currentQuestionIndex].level === 'Easy' ? t('lesson.easy') : lesson.questions[currentQuestionIndex].level === 'Medium' ? t('lesson.medium') : t('lesson.hard')}
+                              </span>
+                            )}
+                            {lesson.questions[currentQuestionIndex].dok && (
+                              <span className="px-3 py-2 bg-yellow-50 text-yellow-700 border border-yellow-100 rounded-lg text-xs md:text-sm font-bold uppercase tracking-wider max-w-full break-words whitespace-normal text-right">
+                                {language === 'ar' ? `عمق المعرفة: ${lesson.questions[currentQuestionIndex].dok}` : `DOK: ${lesson.questions[currentQuestionIndex].dok}`}
                               </span>
                             )}
                             {lesson.questions[currentQuestionIndex].skill && (

@@ -308,6 +308,11 @@ export default function ExamResultPage() {
                           <span className="text-[10px] font-bold text-slate-400 leading-none">
                             | مستوى: {answer.question.level === 'Easy' ? 'سهل' : answer.question.level === 'Medium' ? 'متوسط' : 'صعب'}
                           </span>
+                          {answer.question.dok && (
+                            <span className="text-[10px] font-bold text-slate-400 leading-none">
+                              | {language === 'ar' ? `عمق المعرفة: ${answer.question.dok}` : `DOK: ${answer.question.dok}`}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>

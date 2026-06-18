@@ -436,6 +436,11 @@ export default function TakeExamPage() {
                   <span className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider">
                     {question.skill} | {question.level === 'Easy' ? 'سهل' : question.level === 'Medium' ? 'متوسط' : 'صعب'}
                   </span>
+                  {question.dok && (
+                    <span className="px-3 py-1.5 bg-yellow-50 text-yellow-700 border border-yellow-100 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                      {language === 'ar' ? `عمق المعرفة: ${question.dok}` : `DOK: ${question.dok}`}
+                    </span>
+                  )}
                   {question.standard && (
                     <span className="px-3 py-1.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg text-[10px] font-bold uppercase tracking-wider">
                       المعيار: {question.standard}
