@@ -3494,196 +3494,91 @@ export default function EditCoursePage() {
               </div>
 
               <div className="lg:col-span-8 space-y-8">
-                {/* Content Navigation Tabs */}
-                <div className="bg-white p-2 rounded-[30px] border border-slate-100 shadow-sm flex gap-2">
-                   {[
-                     { id: 'lessons', label: language === 'ar' ? 'الدروس والمحاضرات' : 'Lessons & Lectures', icon: Layers, color: 'indigo' },
-                     { id: 'quizzes', label: language === 'ar' ? 'الاختبارات القصيرة' : 'Quizzes', icon: HelpCircle, color: 'orange' },
-                     { id: 'assignments', label: language === 'ar' ? 'التكليفات والمهام' : 'Assignments & Tasks', icon: FileText, color: 'emerald' },
-                   ].map(tab => (
-                     <button
-                       key={tab.id}
-                       onClick={() => setActiveContentTab(tab.id as any)}
-                       className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-2xl font-black transition-all ${
-                         activeContentTab === tab.id 
-                         ? `${
-                             tab.id === 'lessons' ? 'bg-indigo-600 text-white shadow-indigo-600/20' :
-                             tab.id === 'quizzes' ? 'bg-orange-600 text-black shadow-orange-600/20' :
-                             'bg-emerald-600 text-white shadow-emerald-600/20'
-                           } shadow-lg` 
-                         : 'text-slate-400 hover:bg-slate-50'
-                       }`}
-                     >
-                       <tab.icon className="w-5 h-5" />
-                       {tab.label}
-                     </button>
-                   ))}
-                </div>
-
                 <div className="flex justify-between items-center bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
                   <h3 className="text-2xl font-black text-slate-900 flex items-center gap-4">
-                    {activeContentTab === 'lessons' && <><Layers className="w-8 h-8 text-indigo-600" /> {language === 'ar' ? "الدروس والمحاضرات" : "Lessons & Lectures"}</>}
-                    {activeContentTab === 'quizzes' && <><HelpCircle className="w-8 h-8 text-orange-500" /> {language === 'ar' ? "الاختبارات والتقييمات" : "Quizzes & Assessments"}</>}
-                    {activeContentTab === 'assignments' && <><FileText className="w-8 h-8 text-emerald-500" /> {language === 'ar' ? "التكليفات الدراسية" : "Assignments"}</>}
+                    <Layers className="w-8 h-8 text-indigo-600" /> {language === 'ar' ? "الدروس والمحاضرات" : "Lessons & Lectures"}
                   </h3>
                   <button 
-                    onClick={() => {
-                      if (activeContentTab === 'lessons') {
-                        openAddLessonModal();
-                      } else if (activeContentTab === 'quizzes') {
-                        router.push(`/school-admin/quizzes/new?courseId=${courseId}`);
-                      } else {
-                        router.push(`/school-admin/assignments/new?courseId=${courseId}`);
-                      }
-                    }} 
-                    className={`px-8 py-4 rounded-2xl font-black flex items-center gap-3 transition-all shadow-xl ${
-                      activeContentTab === 'lessons' ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20 text-white' :
-                      activeContentTab === 'quizzes' ? 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/20 text-black' :
-                      'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20 text-white'
-                    }`}
+                    onClick={openAddLessonModal} 
+                    className="px-8 py-4 rounded-2xl font-black flex items-center gap-3 transition-all shadow-xl text-white bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20"
                   >
                     <Plus size={24} /> 
-                    {language === 'ar' ? "إضافة " : "Add "}
-                    {activeContentTab === 'lessons' ? (language === 'ar' ? 'درس' : 'Lesson') : activeContentTab === 'quizzes' ? (language === 'ar' ? 'اختبار' : 'Quiz') : (language === 'ar' ? 'تكليف' : 'Assignment')}
+                    {language === 'ar' ? "إضافة درس" : "Add Lesson"}
                   </button>
-                  {activeContentTab !== 'lessons' && (
-                    <button 
-                      onClick={openBankModal}
-                      className="px-6 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black flex items-center gap-3 hover:bg-slate-200 transition-all border border-slate-200"
-                    >
-                      <Layers className="w-5 h-5" />
-                      {language === 'ar' ? "ربط من البنك المركزي" : "Link from Central Bank"}
-                    </button>
-                  )}
                 </div>
 
                 <div className="flex flex-col gap-4">
-                  {activeContentTab === 'lessons' ? (
-                    lessons.length === 0 ? (
-                      <div className="bg-white border-2 border-dashed border-slate-200 rounded-[40px] p-20 flex flex-col items-center justify-center text-slate-400 gap-4">
-                        <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center">
-                            <BookOpen className="w-10 h-10" />
-                        </div>
-                        <p className="font-black text-xl">{language === 'ar' ? "لا يوجد دروس في هذا الكورس بعد" : "No lessons in this course yet"}</p>
-                        <button onClick={openAddLessonModal} className="text-indigo-600 font-bold hover:underline">{language === 'ar' ? "أضف درسك الأول الآن" : "Add your first lesson now"}</button>
+                  {lessons.length === 0 ? (
+                    <div className="bg-white border-2 border-dashed border-slate-200 rounded-[40px] p-20 flex flex-col items-center justify-center text-slate-400 gap-4">
+                      <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center">
+                          <BookOpen className="w-10 h-10" />
                       </div>
-                    ) : (
-                      lessons.map((lesson, index) => (
-                        <div key={index} className="bg-white border border-slate-100 rounded-[30px] p-5 flex flex-col md:flex-row items-center justify-between gap-6 hover:border-indigo-200 transition-all group relative overflow-hidden shadow-sm hover:shadow-xl">
-                          <div className="absolute top-0 right-0 w-1.5 h-full bg-indigo-600 opacity-0 group-hover:opacity-100 transition-all"></div>
-                          
-                          <div className="flex items-center gap-6 flex-1 w-full md:w-auto">
-                            <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-2xl border border-indigo-100 shadow-inner group-hover:scale-105 transition-all shrink-0">
-                              {index + 1}
-                            </div>
-                            <div className="flex flex-col min-w-0">
-                              <h3 className="font-black text-slate-900 text-xl truncate group-hover:text-indigo-600 transition-colors">
-                                {lesson.title}
-                              </h3>
-                              <div className="flex flex-wrap items-center gap-3 mt-2">
-                                <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase ${lesson.isVisible ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'}`}>
-                                    {lesson.isVisible ? <Eye className="w-3 h-3" /> : <X className="w-3 h-3" />}
-                                    {lesson.isVisible ? (language === 'ar' ? 'مرئي للطلاب' : 'Visible to students') : (language === 'ar' ? 'مخفي عن الطلاب' : 'Hidden from students')}
+                      <p className="font-black text-xl">{language === 'ar' ? "لا يوجد دروس في هذا الكورس بعد" : "No lessons in this course yet"}</p>
+                      <button onClick={openAddLessonModal} className="text-indigo-600 font-bold hover:underline">{language === 'ar' ? "أضف درسك الأول الآن" : "Add your first lesson now"}</button>
+                    </div>
+                  ) : (
+                    lessons.map((lesson, index) => (
+                      <div key={index} className="bg-white border border-slate-100 rounded-[30px] p-5 flex flex-col md:flex-row items-center justify-between gap-6 hover:border-indigo-200 transition-all group relative overflow-hidden shadow-sm hover:shadow-xl">
+                        <div className="absolute top-0 right-0 w-1.5 h-full bg-indigo-600 opacity-0 group-hover:opacity-100 transition-all"></div>
+                        
+                        <div className="flex items-center gap-6 flex-1 w-full md:w-auto">
+                          <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-2xl border border-indigo-100 shadow-inner group-hover:scale-105 transition-all shrink-0">
+                            {index + 1}
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <h3 className="font-black text-slate-900 text-xl truncate group-hover:text-indigo-600 transition-colors">
+                              {lesson.title}
+                            </h3>
+                            <div className="flex flex-wrap items-center gap-3 mt-2">
+                              <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase ${lesson.isVisible ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'}`}>
+                                  {lesson.isVisible ? <Eye className="w-3 h-3" /> : <X className="w-3 h-3" />}
+                                  {lesson.isVisible ? (language === 'ar' ? 'مرئي للطلاب' : 'Visible to students') : (language === 'ar' ? 'مخفي عن الطلاب' : 'Hidden from students')}
+                              </div>
+                              {lesson.publishDate && (
+                                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black uppercase">
+                                    <Clock className="w-3 h-3" />
+                                    {language === 'ar' 
+                                      ? `مجدول: ${new Date(lesson.publishDate).toLocaleDateString('ar-EG')}` 
+                                      : `Scheduled: ${new Date(lesson.publishDate).toLocaleDateString('en-US')}`}
                                 </div>
-                                {lesson.publishDate && (
-                                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black uppercase">
-                                      <Clock className="w-3 h-3" />
-                                      {language === 'ar' 
-                                        ? `مجدول: ${new Date(lesson.publishDate).toLocaleDateString('ar-EG')}` 
-                                        : `Scheduled: ${new Date(lesson.publishDate).toLocaleDateString('en-US')}`}
-                                  </div>
-                                )}
-                                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 text-slate-400 text-[10px] font-black uppercase">
-                                    <Monitor className="w-3 h-3" />
-                                    {lesson.slides?.length || 0} {language === 'ar' ? 'شرائح' : 'slides'}
-                                </div>
+                              )}
+                              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 text-slate-400 text-[10px] font-black uppercase">
+                                  <Monitor className="w-3 h-3" />
+                                  {lesson.slides?.length || 0} {language === 'ar' ? 'شرائح' : 'slides'}
                               </div>
                             </div>
-                          </div>
-
-                          <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-                            <div className="h-8 w-[1px] bg-slate-100 mx-2 hidden md:block"></div>
-                            <button 
-                              onClick={() => window.open(`/lessons/${lesson.id}?preview=true`, '_blank')} 
-                              className="flex items-center gap-2 bg-slate-50 text-slate-400 px-5 py-3 rounded-2xl font-black text-sm hover:bg-indigo-600 hover:text-white transition-all border border-slate-100"
-                              title={language === 'ar' ? "معاينة الدرس" : "Preview Lesson"}
-                            >
-                              <Eye size={18} />
-                              {language === 'ar' ? "معاينة" : "Preview"}
-                            </button>
-                            <button 
-                              onClick={() => openEditLessonModal(index)} 
-                              className="flex items-center gap-2 bg-blue-50 text-blue-600 px-5 py-3 rounded-2xl font-black text-sm hover:bg-blue-600 hover:text-white transition-all border border-blue-100"
-                            >
-                              <Edit2 size={18} />
-                              {language === 'ar' ? "تعديل" : "Edit"}
-                            </button>
-                            <button 
-                              onClick={() => handleRemoveLesson(index)} 
-                              className="p-3 bg-red-50 text-red-400 hover:bg-red-500 hover:text-white rounded-2xl transition-all border border-red-50"
-                            >
-                              <Trash2 size={20} />
-                            </button>
                           </div>
                         </div>
-                      ))
-                    )
-                  ) : (
-                    <div className="bg-white border border-slate-100 rounded-[40px] p-12 flex flex-col items-center justify-center text-center gap-6">
-                       <div className={`w-24 h-24 rounded-[35px] flex items-center justify-center ${activeContentTab === 'quizzes' ? 'bg-orange-50 text-orange-500' : 'bg-emerald-50 text-emerald-500'}`}>
-                          {activeContentTab === 'quizzes' ? <HelpCircle className="w-12 h-12" /> : <FileText className="w-12 h-12" />}
-                       </div>
-                       <div>
-                         <h4 className="text-2xl font-black text-slate-900 mb-2">
-                           {activeContentTab === 'quizzes' ? 'إدارة الاختبارات' : 'إدارة التكليفات'}
-                         </h4>
-                         <p className="text-slate-400 font-bold max-w-md">
-                           يمكنك ربط هذا الكورس بأسئلة من بنك الأسئلة المركزي وتعيينها كـ {activeContentTab === 'quizzes' ? 'اختبارات' : 'تكليفات'} للطلاب.
-                         </p>
-                       </div>
-                       
-                       <div className="w-full max-w-2xl space-y-3">
-                          {exams.filter(e => activeContentTab === 'quizzes' ? e.type?.toUpperCase() !== 'ASSIGNMENT' : e.type?.toUpperCase() === 'ASSIGNMENT').length === 0 ? (
-                            <div className="p-8 border-2 border-dashed border-slate-100 rounded-3xl text-slate-400 font-bold">
-                               لا يوجد {activeContentTab === 'quizzes' ? 'اختبارات' : 'تكليفات'} مرتبطة بهذا الكورس حالياً.
-                            </div>
-                          ) : (
-                            exams.filter(e => activeContentTab === 'quizzes' ? e.type?.toUpperCase() !== 'ASSIGNMENT' : e.type?.toUpperCase() === 'ASSIGNMENT').map((exam, idx) => (
-                              <div key={idx} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
-                                 <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-900 font-black border border-slate-100">
-                                       {idx + 1}
-                                    </div>
-                                    <div className="text-right">
-                                       <div className="font-black text-slate-900">{exam.title}</div>
-                                       <div className="text-[10px] text-slate-400 font-bold flex gap-2">
-                                          <span>{exam._count?.questions || 0} سؤال</span>
-                                          <span>•</span>
-                                          <span>{exam.duration} دقيقة</span>
-                                       </div>
-                                    </div>
-                                 </div>
-                                 <button 
-                                   onClick={() => {
-                                      if (exam.type === 'Quiz') {
-                                        router.push(`/school-admin/quizzes/edit/${exam.id}?courseId=${courseId}`);
-                                      } else if (exam.type === 'Assignment') {
-                                        router.push(`/school-admin/assignments/edit/${exam.id}?courseId=${courseId}`);
-                                      } else {
-                                        router.push(`/school-admin/exams/edit/${exam.id}?courseId=${courseId}`);
-                                      }
-                                    }}
-                                   className="p-2 text-slate-400 hover:text-indigo-600 transition-all"
-                                 >
-                                   <Edit2 size={16} />
-                                 </button>
-                              </div>
-                            ))
-                          )}
-                       </div>
-                    </div>
+
+                        <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+                          <div className="h-8 w-[1px] bg-slate-100 mx-2 hidden md:block"></div>
+                          <button 
+                            onClick={() => window.open(`/lessons/${lesson.id}?preview=true`, '_blank')} 
+                            className="flex items-center gap-2 bg-slate-50 text-slate-400 px-5 py-3 rounded-2xl font-black text-sm hover:bg-indigo-600 hover:text-white transition-all border border-slate-100"
+                            title={language === 'ar' ? "معاينة الدرس" : "Preview Lesson"}
+                          >
+                            <Eye size={18} />
+                            {language === 'ar' ? "معاينة" : "Preview"}
+                          </button>
+                          <button 
+                            onClick={() => openEditLessonModal(index)} 
+                            className="flex items-center gap-2 bg-blue-50 text-blue-600 px-5 py-3 rounded-2xl font-black text-sm hover:bg-blue-600 hover:text-white transition-all border border-blue-100"
+                          >
+                            <Edit2 size={18} />
+                            {language === 'ar' ? "تعديل" : "Edit"}
+                          </button>
+                          <button 
+                            onClick={() => handleRemoveLesson(index)} 
+                            className="p-3 bg-red-50 text-red-400 hover:bg-red-500 hover:text-white rounded-2xl transition-all border border-red-50"
+                          >
+                            <Trash2 size={20} />
+                          </button>
+                        </div>
+                      </div>
+                    ))
                   )}
                 </div>
+              </div>
               </div>
             </div>
           </div>

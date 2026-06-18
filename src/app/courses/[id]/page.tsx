@@ -23,8 +23,6 @@ export default function CourseDetailsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [now] = useState(new Date());
   const [courseProgressPercent, setCourseProgressPercent] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'lessons' | 'quizzes' | 'assignments'>('lessons');
-
   useEffect(() => {
     const fetchCourseDetails = async () => {
       try {
@@ -206,42 +204,19 @@ export default function CourseDetailsPage() {
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="bg-white p-2 rounded-[30px] border border-slate-100 shadow-sm flex gap-2">
-           {[
-             { id: 'lessons', label: language === 'ar' ? 'الدروس والمحاضرات' : 'Lessons & Lectures', icon: BookOpen, color: 'indigo' },
-             { id: 'quizzes', label: language === 'ar' ? 'الاختبارات القصيرة' : 'Quizzes', icon: HelpCircle, color: 'orange' },
-             { id: 'assignments', label: language === 'ar' ? 'التكليفات والمهام' : 'Assignments & Tasks', icon: FileText, color: 'emerald' },
-           ].map(tab => (
-             <button
-               key={tab.id}
-               onClick={() => setActiveTab(tab.id as any)}
-               className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-2xl font-black transition-all duration-300 ${
-                 activeTab === tab.id 
-                 ? `bg-${tab.color}-600 ${tab.color === 'orange' ? 'text-black bg-orange-500 shadow-orange-500/20' : 'text-white'} shadow-lg shadow-${tab.color}-600/20` 
-                 : 'text-slate-400 hover:bg-slate-50'
-               }`}
-             >
-               <tab.icon className="w-5 h-5" />
-               {tab.label}
-             </button>
-           ))}
-        </div>
-
-        {activeTab === 'lessons' ? (
-          /* Lessons List View (The Roadmap) */
-          <div className="space-y-6">
-            <div className="flex items-center justify-between px-4">
-              <h2 className="text-2xl font-black text-slate-900 flex items-center gap-3">
-                <Sparkles className="w-6 h-6 text-amber-400" />
-                {t('courseDetails.folderContent')}
-              </h2>
-              <div className="flex items-center gap-4 text-xs font-bold text-slate-400">
-                <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500"></div> {t('courseDetails.completed')}</span>
-                <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-indigo-500"></div> {t('courseDetails.available')}</span>
-                <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-slate-300"></div> {t('courseDetails.scheduled')}</span>
-              </div>
+        {/* Lessons List View (The Roadmap) */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between px-4">
+            <h2 className="text-2xl font-black text-slate-900 flex items-center gap-3">
+              <Sparkles className="w-6 h-6 text-amber-400" />
+              {t('courseDetails.folderContent')}
+            </h2>
+            <div className="flex items-center gap-4 text-xs font-bold text-slate-400">
+              <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500"></div> {t('courseDetails.completed')}</span>
+              <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-indigo-500"></div> {t('courseDetails.available')}</span>
+              <span className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-slate-300"></div> {t('courseDetails.scheduled')}</span>
             </div>
+          </div>
 
           <div className="grid grid-cols-1 gap-4">
             {(() => {
@@ -323,7 +298,7 @@ export default function CourseDetailsPage() {
                                     : isLocked
                                       ? 'bg-slate-100 text-slate-400 shadow-none'
                                       : 'bg-indigo-50 text-indigo-600 shadow-indigo-100'
-                                }`}>
+                                  }`}>
                                   {isCompleted ? <CheckCircle className="w-8 h-8" /> : isLocked ? <Lock className="w-7 h-7" /> : <Play className="w-7 h-7 fill-current" />}
                                 </div>
                               </div>
@@ -385,81 +360,6 @@ export default function CourseDetailsPage() {
             })()}
           </div>
         </div>
-        ) : (
-          /* Quizzes or Assignments List View */
-          <div className="space-y-6">
-            <div className="flex items-center justify-between px-4">
-              <h2 className="text-2xl font-black text-slate-900 flex items-center gap-3">
-                {activeTab === 'quizzes' ? (
-                  <><HelpCircle className="w-6 h-6 text-orange-500" /> {language === 'ar' ? 'الاختبارات والتقييمات' : 'Quizzes & Assessments'}</>
-                ) : (
-                  <><FileText className="w-6 h-6 text-emerald-500" /> {language === 'ar' ? 'التكليفات والمهام' : 'Assignments & Tasks'}</>
-                )}
-              </h2>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4">
-              {(() => {
-                const items = course.exams?.filter((e: any) => activeTab === 'quizzes' ? e.type !== 'ASSIGNMENT' : e.type === 'ASSIGNMENT') || [];
-                if (items.length === 0) {
-                  return (
-                    <div className="py-24 text-center bg-white rounded-[40px] border-2 border-slate-100 border-dashed animate-in fade-in duration-500">
-                      {activeTab === 'quizzes' ? (
-                        <HelpCircle className="w-20 h-20 text-slate-100 mx-auto mb-6" />
-                      ) : (
-                        <FileText className="w-20 h-20 text-slate-100 mx-auto mb-6" />
-                      )}
-                      <p className="text-slate-400 text-xl font-black">
-                        {activeTab === 'quizzes' 
-                          ? (language === 'ar' ? 'لا يوجد اختبارات مرتبطة بهذا الكورس حالياً' : 'No quizzes linked to this course yet')
-                          : (language === 'ar' ? 'لا يوجد تكليفات مرتبطة بهذا الكورس حالياً' : 'No assignments linked to this course yet')}
-                      </p>
-                    </div>
-                  );
-                }
-
-                return items.map((exam: any, idx: number) => {
-                  return (
-                    <div key={exam.id} className="bg-white rounded-[32px] p-6 sm:p-8 border border-slate-100 shadow-sm hover:shadow-xl hover:border-indigo-200 transition-all duration-500 group flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                      <div className="flex items-center gap-6">
-                        <div className={`w-16 h-16 rounded-3xl flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-110 shrink-0 ${activeTab === 'quizzes' ? 'bg-orange-50 text-orange-500' : 'bg-emerald-50 text-emerald-500'}`}>
-                          {activeTab === 'quizzes' ? <HelpCircle className="w-8 h-8" /> : <FileText className="w-8 h-8" />}
-                        </div>
-                        <div className="space-y-1">
-                          <h3 className="text-xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors leading-tight">
-                            {exam.title}
-                          </h3>
-                          <div className="flex items-center gap-4 text-slate-400 text-xs font-bold">
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-3.5 h-3.5" />
-                              {exam.duration} {language === 'ar' ? 'دقيقة' : 'minutes'}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <HelpCircle className="w-3.5 h-3.5" />
-                              {exam._count?.questions || 0} {language === 'ar' ? 'أسئلة' : 'questions'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <button 
-                        onClick={() => router.push(`/exams/${exam.id}`)}
-                        className={`px-8 py-4 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95 text-white ${
-                          activeTab === 'quizzes' 
-                            ? 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/20 text-black' 
-                            : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20'
-                        }`}
-                      >
-                        {language === 'ar' ? 'بدء الآن' : 'Start Now'}
-                        <ChevronLeft className={`w-4 h-4 transition-transform ${language === 'ar' ? 'group-hover:-translate-x-2' : 'group-hover:translate-x-2 rotate-180'}`} />
-                      </button>
-                    </div>
-                  );
-                });
-              })()}
-            </div>
-          </div>
-        )}
       </div>
     </DashboardLayout>
   );
