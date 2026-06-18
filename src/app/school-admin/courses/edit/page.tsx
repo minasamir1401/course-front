@@ -3579,7 +3579,6 @@ export default function EditCoursePage() {
                   )}
                 </div>
               </div>
-              </div>
             </div>
           </div>
         )}
