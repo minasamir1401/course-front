@@ -579,6 +579,16 @@ export default function EditCoursePage() {
 
     try {
       const targetSchoolIds = (courseData.schoolIds || []).filter(Boolean);
+
+      // 🛡️ SAFE SLIDES PATCH: Save slides independently via dedicated endpoint first
+      if (currentLesson.id && currentLesson.slides && currentLesson.slides.length > 0) {
+        fetch(`${API_URL}/lessons/${currentLesson.id}/slides`, {
+          method: 'PATCH',
+          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ slides: JSON.stringify(currentLesson.slides) })
+        }).catch(() => {}); // Fire and forget
+      }
+
       const res = await fetch(`${API_URL}/school/courses/${courseId}`, {
         method: 'PUT',
         headers: {

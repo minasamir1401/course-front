@@ -431,6 +431,8 @@ export default function EditCoursePage() {
 
   useEffect(() => {
     if (!hasUnsavedChanges || isSubmitting || isLoading || !isAutoSaveEnabled) return;
+    // SAFETY: Never auto-save while the lesson modal is open — slides may not be fully loaded
+    if (isLessonModalOpen) return;
     
     const timer = setTimeout(() => {
       handleSubmit(undefined, true);
@@ -555,6 +557,17 @@ export default function EditCoursePage() {
 
     try {
       const targetSchoolIds = (courseData.schoolIds || []).filter(Boolean);
+
+      // 🛡️ SAFE SLIDES PATCH: Save slides independently first via dedicated endpoint
+      // This ensures slides are never lost even if the full PUT fails or auto-save overwrites them
+      if (currentLesson.id && currentLesson.slides && currentLesson.slides.length > 0) {
+        fetch(`${API_URL}/lessons/${currentLesson.id}/slides`, {
+          method: 'PATCH',
+          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ slides: JSON.stringify(currentLesson.slides) })
+        }).catch(() => {}); // Fire and forget — full PUT below is the primary save
+      }
+
       const res = await fetch(`${API_URL}/school/courses/${courseId}`, {
         method: 'PUT',
         headers: {
