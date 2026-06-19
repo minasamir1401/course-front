@@ -2613,8 +2613,8 @@ export default function EditCoursePage() {
                   { id: 'info', label: language === 'ar' ? 'الأهداف والبيانات' : 'Goals & Info', icon: Target },
                   { id: 'scheduling', label: language === 'ar' ? 'الجدولة والظهور' : 'Scheduling & Visibility', icon: Clock },
                   { id: 'slides', label: language === 'ar' ? 'محتوى الشرح' : 'Explanation Content', icon: Layout },
-                  { id: 'assignments', label: language === 'ar' ? 'التكليفات (Assignments)' : 'Assignments', icon: FileText },
-                  { id: 'exercises', label: language === 'ar' ? 'التدريبات' : 'Exercises', icon: HelpCircle },
+                  { id: 'assignments', label: language === 'ar' ? "واجبات وتكليفات الدرس (Assignments)" : "Assignments", icon: FileText },
+                  { id: 'exercises', label: language === 'ar' ? "تدريبات وتقييمات الدرس (Quiz Me)" : "Quiz Me", icon: HelpCircle },
                   { id: 'attachments', label: language === 'ar' ? 'المرفقات' : 'Attachments', icon: FileJson },
                 ].map(tab => (
                   <button

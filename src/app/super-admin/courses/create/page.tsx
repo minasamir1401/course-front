@@ -2420,6 +2420,8 @@ export default function CreateCoursePage() {
                   { id: 'info', label: language === 'ar' ? "الأهداف والمعلومات" : "Objectives & Info", icon: Target },
                   { id: 'scheduling', label: language === 'ar' ? "الجدولة والظهور" : "Scheduling & Visibility", icon: Clock },
                   { id: 'slides', label: language === 'ar' ? "شرائح الشرح" : "Lecture Slides", icon: Layout },
+                  { id: 'assignments', label: language === 'ar' ? "واجبات وتكليفات الدرس (Assignments)" : "Assignments", icon: FileText },
+                  { id: 'exercises', label: language === 'ar' ? "تدريبات وتقييمات الدرس (Quiz Me)" : "Quiz Me", icon: HelpCircle },
                   { id: 'attachments', label: t('courseCreate.attachments') || "Attachments", icon: FileDown },
                 ].map(tab => (
                   <button
