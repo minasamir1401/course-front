@@ -168,7 +168,7 @@ export default function EditCoursePage() {
 
   const [lessons, setLessons] = useState<any[]>([]);
   const [exams, setExams] = useState<any[]>([]);
-  const [activeContentTab, setActiveContentTab] = useState<'lessons' | 'quizzes' | 'assignments'>('lessons');
+  const [activeContentTab] = useState<'lessons'>('lessons');
   const [isLessonModalOpen, setIsLessonModalOpen] = useState(false);
   const [isBankModalOpen, setIsBankModalOpen] = useState(false);
   const [isQuestionBankModalOpen, setIsQuestionBankModalOpen] = useState(false);
@@ -2573,8 +2573,6 @@ export default function EditCoursePage() {
                   { id: 'info', label: language === 'ar' ? 'الأهداف والبيانات' : 'Goals & Info', icon: Target },
                   { id: 'scheduling', label: language === 'ar' ? 'الجدولة والظهور' : 'Scheduling & Visibility', icon: Clock },
                   { id: 'slides', label: language === 'ar' ? 'محتوى الشرح' : 'Explanation Content', icon: Layout },
-                  { id: 'assignments', label: language === 'ar' ? 'التكليفات (Assignments)' : 'Assignments', icon: FileText },
-                  { id: 'exercises', label: language === 'ar' ? 'التدريبات' : 'Exercises', icon: HelpCircle },
                   { id: 'attachments', label: language === 'ar' ? 'المرفقات' : 'Attachments', icon: FileJson },
                 ].map(tab => (
                   <button
@@ -3130,8 +3128,6 @@ export default function EditCoursePage() {
                   </div>
                 )}
 
-                {activeTab === 'assignments' && renderQuestionsBuilder('assignments')}
-
                 {activeTab === 'scheduling' && (
                   <div className="space-y-8 animate-in fade-in duration-300">
                     <div className="bg-indigo-50/50 border border-indigo-100 p-8 rounded-[35px] flex items-center justify-between">
@@ -3180,8 +3176,6 @@ export default function EditCoursePage() {
                 )}
 
                 {activeTab === 'slides' && renderSlidesBuilder('slides')}
-
-                {activeTab === 'exercises' && renderQuestionsBuilder('questions')}
 
                 {activeTab === 'attachments' && (
                   <div className="space-y-8">
@@ -3567,61 +3561,25 @@ export default function EditCoursePage() {
               <div className="lg:col-span-8 space-y-8">
                 {/* Content Navigation Tabs */}
                 <div className="bg-white p-2 rounded-[30px] border border-slate-100 shadow-sm flex gap-2">
-                   {[
-                     { id: 'lessons', label: language === 'ar' ? 'الدروس والمحاضرات' : 'Lessons & Lectures', icon: Layers, color: 'indigo' },
-                     { id: 'quizzes', label: language === 'ar' ? 'الاختبارات القصيرة' : 'Quizzes', icon: HelpCircle, color: 'orange' },
-                     { id: 'assignments', label: language === 'ar' ? 'التكليفات والمهام' : 'Assignments & Tasks', icon: FileText, color: 'emerald' },
-                   ].map(tab => (
-                     <button
-                       key={tab.id}
-                       onClick={() => setActiveContentTab(tab.id as any)}
-                       className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-2xl font-black transition-all ${
-                         activeContentTab === tab.id 
-                         ? `bg-${tab.color}-600 ${tab.color === 'orange' ? 'text-black' : 'text-white'} shadow-lg shadow-${tab.color}-600/20` 
-                         : 'text-slate-400 hover:bg-slate-50'
-                       }`}
-                     >
-                       <tab.icon className="w-5 h-5" />
-                       {tab.label}
-                     </button>
-                   ))}
+                   <button
+                     className="flex-1 flex items-center justify-center gap-3 py-4 rounded-2xl font-black transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
+                   >
+                     <Layers className="w-5 h-5" />
+                     {language === 'ar' ? 'الدروس والمحاضرات' : 'Lessons & Lectures'}
+                   </button>
                 </div>
 
                 <div className="flex justify-between items-center bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
                   <h3 className="text-2xl font-black text-slate-900 flex items-center gap-4">
-                    {activeContentTab === 'lessons' && <><Layers className="w-8 h-8 text-indigo-600" /> {language === 'ar' ? "الدروس والمحاضرات" : "Lessons & Lectures"}</>}
-                    {activeContentTab === 'quizzes' && <><HelpCircle className="w-8 h-8 text-orange-500" /> {language === 'ar' ? "الاختبارات والتقييمات" : "Quizzes & Assessments"}</>}
-                    {activeContentTab === 'assignments' && <><FileText className="w-8 h-8 text-emerald-500" /> {language === 'ar' ? "التكليفات الدراسية" : "Assignments"}</>}
+                    <Layers className="w-8 h-8 text-indigo-600" /> {language === 'ar' ? "الدروس والمحاضرات" : "Lessons & Lectures"}
                   </h3>
-                  <button 
-                    onClick={() => {
-                      if (activeContentTab === 'lessons') {
-                        openAddLessonModal();
-                      } else if (activeContentTab === 'quizzes') {
-                        router.push(`/super-admin/quizzes/new?courseId=${courseId}`);
-                      } else {
-                        router.push(`/super-admin/assignments/new?courseId=${courseId}`);
-                      }
-                    }} 
-                    className={`px-8 py-4 rounded-2xl font-black flex items-center gap-3 transition-all shadow-xl text-white ${
-                      activeContentTab === 'lessons' ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20' :
-                      activeContentTab === 'quizzes' ? 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/20 text-black' :
-                      'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20'
-                    }`}
+                  <button
+                    onClick={openAddLessonModal}
+                    className="px-8 py-4 rounded-2xl font-black flex items-center gap-3 transition-all shadow-xl bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20 text-white"
                   >
                     <Plus size={24} /> 
-                    {language === 'ar' ? "إضافة " : "Add "}
-                    {activeContentTab === 'lessons' ? (language === 'ar' ? 'درس' : 'Lesson') : activeContentTab === 'quizzes' ? (language === 'ar' ? 'اختبار' : 'Quiz') : (language === 'ar' ? 'تكليف' : 'Assignment')}
+                    {language === 'ar' ? "إضافة درس" : "Add Lesson"}
                   </button>
-                  {activeContentTab !== 'lessons' && (
-                    <button 
-                      onClick={openBankModal}
-                      className="px-6 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black flex items-center gap-3 hover:bg-slate-200 transition-all border border-slate-200"
-                    >
-                      <Layers className="w-5 h-5" />
-                      {language === 'ar' ? "ربط من البنك المركزي" : "Link from Central Bank"}
-                    </button>
-                  )}
                 </div>
 
                 <div className="flex flex-col gap-4">
@@ -3695,61 +3653,7 @@ export default function EditCoursePage() {
                         </div>
                       ))
                     )
-                  ) : (
-                    <div className="bg-white border border-slate-100 rounded-[40px] p-12 flex flex-col items-center justify-center text-center gap-6">
-                       <div className={`w-24 h-24 rounded-[35px] flex items-center justify-center ${activeContentTab === 'quizzes' ? 'bg-orange-50 text-orange-500' : 'bg-emerald-50 text-emerald-500'}`}>
-                          {activeContentTab === 'quizzes' ? <HelpCircle className="w-12 h-12" /> : <FileText className="w-12 h-12" />}
-                       </div>
-                       <div>
-                         <h4 className="text-2xl font-black text-slate-900 mb-2">
-                           {activeContentTab === 'quizzes' ? 'إدارة الاختبارات' : 'إدارة التكليفات'}
-                         </h4>
-                         <p className="text-slate-400 font-bold max-w-md">
-                           يمكنك ربط هذا الكورس بأسئلة من بنك الأسئلة المركزي وتعيينها كـ {activeContentTab === 'quizzes' ? 'اختبارات' : 'تكليفات'} للطلاب.
-                         </p>
-                       </div>
-                       
-                       <div className="w-full max-w-2xl space-y-3">
-                          {exams.filter(e => activeContentTab === 'quizzes' ? e.type?.toUpperCase() !== 'ASSIGNMENT' : e.type?.toUpperCase() === 'ASSIGNMENT').length === 0 ? (
-                            <div className="p-8 border-2 border-dashed border-slate-100 rounded-3xl text-slate-400 font-bold">
-                               لا يوجد {activeContentTab === 'quizzes' ? 'اختبارات' : 'تكليفات'} مرتبطة بهذا الكورس حالياً.
-                            </div>
-                          ) : (
-                            exams.filter(e => activeContentTab === 'quizzes' ? e.type?.toUpperCase() !== 'ASSIGNMENT' : e.type?.toUpperCase() === 'ASSIGNMENT').map((exam, idx) => (
-                              <div key={idx} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
-                                 <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-900 font-black border border-slate-100">
-                                       {idx + 1}
-                                    </div>
-                                    <div className="text-right">
-                                       <div className="font-black text-slate-900">{exam.title}</div>
-                                       <div className="text-[10px] text-slate-400 font-bold flex gap-2">
-                                          <span>{exam._count?.questions || 0} سؤال</span>
-                                          <span>•</span>
-                                          <span>{exam.duration} دقيقة</span>
-                                       </div>
-                                    </div>
-                                 </div>
-                                 <button 
-                                   onClick={() => {
-                                      if (exam.type === 'Quiz') {
-                                        router.push(`/super-admin/quizzes/edit/${exam.id}?courseId=${courseId}`);
-                                      } else if (exam.type === 'Assignment') {
-                                        router.push(`/super-admin/assignments/edit/${exam.id}?courseId=${courseId}`);
-                                      } else {
-                                        router.push(`/super-admin/exams/edit/${exam.id}?courseId=${courseId}`);
-                                      }
-                                    }}
-                                   className="p-2 text-slate-400 hover:text-indigo-600 transition-all"
-                                 >
-                                   <Edit2 size={16} />
-                                 </button>
-                              </div>
-                            ))
-                          )}
-                       </div>
-                    </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </div>

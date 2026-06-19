@@ -168,7 +168,7 @@ export default function EditCoursePage() {
 
   const [lessons, setLessons] = useState<any[]>([]);
   const [exams, setExams] = useState<any[]>([]);
-  const [activeContentTab, setActiveContentTab] = useState<'lessons' | 'quizzes' | 'assignments'>('lessons');
+  const [activeContentTab] = useState<'lessons'>('lessons');
   const [isLessonModalOpen, setIsLessonModalOpen] = useState(false);
   const [isBankModalOpen, setIsBankModalOpen] = useState(false);
   const [isQuestionBankModalOpen, setIsQuestionBankModalOpen] = useState(false);
@@ -212,7 +212,7 @@ export default function EditCoursePage() {
   const [tempQuestion, setTempQuestion] = useState<any>({
     text: "", type: "MCQ", options: ["", "", "", ""],
     correctAnswer: "", points: 1, skill: "General", level: "Medium", dok: "",
-    learningOutcome: "", standard: "", indicator: "", 
+    learningOutcome: "", standard: "", indicator: "",
     sections: [], correctAnswers: [], attempts: 1
   });
 
@@ -333,7 +333,7 @@ export default function EditCoursePage() {
           "2nd Secondary": "الصف الثاني الثانوي",
           "3rd Secondary": "الصف الثالث الثانوي",
         };
-        
+
         const expandedGrades: string[] = [];
         parsedGrades.forEach(g => {
           const mapped = forwardGradeMap[g] || g;
@@ -360,7 +360,7 @@ export default function EditCoursePage() {
           schoolId: data.schoolId || "",
           schoolIds: (data.schools && data.schools.length > 0) ? data.schools.map((s: any) => s.id) : (data.schoolId ? [data.schoolId] : [])
         });
-        
+
         setExams(data.exams || []);
 
         setLessons(data.lessons.map((l: any) => {
@@ -437,9 +437,9 @@ export default function EditCoursePage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ courseId }) 
+        body: JSON.stringify({ courseId })
       });
-      
+
       if (res.ok) {
         showToast(language === 'ar' ? "تم ربط المحتوى بنجاح" : "Content linked successfully", "success");
         if(token) fetchCourseData(token, courseId!);
@@ -475,11 +475,12 @@ export default function EditCoursePage() {
 
   useEffect(() => {
     if (!hasUnsavedChanges || isSubmitting || isLoading || !isAutoSaveEnabled) return;
-    
+    if (isLessonModalOpen) return;
+
     const timer = setTimeout(() => {
       handleSubmit(undefined, true);
     }, 60000);
-    
+
     return () => clearTimeout(timer);
   }, [hasUnsavedChanges, isSubmitting, isLoading, courseData, lessons, isAutoSaveEnabled, isLessonModalOpen, currentLesson, editingLessonIndex]);
 
@@ -555,7 +556,7 @@ export default function EditCoursePage() {
       skill: q.skill,
       level: q.level
     });
-    setCurrentLesson({ ...currentLesson, questions: newQuestions });
+    setCurrentLesson((prev: any) => ({ ...prev, questions: newQuestions }));
     showToast(language === 'ar' ? "تم إضافة السؤال للدرس" : "Question added to lesson", "success");
   };
 
@@ -628,7 +629,7 @@ export default function EditCoursePage() {
   const parseQuestionsFromExcel = (rows: any[][]) => {
     if (rows.length < 2) return [];
     const headers = rows[0].map(h => String(h).trim().toLowerCase());
-    
+
     const textIdx = headers.findIndex(h => h.includes("question") || h.includes("السؤال") || h.includes("نص السؤال"));
     const typeIdx = headers.findIndex(h => h.includes("type") || h.includes("نوع"));
     const opt1Idx = headers.findIndex(h => h.includes("option 1") || h.includes("الخيار 1") || h.includes("أول"));
@@ -686,7 +687,7 @@ export default function EditCoursePage() {
       const indicator = indIdx >= 0 ? String(row[indIdx] ?? "").trim() : "";
       const learningOutcome = loIdx >= 0 ? String(row[loIdx] ?? "").trim() : "";
       const videoUrl = videoIdx >= 0 ? String(row[videoIdx] ?? "").trim() : "";
-      
+
       let level = diffIdx >= 0 ? String(row[diffIdx] ?? "").trim() : "Medium";
       if (level.toLowerCase().includes("easy") || level.includes("سهل")) level = "Easy";
       else if (level.toLowerCase().includes("hard") || level.includes("صعب")) level = "Hard";
@@ -733,14 +734,14 @@ export default function EditCoursePage() {
         const wb = XLSX.read(data, { type: "array" });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
-        
+
         if (rows.length < 2) {
           showToast(language === 'ar' ? "الملف فارغ أو لا يحتوي على صفوف بيانات" : "File is empty or contains no data rows", "error");
           return;
         }
 
         const headers = (rows[0] as string[]).map((h) => String(h).trim().toLowerCase());
-        
+
         // Find columns matching Standard, Indicator, Outcome, Domain
         const stdIdx = headers.findIndex(h => h.includes("standard") || h.includes("معيار") || h.includes("المعايير"));
         const indIdx = headers.findIndex(h => h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشرات"));
@@ -815,7 +816,7 @@ export default function EditCoursePage() {
         const wb = XLSX.read(data, { type: "array" });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
-        
+
         const parsed = parseQuestionsFromExcel(rows);
         if (parsed.length === 0) {
           showToast(language === 'ar' ? "لم يتم العثور على أسئلة صالحة في الملف" : "No valid questions found in the file", "error");
@@ -843,9 +844,9 @@ export default function EditCoursePage() {
         }));
 
         showToast(
-          language === 'ar' 
-            ? `تم استيراد ${parsed.length} سؤال بنجاح` 
-            : `Imported ${parsed.length} questions successfully`, 
+          language === 'ar'
+            ? `تم استيراد ${parsed.length} سؤال بنجاح`
+            : `Imported ${parsed.length} questions successfully`,
           "success"
         );
       } catch (err) {
@@ -868,7 +869,7 @@ export default function EditCoursePage() {
         const wb = XLSX.read(data, { type: "array" });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
-        
+
         const parsed = parseQuestionsFromExcel(rows);
         if (parsed.length === 0) {
           showToast(language === 'ar' ? "لم يتم العثور على واجبات صالحة في الملف" : "No valid assignments found in the file", "error");
@@ -896,9 +897,9 @@ export default function EditCoursePage() {
         }));
 
         showToast(
-          language === 'ar' 
-            ? `تم استيراد ${parsed.length} واجب بنجاح` 
-            : `Imported ${parsed.length} assignments successfully`, 
+          language === 'ar'
+            ? `تم استيراد ${parsed.length} واجب بنجاح`
+            : `Imported ${parsed.length} assignments successfully`,
           "success"
         );
       } catch (err) {
@@ -981,9 +982,9 @@ export default function EditCoursePage() {
       [
         language === 'ar' ? "حدد قارات العالم القديم:" : "Select the ancient world continents:",
         "MULTI_SELECT",
-        language === 'ar' ? "آسيا" : "Asia", 
-        language === 'ar' ? "أوروبا" : "Europe", 
-        language === 'ar' ? "أفريقيا" : "Africa", 
+        language === 'ar' ? "آسيا" : "Asia",
+        language === 'ar' ? "أوروبا" : "Europe",
+        language === 'ar' ? "أفريقيا" : "Africa",
         language === 'ar' ? "أستراليا" : "Australia", "",
         "",
         language === 'ar' ? "آسيا, أوروبا, أفريقيا" : "Asia, Europe, Africa",
@@ -1000,106 +1001,122 @@ export default function EditCoursePage() {
     const filename = type === 'assignments' ? "assignments_template.xlsx" : "practice_questions_template.xlsx";
     XLSX.writeFile(wb, filename);
     showToast(
-      language === 'ar' 
-        ? "تم تحميل نموذج الأسئلة الاسترشادي بنجاح" 
-        : "Questions template downloaded successfully", 
+      language === 'ar'
+        ? "تم تحميل نموذج الأسئلة الاسترشادي بنجاح"
+        : "Questions template downloaded successfully",
       "success"
     );
   };
 
   const addBlock = (source: 'slides' | 'assignments' | 'questions' = 'slides', type: 'TEXT' | 'QUESTION') => {
-    const newBlock = type === 'TEXT' 
+    const newBlock = type === 'TEXT'
       ? { id: Date.now() + Math.random(), type: 'TEXT', label: 'CONTENT', title: `محتوى جديد`, content: "", text: "", videoUrl: "", sections: [] }
       : { id: Date.now() + Math.random(), type: 'QUESTION', label: 'MCQ', title: `سؤال جديد`, content: "", text: "", videoUrl: "", options: ["", "", "", ""], correctAnswer: "", sections: [] };
-    const currentList = currentLesson[source] || [];
-    setCurrentLesson({
-      ...currentLesson,
-      [source]: [...currentList, newBlock]
+    setCurrentLesson((prev: any) => {
+      const currentList = prev[source] || [];
+      return {
+        ...prev,
+        [source]: [...currentList, newBlock]
+      };
     });
   };
 
   const insertBlockAt = (source: 'slides' | 'assignments' | 'questions' = 'slides', index: number, type: 'TEXT' | 'QUESTION') => {
-    const newBlock = type === 'TEXT' 
+    const newBlock = type === 'TEXT'
       ? { id: Date.now() + Math.random(), type: 'TEXT', label: 'CONTENT', title: `محتوى جديد`, content: "", text: "", videoUrl: "", sections: [] }
       : { id: Date.now() + Math.random(), type: 'QUESTION', label: 'MCQ', title: `سؤال جديد`, content: "", text: "", videoUrl: "", options: ["", "", "", ""], correctAnswer: "", sections: [] };
-    const newSlides = [...(currentLesson[source] || [])];
-    newSlides.splice(index, 0, newBlock);
-    setCurrentLesson({
-      ...currentLesson,
-      [source]: newSlides
+    setCurrentLesson((prev: any) => {
+      const newSlides = [...(prev[source] || [])];
+      newSlides.splice(index, 0, newBlock);
+      return {
+        ...prev,
+        [source]: newSlides
+      };
     });
     showToast(language === 'ar' ? "تم إدراج الشريحة بنجاح" : "Slide inserted successfully", "success");
   };
 
   const moveBlock = (source: 'slides' | 'assignments' | 'questions' = 'slides', index: number, direction: 'UP' | 'DOWN') => {
-    const newSlides = [...(currentLesson[source] || [])];
-    const targetIndex = direction === 'UP' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= newSlides.length) return;
-    const temp = newSlides[index];
-    newSlides[index] = newSlides[targetIndex];
-    newSlides[targetIndex] = temp;
-    setCurrentLesson({
-      ...currentLesson,
-      [source]: newSlides
+    setCurrentLesson((prev: any) => {
+      const newSlides = [...(prev[source] || [])];
+      const targetIndex = direction === 'UP' ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= newSlides.length) return prev;
+      const temp = newSlides[index];
+      newSlides[index] = newSlides[targetIndex];
+      newSlides[targetIndex] = temp;
+      return {
+        ...prev,
+        [source]: newSlides
+      };
     });
   };
 
   const updateBlock = (source: 'slides' | 'assignments' | 'questions' = 'slides', index: number, field: string, value: any) => {
-    const newSlides = [...(currentLesson[source] || [])];
-    newSlides[index] = { ...newSlides[index], [field]: value };
-    if (field === 'content') {
-      newSlides[index].text = value;
-    } else if (field === 'text') {
-      newSlides[index].content = value;
-    }
-    setCurrentLesson({ ...currentLesson, [source]: newSlides });
+    setCurrentLesson((prev: any) => {
+      const newSlides = [...(prev[source] || [])];
+      newSlides[index] = { ...newSlides[index], [field]: value };
+      if (field === 'content') {
+        newSlides[index].text = value;
+      } else if (field === 'text') {
+        newSlides[index].content = value;
+      }
+      return { ...prev, [source]: newSlides };
+    });
   };
 
   const removeBlock = (source: 'slides' | 'assignments' | 'questions' = 'slides', index: number) => {
-    const newSlides = [...(currentLesson[source] || [])];
-    newSlides.splice(index, 1);
-    setCurrentLesson({ ...currentLesson, [source]: newSlides });
+    setCurrentLesson((prev: any) => {
+      const newSlides = [...(prev[source] || [])];
+      newSlides.splice(index, 1);
+      return { ...prev, [source]: newSlides };
+    });
   };
 
   const addSection = (source: 'slides' | 'assignments' | 'questions' = 'slides', blockIndex: number, type: string) => {
-    const newSlides = [...(currentLesson[source] || [])];
-    if (!newSlides[blockIndex].sections) newSlides[blockIndex].sections = [];
-    newSlides[blockIndex].sections.push({ id: Date.now() + Math.random(), type, content: "" });
-    setCurrentLesson({ ...currentLesson, [source]: newSlides });
+    setCurrentLesson((prev: any) => {
+      const newSlides = [...(prev[source] || [])];
+      if (!newSlides[blockIndex].sections) newSlides[blockIndex].sections = [];
+      newSlides[blockIndex].sections.push({ id: Date.now() + Math.random(), type, content: "" });
+      return { ...prev, [source]: newSlides };
+    });
   };
 
   const updateSection = (source: 'slides' | 'assignments' | 'questions' = 'slides', blockIndex: number, sectionIndex: number, content: string) => {
-    const newSlides = [...(currentLesson[source] || [])];
-    newSlides[blockIndex].sections[sectionIndex].content = content;
-    setCurrentLesson({ ...currentLesson, [source]: newSlides });
+    setCurrentLesson((prev: any) => {
+      const newSlides = [...(prev[source] || [])];
+      newSlides[blockIndex].sections[sectionIndex].content = content;
+      return { ...prev, [source]: newSlides };
+    });
   };
 
   const removeSection = (source: 'slides' | 'assignments' | 'questions' = 'slides', blockIndex: number, sectionIndex: number) => {
-    const newSlides = [...(currentLesson[source] || [])];
-    newSlides[blockIndex].sections.splice(sectionIndex, 1);
-    setCurrentLesson({ ...currentLesson, [source]: newSlides });
+    setCurrentLesson((prev: any) => {
+      const newSlides = [...(prev[source] || [])];
+      newSlides[blockIndex].sections.splice(sectionIndex, 1);
+      return { ...prev, [source]: newSlides };
+    });
   };
 
   const renderSlidesBuilder = (source: 'slides' | 'assignments' | 'questions') => {
     const list = currentLesson[source] || [];
-    
+
     // Label translations depending on source
     const headerLabel = source === 'slides' ? 'شرائح الشرح والدرس' : source === 'assignments' ? 'تكليفات الدرس (Assignments)' : 'تدريبات الدرس (Quiz Me)';
-    const headerDesc = source === 'slides' 
-      ? 'قم بإضافة محتوى نصي، أمثلة، ملاحظات، أو أسئلة تفاعلية مدمجة لشرح الدرس' 
-      : source === 'assignments' 
-        ? 'قم بإضافة التكليفات التطبيقية والواجبات المنزلية للطلاب' 
+    const headerDesc = source === 'slides'
+      ? 'قم بإضافة محتوى نصي، أمثلة، ملاحظات، أو أسئلة تفاعلية مدمجة لشرح الدرس'
+      : source === 'assignments'
+        ? 'قم بإضافة التكليفات التطبيقية والواجبات المنزلية للطلاب'
         : 'قم بإضافة أسئلة تدريبية تفاعلية لتقييم فهم واستيعاب الطالب';
 
     return (
       <div className="space-y-8 animate-in fade-in duration-300">
         {source !== 'slides' && (
-          <input 
-            type="file" 
-            ref={source === 'assignments' ? assignmentsExcelRef : questionsExcelRef} 
-            style={{ display: 'none' }} 
-            accept=".xlsx,.xls" 
-            onChange={source === 'assignments' ? handleAssignmentsExcelChange : handleQuestionsExcelChange} 
+          <input
+            type="file"
+            ref={source === 'assignments' ? assignmentsExcelRef : questionsExcelRef}
+            style={{ display: 'none' }}
+            accept=".xlsx,.xls"
+            onChange={source === 'assignments' ? handleAssignmentsExcelChange : handleQuestionsExcelChange}
           />
         )}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
@@ -1113,7 +1130,7 @@ export default function EditCoursePage() {
           <div className="flex flex-wrap gap-3">
             {source !== 'slides' && (
               <>
-                <button 
+                <button
                   type="button"
                   onClick={() => handleExcelUpload(source === 'assignments' ? 'assignments' : 'questions')}
                   className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
@@ -1121,7 +1138,7 @@ export default function EditCoursePage() {
                   <Upload className="w-4 h-4" />
                   {language === 'ar' ? 'استيراد Excel' : 'Import Excel'}
                 </button>
-                <button 
+                <button
                   type="button"
                   onClick={() => downloadQuestionsTemplate(source === 'assignments' ? 'assignments' : 'questions')}
                   className="bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
@@ -1131,7 +1148,7 @@ export default function EditCoursePage() {
                 </button>
               </>
             )}
-            <button 
+            <button
               type="button"
               onClick={() => addBlock(source, 'TEXT')}
               className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer"
@@ -1139,7 +1156,7 @@ export default function EditCoursePage() {
               <Plus className="w-5 h-5" />
               + محتوى نصي (Text)
             </button>
-            <button 
+            <button
               type="button"
               onClick={() => addBlock(source, 'QUESTION')}
               className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all shadow-lg cursor-pointer"
@@ -1211,7 +1228,7 @@ export default function EditCoursePage() {
                             </>
                           )}
                         </select>
-                        <input 
+                        <input
                           type="text"
                           value={block.title || ""}
                           onChange={(e) => updateBlock(source, sIdx, 'title', e.target.value)}
@@ -1243,7 +1260,7 @@ export default function EditCoursePage() {
                       </button>
                     </div>
                     <div className="relative" data-dropdown-root="true" onClick={(e) => e.stopPropagation()}>
-                      <button 
+                      <button
                         type="button"
                         onClick={(e) => {
                           e.preventDefault();
@@ -1271,7 +1288,7 @@ export default function EditCoursePage() {
                         ))}
                       </div>
                     </div>
-                    <button 
+                    <button
                       type="button"
                       onClick={() => removeBlock(source, sIdx)}
                       className="text-red-500 hover:text-red-600 p-2 hover:bg-red-500/10 rounded-xl transition-all bg-white cursor-pointer"
@@ -1293,7 +1310,7 @@ export default function EditCoursePage() {
                     />
                   </div>
                   <div>
-                    <RichTextEditor 
+                    <RichTextEditor
                       value={block.content}
                       onChange={(val) => updateBlock(source, sIdx, 'content', val)}
                       placeholder={block.type === 'TEXT' ? (language === 'ar' ? "اكتب محتوى الشرح هنا..." : "Write explanation content here...") : (language === 'ar' ? "اكتب نص السؤال هنا..." : "Write question text here...")}
@@ -1305,7 +1322,7 @@ export default function EditCoursePage() {
                     <div className="grid grid-cols-2 md:grid-cols-6 gap-4 p-6 bg-white border border-slate-200 rounded-[30px] shadow-sm mb-4">
                       <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المعيار' : 'Standard'}</label>
-                        <select 
+                        <select
                           className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
                           value={block.standard || ""}
                           onChange={(e) => updateBlock(source, sIdx, 'standard', e.target.value)}
@@ -1319,7 +1336,7 @@ export default function EditCoursePage() {
 
                       <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المؤشر' : 'Indicator'}</label>
-                        <select 
+                        <select
                           className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
                           value={block.indicator || ""}
                           onChange={(e) => updateBlock(source, sIdx, 'indicator', e.target.value)}
@@ -1333,7 +1350,7 @@ export default function EditCoursePage() {
 
                       <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'مخرج التعلم' : 'Learning Outcome'}</label>
-                        <select 
+                        <select
                           className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
                           value={block.learningOutcome || ""}
                           onChange={(e) => updateBlock(source, sIdx, 'learningOutcome', e.target.value)}
@@ -1347,7 +1364,7 @@ export default function EditCoursePage() {
 
                       <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المهارة' : 'Skill'}</label>
-                        <select 
+                        <select
                           className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
                           value={block.skill || "General"}
                           onChange={(e) => updateBlock(source, sIdx, 'skill', e.target.value)}
@@ -1361,7 +1378,7 @@ export default function EditCoursePage() {
 
                       <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'مستوى الصعوبة' : 'Difficulty'}</label>
-                        <select 
+                        <select
                           className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
                           value={block.level || "Medium"}
                           onChange={(e) => updateBlock(source, sIdx, 'level', e.target.value)}
@@ -1374,7 +1391,7 @@ export default function EditCoursePage() {
 
                       <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'النقاط' : 'Points'}</label>
-                        <input 
+                        <input
                           type="number"
                           className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
                           value={block.points !== undefined ? block.points : 1}
@@ -1401,13 +1418,13 @@ export default function EditCoursePage() {
                       ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {(block.options || ["", "", "", ""]).map((opt: string, oIdx: number) => {
-                            const isSelected = block.label === 'MULTI_SELECT' 
-                              ? (block.correctAnswers || []).includes(opt) 
+                            const isSelected = block.label === 'MULTI_SELECT'
+                              ? (block.correctAnswers || []).includes(opt)
                               : block.correctAnswer === opt;
-                            
+
                             return (
                               <div key={oIdx} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${isSelected && opt ? 'bg-emerald-50 border-emerald-500' : 'bg-white border-transparent'}`}>
-                                <div 
+                                <div
                                   onClick={() => {
                                     if (block.label === 'MULTI_SELECT') {
                                       const answers = block.correctAnswers || [];
@@ -1421,24 +1438,24 @@ export default function EditCoursePage() {
                                 >
                                   {isSelected && opt && <CheckCircle2 className="w-4 h-4 text-white" />}
                                 </div>
-                                <MathInput 
+                                <MathInput
                                   value={opt}
                                   onChange={(val) => {
                                     const newOpts = [...(block.options || ["", "", "", ""])];
                                     const oldVal = newOpts[oIdx];
                                     const newVal = val;
                                     newOpts[oIdx] = newVal;
-                                    
+
                                     const newBlock = { ...block, options: newOpts };
                                     if (block.label === 'MULTI_SELECT' && (block.correctAnswers || []).includes(oldVal)) {
                                       newBlock.correctAnswers = (block.correctAnswers || []).map((a: string) => a === oldVal ? newVal : a);
                                     } else if (block.correctAnswer === oldVal) {
                                       newBlock.correctAnswer = newVal;
                                     }
-                                    
+
                                     const newSlides = [...(currentLesson[source] || [])];
                                     newSlides[sIdx] = newBlock;
-                                    setCurrentLesson({ ...currentLesson, [source]: newSlides });
+                                    setCurrentLesson((prev: any) => ({ ...prev, [source]: newSlides }));
                                   }}
                                   placeholder={language === 'ar' ? `خيار ${oIdx + 1}` : `Option ${oIdx + 1}`}
                                   className="bg-transparent flex-1"
@@ -1453,7 +1470,7 @@ export default function EditCoursePage() {
                               </div>
                             );
                           })}
-                          <button 
+                          <button
                             type="button"
                             onClick={() => updateBlock(source, sIdx, 'options', [...(block.options||["", "", "", ""]), ""])}
                             className="flex justify-center items-center p-3 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-200 hover:border-slate-400 transition-all cursor-pointer"
@@ -1482,7 +1499,7 @@ export default function EditCoursePage() {
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
-                            <RichTextEditor 
+                            <RichTextEditor
                               value={sec.content}
                               onChange={(val) => updateSection(source, sIdx, secIdx, val)}
                               placeholder={language === 'ar' ? `محتوى الـ ${sec.type}...` : `${sec.type} content...`}
@@ -1604,7 +1621,7 @@ export default function EditCoursePage() {
       newList.push(itemToSave);
     }
 
-    setCurrentLesson({ ...currentLesson, [source]: newList });
+    setCurrentLesson((prev: any) => ({ ...prev, [source]: newList }));
     setShowQuestionForm(false);
     setEditingQuestionIndex(null);
     showToast(language === 'ar' ? "تم حفظ السؤال في القائمة بنجاح" : "Question saved to list successfully", "success");
@@ -1614,7 +1631,7 @@ export default function EditCoursePage() {
     if (!confirm(language === 'ar' ? "هل أنت متأكد من حذف هذا السؤال؟" : "Are you sure you want to delete this question?")) return;
     const newList = [...(currentLesson[source] || [])];
     newList.splice(index, 1);
-    setCurrentLesson({ ...currentLesson, [source]: newList });
+    setCurrentLesson((prev: any) => ({ ...prev, [source]: newList }));
     showToast(language === 'ar' ? "تم حذف السؤال" : "Question deleted", "info");
   };
 
@@ -1625,7 +1642,7 @@ export default function EditCoursePage() {
     const temp = newList[index];
     newList[index] = newList[targetIndex];
     newList[targetIndex] = temp;
-    setCurrentLesson({ ...currentLesson, [source]: newList });
+    setCurrentLesson((prev: any) => ({ ...prev, [source]: newList }));
   };
 
   const updateCurrentQuestionField = (field: string, value: any) => {
@@ -1656,7 +1673,7 @@ export default function EditCoursePage() {
     setTempQuestion((prev: any) => {
       const opt = prev.options[oIdx];
       if (!opt && prev.type !== 'TRUE_FALSE') return prev;
-      
+
       const updated = { ...prev };
       if (prev.type === 'MULTI_SELECT') {
         const answers = prev.correctAnswers || [];
@@ -1745,7 +1762,7 @@ export default function EditCoursePage() {
           <span className="truncate">{currentValue || selectPlaceholder}</span>
           <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
         </button>
-        
+
         {isOpen && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>
@@ -1769,7 +1786,7 @@ export default function EditCoursePage() {
                         const newVal = prompt(promptEditLabel, opt);
                         if (newVal !== null && newVal.trim()) {
                           const newList = list.map((x: string) => x === opt ? newVal.trim() : x);
-                          setCurrentLesson({ ...currentLesson, [lessonField]: newList.join("\n") });
+                          setCurrentLesson((prev: any) => ({ ...prev, [lessonField]: newList.join("\n") }));
                           if (tempQuestion[field] === opt) {
                             updateCurrentQuestionField(field, newVal.trim());
                           }
@@ -1784,7 +1801,7 @@ export default function EditCoursePage() {
                       onClick={() => {
                         if (confirm(confirmDeleteLabel)) {
                           const newList = list.filter((x: string) => x !== opt);
-                          setCurrentLesson({ ...currentLesson, [lessonField]: newList.join("\n") });
+                          setCurrentLesson((prev: any) => ({ ...prev, [lessonField]: newList.join("\n") }));
                           if (tempQuestion[field] === opt) {
                             updateCurrentQuestionField(field, "");
                           }
@@ -1805,7 +1822,7 @@ export default function EditCoursePage() {
                     const list = (currentLesson[lessonField] || "").split("\n").filter(Boolean);
                     if (!list.includes(newVal.trim())) {
                       const newList = [...list, newVal.trim()];
-                      setCurrentLesson({ ...currentLesson, [lessonField]: newList.join("\n") });
+                      setCurrentLesson((prev: any) => ({ ...prev, [lessonField]: newList.join("\n") }));
                       updateCurrentQuestionField(field, newVal.trim());
                       setIsOpen(false);
                     }
@@ -1825,24 +1842,24 @@ export default function EditCoursePage() {
 
   const renderQuestionsBuilder = (source: 'assignments' | 'questions') => {
     const list = currentLesson[source] || [];
-    const headerLabel = source === 'assignments' 
+    const headerLabel = source === 'assignments'
       ? (language === 'ar' ? 'واجبات وتكليفات الدرس (Assignments)' : 'Lesson Assignments')
       : (language === 'ar' ? 'تدريبات وتقييمات الدرس (Quiz Me)' : 'Quiz Me Practice');
-    
+
     const headerDesc = source === 'assignments'
       ? (language === 'ar' ? 'قم بإضافة التكليفات التطبيقية والواجبات المنزلية للطلاب' : 'Add application homework and assignments for students')
       : (language === 'ar' ? 'قم بإضافة أسئلة تدريبية تفاعلية لتقييم فهم واستيعاب الطالب' : 'Add interactive practice questions to test student understanding');
 
     return (
       <div className="space-y-8 animate-in fade-in duration-300">
-        <input 
-          type="file" 
-          ref={source === 'assignments' ? assignmentsExcelRef : questionsExcelRef} 
-          style={{ display: 'none' }} 
-          accept=".xlsx,.xls" 
-          onChange={source === 'assignments' ? handleAssignmentsExcelChange : handleQuestionsExcelChange} 
+        <input
+          type="file"
+          ref={source === 'assignments' ? assignmentsExcelRef : questionsExcelRef}
+          style={{ display: 'none' }}
+          accept=".xlsx,.xls"
+          onChange={source === 'assignments' ? handleAssignmentsExcelChange : handleQuestionsExcelChange}
         />
-        
+
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
           <div>
             <h4 className="text-xl font-black text-slate-900 flex items-center gap-3">
@@ -1852,7 +1869,7 @@ export default function EditCoursePage() {
             <p className="text-slate-400 text-sm font-bold mt-1">{headerDesc}</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <button 
+            <button
               type="button"
               onClick={() => handleExcelUpload(source === 'assignments' ? 'assignments' : 'questions')}
               className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
@@ -1860,7 +1877,7 @@ export default function EditCoursePage() {
               <Upload className="w-4 h-4" />
               {language === 'ar' ? 'استيراد Excel' : 'Import Excel'}
             </button>
-            <button 
+            <button
               type="button"
               onClick={() => downloadQuestionsTemplate(source === 'assignments' ? 'assignments' : 'questions')}
               className="bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
@@ -1868,7 +1885,7 @@ export default function EditCoursePage() {
               <Download className="w-4 h-4" />
               {language === 'ar' ? 'تحميل نموذج' : 'Template'}
             </button>
-            <button 
+            <button
               type="button"
               onClick={() => handleAddQuestionForSource(source)}
               className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all shadow-lg cursor-pointer"
@@ -1891,7 +1908,7 @@ export default function EditCoursePage() {
                   <h4 className="text-xl font-black text-slate-800 mb-1">{language === 'ar' ? 'لا يوجد أسئلة مضافة' : 'No questions added yet'}</h4>
                   <p className="text-slate-400 font-bold text-xs max-w-sm">{language === 'ar' ? 'ابدأ بإضافة سؤال جديد أو استيراده من ملف إكسيل' : 'Start by adding a new question or importing from Excel'}</p>
                 </div>
-                <button 
+                <button
                   type="button"
                   onClick={() => handleAddQuestionForSource(source)}
                   className="bg-indigo-50 text-indigo-600 px-8 py-3.5 rounded-2xl font-black transition-all hover:bg-indigo-100 cursor-pointer text-xs"
@@ -1919,7 +1936,7 @@ export default function EditCoursePage() {
                           </span>
                           {q.standard && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">{q.standard}</span>}
                         </div>
-                        <div 
+                        <div
                           className="text-slate-700 font-bold truncate text-sm"
                           dangerouslySetInnerHTML={{ __html: (q.text || "").replace(/<[^>]*>?/gm, '').substring(0, 120) + '...' }}
                         />
@@ -1927,7 +1944,7 @@ export default function EditCoursePage() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <button 
+                      <button
                         type="button"
                         onClick={() => setExpandedQuestionIndex(expandedQuestionIndex === index ? null : index)}
                         className="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center hover:bg-slate-100 hover:text-indigo-600 transition-all"
@@ -1935,7 +1952,7 @@ export default function EditCoursePage() {
                       >
                         {expandedQuestionIndex === index ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                       </button>
-                      <button 
+                      <button
                         type="button"
                         onClick={() => handleEditQuestionForSource(source, index)}
                         className="w-10 h-10 bg-blue-50 text-blue-400 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"
@@ -1943,7 +1960,7 @@ export default function EditCoursePage() {
                       >
                         <Edit2 className="w-5 h-5" />
                       </button>
-                      <button 
+                      <button
                         type="button"
                         onClick={() => removeQuestionForSource(source, index)}
                         className="w-10 h-10 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all"
@@ -1961,7 +1978,7 @@ export default function EditCoursePage() {
                         <div className="space-y-4">
                           <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'نص السؤال / المحتوى:' : 'Question Content:'}</h5>
                           <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm prose prose-slate max-w-none text-sm font-bold" dangerouslySetInnerHTML={{ __html: q.text }} />
-                          
+
                           {q.learningOutcome && (
                             <div className="flex items-center gap-2 text-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-150 w-fit text-xs font-bold">
                               <Target className="w-4 h-4" />
@@ -1969,7 +1986,7 @@ export default function EditCoursePage() {
                             </div>
                           )}
                         </div>
-                        
+
                         <div className="space-y-4">
                           {q.type !== 'TEXT' && (
                             <>
@@ -2028,11 +2045,11 @@ export default function EditCoursePage() {
             <div className="bg-indigo-600 px-8 py-5 flex justify-between items-center">
               <h4 className="text-white font-black flex items-center gap-3">
                 <Plus className="w-5 h-5" />
-                {editingQuestionIndex !== null 
-                  ? (language === 'ar' ? `تعديل السؤال #${editingQuestionIndex + 1}` : `Edit Question #${editingQuestionIndex + 1}`) 
+                {editingQuestionIndex !== null
+                  ? (language === 'ar' ? `تعديل السؤال #${editingQuestionIndex + 1}` : `Edit Question #${editingQuestionIndex + 1}`)
                   : (language === 'ar' ? 'إضافة سؤال تفاعلي جديد' : 'Add New Question')}
               </h4>
-              <button 
+              <button
                 type="button"
                 onClick={() => setShowQuestionForm(false)}
                 className="w-10 h-10 bg-white/10 text-white rounded-xl flex items-center justify-center hover:bg-white/20 transition-all"
@@ -2040,13 +2057,13 @@ export default function EditCoursePage() {
                 <X className="w-6 h-6" />
               </button>
             </div>
-            
+
             <div className="p-8 md:p-12 space-y-8">
               {/* Unified Metadata & Configuration Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 p-6 bg-slate-50 border border-slate-200 rounded-[30px] shadow-sm mb-6">
                 <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'نوع السؤال' : 'Question Type'}</label>
-                  <select 
+                  <select
                     className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
                     value={tempQuestion.type}
                     onChange={(e) => {
@@ -2100,7 +2117,7 @@ export default function EditCoursePage() {
 
                 <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المهارة' : 'Skill'}</label>
-                  <select 
+                  <select
                     className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
                     value={tempQuestion.skill || "General"}
                     onChange={(e) => updateCurrentQuestionField("skill", e.target.value)}
@@ -2113,7 +2130,7 @@ export default function EditCoursePage() {
 
                 <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'مستوى الصعوبة' : 'Difficulty'}</label>
-                  <select 
+                  <select
                     className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
                     value={tempQuestion.level || "Medium"}
                     onChange={(e) => updateCurrentQuestionField("level", e.target.value)}
@@ -2126,7 +2143,7 @@ export default function EditCoursePage() {
 
                 <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'عمق المعرفة (DOK)' : 'Depth of Knowledge (DOK)'}</label>
-                  <select 
+                  <select
                     className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
                     value={tempQuestion.dok || ""}
                     onChange={(e) => updateCurrentQuestionField("dok", e.target.value)}
@@ -2141,7 +2158,7 @@ export default function EditCoursePage() {
 
                 <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'النقاط / الدرجة' : 'Points'}</label>
-                  <input 
+                  <input
                     type="number"
                     className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px]"
                     value={tempQuestion.points !== undefined ? tempQuestion.points : 1}
@@ -2151,7 +2168,7 @@ export default function EditCoursePage() {
 
                 <div className="flex flex-col gap-2 md:col-span-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'رابط فيديو اختياري للسؤال' : 'Optional Video Link'}</label>
-                  <input 
+                  <input
                     type="url"
                     className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 min-h-[34px]"
                     value={tempQuestion.videoUrl || ""}
@@ -2179,7 +2196,7 @@ export default function EditCoursePage() {
                     <p className="text-slate-400 text-[10px] font-bold mt-0.5">{language === 'ar' ? 'أضف تلميحات أو ملاحظات أو تفسيرات تفصيلية لهذا السؤال' : 'Add hints, tips, or detailed explanations'}</p>
                   </div>
                   <div className="relative" data-dropdown-root="true">
-                    <button 
+                    <button
                       type="button"
                       onClick={() => setOpenDropdownId(openDropdownId === 'question-sections' ? null : 'question-sections')}
                       className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all cursor-pointer border border-indigo-100"
@@ -2216,15 +2233,15 @@ export default function EditCoursePage() {
                             <IconComponent className="w-3.5 h-3.5" />
                             {preset.label}
                           </span>
-                          <button 
+                          <button
                             type="button"
-                            onClick={() => removeQuestionSection(idx)} 
+                            onClick={() => removeQuestionSection(idx)}
                             className="text-red-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
-                        <RichTextEditor 
+                        <RichTextEditor
                           value={sec.content || ""}
                           onChange={(value) => updateQuestionSectionContent(idx, value)}
                           placeholder="Write block content here..."
@@ -2247,7 +2264,7 @@ export default function EditCoursePage() {
                   {tempQuestion.type === "TRUE_FALSE" ? (
                     <>
                       <div className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isQuestionCorrectAnswer("صحيح") ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
-                        <div 
+                        <div
                           onClick={() => toggleQuestionCorrectAnswer(0)}
                           className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isQuestionCorrectAnswer("صحيح") ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200'}`}
                         >
@@ -2256,7 +2273,7 @@ export default function EditCoursePage() {
                         <span className="font-bold text-slate-700">{language === 'ar' ? 'صحيح' : 'True'}</span>
                       </div>
                       <div className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isQuestionCorrectAnswer("خطأ") ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
-                        <div 
+                        <div
                           onClick={() => toggleQuestionCorrectAnswer(1)}
                           className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isQuestionCorrectAnswer("خطأ") ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200'}`}
                         >
@@ -2269,26 +2286,26 @@ export default function EditCoursePage() {
                     <>
                       {(tempQuestion.options || ["", "", "", ""]).map((opt: string, oIndex: number) => (
                         <div key={oIndex} className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isQuestionCorrectAnswer(opt) && opt !== "" ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
-                          <div 
+                          <div
                             onClick={() => toggleQuestionCorrectAnswer(oIndex)}
                             className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isQuestionCorrectAnswer(opt) && opt !== "" ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200'}`}
                           >
                             {isQuestionCorrectAnswer(opt) && opt !== "" && <CheckCircle2 className="w-5 h-5 text-white" />}
                           </div>
-                          <MathInput 
+                          <MathInput
                             placeholder={language === 'ar' ? `الخيار ${oIndex + 1}` : `Option ${oIndex + 1}`}
                             className="bg-transparent flex-1"
                             value={opt}
                             onChange={(val) => updateQuestionOption(oIndex, val)}
                           />
                           {tempQuestion.options.length > 2 && (
-                            <button 
-                              type="button" 
+                            <button
+                              type="button"
                               onClick={() => {
                                 const newOptions = [...tempQuestion.options];
                                 newOptions.splice(oIndex, 1);
                                 setTempQuestion({ ...tempQuestion, options: newOptions });
-                              }} 
+                              }}
                               className="text-red-400 hover:text-red-600 transition-all"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -2296,8 +2313,8 @@ export default function EditCoursePage() {
                           )}
                         </div>
                       ))}
-                      <div 
-                        onClick={() => setTempQuestion({ ...tempQuestion, options: [...tempQuestion.options, ""] })} 
+                      <div
+                        onClick={() => setTempQuestion({ ...tempQuestion, options: [...tempQuestion.options, ""] })}
                         className="flex items-center justify-center gap-2 p-5 rounded-[22px] border-2 border-dashed border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all cursor-pointer text-indigo-600 font-bold text-sm"
                       >
                         <Plus className="w-5 h-5" />
@@ -2310,14 +2327,14 @@ export default function EditCoursePage() {
 
               {/* Form Buttons */}
               <div className="flex justify-end gap-4 pt-4 border-t border-slate-100">
-                <button 
+                <button
                   type="button"
                   onClick={() => setShowQuestionForm(false)}
                   className="px-8 py-4 rounded-2xl font-bold bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all whitespace-nowrap shrink-0 cursor-pointer"
                 >
                   {language === 'ar' ? 'إلغاء' : 'Cancel'}
                 </button>
-                <button 
+                <button
                   type="button"
                   onClick={() => handleSaveQuestionForSource(source)}
                   className="px-10 py-4 rounded-2xl font-black bg-indigo-600 text-white shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 whitespace-nowrap shrink-0 cursor-pointer"
@@ -2507,9 +2524,9 @@ export default function EditCoursePage() {
             setLessons(parsedLessons);
           }
         }
-        
+
         setTimeout(() => setHasUnsavedChanges(false), 1000);
-        
+
         if (!isAutoSave) {
           showToast(language === 'ar' ? "تم تحديث الكورس بنجاح" : "Course updated successfully", 'success');
           router.push(`/school-admin/courses`);
@@ -2586,8 +2603,6 @@ export default function EditCoursePage() {
                   { id: 'info', label: language === 'ar' ? 'الأهداف والبيانات' : 'Goals & Info', icon: Target },
                   { id: 'scheduling', label: language === 'ar' ? 'الجدولة والظهور' : 'Scheduling & Visibility', icon: Clock },
                   { id: 'slides', label: language === 'ar' ? 'محتوى الشرح' : 'Explanation Content', icon: Layout },
-                  { id: 'assignments', label: language === 'ar' ? 'التكليفات (Assignments)' : 'Assignments', icon: FileText },
-                  { id: 'exercises', label: language === 'ar' ? 'التدريبات' : 'Exercises', icon: HelpCircle },
                   { id: 'attachments', label: language === 'ar' ? 'المرفقات' : 'Attachments', icon: FileJson },
                 ].map(tab => (
                   <button
@@ -2612,7 +2627,7 @@ export default function EditCoursePage() {
                           type="text"
                           placeholder={language === 'ar' ? "مثال: مقدمة في علم الفيزياء" : "e.g. Introduction to Physics"}
                           value={currentLesson.title || ""}
-                          onChange={(e) => setCurrentLesson({ ...currentLesson, title: e.target.value })}
+                          onChange={(e) => setCurrentLesson((prev: any) => ({ ...prev, title: e.target.value }))}
                           className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 text-lg font-bold outline-none focus:border-indigo-600 focus:bg-white transition-all shadow-sm"
                         />
                       </div>
@@ -2623,7 +2638,7 @@ export default function EditCoursePage() {
                             type="text"
                             placeholder="https://youtube.com/watch?v=..."
                             value={currentLesson.videoUrl || ""}
-                            onChange={(e) => setCurrentLesson({ ...currentLesson, videoUrl: e.target.value })}
+                            onChange={(e) => setCurrentLesson((prev: any) => ({ ...prev, videoUrl: e.target.value }))}
                             className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 text-lg font-bold outline-none focus:border-indigo-600 focus:bg-white transition-all text-left pl-12 shadow-sm"
                             dir="ltr"
                           />
@@ -2649,10 +2664,10 @@ export default function EditCoursePage() {
                                 if (e.target.value === "__NEW__") {
                                   const newDomain = prompt(language === 'ar' ? "أدخل اسم المجال الجديد:" : "Enter new domain name:");
                                   if (newDomain && newDomain.trim()) {
-                                    setCurrentLesson({ ...currentLesson, domain: newDomain.trim() });
+                                    setCurrentLesson((prev: any) => ({ ...prev, domain: newDomain.trim() }));
                                   }
                                 } else {
-                                  setCurrentLesson({ ...currentLesson, domain: e.target.value });
+                                  setCurrentLesson((prev: any) => ({ ...prev, domain: e.target.value }));
                                 }
                               }}
                               className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all shadow-sm appearance-none"
@@ -2670,7 +2685,7 @@ export default function EditCoursePage() {
                                   onClick={() => {
                                     const newVal = prompt(language === 'ar' ? "تعديل المجال:" : "Edit Domain:", currentLesson.domain);
                                     if (newVal !== null && newVal.trim()) {
-                                      setCurrentLesson({...currentLesson, domain: newVal.trim()});
+                                      setCurrentLesson((prev: any) => ({ ...prev, domain: newVal.trim() }));
                                       showToast(language === 'ar' ? "تم تعديل المجال بنجاح" : "Domain updated successfully", "success");
                                     }
                                   }}
@@ -2682,7 +2697,7 @@ export default function EditCoursePage() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    setCurrentLesson({...currentLesson, domain: ""});
+                                    setCurrentLesson((prev: any) => ({ ...prev, domain: "" }));
                                     showToast(language === 'ar' ? "تم إزالة المجال" : "Domain cleared", "info");
                                   }}
                                   className="p-3 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl border border-rose-100 flex items-center justify-center transition-all"
@@ -2711,14 +2726,14 @@ export default function EditCoursePage() {
                                 {(() => {
                                   const selected = (currentLesson.standards || "").split("\n").filter(Boolean);
                                   if (selected.length === 0) return language === 'ar' ? "اختر المعيار..." : "Select Standard...";
-                                  return language === 'ar' 
-                                    ? `تم تحديد (${selected.length}) معايير` 
+                                  return language === 'ar'
+                                    ? `تم تحديد (${selected.length}) معايير`
                                     : `Selected (${selected.length}) standards`;
                                 })()}
                               </span>
                               <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${isStandardDropdownOpen ? 'rotate-180' : ''}`} />
                             </button>
-                            
+
                             {isStandardDropdownOpen && (
                               <>
                                 <div className="fixed inset-0 z-40" onClick={() => setIsStandardDropdownOpen(false)}></div>
@@ -2850,14 +2865,14 @@ export default function EditCoursePage() {
                                 {(() => {
                                   const selected = (currentLesson.indicators || "").split("\n").filter(Boolean);
                                   if (selected.length === 0) return language === 'ar' ? "اختر المؤشر..." : "Select Indicator...";
-                                  return language === 'ar' 
-                                    ? `تم تحديد (${selected.length}) مؤشرات` 
+                                  return language === 'ar'
+                                    ? `تم تحديد (${selected.length}) مؤشرات`
                                     : `Selected (${selected.length}) indicators`;
                                 })()}
                               </span>
                               <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${isIndicatorDropdownOpen ? 'rotate-180' : ''}`} />
                             </button>
-                            
+
                             {isIndicatorDropdownOpen && (
                               <>
                                 <div className="fixed inset-0 z-40" onClick={() => setIsIndicatorDropdownOpen(false)}></div>
@@ -2989,14 +3004,14 @@ export default function EditCoursePage() {
                                 {(() => {
                                   const selected = (currentLesson.learningOutcomes || "").split("\n").filter(Boolean);
                                   if (selected.length === 0) return language === 'ar' ? "اختر ناتج التعلم..." : "Select Learning Outcome...";
-                                  return language === 'ar' 
-                                    ? `تم تحديد (${selected.length}) نواتج تعلم` 
+                                  return language === 'ar'
+                                    ? `تم تحديد (${selected.length}) نواتج تعلم`
                                     : `Selected (${selected.length}) outcomes`;
                                 })()}
                               </span>
                               <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${isOutcomeDropdownOpen ? 'rotate-180' : ''}`} />
                             </button>
-                            
+
                             {isOutcomeDropdownOpen && (
                               <>
                                 <div className="fixed inset-0 z-40" onClick={() => setIsOutcomeDropdownOpen(false)}></div>
@@ -3115,14 +3130,14 @@ export default function EditCoursePage() {
                       </div>
 
                       <div className="flex justify-center items-center gap-4 mt-6">
-                        <input 
-                          type="file" 
-                          ref={metadataExcelRef} 
-                          style={{ display: 'none' }} 
-                          accept=".xlsx,.xls" 
-                          onChange={handleMetadataExcelChange} 
+                        <input
+                          type="file"
+                          ref={metadataExcelRef}
+                          style={{ display: 'none' }}
+                          accept=".xlsx,.xls"
+                          onChange={handleMetadataExcelChange}
                         />
-                        <button 
+                        <button
                           type="button"
                           onClick={() => handleExcelUpload('metadata')}
                           className="flex items-center gap-2 bg-emerald-50 text-emerald-600 px-6 py-2.5 rounded-xl border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all font-black text-xs cursor-pointer shadow-sm"
@@ -3130,7 +3145,7 @@ export default function EditCoursePage() {
                           <Upload className="w-4 h-4" />
                           {language === 'ar' ? "رفع المعايير من Excel" : "Upload standards from Excel"}
                         </button>
-                        <button 
+                        <button
                           type="button"
                           onClick={downloadMetadataTemplate}
                           className="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-6 py-2.5 rounded-xl border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all font-black text-xs cursor-pointer shadow-sm"
@@ -3143,8 +3158,6 @@ export default function EditCoursePage() {
                   </div>
                 )}
 
-                {activeTab === 'assignments' && renderQuestionsBuilder('assignments')}
-
                 {activeTab === 'scheduling' && (
                   <div className="space-y-8 animate-in fade-in duration-300">
                     <div className="bg-indigo-50/50 border border-indigo-100 p-8 rounded-[35px] flex items-center justify-between">
@@ -3152,7 +3165,7 @@ export default function EditCoursePage() {
                           <h4 className="text-xl font-black text-indigo-900">حالة ظهور الدرس</h4>
                           <p className="text-indigo-600/60 font-bold text-sm">تحكم في ما إذا كان الطالب يستطيع رؤية هذا الدرس حالياً</p>
                        </div>
-                       <button 
+                       <button
                         onClick={() => setCurrentLesson({...currentLesson, isVisible: !currentLesson.isVisible})}
                         className={`w-20 h-10 rounded-full relative transition-all duration-300 ${currentLesson.isVisible ? 'bg-indigo-600' : 'bg-slate-300'}`}
                        >
@@ -3167,10 +3180,10 @@ export default function EditCoursePage() {
                              <label className="text-sm font-black uppercase tracking-widest">تاريخ النشر (Publish Date)</label>
                           </div>
                           <p className="text-slate-400 text-xs font-bold">لن يظهر الدرس للطالب قبل هذا التاريخ حتى لو كان وضع "الظهور" مفعلاً</p>
-                          <input 
+                          <input
                             type="datetime-local"
                             value={currentLesson.publishDate || ""}
-                            onChange={(e) => setCurrentLesson({...currentLesson, publishDate: e.target.value})}
+                            onChange={(e) => setCurrentLesson((prev: any) => ({ ...prev, publishDate: e.target.value }))}
                             className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 font-bold text-slate-700 outline-none focus:border-emerald-500 transition-all"
                           />
                        </div>
@@ -3181,10 +3194,10 @@ export default function EditCoursePage() {
                              <label className="text-sm font-black uppercase tracking-widest">تاريخ الانتهاء (Cut-off Date)</label>
                           </div>
                           <p className="text-slate-400 text-xs font-bold">سيختفي الدرس من واجهة الطالب تلقائياً بعد هذا التاريخ</p>
-                          <input 
+                          <input
                             type="datetime-local"
                             value={currentLesson.cutOffDate || ""}
-                            onChange={(e) => setCurrentLesson({...currentLesson, cutOffDate: e.target.value})}
+                            onChange={(e) => setCurrentLesson((prev: any) => ({ ...prev, cutOffDate: e.target.value }))}
                             className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 font-bold text-slate-700 outline-none focus:border-red-500 transition-all"
                           />
                        </div>
@@ -3194,33 +3207,31 @@ export default function EditCoursePage() {
 
                 {activeTab === 'slides' && renderSlidesBuilder('slides')}
 
-                {activeTab === 'exercises' && renderQuestionsBuilder('questions')}
-
                 {activeTab === 'attachments' && (
                   <div className="space-y-8">
                     <div className="flex justify-between items-center">
                       <h4 className="text-xl font-black text-slate-900">الملفات المرفقة</h4>
-                      <button onClick={() => setCurrentLesson({ ...currentLesson, attachments: [...(currentLesson.attachments || []), { name: "", url: "", type: "PDF" }] })} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg"><Plus className="w-5 h-5" /> إضافة ملف</button>
+                      <button onClick={() => setCurrentLesson((prev: any) => ({ ...prev, attachments: [...(prev.attachments || []), { name: "", url: "", type: "PDF" }] }))} className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg"><Plus className="w-5 h-5" /> إضافة ملف</button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {(currentLesson.attachments || []).map((att: any, attIdx: number) => (
                         <div key={attIdx} className="bg-white border border-slate-100 rounded-3xl p-6 space-y-4 hover:border-indigo-100 transition-all shadow-sm">
                           <div className="flex justify-between items-start">
                             <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center"><FileText className="w-6 h-6" /></div>
-                            <button onClick={() => { const atts = [...currentLesson.attachments]; atts.splice(attIdx, 1); setCurrentLesson({ ...currentLesson, attachments: atts }); }} className="text-red-500 hover:text-red-700 p-2 transition-colors"><Trash2 size={20} /></button>
+                            <button onClick={() => { const atts = [...currentLesson.attachments]; atts.splice(attIdx, 1); setCurrentLesson((prev: any) => ({ ...prev, attachments: atts })); }} className="text-red-500 hover:text-red-700 p-2 transition-colors"><Trash2 size={20} /></button>
                           </div>
                           <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block px-1">اسم الملف</label>
-                            <input type="text" value={att.name} onChange={(e) => { const atts = [...currentLesson.attachments]; atts[attIdx].name = e.target.value; setCurrentLesson({ ...currentLesson, attachments: atts }); }} className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold text-sm outline-none focus:border-indigo-600" placeholder={language === 'ar' ? "مثال: كتاب الفيزياء الأساسي" : "e.g. Basic Physics Book"} />
+                            <input type="text" value={att.name} onChange={(e) => { const atts = [...currentLesson.attachments]; atts[attIdx].name = e.target.value; setCurrentLesson((prev: any) => ({ ...prev, attachments: atts })); }} className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold text-sm outline-none focus:border-indigo-600" placeholder={language === 'ar' ? "مثال: كتاب الفيزياء الأساسي" : "e.g. Basic Physics Book"} />
                           </div>
                           <div className="flex gap-3">
                             <div className="w-32 space-y-2">
                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block px-1">النوع</label>
-                              <select value={att.type} onChange={(e) => { const atts = [...currentLesson.attachments]; atts[attIdx].type = e.target.value; setCurrentLesson({ ...currentLesson, attachments: atts }); }} className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold text-xs outline-none focus:border-indigo-600"><option value="PDF">PDF</option><option value="PPT">PPT</option><option value="IMAGE">IMAGE</option></select>
+                              <select value={att.type} onChange={(e) => { const atts = [...currentLesson.attachments]; atts[attIdx].type = e.target.value; setCurrentLesson((prev: any) => ({ ...prev, attachments: atts })); }} className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold text-xs outline-none focus:border-indigo-600"><option value="PDF">PDF</option><option value="PPT">PPT</option><option value="IMAGE">IMAGE</option></select>
                             </div>
                             <div className="flex-1 space-y-2">
                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block px-1 text-left" dir="ltr">URL</label>
-                              <input type="text" value={att.url} onChange={(e) => { const atts = [...currentLesson.attachments]; atts[attIdx].url = e.target.value; setCurrentLesson({ ...currentLesson, attachments: atts }); }} className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-600 text-xs outline-none text-left font-mono focus:border-indigo-600" dir="ltr" placeholder="https://..." />
+                              <input type="text" value={att.url} onChange={(e) => { const atts = [...currentLesson.attachments]; atts[attIdx].url = e.target.value; setCurrentLesson((prev: any) => ({ ...prev, attachments: atts })); }} className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-600 text-xs outline-none text-left font-mono focus:border-indigo-600" dir="ltr" placeholder="https://..." />
                             </div>
                           </div>
                         </div>
@@ -3247,7 +3258,7 @@ export default function EditCoursePage() {
                 </div>
               </div>
               <div className="flex gap-3 items-center">
-                
+
                 <div className="flex items-center gap-3 bg-slate-100 px-4 py-2 rounded-2xl border border-slate-200 ml-4">
                   <span className="text-sm font-bold text-slate-600">{language === 'ar' ? 'الحفظ التلقائي' : 'Auto-save'}</span>
                   <label className="relative inline-flex items-center cursor-pointer">
@@ -3382,7 +3393,7 @@ export default function EditCoursePage() {
                       </div>
                       <div className="space-y-2">
                         <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">الدولة</label>
-                        <select 
+                        <select
                           value={courseData.country}
                           onChange={(e) => setCourseData({...courseData, country: e.target.value})}
                           className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all text-sm appearance-none"
@@ -3421,7 +3432,7 @@ export default function EditCoursePage() {
                             }
                           ].map((group) => {
                             const allSelected = group.grades.every(g => courseData.grades.includes(g));
-                            
+
                             return (
                               <div key={group.stage} className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm space-y-3">
                                 <div className="flex justify-between items-center pb-2 border-b border-slate-100">
@@ -3518,65 +3529,26 @@ export default function EditCoursePage() {
               <div className="lg:col-span-8 space-y-8">
                 {/* Content Navigation Tabs */}
                 <div className="bg-white p-2 rounded-[30px] border border-slate-100 shadow-sm flex gap-2">
-                   {[
-                     { id: 'lessons', label: language === 'ar' ? 'الدروس والمحاضرات' : 'Lessons & Lectures', icon: Layers, color: 'indigo' },
-                     { id: 'quizzes', label: language === 'ar' ? 'الاختبارات القصيرة' : 'Quizzes', icon: HelpCircle, color: 'orange' },
-                     { id: 'assignments', label: language === 'ar' ? 'التكليفات والمهام' : 'Assignments & Tasks', icon: FileText, color: 'emerald' },
-                   ].map(tab => (
-                     <button
-                       key={tab.id}
-                       onClick={() => setActiveContentTab(tab.id as any)}
-                       className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-2xl font-black transition-all ${
-                         activeContentTab === tab.id 
-                         ? `${
-                             tab.id === 'lessons' ? 'bg-indigo-600 text-white shadow-indigo-600/20' :
-                             tab.id === 'quizzes' ? 'bg-orange-600 text-black shadow-orange-600/20' :
-                             'bg-emerald-600 text-white shadow-emerald-600/20'
-                           } shadow-lg` 
-                         : 'text-slate-400 hover:bg-slate-50'
-                       }`}
-                     >
-                       <tab.icon className="w-5 h-5" />
-                       {tab.label}
-                     </button>
-                   ))}
+                   <button
+                     onClick={() => setActiveContentTab('lessons')}
+                     className="flex-1 flex items-center justify-center gap-3 py-4 rounded-2xl font-black transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
+                   >
+                     <Layers className="w-5 h-5" />
+                     {language === 'ar' ? 'الدروس والمحاضرات' : 'Lessons & Lectures'}
+                   </button>
                 </div>
 
                 <div className="flex justify-between items-center bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
                   <h3 className="text-2xl font-black text-slate-900 flex items-center gap-4">
-                    {activeContentTab === 'lessons' && <><Layers className="w-8 h-8 text-indigo-600" /> {language === 'ar' ? "الدروس والمحاضرات" : "Lessons & Lectures"}</>}
-                    {activeContentTab === 'quizzes' && <><HelpCircle className="w-8 h-8 text-orange-500" /> {language === 'ar' ? "الاختبارات والتقييمات" : "Quizzes & Assessments"}</>}
-                    {activeContentTab === 'assignments' && <><FileText className="w-8 h-8 text-emerald-500" /> {language === 'ar' ? "التكليفات الدراسية" : "Assignments"}</>}
+                    <Layers className="w-8 h-8 text-indigo-600" /> {language === 'ar' ? "الدروس والمحاضرات" : "Lessons & Lectures"}
                   </h3>
-                  <button 
-                    onClick={() => {
-                      if (activeContentTab === 'lessons') {
-                        openAddLessonModal();
-                      } else if (activeContentTab === 'quizzes') {
-                        router.push(`/school-admin/quizzes/new?courseId=${courseId}`);
-                      } else {
-                        router.push(`/school-admin/assignments/new?courseId=${courseId}`);
-                      }
-                    }} 
-                    className={`px-8 py-4 rounded-2xl font-black flex items-center gap-3 transition-all shadow-xl ${
-                      activeContentTab === 'lessons' ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20 text-white' :
-                      activeContentTab === 'quizzes' ? 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/20 text-black' :
-                      'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20 text-white'
-                    }`}
+                  <button
+                    onClick={openAddLessonModal}
+                    className="px-8 py-4 rounded-2xl font-black flex items-center gap-3 transition-all shadow-xl bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20 text-white"
                   >
-                    <Plus size={24} /> 
-                    {language === 'ar' ? "إضافة " : "Add "}
-                    {activeContentTab === 'lessons' ? (language === 'ar' ? 'درس' : 'Lesson') : activeContentTab === 'quizzes' ? (language === 'ar' ? 'اختبار' : 'Quiz') : (language === 'ar' ? 'تكليف' : 'Assignment')}
+                    <Plus size={24} />
+                    {language === 'ar' ? "إضافة درس" : "Add Lesson"}
                   </button>
-                  {activeContentTab !== 'lessons' && (
-                    <button 
-                      onClick={openBankModal}
-                      className="px-6 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black flex items-center gap-3 hover:bg-slate-200 transition-all border border-slate-200"
-                    >
-                      <Layers className="w-5 h-5" />
-                      {language === 'ar' ? "ربط من البنك المركزي" : "Link from Central Bank"}
-                    </button>
-                  )}
                 </div>
 
                 <div className="flex flex-col gap-4">
@@ -3593,7 +3565,7 @@ export default function EditCoursePage() {
                       lessons.map((lesson, index) => (
                         <div key={index} className="bg-white border border-slate-100 rounded-[30px] p-5 flex flex-col md:flex-row items-center justify-between gap-6 hover:border-indigo-200 transition-all group relative overflow-hidden shadow-sm hover:shadow-xl">
                           <div className="absolute top-0 right-0 w-1.5 h-full bg-indigo-600 opacity-0 group-hover:opacity-100 transition-all"></div>
-                          
+
                           <div className="flex items-center gap-6 flex-1 w-full md:w-auto">
                             <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-2xl border border-indigo-100 shadow-inner group-hover:scale-105 transition-all shrink-0">
                               {index + 1}
@@ -3610,8 +3582,8 @@ export default function EditCoursePage() {
                                 {lesson.publishDate && (
                                   <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black uppercase">
                                       <Clock className="w-3 h-3" />
-                                      {language === 'ar' 
-                                        ? `مجدول: ${new Date(lesson.publishDate).toLocaleDateString('ar-EG')}` 
+                                      {language === 'ar'
+                                        ? `مجدول: ${new Date(lesson.publishDate).toLocaleDateString('ar-EG')}`
                                         : `Scheduled: ${new Date(lesson.publishDate).toLocaleDateString('en-US')}`}
                                   </div>
                                 )}
@@ -3625,23 +3597,23 @@ export default function EditCoursePage() {
 
                           <div className="flex items-center gap-3 w-full md:w-auto justify-end">
                             <div className="h-8 w-[1px] bg-slate-100 mx-2 hidden md:block"></div>
-                            <button 
-                              onClick={() => window.open(`/lessons/${lesson.id}?preview=true`, '_blank')} 
+                            <button
+                              onClick={() => window.open(`/lessons/${lesson.id}?preview=true`, '_blank')}
                               className="flex items-center gap-2 bg-slate-50 text-slate-400 px-5 py-3 rounded-2xl font-black text-sm hover:bg-indigo-600 hover:text-white transition-all border border-slate-100"
                               title={language === 'ar' ? "معاينة الدرس" : "Preview Lesson"}
                             >
                               <Eye size={18} />
                               {language === 'ar' ? "معاينة" : "Preview"}
                             </button>
-                            <button 
-                              onClick={() => openEditLessonModal(index)} 
+                            <button
+                              onClick={() => openEditLessonModal(index)}
                               className="flex items-center gap-2 bg-blue-50 text-blue-600 px-5 py-3 rounded-2xl font-black text-sm hover:bg-blue-600 hover:text-white transition-all border border-blue-100"
                             >
                               <Edit2 size={18} />
                               {language === 'ar' ? "تعديل" : "Edit"}
                             </button>
-                            <button 
-                              onClick={() => handleRemoveLesson(index)} 
+                            <button
+                              onClick={() => handleRemoveLesson(index)}
                               className="p-3 bg-red-50 text-red-400 hover:bg-red-500 hover:text-white rounded-2xl transition-all border border-red-50"
                             >
                               <Trash2 size={20} />
@@ -3650,61 +3622,7 @@ export default function EditCoursePage() {
                         </div>
                       ))
                     )
-                  ) : (
-                    <div className="bg-white border border-slate-100 rounded-[40px] p-12 flex flex-col items-center justify-center text-center gap-6">
-                       <div className={`w-24 h-24 rounded-[35px] flex items-center justify-center ${activeContentTab === 'quizzes' ? 'bg-orange-50 text-orange-500' : 'bg-emerald-50 text-emerald-500'}`}>
-                          {activeContentTab === 'quizzes' ? <HelpCircle className="w-12 h-12" /> : <FileText className="w-12 h-12" />}
-                       </div>
-                       <div>
-                         <h4 className="text-2xl font-black text-slate-900 mb-2">
-                           {activeContentTab === 'quizzes' ? 'إدارة الاختبارات' : 'إدارة التكليفات'}
-                         </h4>
-                         <p className="text-slate-400 font-bold max-w-md">
-                           يمكنك ربط هذا الكورس بأسئلة من بنك الأسئلة المركزي وتعيينها كـ {activeContentTab === 'quizzes' ? 'اختبارات' : 'تكليفات'} للطلاب.
-                         </p>
-                       </div>
-                       
-                       <div className="w-full max-w-2xl space-y-3">
-                          {exams.filter(e => activeContentTab === 'quizzes' ? e.type?.toUpperCase() !== 'ASSIGNMENT' : e.type?.toUpperCase() === 'ASSIGNMENT').length === 0 ? (
-                            <div className="p-8 border-2 border-dashed border-slate-100 rounded-3xl text-slate-400 font-bold">
-                               لا يوجد {activeContentTab === 'quizzes' ? 'اختبارات' : 'تكليفات'} مرتبطة بهذا الكورس حالياً.
-                            </div>
-                          ) : (
-                            exams.filter(e => activeContentTab === 'quizzes' ? e.type?.toUpperCase() !== 'ASSIGNMENT' : e.type?.toUpperCase() === 'ASSIGNMENT').map((exam, idx) => (
-                              <div key={idx} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
-                                 <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-900 font-black border border-slate-100">
-                                       {idx + 1}
-                                    </div>
-                                    <div className="text-right">
-                                       <div className="font-black text-slate-900">{exam.title}</div>
-                                       <div className="text-[10px] text-slate-400 font-bold flex gap-2">
-                                          <span>{exam._count?.questions || 0} سؤال</span>
-                                          <span>•</span>
-                                          <span>{exam.duration} دقيقة</span>
-                                       </div>
-                                    </div>
-                                 </div>
-                                 <button 
-                                   onClick={() => {
-                                      if (exam.type === 'Quiz') {
-                                        router.push(`/school-admin/quizzes/edit/${exam.id}?courseId=${courseId}`);
-                                      } else if (exam.type === 'Assignment') {
-                                        router.push(`/school-admin/assignments/edit/${exam.id}?courseId=${courseId}`);
-                                      } else {
-                                        router.push(`/school-admin/exams/edit/${exam.id}?courseId=${courseId}`);
-                                      }
-                                    }}
-                                   className="p-2 text-slate-400 hover:text-indigo-600 transition-all"
-                                 >
-                                   <Edit2 size={16} />
-                                 </button>
-                              </div>
-                            ))
-                          )}
-                       </div>
-                    </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -3724,7 +3642,7 @@ export default function EditCoursePage() {
                       <X size={24} />
                   </button>
                 </div>
-                
+
                 <div className="flex-1 overflow-y-auto p-8 space-y-4 custom-scrollbar">
                   {bankItems.length === 0 ? (
                     <div className="text-center py-12 text-slate-400 font-bold">{language === 'ar' ? "لا توجد عناصر متاحة في البنك المركزي حالياً." : "No items currently available in the central bank."}</div>
@@ -3744,7 +3662,7 @@ export default function EditCoursePage() {
                                 </div>
                             </div>
                           </div>
-                          <button 
+                          <button
                             onClick={() => {
                               linkExamToCourse(item.id);
                               setIsBankModalOpen(false);
@@ -3774,7 +3692,7 @@ export default function EditCoursePage() {
                       <X size={24} />
                   </button>
                 </div>
-                
+
                 <div className="flex-1 overflow-y-auto p-8 space-y-4 custom-scrollbar">
                   {bankQuestions.length === 0 ? (
                     <div className="text-center py-12 text-slate-400 font-bold">{language === 'ar' ? "لا توجد أسئلة متاحة في البنك المركزي حالياً." : "No questions currently available in the central bank."}</div>
@@ -3791,7 +3709,7 @@ export default function EditCoursePage() {
                                   <span className="px-2 py-1 bg-slate-100 rounded-lg text-[10px] font-black text-slate-500 uppercase">{q.points} {language === 'ar' ? 'نقاط' : 'pts'}</span>
                                 </div>
                             </div>
-                            <button 
+                            <button
                               onClick={() => addQuestionFromBank(q)}
                               className="shrink-0 w-12 h-12 bg-white border border-slate-100 rounded-2xl flex items-center justify-center text-slate-400 hover:bg-orange-500 hover:text-white hover:border-orange-500 transition-all shadow-sm"
                             >
@@ -3810,6 +3728,3 @@ export default function EditCoursePage() {
     </DashboardLayout>
   );
 }
-
-
-

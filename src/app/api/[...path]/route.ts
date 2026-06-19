@@ -7,11 +7,15 @@ const getBackendBase = () => {
   const internalOrigin = process.env.INTERNAL_BACKEND_URL?.replace(/\/+$/, '').trim();
   if (internalOrigin) return internalOrigin;
 
-  // Priority 2: BACKEND_ORIGIN env var
+  // Priority 2: Explicit public backend origin when present
+  const publicOrigin = process.env.NEXT_PUBLIC_BACKEND_ORIGIN?.replace(/\/+$/, '').trim();
+  if (publicOrigin) return publicOrigin;
+
+  // Priority 3: BACKEND_ORIGIN env var
   const origin = process.env.BACKEND_ORIGIN?.replace(/\/+$/, '').trim();
   if (origin) return origin;
 
-  // Priority 3: Extract origin from NEXT_PUBLIC_API_URL
+  // Priority 4: Extract origin from NEXT_PUBLIC_API_URL
   const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/"/g, '').trim();
   if (apiUrl) {
     try {
@@ -19,7 +23,7 @@ const getBackendBase = () => {
     } catch {}
   }
 
-  // Priority 4: Docker internal fallback for docker-compose deployments
+  // Priority 5: Docker internal fallback for docker-compose deployments
   return 'http://backend:5000';
 };
 
