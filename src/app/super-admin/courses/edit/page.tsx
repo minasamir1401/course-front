@@ -3141,6 +3141,8 @@ export default function EditCoursePage() {
                   </div>
                 )}
 
+                {activeTab === 'assignments' && renderQuestionsBuilder('assignments')}
+
                 {activeTab === 'scheduling' && (
                   <div className="space-y-8 animate-in fade-in duration-300">
                     <div className="bg-indigo-50/50 border border-indigo-100 p-8 rounded-[35px] flex items-center justify-between">
@@ -3189,6 +3191,8 @@ export default function EditCoursePage() {
                 )}
 
                 {activeTab === 'slides' && renderSlidesBuilder('slides')}
+
+                {activeTab === 'exercises' && renderQuestionsBuilder('questions')}
 
                 {activeTab === 'attachments' && (
                   <div className="space-y-8">
