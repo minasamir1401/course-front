@@ -3530,7 +3530,6 @@ export default function EditCoursePage() {
                 {/* Content Navigation Tabs */}
                 <div className="bg-white p-2 rounded-[30px] border border-slate-100 shadow-sm flex gap-2">
                    <button
-                     onClick={() => setActiveContentTab('lessons')}
                      className="flex-1 flex items-center justify-center gap-3 py-4 rounded-2xl font-black transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
                    >
                      <Layers className="w-5 h-5" />
