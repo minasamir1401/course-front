@@ -1046,6 +1046,7 @@ export default function EditCoursePage() {
   };
 
   const removeBlock = (source: 'slides' | 'assignments' | 'questions' = 'slides', index: number) => {
+    if (!confirm(language === 'ar' ? "هل أنت متأكد من حذف هذه الشريحة/السؤال؟" : "Are you sure you want to delete this slide/question?")) return;
     const newSlides = [...(currentLesson[source] || [])];
     newSlides.splice(index, 1);
     setCurrentLesson({ ...currentLesson, [source]: newSlides });
@@ -1065,6 +1066,7 @@ export default function EditCoursePage() {
   };
 
   const removeSection = (source: 'slides' | 'assignments' | 'questions' = 'slides', blockIndex: number, sectionIndex: number) => {
+    if (!confirm(language === 'ar' ? "هل أنت متأكد من حذف هذا القسم؟" : "Are you sure you want to delete this section?")) return;
     const newSlides = [...(currentLesson[source] || [])];
     newSlides[blockIndex].sections.splice(sectionIndex, 1);
     setCurrentLesson({ ...currentLesson, [source]: newSlides });
@@ -1302,7 +1304,7 @@ export default function EditCoursePage() {
                   </div>
 
                   {block.type === 'QUESTION' && (
-                    <div className="grid grid-cols-2 md:grid-cols-6 gap-4 p-6 bg-white border border-slate-200 rounded-[30px] shadow-sm mb-4">
+                    <div className="grid grid-cols-2 md:grid-cols-7 gap-4 p-6 bg-white border border-slate-200 rounded-[30px] shadow-sm mb-4">
                       <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المعيار' : 'Standard'}</label>
                         <select 
@@ -1369,6 +1371,21 @@ export default function EditCoursePage() {
                           <option value="Easy">{language === 'ar' ? 'سهل' : 'Easy'}</option>
                           <option value="Medium">{language === 'ar' ? 'متوسط' : 'Medium'}</option>
                           <option value="Hard">{language === 'ar' ? 'صعب' : 'Hard'}</option>
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'عمق المعرفة (DOK)' : 'Depth of Knowledge (DOK)'}</label>
+                        <select 
+                          className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
+                          value={block.dok || ""}
+                          onChange={(e) => updateBlock(source, sIdx, 'dok', e.target.value)}
+                        >
+                          <option value="">{language === 'ar' ? 'بلا تحديد' : 'None'}</option>
+                          <option value="DOK 1">DOK 1</option>
+                          <option value="DOK 2">DOK 2</option>
+                          <option value="DOK 3">DOK 3</option>
+                          <option value="DOK 4">DOK 4</option>
                         </select>
                       </div>
 
@@ -3273,7 +3290,6 @@ export default function EditCoursePage() {
                   </span>
                 )}
                 
-                <button onClick={handleDeleteCourse} className="bg-red-50 text-red-600 px-8 py-4 rounded-2xl font-black flex items-center gap-2 hover:bg-red-600 hover:text-white transition-all border border-red-100"><Trash2 size={20} /> {language === 'ar' ? "حذف" : "Delete"}</button>
                 <button onClick={(e) => handleSubmit(e)} disabled={isSubmitting} className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-10 py-4 rounded-2xl font-black flex items-center gap-3 hover:scale-105 shadow-xl shadow-indigo-600/20 disabled:opacity-50 transition-all">
                   {isSubmitting 
                     ? (language === 'ar' ? "جاري الحفظ..." : "Saving...") 
@@ -3574,6 +3590,15 @@ export default function EditCoursePage() {
                       </button>
                     </div>
                   )}
+                </div>
+
+                <div className="bg-red-50/50 rounded-[28px] border border-red-100 p-6 flex flex-col items-center justify-center gap-3">
+                   <p className="text-xs font-bold text-red-500 text-center">
+                     {language === 'ar' ? 'منطقة الخطر' : 'Danger Zone'}
+                   </p>
+                   <button type="button" onClick={handleDeleteCourse} className="w-full bg-red-100 text-red-600 px-8 py-3.5 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-red-600 hover:text-white transition-all border border-red-200">
+                     <Trash2 size={20} /> {language === 'ar' ? 'حذف الكورس بالكامل' : 'Delete Course'}
+                   </button>
                 </div>
               </div>
 

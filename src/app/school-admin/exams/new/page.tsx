@@ -574,6 +574,7 @@ export function SchoolAdminNewExamPageContent({ presetType, presetCourseId }: { 
   };
 
   const removeSection = (index: number) => {
+    if (!confirm(language === 'ar' ? "هل أنت متأكد من حذف هذا القسم؟" : "Are you sure you want to delete this section?")) return;
     const sections = [...(currentQuestion.sections || [])];
     sections.splice(index, 1);
     setCurrentQuestion({ ...currentQuestion, sections });
@@ -586,6 +587,7 @@ export function SchoolAdminNewExamPageContent({ presetType, presetCourseId }: { 
   };
 
   const removeQuestion = (index: number) => {
+    if (!confirm(language === 'ar' ? "هل أنت متأكد من حذف هذه الشريحة/السؤال؟" : "Are you sure you want to delete this slide/question?")) return;
     const newQuestions = [...questions];
     newQuestions.splice(index, 1);
     setQuestions(newQuestions);
@@ -1389,6 +1391,21 @@ export function SchoolAdminNewExamPageContent({ presetType, presetCourseId }: { 
                           <option value="Easy">{t('schoolAdmin.examsNewPage.easy')}</option>
                           <option value="Medium">{t('schoolAdmin.examsNewPage.medium')}</option>
                           <option value="Hard">{t('schoolAdmin.examsNewPage.hard')}</option>
+                        </select>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'عمق المعرفة (DOK)' : 'DOK'}</label>
+                        <select 
+                          className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
+                          value={currentQuestion.dok || ""}
+                          onChange={(e) => updateCurrentQuestion("dok", e.target.value)}
+                        >
+                          <option value="">{language === 'ar' ? '— اختر DOK —' : '— Select DOK —'}</option>
+                          <option value="DOK 1">DOK 1</option>
+                          <option value="DOK 2">DOK 2</option>
+                          <option value="DOK 3">DOK 3</option>
+                          <option value="DOK 4">DOK 4</option>
                         </select>
                       </div>
 

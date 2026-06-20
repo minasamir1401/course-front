@@ -573,6 +573,7 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId }: { p
   };
 
   const removeSection = (index: number) => {
+    if (!confirm(language === 'ar' ? "هل أنت متأكد من حذف هذا القسم؟" : "Are you sure you want to delete this section?")) return;
     const sections = [...(currentQuestion.sections || [])];
     sections.splice(index, 1);
     setCurrentQuestion({ ...currentQuestion, sections });
@@ -585,6 +586,7 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId }: { p
   };
 
   const removeQuestion = (index: number) => {
+    if (!confirm(language === 'ar' ? "هل أنت متأكد من حذف هذه الشريحة/السؤال؟" : "Are you sure you want to delete this slide/question?")) return;
     const newQuestions = [...questions];
     newQuestions.splice(index, 1);
     setQuestions(newQuestions);
