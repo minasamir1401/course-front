@@ -36,6 +36,7 @@ export default function BackupsPage() {
   const [confirmText, setConfirmText] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const autoDownloaded = useRef(false);
 
   useEffect(() => {
     const token = localStorage.getItem("super_admin_token") || localStorage.getItem("token");
@@ -64,6 +65,15 @@ export default function BackupsPage() {
           name: b.filename || b.name || "backup.json"
         }));
         setBackups(mapped);
+
+        // Auto-download the latest backup once on initial page load
+        if (mapped.length > 0 && !autoDownloaded.current) {
+          autoDownloaded.current = true;
+          const latestBackup = mapped[0];
+          setTimeout(() => {
+            handleDownloadBackup(latestBackup.name, true);
+          }, 1200);
+        }
       } else {
         showToast(language === 'ar' ? "فشل في تحميل قائمة النسخ الاحتياطية" : "Failed to load backups list", "error");
       }
@@ -100,12 +110,34 @@ export default function BackupsPage() {
     }
   };
 
-  const handleDownloadBackup = async (filename: string) => {
+  const handleDownloadBackup = async (filename: string, isAuto: boolean = false) => {
     try {
       const token = localStorage.getItem("super_admin_token") || localStorage.getItem("token");
-      // Open download in a new window/tab, passing the auth token in query param
-      window.open(`${API_URL}/admin/backup/download/${filename}?token=${token}`, '_blank');
-      showToast(language === 'ar' ? "بدء تحميل ملف النسخة الاحتياطية" : "Starting backup download", "success");
+      const url = `${API_URL}/admin/backup/download/${filename}?token=${token}`;
+      
+      // Programmatic download using <a> tag to bypass browser popup blockers
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      if (isAuto) {
+        showToast(
+          language === 'ar' 
+            ? "يرجى الانتظار، جاري تحميل أحدث نسخة احتياطية تلقائياً..." 
+            : "Please wait, downloading the latest backup automatically...", 
+          "success"
+        );
+      } else {
+        showToast(
+          language === 'ar' 
+            ? `جاري تحميل ملف النسخة الاحتياطية: ${filename}` 
+            : `Downloading backup file: ${filename}`, 
+          "success"
+        );
+      }
     } catch (e) {
       console.error(e);
       showToast(language === 'ar' ? "فشل تحميل الملف" : "Failed to download file", "error");
