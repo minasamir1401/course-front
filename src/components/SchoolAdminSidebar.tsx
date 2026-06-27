@@ -29,6 +29,7 @@ export default function SchoolAdminSidebar() {
     { href: "/school-admin/students", label: "قائمة الطلاب", icon: GraduationCap },
     { href: "/school-admin/teachers", label: "إدارة المدرسين", icon: Users },
     { href: "/school-admin/classes", label: "الفصول الدراسية", icon: PanelsTopLeft },
+    { href: "/school-admin/skills-hub", label: "الأنشطة والمهارات", icon: PanelsTopLeft },
     { href: "/school-admin/exams", label: "الامتحانات", icon: ClipboardList },
     { href: "/school-admin/reports", label: "التقارير", icon: BarChart2 },
   ];
