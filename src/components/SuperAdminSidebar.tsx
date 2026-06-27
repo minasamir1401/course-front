@@ -102,6 +102,7 @@ export default function SuperAdminSidebar({
             <p className="px-3 py-1 text-[10px] font-black text-slate-400 uppercase tracking-[2px]">{t('superAdmin.sidebar.centralCourses')}</p>
             <SidebarLink href="/super-admin/courses" icon={Layers} label={t('superAdmin.sidebar.allCourses')} active={isActive('/super-admin/courses')} />
             <SidebarLink href="/super-admin/courses/create" icon={Plus} label={t('superAdmin.sidebar.addCourse')} active={isActive('/super-admin/courses/create')} />
+            <SidebarLink href="/super-admin/skills-hub" icon={BookOpen} label={language === 'ar' ? "أنشطة ومهارات كليفروا" : "Klevro Skills Hub"} active={isActive('/super-admin/skills-hub')} />
           </div>
 
           {/* MONITORING */}
