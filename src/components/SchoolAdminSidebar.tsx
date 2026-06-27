@@ -32,28 +32,30 @@ export default function SchoolAdminSidebar() {
     return pathname.startsWith(href);
   };
 
-  const navItems = [
-    { href: "/school-admin", label: "لوحة التحكم", icon: LayoutDashboard },
-    { href: "/school-admin/students", label: "قائمة الطلاب", icon: GraduationCap },
-    { href: "/school-admin/teachers", label: "إدارة المدرسين", icon: Users },
-    { href: "/school-admin/classes", label: "الفصول الدراسية", icon: PanelsTopLeft },
-    { href: "/school-admin/skills-hub", label: "الأنشطة والمهارات", icon: PanelsTopLeft },
-    { href: "/school-admin/skills-hub?action=add-cluster", label: "إضافة محور مهاراتي", icon: Plus },
-    { href: "/school-admin/exams", label: "الامتحانات", icon: ClipboardList },
-    { href: "/school-admin/reports", label: "التقارير", icon: BarChart2 },
-  ];
-
-  // Get admin name from localStorage
+  const [role, setRole] = useState("SCHOOL_ADMIN");
   const [adminName, setAdminName] = React.useState("مدير المدرسة");
+
   React.useEffect(() => {
     const userStr = localStorage.getItem("school_admin_user");
     if (userStr) {
       try {
         const user = JSON.parse(userStr);
         if (user.name) setAdminName(user.name);
+        if (user.role) setRole(user.role);
       } catch {}
     }
   }, []);
+
+  const navItems = [
+    { href: "/school-admin", label: "لوحة التحكم", icon: LayoutDashboard },
+    { href: "/school-admin/students", label: "قائمة الطلاب", icon: GraduationCap },
+    ...(role === "TEACHER" ? [] : [{ href: "/school-admin/teachers", label: "إدارة المدرسين", icon: Users }]),
+    { href: "/school-admin/classes", label: "الفصول الدراسية", icon: PanelsTopLeft },
+    { href: "/school-admin/skills-hub", label: "الأنشطة والمهارات", icon: PanelsTopLeft },
+    { href: "/school-admin/skills-hub?action=add-cluster", label: "إضافة محور مهاراتي", icon: Plus },
+    { href: "/school-admin/exams", label: "الامتحانات", icon: ClipboardList },
+    { href: "/school-admin/reports", label: "التقارير", icon: BarChart2 },
+  ];
 
   const initial = adminName.charAt(0) || "A";
 
@@ -78,7 +80,9 @@ export default function SchoolAdminSidebar() {
             </div>
             <div>
               <h1 className="text-xl font-black text-slate-900 tracking-tight leading-none">مدرستي</h1>
-              <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mt-1 block">SCHOOL ADMIN</span>
+              <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mt-1 block">
+                {role === "TEACHER" ? "TEACHER" : "SCHOOL ADMIN"}
+              </span>
             </div>
             <button
               onClick={() => setIsOpen(false)}

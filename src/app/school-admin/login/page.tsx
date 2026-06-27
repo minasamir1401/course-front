@@ -62,8 +62,8 @@ export default function SchoolAdminLoginPage() {
         return;
       }
 
-      // Only allow SCHOOL_ADMIN
-      if (data.user.role !== "SCHOOL_ADMIN") {
+      // Only allow SCHOOL_ADMIN or TEACHER
+      if (data.user.role !== "SCHOOL_ADMIN" && data.user.role !== "TEACHER") {
         setError(t('login.roleErrorSchool'));
         return;
       }

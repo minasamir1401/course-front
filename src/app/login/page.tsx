@@ -16,20 +16,26 @@ export default function StudentLoginPage() {
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
+    const schoolAdminToken = localStorage.getItem("school_admin_token");
+    const schoolAdminUser = localStorage.getItem("school_admin_user");
+    if (schoolAdminToken && schoolAdminUser) {
+      try {
+        const user = JSON.parse(schoolAdminUser);
+        if (user && (user.role === "TEACHER" || user.role === "SCHOOL_ADMIN")) {
+          router.replace("/school-admin");
+          return;
+        }
+      } catch (e) {}
+    }
+
     const token = localStorage.getItem("lms_token");
     const userString = localStorage.getItem("lms_user");
-    
     if (token && userString) {
       try {
         const user = JSON.parse(userString);
-        if (user) {
-          if (user.role === "TEACHER") {
-            router.replace("/teacher");
-            return;
-          } else if (user.role === "STUDENT") {
-            router.replace("/dashboard");
-            return;
-          }
+        if (user && user.role === "STUDENT") {
+          router.replace("/dashboard");
+          return;
         }
       } catch (e) {
         localStorage.removeItem("lms_token");
@@ -72,22 +78,33 @@ export default function StudentLoginPage() {
         return;
       }
 
-      localStorage.setItem("lms_token", data.token);
-      localStorage.setItem(
-        "lms_user",
-        JSON.stringify({
-          id: data.user.id,
-          role: data.user.role,
-          name: data.user.name,
-          schoolId: data.user.schoolId,
-          schoolName: data.user.schoolName,
-          username: username,
-        })
-      );
-
       if (data.user.role === "TEACHER") {
-        router.push("/dashboard"); // Temporarily redirect to dashboard
+        localStorage.setItem("school_admin_token", data.token);
+        localStorage.setItem(
+          "school_admin_user",
+          JSON.stringify({
+            id: data.user.id,
+            role: data.user.role,
+            name: data.user.name,
+            schoolId: data.user.schoolId,
+            schoolName: data.user.schoolName,
+            username: username,
+          })
+        );
+        router.push("/school-admin");
       } else {
+        localStorage.setItem("lms_token", data.token);
+        localStorage.setItem(
+          "lms_user",
+          JSON.stringify({
+            id: data.user.id,
+            role: data.user.role,
+            name: data.user.name,
+            schoolId: data.user.schoolId,
+            schoolName: data.user.schoolName,
+            username: username,
+          })
+        );
         router.push("/dashboard");
       }
     } catch (err: any) {
