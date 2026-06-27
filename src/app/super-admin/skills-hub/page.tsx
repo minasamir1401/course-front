@@ -12,6 +12,40 @@ import { API_URL } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import InteractiveQuestionEditor from "@/components/InteractiveQuestionEditor";
 
+const METADATA_OPTIONS: Record<string, { standards: string[], indicators: string[], outcomes: string[] }> = {
+  "الرياضيات": {
+    standards: ["MA-3.1", "MA-3.2", "MA-3.3", "MA-3.4", "MA-3.5"],
+    indicators: ["IND-3.1.1", "IND-3.1.2", "IND-3.2.1", "IND-3.3.1", "IND-3.4.1"],
+    outcomes: [
+      "Identify and represent fractions on a number line",
+      "Solve multiplication and division word problems",
+      "Tell and write time to the nearest minute using clock hands",
+      "Classify geometric shapes based on their attributes",
+      "Measure area and perimeter of rectangular shapes"
+    ]
+  },
+  "القراءة": {
+    standards: ["RD-3.1", "RD-3.2", "RD-3.3", "RD-3.4"],
+    indicators: ["IND-RD-3.1.1", "IND-RD-3.1.2", "IND-RD-3.2.1", "IND-RD-3.3.1"],
+    outcomes: [
+      "Determine the main idea of a text and explain key details",
+      "Identify context clues to find meaning of unknown words",
+      "Compare and contrast themes and plots in stories",
+      "Answer who, what, where, when, and why questions about a passage"
+    ]
+  },
+  "العلوم": {
+    standards: ["SCI-3.1", "SCI-3.2", "SCI-3.3", "SCI-3.4"],
+    indicators: ["IND-SCI-3.1.1", "IND-SCI-3.2.1", "IND-SCI-3.2.2", "IND-SCI-3.3.1"],
+    outcomes: [
+      "Analyze weather data to predict future conditions",
+      "Explain the stages of life cycles for plants and animals",
+      "Describe how forces affect the motion of an object",
+      "Identify how organisms adapt to survive in their environment"
+    ]
+  }
+};
+
 export default function SuperAdminSkillsHubPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -437,12 +471,12 @@ export default function SuperAdminSkillsHubPage() {
     const payload = {
       lessonId: selectedLesson.id,
       ...activityForm,
-      title: JSON.stringify({ ar: activityForm.titleAr, en: activityForm.titleEn }),
-      hint: JSON.stringify({ ar: activityForm.hintAr, en: activityForm.hintEn }),
-      tip: JSON.stringify({ ar: activityForm.tipAr, en: activityForm.tipEn }),
-      explanation: JSON.stringify({ ar: activityForm.explanationAr, en: activityForm.explanationEn }),
-      keyInsight: JSON.stringify({ ar: activityForm.keyInsightAr, en: activityForm.keyInsightEn }),
-      learningOutcome: JSON.stringify({ ar: activityForm.learningOutcomeAr, en: activityForm.learningOutcomeEn }),
+      title: JSON.stringify({ ar: activityForm.titleEn, en: activityForm.titleEn }),
+      hint: JSON.stringify({ ar: activityForm.hintEn, en: activityForm.hintEn }),
+      tip: JSON.stringify({ ar: activityForm.tipEn, en: activityForm.tipEn }),
+      explanation: JSON.stringify({ ar: activityForm.explanationEn, en: activityForm.explanationEn }),
+      keyInsight: JSON.stringify({ ar: activityForm.keyInsightEn, en: activityForm.keyInsightEn }),
+      learningOutcome: JSON.stringify({ ar: activityForm.learningOutcomeEn, en: activityForm.learningOutcomeEn }),
       options: typeof activityForm.options === "string" ? activityForm.options : JSON.stringify(activityForm.options),
       correctAnswer: typeof activityForm.correctAnswer === "string" ? activityForm.correctAnswer : JSON.stringify(activityForm.correctAnswer)
     };
@@ -493,12 +527,12 @@ export default function SuperAdminSkillsHubPage() {
         const payload = {
           lessonId: selectedLesson.id,
           ...activityForm,
-          title: JSON.stringify({ ar: activityForm.titleAr, en: activityForm.titleEn }),
-          hint: JSON.stringify({ ar: activityForm.hintAr, en: activityForm.hintEn }),
-          tip: JSON.stringify({ ar: activityForm.tipAr, en: activityForm.tipEn }),
-          explanation: JSON.stringify({ ar: activityForm.explanationAr, en: activityForm.explanationEn }),
-          keyInsight: JSON.stringify({ ar: activityForm.keyInsightAr, en: activityForm.keyInsightEn }),
-          learningOutcome: JSON.stringify({ ar: activityForm.learningOutcomeAr, en: activityForm.learningOutcomeEn }),
+          title: JSON.stringify({ ar: activityForm.titleEn, en: activityForm.titleEn }),
+          hint: JSON.stringify({ ar: activityForm.hintEn, en: activityForm.hintEn }),
+          tip: JSON.stringify({ ar: activityForm.tipEn, en: activityForm.tipEn }),
+          explanation: JSON.stringify({ ar: activityForm.explanationEn, en: activityForm.explanationEn }),
+          keyInsight: JSON.stringify({ ar: activityForm.keyInsightEn, en: activityForm.keyInsightEn }),
+          learningOutcome: JSON.stringify({ ar: activityForm.learningOutcomeEn, en: activityForm.learningOutcomeEn }),
           options: typeof activityForm.options === "string" ? activityForm.options : JSON.stringify(activityForm.options),
           correctAnswer: typeof activityForm.correctAnswer === "string" ? activityForm.correctAnswer : JSON.stringify(activityForm.correctAnswer)
         };
@@ -1111,23 +1145,15 @@ export default function SuperAdminSkillsHubPage() {
                 
                 {/* 1. Base Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50/50 p-6 rounded-3xl border border-slate-100">
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'عنوان النشاط / السؤال (عربي)' : 'Activity Title / Question (Arabic)'}</label>
-                    <input
-                      type="text"
-                      value={activityForm.titleAr}
-                      onChange={(e) => updateActivityForm("titleAr", e.target.value)}
-                      className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                      placeholder={language === 'ar' ? 'مثال: قراءة الساعة ومطابقة العقارب' : 'e.g., Reading clock hands'}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'عنوان النشاط / السؤال (English)' : 'Activity Title / Question (English)'}</label>
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'عنوان النشاط / السؤال' : 'Activity Title / Question'}</label>
                     <input
                       type="text"
                       value={activityForm.titleEn}
-                      onChange={(e) => updateActivityForm("titleEn", e.target.value)}
+                      onChange={(e) => {
+                        updateActivityForm("titleEn", e.target.value);
+                        updateActivityForm("titleAr", e.target.value);
+                      }}
                       className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold outline-none focus:border-indigo-500 text-left font-sans"
                       placeholder="Example: Reading Clock Hands"
                       dir="ltr"
@@ -1224,44 +1250,66 @@ export default function SuperAdminSkillsHubPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'المعيار (Standard)' : 'Standard'}</label>
-                      <input
-                        type="text"
-                        value={activityForm.standard}
+                      <select
+                        value={activityForm.standard || ""}
                         onChange={(e) => updateActivityForm("standard", e.target.value)}
-                        className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                        placeholder="مثل: MA-3-1"
-                      />
+                        className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-black outline-none focus:border-indigo-500"
+                      >
+                        <option value="">{language === 'ar' ? '-- اختر المعيار --' : '-- Select Standard --'}</option>
+                        {(() => {
+                          const currentOptions = METADATA_OPTIONS[subject] || METADATA_OPTIONS["الرياضيات"];
+                          const list = [...currentOptions.standards];
+                          if (activityForm.standard && !list.includes(activityForm.standard)) {
+                            list.push(activityForm.standard);
+                          }
+                          return list.map((std) => (
+                            <option key={std} value={std}>{std}</option>
+                          ));
+                        })()}
+                      </select>
                     </div>
                     <div className="space-y-2">
                       <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'المؤشر (Indicator)' : 'Indicator'}</label>
-                      <input
-                        type="text"
-                        value={activityForm.indicator}
+                      <select
+                        value={activityForm.indicator || ""}
                         onChange={(e) => updateActivityForm("indicator", e.target.value)}
-                        className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                        placeholder="مثل: IND-2"
-                      />
+                        className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-black outline-none focus:border-indigo-500"
+                      >
+                        <option value="">{language === 'ar' ? '-- اختر المؤشر --' : '-- Select Indicator --'}</option>
+                        {(() => {
+                          const currentOptions = METADATA_OPTIONS[subject] || METADATA_OPTIONS["الرياضيات"];
+                          const list = [...currentOptions.indicators];
+                          if (activityForm.indicator && !list.includes(activityForm.indicator)) {
+                            list.push(activityForm.indicator);
+                          }
+                          return list.map((ind) => (
+                            <option key={ind} value={ind}>{ind}</option>
+                          ));
+                        })()}
+                      </select>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'مخرجات التعلم (عربي)' : 'Learning Outcome (Arabic)'}</label>
-                      <input
-                        type="text"
-                        value={activityForm.learningOutcomeAr}
-                        onChange={(e) => updateActivityForm("learningOutcomeAr", e.target.value)}
-                        className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                        placeholder="مثل: التعرف على عقارب الساعات"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'Learning Outcome (English)' : 'Learning Outcome (English)'}</label>
-                      <input
-                        type="text"
-                        value={activityForm.learningOutcomeEn}
-                        onChange={(e) => updateActivityForm("learningOutcomeEn", e.target.value)}
-                        className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold outline-none focus:border-indigo-500 text-left font-sans"
-                        placeholder="Example: Read clock hands"
-                        dir="ltr"
-                      />
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'مخرجات التعلم' : 'Learning Outcome'}</label>
+                      <select
+                        value={activityForm.learningOutcomeEn || ""}
+                        onChange={(e) => {
+                          updateActivityForm("learningOutcomeEn", e.target.value);
+                          updateActivityForm("learningOutcomeAr", e.target.value);
+                        }}
+                        className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-black outline-none focus:border-indigo-500"
+                      >
+                        <option value="">{language === 'ar' ? '-- اختر مخرج التعلم --' : '-- Select Learning Outcome --'}</option>
+                        {(() => {
+                          const currentOptions = METADATA_OPTIONS[subject] || METADATA_OPTIONS["الرياضيات"];
+                          const list = [...currentOptions.outcomes];
+                          if (activityForm.learningOutcomeEn && !list.includes(activityForm.learningOutcomeEn)) {
+                            list.push(activityForm.learningOutcomeEn);
+                          }
+                          return list.map((otc) => (
+                            <option key={otc} value={otc}>{otc}</option>
+                          ));
+                        })()}
+                      </select>
                     </div>
                   </div>
                 </div>
@@ -1273,84 +1321,56 @@ export default function SuperAdminSkillsHubPage() {
                     {language === 'ar' ? 'مساعدات التعلم والتغذية الراجعة' : 'Learning Aids & Feedback Insights'}
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'تلميح للطالب (عربي)' : 'Student Hint (Arabic)'}</label>
-                      <textarea
-                        value={activityForm.hintAr}
-                        onChange={(e) => updateActivityForm("hintAr", e.target.value)}
-                        rows={2}
-                        className="w-full bg-white border border-slate-200 p-3 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                        placeholder="يظهر للطالب عند طلبه المساعدة."
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'Hint (English)' : 'Hint (English)'}</label>
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'تلميح للطالب (Hint)' : 'Student Hint'}</label>
                       <textarea
                         value={activityForm.hintEn}
-                        onChange={(e) => updateActivityForm("hintEn", e.target.value)}
+                        onChange={(e) => {
+                          updateActivityForm("hintEn", e.target.value);
+                          updateActivityForm("hintAr", e.target.value);
+                        }}
                         rows={2}
                         className="w-full bg-white border border-slate-200 p-3 rounded-xl text-sm font-bold outline-none focus:border-indigo-500 text-left font-sans"
                         placeholder="Shown when help is requested."
                         dir="ltr"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'نصيحة ذكية (عربي)' : 'Smart Tip (Arabic)'}</label>
-                      <textarea
-                        value={activityForm.tipAr}
-                        onChange={(e) => updateActivityForm("tipAr", e.target.value)}
-                        rows={2}
-                        className="w-full bg-white border border-slate-200 p-3 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                        placeholder="نصيحة تعزز الفكرة الرياضية."
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'Smart Tip (English)' : 'Smart Tip (English)'}</label>
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'نصيحة ذكية (Smart Tip)' : 'Smart Tip'}</label>
                       <textarea
                         value={activityForm.tipEn}
-                        onChange={(e) => updateActivityForm("tipEn", e.target.value)}
+                        onChange={(e) => {
+                          updateActivityForm("tipEn", e.target.value);
+                          updateActivityForm("tipAr", e.target.value);
+                        }}
                         rows={2}
                         className="w-full bg-white border border-slate-200 p-3 rounded-xl text-sm font-bold outline-none focus:border-indigo-500 text-left font-sans"
                         placeholder="Smart tip for reinforcing concepts."
                         dir="ltr"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'شرح الإجابة المفصل (عربي)' : 'Detailed Solution Explanation (Arabic)'}</label>
-                      <textarea
-                        value={activityForm.explanationAr}
-                        onChange={(e) => updateActivityForm("explanationAr", e.target.value)}
-                        rows={3}
-                        className="w-full bg-white border border-slate-200 p-3 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                        placeholder="شرح كامل للحل يظهر للطالب بعد إنهاء النشاط."
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'Explanation (English)' : 'Explanation (English)'}</label>
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'شرح الإجابة المفصل (Explanation)' : 'Detailed Solution Explanation'}</label>
                       <textarea
                         value={activityForm.explanationEn}
-                        onChange={(e) => updateActivityForm("explanationEn", e.target.value)}
+                        onChange={(e) => {
+                          updateActivityForm("explanationEn", e.target.value);
+                          updateActivityForm("explanationAr", e.target.value);
+                        }}
                         rows={3}
                         className="w-full bg-white border border-slate-200 p-3 rounded-xl text-sm font-bold outline-none focus:border-indigo-500 text-left font-sans"
                         placeholder="Detailed answer explanation shown after playing."
                         dir="ltr"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'فكرة جوهرية (عربي)' : 'Key Insight (Arabic)'}</label>
-                      <textarea
-                        value={activityForm.keyInsightAr}
-                        onChange={(e) => updateActivityForm("keyInsightAr", e.target.value)}
-                        rows={3}
-                        className="w-full bg-white border border-slate-200 p-3 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                        placeholder="الدرس المستخلص من اللعبة أو النشاط."
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'Key Insight (English)' : 'Key Insight (English)'}</label>
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'فكرة جوهرية (Key Insight)' : 'Key Insight'}</label>
                       <textarea
                         value={activityForm.keyInsightEn}
-                        onChange={(e) => updateActivityForm("keyInsightEn", e.target.value)}
+                        onChange={(e) => {
+                          updateActivityForm("keyInsightEn", e.target.value);
+                          updateActivityForm("keyInsightAr", e.target.value);
+                        }}
                         rows={3}
                         className="w-full bg-white border border-slate-200 p-3 rounded-xl text-sm font-bold outline-none focus:border-indigo-500 text-left font-sans"
                         placeholder="The core take-away from this interactive game."
