@@ -23,7 +23,7 @@ export default function SchoolAdminLoginPage() {
     if (token && userString) {
       try {
         const user = JSON.parse(userString);
-        if (user && user.role === "SCHOOL_ADMIN") {
+        if (user && (user.role === "SCHOOL_ADMIN" || user.role === "TEACHER")) {
           router.replace("/school-admin");
           return;
         }
@@ -62,8 +62,8 @@ export default function SchoolAdminLoginPage() {
         return;
       }
 
-      // Only allow SCHOOL_ADMIN
-      if (data.user.role !== "SCHOOL_ADMIN") {
+      // Only allow SCHOOL_ADMIN or TEACHER
+      if (data.user.role !== "SCHOOL_ADMIN" && data.user.role !== "TEACHER") {
         setError(t('login.roleErrorSchool'));
         return;
       }

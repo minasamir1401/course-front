@@ -67,10 +67,10 @@ export const startImpersonation = (targetToken: string, targetUser: any, targetR
   }
 
   // 4. Set target session
-  if (targetRole === 'STUDENT' || targetRole === 'TEACHER') {
+  if (targetRole === 'STUDENT') {
     localStorage.setItem(AUTH_KEYS.STUDENT.TOKEN, targetToken);
     localStorage.setItem(AUTH_KEYS.STUDENT.USER, JSON.stringify(targetUser));
-  } else if (targetRole === 'SCHOOL_ADMIN') {
+  } else if (targetRole === 'SCHOOL_ADMIN' || targetRole === 'TEACHER') {
     localStorage.setItem(AUTH_KEYS.SCHOOL_ADMIN.TOKEN, targetToken);
     localStorage.setItem(AUTH_KEYS.SCHOOL_ADMIN.USER, JSON.stringify(targetUser));
   }

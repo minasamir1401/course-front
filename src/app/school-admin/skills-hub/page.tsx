@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Sparkles, Plus, Trash2, Edit, ChevronDown, ChevronUp,
   ArrowRight, ArrowLeft, Save, CheckCircle2, AlertCircle, X,
@@ -14,6 +14,8 @@ import InteractiveQuestionEditor from "@/components/InteractiveQuestionEditor";
 
 export default function SchoolAdminSkillsHubPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const action = searchParams.get("action");
   const { language } = useLanguage();
   const [token, setToken] = useState<string | null>(null);
   const [schoolId, setSchoolId] = useState<string | null>(null);
@@ -99,6 +101,12 @@ export default function SchoolAdminSkillsHubPage() {
     }
     fetchClusters(storedToken, subject, grade);
   }, [router, subject, grade]);
+
+  useEffect(() => {
+    if (action === "add-cluster" && token) {
+      setClusterModal({ open: true, data: { name: "", description: "" } });
+    }
+  }, [action, token]);
 
   // Fetch Clusters
   const fetchClusters = async (authToken: string, currentSubject: string, currentGrade: string) => {
@@ -650,6 +658,7 @@ export default function SchoolAdminSkillsHubPage() {
               >
                 <option value="الرياضيات">📐 الرياضيات</option>
                 <option value="القراءة">📚 القراءة</option>
+                <option value="العلوم">🔬 العلوم</option>
               </select>
 
               {/* Grade Select */}
@@ -916,11 +925,38 @@ export default function SchoolAdminSkillsHubPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               
-              {/* Form Left/Middle Form Inputs */}
-              <div className="lg:col-span-2 space-y-6">
+              {/* 1. Interactive Options Editor (Left/Middle 2/3) */}
+              <div className="lg:col-span-2 bg-slate-50/50 p-6 rounded-3xl border border-slate-100 space-y-6">
+                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b pb-2 flex items-center gap-2">
+                  <Layers className="w-5 h-5 text-indigo-500 animate-none" />
+                  خيارات اللعبة والإجابة الصحيحة
+                </h4>
                 
-                {/* 1. Base Fields */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50/50 p-6 rounded-3xl border border-slate-100">
+                <div className="bg-white rounded-2xl border border-slate-200 p-4 min-h-[300px]">
+                  <InteractiveQuestionEditor
+                    question={{
+                      type: activityForm.type,
+                      options: activityForm.options,
+                      correctAnswer: activityForm.correctAnswer,
+                      text: activityForm.title // Pass title as text
+                    }}
+                    language={language}
+                    onChange={(updated) => {
+                      setActivityForm((prev: any) => ({
+                        ...prev,
+                        options: typeof updated.options === "string" ? updated.options : JSON.stringify(updated.options),
+                        correctAnswer: typeof updated.correctAnswer === "string" ? updated.correctAnswer : JSON.stringify(updated.correctAnswer)
+                      }));
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* 2. Form Side Inputs (Right 1/3) */}
+              <div className="lg:col-span-1 space-y-6">
+                
+                {/* Base Fields */}
+                <div className="grid grid-cols-1 gap-6 bg-slate-50/50 p-6 rounded-3xl border border-slate-100">
                   <div className="space-y-2">
                     <label className="text-xs font-black text-slate-500 uppercase block">عنوان النشاط / السؤال</label>
                     <input
@@ -1013,13 +1049,13 @@ export default function SchoolAdminSkillsHubPage() {
                   </div>
                 </div>
 
-                {/* 2. Educational Metadata & Standards */}
+                {/* Educational Metadata & Standards */}
                 <div className="bg-slate-50/50 p-6 rounded-3xl border border-slate-100 space-y-4">
                   <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                     <Settings className="w-4 h-4" />
                     المعايير والمخرجات (Scope & Sequence Metadata)
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 gap-6">
                     <div className="space-y-2">
                       <label className="text-xs font-black text-slate-500 uppercase block">المعيار (Standard)</label>
                       <input
@@ -1053,13 +1089,13 @@ export default function SchoolAdminSkillsHubPage() {
                   </div>
                 </div>
 
-                {/* 3. Educational Helper Modals (Hint, Tip, Explanation, Insight) */}
+                {/* Educational Helper Modals (Hint, Tip, Explanation, Insight) */}
                 <div className="bg-slate-50/50 p-6 rounded-3xl border border-slate-100 space-y-4">
                   <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                     <Info className="w-4 h-4" />
                     مساعدات التعلم والتغذية الراجعة
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 gap-6">
                     <div className="space-y-2">
                       <label className="text-xs font-black text-slate-500 uppercase block">تلميح للطالب (Hint)</label>
                       <textarea
@@ -1104,34 +1140,6 @@ export default function SchoolAdminSkillsHubPage() {
                 </div>
 
               </div>
-
-              {/* 3. Interactive Options Editor (Right 1/3) */}
-              <div className="bg-slate-50/50 p-6 rounded-3xl border border-slate-100 space-y-6">
-                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b pb-2 flex items-center gap-2">
-                  <Layers className="w-5 h-5 text-indigo-500 animate-none" />
-                  خيارات اللعبة والإجابة الصحيحة
-                </h4>
-                
-                <div className="bg-white rounded-2xl border border-slate-200 p-4 min-h-[300px]">
-                  <InteractiveQuestionEditor
-                    question={{
-                      type: activityForm.type,
-                      options: activityForm.options,
-                      correctAnswer: activityForm.correctAnswer,
-                      text: activityForm.title // Pass title as text
-                    }}
-                    language={language}
-                    onChange={(updated) => {
-                      setActivityForm((prev: any) => ({
-                        ...prev,
-                        options: typeof updated.options === "string" ? updated.options : JSON.stringify(updated.options),
-                        correctAnswer: typeof updated.correctAnswer === "string" ? updated.correctAnswer : JSON.stringify(updated.correctAnswer)
-                      }));
-                    }}
-                  />
-                </div>
-              </div>
-
             </div>
 
             {/* Save Actions */}

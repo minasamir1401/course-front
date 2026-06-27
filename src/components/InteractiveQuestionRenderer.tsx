@@ -205,25 +205,25 @@ export default function InteractiveQuestionRenderer({ question, value, onChange,
         .game-btn-3d-selected {
           transform: translateY(3px) !important;
           border-bottom-width: 2px !important;
-          background: #0f172a !important;
-          border-color: #0f172a !important;
-          color: #ffffff !important;
-          box-shadow: 0 0 15px rgba(15, 23, 42, 0.25) !important;
+          background: #bae6fd !important;
+          border-color: #38bdf8 !important;
+          color: #0f172a !important;
+          box-shadow: 0 0 15px rgba(56, 189, 248, 0.25) !important;
         }
         .game-btn-3d-selected * {
-          color: #ffffff !important;
+          color: #0f172a !important;
         }
 
         .game-btn-3d-matched {
           transform: translateY(3px) !important;
           border-bottom-width: 2px !important;
-          background: #1e293b !important;
-          border-color: #1e293b !important;
-          color: #ffffff !important;
+          background: #7dd3fc !important;
+          border-color: #0284c7 !important;
+          color: #0f172a !important;
           box-shadow: none !important;
         }
         .game-btn-3d-matched * {
-          color: #ffffff !important;
+          color: #0f172a !important;
         }
 
         .game-slot-3d {
@@ -234,12 +234,12 @@ export default function InteractiveQuestionRenderer({ question, value, onChange,
         }
 
         .game-slot-3d-filled {
-          background: #0f172a !important;
-          border: 2px solid #0f172a !important;
+          background: #bae6fd !important;
+          border: 2px solid #38bdf8 !important;
           border-bottom-width: 6px !important;
-          border-bottom-color: #020617 !important;
-          color: #ffffff !important;
-          box-shadow: 0 6px 15px rgba(15, 23, 42, 0.15) !important;
+          border-bottom-color: #0284c7 !important;
+          color: #0f172a !important;
+          box-shadow: 0 6px 15px rgba(56, 189, 248, 0.15) !important;
         }
 
         .candy-choice {
@@ -319,7 +319,7 @@ function McqRenderer({ question, value, onChange, language }: any) {
                 language === 'ar' ? 'text-right' : 'text-left'
               } ${isSelected ? "game-btn-3d-selected" : ""}`}
             >
-              <span className={`font-black text-base ${isSelected ? "text-white" : "text-slate-700"}`}>{translateText(choice, language)}</span>
+              <span className={`font-black text-base ${isSelected ? "text-slate-900" : "text-slate-700"}`}>{translateText(choice, language)}</span>
               <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${isSelected ? "border-white bg-white text-slate-950" : "border-slate-350 bg-white"}`}>
                 {isSelected && <span className="w-2.5 h-2.5 rounded-full bg-slate-950" />}
               </div>
@@ -395,7 +395,7 @@ function MultiSelectRenderer({ question, value, onChange, language }: any) {
                 language === 'ar' ? 'text-right' : 'text-left'
               } ${isSelected ? "game-btn-3d-selected" : ""}`}
             >
-              <span className={`font-black text-base ${isSelected ? "text-white" : "text-slate-700"}`}>{translateText(choice, language)}</span>
+              <span className={`font-black text-base ${isSelected ? "text-slate-900" : "text-slate-700"}`}>{translateText(choice, language)}</span>
               <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center ${isSelected ? "border-white bg-white text-slate-950" : "border-slate-350 bg-white"}`}>
                 {isSelected && <CheckCircle2 className="w-4 h-4 text-slate-950" />}
               </div>
@@ -522,7 +522,7 @@ function MatchingRenderer({ question, value, onChange, language, containerRef }:
                 key={i}
                 data-right-id={item}
                 onClick={() => handleRightClick(item)}
-                className={`p-4 rounded-2xl border-2 transition-all text-center game-card-3d-teal cursor-pointer ${isMatched ? "bg-slate-950 border-slate-950 text-white opacity-60 pointer-events-none" : ""}`}
+                className={`p-4 rounded-2xl border-2 transition-all text-center game-card-3d-teal cursor-pointer ${isMatched ? "bg-sky-200 border-sky-300 text-slate-900 opacity-60 pointer-events-none" : ""}`}
               >
                 <span className="font-bold text-sm truncate">{translateText(item, language)}</span>
               </div>
@@ -588,7 +588,7 @@ function DragDropFillRenderer({ question, value, onChange, language }: any) {
             onClick={() => handleSlotClick(slotIdx)}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => handleDrop(e, slotIdx)}
-            className={`inline-block min-w-[80px] h-9 mx-1.5 align-middle rounded-xl text-center font-black text-xs pt-2 border transition-all cursor-pointer ${wordInSlot ? "bg-slate-950 border-slate-950 text-white" : "bg-slate-100 border-dashed border-slate-350 text-slate-400"}`}
+            className={`inline-block min-w-[80px] h-9 mx-1.5 align-middle rounded-xl text-center font-black text-xs pt-2 border transition-all cursor-pointer ${wordInSlot ? "bg-sky-200 border-sky-300 text-slate-900" : "bg-slate-100 border-dashed border-slate-350 text-slate-400"}`}
           >
             {translateText(wordInSlot, language) || (language === "ar" ? `فراغ ${slotIdx + 1}` : `Slot ${slotIdx + 1}`)}
           </span>
@@ -618,7 +618,7 @@ function DragDropFillRenderer({ question, value, onChange, language }: any) {
                 draggable={!isPlaced}
                 onDragStart={(e) => handleDragStart(e, word)}
                 onClick={() => setActiveWord(isSelected ? null : word)}
-                className={`px-5 py-3 rounded-2xl border-2 transition-all font-black text-xs select-none cursor-grab ${isPlaced ? "opacity-30 cursor-not-allowed bg-slate-100 border-slate-200" : isSelected ? "bg-slate-950 border-slate-950 text-white" : "bg-white border-slate-200 hover:border-slate-400"}`}
+                className={`px-5 py-3 rounded-2xl border-2 transition-all font-black text-xs select-none cursor-grab ${isPlaced ? "opacity-30 cursor-not-allowed bg-slate-100 border-slate-200" : isSelected ? "bg-sky-200 border-sky-300 text-slate-900" : "bg-white border-slate-200 hover:border-slate-400"}`}
               >
                 {translateText(word, language)}
               </button>
@@ -687,14 +687,14 @@ function GroupSortingRenderer({ question, value, onChange, language }: any) {
                 draggable="true"
                 onDragStart={(e) => handleDragStart(e, item)}
                 onClick={() => setActiveItem(isSelected ? null : item)}
-                className={`px-5 py-3 rounded-2xl border-2 transition-all font-black text-xs cursor-grab ${isSelected ? "bg-slate-950 border-slate-950 text-white" : "bg-white border-slate-200 hover:border-slate-400"}`}
+                className={`px-5 py-3 rounded-2xl border-2 transition-all font-black text-xs cursor-grab ${isSelected ? "bg-sky-200 border-sky-300 text-slate-900" : "bg-white border-slate-200 hover:border-slate-400"}`}
               >
                 {translateText(item, language)}
               </button>
             );
           })}
           {items.filter((i: string) => !sortingState[i]).length === 0 && (
-            <p className="text-slate-550 text-xs font-black w-full text-center">
+            <p className="text-slate-555 text-xs font-black w-full text-center">
               {language === "ar" ? "أحسنت! تم تصنيف جميع العناصر بنجاح." : "Excellent! All items classified."}
             </p>
           )}
@@ -717,7 +717,7 @@ function GroupSortingRenderer({ question, value, onChange, language }: any) {
               {Object.keys(sortingState)
                 .filter((item) => sortingState[item] === grp)
                 .map((item) => (
-                  <div key={item} className="bg-slate-950 border border-slate-950 text-white px-3.5 py-2 rounded-xl flex items-center gap-1.5 text-xs font-black animate-pop-in">
+                  <div key={item} className="bg-sky-200 border border-sky-300 text-slate-900 px-3.5 py-2 rounded-xl flex items-center gap-1.5 text-xs font-black animate-pop-in">
                     <span>{translateText(item, language)}</span>
                     <button type="button" onClick={(e) => { e.stopPropagation(); clearItem(item); }} className="text-rose-400 font-black hover:text-rose-500">×</button>
                   </div>
@@ -845,19 +845,19 @@ function ClockRenderer({ question, value, onChange, language }: any) {
           })}
           
           <div
-            className="w-2 h-14 bg-slate-900 absolute bottom-1/2 left-1/2 origin-bottom rounded-full shadow-sm"
+            className="w-2 h-14 bg-blue-900 absolute bottom-1/2 left-1/2 origin-bottom rounded-full shadow-sm"
             style={{ transform: `translate(-50%, 0) rotate(${(hour % 12) * 30 + minute * 0.5}deg)` }}
           />
           <div
-            className="w-1 h-20 bg-slate-650 absolute bottom-1/2 left-1/2 origin-bottom rounded-full shadow-sm"
+            className="w-1 h-20 bg-blue-600 absolute bottom-1/2 left-1/2 origin-bottom rounded-full shadow-sm"
             style={{ transform: `translate(-50%, 0) rotate(${minute * 6}deg)` }}
           />
-          <div className="w-4 h-4 rounded-full bg-slate-950 absolute border-2 border-white shadow" />
+          <div className="w-4 h-4 rounded-full bg-sky-500 absolute border-2 border-white shadow" />
         </div>
       </div>
 
       <div className="text-center">
-        <span className="text-3xl font-black text-white bg-slate-950 border border-slate-950 px-6 py-3.5 rounded-2xl tracking-widest shadow-lg">
+        <span className="text-3xl font-black text-slate-950 bg-sky-100 border border-sky-300 px-6 py-3.5 rounded-2xl tracking-widest shadow-lg">
           {String(hour).padStart(2, "0")}:{String(minute).padStart(2, "0")}
         </span>
       </div>
@@ -938,12 +938,20 @@ function MindMapRenderer({ question, value, onChange, language, containerRef }: 
         {nodes.map((node: any) => {
           const isBlank = node.isBlank;
           const nodeAns = mapAnswers[node.id];
+          const nodeClass = isBlank
+            ? (nodeAns
+              ? "bg-sky-200 border-sky-300 text-slate-900 animate-pop-in"
+              : "border-dashed border-slate-300 bg-slate-50 text-slate-400")
+            : (node.parent
+              ? "bg-white border-slate-200 text-slate-800"
+              : "bg-sky-100 border-sky-200 text-slate-900");
+
           return (
             <div
               key={node.id}
               data-node-id={node.id}
               onClick={() => handleNodeClick(node.id, node)}
-              className={`p-4.5 rounded-2xl border-2 transition-all cursor-pointer font-black text-sm min-w-[125px] text-center ${node.parent ? "bg-white border-slate-200 text-slate-800" : "bg-slate-950 border-slate-950 text-white"} ${isBlank && !nodeAns ? "border-dashed border-slate-350 bg-slate-50 text-slate-400" : isBlank && nodeAns ? "bg-slate-900 border-slate-900 text-white animate-pop-in" : ""}`}
+              className={`p-4.5 rounded-2xl border-2 transition-all cursor-pointer font-black text-sm min-w-[125px] text-center ${nodeClass}`}
             >
               {isBlank ? (translateText(nodeAns, language) || "?") : translateText(node.label, language)}
             </div>
@@ -965,7 +973,7 @@ function MindMapRenderer({ question, value, onChange, language, containerRef }: 
                   key={i}
                   type="button"
                   onClick={() => setActiveWord(isSelected ? null : word)}
-                  className={`px-5 py-3 rounded-2xl border-2 transition-all font-black text-xs cursor-pointer ${isPlaced ? "opacity-30 cursor-not-allowed bg-slate-100 border-slate-200" : isSelected ? "bg-slate-950 border-slate-950 text-white" : "bg-white border-slate-200 hover:border-slate-400"}`}
+                  className={`px-5 py-3 rounded-2xl border-2 transition-all font-black text-xs cursor-pointer ${isPlaced ? "opacity-30 cursor-not-allowed bg-slate-100 border-slate-200" : isSelected ? "bg-sky-200 border-sky-300 text-slate-900" : "bg-white border-slate-200 hover:border-slate-400"}`}
                 >
                   {translateText(word, language)}
                 </button>

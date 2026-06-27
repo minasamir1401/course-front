@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, Trash2, HelpCircle } from "lucide-react";
+import { Plus, Trash2, HelpCircle, Sparkles, Info } from "lucide-react";
 import GeoGebraWidget from "./GeoGebraWidget";
 
 interface EditorProps {
@@ -35,6 +35,193 @@ const parseJson = (str: any, fallback: any = {}) => {
   }
 };
 
+const guides: Record<string, { title: string; desc: string; example: string; steps: string }> = {
+  MCQ: {
+    title: "اختيار من متعدد (MCQ)",
+    desc: "سؤال تقليدي وسهل، بتكتب فيه سؤال وشوية خيارات للطالب، وهو بيختار إجابة واحدة بس هي اللي صح.",
+    example: "السؤال: 'مين هو عميد الأدب العربي؟' -> الخيارات: [طه حسين، نجيب محفوظ، عباس العقاد] -> الإجابة الصح: طه حسين.",
+    steps: "اكتب خيارات الإجابة في الحقول تحت، وعلم على الدائرة الصغيرة اللي جنب الإجابة الصح عشان السيستم يعرفها."
+  },
+  TRUE_FALSE: {
+    title: "صح أم خطأ (True/False)",
+    desc: "عبارة أو معلومة واضحة، والطالب بيحدد إذا كانت المعلومة دي صحيحة (صواب) ولا خاطئة (خطأ).",
+    example: "السؤال: 'أكلة الكشري من أشهر الأكلات الشعبية في مصر.' -> الإجابة الصح: صح.",
+    steps: "اختار الإجابة الصحيحة مباشرة تحت سواء كانت 'صح' أو 'خطأ'."
+  },
+  MULTI_SELECT: {
+    title: "اختيارات متعددة (Multi-Select)",
+    desc: "سؤال شبه الاختيار من متعدد، بس هنا مسموح للطالب يختار أكتر من إجابة صحيحة في نفس الوقت.",
+    example: "السؤال: 'مين من المحافظات دي بتطل على البحر الأحمر؟' -> الخيارات: [الغردقة، الإسكندرية، السويس، مطروح] -> الإجابات الصح: [الغردقة، السويس].",
+    steps: "اكتب كل الخيارات المتاحة، وعلم على مربعات الصح (Checkbox) لكل الإجابات المظبوطة."
+  },
+  MATCHING: {
+    title: "سؤال التوصيل (Matching)",
+    desc: "لعبة توصيل كلاسيكية، بتعمل عمودين (يمين وشمال)، والطالب بيوصل كل كلمة أو صورة باللي يناسبها.",
+    example: "التوصيل بين المحافظة والرمز بتاعها: (الجيزة ↔ الأهرامات)، (الإسكندرية ↔ قلعة قايتباي)، (الأقصر ↔ معبد الكرنك).",
+    steps: "اكتب الكلمة اليمين في خانة 'العنصر الأيمن'، واكتب الكلمة المطابقة ليها في خانة 'العنصر المقابل'، واضغط 'إضافة الزوج'. كرر ده لكل العناصر."
+  },
+  DRAG_DROP_FILL: {
+    title: "سحب الفراغات (Drag & Drop Fill)",
+    desc: "بتكتب جملة كاملة وتحدد الفراغات برموز خاصة، وتحت بتكتب الكلمات اللي الطالب هيسحبها ويحطها في الفراغ المناسب.",
+    example: "الجملة: 'تبنى الأهرامات في محافظة [slot0] بينما يقع السد العالي في [slot1].' -> الكلمات الصح: [slot0 ↔ الجيزة]، [slot1 ↔ أسوان].",
+    steps: "اكتب جملتك وحط الرمز [slot0] للفراغ الأول و [slot1] للفراغ الثاني وهكذا. بعد كده ضيف الكلمات الاختيارية تحت، وحدد الكلمة الصح لكل فراغ."
+  },
+  GROUP_SORTING: {
+    title: "تصنيف المجموعات (Group Sorting)",
+    desc: "بتعمل مجموعتين أو أكتر (تصنيفات)، وبتديله كروت متلخبطة، والطالب مطلوب منه يسحب كل كارت للمجموعة الصح بتاعته.",
+    example: "المجموعات: [أكلات حلوة، أكلات حادقة] -> الكروت: (بسبوسة ↔ أكلات حلوة)، (كشري ↔ أكلات حادقة)، (كنافة ↔ أكلات حلوة).",
+    steps: "اكتب اسم المجموعة واضغط 'إضافة مجموعة'. بعدين اكتب اسم الكارت واختار مجموعته واضغط 'إضافة بطاقة'."
+  },
+  NUMBER_LINE: {
+    title: "خط الأعداد (Number Line)",
+    desc: "خط أعداد تفاعلي ومرسوم، بتحدد بدايته ونهايته ونقطة معينة الطالب بيحرك المؤشر عشان يقف عليها.",
+    example: "تمثيل الكسور: البداية: 0، النهاية: 1، الخطوة: 0.25 (ربع) -> الإجابة المطلوبة: 0.5 (النصف).",
+    steps: "حدد بداية الخط ونهايته ومقدار التقسيم (الخطوة)، واكتب الرقم الصحيح اللي الطالب لازم يقف عنده."
+  },
+  CLOCK: {
+    title: "عقارب الساعة (Clock)",
+    desc: "ساعة دائرية تفاعلية بعقارب حقيقية (ساعات ودقائق)، الطالب بيسحب العقارب بإيده عشان يظبط الوقت المطلوب منه.",
+    example: "السؤال: 'اظبط عقارب الساعة على ميعاد الفطار الساعة 7 وربع الصبح.' -> الإجابة الصح: 07:15.",
+    steps: "اختر الساعة والدقائق المظبوطة من القوائم تحت، ودي هتكون الإجابة اللي الطالب لازم يظبط عقاربه عليها."
+  },
+  MIND_MAP: {
+    title: "خريطة مفاهيم (Mind Map)",
+    desc: "خريطة شجرية متفرعة بتعرض تسلسل الأفكار، بتسيب فيها عقد أو مفاهيم فارغة والطالب بيسحب الكلمة الصح لمكانها في الشجرة.",
+    example: "العقدة الرئيسية: 'أقسام الكلمة' يتفرع منها: ['اسم' (فراغ)، 'فعل' (فراغ)، 'حرف' (فراغ)].",
+    steps: "اكتب اسم المفهوم واختار المفهوم الأب بتاعه، ولو عايزه يظهر كفراغ للطالب علم على 'فراغ يقوم الطالب بسحبه' واضغط إضافة."
+  },
+  VIDEO_CHECKPOINT: {
+    title: "فيديو تفاعلي (Video Checkpoint)",
+    desc: "بتعرض فيديو تعليمي، وعند ثانية معينة الفيديو بيقف إجباري ويظهر سؤال اختيار من متعدد يختبر فهم الطالب قبل ما يكمل.",
+    example: "فيديو بيشرح الأهرامات، وعند الثانية 30 يقف ويسأل: 'مين بنا الهرم الأكبر؟' -> الاختيارات: [خوفو، خفرع، منكاورع] -> الإجابة الصح: خوفو.",
+    steps: "حط رابط الفيديو، واكتب زمن الوقف بالثواني، وضيف السؤال والاختيارات وحدد الإجابة الصح واضغط إضافة."
+  },
+  SWIPE_SORT: {
+    title: "سحب سريع لليمين/اليسار (Swipe Sort)",
+    desc: "لعبة كروت سريعة شبه تندر! بيظهر كارت في النص، والطالب بيسحبه يمين لو ينتمي للمجموعة اليمين، أو شمال لو ينتمي للمجموعة الشمال.",
+    example: "فرز السلوكيات: يمين (سلوك ممتاز) ↔ مساعدة المحتاج، شمال (سلوك خاطئ) ↔ إلقاء القمامة في الشارع.",
+    steps: "اكتب اسم المجموعة اليمين والمجموعة الشمال. بعد كده اكتب الكلمات وحدد اتجاه السحب الصح لكل كلمة."
+  },
+  MAZE: {
+    title: "المتاهة التعليمية (Maze)",
+    desc: "لعبة أركيد ممتعة، الطالب بيتحكم بشخصية بتتحرك جوه متاهة وبيحاول يوصل للإجابة الصحيحة ويهرب من الوحوش اللي بتطارده.",
+    example: "السؤال: 'حاصل ضرب 4 × 3 يساوي كم؟' -> الإجابة الصح: 12. الإجابات الغلط لتشتيت الطالب: [7، 16، 9].",
+    steps: "اكتب السؤال، وحدد الإجابة الصحيحة، وضيف شوية إجابات خاطئة تتوزع في ممرات المتاهة لتصعيب اللعبة."
+  },
+  WORD_SEARCH: {
+    title: "البحث عن الكلمات (Word Search)",
+    desc: "جدول مليان حروف متلخبطة، والطالب بيحاول يجمع الكلمات المطلوبة منه بتوصيل الحروف جنب بعضها بالطول أو العرض.",
+    example: "السؤال: 'ابحث عن أسماء فواكه صيفية.' -> الكلمات المطلوبة: [مانجو، بطيخ، تين].",
+    steps: "اكتب الكلمات المطلوبة واضغط إضافة، والسيستم هيعمل جدول الحروف ويلخبطها تلقائياً."
+  },
+  GEOGEBRA: {
+    title: "أداة جيوجيبرا (GeoGebra)",
+    desc: "أداة هندسية ورياضية تفاعلية ممتازة لرسم الأشكال الهندسية، الدوال البيانية، وقياس الزوايا والمساحات.",
+    example: "رسم وتحديد أضلاع المثلث القائم أو رسم الدالة التربيعية ص = س².",
+    steps: "حط معرف الأداة (Material ID) من موقع GeoGebra عشان تظهر للطالب في الامتحان تفاعلياً."
+  },
+  FLASH_CARD: {
+    title: "البطاقات التعليمية (Flash Cards)",
+    desc: "كروت بوجهين، الطالب بيقرأ الكلمة أو السؤال على الوش، ويضغط على الكارت عشان يتقلب ويشوف الإجابة أو المعنى على الضهر لتعزيز الحفظ.",
+    example: "وش الكارت: 'الفسطاط' -> ضهر الكارت: 'أول عاصمة إسلامية لمصر بناها عمرو بن العاص'.",
+    steps: "اكتب الكلمة أو السؤال للوجه الأمامي، والمعنى أو الحل للوجه الخلفي واضغط إضافة."
+  },
+  MEMORY_GAME: {
+    title: "لعبة الذاكرة (Memory Game)",
+    desc: "كروت مقلوبة على الشاشة، الطالب بيقلب كارتين كارتين ويحاول يطابق الكروت اللي ليها نفس المعنى أو الكلمة وجمعها.",
+    example: "الكارت الأول: 'كتاب'، الكارت المطابق ليه: 'كتب' (مفرد وجمع). أو (مصر ↔ القاهرة).",
+    steps: "اكتب الكلمة الأولى وجنبها الكلمة المطابقة ليها واضغط 'إضافة زوج'، واللعبة هتلخبطهم وتخفيهم تلقائياً."
+  },
+  WORD_SCRAMBLE: {
+    title: "ترتيب الحروف (Word Scramble)",
+    desc: "كلمة حروفها متلخبطة على الشاشة، والطالب مطلوب منه يرتب الحروف ورا بعضها بشكل صحيح عشان يجمع الكلمة.",
+    example: "الحروف المتلخبطة: [ق - ه - ر - ا - ة] -> الترتيب الصحيح: القاهرة.",
+    steps: "اكتب الكلمة الصحيحة مظبوطة ومرتبة، واللعبة هتلخبط الحروف للطالب تلقائياً."
+  },
+  SENTENCE_REORDER: {
+    title: "ترتيب الجملة (Sentence Reorder)",
+    desc: "جملة مفيدة كلماتها متلخبطة، والطالب بيسحب الكلمات ويرتبها جنب بعضها عشان يركب الجملة بشكل صح.",
+    example: "الكلمات المتلخبطة: [مصر، الدنيا، أم، هي] -> الترتيب الصحيح: مصر هي أم الدنيا.",
+    steps: "اكتب الجملة كاملة ومرتبة بشكل صحيح، والسيستم هيقسم الكلمات ويلخبطها للطالب تلقائياً."
+  },
+  MATH_EQUATION: {
+    title: "معادلة حسابية (Math Equation)",
+    desc: "سؤال رياضيات بيحتاج إدخال إجابة دقيقة بصيغة رياضية، وبنوفر للطالب كيبورد رموز رياضية تفاعلية (جذور، كسور، أسس).",
+    example: "السؤال: 'حل المعادلة: س + ٣ = ٧' -> الإجابة الصح: س = ٤ (أو 4).",
+    steps: "اكتب السؤال الرياضي، وحدد صيغة الإجابة الصحيحة بدقة في خانة الحل."
+  },
+  SEQUENCE_ORDER: {
+    title: "ترتيب التسلسل (Sequence Order)",
+    desc: "مجموعة من الخطوات، الأحداث التاريخية، أو الأرقام، وطلب من الطالب ترتيبها من البداية للنهاية.",
+    example: "خطوات عمل الشاي الكشري: (1. ضع الشاي والسكر في الكوب، 2. صب الماء المغلي، 3. قلب جيداً).",
+    steps: "اكتب الخطوات بالترتيب الصحيح من فوق لتحت، والسيستم هيلخبطهم للطالب وهو هيرتبهم."
+  },
+  CROSSWORD: {
+    title: "الكلمات المتقاطعة (Crossword)",
+    desc: "مربعات متقاطعة كلاسيكية، بيظهر للطالب تلميحات رأسية وأفقية وهو بيملا المربعات بالحروف لتكوين الكلمات.",
+    example: "أفقي 1: 'عاصمة مصر' (القاهرة)، رأسي 2: 'أطول نهر في العالم' (النيل).",
+    steps: "اكتب الكلمة الصحيحة، والتلميح بتاعها، وحدد اتجاهها (أفقي أو رأسي) واضغط إضافة."
+  },
+  COUNT_OBJECTS: {
+    title: "عد العناصر (Count Objects)",
+    desc: "سؤال تفاعلي بيعرض مجموعة صور لعناصر مكررة (تفاح، كور، أهرامات)، والطالب بيعدها ويكتب الرقم المظبوط.",
+    example: "صورة فيها 5 أهرامات صغيرة -> السؤال: 'عد الأهرامات في الصورة' -> الإجابة الصح: 5.",
+    steps: "ارفع الصورة أو حدد نوع العناصر وعددها، واكتب الرقم الصحيح كإجابة."
+  },
+  IMAGE_LABEL: {
+    title: "تسمية الصورة (Image Labeling)",
+    desc: "بتجيب صورة (زي خريطة أو رسمة جهاز في العلوم)، وتحط نقط معينة عليها، والطالب بيسحب الكلمة الصح لكل نقطة في الصورة.",
+    example: "خريطة جمهورية مصر العربية: (نقطة فوق ↔ البحر المتوسط)، (نقطة يمين ↔ البحر الأحمر).",
+    steps: "ارفع الصورة، وعلم على الأماكن المحددة بالإحداثيات، واكتب الاسم الصح لكل مكان."
+  },
+  COLOR_MATCH: {
+    title: "تطابق الألوان (Color Match)",
+    desc: "لعبة بصرية لمطابقة العناصر أو الكرات الملونة حسب لون السلة أو الهدف لتنمية الذكاء البصري للأطفال.",
+    example: "سحب الكرات الحمراء لسلة الفراولة، والكرات الصفراء لسلة الموز.",
+    steps: "حدد الألوان المتاحة والربط الصحيح بين العناصر وألوانها لتوليد اللعبة."
+  }
+};
+
+function GameGuide({ type }: { type: string }) {
+  const guide = guides[type];
+  if (!guide) return null;
+
+  return (
+    <div className="bg-gradient-to-br from-indigo-50/75 via-sky-50/40 to-white rounded-3xl border border-indigo-100/60 p-5 shadow-sm space-y-4 text-right animate-in fade-in slide-in-from-top-4 duration-300">
+      <div className="flex items-start gap-3 justify-start">
+        <div className="w-10 h-10 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+          <Sparkles className="w-5 h-5 animate-pulse" />
+        </div>
+        <div className="space-y-1">
+          <h4 className="font-black text-sm text-indigo-950 flex items-center gap-2">
+            <span>دليل ومثال محرر: {guide.title}</span>
+          </h4>
+          <p className="text-xs font-bold text-indigo-900/85 leading-relaxed">
+            {guide.desc}
+          </p>
+        </div>
+      </div>
+      
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-indigo-50/70 space-y-2 text-xs">
+        <div className="flex items-center gap-2 text-indigo-700 font-black">
+          <Info className="w-4 h-4" />
+          <span>مثال توضيحي (مصري بسيط):</span>
+        </div>
+        <p className="font-bold text-slate-700 leading-relaxed">
+          {guide.example}
+        </p>
+        
+        <div className="mt-3 pt-3 border-t border-slate-100 space-y-1">
+          <span className="font-black text-indigo-950 block">خطوات العمل في هذا المحرر:</span>
+          <p className="font-bold text-slate-500 leading-relaxed">
+            {guide.steps}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function InteractiveQuestionEditor({ question, onChange, language }: EditorProps) {
   const updateQuestionData = (optionsObj: any, correctAnswerVal: any) => {
     onChange({
@@ -44,62 +231,73 @@ export default function InteractiveQuestionEditor({ question, onChange, language
     });
   };
 
-  switch (question.type) {
-    case "MCQ":
-      return <McqEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
-    case "TRUE_FALSE":
-      return <TrueFalseEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
-    case "MULTI_SELECT":
-      return <MultiSelectEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
-    case "MATCHING":
-      return <MatchingEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
-    case "DRAG_DROP_FILL":
-      return <DragDropFillEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
-    case "GROUP_SORTING":
-      return <GroupSortingEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
-    case "CLOCK":
-      return <ClockEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
-    case "MIND_MAP":
-      return <MindMapEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
-    case "VIDEO_CHECKPOINT":
-      return <VideoCheckpointEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
-    case "NUMBER_LINE":
-      return <NumberLineEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
-    case "SWIPE_SORT":
-      return <SwipeSortEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
-    case "MAZE":
-      return <MazeEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
-    case "WORD_SEARCH":
-      return <WordSearchEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
-    case "GEOGEBRA":
-      return <GeoGebraEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
-    case "FLASH_CARD":
-      return <FlashCardEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
-    case "MEMORY_GAME":
-      return <MemoryGameEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
-    case "WORD_SCRAMBLE":
-      return <WordScrambleEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
-    case "SENTENCE_REORDER":
-      return <SentenceReorderEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
-    case "MATH_EQUATION":
-      return <MathEquationEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
-    case "SEQUENCE_ORDER":
-      return <SequenceOrderEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
-    case "CROSSWORD":
-      return <CrosswordEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
-    case "COUNT_OBJECTS":
-      return <CountObjectsEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
-    case "IMAGE_LABEL":
-      return <ImageLabelEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
-    case "COLOR_MATCH":
-      return <ColorMatchEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
-    default:
-      return (
-        <div className="p-4 text-center text-slate-400 font-bold w-full max-w-full">
-          {language === "ar" ? "يرجى تحديد نوع نشاط متاح باليمين للبدء بالتحرير المرئي." : "Please select an available activity type to start visual editing."}
-        </div>
-      );
-  }
+  const renderEditor = () => {
+    switch (question.type) {
+      case "MCQ":
+        return <McqEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+      case "TRUE_FALSE":
+        return <TrueFalseEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+      case "MULTI_SELECT":
+        return <MultiSelectEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+      case "MATCHING":
+        return <MatchingEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+      case "DRAG_DROP_FILL":
+        return <DragDropFillEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+      case "GROUP_SORTING":
+        return <GroupSortingEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+      case "CLOCK":
+        return <ClockEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+      case "MIND_MAP":
+        return <MindMapEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+      case "VIDEO_CHECKPOINT":
+        return <VideoCheckpointEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+      case "NUMBER_LINE":
+        return <NumberLineEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+      case "SWIPE_SORT":
+        return <SwipeSortEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+      case "MAZE":
+        return <MazeEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+      case "WORD_SEARCH":
+        return <WordSearchEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+      case "GEOGEBRA":
+        return <GeoGebraEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+      case "FLASH_CARD":
+        return <FlashCardEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+      case "MEMORY_GAME":
+        return <MemoryGameEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+      case "WORD_SCRAMBLE":
+        return <WordScrambleEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+      case "SENTENCE_REORDER":
+        return <SentenceReorderEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+      case "MATH_EQUATION":
+        return <MathEquationEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+      case "SEQUENCE_ORDER":
+        return <SequenceOrderEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+      case "CROSSWORD":
+        return <CrosswordEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+      case "COUNT_OBJECTS":
+        return <CountObjectsEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+      case "IMAGE_LABEL":
+        return <ImageLabelEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+      case "COLOR_MATCH":
+        return <ColorMatchEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+      default:
+        return (
+          <div className="p-4 text-center text-slate-400 font-bold w-full max-w-full">
+            {language === "ar" ? "يرجى تحديد نوع نشاط متاح باليمين للبدء بالتحرير المرئي." : "Please select an available activity type to start visual editing."}
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div className="space-y-6 w-full max-w-full text-right" dir="rtl">
+      <GameGuide type={question.type} />
+      <div className="pt-6 border-t border-slate-100">
+        {renderEditor()}
+      </div>
+    </div>
+  );
 }
 
 // -------------------------------------------------------------

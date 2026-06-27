@@ -240,9 +240,9 @@ function UsersManagementContent() {
         );
 
         // Redirect
-        if (user.role === 'STUDENT' || user.role === 'TEACHER') {
+        if (user.role === 'STUDENT') {
           router.push("/dashboard");
-        } else if (user.role === 'SCHOOL_ADMIN') {
+        } else if (user.role === 'SCHOOL_ADMIN' || user.role === 'TEACHER') {
           router.push("/school-admin");
         }
       } else {
@@ -328,6 +328,8 @@ function UsersManagementContent() {
             <div className="absolute bottom-[-10%] left-[-10%] w-[30%] h-[50%] bg-blue-600 blur-[100px] rounded-full"></div>
           </div>
         </div>
+
+
 
         {/* Tabs & Filters */}
         <div className="space-y-6">

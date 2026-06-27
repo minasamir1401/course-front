@@ -241,9 +241,9 @@ export default function SchoolManagementPage() {
         startImpersonation(data.token, data.user, user.role);
         
         // Redirect
-        if (user.role === 'STUDENT' || user.role === 'TEACHER') {
+        if (user.role === 'STUDENT') {
           router.push("/dashboard");
-        } else if (user.role === 'SCHOOL_ADMIN') {
+        } else if (user.role === 'SCHOOL_ADMIN' || user.role === 'TEACHER') {
           router.push("/school-admin");
         }
         

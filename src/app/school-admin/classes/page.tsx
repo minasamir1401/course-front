@@ -28,6 +28,8 @@ export default function SchoolAdminClassesPage() {
   const [teachers, setTeachers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingClassId, setEditingClassId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
   const [formData, setFormData] = useState({
@@ -97,19 +99,32 @@ export default function SchoolAdminClassesPage() {
 
     try {
       const token = localStorage.getItem("school_admin_token");
-      const res = await fetch(`${API_URL}/classes`, {
-        method: "POST",
+      const url = isEditMode ? `${API_URL}/classes/${editingClassId}` : `${API_URL}/classes`;
+      const method = isEditMode ? "PUT" : "POST";
+      
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ ...formData, schoolId })
       });
 
       if (res.ok) {
-        showToast(t('schoolAdmin.classesPage.createSuccess'), "success");
+        showToast(
+          isEditMode 
+            ? (language === 'ar' ? "تم تحديث الفصل بنجاح" : "Classroom updated successfully") 
+            : t('schoolAdmin.classesPage.createSuccess'), 
+          "success"
+        );
         setIsModalOpen(false);
         setFormData({ name: "", grade: "", subject: "", teacherName: "" });
         fetchClasses(schoolId);
       } else {
-        showToast(t('schoolAdmin.classesPage.createFail'), "error");
+        showToast(
+          isEditMode 
+            ? (language === 'ar' ? "فشل تحديث الفصل" : "Failed to update classroom") 
+            : t('schoolAdmin.classesPage.createFail'), 
+          "error"
+        );
       }
     } catch (e) {
       showToast(t('schoolAdmin.classesPage.connError'), "error");
@@ -168,7 +183,12 @@ export default function SchoolAdminClassesPage() {
           </div>
 
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              setIsEditMode(false);
+              setEditingClassId(null);
+              setFormData({ name: "", grade: "", subject: "", teacherName: "" });
+              setIsModalOpen(true);
+            }}
             className="w-full md:w-auto bg-orange-500 text-white px-10 py-4 rounded-2xl font-black shadow-xl shadow-orange-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
           >
             <Plus className="w-6 h-6" /> 
@@ -220,7 +240,12 @@ export default function SchoolAdminClassesPage() {
               <Layout className="w-16 h-16 text-slate-200 mx-auto mb-4" />
               <h4 className="text-xl font-black text-slate-400">{t('schoolAdmin.classesPage.noClasses')}</h4>
               <button
-                onClick={() => setIsModalOpen(true)}
+                onClick={() => {
+                  setIsEditMode(false);
+                  setEditingClassId(null);
+                  setFormData({ name: "", grade: "", subject: "", teacherName: "" });
+                  setIsModalOpen(true);
+                }}
                 className="mt-4 bg-orange-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-orange-600 transition-all"
               >
                 {t('schoolAdmin.classesPage.createFirstClass')}
@@ -252,10 +277,27 @@ export default function SchoolAdminClassesPage() {
                         </div>
                       )}
                     </div>
-                    <div className="flex justify-end pt-4 border-t border-slate-50 mt-4">
+                    <div className="flex justify-end gap-3 pt-4 border-t border-slate-50 mt-4">
+                      <button
+                        onClick={() => {
+                          setIsEditMode(true);
+                          setEditingClassId(cls.id);
+                          setFormData({
+                            name: cls.name,
+                            grade: cls.grade,
+                            subject: cls.subject || "",
+                            teacherName: cls.teacherName || ""
+                          });
+                          setIsModalOpen(true);
+                        }}
+                        className="text-slate-300 hover:text-blue-500 transition-colors cursor-pointer"
+                        title={language === 'ar' ? "تعديل" : "Edit"}
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
                       <button
                         onClick={() => handleDeleteClass(cls.id)}
-                        className="text-slate-300 hover:text-red-500 transition-colors"
+                        className="text-slate-300 hover:text-red-500 transition-colors cursor-pointer"
                         title={t('schoolAdmin.teachersPage.deleteTooltip')}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -274,7 +316,11 @@ export default function SchoolAdminClassesPage() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100] flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto custom-scrollbar">
           <div className="bg-white w-full max-w-lg rounded-[28px] sm:rounded-[40px] p-5 sm:p-10 shadow-2xl animate-in zoom-in-95 my-4 sm:my-8 max-h-[calc(100vh-2rem)] overflow-y-auto custom-scrollbar">
             <div className="flex justify-between items-center mb-8">
-              <h3 className="text-2xl font-black text-slate-800">{t('schoolAdmin.classesPage.modalTitle')}</h3>
+              <h3 className="text-2xl font-black text-slate-800">
+                {isEditMode 
+                  ? (language === 'ar' ? "تعديل الفصل الدراسي" : "Edit Classroom") 
+                  : t('schoolAdmin.classesPage.modalTitle')}
+              </h3>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-800"><X /></button>
             </div>
 
@@ -350,7 +396,9 @@ export default function SchoolAdminClassesPage() {
                 type="submit"
                 className="w-full bg-orange-500 text-white font-black py-5 rounded-2xl shadow-xl hover:bg-orange-600 hover:scale-105 transition-all"
               >
-                {t('schoolAdmin.classesPage.submitBtn')}
+                {isEditMode 
+                  ? (language === 'ar' ? "حفظ التغييرات" : "Save Changes") 
+                  : t('schoolAdmin.classesPage.submitBtn')}
               </button>
             </form>
           </div>
