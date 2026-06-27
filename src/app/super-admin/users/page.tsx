@@ -329,6 +329,32 @@ function UsersManagementContent() {
           </div>
         </div>
 
+        {/* Teacher Registration Link Banner */}
+        <div className="bg-blue-50 border border-blue-100 rounded-3xl p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h4 className="font-black text-blue-900 text-sm sm:text-base">
+              {language === 'ar' ? "رابط تسجيل المعلمين الذاتي" : "Self-registration link for Teachers"}
+            </h4>
+            <p className="text-blue-700 text-xs font-bold mt-1">
+              {language === 'ar' 
+                ? "شارك هذا الرابط مع المعلمين لتمكينهم من تسجيل حساباتهم بأنفسهم وتحديد مدارسهم وتخصصاتهم." 
+                : "Share this link with teachers to let them register themselves and choose their school."}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-xl border border-blue-200 w-full sm:w-auto justify-between sm:justify-start">
+            <span className="font-mono text-xs text-slate-700 select-all">https://klevro.tech/register/teacher</span>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText("https://klevro.tech/register/teacher");
+                showToast(language === 'ar' ? "تم نسخ الرابط بنجاح!" : "Link copied successfully!", "success");
+              }}
+              className="text-blue-600 hover:text-blue-800 text-xs font-black transition-colors cursor-pointer"
+            >
+              {language === 'ar' ? "نسخ" : "Copy"}
+            </button>
+          </div>
+        </div>
+
         {/* Tabs & Filters */}
         <div className="space-y-6">
           {/* Tabs */}
