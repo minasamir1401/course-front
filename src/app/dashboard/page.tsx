@@ -151,6 +151,27 @@ export default function StudentDashboard() {
                       <p className="text-white font-black text-lg md:text-xl">{stats?.grade || t('dashboard.learningPath')}</p>
                    </div>
                 </div>
+                
+                {stats?.classroomName && (
+                  <div className="glass px-6 md:px-8 py-4 md:py-5 rounded-2xl md:rounded-3xl flex items-center gap-4 md:gap-5 border-white/10">
+                     <div className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-white/10 flex items-center justify-center border border-white/20 shadow-inner">
+                        <GraduationCap className="w-5 h-5 md:w-7 md:h-7 text-indigo-200" />
+                     </div>
+                     <div className="text-start">
+                        <p className="text-indigo-100 text-[8px] md:text-[10px] font-black uppercase tracking-[1px] md:tracking-[2px]">
+                          {language === 'ar' ? 'الفصل الدراسي والمعلم' : 'Classroom & Teacher'}
+                        </p>
+                        <p className="text-white font-black text-base md:text-lg">
+                          {stats.classroomName}
+                          {stats.teacherName && (
+                            <span className="text-[10px] md:text-xs font-bold opacity-85 block mt-0.5 text-indigo-200">
+                              {language === 'ar' ? `المعلم: ${stats.teacherName}` : `Teacher: ${stats.teacherName}`}
+                            </span>
+                          )}
+                        </p>
+                     </div>
+                  </div>
+                )}
               </div>
             </div>
 

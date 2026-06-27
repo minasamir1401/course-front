@@ -15,6 +15,7 @@ export default function SchoolAdminStudentsPage() {
   const [schoolName, setSchoolName] = useState("مدرستك");
   const [schoolId, setSchoolId] = useState("");
   const [students, setStudents] = useState<any[]>([]);
+  const [classrooms, setClassrooms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -26,8 +27,24 @@ export default function SchoolAdminStudentsPage() {
     name: "",
     username: "",
     password: "",
-    grade: ""
+    grade: "",
+    classroomId: ""
   });
+
+  const fetchClassrooms = async (sId: string) => {
+    try {
+      const token = localStorage.getItem("school_admin_token");
+      const res = await fetch(`${API_URL}/classes?schoolId=${sId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setClassrooms(Array.isArray(data) ? data : []);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   useEffect(() => {
     try {
@@ -38,6 +55,7 @@ export default function SchoolAdminStudentsPage() {
         if (parsed.schoolId) {
           setSchoolId(parsed.schoolId);
           fetchStudents(parsed.schoolId);
+          fetchClassrooms(parsed.schoolId);
         }
       }
     } catch (e) {
@@ -88,7 +106,8 @@ export default function SchoolAdminStudentsPage() {
       const payload: any = {
         name: formData.name,
         username: formData.username,
-        grade: formData.grade
+        grade: formData.grade,
+        classroomId: formData.classroomId || null
       };
       if (formData.password) {
         payload.password = formData.password;
@@ -124,7 +143,8 @@ export default function SchoolAdminStudentsPage() {
       name: student.name,
       username: student.username,
       password: "", // leave empty to not change unless typed
-      grade: student.grade || ""
+      grade: student.grade || "",
+      classroomId: student.classroomId || ""
     });
     setEditModalOpen(true);
   };
@@ -238,7 +258,12 @@ export default function SchoolAdminStudentsPage() {
                            </div>
                         </td>
                         <td className="px-6 py-5">
-                           <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[10px] font-black">{student.grade || "غير محدد"}</span>
+                           <div className="flex flex-col gap-1.5">
+                              <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[10px] font-black w-fit">{student.grade || "غير محدد"}</span>
+                              {student.classroom && (
+                                 <span className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-lg text-[10px] font-black w-fit">{student.classroom.name.split(' | ')[0]}</span>
+                              )}
+                           </div>
                         </td>
                         <td className="px-6 py-5 text-slate-500 text-xs font-bold">
                            {student.createdAt ? new Date(student.createdAt).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US') : "—"}
@@ -316,6 +341,19 @@ export default function SchoolAdminStudentsPage() {
                   >
                     <option value="">{language === 'ar' ? 'اختر الصف' : 'Select Grade'}</option>
                     {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-500 mb-2">{language === 'ar' ? 'الفصل الدراسي' : 'Classroom'}</label>
+                  <select
+                    value={formData.classroomId}
+                    onChange={(e) => setFormData({ ...formData, classroomId: e.target.value })}
+                    className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-800 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all"
+                  >
+                    <option value="">{language === 'ar' ? 'بدون فصل (غير معين)' : 'No Classroom (Unassigned)'}</option>
+                    {classrooms.map(c => (
+                      <option key={c.id} value={c.id}>{c.name} ({c.grade})</option>
+                    ))}
                   </select>
                 </div>
                 <button
