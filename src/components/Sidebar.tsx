@@ -63,9 +63,11 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose, onToggle, rol
     {
       title: t('schoolAdmin.sidebar.staffManagement'),
       links: [
-        { href: "/school-admin/teachers", icon: UserCheck, label: t('schoolAdmin.sidebar.teachers') },
+        ...(role === "TEACHER" ? [] : [
+          { href: "/school-admin/teachers", icon: UserCheck, label: t('schoolAdmin.sidebar.teachers') },
+          { href: "/school-admin/classes", icon: Users, label: t('schoolAdmin.sidebar.classes') },
+        ]),
         { href: "/school-admin/students", icon: GraduationCap, label: t('schoolAdmin.sidebar.students') },
-        { href: "/school-admin/classes", icon: Users, label: t('schoolAdmin.sidebar.classes') },
       ]
     },
     {

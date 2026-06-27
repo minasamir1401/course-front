@@ -49,8 +49,10 @@ export default function SchoolAdminSidebar() {
   const navItems = [
     { href: "/school-admin", label: "لوحة التحكم", icon: LayoutDashboard },
     { href: "/school-admin/students", label: "قائمة الطلاب", icon: GraduationCap },
-    ...(role === "TEACHER" ? [] : [{ href: "/school-admin/teachers", label: "إدارة المدرسين", icon: Users }]),
-    { href: "/school-admin/classes", label: "الفصول الدراسية", icon: PanelsTopLeft },
+    ...(role === "TEACHER" ? [] : [
+      { href: "/school-admin/teachers", label: "إدارة المدرسين", icon: Users },
+      { href: "/school-admin/classes", label: "الفصول الدراسية", icon: PanelsTopLeft }
+    ]),
     { href: "/school-admin/skills-hub", label: "الأنشطة والمهارات", icon: PanelsTopLeft },
     { href: "/school-admin/skills-hub?action=add-cluster", label: "إضافة محور مهاراتي", icon: Plus },
     { href: "/school-admin/exams", label: "الامتحانات", icon: ClipboardList },
