@@ -32,8 +32,8 @@ export default function SchoolAdminLayout({
         const user = JSON.parse(userStr);
         const role = String(user.role || "").toUpperCase();
 
-        // Super Admin and School Admin are allowed here
-        if (role === "SCHOOL_ADMIN" || role === "SUPER_ADMIN") {
+        // Super Admin, School Admin, and Teacher are allowed here
+        if (role === "SCHOOL_ADMIN" || role === "SUPER_ADMIN" || role === "TEACHER") {
           setIsChecking(false);
           return;
         }
