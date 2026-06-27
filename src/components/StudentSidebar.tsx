@@ -25,7 +25,6 @@ const NAV_ITEMS = [
   { label: "الجدول الزمني", href: "/calendar", icon: Calendar },
   { label: "الرسائل", href: "/messages", icon: MessageSquare },
   { label: "الإنجازات", href: "/activities", icon: Award },
-  { label: "الإعدادات", href: "/settings", icon: Settings },
 ];
 
 export default function StudentSidebar() {

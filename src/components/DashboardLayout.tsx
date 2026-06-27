@@ -23,7 +23,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { label: t('nav.exams'), href: "/exams", icon: ClipboardList },
     { label: t('nav.reports'), href: "/reports", icon: BarChart3 },
     { label: t('nav.courses'), href: "/courses", icon: BookOpen },
-    { label: t('nav.settings'), href: "/settings", icon: Settings },
+    { label: language === 'ar' ? 'الأنشطة التعليمية' : 'Activities', href: "/activities", icon: Sparkles },
   ];
 
   const isSuperAdmin = pathname?.startsWith("/super-admin");

@@ -65,6 +65,7 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose, onToggle, rol
       links: [
         { href: "/school-admin/exams", icon: ClipboardList, label: t('schoolAdmin.sidebar.exams') },
         { href: "/school-admin/courses", icon: BookOpen, label: t('schoolAdmin.sidebar.courses') },
+        { href: "/school-admin/skills-hub", icon: BookOpen, label: language === 'ar' ? 'أنشطة ومهارات كليفروا' : 'Klevro Skills Hub' },
       ]
     },
     {
@@ -128,10 +129,6 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose, onToggle, rol
 
         {/* Bottom Actions */}
         <div className="p-6 mt-auto border-t border-slate-50 bg-slate-50/50 space-y-3" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-          <button className="flex items-center gap-3 w-full px-4 py-3.5 rounded-2xl bg-white border border-slate-100 text-slate-600 hover:text-slate-900 hover:shadow-md transition-all font-bold text-sm group">
-            <Settings className="w-4 h-4 text-slate-400 group-hover:rotate-90 transition-transform duration-500" />
-            <span>{t('schoolAdmin.sidebar.schoolSettings')}</span>
-          </button>
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 w-full px-4 py-3.5 rounded-2xl bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white transition-all font-black text-sm group"
