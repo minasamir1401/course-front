@@ -23,7 +23,7 @@ export default function SchoolAdminLoginPage() {
     if (token && userString) {
       try {
         const user = JSON.parse(userString);
-        if (user && user.role === "SCHOOL_ADMIN") {
+        if (user && (user.role === "SCHOOL_ADMIN" || user.role === "TEACHER")) {
           router.replace("/school-admin");
           return;
         }
