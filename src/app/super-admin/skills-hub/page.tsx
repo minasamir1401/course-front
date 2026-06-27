@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Sparkles, Plus, Trash2, Edit, ChevronDown, ChevronUp,
   ArrowRight, ArrowLeft, Save, CheckCircle2, AlertCircle, X,
@@ -14,6 +14,8 @@ import InteractiveQuestionEditor from "@/components/InteractiveQuestionEditor";
 
 export default function SuperAdminSkillsHubPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const action = searchParams.get("action");
   const { language } = useLanguage();
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -142,6 +144,12 @@ export default function SuperAdminSkillsHubPage() {
     fetchClusters(storedToken, subject, grade);
     fetchSchools(storedToken);
   }, [router, subject, grade]);
+
+  useEffect(() => {
+    if (action === "add-cluster" && token) {
+      setClusterModal({ open: true, data: { name: "", description: "", isCentral: true, schoolId: "" } });
+    }
+  }, [action, token]);
 
   // Fetch Clusters
   const fetchClusters = async (authToken: string, currentSubject: string, currentGrade: string) => {
@@ -808,6 +816,7 @@ export default function SuperAdminSkillsHubPage() {
               >
                 <option value="الرياضيات">{language === 'ar' ? '📐 الرياضيات' : '📐 Mathematics'}</option>
                 <option value="القراءة">{language === 'ar' ? '📚 القراءة' : '📚 Reading'}</option>
+                <option value="العلوم">{language === 'ar' ? '🔬 العلوم' : '🔬 Science'}</option>
               </select>
 
               {/* Grade Select */}

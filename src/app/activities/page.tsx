@@ -370,7 +370,7 @@ export default function ActivitiesPage() {
             
             {/* Subject Tabs */}
             <div className="flex gap-3 bg-black/15 p-2 rounded-2xl border border-white/10 shrink-0">
-              {["الرياضيات", "القراءة"].map((subj) => (
+              {["الرياضيات", "القراءة", "العلوم"].map((subj) => (
                 <button
                   key={subj}
                   onClick={() => setSubject(subj)}
@@ -382,7 +382,9 @@ export default function ActivitiesPage() {
                 >
                   {subj === "الرياضيات" 
                     ? (language === 'ar' ? "📐 الرياضيات" : "📐 Mathematics") 
-                    : (language === 'ar' ? "📚 القراءة" : "📚 Reading")}
+                    : subj === "القراءة"
+                    ? (language === 'ar' ? "📚 القراءة" : "📚 Reading")
+                    : (language === 'ar' ? "🔬 العلوم" : "🔬 Science")}
                 </button>
               ))}
             </div>

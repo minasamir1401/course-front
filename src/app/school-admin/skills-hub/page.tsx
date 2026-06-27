@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Sparkles, Plus, Trash2, Edit, ChevronDown, ChevronUp,
   ArrowRight, ArrowLeft, Save, CheckCircle2, AlertCircle, X,
@@ -14,6 +14,8 @@ import InteractiveQuestionEditor from "@/components/InteractiveQuestionEditor";
 
 export default function SchoolAdminSkillsHubPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const action = searchParams.get("action");
   const { language } = useLanguage();
   const [token, setToken] = useState<string | null>(null);
   const [schoolId, setSchoolId] = useState<string | null>(null);
@@ -99,6 +101,12 @@ export default function SchoolAdminSkillsHubPage() {
     }
     fetchClusters(storedToken, subject, grade);
   }, [router, subject, grade]);
+
+  useEffect(() => {
+    if (action === "add-cluster" && token) {
+      setClusterModal({ open: true, data: { name: "", description: "" } });
+    }
+  }, [action, token]);
 
   // Fetch Clusters
   const fetchClusters = async (authToken: string, currentSubject: string, currentGrade: string) => {
@@ -650,6 +658,7 @@ export default function SchoolAdminSkillsHubPage() {
               >
                 <option value="الرياضيات">📐 الرياضيات</option>
                 <option value="القراءة">📚 القراءة</option>
+                <option value="العلوم">🔬 العلوم</option>
               </select>
 
               {/* Grade Select */}

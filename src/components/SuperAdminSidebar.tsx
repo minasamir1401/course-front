@@ -46,6 +46,13 @@ export default function SuperAdminSidebar({
       const roleInHref = new URLSearchParams(href.split('?')[1]).get('role');
       return currentRole === roleInHref;
     }
+    if (href.includes('action=')) {
+      const actionInHref = new URLSearchParams(href.split('?')[1]).get('action');
+      return pathname.startsWith(href.split('?')[0]) && searchParams.get('action') === actionInHref;
+    }
+    if (href === '/super-admin/skills-hub') {
+      return pathname === '/super-admin/skills-hub' && !searchParams.get('action');
+    }
     if (href === '/super-admin/users') {
       return pathname === '/super-admin/users' && !currentRole;
     }
@@ -102,7 +109,13 @@ export default function SuperAdminSidebar({
             <p className="px-3 py-1 text-[10px] font-black text-slate-400 uppercase tracking-[2px]">{t('superAdmin.sidebar.centralCourses')}</p>
             <SidebarLink href="/super-admin/courses" icon={Layers} label={t('superAdmin.sidebar.allCourses')} active={isActive('/super-admin/courses')} />
             <SidebarLink href="/super-admin/courses/create" icon={Plus} label={t('superAdmin.sidebar.addCourse')} active={isActive('/super-admin/courses/create')} />
+          </div>
+
+          {/* SKILLS HUB */}
+          <div className="space-y-1">
+            <p className="px-3 py-1 text-[10px] font-black text-slate-400 uppercase tracking-[2px]">{language === 'ar' ? "مكتبة المهارات" : "Skills Library"}</p>
             <SidebarLink href="/super-admin/skills-hub" icon={BookOpen} label={language === 'ar' ? "أنشطة ومهارات كليفروا" : "Klevro Skills Hub"} active={isActive('/super-admin/skills-hub')} />
+            <SidebarLink href="/super-admin/skills-hub?action=add-cluster" icon={Plus} label={language === 'ar' ? "إضافة محور مهاراتي" : "Add Skill Cluster"} active={isActive('/super-admin/skills-hub?action=add-cluster')} />
           </div>
 
           {/* MONITORING */}

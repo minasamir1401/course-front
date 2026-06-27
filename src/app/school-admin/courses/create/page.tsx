@@ -18,6 +18,7 @@ import * as XLSX from 'xlsx';
 import RichTextEditor from "@/components/RichTextEditor";
 import { compressImage } from "@/lib/image-utils";
 import FileUpload from "@/components/FileUpload";
+import InteractiveQuestionEditor from "@/components/InteractiveQuestionEditor";
 
 
 export default function CreateCoursePage() {
@@ -827,6 +828,53 @@ export default function CreateCoursePage() {
     setCurrentLesson((prev: any) => ({ ...prev, [source]: newSlides }));
   };
 
+  const updateBlockTypeAndReset = (source: 'slides' | 'assignments' | 'questions', index: number, newType: string) => {
+    const isOldSimple = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(newType);
+    let defaultOptions: any = ["", "", "", ""];
+    let defaultCorrect = "";
+    
+    if (newType === 'TRUE_FALSE') {
+      defaultOptions = ["صحيح", "خطأ"];
+      defaultCorrect = "صحيح";
+    } else if (newType === 'MULTI_SELECT') {
+      defaultOptions = ["", "", "", ""];
+      defaultCorrect = "[]";
+    } else if (!isOldSimple) {
+      if (newType === 'MATCHING') {
+        defaultOptions = JSON.stringify({ left: [], right: [] });
+        defaultCorrect = JSON.stringify({});
+      } else if (newType === 'DRAG_DROP_FILL') {
+        defaultOptions = JSON.stringify({ sentence: "", choices: [] });
+        defaultCorrect = JSON.stringify([]);
+      } else if (newType === 'GROUP_SORTING') {
+        defaultOptions = JSON.stringify({ groups: [], items: [] });
+        defaultCorrect = JSON.stringify({});
+      } else if (newType === 'CLOCK') {
+        defaultOptions = JSON.stringify({ minuteStep: 5 });
+        defaultCorrect = "12:00";
+      } else if (newType === 'MIND_MAP') {
+        defaultOptions = JSON.stringify({ nodes: [] });
+        defaultCorrect = JSON.stringify({});
+      } else if (newType === 'VIDEO_CHECKPOINT') {
+        defaultOptions = JSON.stringify({ videoUrl: "", checkpoints: [] });
+        defaultCorrect = JSON.stringify({});
+      } else {
+        defaultOptions = JSON.stringify({ choices: [] });
+        defaultCorrect = "";
+      }
+    }
+    
+    const newSlides = [...(currentLesson[source] || [])];
+    newSlides[index] = { 
+      ...newSlides[index], 
+      label: newType,
+      options: defaultOptions,
+      correctAnswer: defaultCorrect,
+      correctAnswers: newType === 'MULTI_SELECT' ? [] : undefined
+    };
+    setCurrentLesson((prev: any) => ({ ...prev, [source]: newSlides }));
+  };
+
   const removeBlock = (source: 'slides' | 'assignments' | 'questions' = 'slides', index: number) => {
     if (!confirm(language === 'ar' ? "هل أنت متأكد من حذف هذه الشريحة/السؤال؟" : "Are you sure you want to delete this slide/question?")) return;
     const newSlides = [...(currentLesson[source] || [])];
@@ -975,7 +1023,7 @@ export default function CreateCoursePage() {
                       <div className="flex gap-2">
                         <select
                           value={block.label}
-                          onChange={(e) => updateBlock(source, sIdx, 'label', e.target.value)}
+                          onChange={(e) => updateBlockTypeAndReset(source, sIdx, e.target.value)}
                           className="bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-600 outline-none focus:border-indigo-600 px-2 py-1 uppercase"
                         >
                           {block.type === 'TEXT' ? (
@@ -991,6 +1039,27 @@ export default function CreateCoursePage() {
                               <option value="MCQ">{language === 'ar' ? 'اختيار من متعدد (MCQ)' : 'Multiple Choice (MCQ)'}</option>
                               <option value="TRUE_FALSE">{language === 'ar' ? 'صح / خطأ (T/F)' : 'True / False (T/F)'}</option>
                               <option value="MULTI_SELECT">{language === 'ar' ? 'اختيار متعدد (تحديد)' : 'Multi-select (Checkboxes)'}</option>
+                              <option value="MATCHING">{language === 'ar' ? 'سؤال التوصيل (Matching)' : 'Matching Elements'}</option>
+                              <option value="DRAG_DROP_FILL">{language === 'ar' ? 'سحب الفراغات (Drag & Drop Fill)' : 'Drag & Drop Fill'}</option>
+                              <option value="GROUP_SORTING">{language === 'ar' ? 'تصنيف المجموعات (Group Sorting)' : 'Group Sorting'}</option>
+                              <option value="NUMBER_LINE">{language === 'ar' ? 'خط الأعداد (Number Line)' : 'Number Line'}</option>
+                              <option value="CLOCK">{language === 'ar' ? 'عقارب الساعة (Clock)' : 'Interactive Clock'}</option>
+                              <option value="MIND_MAP">{language === 'ar' ? 'خريطة مفاهيم (Mind Map)' : 'Concept Mind Map'}</option>
+                              <option value="VIDEO_CHECKPOINT">{language === 'ar' ? 'فيديو تفاعلي (Video Checkpoint)' : 'Interactive Video'}</option>
+                              <option value="SWIPE_SORT">{language === 'ar' ? 'سحب سريع لليمين/اليسار (Swipe Sort)' : 'Swipe Sort'}</option>
+                              <option value="MAZE">{language === 'ar' ? 'المتاهة التعليمية (Maze)' : 'Educational Maze'}</option>
+                              <option value="WORD_SEARCH">{language === 'ar' ? 'البحث عن الكلمات (Word Search)' : 'Word Search'}</option>
+                              <option value="GEOGEBRA">{language === 'ar' ? 'جيوجيبرا (GeoGebra)' : 'GeoGebra Widget'}</option>
+                              <option value="FLASH_CARD">{language === 'ar' ? 'البطاقات التعليمية (Flash Cards)' : 'Flash Cards'}</option>
+                              <option value="MEMORY_GAME">{language === 'ar' ? 'لعبة الذاكرة (Memory Game)' : 'Memory Game'}</option>
+                              <option value="WORD_SCRAMBLE">{language === 'ar' ? 'ترتيب الحروف (Word Scramble)' : 'Word Scramble'}</option>
+                              <option value="SENTENCE_REORDER">{language === 'ar' ? 'ترتيب الجملة (Sentence Reorder)' : 'Sentence Reorder'}</option>
+                              <option value="MATH_EQUATION">{language === 'ar' ? 'معادلة حسابية (Math Equation)' : 'Math Equation'}</option>
+                              <option value="SEQUENCE_ORDER">{language === 'ar' ? 'ترتيب التسلسل (Sequence Order)' : 'Sequence Order'}</option>
+                              <option value="CROSSWORD">{language === 'ar' ? 'الكلمات المتقاطعة (Crossword)' : 'Crossword'}</option>
+                              <option value="COUNT_OBJECTS">{language === 'ar' ? 'عد العناصر (Count Objects)' : 'Count Objects'}</option>
+                              <option value="IMAGE_LABEL">{language === 'ar' ? 'تسمية الصورة (Image Labeling)' : 'Image Labeling'}</option>
+                              <option value="COLOR_MATCH">{language === 'ar' ? 'تطابق الألوان (Color Match)' : 'Color Match'}</option>
                             </>
                           )}
                         </select>
@@ -1127,7 +1196,6 @@ export default function CreateCoursePage() {
                           ))}
                         </select>
                       </div>
-
                       <div className="flex flex-col gap-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المهارة' : 'Skill'}</label>
                         <select
@@ -1184,70 +1252,92 @@ export default function CreateCoursePage() {
 
                   {block.type === 'QUESTION' && (
                     <div className="bg-slate-100 p-6 rounded-2xl border border-slate-200 space-y-4">
-                      <label className="text-xs font-black text-slate-500 uppercase tracking-widest block">{language === 'ar' ? "خيارات الإجابة والإجابة الصحيحة" : "Answer Options & Correct Answer"}</label>
-                      {block.label === 'TRUE_FALSE' ? (
-                        <div className="grid grid-cols-2 gap-4">
-                          {['صحيح', 'خطأ'].map((opt) => (
-                            <div key={opt} className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${block.correctAnswer === opt ? 'bg-emerald-50 border-emerald-500' : 'bg-white border-transparent'}`} onClick={() => updateBlock(source, sIdx, 'correctAnswer', opt)}>
-                              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${block.correctAnswer === opt ? 'bg-emerald-500 border-emerald-200' : 'bg-slate-200 border-transparent'}`}>
-                                {block.correctAnswer === opt && <CheckCircle2 className="w-4 h-4 text-white" />}
-                              </div>
-                              <span className="font-bold text-slate-700">{opt === 'صحيح' ? (language === 'ar' ? 'صحيح' : 'True') : (language === 'ar' ? 'خطأ' : 'False')}</span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {(block.options || []).map((opt: string, oIdx: number) => {
-                            const isSelected = block.label === 'MULTI_SELECT'
-                              ? (block.correctAnswers || []).includes(opt)
-                              : block.correctAnswer === opt;
-
-                            return (
-                              <div key={oIdx} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${isSelected && opt ? 'bg-emerald-50 border-emerald-500' : 'bg-white border-transparent'}`}>
-                                <div
-                                  onClick={() => {
-                                    if (block.label === 'MULTI_SELECT') {
-                                      const answers = block.correctAnswers || [];
-                                      if (answers.includes(opt) && opt) updateBlock(source, sIdx, 'correctAnswers', answers.filter((a:string) => a !== opt));
-                                      else if (opt) updateBlock(source, sIdx, 'correctAnswers', [...answers, opt]);
-                                    } else {
-                                      updateBlock(source, sIdx, 'correctAnswer', opt);
-                                    }
-                                  }}
-                                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 cursor-pointer ${isSelected && opt ? 'bg-emerald-500 border-emerald-200' : 'bg-slate-200 border-transparent'}`}
-                                >
-                                  {isSelected && opt && <CheckCircle2 className="w-4 h-4 text-white" />}
+                      {['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(block.label || 'MCQ') ? (
+                        <>
+                          <label className="text-xs font-black text-slate-500 uppercase tracking-widest block">{language === 'ar' ? "خيارات الإجابة والإجابة الصحيحة" : "Answer Options & Correct Answer"}</label>
+                          {block.label === 'TRUE_FALSE' ? (
+                            <div className="grid grid-cols-2 gap-4">
+                              {['صحيح', 'خطأ'].map((opt) => (
+                                <div key={opt} className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${block.correctAnswer === opt ? 'bg-emerald-50 border-emerald-500' : 'bg-white border-transparent'}`} onClick={() => updateBlock(source, sIdx, 'correctAnswer', opt)}>
+                                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${block.correctAnswer === opt ? 'bg-emerald-500 border-emerald-200' : 'bg-slate-200 border-transparent'}`}>
+                                    {block.correctAnswer === opt && <CheckCircle2 className="w-4 h-4 text-white" />}
+                                  </div>
+                                  <span className="font-bold text-slate-700">{opt === 'صحيح' ? (language === 'ar' ? 'صحيح' : 'True') : (language === 'ar' ? 'خطأ' : 'False')}</span>
                                 </div>
-                                <input
-                                  type="text"
-                                  value={opt}
-                                  onChange={(e) => {
-                                    const newOpts = [...(block.options || [])];
-                                    newOpts[oIdx] = e.target.value;
-                                    updateBlock(source, sIdx, 'options', newOpts);
-                                  }}
-                                  placeholder={language === 'ar' ? `الخيار ${oIdx + 1}` : `Option ${oIdx + 1}`}
-                                  className="bg-transparent outline-none font-bold text-slate-700 flex-1"
-                                />
-                                {block.options.length > 2 && (
-                                  <button type="button" onClick={() => {
-                                    const newOpts = [...block.options];
-                                    newOpts.splice(oIdx, 1);
-                                    updateBlock(source, sIdx, 'options', newOpts);
-                                  }} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
-                                )}
-                              </div>
-                            );
-                          })}
-                          <button
-                            type="button"
-                            onClick={() => updateBlock(source, sIdx, 'options', [...(block.options||[]), ""])}
-                            className="flex justify-center items-center p-3 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-200 hover:border-slate-400 transition-all cursor-pointer"
-                          >
-                            <Plus className="w-5 h-5 ml-1" /> {language === 'ar' ? 'إضافة خيار' : 'Add Option'}
-                          </button>
-                        </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {(block.options || []).map((opt: string, oIdx: number) => {
+                                const isSelected = block.label === 'MULTI_SELECT'
+                                  ? (block.correctAnswers || []).includes(opt)
+                                  : block.correctAnswer === opt;
+        
+                                return (
+                                  <div key={oIdx} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${isSelected && opt ? 'bg-emerald-50 border-emerald-500' : 'bg-white border-transparent'}`}>
+                                    <div
+                                      onClick={() => {
+                                        if (block.label === 'MULTI_SELECT') {
+                                          const answers = block.correctAnswers || [];
+                                          if (answers.includes(opt) && opt) updateBlock(source, sIdx, 'correctAnswers', answers.filter((a:string) => a !== opt));
+                                          else if (opt) updateBlock(source, sIdx, 'correctAnswers', [...answers, opt]);
+                                        } else {
+                                          updateBlock(source, sIdx, 'correctAnswer', opt);
+                                        }
+                                      }}
+                                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 cursor-pointer ${isSelected && opt ? 'bg-emerald-500 border-emerald-200' : 'bg-slate-200 border-transparent'}`}
+                                    >
+                                      {isSelected && opt && <CheckCircle2 className="w-4 h-4 text-white" />}
+                                    </div>
+                                    <input
+                                      type="text"
+                                      value={opt}
+                                      onChange={(e) => {
+                                        const newOpts = [...(block.options || [])];
+                                        newOpts[oIdx] = e.target.value;
+                                        updateBlock(source, sIdx, 'options', newOpts);
+                                      }}
+                                      placeholder={language === 'ar' ? `الخيار ${oIdx + 1}` : `Option ${oIdx + 1}`}
+                                      className="bg-transparent outline-none font-bold text-slate-700 flex-1"
+                                    />
+                                    {block.options.length > 2 && (
+                                      <button type="button" onClick={() => {
+                                        const newOpts = [...block.options];
+                                        newOpts.splice(oIdx, 1);
+                                        updateBlock(source, sIdx, 'options', newOpts);
+                                      }} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                              <button
+                                type="button"
+                                onClick={() => updateBlock(source, sIdx, 'options', [...(block.options||[]), ""])}
+                                className="flex justify-center items-center p-3 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-200 hover:border-slate-400 transition-all cursor-pointer"
+                              >
+                                <Plus className="w-5 h-5 ml-1" /> {language === 'ar' ? 'إضافة خيار' : 'Add Option'}
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <InteractiveQuestionEditor
+                          question={{
+                            ...block,
+                            type: block.label || 'MCQ'
+                          }}
+                          onChange={(updatedQ) => {
+                            updateBlock(source, sIdx, 'options', updatedQ.options);
+                            updateBlock(source, sIdx, 'correctAnswer', updatedQ.correctAnswer);
+                            if (updatedQ.type === 'MULTI_SELECT') {
+                              try {
+                                const parsed = JSON.parse(updatedQ.correctAnswer);
+                                updateBlock(source, sIdx, 'correctAnswers', parsed);
+                              } catch (e) {}
+                            }
+                          }}
+                          language={language}
+                        />
                       )}
                     </div>
                   )}

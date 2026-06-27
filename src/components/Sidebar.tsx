@@ -2,11 +2,11 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   LayoutDashboard, Users, GraduationCap, ClipboardList,
   Settings, LogOut, Menu, X, BookOpen, UserCheck,
-  BarChart3, ShieldCheck
+  BarChart3, ShieldCheck, Plus
 } from "lucide-react";
 import { logout } from "@/lib/auth";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -21,6 +21,7 @@ interface SidebarProps {
 export default function Sidebar({ isOpen: externalIsOpen, onClose, onToggle, role }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t, language } = useLanguage();
   const [internalIsOpen, setInternalIsOpen] = useState(false);
 
@@ -41,6 +42,13 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose, onToggle, rol
   const handleLogout = () => logout(router, pathname);
 
   const isActive = (href: string) => {
+    if (href.includes('action=')) {
+      const actionInHref = new URLSearchParams(href.split('?')[1]).get('action');
+      return pathname.startsWith(href.split('?')[0]) && searchParams.get('action') === actionInHref;
+    }
+    if (href === "/school-admin/skills-hub") {
+      return pathname === "/school-admin/skills-hub" && !searchParams.get('action');
+    }
     if (href === '/school-admin') return pathname === '/school-admin';
     return pathname.startsWith(href);
   };
@@ -66,6 +74,7 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose, onToggle, rol
         { href: "/school-admin/exams", icon: ClipboardList, label: t('schoolAdmin.sidebar.exams') },
         { href: "/school-admin/courses", icon: BookOpen, label: t('schoolAdmin.sidebar.courses') },
         { href: "/school-admin/skills-hub", icon: BookOpen, label: language === 'ar' ? 'أنشطة ومهارات كليفروا' : 'Klevro Skills Hub' },
+        { href: "/school-admin/skills-hub?action=add-cluster", icon: Plus, label: language === 'ar' ? 'إضافة محور مهاراتي' : 'Add Skill Cluster' },
       ]
     },
     {

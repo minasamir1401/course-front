@@ -2,15 +2,16 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   LayoutDashboard, GraduationCap, Users, PanelsTopLeft,
-  ClipboardList, BarChart2, LogOut, School, X, Menu
+  ClipboardList, BarChart2, LogOut, School, X, Menu, Plus
 } from "lucide-react";
 
 export default function SchoolAdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isOpen, setIsOpen] = useState(false);
 
   const handleLogout = () => {
@@ -20,6 +21,13 @@ export default function SchoolAdminSidebar() {
   };
 
   const isActive = (href: string) => {
+    if (href.includes('action=')) {
+      const actionInHref = new URLSearchParams(href.split('?')[1]).get('action');
+      return pathname.startsWith(href.split('?')[0]) && searchParams.get('action') === actionInHref;
+    }
+    if (href === "/school-admin/skills-hub") {
+      return pathname === "/school-admin/skills-hub" && !searchParams.get('action');
+    }
     if (href === "/school-admin") return pathname === "/school-admin";
     return pathname.startsWith(href);
   };
@@ -30,6 +38,7 @@ export default function SchoolAdminSidebar() {
     { href: "/school-admin/teachers", label: "إدارة المدرسين", icon: Users },
     { href: "/school-admin/classes", label: "الفصول الدراسية", icon: PanelsTopLeft },
     { href: "/school-admin/skills-hub", label: "الأنشطة والمهارات", icon: PanelsTopLeft },
+    { href: "/school-admin/skills-hub?action=add-cluster", label: "إضافة محور مهاراتي", icon: Plus },
     { href: "/school-admin/exams", label: "الامتحانات", icon: ClipboardList },
     { href: "/school-admin/reports", label: "التقارير", icon: BarChart2 },
   ];

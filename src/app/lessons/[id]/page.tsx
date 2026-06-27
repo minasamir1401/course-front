@@ -18,6 +18,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 
 const VideoPlayer = dynamic(() => import('@/components/VideoPlayer'), { ssr: false });
 const Confetti = dynamic(() => import('react-confetti'), { ssr: false });
+const InteractiveQuestionRenderer = dynamic(() => import('@/components/InteractiveQuestionRenderer'), { ssr: false });
 import HtmlRenderer from '@/components/HtmlRenderer';
 
 const QuestionFeedback = ({ isCorrect, correctAnswer, language }: any) => {
@@ -162,6 +163,35 @@ const normalizeAnswerGlobal = (value: any) => {
   if (norm === 'true') return 'صحيح';
   if (norm === 'false') return 'خطأ';
   return norm;
+};
+
+const checkAdvancedCorrect = (q: any, ans: any) => {
+  if (!ans) return false;
+  const cleanStr = (s: any) => String(s ?? '').trim().replace(/"/g, '');
+  try {
+    const isJsonString = (str: any) => {
+      if (typeof str !== 'string') return false;
+      const trimmed = str.trim();
+      return (trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'));
+    };
+    
+    const corrAns = q.correctAnswer;
+    const hasJson = isJsonString(corrAns) || isJsonString(ans) || typeof ans === 'object' || typeof corrAns === 'object';
+    if (hasJson) {
+      const correct = typeof corrAns === 'string' && (corrAns.startsWith('{') || corrAns.startsWith('[')) ? JSON.parse(corrAns) : corrAns;
+      const student = typeof ans === 'string' && (ans.startsWith('{') || ans.startsWith('[')) ? JSON.parse(ans) : ans;
+      if (Array.isArray(correct) && Array.isArray(student)) {
+        return correct.length === student.length && correct.every((val: any, i: number) => cleanStr(val) === cleanStr(student[i]));
+      }
+      if (typeof correct === 'object' && typeof student === 'object' && correct !== null && student !== null) {
+        const correctKeys = Object.keys(correct);
+        const studentKeys = Object.keys(student);
+        if (correctKeys.length !== studentKeys.length) return false;
+        return correctKeys.every((k: string) => cleanStr(correct[k]) === cleanStr(student[k]));
+      }
+    }
+  } catch (e) {}
+  return cleanStr(ans) === cleanStr(q.correctAnswer);
 };
 
 const isQuestionLike = (item: any) =>
@@ -380,13 +410,18 @@ export default function LessonPlayerPage() {
         if (slideSubmitted[idx]) {
           attemptedQ++;
           attemptedScoreCap += (Number(slide.points) || 1);
-          const isMulti = slide.label === 'MULTI_SELECT';
+          const isMulti = slide.label === 'MULTI_SELECT' || slide.type === 'MULTI_SELECT';
+          const isStandard = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(slide.label || slide.type || 'MCQ');
           const studentAnswers = slideAnswers[idx] || (isMulti ? [] : '');
-          const isCorrect = isMulti
-            ? studentAnswers.length === (slide.correctAnswers || []).length &&
-              studentAnswers.every((a: string) => (slide.correctAnswers || []).map(normalizeAnswer).includes(normalizeAnswer(a)))
-            : (!slide.correctAnswer || normalizeAnswer(slideAnswers[idx]) === normalizeAnswer(slide.correctAnswer));
-          if (isCorrect && studentAnswers.length > 0) {
+          
+          const isCorrect = isStandard
+            ? (isMulti
+              ? studentAnswers.length === (slide.correctAnswers || []).length &&
+                studentAnswers.every((a: string) => (slide.correctAnswers || []).map(normalizeAnswer).includes(normalizeAnswer(a)))
+              : (!slide.correctAnswer || normalizeAnswer(slideAnswers[idx]) === normalizeAnswer(slide.correctAnswer)))
+            : checkAdvancedCorrect(slide, slideAnswers[idx]);
+
+          if (isCorrect && (isMulti ? studentAnswers.length > 0 : !!slideAnswers[idx])) {
             totalScore += (Number(slide.points) || 1);
             correctQ++;
           }
@@ -401,13 +436,18 @@ export default function LessonPlayerPage() {
         if (assignmentSubmitted[idx]) {
           attemptedQ++;
           attemptedScoreCap += (Number(as.points) || 1);
-          const isMulti = as.type === 'MULTI_SELECT';
+          const isMulti = as.type === 'MULTI_SELECT' || as.label === 'MULTI_SELECT';
+          const isStandard = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(as.label || as.type || 'MCQ');
           const studentAnswers = assignmentAnswers[idx] || (isMulti ? [] : '');
-          const isCorrect = isMulti
-            ? studentAnswers.length === (as.correctAnswers || []).length &&
-              studentAnswers.every((a: string) => (as.correctAnswers || []).map(normalizeAnswer).includes(normalizeAnswer(a)))
-            : (!as.correctAnswer || normalizeAnswer(assignmentAnswers[idx]) === normalizeAnswer(as.correctAnswer));
-          if (isCorrect && studentAnswers.length > 0) {
+          
+          const isCorrect = isStandard
+            ? (isMulti
+              ? studentAnswers.length === (as.correctAnswers || []).length &&
+                studentAnswers.every((a: string) => (as.correctAnswers || []).map(normalizeAnswer).includes(normalizeAnswer(a)))
+              : (!as.correctAnswer || normalizeAnswer(assignmentAnswers[idx]) === normalizeAnswer(as.correctAnswer)))
+            : checkAdvancedCorrect(as, assignmentAnswers[idx]);
+
+          if (isCorrect && (isMulti ? studentAnswers.length > 0 : !!assignmentAnswers[idx])) {
             totalScore += (Number(as.points) || 1);
             correctQ++;
           }
@@ -422,13 +462,18 @@ export default function LessonPlayerPage() {
         if (quizSubmitted[idx]) {
           attemptedQ++;
           attemptedScoreCap += (Number(q.points) || 1);
-          const isMulti = q.type === 'MULTI_SELECT';
+          const isMulti = q.type === 'MULTI_SELECT' || q.label === 'MULTI_SELECT';
+          const isStandard = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(q.label || q.type || 'MCQ');
           const studentAnswers = answers[idx] || (isMulti ? [] : '');
-          const isCorrect = isMulti
-            ? studentAnswers.length === (q.correctAnswers || []).length &&
-              studentAnswers.every((a: string) => (q.correctAnswers || []).map(normalizeAnswer).includes(normalizeAnswer(a)))
-            : (!q.correctAnswer || normalizeAnswer(answers[idx]) === normalizeAnswer(q.correctAnswer));
-          if (isCorrect && studentAnswers.length > 0) {
+          
+          const isCorrect = isStandard
+            ? (isMulti
+              ? studentAnswers.length === (q.correctAnswers || []).length &&
+                studentAnswers.every((a: string) => (q.correctAnswers || []).map(normalizeAnswer).includes(normalizeAnswer(a)))
+              : (!q.correctAnswer || normalizeAnswer(answers[idx]) === normalizeAnswer(q.correctAnswer)))
+            : checkAdvancedCorrect(q, answers[idx]);
+
+          if (isCorrect && (isMulti ? studentAnswers.length > 0 : !!answers[idx])) {
             totalScore += (Number(q.points) || 1);
             correctQ++;
           }
@@ -589,6 +634,9 @@ export default function LessonPlayerPage() {
   };
 
   const handleNextQuestion = () => {
+    if (isQuestionLike(lesson.questions[currentQuestionIndex]) && !quizSubmitted[currentQuestionIndex]) {
+      setQuizSubmitted({ ...quizSubmitted, [currentQuestionIndex]: true });
+    }
     if (currentQuestionIndex < lesson.questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
@@ -744,9 +792,9 @@ export default function LessonPlayerPage() {
                 <button
                   onClick={() => goToLesson(prevLesson)}
                   title={prevLesson.title}
-                  className="flex items-center gap-3 px-6 py-3 bg-white border-2 border-slate-100 text-slate-700 rounded-2xl font-black text-sm hover:border-indigo-400 hover:text-indigo-600 transition-all shadow-sm group cursor-pointer"
+                  className="flex items-center gap-3 px-6 py-3 bg-slate-50/80 border-2 border-slate-200/60 text-slate-900 rounded-2xl font-black text-sm hover:bg-slate-100 transition-all shadow-sm group cursor-pointer"
                 >
-                  <ChevronRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform text-slate-400 group-hover:text-indigo-600" />
+                  <ChevronRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform text-slate-400 group-hover:text-indigo-650" />
                   <div className="flex flex-col text-start">
                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                       {language === 'ar' ? 'الدرس السابق' : 'Previous Lesson'}
@@ -759,15 +807,15 @@ export default function LessonPlayerPage() {
                 <button
                   onClick={() => goToLesson(nextLesson)}
                   title={nextLesson.title}
-                  className="flex items-center gap-3 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-black text-sm hover:bg-indigo-700 transition-all shadow-lg hover:shadow-indigo-200 group cursor-pointer"
+                  className="flex items-center gap-3 px-6 py-3 bg-sky-400 text-slate-950 rounded-2xl font-black text-sm hover:bg-sky-500 transition-all shadow-lg hover:shadow-sky-200/40 group cursor-pointer border border-sky-500/20"
                 >
                   <div className="flex flex-col text-start">
-                    <span className="text-[10px] text-indigo-200 font-bold uppercase tracking-wider">
+                    <span className="text-[10px] text-slate-900 font-bold uppercase tracking-wider">
                       {language === 'ar' ? 'الدرس التالي' : 'Next Lesson'}
                     </span>
                     <span className="truncate max-w-[140px] text-xs sm:text-sm font-black">{nextLesson.title}</span>
                   </div>
-                  <ChevronLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform text-indigo-200 group-hover:text-white" />
+                  <ChevronLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform text-slate-900" />
                 </button>
               )}
             </div>
@@ -804,7 +852,7 @@ export default function LessonPlayerPage() {
                 <div className="mt-12 text-center space-y-6">
                   <button
                     onClick={() => setCurrentStage('slides')}
-                    className="premium-gradient-primary text-white px-12 py-5 rounded-[25px] font-black text-lg hover:scale-105 transition-all shadow-2xl shadow-indigo-200 flex items-center gap-4 mx-auto"
+                    className="bg-sky-400 text-slate-950 hover:bg-sky-500 px-12 py-5 rounded-[25px] font-black text-lg hover:scale-105 transition-all shadow-2xl shadow-sky-200/40 flex items-center gap-4 mx-auto border border-sky-500/20"
                   >
                     {t('lesson.showExplanation')}
                     <ArrowLeft className={`w-5 h-5 ${language === 'en' ? 'rotate-180' : ''}`} />
@@ -855,56 +903,85 @@ export default function LessonPlayerPage() {
 
 
                   {/* Question Options for Slide */}
-                  {isQuestionLike(lesson.slides[currentSlideIndex]) && getQuestionOptions(lesson.slides[currentSlideIndex], language).length > 0 && (
-                    <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-4xl">
-                      {getQuestionOptions(lesson.slides[currentSlideIndex], language).map((opt: string, oIdx: number) => {
-                        const isMulti = lesson.slides[currentSlideIndex].label === 'MULTI_SELECT';
-                        const isSelected = isMulti ? (slideAnswers[currentSlideIndex] || []).includes(opt) : slideAnswers[currentSlideIndex] === opt;
-                        const isSubmitted = slideSubmitted[currentSlideIndex];
-                        const isCorrect = isSubmitted && (isMulti ? (lesson.slides[currentSlideIndex].correctAnswers || []).includes(opt) : ((!lesson.slides[currentSlideIndex].correctAnswer && isSelected) || normalizeAnswerGlobal(opt) === normalizeAnswerGlobal(lesson.slides[currentSlideIndex].correctAnswer)));
-                        const isWrong = isSubmitted && isSelected && !isCorrect;
+                  {isQuestionLike(lesson.slides[currentSlideIndex]) && (
+                    <>
+                      {['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(lesson.slides[currentSlideIndex].label || lesson.slides[currentSlideIndex].type || 'MCQ') ? (
+                        getQuestionOptions(lesson.slides[currentSlideIndex], language).length > 0 && (
+                          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-4xl">
+                            {getQuestionOptions(lesson.slides[currentSlideIndex], language).map((opt: string, oIdx: number) => {
+                              const isMulti = lesson.slides[currentSlideIndex].label === 'MULTI_SELECT';
+                              const isSelected = isMulti ? (slideAnswers[currentSlideIndex] || []).includes(opt) : slideAnswers[currentSlideIndex] === opt;
+                              const isSubmitted = slideSubmitted[currentSlideIndex];
+                              const isCorrect = isSubmitted && (isMulti ? (lesson.slides[currentSlideIndex].correctAnswers || []).includes(opt) : ((!lesson.slides[currentSlideIndex].correctAnswer && isSelected) || normalizeAnswerGlobal(opt) === normalizeAnswerGlobal(lesson.slides[currentSlideIndex].correctAnswer)));
+                              const isWrong = isSubmitted && isSelected && !isCorrect;
 
-                        return (
-                          <button
-                            key={oIdx}
-                            onClick={() => {
-                              if (!isSubmitted) {
-                                if (isMulti) {
-                                  const currentArr = slideAnswers[currentSlideIndex] || [];
-                                  const newArr = currentArr.includes(opt) ? currentArr.filter((a: string) => a !== opt) : [...currentArr, opt];
-                                  setSlideAnswers({ ...slideAnswers, [currentSlideIndex]: newArr });
-                                } else {
-                                  setSlideAnswers({ ...slideAnswers, [currentSlideIndex]: opt });
-                                }
+                              return (
+                                <button
+                                  key={oIdx}
+                                  onClick={() => {
+                                    if (!isSubmitted) {
+                                      if (isMulti) {
+                                        const currentArr = slideAnswers[currentSlideIndex] || [];
+                                        const newArr = currentArr.includes(opt) ? currentArr.filter((a: string) => a !== opt) : [...currentArr, opt];
+                                        setSlideAnswers({ ...slideAnswers, [currentSlideIndex]: newArr });
+                                      } else {
+                                        setSlideAnswers({ ...slideAnswers, [currentSlideIndex]: opt });
+                                      }
+                                    }
+                                  }}
+                                  className={`relative p-6 rounded-3xl border-4 text-right transition-all group overflow-hidden ${isSelected ? (isCorrect ? 'border-emerald-500 bg-emerald-50' : isWrong ? 'border-red-500 bg-red-50' : 'border-indigo-500 bg-indigo-50') : 'border-slate-100 bg-white hover:border-indigo-200'} ${isSubmitted && !isSelected && !isCorrect ? 'opacity-50' : ''}`}
+                                  disabled={isSubmitted}
+                                >
+                                  <span className={`text-xl font-bold ${isSelected ? (isCorrect ? 'text-emerald-700' : isWrong ? 'text-red-700' : 'text-indigo-700') : 'text-slate-700'}`}>
+                                    <HtmlRenderer html={opt} tag="span" />
+                                  </span>
+                                  {isSelected && !isSubmitted && <CheckCircle2 className="absolute top-1/2 left-6 -translate-y-1/2 w-8 h-8 text-indigo-500" />}
+                                  {isCorrect && <CheckCircle2 className="absolute top-1/2 left-6 -translate-y-1/2 w-8 h-8 text-emerald-500" />}
+                                  {isWrong && <X className="absolute top-1/2 left-6 -translate-y-1/2 w-8 h-8 text-red-500" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )
+                      ) : (
+                        <div className="mt-8 w-full max-w-4xl text-start bg-slate-50 p-6 rounded-3xl border border-slate-200">
+                          <InteractiveQuestionRenderer
+                            question={{
+                              ...lesson.slides[currentSlideIndex],
+                              type: lesson.slides[currentSlideIndex].label || lesson.slides[currentSlideIndex].type || 'MCQ'
+                            }}
+                            value={slideAnswers[currentSlideIndex] || ''}
+                            onChange={(val: any) => {
+                              if (!slideSubmitted[currentSlideIndex]) {
+                                setSlideAnswers({ ...slideAnswers, [currentSlideIndex]: typeof val === 'string' ? val : JSON.stringify(val) });
                               }
                             }}
-                            className={`relative p-6 rounded-3xl border-4 text-right transition-all group overflow-hidden ${isSelected ? (isCorrect ? 'border-emerald-500 bg-emerald-50' : isWrong ? 'border-red-500 bg-red-50' : 'border-indigo-500 bg-indigo-50') : 'border-slate-100 bg-white hover:border-indigo-200'} ${isSubmitted && !isSelected && !isCorrect ? 'opacity-50' : ''}`}
-                            disabled={isSubmitted}
-                          >
-                            <span className={`text-xl font-bold ${isSelected ? (isCorrect ? 'text-emerald-700' : isWrong ? 'text-red-700' : 'text-indigo-700') : 'text-slate-700'}`}>
-                              <HtmlRenderer html={opt} tag="span" />
-                            </span>
-                            {isSelected && !isSubmitted && <CheckCircle2 className="absolute top-1/2 left-6 -translate-y-1/2 w-8 h-8 text-indigo-500" />}
-                            {isCorrect && <CheckCircle2 className="absolute top-1/2 left-6 -translate-y-1/2 w-8 h-8 text-emerald-500" />}
-                            {isWrong && <X className="absolute top-1/2 left-6 -translate-y-1/2 w-8 h-8 text-red-500" />}
-                          </button>
-                        );
-                      })}
-                    </div>
+                            language={language}
+                          />
+                        </div>
+                      )}
+                    </>
                   )}
                   {isQuestionLike(lesson.slides[currentSlideIndex]) && slideAnswers[currentSlideIndex] && !slideSubmitted[currentSlideIndex] && (
                     <button
                       onClick={() => setSlideSubmitted({ ...slideSubmitted, [currentSlideIndex]: true })}
-                      className="mt-6 bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black text-lg hover:bg-indigo-700 shadow-xl"
+                      className="mt-6 bg-sky-400 text-slate-950 hover:bg-sky-500 px-8 py-3 rounded-2xl font-black text-lg shadow-xl shadow-sky-200/40 border border-sky-500/20"
                     >
                       {language === 'ar' ? 'تأكيد الإجابة ✓' : 'Confirm Answer ✓'}
                     </button>
                   )}
 
                   {slideSubmitted[currentSlideIndex] && isQuestionLike(lesson.slides[currentSlideIndex]) && (() => {
-                    const isMulti = lesson.slides[currentSlideIndex].label === 'MULTI_SELECT';
+                    const isMulti = lesson.slides[currentSlideIndex].label === 'MULTI_SELECT' || lesson.slides[currentSlideIndex].type === 'MULTI_SELECT';
+                    const isStandard = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(lesson.slides[currentSlideIndex].label || lesson.slides[currentSlideIndex].type || 'MCQ');
                     const studentAnswers = slideAnswers[currentSlideIndex] || (isMulti ? [] : '');
-                    const isCorrect = isMulti ? studentAnswers.length === (lesson.slides[currentSlideIndex].correctAnswers || []).length && studentAnswers.every((a: string) => (lesson.slides[currentSlideIndex].correctAnswers || []).includes(a)) : (!lesson.slides[currentSlideIndex].correctAnswer || normalizeAnswerGlobal(slideAnswers[currentSlideIndex]) === normalizeAnswerGlobal(lesson.slides[currentSlideIndex].correctAnswer));
+                    
+                    const isCorrect = isStandard
+                      ? (isMulti
+                        ? studentAnswers.length === (lesson.slides[currentSlideIndex].correctAnswers || []).length && studentAnswers.every((a: string) => (lesson.slides[currentSlideIndex].correctAnswers || []).includes(a))
+                        : (!lesson.slides[currentSlideIndex].correctAnswer || normalizeAnswerGlobal(slideAnswers[currentSlideIndex]) === normalizeAnswerGlobal(lesson.slides[currentSlideIndex].correctAnswer)))
+                      : checkAdvancedCorrect(lesson.slides[currentSlideIndex], slideAnswers[currentSlideIndex]);
+
                     return (
                       <div className="mt-8 w-full max-w-4xl">
                         <QuestionFeedback
@@ -934,28 +1011,38 @@ export default function LessonPlayerPage() {
                         setCurrentStage('welcome');
                       }
                     }}
-                    className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center hover:bg-slate-50 transition-all shadow-sm"
+                    className="w-12 h-12 rounded-2xl bg-slate-50/80 border-2 border-slate-200/60 flex items-center justify-center hover:bg-slate-100 transition-all shadow-sm"
                   >
                     <ChevronRight className="w-6 h-6 text-slate-900" />
                   </button>
 
                   <div className="flex gap-2 flex-wrap justify-center">
                     {lesson.slides.map((_: any, i: number) => (
-                      <div key={i} className={`h-1.5 rounded-full transition-all duration-700 ${currentSlideIndex === i ? 'w-8 bg-indigo-600' : 'w-1.5 bg-slate-200'}`}></div>
+                      <div key={i} className={`h-1.5 rounded-full transition-all duration-700 ${currentSlideIndex === i ? 'w-8 bg-sky-400' : 'w-1.5 bg-slate-200'}`}></div>
                     ))}
                   </div>
 
                   {currentSlideIndex < lesson.slides.length - 1 ? (
                     <button
-                      onClick={() => setCurrentSlideIndex(prev => prev + 1)}
-                      className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all"
+                      onClick={() => {
+                        if (isQuestionLike(lesson.slides[currentSlideIndex]) && !slideSubmitted[currentSlideIndex]) {
+                          setSlideSubmitted({ ...slideSubmitted, [currentSlideIndex]: true });
+                        }
+                        setCurrentSlideIndex(prev => prev + 1);
+                      }}
+                      className="w-12 h-12 rounded-2xl bg-sky-400 text-slate-950 flex items-center justify-center hover:bg-sky-500 shadow-xl shadow-sky-200/40 transition-all border border-sky-500/20"
                     >
-                      <ChevronLeft className="w-6 h-6" />
+                      <ChevronLeft className="w-6 h-6 text-slate-950" />
                     </button>
                   ) : (
                     <button
-                      onClick={() => setCurrentStage('assignments')}
-                      className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black text-base hover:bg-indigo-700 shadow-xl shadow-indigo-100 flex items-center gap-3 shrink-0"
+                      onClick={() => {
+                        if (isQuestionLike(lesson.slides[currentSlideIndex]) && !slideSubmitted[currentSlideIndex]) {
+                          setSlideSubmitted({ ...slideSubmitted, [currentSlideIndex]: true });
+                        }
+                        setCurrentStage('assignments');
+                      }}
+                      className="bg-sky-400 text-slate-950 px-6 py-3 rounded-2xl font-black text-base hover:bg-sky-500 shadow-xl shadow-sky-200/40 flex items-center gap-3 shrink-0 border border-sky-500/20"
                     >
                       {t('lesson.showAssignments')}
                     </button>
@@ -991,45 +1078,67 @@ export default function LessonPlayerPage() {
                         </div>
                         <HtmlRenderer html={as.text} className="text-slate-600 text-lg leading-relaxed prose prose-indigo mb-6 text-start" />
 
-                        {isQuestionLike(as) && getQuestionOptions(as, language).length > 0 && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-                            {getQuestionOptions(as, language).map((opt: string, oIdx: number) => {
-                              const isMulti = as.type === 'MULTI_SELECT' || as.label === 'MULTI_SELECT';
-                              const isSelected = isMulti ? (assignmentAnswers[idx] || []).includes(opt) : assignmentAnswers[idx] === opt;
-                              const isCorrect = isSubmitted && (isMulti ? (as.correctAnswers || []).includes(opt) : ((!as.correctAnswer && isSelected) || normalizeAnswerGlobal(opt) === normalizeAnswerGlobal(as.correctAnswer)));
-                              const isWrong = isSubmitted && isSelected && !isCorrect;
-                              return (
-                                <button
-                                  key={oIdx}
-                                  onClick={() => {
+                        {isQuestionLike(as) && (
+                          <>
+                            {['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(as.label || as.type || 'MCQ') ? (
+                              getQuestionOptions(as, language).length > 0 && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                                  {getQuestionOptions(as, language).map((opt: string, oIdx: number) => {
+                                    const isMulti = as.type === 'MULTI_SELECT' || as.label === 'MULTI_SELECT';
+                                    const isSelected = isMulti ? (assignmentAnswers[idx] || []).includes(opt) : assignmentAnswers[idx] === opt;
+                                    const isCorrect = isSubmitted && (isMulti ? (as.correctAnswers || []).includes(opt) : ((!as.correctAnswer && isSelected) || normalizeAnswerGlobal(opt) === normalizeAnswerGlobal(as.correctAnswer)));
+                                    const isWrong = isSubmitted && isSelected && !isCorrect;
+                                    return (
+                                      <button
+                                        key={oIdx}
+                                        onClick={() => {
+                                          if (!isSubmitted) {
+                                            if (isMulti) {
+                                              const currentArr = assignmentAnswers[idx] || [];
+                                              const newArr = currentArr.includes(opt) ? currentArr.filter((a: string) => a !== opt) : [...currentArr, opt];
+                                              setAssignmentAnswers({ ...assignmentAnswers, [idx]: newArr });
+                                            } else {
+                                              setAssignmentAnswers({ ...assignmentAnswers, [idx]: opt });
+                                            }
+                                          }
+                                        }}
+                                        className={`relative p-5 rounded-3xl border-4 text-right transition-all group overflow-hidden ${isSelected ? (isCorrect ? 'border-emerald-500 bg-emerald-50' : isWrong ? 'border-red-500 bg-red-50' : 'border-indigo-500 bg-indigo-50') : 'border-slate-100 bg-white hover:border-indigo-200'} ${isSubmitted && !isSelected && !isCorrect ? 'opacity-50' : ''}`}
+                                        disabled={isSubmitted}
+                                      >
+                                        <span className={`text-lg font-bold ${isSelected ? (isCorrect ? 'text-emerald-700' : isWrong ? 'text-red-700' : 'text-indigo-700') : 'text-slate-700'}`}>
+                                          <HtmlRenderer html={opt} tag="span" />
+                                        </span>
+                                        {isSelected && !isSubmitted && <CheckCircle2 className="absolute top-1/2 left-4 -translate-y-1/2 w-6 h-6 text-indigo-500" />}
+                                        {isCorrect && <CheckCircle2 className="absolute top-1/2 left-4 -translate-y-1/2 w-6 h-6 text-emerald-500" />}
+                                        {isWrong && <X className="absolute top-1/2 left-4 -translate-y-1/2 w-6 h-6 text-red-500" />}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )
+                            ) : (
+                              <div className="w-full text-start bg-slate-50 p-6 rounded-3xl border border-slate-200">
+                                <InteractiveQuestionRenderer
+                                  question={{
+                                    ...as,
+                                    type: as.label || as.type || 'MCQ'
+                                  }}
+                                  value={assignmentAnswers[idx] || ''}
+                                  onChange={(val: any) => {
                                     if (!isSubmitted) {
-                                      if (isMulti) {
-                                        const currentArr = assignmentAnswers[idx] || [];
-                                        const newArr = currentArr.includes(opt) ? currentArr.filter((a: string) => a !== opt) : [...currentArr, opt];
-                                        setAssignmentAnswers({ ...assignmentAnswers, [idx]: newArr });
-                                      } else {
-                                        setAssignmentAnswers({ ...assignmentAnswers, [idx]: opt });
-                                      }
+                                      setAssignmentAnswers({ ...assignmentAnswers, [idx]: typeof val === 'string' ? val : JSON.stringify(val) });
                                     }
                                   }}
-                                  className={`relative p-5 rounded-3xl border-4 text-right transition-all group overflow-hidden ${isSelected ? (isCorrect ? 'border-emerald-500 bg-emerald-50' : isWrong ? 'border-red-500 bg-red-50' : 'border-indigo-500 bg-indigo-50') : 'border-slate-100 bg-white hover:border-indigo-200'} ${isSubmitted && !isSelected && !isCorrect ? 'opacity-50' : ''}`}
-                                  disabled={isSubmitted}
-                                >
-                                  <span className={`text-lg font-bold ${isSelected ? (isCorrect ? 'text-emerald-700' : isWrong ? 'text-red-700' : 'text-indigo-700') : 'text-slate-700'}`}>
-                                    <HtmlRenderer html={opt} tag="span" />
-                                  </span>
-                                  {isSelected && !isSubmitted && <CheckCircle2 className="absolute top-1/2 left-4 -translate-y-1/2 w-6 h-6 text-indigo-500" />}
-                                  {isCorrect && <CheckCircle2 className="absolute top-1/2 left-4 -translate-y-1/2 w-6 h-6 text-emerald-500" />}
-                                  {isWrong && <X className="absolute top-1/2 left-4 -translate-y-1/2 w-6 h-6 text-red-500" />}
-                                </button>
-                              );
-                            })}
-                          </div>
+                                  language={language}
+                                />
+                              </div>
+                            )}
+                          </>
                         )}
                         {isQuestionLike(as) && assignmentAnswers[idx] && !isSubmitted && (
                           <button
                             onClick={() => setAssignmentSubmitted({ ...assignmentSubmitted, [idx]: true })}
-                            className="mt-6 bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black text-lg hover:bg-indigo-700 shadow-xl"
+                            className="mt-6 bg-sky-400 text-slate-950 hover:bg-sky-500 px-8 py-3 rounded-2xl font-black text-lg shadow-xl shadow-sky-200/40 border border-sky-500/20"
                           >
                             {language === 'ar' ? 'تأكيد الإجابة' : 'Confirm Answer'}
                           </button>
@@ -1037,8 +1146,13 @@ export default function LessonPlayerPage() {
 
                         {isSubmitted && isQuestionLike(as) && (() => {
                           const isMulti = as.type === 'MULTI_SELECT' || as.label === 'MULTI_SELECT';
+                          const isStandard = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(as.label || as.type || 'MCQ');
                           const studentAnswers = assignmentAnswers[idx] || (isMulti ? [] : '');
-                          const isCorrect = isMulti ? studentAnswers.length === (as.correctAnswers || []).length && studentAnswers.every((a: string) => (as.correctAnswers || []).includes(a)) : (!as.correctAnswer || normalizeAnswerGlobal(assignmentAnswers[idx]) === normalizeAnswerGlobal(as.correctAnswer));
+                          
+                          const isCorrect = isStandard
+                            ? (isMulti ? studentAnswers.length === (as.correctAnswers || []).length && studentAnswers.every((a: string) => (as.correctAnswers || []).includes(a)) : (!as.correctAnswer || normalizeAnswerGlobal(assignmentAnswers[idx]) === normalizeAnswerGlobal(as.correctAnswer)))
+                            : checkAdvancedCorrect(as, assignmentAnswers[idx]);
+
                           return (
                             <div className="mt-8">
                               <QuestionFeedback
@@ -1069,14 +1183,23 @@ export default function LessonPlayerPage() {
                 <div className="flex justify-center pt-8 gap-4 flex-wrap">
                   <button
                     onClick={() => setCurrentStage('slides')}
-                    className="bg-white border-2 border-slate-200 text-slate-700 px-8 py-5 rounded-[25px] font-black text-lg hover:bg-slate-50 transition-all flex items-center gap-4"
+                    className="bg-slate-50/80 border-2 border-slate-200/60 text-slate-900 px-8 py-5 rounded-[25px] font-black text-lg hover:bg-slate-100 transition-all flex items-center gap-4"
                   >
                     <ArrowRight className={`w-5 h-5 ${language === 'en' ? 'rotate-180' : ''}`} />
                     {t('lesson.previous')}
                   </button>
                   <button
-                    onClick={() => setCurrentStage('exercises')}
-                    className="bg-emerald-600 text-white px-12 py-5 rounded-[25px] font-black text-lg hover:scale-105 transition-all shadow-2xl shadow-emerald-100 flex items-center gap-4"
+                    onClick={() => {
+                      const newSubmitted = { ...assignmentSubmitted };
+                      lesson.assignments?.forEach((as: any, idx: number) => {
+                        if (isQuestionLike(as) && !newSubmitted[idx]) {
+                          newSubmitted[idx] = true;
+                        }
+                      });
+                      setAssignmentSubmitted(newSubmitted);
+                      setCurrentStage('exercises');
+                    }}
+                    className="bg-sky-400 text-slate-950 px-12 py-5 rounded-[25px] font-black text-lg hover:scale-105 transition-all shadow-2xl shadow-sky-200/40 flex items-center gap-4 border border-sky-500/20"
                   >
                     {t('lesson.startExercises')}
                     <ArrowLeft className={`w-5 h-5 ${language === 'en' ? 'rotate-180' : ''}`} />
@@ -1092,7 +1215,12 @@ export default function LessonPlayerPage() {
                     {lesson.questions.map((_: any, i: number) => (
                       <button
                         key={i}
-                        onClick={() => setCurrentQuestionIndex(i)}
+                        onClick={() => {
+                          if (isQuestionLike(lesson.questions[currentQuestionIndex]) && !quizSubmitted[currentQuestionIndex]) {
+                            setQuizSubmitted({ ...quizSubmitted, [currentQuestionIndex]: true });
+                          }
+                          setCurrentQuestionIndex(i);
+                        }}
                         className={`w-9 h-9 md:w-10 md:h-10 rounded-xl font-black transition-all border-2 flex items-center justify-center text-xs ${currentQuestionIndex === i ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg' : answers[i] ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-white border-slate-100 text-slate-400'}`}
                       >
                         {i + 1}
@@ -1161,49 +1289,72 @@ export default function LessonPlayerPage() {
 
                         <HtmlRenderer html={lesson.questions[currentQuestionIndex].text} tag="h3" className="text-lg md:text-2xl font-black text-slate-900 mb-8 leading-relaxed tracking-tight break-words w-full text-start" />
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-4 mb-6">
-                          {getQuestionOptions(lesson.questions[currentQuestionIndex], language).map((opt: string, oIdx: number) => {
-                            const isMulti = lesson.questions[currentQuestionIndex].type === 'MULTI_SELECT';
-                            const isSelected = isMulti ? (answers[currentQuestionIndex] || []).includes(opt) : answers[currentQuestionIndex] === opt;
-                            const isSubmitted = quizSubmitted[currentQuestionIndex];
-                            const isCorrect = isSubmitted && (isMulti ? (lesson.questions[currentQuestionIndex].correctAnswers || []).includes(opt) : ((!lesson.questions[currentQuestionIndex].correctAnswer && isSelected) || normalizeAnswerGlobal(opt) === normalizeAnswerGlobal(lesson.questions[currentQuestionIndex].correctAnswer)));
-                            const isWrong = isSubmitted && isSelected && !isCorrect;
+                        {['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(lesson.questions[currentQuestionIndex].type || lesson.questions[currentQuestionIndex].label || 'MCQ') ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-4 mb-6">
+                            {getQuestionOptions(lesson.questions[currentQuestionIndex], language).map((opt: string, oIdx: number) => {
+                              const isMulti = lesson.questions[currentQuestionIndex].type === 'MULTI_SELECT';
+                              const isSelected = isMulti ? (answers[currentQuestionIndex] || []).includes(opt) : answers[currentQuestionIndex] === opt;
+                              const isSubmitted = quizSubmitted[currentQuestionIndex];
+                              const isCorrect = isSubmitted && (isMulti ? (lesson.questions[currentQuestionIndex].correctAnswers || []).includes(opt) : ((!lesson.questions[currentQuestionIndex].correctAnswer && isSelected) || normalizeAnswerGlobal(opt) === normalizeAnswerGlobal(lesson.questions[currentQuestionIndex].correctAnswer)));
+                              const isWrong = isSubmitted && isSelected && !isCorrect;
 
-                            return (
-                              <button
-                                key={oIdx}
-                                onClick={() => handleAnswerSelect(opt)}
-                                disabled={isSubmitted}
-                                className={`p-5 md:p-6 rounded-[25px] border-4 text-start transition-all duration-300 font-black text-sm md:text-base relative break-words overflow-hidden ${isSelected ? (isCorrect ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : isWrong ? 'border-red-500 bg-red-50 text-red-700' : 'bg-indigo-600 border-white text-white shadow-xl shadow-indigo-100') : 'bg-white border-slate-50 text-slate-600 hover:border-indigo-200'} ${isSubmitted && !isSelected && !isCorrect ? 'opacity-50' : ''}`}
-                              >
-                                <div className="flex items-center justify-between gap-4">
-                                  <span className={`flex-1 break-words leading-relaxed ${isSelected && !isSubmitted ? 'text-white' : ''}`}>
-                                    <HtmlRenderer html={opt} tag="span" />
-                                  </span>
-                                  <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${isSelected && !isSubmitted ? 'border-white bg-white/20' : isCorrect ? 'border-emerald-500 bg-emerald-500 text-white' : isWrong ? 'border-red-500 bg-red-500 text-white' : 'border-slate-200'}`}>
-                                    {isSelected && !isSubmitted && <CheckCircle2 className="w-4 h-4" />}
-                                    {isCorrect && <CheckCircle2 className="w-4 h-4" />}
-                                    {isWrong && <X className="w-4 h-4" />}
+                              return (
+                                <button
+                                  key={oIdx}
+                                  onClick={() => handleAnswerSelect(opt)}
+                                  disabled={isSubmitted}
+                                  className={`p-5 md:p-6 rounded-[25px] border-4 text-start transition-all duration-300 font-black text-sm md:text-base relative break-words overflow-hidden ${isSelected ? (isCorrect ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : isWrong ? 'border-red-500 bg-red-50 text-red-700' : 'bg-indigo-600 border-white text-white shadow-xl shadow-indigo-100') : 'bg-white border-slate-50 text-slate-600 hover:border-indigo-200'} ${isSubmitted && !isSelected && !isCorrect ? 'opacity-50' : ''}`}
+                                >
+                                  <div className="flex items-center justify-between gap-4">
+                                    <span className={`flex-1 break-words leading-relaxed ${isSelected && !isSubmitted ? 'text-white' : ''}`}>
+                                      <HtmlRenderer html={opt} tag="span" />
+                                    </span>
+                                    <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${isSelected && !isSubmitted ? 'border-white bg-white/20' : isCorrect ? 'border-emerald-500 bg-emerald-500 text-white' : isWrong ? 'border-red-500 bg-red-505 text-white' : 'border-slate-200'}`}>
+                                      {isSelected && !isSubmitted && <CheckCircle2 className="w-4 h-4" />}
+                                      {isCorrect && <CheckCircle2 className="w-4 h-4" />}
+                                      {isWrong && <X className="w-4 h-4" />}
+                                    </div>
                                   </div>
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="w-full text-start bg-slate-50 p-6 rounded-3xl border border-slate-200 mb-6">
+                            <InteractiveQuestionRenderer
+                              question={{
+                                ...lesson.questions[currentQuestionIndex],
+                                type: lesson.questions[currentQuestionIndex].type || lesson.questions[currentQuestionIndex].label || 'MCQ'
+                              }}
+                              value={answers[currentQuestionIndex] || ''}
+                              onChange={(val: any) => {
+                                if (!quizSubmitted[currentQuestionIndex]) {
+                                  setAnswers({ ...answers, [currentQuestionIndex]: typeof val === 'string' ? val : JSON.stringify(val) });
+                                }
+                              }}
+                              language={language}
+                            />
+                          </div>
+                        )}
 
                         {answers[currentQuestionIndex] && !quizSubmitted[currentQuestionIndex] && (
                           <button
                             onClick={() => setQuizSubmitted({ ...quizSubmitted, [currentQuestionIndex]: true })}
-                            className="mt-2 mb-6 bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black text-lg hover:bg-indigo-700 shadow-xl"
+                            className="mt-2 mb-6 bg-sky-400 text-slate-950 hover:bg-sky-500 px-8 py-3 rounded-2xl font-black text-lg shadow-xl shadow-sky-200/40 border border-sky-500/20"
                           >
                             {language === 'ar' ? 'تأكيد الإجابة' : 'Confirm Answer'}
                           </button>
                         )}
 
                         {quizSubmitted[currentQuestionIndex] && (() => {
-                          const isMulti = lesson.questions[currentQuestionIndex].type === 'MULTI_SELECT';
+                          const isMulti = lesson.questions[currentQuestionIndex].type === 'MULTI_SELECT' || lesson.questions[currentQuestionIndex].label === 'MULTI_SELECT';
+                          const isStandard = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(lesson.questions[currentQuestionIndex].type || lesson.questions[currentQuestionIndex].label || 'MCQ');
                           const studentAnswers = answers[currentQuestionIndex] || (isMulti ? [] : '');
-                          const isCorrect = isMulti ? studentAnswers.length === (lesson.questions[currentQuestionIndex].correctAnswers || []).length && studentAnswers.every((a: string) => (lesson.questions[currentQuestionIndex].correctAnswers || []).includes(a)) : (!lesson.questions[currentQuestionIndex].correctAnswer || normalizeAnswerGlobal(answers[currentQuestionIndex]) === normalizeAnswerGlobal(lesson.questions[currentQuestionIndex].correctAnswer));
+                          
+                          const isCorrect = isStandard
+                            ? (isMulti ? studentAnswers.length === (lesson.questions[currentQuestionIndex].correctAnswers || []).length && studentAnswers.every((a: string) => (lesson.questions[currentQuestionIndex].correctAnswers || []).includes(a)) : (!lesson.questions[currentQuestionIndex].correctAnswer || normalizeAnswerGlobal(answers[currentQuestionIndex]) === normalizeAnswerGlobal(lesson.questions[currentQuestionIndex].correctAnswer)))
+                            : checkAdvancedCorrect(lesson.questions[currentQuestionIndex], answers[currentQuestionIndex]);
+
                           return (
                             <div className="mt-4 animate-in fade-in slide-in-from-top-2">
                               <QuestionFeedback
@@ -1227,16 +1378,16 @@ export default function LessonPlayerPage() {
                         <button
                           onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
                           disabled={currentQuestionIndex === 0}
-                          className="text-slate-400 px-6 py-3 rounded-xl font-black hover:text-slate-600 disabled:opacity-20 text-sm"
+                          className="bg-slate-50/80 border-2 border-slate-200/60 text-slate-900 px-6 py-3 rounded-xl font-black hover:bg-slate-100 disabled:opacity-20 text-sm"
                         >
                           {t('lesson.previous')}
                         </button>
                         <button
                           onClick={handleNextQuestion}
-                          className={`px-8 py-3.5 rounded-2xl font-black transition-all flex items-center gap-3 text-base shadow-xl ${currentQuestionIndex < lesson.questions.length - 1 ? 'bg-slate-950 text-white hover:bg-indigo-600' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}
+                          className="px-8 py-3.5 rounded-2xl font-black transition-all flex items-center gap-3 text-base shadow-xl border border-sky-500/20 bg-sky-400 text-slate-950 hover:bg-sky-500"
                         >
                           {currentQuestionIndex < lesson.questions.length - 1 ? t('lesson.next') : t('lesson.finishQuiz')}
-                          <ChevronLeft className={`w-5 h-5 transition-transform ${language === 'ar' ? 'group-hover:-translate-x-2' : 'group-hover:translate-x-2 rotate-180'}`} />
+                          <ChevronLeft className="w-5 h-5 transition-transform text-slate-900" />
                         </button>
                       </div>
                     </>
@@ -1442,14 +1593,14 @@ export default function LessonPlayerPage() {
                           setCurrentSlideIndex(0);
                           setCurrentQuestionIndex(0);
                         }}
-                        className="bg-slate-950 text-white px-10 py-5 rounded-[25px] font-black text-xl hover:scale-105 transition-all shadow-2xl shadow-slate-200"
+                        className="bg-sky-400 text-slate-950 px-10 py-5 rounded-[25px] font-black text-xl hover:scale-105 transition-all shadow-2xl shadow-sky-200/40 border border-sky-500/20"
                       >
                         {language === 'ar' ? 'إعادة المحاولة 🔄' : 'Try Again 🔄'}
                       </button>
                     )}
                     <button
                       onClick={() => router.push(`/courses/${lesson.courseId}`)}
-                      className="premium-gradient-primary text-white px-16 py-5 rounded-[25px] font-black text-xl hover:scale-105 transition-all shadow-2xl shadow-indigo-200"
+                      className="bg-slate-50/80 border-2 border-slate-200/60 text-slate-900 px-16 py-5 rounded-[25px] font-black text-xl hover:bg-slate-100 transition-all shadow-lg"
                     >
                       {t('lesson.backToCourse')}
                     </button>
@@ -1465,7 +1616,7 @@ export default function LessonPlayerPage() {
                         {prevLesson && (
                           <button
                             onClick={() => goToLesson(prevLesson)}
-                            className="flex items-center gap-3 px-8 py-4 bg-white border-2 border-slate-200 text-slate-700 rounded-[22px] font-black hover:border-indigo-400 hover:text-indigo-600 transition-all shadow-sm group"
+                            className="flex items-center gap-3 px-8 py-4 bg-slate-50/80 border-2 border-slate-200/60 text-slate-900 rounded-[22px] font-black hover:bg-slate-100 transition-all shadow-sm group"
                           >
                             <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                             <div className="text-right">
@@ -1477,13 +1628,13 @@ export default function LessonPlayerPage() {
                         {nextLesson && (
                           <button
                             onClick={() => goToLesson(nextLesson)}
-                            className="flex items-center gap-3 px-8 py-4 bg-indigo-600 text-white rounded-[22px] font-black hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200 group"
+                            className="flex items-center gap-3 px-8 py-4 bg-sky-400 text-slate-950 rounded-[22px] font-black hover:bg-sky-500 transition-all shadow-xl shadow-sky-200/40 group border border-sky-500/20"
                           >
                             <div className="text-right">
-                              <p className="text-[10px] text-indigo-200 uppercase tracking-widest">{language === 'ar' ? 'الدرس التالي' : 'Next Lesson'}</p>
+                              <p className="text-[10px] text-slate-900 uppercase tracking-widest">{language === 'ar' ? 'الدرس التالي' : 'Next Lesson'}</p>
                               <p className="text-sm font-black truncate max-w-[160px]">{nextLesson.title}</p>
                             </div>
-                            <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+                            <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform text-slate-900" />
                           </button>
                         )}
                       </div>
