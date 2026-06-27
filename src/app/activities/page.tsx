@@ -614,10 +614,10 @@ export default function ActivitiesPage() {
           )}
         </div>
 
-        {/* ── IMMERSIVE FULL-SCREEN 3D GAME PLAYER OVERLAY ── */}
+         {/* ── IMMERSIVE FULL-SCREEN 3D GAME PLAYER OVERLAY ── */}
         {activeActivity && (
           <div className="fixed inset-0 z-[100] bg-slate-900/65 backdrop-blur-md flex items-center justify-center p-0 md:p-6 overflow-y-auto" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-            <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 w-full max-w-5xl md:rounded-[40px] shadow-2xl flex flex-col min-h-screen md:min-h-[85vh] max-h-screen overflow-hidden border border-white/10 animate-in zoom-in-95 duration-200">
+            <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 w-full max-w-5xl md:rounded-[40px] shadow-2xl flex flex-col min-h-screen md:min-h-[85vh] md:max-h-[90vh] overflow-y-auto md:overflow-hidden border border-white/10 animate-in zoom-in-95 duration-200">
               
               {/* Game Player Header */}
               <div className="bg-gradient-to-r from-indigo-700 to-violet-850 p-6 text-white flex justify-between items-center shadow-md">
@@ -644,7 +644,7 @@ export default function ActivitiesPage() {
               </div>
 
               {/* Game Player Body */}
-              <div className="flex-1 overflow-y-auto p-6 md:p-8 flex flex-col lg:flex-row gap-8">
+              <div className="flex-1 md:overflow-y-auto p-4 md:p-8 flex flex-col lg:flex-row gap-8">
                 
                 {/* Right: Helpers Panel (1/4 width on desktop) */}
                 <div className="w-full lg:w-64 space-y-4 shrink-0">
@@ -714,7 +714,7 @@ export default function ActivitiesPage() {
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t border-slate-100">
                     <button
                       onClick={closePlayer}
-                      className="px-6 py-3.5 rounded-2xl border-2 border-slate-200 text-slate-500 hover:bg-slate-50 font-black text-sm transition-all active:scale-95 w-full sm:w-auto"
+                      className="px-6 py-3.5 rounded-2xl bg-slate-50/80 border-2 border-slate-200/60 text-slate-900 hover:bg-slate-100 font-black text-sm transition-all active:scale-95 w-full sm:w-auto"
                     >
                       {language === 'ar' ? 'تراجع' : 'Back'}
                     </button>
@@ -726,8 +726,8 @@ export default function ActivitiesPage() {
                         disabled={!hasPrev}
                         className={`px-5 py-3.5 rounded-2xl border-2 font-black text-sm transition-all active:scale-95 flex items-center gap-2 w-full sm:w-auto justify-center ${
                           hasPrev
-                            ? "border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer"
-                            : "border-slate-100 text-slate-300 cursor-not-allowed"
+                            ? "bg-slate-50/80 border-2 border-slate-200/60 text-slate-900 hover:bg-slate-100 cursor-pointer"
+                            : "bg-slate-50/30 border-2 border-slate-200/20 text-slate-300 cursor-not-allowed"
                         }`}
                       >
                         {language === 'ar' ? <ArrowRight className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />}
@@ -740,8 +740,8 @@ export default function ActivitiesPage() {
                         disabled={!hasNext}
                         className={`px-5 py-3.5 rounded-2xl border-2 font-black text-sm transition-all active:scale-95 flex items-center gap-2 w-full sm:w-auto justify-center ${
                           hasNext
-                            ? "border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer"
-                            : "border-slate-100 text-slate-300 cursor-not-allowed"
+                            ? "bg-slate-50/80 border-2 border-slate-200/60 text-slate-900 hover:bg-slate-100 cursor-pointer"
+                            : "bg-slate-50/30 border-2 border-slate-200/20 text-slate-300 cursor-not-allowed"
                         }`}
                       >
                         <span>{language === 'ar' ? 'التالي' : 'Next'}</span>
@@ -752,10 +752,10 @@ export default function ActivitiesPage() {
                     <button
                       onClick={submitAnswer}
                       disabled={!currentAnswer || isSubmitting}
-                      className={`px-10 py-3.5 rounded-2xl font-black text-sm text-white transition-all flex items-center gap-2 active:scale-95 shadow-md w-full sm:w-auto justify-center ${
+                      className={`px-10 py-3.5 rounded-2xl font-black text-sm transition-all flex items-center gap-2 active:scale-95 w-full sm:w-auto justify-center ${
                         !currentAnswer || isSubmitting
-                          ? "bg-slate-300 cursor-not-allowed shadow-none"
-                          : "bg-indigo-600 hover:bg-slate-900"
+                          ? "bg-sky-200/40 text-slate-400 cursor-not-allowed border border-sky-300/10 shadow-none"
+                          : "bg-sky-400 text-slate-950 hover:bg-sky-500 shadow-xl shadow-sky-200/40 border border-sky-500/20"
                       }`}
                     >
                       {isSubmitting ? (
