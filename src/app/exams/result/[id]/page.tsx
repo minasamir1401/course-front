@@ -7,6 +7,7 @@ import { CheckCircle2, XCircle, ChevronRight, ChevronLeft, LayoutDashboard, Refr
 import Link from "next/link";
 import { useNotification } from "@/context/NotificationContext";
 import HtmlRenderer from "@/components/HtmlRenderer";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const renderExplanation = (explanationString: string) => {
   if (!explanationString) return null;
@@ -80,6 +81,19 @@ export default function ExamResultPage() {
   const { id } = useParams();
   const router = useRouter();
   const { showToast } = useNotification();
+  const { language } = useLanguage();
+
+  const translateTrueFalse = (opt: string) => {
+    const norm = String(opt || '').trim();
+    if (norm === 'صحيح' || norm.toLowerCase() === 'true') {
+      return language === 'ar' ? 'صحيح' : 'True';
+    }
+    if (norm === 'خطأ' || norm.toLowerCase() === 'false') {
+      return language === 'ar' ? 'خطأ' : 'False';
+    }
+    return opt;
+  };
+
   const [submission, setSubmission] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -294,6 +308,11 @@ export default function ExamResultPage() {
                           <span className="text-[10px] font-bold text-slate-400 leading-none">
                             | مستوى: {answer.question.level === 'Easy' ? 'سهل' : answer.question.level === 'Medium' ? 'متوسط' : 'صعب'}
                           </span>
+                          {answer.question.dok && (
+                            <span className="text-[10px] font-bold text-slate-400 leading-none">
+                              | {language === 'ar' ? `عمق المعرفة: ${answer.question.dok}` : `DOK: ${answer.question.dok}`}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -362,7 +381,7 @@ export default function ExamResultPage() {
 
                         return (
                           <div key={oIdx} className={`p-5 rounded-2xl border-2 transition-all flex items-center justify-between ${bgClass}`}>
-                            <span className={`font-bold ${textClass}`}><HtmlRenderer html={opt} tag="span" /></span>
+                            <span className={`font-bold ${textClass}`}><HtmlRenderer html={answer.question.type === 'TRUE_FALSE' ? translateTrueFalse(opt) : opt} tag="span" /></span>
                             {icon}
                           </div>
                         );

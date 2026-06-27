@@ -1,0 +1,1838 @@
+"use client";
+
+import React, { useState, useEffect, useRef } from "react";
+import { CheckCircle2, AlertCircle, HelpCircle, Info, Sparkles, BookOpen, Clock as ClockIcon, Award, Play } from "lucide-react";
+import HtmlRenderer from "./HtmlRenderer";
+import GeoGebraWidget from "./GeoGebraWidget";
+
+interface QuestionProps {
+  question: any;
+  value: string; // The current answer stored (serialized JSON or string)
+  onChange: (val: string) => void;
+  language: string;
+}
+
+// Safely parse JSON
+const parseJson = (str: any, fallback: any = {}) => {
+  try {
+    if (str === undefined || str === null) return fallback;
+    let parsed = str;
+    if (typeof str === "string") {
+      const trimmed = str.trim();
+      if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+        parsed = JSON.parse(trimmed);
+      } else {
+        return fallback;
+      }
+    }
+    if (typeof parsed !== "object" || parsed === null) {
+      return fallback;
+    }
+    if (fallback && !Array.isArray(fallback) && Array.isArray(parsed)) {
+      return fallback;
+    }
+    return parsed;
+  } catch {
+    return fallback;
+  }
+};
+
+// Bilingual translation helper
+const translateText = (val: any, lang: string): string => {
+  if (!val) return "";
+  if (typeof val === "string") {
+    try {
+      const parsed = JSON.parse(val);
+      if (parsed && typeof parsed === "object") {
+        return parsed[lang] || parsed["ar"] || parsed["en"] || "";
+      }
+    } catch {}
+    return val;
+  }
+  if (typeof val === "object" && val !== null) {
+    return val[lang] || val["ar"] || val["en"] || "";
+  }
+  return String(val);
+};
+
+export default function InteractiveQuestionRenderer({ question, value, onChange, language }: QuestionProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Render individual component based on type
+  const renderWidget = () => {
+    switch (question.type) {
+      case "MCQ":
+        return <McqRenderer question={question} value={value} onChange={onChange} language={language} />;
+      case "TRUE_FALSE":
+        return <TrueFalseRenderer question={question} value={value} onChange={onChange} language={language} />;
+      case "MULTI_SELECT":
+        return <MultiSelectRenderer question={question} value={value} onChange={onChange} language={language} />;
+      case "MATCHING":
+        return <MatchingRenderer question={question} value={value} onChange={onChange} language={language} containerRef={containerRef} />;
+      case "DRAG_DROP_FILL":
+        return <DragDropFillRenderer question={question} value={value} onChange={onChange} language={language} />;
+      case "GROUP_SORTING":
+        return <GroupSortingRenderer question={question} value={value} onChange={onChange} language={language} />;
+      case "CLOCK":
+        return <ClockRenderer question={question} value={value} onChange={onChange} language={language} />;
+      case "MIND_MAP":
+        return <MindMapRenderer question={question} value={value} onChange={onChange} language={language} containerRef={containerRef} />;
+      case "VIDEO_CHECKPOINT":
+        return <VideoCheckpointRenderer question={question} value={value} onChange={onChange} language={language} />;
+      case "NUMBER_LINE":
+        return <NumberLineRenderer question={question} value={value} onChange={onChange} language={language} />;
+      case "SWIPE_SORT":
+        return <SwipeSortRenderer question={question} value={value} onChange={onChange} language={language} />;
+      case "MAZE":
+        return <MazeRenderer question={question} value={value} onChange={onChange} language={language} />;
+      case "WORD_SEARCH":
+        return <WordSearchRenderer question={question} value={value} onChange={onChange} language={language} />;
+      case "GEOGEBRA":
+        return <GeoGebraRenderer question={question} value={value} onChange={onChange} language={language} />;
+      case "FLASH_CARD":
+        return <FlashCardRenderer question={question} value={value} onChange={onChange} language={language} />;
+      case "MEMORY_GAME":
+        return <MemoryGameRenderer question={question} value={value} onChange={onChange} language={language} />;
+      case "WORD_SCRAMBLE":
+        return <WordScrambleRenderer question={question} value={value} onChange={onChange} language={language} />;
+      case "SENTENCE_REORDER":
+        return <SentenceReorderRenderer question={question} value={value} onChange={onChange} language={language} />;
+      case "MATH_EQUATION":
+        return <MathEquationRenderer question={question} value={value} onChange={onChange} language={language} />;
+      case "SEQUENCE_ORDER":
+        return <SequenceOrderRenderer question={question} value={value} onChange={onChange} language={language} />;
+      case "CROSSWORD":
+        return <CrosswordRenderer question={question} value={value} onChange={onChange} language={language} />;
+      case "COUNT_OBJECTS":
+        return <CountObjectsRenderer question={question} value={value} onChange={onChange} language={language} />;
+      case "IMAGE_LABEL":
+        return <ImageLabelRenderer question={question} value={value} onChange={onChange} language={language} />;
+      case "COLOR_MATCH":
+        return <ColorMatchRenderer question={question} value={value} onChange={onChange} language={language} />;
+      default:
+        return (
+          <div className="p-6 text-center text-slate-400 font-bold w-full max-w-full">
+            {language === "ar" ? "نوع السؤال غير مدعوم حالياً." : "Question type not supported."}
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div ref={containerRef} className="w-full relative max-w-full overflow-hidden">
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes gravity-drop {
+          0% { transform: translateY(-200px) scaleY(1.3); opacity: 0; }
+          60% { transform: translateY(12px) scaleY(0.85); opacity: 1; }
+          85% { transform: translateY(-5px) scaleY(1.04); }
+          100% { transform: translateY(0) scaleY(1); }
+        }
+        @keyframes jiggle {
+          0%, 100% { transform: scale(1) rotate(0deg); }
+          15% { transform: scale(1.04) rotate(-2deg); }
+          30% { transform: scale(1.04) rotate(2deg); }
+          45% { transform: scale(1.04) rotate(-1.5deg); }
+          60% { transform: scale(1.04) rotate(1.5deg); }
+        }
+        @keyframes pop-in {
+          0% { transform: scale(0.82); opacity: 0; }
+          70% { transform: scale(1.08); }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes float {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-6px) rotate(0.6deg); }
+        }
+        @keyframes float-reverse {
+          0%, 100% { transform: translateY(-6px) rotate(-0.6deg); }
+          50% { transform: translateY(0px) rotate(0deg); }
+        }
+        @keyframes dash {
+          to {
+            stroke-dashoffset: -40;
+          }
+        }
+        @keyframes path-pulse {
+          0% { stroke-width: 4px; opacity: 0.8; }
+          50% { stroke-width: 6px; opacity: 1; }
+          100% { stroke-width: 4px; opacity: 0.8; }
+        }
+        @keyframes swipe-left-out {
+          0% { transform: translate(0, 0) rotate(0); opacity: 1; }
+          100% { transform: translate(-380px, 35px) rotate(-22deg); opacity: 0; }
+        }
+        @keyframes swipe-right-out {
+          0% { transform: translate(0, 0) rotate(0); opacity: 1; }
+          100% { transform: translate(380px, 35px) rotate(22deg); opacity: 0; }
+        }
+
+        .game-card-3d-violet {
+          background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+          border: 2px solid #e2e8f0;
+          border-bottom-width: 7px;
+          border-bottom-color: #cbd5e1;
+          box-shadow: 0 8px 22px rgba(0, 0, 0, 0.03);
+        }
+        .game-card-3d-violet:hover:not(:disabled) {
+          transform: translateY(-3px);
+          border-bottom-width: 10px;
+          border-bottom-color: #94a3b8;
+          box-shadow: 0 12px 28px rgba(0, 0, 0, 0.06);
+        }
+        .game-card-3d-violet:active:not(:disabled) {
+          transform: translateY(3px);
+          border-bottom-width: 2px;
+        }
+
+        .game-card-3d-teal {
+          background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+          border: 2px solid #e2e8f0;
+          border-bottom-width: 7px;
+          border-bottom-color: #cbd5e1;
+          box-shadow: 0 8px 22px rgba(0, 0, 0, 0.03);
+        }
+        .game-card-3d-teal:hover:not(:disabled) {
+          transform: translateY(-3px);
+          border-bottom-width: 10px;
+          border-bottom-color: #94a3b8;
+          box-shadow: 0 12px 28px rgba(0, 0, 0, 0.06);
+        }
+        .game-card-3d-teal:active:not(:disabled) {
+          transform: translateY(3px);
+          border-bottom-width: 2px;
+        }
+
+        .game-btn-3d-selected {
+          transform: translateY(3px) !important;
+          border-bottom-width: 2px !important;
+          background: #0f172a !important;
+          border-color: #0f172a !important;
+          color: #ffffff !important;
+          box-shadow: 0 0 15px rgba(15, 23, 42, 0.25) !important;
+        }
+        .game-btn-3d-selected * {
+          color: #ffffff !important;
+        }
+
+        .game-btn-3d-matched {
+          transform: translateY(3px) !important;
+          border-bottom-width: 2px !important;
+          background: #1e293b !important;
+          border-color: #1e293b !important;
+          color: #ffffff !important;
+          box-shadow: none !important;
+        }
+        .game-btn-3d-matched * {
+          color: #ffffff !important;
+        }
+
+        .game-slot-3d {
+          background: #f8fafc;
+          box-shadow: inset 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 0 rgba(255,255,255,0.8);
+          border: 2px dashed #cbd5e1;
+          transition: all 0.2s ease;
+        }
+
+        .game-slot-3d-filled {
+          background: #0f172a !important;
+          border: 2px solid #0f172a !important;
+          border-bottom-width: 6px !important;
+          border-bottom-color: #020617 !important;
+          color: #ffffff !important;
+          box-shadow: 0 6px 15px rgba(15, 23, 42, 0.15) !important;
+        }
+
+        .candy-choice {
+          background: #ffffff;
+          border: 2px solid #e2e8f0;
+          border-bottom-width: 6px;
+          border-bottom-color: #cbd5e1;
+          box-shadow: 0 6px 15px rgba(0, 0, 0, 0.03);
+          border-radius: 18px;
+          transition: all 0.15s cubic-bezier(0.25, 0.8, 0.25, 1);
+          cursor: pointer;
+        }
+        .candy-choice:hover:not(:disabled) {
+          transform: translateY(-2px);
+          border-bottom-width: 8px;
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+        }
+        .candy-choice:active:not(:disabled) {
+          transform: translateY(4px);
+          border-bottom-width: 2px;
+        }
+
+        .animate-gravity {
+          animation: gravity-drop 0.55s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+        }
+        .animate-float {
+          animation: float 3.2s ease-in-out infinite;
+        }
+        .animate-float-reverse {
+          animation: float-reverse 3.2s ease-in-out infinite;
+        }
+        .animate-pop-in {
+          animation: pop-in 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+        }
+        .animate-jiggle {
+          animation: jiggle 0.45s ease-in-out;
+        }
+        .animate-swipe-left {
+          animation: swipe-left-out 0.4s ease-out forwards;
+        }
+        .animate-swipe-right {
+          animation: swipe-right-out 0.4s ease-out forwards;
+        }
+        .animate-dash {
+          stroke-dasharray: 8, 4;
+          animation: dash 1s linear infinite, path-pulse 2s ease-in-out infinite;
+        }
+        
+        .scale-up {
+          animation: pop-in 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.2) both;
+        }
+      ` }} />
+      {renderWidget()}
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// 📝 1. MCQ (اختيار من متعدد)
+// -------------------------------------------------------------
+function McqRenderer({ question, value, onChange, language }: any) {
+  const opts = parseJson(question.options, { choices: [] });
+  const choices = Array.isArray(opts?.choices) ? opts.choices : [];
+
+  return (
+    <div className={`space-y-4 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <h4 className="text-lg font-black text-slate-800 mb-4">{translateText(question.title, language)}</h4>
+      <div className="flex flex-col gap-3">
+        {choices.map((choice: any, idx: number) => {
+          const isSelected = value === choice;
+          return (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => onChange(choice)}
+              className={`w-full p-5 rounded-3xl border-2 transition-all flex justify-between items-center game-card-3d-violet cursor-pointer select-none ${
+                language === 'ar' ? 'text-right' : 'text-left'
+              } ${isSelected ? "game-btn-3d-selected" : ""}`}
+            >
+              <span className={`font-black text-base ${isSelected ? "text-white" : "text-slate-700"}`}>{translateText(choice, language)}</span>
+              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${isSelected ? "border-white bg-white text-slate-950" : "border-slate-350 bg-white"}`}>
+                {isSelected && <span className="w-2.5 h-2.5 rounded-full bg-slate-950" />}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// 📝 2. TRUE_FALSE (صح أم خطأ)
+// -------------------------------------------------------------
+function TrueFalseRenderer({ question, value, onChange, language }: any) {
+  const trueLabel = language === "ar" ? "صح" : "True";
+  const falseLabel = language === "ar" ? "خطأ" : "False";
+
+  return (
+    <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <h4 className="text-lg font-black text-slate-800 mb-6">{translateText(question.title, language)}</h4>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {[trueLabel, falseLabel].map((choice) => {
+          const isSelected = value === choice;
+          return (
+            <button
+              key={choice}
+              type="button"
+              onClick={() => onChange(choice)}
+              className={`p-6 rounded-3xl border-2 text-center font-black text-xl transition-all cursor-pointer select-none game-card-3d-violet ${
+                isSelected ? "game-btn-3d-selected" : ""
+              }`}
+            >
+              <span>{choice}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// 📝 3. MULTI_SELECT (اختيارات متعددة)
+// -------------------------------------------------------------
+function MultiSelectRenderer({ question, value, onChange, language }: any) {
+  const opts = parseJson(question.options, { choices: [] });
+  const choices = Array.isArray(opts?.choices) ? opts.choices : [];
+  const selectedList = parseJson(value, []);
+
+  const handleToggle = (choice: string) => {
+    let nextList = [...selectedList];
+    if (nextList.includes(choice)) {
+      nextList = nextList.filter((x) => x !== choice);
+    } else {
+      nextList.push(choice);
+    }
+    onChange(JSON.stringify(nextList));
+  };
+
+  return (
+    <div className={`space-y-4 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <h4 className="text-lg font-black text-slate-800 mb-4">{translateText(question.title, language)}</h4>
+      <div className="flex flex-col gap-3">
+        {choices.map((choice: any, idx: number) => {
+          const isSelected = selectedList.includes(choice);
+          return (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => handleToggle(choice)}
+              className={`w-full p-5 rounded-3xl border-2 transition-all flex justify-between items-center game-card-3d-violet cursor-pointer select-none ${
+                language === 'ar' ? 'text-right' : 'text-left'
+              } ${isSelected ? "game-btn-3d-selected" : ""}`}
+            >
+              <span className={`font-black text-base ${isSelected ? "text-white" : "text-slate-700"}`}>{translateText(choice, language)}</span>
+              <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center ${isSelected ? "border-white bg-white text-slate-950" : "border-slate-350 bg-white"}`}>
+                {isSelected && <CheckCircle2 className="w-4 h-4 text-slate-950" />}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// 🤝 4. MATCHING (توصيل)
+// -------------------------------------------------------------
+function MatchingRenderer({ question, value, onChange, language, containerRef }: any) {
+  const opts = parseJson(question.options, { left: [], right: [] });
+  const leftItems = Array.isArray(opts?.left) ? opts.left : [];
+  const rightItems = Array.isArray(opts?.right) ? opts.right : [];
+  const matchingState = parseJson(value, {});
+
+  const [selectedLeft, setSelectedLeft] = useState<string | null>(null);
+  const [coords, setCoords] = useState<{ x1: number; y1: number; x2: number; y2: number; color: string }[]>([]);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const updateCoords = () => {
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const newCoords: typeof coords = [];
+      const colors = ["#020617", "#0f172a", "#1e293b", "#334155", "#475569"];
+
+      const getEl = (attr: string, val: string) => containerRef.current.querySelector(`[${attr}="${val}"]`);
+
+      Object.entries(matchingState).forEach(([lKey, rVal], idx) => {
+        const leftEl = getEl("data-left-id", lKey);
+        const rightEl = getEl("data-right-id", rVal as string);
+        if (leftEl && rightEl) {
+          const lRect = leftEl.getBoundingClientRect();
+          const rRect = rightEl.getBoundingClientRect();
+          newCoords.push({
+            x1: (language === "ar" ? lRect.left : lRect.right) - containerRect.left,
+            y1: lRect.top + lRect.height / 2 - containerRect.top,
+            x2: (language === "ar" ? rRect.right : rRect.left) - containerRect.left,
+            y2: rRect.top + rRect.height / 2 - containerRect.top,
+            color: colors[idx % colors.length]
+          });
+        }
+      });
+      setCoords(newCoords);
+    };
+
+    updateCoords();
+    window.addEventListener("resize", updateCoords);
+    const timeout = setTimeout(updateCoords, 100);
+    return () => {
+      window.removeEventListener("resize", updateCoords);
+      clearTimeout(timeout);
+    };
+  }, [value, question, language, containerRef]);
+
+  const handleLeftClick = (item: string) => {
+    setSelectedLeft(item);
+  };
+
+  const handleRightClick = (item: string) => {
+    if (!selectedLeft) return;
+    const newState = { ...matchingState, [selectedLeft]: item };
+    onChange(JSON.stringify(newState));
+    setSelectedLeft(null);
+  };
+
+  const clearMatch = (leftItem: string) => {
+    const newState = { ...matchingState };
+    delete newState[leftItem];
+    onChange(JSON.stringify(newState));
+  };
+
+  return (
+    <div className="space-y-6 relative w-full overflow-hidden" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">
+        {coords.map((c, idx) => (
+          <path
+            key={idx}
+            d={`M ${c.x1} ${c.y1} C ${(c.x1 + c.x2) / 2} ${c.y1}, ${(c.x1 + c.x2) / 2} ${c.y2}, ${c.x2} ${c.y2}`}
+            fill="none"
+            stroke={c.color}
+            strokeWidth="4"
+            className="animate-dash"
+          />
+        ))}
+      </svg>
+      <div className="grid grid-cols-2 gap-8 min-h-[250px]">
+        <div className="flex flex-col gap-4">
+          <span className="text-xs font-black text-slate-400 block uppercase">
+            {language === "ar" ? "العمود الأول (اضغط للتوصيل)" : "First Column (Click to match)"}
+          </span>
+          {leftItems.map((item: any, i: number) => {
+            const matched = !!matchingState[item];
+            const isSelected = selectedLeft === item;
+            return (
+              <div
+                key={i}
+                data-left-id={item}
+                onClick={() => handleLeftClick(item)}
+                className={`p-4 rounded-2xl border-2 transition-all flex justify-between items-center game-card-3d-violet cursor-pointer ${isSelected ? "game-btn-3d-selected" : ""} ${matched ? "game-btn-3d-matched" : ""}`}
+              >
+                <span className="font-bold text-sm truncate">{translateText(item, language)}</span>
+                {matched && (
+                  <button type="button" onClick={(e) => { e.stopPropagation(); clearMatch(item); }} className="text-rose-500 font-bold hover:underline text-xs">
+                    {language === "ar" ? "مسح" : "Clear"}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex flex-col gap-4">
+          <span className="text-xs font-black text-slate-400 block uppercase">
+            {language === "ar" ? "العمود الثاني" : "Second Column"}
+          </span>
+          {rightItems.map((item: any, i: number) => {
+            const isMatched = Object.values(matchingState).includes(item);
+            return (
+              <div
+                key={i}
+                data-right-id={item}
+                onClick={() => handleRightClick(item)}
+                className={`p-4 rounded-2xl border-2 transition-all text-center game-card-3d-teal cursor-pointer ${isMatched ? "bg-slate-950 border-slate-950 text-white opacity-60 pointer-events-none" : ""}`}
+              >
+                <span className="font-bold text-sm truncate">{translateText(item, language)}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// 📥 5. DRAG_DROP_FILL (سحب الفراغات)
+// -------------------------------------------------------------
+function DragDropFillRenderer({ question, value, onChange, language }: any) {
+  const opts = parseJson(question.options, { sentence: "", choices: [] });
+  const sentence = opts.sentence || "";
+  const choices = Array.isArray(opts?.choices) ? opts.choices : [];
+  const currentSlots = parseJson(value, []);
+
+  const [activeWord, setActiveWord] = useState<string | null>(null);
+
+  const handleSlotClick = (slotIdx: number) => {
+    if (activeWord) {
+      const nextSlots = [...currentSlots];
+      nextSlots[slotIdx] = activeWord;
+      onChange(JSON.stringify(nextSlots));
+      setActiveWord(null);
+    } else {
+      const nextSlots = [...currentSlots];
+      nextSlots[slotIdx] = "";
+      onChange(JSON.stringify(nextSlots));
+    }
+  };
+
+  const handleDragStart = (e: React.DragEvent, word: string) => {
+    e.dataTransfer.setData("text/plain", word);
+    setActiveWord(word);
+  };
+
+  const handleDrop = (e: React.DragEvent, slotIdx: number) => {
+    e.preventDefault();
+    const word = e.dataTransfer.getData("text/plain") || activeWord;
+    if (word) {
+      const nextSlots = [...currentSlots];
+      nextSlots[slotIdx] = word;
+      onChange(JSON.stringify(nextSlots));
+      setActiveWord(null);
+    }
+  };
+
+  const renderSentence = () => {
+    const translatedSentence = translateText(sentence, language);
+    const parts = translatedSentence.split(/(\[slot\d+\])/g);
+    return parts.map((part: string, idx: number) => {
+      const match = part.match(/\[slot(\d+)\]/);
+      if (match) {
+        const slotIdx = parseInt(match[1]);
+        const wordInSlot = currentSlots[slotIdx];
+        return (
+          <span
+            key={idx}
+            onClick={() => handleSlotClick(slotIdx)}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => handleDrop(e, slotIdx)}
+            className={`inline-block min-w-[80px] h-9 mx-1.5 align-middle rounded-xl text-center font-black text-xs pt-2 border transition-all cursor-pointer ${wordInSlot ? "bg-slate-950 border-slate-950 text-white" : "bg-slate-100 border-dashed border-slate-350 text-slate-400"}`}
+          >
+            {translateText(wordInSlot, language) || (language === "ar" ? `فراغ ${slotIdx + 1}` : `Slot ${slotIdx + 1}`)}
+          </span>
+        );
+      }
+      return <span key={idx} className="font-bold text-slate-800">{part}</span>;
+    });
+  };
+
+  return (
+    <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <div className={`bg-slate-50 p-6 rounded-3xl border border-slate-150 leading-loose text-base ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+        {renderSentence()}
+      </div>
+      <div className="space-y-3">
+        <span className="text-xs font-black text-slate-400 block uppercase">
+          {language === "ar" ? "الكلمات المتاحة (اسحبها للمكان المناسب أو اضغط عليها):" : "Available words (drag or click to place):"}
+        </span>
+        <div className="flex flex-wrap gap-2.5 justify-start">
+          {choices.map((word: any, i: number) => {
+            const isPlaced = currentSlots.includes(word);
+            const isSelected = activeWord === word;
+            return (
+              <button
+                key={i}
+                type="button"
+                draggable={!isPlaced}
+                onDragStart={(e) => handleDragStart(e, word)}
+                onClick={() => setActiveWord(isSelected ? null : word)}
+                className={`px-5 py-3 rounded-2xl border-2 transition-all font-black text-xs select-none cursor-grab ${isPlaced ? "opacity-30 cursor-not-allowed bg-slate-100 border-slate-200" : isSelected ? "bg-slate-950 border-slate-950 text-white" : "bg-white border-slate-200 hover:border-slate-400"}`}
+              >
+                {translateText(word, language)}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// 🗂️ 6. GROUP_SORTING (تصنيف المجموعات)
+// -------------------------------------------------------------
+function GroupSortingRenderer({ question, value, onChange, language }: any) {
+  const opts = parseJson(question.options, { groups: [], items: [] });
+  const groups = Array.isArray(opts?.groups) ? opts.groups : [];
+  const items = Array.isArray(opts?.items) ? opts.items : [];
+  const sortingState = parseJson(value, {});
+
+  const [activeItem, setActiveItem] = useState<string | null>(null);
+
+  const placeItem = (groupName: string) => {
+    if (!activeItem) return;
+    const newState = { ...sortingState, [activeItem]: groupName };
+    onChange(JSON.stringify(newState));
+    setActiveItem(null);
+  };
+
+  const handleDragStart = (e: React.DragEvent, item: string) => {
+    e.dataTransfer.setData("text/plain", item);
+    setActiveItem(item);
+  };
+
+  const handleDrop = (e: React.DragEvent, groupName: string) => {
+    e.preventDefault();
+    const item = e.dataTransfer.getData("text/plain") || activeItem;
+    if (item) {
+      const newState = { ...sortingState, [item]: groupName };
+      onChange(JSON.stringify(newState));
+      setActiveItem(null);
+    }
+  };
+
+  const clearItem = (item: string) => {
+    const newState = { ...sortingState };
+    delete newState[item];
+    onChange(JSON.stringify(newState));
+  };
+
+  return (
+    <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <div className="space-y-3">
+        <span className="text-xs font-black text-slate-400 block uppercase">
+          {language === "ar" ? "عناصر للتصنيف (اسحب العنصر للمجموعة المناسبة أو اضغط عليه):" : "Items to sort (drag or click to group):"}
+        </span>
+        <div className="flex flex-wrap gap-2.5 justify-start min-h-[60px] p-4 bg-slate-50 rounded-3xl border border-slate-150">
+          {items.map((item: any) => {
+            const isSorted = !!sortingState[item];
+            const isSelected = activeItem === item;
+            if (isSorted) return null;
+            return (
+              <button
+                key={item}
+                type="button"
+                draggable="true"
+                onDragStart={(e) => handleDragStart(e, item)}
+                onClick={() => setActiveItem(isSelected ? null : item)}
+                className={`px-5 py-3 rounded-2xl border-2 transition-all font-black text-xs cursor-grab ${isSelected ? "bg-slate-950 border-slate-950 text-white" : "bg-white border-slate-200 hover:border-slate-400"}`}
+              >
+                {translateText(item, language)}
+              </button>
+            );
+          })}
+          {items.filter((i: string) => !sortingState[i]).length === 0 && (
+            <p className="text-slate-550 text-xs font-black w-full text-center">
+              {language === "ar" ? "أحسنت! تم تصنيف جميع العناصر بنجاح." : "Excellent! All items classified."}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {groups.map((grp: any) => (
+          <div
+            key={grp}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => handleDrop(e, grp)}
+            onClick={() => placeItem(grp)}
+            className="bg-white rounded-3xl border-2 border-slate-200 p-5 min-h-[160px] flex flex-col justify-between hover:border-slate-800 transition-all cursor-pointer"
+          >
+            <div className="border-b pb-2 mb-3">
+              <span className="font-black text-sm text-slate-950">{translateText(grp, language)}</span>
+            </div>
+            <div className="flex-1 flex flex-wrap gap-2 align-start">
+              {Object.keys(sortingState)
+                .filter((item) => sortingState[item] === grp)
+                .map((item) => (
+                  <div key={item} className="bg-slate-950 border border-slate-950 text-white px-3.5 py-2 rounded-xl flex items-center gap-1.5 text-xs font-black animate-pop-in">
+                    <span>{translateText(item, language)}</span>
+                    <button type="button" onClick={(e) => { e.stopPropagation(); clearItem(item); }} className="text-rose-400 font-black hover:text-rose-500">×</button>
+                  </div>
+                ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// 🕰️ 7. CLOCK (عقارب الساعة التفاعلية)
+// -------------------------------------------------------------
+function ClockRenderer({ question, value, onChange, language }: any) {
+  const parts = (value || "12:00").split(":");
+  const hour = parseInt(parts[0]) || 12;
+  const minute = parseInt(parts[1]) || 0;
+
+  const clockRef = useRef<HTMLDivElement>(null);
+  const [activeHand, setActiveHand] = useState<"hour" | "minute" | null>(null);
+
+  const updateTime = (field: "hour" | "minute", val: number) => {
+    const nextH = field === "hour" ? val : hour;
+    const nextM = field === "minute" ? val : minute;
+    onChange(`${String(nextH).padStart(2, "0")}:${String(nextM).padStart(2, "0")}`);
+  };
+
+  const handlePointerInteraction = (clientX: number, clientY: number) => {
+    if (!clockRef.current) return;
+    const rect = clockRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const dx = clientX - centerX;
+    const dy = clientY - centerY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    let angle = Math.atan2(dx, -dy) * (180 / Math.PI);
+    if (angle < 0) angle += 360;
+
+    let targetHand = activeHand;
+    if (!targetHand) {
+      targetHand = distance < rect.width * 0.3 ? "hour" : "minute";
+    }
+
+    if (targetHand === "hour") {
+      let h = Math.round(angle / 30);
+      if (h === 0) h = 12;
+      updateTime("hour", h);
+    } else {
+      let mVal = Math.round(angle / 6);
+      if (mVal === 60) mVal = 0;
+      updateTime("minute", mVal);
+    }
+  };
+
+  const handlePointerDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (!clockRef.current) return;
+    const rect = clockRef.current.getBoundingClientRect();
+    const dx = e.clientX - (rect.left + rect.width / 2);
+    const dy = e.clientY - (rect.top + rect.height / 2);
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const selected = dist < rect.width * 0.3 ? "hour" : "minute";
+    setActiveHand(selected);
+    handlePointerInteraction(e.clientX, e.clientY);
+  };
+
+  const handlePointerMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!activeHand) return;
+    handlePointerInteraction(e.clientX, e.clientY);
+  };
+
+  const handlePointerUp = () => {
+    setActiveHand(null);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length === 0) return;
+    const touch = e.touches[0];
+    if (!clockRef.current) return;
+    const rect = clockRef.current.getBoundingClientRect();
+    const dx = touch.clientX - (rect.left + rect.width / 2);
+    const dy = touch.clientY - (rect.top + rect.height / 2);
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const selected = dist < rect.width * 0.3 ? "hour" : "minute";
+    setActiveHand(selected);
+    handlePointerInteraction(touch.clientX, touch.clientY);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!activeHand || e.touches.length === 0) return;
+    const touch = e.touches[0];
+    handlePointerInteraction(touch.clientX, touch.clientY);
+  };
+
+  return (
+    <div className={`space-y-6 w-full max-w-full select-none ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <h4 className="text-base font-black text-slate-800 text-center">
+        {language === "ar" ? "اضغط واسحب عقارب الساعة مباشرة لتعديل الوقت:" : "Click and drag clock hands directly to set time:"}
+      </h4>
+      
+      <div className="flex justify-center">
+        <div
+          ref={clockRef}
+          onMouseDown={handlePointerDown}
+          onMouseMove={handlePointerMove}
+          onMouseUp={handlePointerUp}
+          onMouseLeave={handlePointerUp}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handlePointerUp}
+          className="w-60 h-60 rounded-full border-4 border-slate-900 bg-white relative flex items-center justify-center shadow-xl cursor-crosshair"
+        >
+          {Array.from({ length: 12 }).map((_, i) => {
+            const angle = ((i + 1) * 30 * Math.PI) / 180;
+            const x = 50 + 40 * Math.sin(angle);
+            const y = 50 - 40 * Math.cos(angle);
+            return (
+              <span key={i} className="absolute text-xs font-black text-slate-500" style={{ left: `${x}%`, top: `${y}%`, transform: "translate(-50%, -50%)" }}>
+                {i + 1}
+              </span>
+            );
+          })}
+          
+          <div
+            className="w-2 h-14 bg-slate-900 absolute bottom-1/2 left-1/2 origin-bottom rounded-full shadow-sm"
+            style={{ transform: `translate(-50%, 0) rotate(${(hour % 12) * 30 + minute * 0.5}deg)` }}
+          />
+          <div
+            className="w-1 h-20 bg-slate-650 absolute bottom-1/2 left-1/2 origin-bottom rounded-full shadow-sm"
+            style={{ transform: `translate(-50%, 0) rotate(${minute * 6}deg)` }}
+          />
+          <div className="w-4 h-4 rounded-full bg-slate-950 absolute border-2 border-white shadow" />
+        </div>
+      </div>
+
+      <div className="text-center">
+        <span className="text-3xl font-black text-white bg-slate-950 border border-slate-950 px-6 py-3.5 rounded-2xl tracking-widest shadow-lg">
+          {String(hour).padStart(2, "0")}:{String(minute).padStart(2, "0")}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// 🗺️ 8. MIND_MAP (خريطة المفاهيم)
+// -------------------------------------------------------------
+function MindMapRenderer({ question, value, onChange, language, containerRef }: any) {
+  const opts = parseJson(question.options, { nodes: [] });
+  const nodes = Array.isArray(opts?.nodes) ? opts.nodes : [];
+  const mapAnswers = parseJson(value, {});
+
+  const [activeWord, setActiveWord] = useState<string | null>(null);
+  const [coords, setCoords] = useState<{ x1: number; y1: number; x2: number; y2: number }[]>([]);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const updateCoords = () => {
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const newCoords: typeof coords = [];
+      const getEl = (id: string) => containerRef.current.querySelector(`[data-node-id="${id}"]`);
+
+      nodes.forEach((node: any) => {
+        if (node.parent) {
+          const parentEl = getEl(node.parent);
+          const childEl = getEl(node.id);
+          if (parentEl && childEl) {
+            const pRect = parentEl.getBoundingClientRect();
+            const cRect = childEl.getBoundingClientRect();
+            newCoords.push({
+              x1: pRect.left + pRect.width / 2 - containerRect.left,
+              y1: pRect.bottom - containerRect.top,
+              x2: cRect.left + cRect.width / 2 - containerRect.left,
+              y2: cRect.top - containerRect.top
+            });
+          }
+        }
+      });
+      setCoords(newCoords);
+    };
+
+    updateCoords();
+    window.addEventListener("resize", updateCoords);
+    const timeout = setTimeout(updateCoords, 100);
+    return () => {
+      window.removeEventListener("resize", updateCoords);
+      clearTimeout(timeout);
+    };
+  }, [value, question, containerRef]);
+
+  const handleNodeClick = (nodeId: string, node: any) => {
+    if (!node.isBlank) return;
+    if (activeWord) {
+      const nextAnswers = { ...mapAnswers, [nodeId]: activeWord };
+      onChange(JSON.stringify(nextAnswers));
+      setActiveWord(null);
+    } else {
+      const nextAnswers = { ...mapAnswers };
+      delete nextAnswers[nodeId];
+      onChange(JSON.stringify(nextAnswers));
+    }
+  };
+
+  const blanksList = nodes.filter((n: any) => n.isBlank).map((n: any) => n.label);
+
+  return (
+    <div className="space-y-8 relative w-full overflow-hidden" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">
+        {coords.map((c, idx) => (
+          <line key={idx} x1={c.x1} y1={c.y1} x2={c.x2} y2={c.y2} stroke="#cbd5e1" strokeWidth="3" />
+        ))}
+      </svg>
+
+      <div className="flex flex-wrap justify-center gap-6 py-4">
+        {nodes.map((node: any) => {
+          const isBlank = node.isBlank;
+          const nodeAns = mapAnswers[node.id];
+          return (
+            <div
+              key={node.id}
+              data-node-id={node.id}
+              onClick={() => handleNodeClick(node.id, node)}
+              className={`p-4.5 rounded-2xl border-2 transition-all cursor-pointer font-black text-sm min-w-[125px] text-center ${node.parent ? "bg-white border-slate-200 text-slate-800" : "bg-slate-950 border-slate-950 text-white"} ${isBlank && !nodeAns ? "border-dashed border-slate-350 bg-slate-50 text-slate-400" : isBlank && nodeAns ? "bg-slate-900 border-slate-900 text-white animate-pop-in" : ""}`}
+            >
+              {isBlank ? (translateText(nodeAns, language) || "?") : translateText(node.label, language)}
+            </div>
+          );
+        })}
+      </div>
+
+      {blanksList.length > 0 && (
+        <div className="space-y-3 pt-4 border-t border-slate-100">
+          <span className="text-xs font-black text-slate-400 block uppercase">
+            {language === "ar" ? "الخيارات المتاحة (اضغط على الخيار ثم اضغط على الفراغ):" : "Available choices (click choice then blank):"}
+          </span>
+          <div className="flex flex-wrap gap-2.5">
+            {blanksList.map((word: any, i: number) => {
+              const isPlaced = Object.values(mapAnswers).includes(word);
+              const isSelected = activeWord === word;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setActiveWord(isSelected ? null : word)}
+                  className={`px-5 py-3 rounded-2xl border-2 transition-all font-black text-xs cursor-pointer ${isPlaced ? "opacity-30 cursor-not-allowed bg-slate-100 border-slate-200" : isSelected ? "bg-slate-950 border-slate-950 text-white" : "bg-white border-slate-200 hover:border-slate-400"}`}
+                >
+                  {translateText(word, language)}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// ⏸️ 9. VIDEO_CHECKPOINT (فيديو تفاعلي)
+// -------------------------------------------------------------
+function VideoCheckpointRenderer({ question, value, onChange, language }: any) {
+  const opts = parseJson(question.options, { videoUrl: "", checkpoints: [] });
+  const videoUrl = opts.videoUrl || "";
+  const checkpoints = Array.isArray(opts?.checkpoints) ? opts.checkpoints : [];
+  const stateData = parseJson(value, { answeredCheckpoints: {} });
+  const answered = stateData.answeredCheckpoints || {};
+
+  const [currentAnswers, setCurrentAnswers] = useState<Record<string, string>>(answered);
+
+  const handleSelectAnswer = (timeKey: string, val: string) => {
+    const nextAns = { ...currentAnswers, [timeKey]: val };
+    setCurrentAnswers(nextAns);
+    onChange(JSON.stringify({ answeredCheckpoints: nextAns }));
+  };
+
+  return (
+    <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      {videoUrl && (
+        <div className="w-full aspect-video rounded-3xl overflow-hidden border border-slate-200 bg-black">
+          <iframe
+            src={videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be") ? videoUrl : `https://www.youtube.com/embed/${videoUrl}`}
+            className="w-full h-full"
+            allowFullScreen
+          />
+        </div>
+      )}
+      <div className="space-y-4">
+        <span className="text-xs font-black text-slate-400 block uppercase">
+          {language === "ar" ? "الأسئلة التفاعلية المرفقة بالفيديو:" : "Interactive questions attached to the video:"}
+        </span>
+        <div className="space-y-4">
+          {checkpoints.map((cp: any, idx: number) => {
+            const timeKey = String(cp.time);
+            const selectedVal = currentAnswers[timeKey] || "";
+            return (
+              <div key={idx} className="bg-slate-50 p-5 rounded-3xl border border-slate-150 space-y-4">
+                <span className="px-2.5 py-1 bg-slate-900 border border-slate-900 text-white text-[10px] font-black rounded-lg">
+                  {language === "ar" ? `ثانية ${cp.time}` : `${cp.time}s`}
+                </span>
+                <p className="font-black text-slate-800 text-sm">{translateText(cp.question, language)}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  {(cp.choices || []).map((ch: any) => {
+                    const isSelected = selectedVal === ch;
+                    return (
+                      <button
+                        key={ch}
+                        type="button"
+                        onClick={() => handleSelectAnswer(timeKey, ch)}
+                        className={`p-3.5 rounded-2xl border-2 transition-all font-bold text-xs cursor-pointer ${
+                          language === 'ar' ? 'text-right' : 'text-left'
+                        } ${isSelected ? "bg-slate-950 border-slate-950 text-white" : "bg-white border-slate-200 hover:border-slate-400"}`}
+                      >
+                        {translateText(ch, language)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// 📐 10. NUMBER_LINE (خط الأعداد)
+// -------------------------------------------------------------
+function NumberLineRenderer({ question, value, onChange, language }: any) {
+  const opts = parseJson(question.options, { min: 0, max: 10, step: 1, labels: [] });
+  const min = opts.min ?? 0;
+  const max = opts.max ?? 10;
+  const step = opts.step ?? 1;
+  const labels = Array.isArray(opts?.labels) ? opts.labels : [];
+  
+  const currentVal = value ? parseFloat(value) : min;
+
+  return (
+    <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <h4 className="text-base font-black text-slate-800 text-center">
+        {language === "ar" ? "حرّك المؤشر لتحديد الرقم المطلوب:" : "Move the slider to select the correct number:"}
+      </h4>
+      
+      <div className="flex flex-col gap-4 py-8 items-center">
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={currentVal}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full accent-slate-950 h-3 bg-slate-250 rounded-lg appearance-none cursor-pointer"
+        />
+        <div className="flex justify-between w-full px-2 text-xs font-black text-slate-500">
+          <span>{min}</span>
+          {labels.map((lbl: any, i: number) => (
+            <span key={i}>{translateText(lbl, language)}</span>
+          ))}
+          <span>{max}</span>
+        </div>
+      </div>
+
+      <div className="text-center">
+        <span className="text-3xl font-black text-white bg-slate-950 border border-slate-950 px-6 py-3.5 rounded-2xl shadow-lg">{currentVal}</span>
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// 🔄 11. SWIPE_SORT (فرز البطاقات بالـ Swipe)
+// -------------------------------------------------------------
+function SwipeSortRenderer({ question, value, onChange, language }: any) {
+  const opts = parseJson(question.options, { leftGroup: "Left Group", rightGroup: "Right Group", items: [] });
+  const leftGroup = opts.leftGroup || "Left";
+  const rightGroup = opts.rightGroup || "Right";
+  const items = Array.isArray(opts?.items) ? opts.items : [];
+  const swipeState = parseJson(value, {});
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const handleSwipe = (direction: "left" | "right") => {
+    if (currentIndex >= items.length) return;
+    const cardText = items[currentIndex];
+    const newState = { ...swipeState, [cardText]: direction };
+    onChange(JSON.stringify(newState));
+    setCurrentIndex((prev) => prev + 1);
+  };
+
+  const hasMore = currentIndex < items.length;
+
+  return (
+    <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      {hasMore ? (
+        <div className="flex flex-col items-center gap-6">
+          <div className="w-72 h-56 rounded-3xl border-2 border-slate-200 bg-white p-6 shadow-xl flex flex-col justify-between items-center text-center animate-gravity">
+            <span className="text-xs font-black text-slate-400">
+              {language === "ar" ? `بطاقة رقم ${currentIndex + 1} / ${items.length}` : `Card ${currentIndex + 1} / ${items.length}`}
+            </span>
+            <p className="text-lg font-black text-slate-800 my-auto leading-relaxed">{translateText(items[currentIndex], language)}</p>
+            <div className="flex gap-4 w-full">
+              <button
+                type="button"
+                onClick={() => handleSwipe("left")}
+                className="flex-1 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-900 text-white border border-slate-950 text-xs font-black"
+              >
+                ← {translateText(leftGroup, language)}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSwipe("right")}
+                className="flex-1 py-2.5 rounded-xl bg-slate-950 hover:bg-slate-900 text-white border border-slate-950 text-xs font-black"
+              >
+                {translateText(rightGroup, language)} →
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="text-center py-8">
+          <p className="text-slate-950 font-black text-sm">
+            {language === "ar" ? "تم تصنيف كافة البطاقات بنجاح! يمكنك إرسال الإجابة." : "All cards categorized! You can submit your answer."}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// 🗺️ 12. MAZE (مسار المتاهة التعليمي)
+// -------------------------------------------------------------
+function MazeRenderer({ question, value, onChange, language }: any) {
+  const defaultGrid = Array.from({ length: 5 }, () => Array(5).fill(1));
+  const opts = parseJson(question.options, { mazeGrid: defaultGrid, start: [0, 0], end: [4, 4] });
+  const grid = Array.isArray(opts?.mazeGrid) ? opts.mazeGrid : defaultGrid;
+  const start = opts.start || [0, 0];
+  const end = opts.end || [4, 4];
+  
+  const currentPath = parseJson(value, []);
+
+  const handleCellClick = (r: number, c: number) => {
+    if (grid[r][c] === 0) return; // Wall
+    const coordStr = `${r},${c}`;
+    if (currentPath.includes(coordStr)) {
+      const idx = currentPath.indexOf(coordStr);
+      const nextPath = currentPath.slice(0, idx + 1);
+      onChange(JSON.stringify(nextPath));
+    } else {
+      if (currentPath.length > 0) {
+        const last = currentPath[currentPath.length - 1].split(",").map(Number);
+        const dist = Math.abs(r - last[0]) + Math.abs(c - last[1]);
+        if (dist !== 1) return; // Must be adjacent
+      } else {
+        if (r !== start[0] || c !== start[1]) return; // Must start at start coord
+      }
+      const nextPath = [...currentPath, coordStr];
+      onChange(JSON.stringify(nextPath));
+    }
+  };
+
+  const handleReset = () => {
+    onChange(JSON.stringify([`${start[0]},${start[1]}`]));
+  };
+
+  return (
+    <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <div className="flex justify-between items-center">
+        <span className="text-xs font-bold text-slate-500">
+          {language === "ar" ? "ارسم مساراً من البداية حتى المخرج:" : "Draw a path from start to end:"}
+        </span>
+        <button type="button" onClick={handleReset} className="text-xs text-rose-500 font-bold hover:underline">
+          {language === "ar" ? "إعادة تعيين" : "Reset"}
+        </button>
+      </div>
+
+      <div className="w-full overflow-x-auto pb-2 flex justify-center">
+        <div className="flex flex-col gap-1.5 border-2 border-slate-200 p-3 bg-slate-100 rounded-2xl w-fit">
+          {grid.map((row: any[], rIdx: number) => (
+            <div key={rIdx} className="flex gap-1.5">
+              {row.map((val: number, cIdx: number) => {
+                const coordStr = `${rIdx},${cIdx}`;
+                const isWall = val === 0;
+                const isStart = start[0] === rIdx && start[1] === cIdx;
+                const isEnd = end[0] === rIdx && end[1] === cIdx;
+                const isPath = currentPath.includes(coordStr);
+                const pathIndex = currentPath.indexOf(coordStr);
+
+                return (
+                  <button
+                    key={cIdx}
+                    type="button"
+                    onClick={() => handleCellClick(rIdx, cIdx)}
+                    className={`w-10 h-10 rounded-lg border transition-all flex flex-col items-center justify-center font-black text-[9px] relative shrink-0 ${isWall ? "bg-slate-800 border-slate-900 text-slate-400 cursor-not-allowed" : isStart ? "bg-slate-950 border-slate-950 text-white" : isEnd ? "bg-emerald-650 border-emerald-700 text-white" : isPath ? "bg-slate-800 border-slate-800 text-white" : "bg-white border-slate-200 hover:border-slate-350"}`}
+                  >
+                    {isStart && <span>{language === "ar" ? "البداية" : "Start"}</span>}
+                    {isEnd && <span>{language === "ar" ? "المخرج" : "Exit"}</span>}
+                    {!isStart && !isEnd && isPath && <span>{pathIndex + 1}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// 🧩 13. WORD_SEARCH (البحث عن الكلمات)
+// -------------------------------------------------------------
+function WordSearchRenderer({ question, value, onChange, language }: any) {
+  const opts = parseJson(question.options, { grid: [], words: [] });
+  const grid = Array.isArray(opts?.grid) ? opts.grid : [];
+  const words = Array.isArray(opts?.words) ? opts.words : [];
+  const foundWords = parseJson(value, []);
+
+  const handleWordClick = (w: string) => {
+    let nextFound = [...foundWords];
+    if (nextFound.includes(w)) {
+      nextFound = nextFound.filter((x) => x !== w);
+    } else {
+      nextFound.push(w);
+    }
+    onChange(JSON.stringify(nextFound));
+  };
+
+  return (
+    <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      {grid.length > 0 && (
+        <div className="w-full overflow-x-auto pb-2 flex justify-center">
+          <div className="bg-slate-50 p-3 border border-slate-150 rounded-2xl flex flex-col gap-1.5 w-fit mx-auto shadow-inner">
+            {grid.map((row: string[], r: number) => (
+              <div key={r} className="flex gap-1.5">
+                {row.map((letter: string, c: number) => (
+                  <div key={c} className="w-8 h-8 bg-white border border-slate-200 rounded-lg flex items-center justify-center font-black text-slate-700 text-xs shadow-sm uppercase shrink-0">
+                    {letter}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-3">
+        <span className="text-xs font-black text-slate-400 block uppercase">
+          {language === "ar" ? "الكلمات المخفية بالجدول (اضغط الكلمة التي تعثر عليها لشطبها):" : "Hidden words (click word to scratch out):"}
+        </span>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {words.map((w: any) => {
+            const isFound = foundWords.includes(w);
+            return (
+              <button
+                key={w}
+                type="button"
+                onClick={() => handleWordClick(w)}
+                className={`p-3.5 rounded-xl border-2 transition-all font-black text-xs text-center cursor-pointer ${isFound ? "bg-slate-950 border-slate-950 text-white line-through" : "bg-white border-slate-200"}`}
+              >
+                {translateText(w, language)}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// 📐 14. GEOGEBRA (جيوجيبرا)
+// -------------------------------------------------------------
+function GeoGebraRenderer({ question, value, onChange, language }: any) {
+  const opts = parseJson(question.options, { materialId: "", width: 800, height: 500, iframeUrl: "" });
+  const materialId = opts.materialId || "";
+  const w = opts.width || 800;
+  const h = opts.height || 500;
+  const iframeUrl = opts.iframeUrl || "";
+
+  return (
+    <div className="flex flex-col items-center gap-6 w-full max-w-full" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      {iframeUrl && (
+        <div className="w-full aspect-[16/10] max-w-2xl rounded-2xl overflow-hidden border border-slate-200 bg-white">
+          <GeoGebraWidget materialId={materialId} iframeUrl={iframeUrl} w={w} h={h} />
+        </div>
+      )}
+      <div className="w-full max-w-md space-y-2">
+        <label className={`text-xs font-bold text-slate-500 uppercase tracking-widest block ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+          {language === "ar" ? "أدخل الحل النهائي هنا:" : "Enter the final solution here:"}
+        </label>
+        <input
+          type="text"
+          className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-center font-bold text-sm"
+          value={value || ""}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={language === "ar" ? "الحل..." : "Answer..."}
+        />
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// 🎴 15. FLASH_CARD (البطاقات التعليمية)
+// -------------------------------------------------------------
+function FlashCardRenderer({ question, value, onChange, language }: any) {
+  const opts = parseJson(question.options, { front: "", back: "" });
+  const [isFlipped, setIsFlipped] = useState(false);
+
+  return (
+    <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <div className="flex justify-center py-4">
+        <div
+          onClick={() => setIsFlipped(!isFlipped)}
+          className={`w-72 h-44 rounded-3xl border-2 p-6 flex flex-col justify-center items-center text-center cursor-pointer transition-all duration-500 relative ${isFlipped ? "bg-slate-950 border-slate-950 text-white" : "bg-white border-slate-250 text-slate-800"}`}
+        >
+          <p className="text-base font-black leading-relaxed">{isFlipped ? translateText(opts.back, language) : translateText(opts.front, language)}</p>
+          <span className="absolute bottom-3 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+            {language === "ar" ? "اضغط لقلب البطاقة" : "Click to flip card"}
+          </span>
+        </div>
+      </div>
+      <div className="w-full max-w-md mx-auto space-y-2">
+        <label className="text-xs font-bold text-slate-500 block text-center">
+          {language === "ar" ? "اكتب إجابتك للتحقق:" : "Type your answer to verify:"}
+        </label>
+        <input
+          type="text"
+          className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-center font-bold text-sm"
+          value={value || ""}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={language === "ar" ? "إجابتك..." : "Your answer..."}
+        />
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// 🧠 16. MEMORY_GAME (لعبة الذاكرة)
+// -------------------------------------------------------------
+interface MemoryCard {
+  id: number;
+  text: string;
+  type: "left" | "right";
+  pairIndex: number;
+}
+
+function MemoryGameRenderer({ question, value, onChange, language }: any) {
+  const opts = parseJson(question.options, { pairs: [] });
+  const rawPairs = Array.isArray(opts?.pairs) ? opts.pairs : [];
+  
+  const [cards, setCards] = useState<MemoryCard[]>([]);
+  const [flippedIds, setFlippedIds] = useState<number[]>([]);
+  const [matchedPairs, setMatchedPairs] = useState<number[]>([]);
+
+  useEffect(() => {
+    const generated: MemoryCard[] = [];
+    rawPairs.forEach((p: any, idx: number) => {
+      generated.push({ id: idx * 2, text: p.left, type: "left", pairIndex: idx });
+      generated.push({ id: idx * 2 + 1, text: p.right, type: "right", pairIndex: idx });
+    });
+    const shuffled = [...generated].sort(() => Math.random() - 0.5);
+    setCards(shuffled);
+  }, [question.options]);
+
+  const handleCardClick = (cardId: number, pairIndex: number) => {
+    if (flippedIds.includes(cardId) || matchedPairs.includes(pairIndex)) return;
+    if (flippedIds.length >= 2) return;
+
+    const nextFlipped = [...flippedIds, cardId];
+    setFlippedIds(nextFlipped);
+
+    if (nextFlipped.length === 2) {
+      const firstCard = cards.find((c) => c.id === nextFlipped[0]);
+      const secondCard = cards.find((c) => c.id === nextFlipped[1]);
+      if (firstCard && secondCard && firstCard.pairIndex === secondCard.pairIndex) {
+        const nextMatched = [...matchedPairs, firstCard.pairIndex];
+        setMatchedPairs(nextMatched);
+        setFlippedIds([]);
+        onChange(JSON.stringify(nextMatched));
+      } else {
+        setTimeout(() => setFlippedIds([]), 1000);
+      }
+    }
+  };
+
+  return (
+    <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <span className="text-xs font-bold text-slate-500">
+        {language === "ar" ? "لعبة الذاكرة (اعثر على الكروت المتطابقة):" : "Memory Game (Match the cards):"}
+      </span>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 justify-center">
+        {cards.map((c) => {
+          const isOpen = flippedIds.includes(c.id) || matchedPairs.includes(c.pairIndex);
+          return (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => handleCardClick(c.id, c.pairIndex)}
+              className={`w-full aspect-[4/3] rounded-2xl border-2 flex items-center justify-center font-black text-xs p-3 transition-all ${isOpen ? "bg-slate-950 border-slate-950 text-white animate-pop-in" : "bg-white border-slate-200 hover:border-slate-450"}`}
+            >
+              {isOpen ? translateText(c.text, language) : "🌟"}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// 🔠 17. WORD_SCRAMBLE (ترتيب الحروف)
+// -------------------------------------------------------------
+function WordScrambleRenderer({ question, value, onChange, language }: any) {
+  const opts = parseJson(question.options, { word: "" });
+  const rawWord = translateText(opts.word, language);
+  const word = (rawWord || "").toUpperCase();
+
+  const [letters, setLetters] = useState<string[]>([]);
+  const [typedLetters, setTypedLetters] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!word) return;
+    const shuffled = word.split("").sort(() => Math.random() - 0.5);
+    setLetters(shuffled);
+    setTypedLetters([]);
+  }, [word]);
+
+  const selectLetter = (l: string, idx: number) => {
+    const nextTyped = [...typedLetters, l];
+    setTypedLetters(nextTyped);
+    onChange(nextTyped.join(""));
+  };
+
+  const handleClear = () => {
+    setTypedLetters([]);
+    onChange("");
+  };
+
+  return (
+    <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <h4 className="text-base font-black text-slate-800 text-center">
+        {language === "ar" ? "أعد ترتيب الحروف لتكوين الكلمة الصحيحة:" : "Rearrange the letters to form the correct word:"}
+      </h4>
+      
+      <div className="flex justify-center gap-2 py-4">
+        {letters.map((l, idx) => (
+          <button
+            key={idx}
+            type="button"
+            onClick={() => selectLetter(l, idx)}
+            className="w-11 h-11 bg-white border-2 border-slate-200 rounded-xl flex items-center justify-center font-black text-base text-slate-700 hover:border-slate-800 cursor-pointer transition-all"
+          >
+            {l}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex flex-col items-center gap-3">
+        <div className="min-w-[150px] min-h-[46px] border-2 border-slate-950 rounded-2xl px-5 py-2.5 flex items-center justify-center font-black text-lg text-white bg-slate-950">
+          {typedLetters.join(" ")}
+        </div>
+        <button type="button" onClick={handleClear} className="text-xs text-rose-500 font-bold hover:underline">
+          {language === "ar" ? "مسح الكلمة" : "Clear Word"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// 🔤 18. SENTENCE_REORDER (ترتيب الجملة)
+// -------------------------------------------------------------
+function SentenceReorderRenderer({ question, value, onChange, language }: any) {
+  const opts = parseJson(question.options, { words: [] });
+  const rawWords = Array.isArray(opts?.words) ? opts.words : [];
+
+  const [shuffledWords, setShuffledWords] = useState<string[]>([]);
+  const [selectedWords, setSelectedWords] = useState<string[]>([]);
+
+  useEffect(() => {
+    const shuffled = [...rawWords].sort(() => Math.random() - 0.5);
+    setShuffledWords(shuffled);
+    setSelectedWords([]);
+  }, [question.options]);
+
+  const selectWord = (word: string) => {
+    if (selectedWords.includes(word)) return;
+    const nextSelected = [...selectedWords, word];
+    setSelectedWords(nextSelected);
+    onChange(nextSelected.join(" "));
+  };
+
+  const handleClear = () => {
+    setSelectedWords([]);
+    onChange("");
+  };
+
+  return (
+    <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <h4 className="text-base font-black text-slate-800 text-center">
+        {language === "ar" ? "اضغط على الكلمات بالترتيب الصحيح لتكوين الجملة:" : "Click the words in the correct order to build the sentence:"}
+      </h4>
+      
+      <div className="flex flex-wrap gap-2 justify-center py-4">
+        {shuffledWords.map((w, idx) => {
+          const isSelected = selectedWords.includes(w);
+          return (
+            <button
+              key={idx}
+              type="button"
+              disabled={isSelected}
+              onClick={() => selectWord(w)}
+              className={`px-4.5 py-3 rounded-2xl border-2 transition-all font-black text-xs ${isSelected ? "bg-slate-100 border-slate-200 text-slate-350 opacity-40 cursor-not-allowed" : "bg-white border-slate-200 hover:border-slate-400"}`}
+            >
+              {translateText(w, language)}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-full min-h-[55px] border-2 border-slate-950 rounded-3xl p-4 flex flex-wrap items-center justify-center gap-2.5 font-black text-sm text-white bg-slate-950">
+          {selectedWords.map((w) => translateText(w, language)).join(" ")}
+        </div>
+        <button type="button" onClick={handleClear} className="text-xs text-rose-500 font-bold hover:underline">
+          {language === "ar" ? "إعادة ترتيب" : "Reset"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// 📐 19. MATH_EQUATION (معادلة حسابية)
+// -------------------------------------------------------------
+function MathEquationRenderer({ question, value, onChange, language }: any) {
+  const opts = parseJson(question.options, { equation: "" });
+  const equation = translateText(opts.equation, language);
+
+  return (
+    <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <h4 className="text-base font-black text-slate-800 text-center">
+        {language === "ar" ? "أوجد قيمة المتغير x لحل المعادلة:" : "Solve the equation for x:"}
+      </h4>
+      
+      <div className="text-center py-6">
+        <span className="text-3xl font-black text-slate-800 border-b-4 border-slate-900 pb-2 px-6">{equation}</span>
+      </div>
+
+      <div className="w-full max-w-xs mx-auto space-y-2">
+        <label className="text-xs font-bold text-slate-500 block text-center">
+          {language === "ar" ? "الجواب (قيمة x):" : "Answer (x value):"}
+        </label>
+        <input
+          type="text"
+          className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-center font-bold text-sm"
+          value={value || ""}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={language === "ar" ? "قيمة x = ..." : "x = ..."}
+        />
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// 🔢 20. SEQUENCE_ORDER (ترتيب التسلسل)
+// -------------------------------------------------------------
+function SequenceOrderRenderer({ question, value, onChange, language }: any) {
+  const opts = parseJson(question.options, { items: [] });
+  const rawItems = Array.isArray(opts?.items) ? opts.items : [];
+  
+  const [itemsList, setItemsList] = useState<string[]>([]);
+
+  useEffect(() => {
+    const shuffled = [...rawItems].sort(() => Math.random() - 0.5);
+    setItemsList(shuffled);
+    onChange(JSON.stringify(shuffled));
+  }, [question.options]);
+
+  const moveItem = (idx: number, direction: "up" | "down") => {
+    const nextItems = [...itemsList];
+    if (direction === "up" && idx > 0) {
+      const temp = nextItems[idx];
+      nextItems[idx] = nextItems[idx - 1];
+      nextItems[idx - 1] = temp;
+    } else if (direction === "down" && idx < nextItems.length - 1) {
+      const temp = nextItems[idx];
+      nextItems[idx] = nextItems[idx + 1];
+      nextItems[idx + 1] = temp;
+    }
+    setItemsList(nextItems);
+    onChange(JSON.stringify(nextItems));
+  };
+
+  return (
+    <div className={`space-y-4 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <span className="text-xs font-bold text-slate-500">
+        {language === "ar" ? "رتب العناصر بالتسلسل الصحيح (باستخدام الأسهم):" : "Order the elements in the correct sequence:"}
+      </span>
+      <div className="flex flex-col gap-2.5">
+        {itemsList.map((item, idx) => (
+          <div key={idx} className="p-4 bg-white border border-slate-200 rounded-2xl flex justify-between items-center shadow-sm animate-gravity">
+            <span className="font-bold text-slate-700 text-xs">{idx + 1}. {translateText(item, language)}</span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={idx === 0}
+                onClick={() => moveItem(idx, "up")}
+                className="w-8 h-8 rounded-lg bg-slate-950 text-white flex items-center justify-center font-bold text-xs disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+              >
+                ▲
+              </button>
+              <button
+                type="button"
+                disabled={idx === itemsList.length - 1}
+                onClick={() => moveItem(idx, "down")}
+                className="w-8 h-8 rounded-lg bg-slate-950 text-white flex items-center justify-center font-bold text-xs disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+              >
+                ▼
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// 🔠 21. CROSSWORD (الكلمات المتقاطعة)
+// -------------------------------------------------------------
+function CrosswordRenderer({ question, value, onChange, language }: any) {
+  const opts = parseJson(question.options, { words: [] });
+  const words = Array.isArray(opts?.words) ? opts.words : [];
+  const crosswordState = parseJson(value, {});
+
+  const handleInputChange = (idx: number, text: string) => {
+    const nextAnswers = { ...crosswordState, [idx]: text.toUpperCase() };
+    onChange(JSON.stringify(nextAnswers));
+  };
+
+  return (
+    <div className={`space-y-4 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <span className="text-xs font-bold text-slate-500">
+        {language === "ar" ? "أجب عن الكلمات المتقاطعة حسب التلميحات:" : "Answer crossword puzzles based on clues:"}
+      </span>
+      <div className="space-y-3.5">
+        {words.map((item: any, idx: number) => {
+          const typedVal = crosswordState[idx] || "";
+          return (
+            <div key={idx} className="bg-slate-50 p-4.5 rounded-2xl border border-slate-150 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 animate-gravity">
+              <span className="font-bold text-slate-700 text-xs">{idx + 1}. {translateText(item.clue, language)}</span>
+              <input
+                type="text"
+                className="w-full sm:w-44 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-center font-bold text-xs uppercase"
+                value={typedVal}
+                onChange={(e) => handleInputChange(idx, e.target.value)}
+                maxLength={item.word ? item.word.length : 15}
+                placeholder={language === "ar" ? `حروف الكلمة (${item.word ? item.word.length : ""} حروف)` : `Word (${item.word ? item.word.length : ""} chars)`}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// 🔢 22. COUNT_OBJECTS (عد العناصر)
+// -------------------------------------------------------------
+function CountObjectsRenderer({ question, value, onChange, language }: any) {
+  const opts = parseJson(question.options, { itemImage: "", itemName: "" });
+  const itemName = translateText(opts.itemName, language) || "item";
+  const itemImage = opts.itemImage || "https://images.unsplash.com/photo-1560807707-8cc77767d783?w=150";
+
+  return (
+    <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <h4 className="text-base font-black text-slate-800 text-center">
+        {language === "ar" ? `كم عدد الـ ${itemName} الموجودة بالأسفل؟` : `How many ${itemName} are shown below?`}
+      </h4>
+      
+      <div className="flex flex-wrap gap-4 justify-center py-6 bg-slate-50 rounded-3xl border border-slate-150">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <img
+            key={i}
+            src={itemImage}
+            alt={itemName}
+            className="w-16 h-16 object-cover rounded-xl border border-white shadow-md animate-gravity animate-float"
+            style={{ animationDelay: `${i * 150}ms` }}
+          />
+        ))}
+      </div>
+
+      <div className="w-full max-w-xs mx-auto space-y-2">
+        <label className="text-xs font-bold text-slate-500 block text-center">{language === "ar" ? "العدد الكلي:" : "Total count:"}</label>
+        <input
+          type="number"
+          min="0"
+          className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-center font-bold text-sm"
+          value={value || ""}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={language === "ar" ? "اكتب العدد..." : "Type number..."}
+        />
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// 🖼️ 23. IMAGE_LABEL (تسمية أجزاء الصورة)
+// -------------------------------------------------------------
+function ImageLabelRenderer({ question, value, onChange, language }: any) {
+  const opts = parseJson(question.options, { imageUrl: "", labels: [] });
+  const imageUrl = opts.imageUrl || "";
+  const labels = Array.isArray(opts?.labels) ? opts.labels : [];
+  
+  const currentAnswers = parseJson(value, {});
+
+  const handleLabelChange = (idx: number, text: string) => {
+    const nextAnswers = { ...currentAnswers, [idx]: text };
+    onChange(JSON.stringify(nextAnswers));
+  };
+
+  return (
+    <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <span className="text-xs font-bold text-slate-500">
+        {language === "ar" ? "اكتب الاسم المقابل لكل علامة على الصورة:" : "Write label names corresponding to each marker:"}
+      </span>
+      
+      {imageUrl && (
+        <div className="relative w-full max-w-md mx-auto aspect-square rounded-2xl overflow-hidden border border-slate-200 shadow-lg bg-white">
+          <img src={imageUrl} alt="Background" className="w-full h-full object-cover" />
+          {labels.map((item: any, idx: number) => (
+            <div
+              key={idx}
+              className="absolute w-6 h-6 rounded-full bg-slate-950 text-white flex items-center justify-center font-bold text-xs shadow-md border-2 border-white cursor-pointer"
+              style={{ left: `${item.x}%`, top: `${item.y}%`, transform: "translate(-50%, -50%)" }}
+              title={`Label ${idx + 1}`}
+            >
+              {idx + 1}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="space-y-3.5">
+        {labels.map((item: any, idx: number) => {
+          const currentText = currentAnswers[idx] || "";
+          return (
+            <div key={idx} className="bg-slate-50 p-4 rounded-xl border border-slate-150 flex items-center justify-between gap-3">
+              <span className="font-bold text-slate-700 text-xs">
+                {language === "ar" ? `العلامة ${idx + 1}:` : `Marker ${idx + 1}:`}
+              </span>
+              <input
+                type="text"
+                className="w-full max-w-xs bg-white border border-slate-200 rounded-lg px-3 py-1.5 font-bold text-xs"
+                value={currentText}
+                onChange={(e) => handleLabelChange(idx, e.target.value)}
+                placeholder={language === "ar" ? "اكتب التسمية هنا..." : "Type label here..."}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------
+// 🎨 24. COLOR_MATCH (تطابق الألوان)
+// -------------------------------------------------------------
+function ColorMatchRenderer({ question, value, onChange, language }: any) {
+  const opts = parseJson(question.options, { pairs: [] });
+  const pairs = Array.isArray(opts?.pairs) ? opts.pairs : [];
+  
+  const currentAnswers = parseJson(value, {});
+
+  const handleColorChange = (idx: number, colorText: string) => {
+    const nextAnswers = { ...currentAnswers, [idx]: colorText };
+    onChange(JSON.stringify(nextAnswers));
+  };
+
+  return (
+    <div className={`space-y-4 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <span className="text-xs font-bold text-slate-500">
+        {language === "ar" ? "حدد اللون الصحيح لكل عنصر بالأسفل:" : "Define the correct color for each element below:"}
+      </span>
+      <div className="space-y-3.5">
+        {pairs.map((p: any, idx: number) => {
+          const typedVal = currentAnswers[idx] || "";
+          return (
+            <div key={idx} className="bg-slate-50 p-4.5 rounded-2xl border border-slate-150 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 animate-gravity">
+              <span className="font-black text-slate-800 text-sm">
+                {language === "ar" ? `ماهو لون الـ ${translateText(p.item, language)}؟` : `What is the color of ${translateText(p.item, language)}?`}
+              </span>
+              <input
+                type="text"
+                className="w-full sm:w-44 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-center font-bold text-xs"
+                value={typedVal}
+                onChange={(e) => handleColorChange(idx, e.target.value)}
+                placeholder={language === "ar" ? "مثال: أصفر" : "Example: Yellow"}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

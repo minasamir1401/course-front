@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   LayoutDashboard, Building2, Users, GraduationCap,
   Settings, LogOut, Menu, X, ClipboardList, BookOpen, UserCheck, Shield,
-  Plus, PieChart, Layers, Database
+  Plus, PieChart, Layers, Database, Activity
 } from "lucide-react";
 import { logout } from "@/lib/auth";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -102,6 +102,12 @@ export default function SuperAdminSidebar({
             <p className="px-3 py-1 text-[10px] font-black text-slate-400 uppercase tracking-[2px]">{t('superAdmin.sidebar.centralCourses')}</p>
             <SidebarLink href="/super-admin/courses" icon={Layers} label={t('superAdmin.sidebar.allCourses')} active={isActive('/super-admin/courses')} />
             <SidebarLink href="/super-admin/courses/create" icon={Plus} label={t('superAdmin.sidebar.addCourse')} active={isActive('/super-admin/courses/create')} />
+          </div>
+
+          {/* MONITORING */}
+          <div className="space-y-1">
+            <p className="px-3 py-1 text-[10px] font-black text-slate-400 uppercase tracking-[2px]">{language === 'ar' ? 'المراقبة' : 'Monitoring'}</p>
+            <SidebarLink href="/super-admin/monitor" icon={Activity} label={language === 'ar' ? "مراقبة النظام" : "System Monitor"} active={isActive('/super-admin/monitor')} />
           </div>
 
           {/* REPORTS */}

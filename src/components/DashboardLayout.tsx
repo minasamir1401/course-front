@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { LayoutDashboard, ClipboardList, BookOpen, Settings, BarChart3, Sparkles } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import AdminErrorBridge from "@/components/AdminErrorBridge";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -59,6 +60,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen font-sans overflow-x-hidden bg-transparent relative" dir={language === 'ar' ? "rtl" : "ltr"}>
+      <AdminErrorBridge />
       {/* Background Ornaments */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-100/40 blur-[120px] rounded-full animate-pulse" />
