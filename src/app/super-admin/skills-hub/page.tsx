@@ -1140,12 +1140,39 @@ export default function SuperAdminSkillsHubPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               
-              {/* Form Left/Middle Form Inputs */}
-              <div className="lg:col-span-2 space-y-6">
+              {/* 1. Interactive Options Editor (Left/Middle 2/3) */}
+              <div className="lg:col-span-2 bg-slate-50/50 p-6 rounded-3xl border border-slate-100 space-y-6">
+                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b pb-2 flex items-center gap-2">
+                  <Layers className="w-5 h-5 text-indigo-500 animate-none" />
+                  {language === 'ar' ? 'خيارات اللعبة والإجابة الصحيحة' : 'Game Options & Correct Answer'}
+                </h4>
                 
-                {/* 1. Base Fields */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50/50 p-6 rounded-3xl border border-slate-100">
-                  <div className="space-y-2 md:col-span-2">
+                <div className="bg-white rounded-2xl border border-slate-200 p-4 min-h-[300px]">
+                  <InteractiveQuestionEditor
+                    question={{
+                      type: activityForm.type,
+                      options: activityForm.options,
+                      correctAnswer: activityForm.correctAnswer,
+                      text: activityForm.titleAr // Pass title as text
+                    }}
+                    language={language}
+                    onChange={(updated) => {
+                      setActivityForm((prev: any) => ({
+                        ...prev,
+                        options: typeof updated.options === "string" ? updated.options : JSON.stringify(updated.options),
+                        correctAnswer: typeof updated.correctAnswer === "string" ? updated.correctAnswer : JSON.stringify(updated.correctAnswer)
+                      }));
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* 2. Form Side Inputs (Right 1/3) */}
+              <div className="lg:col-span-1 space-y-6">
+                
+                {/* Base Fields */}
+                <div className="grid grid-cols-1 gap-6 bg-slate-50/50 p-6 rounded-3xl border border-slate-100">
+                  <div className="space-y-2">
                     <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'عنوان النشاط / السؤال' : 'Activity Title / Question'}</label>
                     <input
                       type="text"
@@ -1241,13 +1268,13 @@ export default function SuperAdminSkillsHubPage() {
                   </div>
                 </div>
 
-                {/* 2. Educational Metadata & Standards */}
+                {/* Educational Metadata & Standards */}
                 <div className="bg-slate-50/50 p-6 rounded-3xl border border-slate-100 space-y-4">
                   <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                     <Settings className="w-4 h-4" />
                     {language === 'ar' ? 'المعايير والمخرجات (Scope & Sequence Metadata)' : 'Standards & Outcomes (Scope & Sequence Metadata)'}
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 gap-6">
                     <div className="space-y-2">
                       <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'المعيار (Standard)' : 'Standard'}</label>
                       <select
@@ -1288,7 +1315,7 @@ export default function SuperAdminSkillsHubPage() {
                         })()}
                       </select>
                     </div>
-                    <div className="space-y-2 md:col-span-2">
+                    <div className="space-y-2">
                       <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'مخرجات التعلم' : 'Learning Outcome'}</label>
                       <select
                         value={activityForm.learningOutcomeEn || ""}
@@ -1314,14 +1341,14 @@ export default function SuperAdminSkillsHubPage() {
                   </div>
                 </div>
 
-                {/* 3. Educational Helper Modals (Hint, Tip, Explanation, Insight) */}
+                {/* Educational Helper Modals (Hint, Tip, Explanation, Insight) */}
                 <div className="bg-slate-50/50 p-6 rounded-3xl border border-slate-100 space-y-4">
                   <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                     <Info className="w-4 h-4" />
                     {language === 'ar' ? 'مساعدات التعلم والتغذية الراجعة' : 'Learning Aids & Feedback Insights'}
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2 md:col-span-2">
+                  <div className="grid grid-cols-1 gap-6">
+                    <div className="space-y-2">
                       <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'تلميح للطالب (Hint)' : 'Student Hint'}</label>
                       <textarea
                         value={activityForm.hintEn}
@@ -1335,7 +1362,7 @@ export default function SuperAdminSkillsHubPage() {
                         dir="ltr"
                       />
                     </div>
-                    <div className="space-y-2 md:col-span-2">
+                    <div className="space-y-2">
                       <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'نصيحة ذكية (Smart Tip)' : 'Smart Tip'}</label>
                       <textarea
                         value={activityForm.tipEn}
@@ -1349,7 +1376,7 @@ export default function SuperAdminSkillsHubPage() {
                         dir="ltr"
                       />
                     </div>
-                    <div className="space-y-2 md:col-span-2">
+                    <div className="space-y-2">
                       <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'شرح الإجابة المفصل (Explanation)' : 'Detailed Solution Explanation'}</label>
                       <textarea
                         value={activityForm.explanationEn}
@@ -1363,7 +1390,7 @@ export default function SuperAdminSkillsHubPage() {
                         dir="ltr"
                       />
                     </div>
-                    <div className="space-y-2 md:col-span-2">
+                    <div className="space-y-2">
                       <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'فكرة جوهرية (Key Insight)' : 'Key Insight'}</label>
                       <textarea
                         value={activityForm.keyInsightEn}
@@ -1381,34 +1408,6 @@ export default function SuperAdminSkillsHubPage() {
                 </div>
 
               </div>
-
-              {/* 3. Interactive Options Editor (Right 1/3) */}
-              <div className="bg-slate-50/50 p-6 rounded-3xl border border-slate-100 space-y-6">
-                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b pb-2 flex items-center gap-2">
-                  <Layers className="w-5 h-5 text-indigo-500 animate-none" />
-                  {language === 'ar' ? 'خيارات اللعبة والإجابة الصحيحة' : 'Game Options & Correct Answer'}
-                </h4>
-                
-                <div className="bg-white rounded-2xl border border-slate-200 p-4 min-h-[300px]">
-                  <InteractiveQuestionEditor
-                    question={{
-                      type: activityForm.type,
-                      options: activityForm.options,
-                      correctAnswer: activityForm.correctAnswer,
-                      text: activityForm.titleAr // Pass title as text
-                    }}
-                    language={language}
-                    onChange={(updated) => {
-                      setActivityForm((prev: any) => ({
-                        ...prev,
-                        options: typeof updated.options === "string" ? updated.options : JSON.stringify(updated.options),
-                        correctAnswer: typeof updated.correctAnswer === "string" ? updated.correctAnswer : JSON.stringify(updated.correctAnswer)
-                      }));
-                    }}
-                  />
-                </div>
-              </div>
-
             </div>
 
             {/* Save Actions */}
