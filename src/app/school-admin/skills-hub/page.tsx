@@ -1,16 +1,19 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Sparkles, Plus, Trash2, Edit, ChevronDown, ChevronUp,
   ArrowRight, ArrowLeft, Save, CheckCircle2, AlertCircle, X,
-  Folder, BookOpen, FileText, Info, HelpCircle, Layers, Settings
+  Folder, BookOpen, FileText, Info, HelpCircle, Layers, Settings,
+  Play, BrainCircuit, RefreshCw, Star, StarOff, Upload, Download, Globe, School, Eye, Clock
 } from "lucide-react";
 import { API_URL } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import InteractiveQuestionEditor from "@/components/InteractiveQuestionEditor";
+import InteractiveQuestionRenderer from "@/components/InteractiveQuestionRenderer";
+import * as XLSX from "xlsx";
 
 export default function SchoolAdminSkillsHubPage() {
   const router = useRouter();
@@ -20,6 +23,97 @@ export default function SchoolAdminSkillsHubPage() {
   const [token, setToken] = useState<string | null>(null);
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Auto-Save States & Refs
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const autoSaveTimeoutRef = useRef<any>(null);
+  const isFirstLoadRef = useRef<boolean>(true);
+
+  // Metadata Excel upload ref
+  const metadataExcelRef = useRef<HTMLInputElement>(null);
+
+  // Preview Play States
+  const [previewActivity, setPreviewActivity] = useState<any>(null);
+  const [previewAnswer, setPreviewAnswer] = useState<string>("");
+  const [previewIsSubmitting, setPreviewIsSubmitting] = useState(false);
+  const [previewResult, setPreviewResult] = useState<any>(null);
+  const [previewStartTime, setPreviewStartTime] = useState<number>(0);
+  const [previewHintsUsed, setPreviewHintsUsed] = useState<number>(0);
+  const [previewAttemptCount, setPreviewAttemptCount] = useState<number>(1);
+  const [previewHelperModal, setPreviewHelperModal] = useState<{ type: "hint" | "tip" | "keyInsight" | null; content: string }>({
+    type: null,
+    content: ""
+  });
+
+  const getGradeLabel = (g: string) => {
+    if (language === "ar") return g;
+    const map: Record<string, string> = {
+      "الصف الأول الابتدائي": "Grade 1 Primary",
+      "الصف الثاني الابتدائي": "Grade 2 Primary",
+      "الصف الثالث الابتدائي": "Grade 3 Primary",
+      "الصف الرابع الابتدائي": "Grade 4 Primary",
+      "الصف الخامس الابتدائي": "Grade 5 Primary",
+      "الصف السادس الابتدائي": "Grade 6 Primary",
+      "الصف الأول الإعدادي": "Grade 7 Preparatory",
+      "الصف الثاني الإعدادي": "Grade 8 Preparatory",
+      "الصف الثالث الإعدادي": "Grade 9 Preparatory",
+      "الصف الأول الثانوي": "Grade 10 Secondary",
+      "الصف الثاني الثانوي": "Grade 11 Secondary",
+      "الصف الثالث الثانوي": "Grade 12 Secondary"
+    };
+    return map[g] || g;
+  };
+
+  const getCleanDescription = (desc: string | null) => {
+    if (!desc) return "";
+    const trimmed = desc.trim();
+    if (trimmed.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        return parsed.description || "";
+      } catch {}
+    }
+    return desc;
+  };
+
+  const getLessonMetadata = (lesson: any) => {
+    if (!lesson || !lesson.description) return { description: "", standards: [], indicators: [], outcomes: [] };
+    const desc = lesson.description.trim();
+    if (desc.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(desc);
+        return {
+          description: parsed.description || "",
+          standards: parsed.standards || [],
+          indicators: parsed.indicators || [],
+          outcomes: parsed.outcomes || []
+        };
+      } catch {}
+    }
+    return {
+      description: lesson.description,
+      standards: [],
+      indicators: [],
+      outcomes: []
+    };
+  };
+
+  const translateText = (val: any, lang: string = "ar") => {
+    if (!val) return "";
+    if (typeof val === "string") {
+      try {
+        const parsed = JSON.parse(val);
+        if (parsed && typeof parsed === "object") {
+          return parsed[lang] || parsed["ar"] || parsed["en"] || "";
+        }
+      } catch {}
+      return val;
+    }
+    if (typeof val === "object" && val !== null) {
+      return val[lang] || val["ar"] || val["en"] || "";
+    }
+    return String(val);
+  };
 
   // Filter States
   const [subject, setSubject] = useState<string>("الرياضيات");
@@ -245,6 +339,14 @@ export default function SchoolAdminSkillsHubPage() {
       : `${API_URL}/skills-hub/lessons`;
     const method = isEdit ? "PUT" : "POST";
 
+    const existingMetadata = getLessonMetadata(lessonModal.data);
+    const finalDescription = JSON.stringify({
+      description: lessonModal.data.description || "",
+      standards: existingMetadata.standards || [],
+      indicators: existingMetadata.indicators || [],
+      outcomes: existingMetadata.outcomes || []
+    });
+
     try {
       const res = await fetch(url, {
         method,
@@ -255,7 +357,7 @@ export default function SchoolAdminSkillsHubPage() {
         body: JSON.stringify({
           clusterId: selectedCluster.id,
           name: lessonModal.data.name,
-          description: lessonModal.data.description,
+          description: finalDescription,
           order: Number(lessonModal.data.order) || 0
         })
       });
@@ -310,6 +412,8 @@ export default function SchoolAdminSkillsHubPage() {
       explanation: "",
       keyInsight: ""
     });
+    isFirstLoadRef.current = true;
+    setAutoSaveStatus("idle");
     setActiveTab("activity-form");
   };
 
@@ -333,7 +437,24 @@ export default function SchoolAdminSkillsHubPage() {
       explanation: act.explanation || "",
       keyInsight: act.keyInsight || ""
     });
+    isFirstLoadRef.current = true;
+    setAutoSaveStatus("idle");
     setActiveTab("activity-form");
+  };
+
+  const handleDeleteActivity = async (id: string) => {
+    if (!token || !confirm(language === 'ar' ? "هل أنت متأكد من حذف هذا النشاط التفاعلي؟" : "Are you sure you want to delete this interactive activity?")) return;
+    try {
+      const res = await fetch(`${API_URL}/skills-hub/activities/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        fetchActivities(selectedLesson.id);
+      }
+    } catch (err) {
+      console.error("Error deleting activity:", err);
+    }
   };
 
   // Submit Activity
@@ -368,11 +489,298 @@ export default function SchoolAdminSkillsHubPage() {
         fetchActivities(selectedLesson.id);
       } else {
         const err = await res.json();
-        alert(err.error || "حدث خطأ أثناء حفظ النشاط");
+        alert(err.error || (language === 'ar' ? "حدث خطأ أثناء حفظ النشاط" : "Error saving activity"));
       }
     } catch (err) {
       console.error("Error saving activity:", err);
     }
+  };
+
+  // Save & Continue Handler
+  const handleSaveActivityAndContinue = async () => {
+    if (!token || !selectedLesson) return;
+    const isEdit = !!editingActivity;
+    const url = isEdit
+      ? `${API_URL}/skills-hub/activities/${editingActivity.id}`
+      : `${API_URL}/skills-hub/activities`;
+    const method = isEdit ? "PUT" : "POST";
+
+    const payload = {
+      lessonId: selectedLesson.id,
+      ...activityForm,
+      options: typeof activityForm.options === "string" ? activityForm.options : JSON.stringify(activityForm.options),
+      correctAnswer: typeof activityForm.correctAnswer === "string" ? activityForm.correctAnswer : JSON.stringify(activityForm.correctAnswer)
+    };
+
+    try {
+      setAutoSaveStatus("saving");
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setAutoSaveStatus("saved");
+        if (!isEdit && data.activity) {
+          setEditingActivity(data.activity);
+        }
+        fetchActivities(selectedLesson.id);
+        alert(language === 'ar' ? "تم حفظ النشاط بنجاح" : "Activity saved successfully");
+      } else {
+        setAutoSaveStatus("error");
+        const err = await res.json();
+        alert(err.error || (language === 'ar' ? "حدث خطأ أثناء حفظ النشاط" : "Error saving activity"));
+      }
+    } catch (err) {
+      console.error("Error saving activity:", err);
+      setAutoSaveStatus("error");
+    }
+  };
+
+  // Auto-Save Effect Hook
+  useEffect(() => {
+    if (activeTab !== "activity-form" || !token || !selectedLesson) return;
+    
+    // Prevent auto-save on initial form load
+    if (isFirstLoadRef.current) {
+      isFirstLoadRef.current = false;
+      return;
+    }
+
+    setAutoSaveStatus("saving");
+    if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
+
+    autoSaveTimeoutRef.current = setTimeout(async () => {
+      const isEdit = !!editingActivity;
+      const url = isEdit
+        ? `${API_URL}/skills-hub/activities/${editingActivity.id}`
+        : `${API_URL}/skills-hub/activities`;
+      const method = isEdit ? "PUT" : "POST";
+
+      const payload = {
+        lessonId: selectedLesson.id,
+        ...activityForm,
+        options: typeof activityForm.options === "string" ? activityForm.options : JSON.stringify(activityForm.options),
+        correctAnswer: typeof activityForm.correctAnswer === "string" ? activityForm.correctAnswer : JSON.stringify(activityForm.correctAnswer)
+      };
+
+      try {
+        const res = await fetch(url, {
+          method,
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setAutoSaveStatus("saved");
+          if (!isEdit && data.activity) {
+            setEditingActivity(data.activity);
+          }
+          fetchActivities(selectedLesson.id);
+        } else {
+          setAutoSaveStatus("error");
+        }
+      } catch (err) {
+        console.error("Autosave error:", err);
+        setAutoSaveStatus("error");
+      }
+    }, 1500);
+
+    return () => {
+      if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
+    };
+  }, [activityForm, activeTab]);
+
+  // Lesson Metadata Excel Import / Export
+  const saveLessonMetadata = async (updatedMetadata: any) => {
+    if (!token || !selectedLesson) return;
+    const updatedDescription = JSON.stringify(updatedMetadata);
+    try {
+      const res = await fetch(`${API_URL}/skills-hub/lessons/${selectedLesson.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: selectedLesson.name,
+          description: updatedDescription,
+          order: selectedLesson.order
+        })
+      });
+      if (res.ok) {
+        const updatedLesson = await res.json();
+        setSelectedLesson(updatedLesson.lesson);
+        setLessons(prev => prev.map(l => l.id === selectedLesson.id ? updatedLesson.lesson : l));
+      }
+    } catch (err) {
+      console.error("Error saving lesson metadata:", err);
+    }
+  };
+
+  const handleExcelUpload = () => {
+    metadataExcelRef.current?.click();
+  };
+
+  const handleMetadataExcelChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!selectedLesson) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const wb = XLSX.read(data, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+
+        if (rows.length < 2) {
+          alert(language === 'ar' ? "ملف Excel فارغ أو لا يحتوي على صفوف بيانات" : "Excel file is empty or does not contain data rows");
+          return;
+        }
+
+        const headers = (rows[0] as string[]).map((h) => String(h).trim().toLowerCase());
+
+        const stdIdx = headers.findIndex(h => h.includes("standard") || h.includes("معيار") || h.includes("المعايير"));
+        const indIdx = headers.findIndex(h => h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشرات"));
+        const loIdx = headers.findIndex(h => h.includes("outcome") || h.includes("ناتج") || h.includes("مخرج") || h.includes("النواتج") || h.includes("المخرجات"));
+        const titleIdx = headers.findIndex(h => h.includes("title") || h.includes("درس") || h.includes("المهارة") || h.includes("الفرعية"));
+
+        if (stdIdx === -1 && indIdx === -1 && loIdx === -1) {
+          alert(language === 'ar' ? "لم يتم العثور على أعمدة متوافقة (المعايير، المؤشرات، المخرجات)" : "Could not find matching columns (Standards, Indicators, Outcomes)");
+          return;
+        }
+
+        const dataRows = rows.slice(1).filter(r => r.some(c => String(c).trim() !== ""));
+
+        let filteredRows = dataRows;
+        if (titleIdx >= 0 && selectedLesson.name) {
+          const lessonNameLower = selectedLesson.name.trim().toLowerCase();
+          const matchingRows = dataRows.filter(r => {
+            const rowTitle = String(r[titleIdx] ?? "").trim().toLowerCase();
+            return rowTitle && (lessonNameLower.includes(rowTitle) || rowTitle.includes(lessonNameLower));
+          });
+          if (matchingRows.length > 0) {
+            filteredRows = matchingRows;
+          }
+        }
+
+        if (filteredRows.length === 0) {
+          alert(language === 'ar' ? "لم يتم العثور على بيانات مطابقة لهذه المهارة" : "No matching data rows found for this sub-skill");
+          return;
+        }
+
+        const standardsList = filteredRows.map(r => stdIdx >= 0 ? String(r[stdIdx] ?? "").trim() : "").filter(Boolean);
+        const indicatorsList = filteredRows.map(r => indIdx >= 0 ? String(r[indIdx] ?? "").trim() : "").filter(Boolean);
+        const outcomesList = filteredRows.map(r => loIdx >= 0 ? String(r[loIdx] ?? "").trim() : "").filter(Boolean);
+
+        const existingMetadata = getLessonMetadata(selectedLesson);
+        const nextStandards = Array.from(new Set([...existingMetadata.standards, ...standardsList]));
+        const nextIndicators = Array.from(new Set([...existingMetadata.indicators, ...indicatorsList]));
+        const nextOutcomes = Array.from(new Set([...existingMetadata.outcomes, ...outcomesList]));
+
+        await saveLessonMetadata({
+          description: existingMetadata.description,
+          standards: nextStandards,
+          indicators: nextIndicators,
+          outcomes: nextOutcomes
+        });
+
+        alert(language === 'ar' ? "تم استيراد المعايير والمؤشرات بنجاح" : "Standards and indicators imported successfully");
+      } catch (err) {
+        console.error("Error importing metadata:", err);
+        alert(language === 'ar' ? "حدث خطأ أثناء قراءة ملف Excel" : "Error reading Excel file");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = "";
+  };
+
+  const downloadMetadataTemplate = () => {
+    const wsData = [
+      ["Sub-Skill Title", "Standard", "Indicator", "Outcome"],
+      [selectedLesson?.name || "اسم المهارة الفرعية", "MATH.3.A.1", "MATH.IND.1", "القدرة على تكوين العشرات"],
+      [selectedLesson?.name || "اسم المهارة الفرعية", "MATH.3.A.2", "MATH.IND.2", "قراءة الساعات بدقة"]
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Metadata Template");
+    XLSX.writeFile(wb, "skills_metadata_template.xlsx");
+  };
+
+  // Preview / Play Handlers
+  const startPreviewActivity = async (act: any) => {
+    if (!token) return;
+    try {
+      setIsLoading(true);
+      const res = await fetch(`${API_URL}/skills-hub/activities/${act.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const activity = await res.json();
+        setPreviewActivity(activity);
+        setPreviewAnswer("");
+        setPreviewStartTime(Date.now());
+        setPreviewHintsUsed(0);
+        setPreviewAttemptCount(1);
+        setPreviewResult(null);
+      }
+    } catch (err) {
+      console.error("Error loading activity for preview:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const submitPreviewAnswer = async () => {
+    if (!token || !previewActivity || previewIsSubmitting) return;
+    setPreviewIsSubmitting(true);
+    const timeTaken = Math.round((Date.now() - previewStartTime) / 1000);
+    
+    try {
+      const res = await fetch(`${API_URL}/skills-hub/activities/${previewActivity.id}/attempt`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          selectedAnswer: previewAnswer,
+          timeTaken,
+          hintsUsed: previewHintsUsed,
+          attemptCount: previewAttemptCount
+        })
+      });
+      
+      if (res.ok) {
+        const result = await res.json();
+        setPreviewResult(result);
+      } else {
+        const errData = await res.json();
+        alert(errData.error || (language === 'ar' ? "خطأ في الإرسال" : "Submission failed"));
+      }
+    } catch (err) {
+      console.error("Error submitting preview attempt:", err);
+    } finally {
+      setPreviewIsSubmitting(false);
+    }
+  };
+
+  const handlePreviewRetry = () => {
+    setPreviewResult(null);
+    setPreviewAnswer("");
+    setPreviewStartTime(Date.now());
+    setPreviewAttemptCount(prev => prev + 1);
   };
 
   const handleSeedDemoActivities = async () => {
@@ -559,18 +967,10 @@ export default function SchoolAdminSkillsHubPage() {
       {
         title: "تسمية أجزاء زهرة النبات على الصورة",
         type: "IMAGE_LABEL",
-        options: { imageUrl: "https://images.unsplash.com/photo-1507290439931-a8e02da4b8e0?w=600", labels: [{ text: "الأوراق", x: 30, y: 70 }, { text: "البتلات", x: 50, y: 30 }] },
-        correctAnswer: [{ text: "الأوراق", x: 30, y: 70 }, { text: "البتلات", x: 50, y: 30 }],
+        options: { imageUrl: "https://images.unsplash.com/photo-1507269837357-1037ae918498?w=500", labels: [{ x: 50, y: 30, text: "بتلة" }, { x: 50, y: 70, text: "ساق" }] },
+        correctAnswer: [{ x: 50, y: 30, text: "بتلة" }, { x: 50, y: 70, text: "ساق" }],
         points: 20,
         difficulty: "Hard"
-      },
-      {
-        title: "تطابق الألوان - الفواكه والألوان المناسبة",
-        type: "COLOR_MATCH",
-        options: { pairs: [{ item: "فراولة", color: "أحمر" }, { item: "موز", color: "أصفر" }] },
-        correctAnswer: [{ item: "فراولة", color: "أحمر" }, { item: "موز", color: "أصفر" }],
-        points: 15,
-        difficulty: "Medium"
       }
     ];
 
@@ -605,45 +1005,36 @@ export default function SchoolAdminSkillsHubPage() {
         });
       }
       fetchActivities(selectedLesson.id);
-      alert("تم توليد الـ 24 نشاطاً تجريبياً بنجاح! يمكنك الآن استعراضها وتعديلها.");
+      alert(language === 'ar' ? "تم توليد الـ 24 نشاطاً تجريبياً بنجاح! يمكنك الآن استعراضها وتعديلها." : "Demo activities generated successfully!");
     } catch (err) {
       console.error("Error seeding demo activities:", err);
-      alert("حدث خطأ أثناء توليد الأنشطة التجريبية.");
-    }
-  };
-
-  // Delete Activity
-  const handleDeleteActivity = async (id: string) => {
-    if (!token || !confirm("هل أنت متأكد من حذف هذا النشاط التفاعلي؟")) return;
-    try {
-      const res = await fetch(`${API_URL}/skills-hub/activities/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        fetchActivities(selectedLesson.id);
-      }
-    } catch (err) {
-      console.error("Error deleting activity:", err);
+      alert(language === 'ar' ? "حدث خطأ أثناء توليد الأنشطة التجريبية." : "Error generating demo activities.");
     }
   };
 
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto space-y-8 pb-24 px-4 overflow-x-hidden" dir="rtl">
+      <input
+        type="file"
+        ref={metadataExcelRef}
+        style={{ display: "none" }}
+        accept=".xlsx,.xls"
+        onChange={handleMetadataExcelChange}
+      />
+      <div className="max-w-7xl mx-auto space-y-8 pb-24 px-4 overflow-x-hidden" dir={language === 'ar' ? 'rtl' : 'ltr'}>
         
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm">
-          <div className="space-y-2 text-right">
+        <div className={`flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+          <div className="space-y-2">
             <div className="flex items-center gap-2 text-indigo-600 font-black">
               <Sparkles className="w-5 h-5 floating" />
-              <span>لوحة الإشراف والتعديل</span>
+              <span>{language === 'ar' ? 'لوحة الإشراف والتعديل' : 'Administration & Edit Board'}</span>
             </div>
             <h1 className="text-2xl md:text-4xl font-black text-slate-900 leading-tight">
-              إدارة مكتبة المهارات التفاعلية
+              {language === 'ar' ? 'إدارة مكتبة المهارات التفاعلية' : 'Interactive Skills Hub Library'}
             </h1>
             <p className="text-slate-500 font-medium text-sm">
-              أضف محاور، مهارات، وأنشطة تعليمية تفاعلية مخصصة لطلاب مدرستك ومطابقة للـ Scope & Sequence.
+              {language === 'ar' ? 'أضف محاور، مهارات، وأنشطة تعليمية تفاعلية مخصصة لطلاب مدرستك ومطابقة للـ Scope & Sequence.' : 'Add custom skill clusters, lessons, and interactive educational activities tailored to your school and aligned with Scope & Sequence.'}
             </p>
           </div>
           
@@ -656,9 +1047,9 @@ export default function SchoolAdminSkillsHubPage() {
                 onChange={(e) => setSubject(e.target.value)}
                 className="bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-black outline-none focus:border-indigo-500"
               >
-                <option value="الرياضيات">📐 الرياضيات</option>
-                <option value="القراءة">📚 القراءة</option>
-                <option value="العلوم">🔬 العلوم</option>
+                <option value="الرياضيات">{language === 'ar' ? '📐 الرياضيات' : '📐 Mathematics'}</option>
+                <option value="القراءة">{language === 'ar' ? '📚 القراءة' : '📚 Reading'}</option>
+                <option value="العلوم">{language === 'ar' ? '🔬 العلوم' : '🔬 Science'}</option>
               </select>
 
               {/* Grade Select */}
@@ -668,7 +1059,7 @@ export default function SchoolAdminSkillsHubPage() {
                 className="bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-black outline-none focus:border-indigo-500"
               >
                 {GRADES_LIST.map((g) => (
-                  <option key={g} value={g}>{g}</option>
+                  <option key={g} value={g}>{getGradeLabel(g)}</option>
                 ))}
               </select>
             </div>
@@ -684,19 +1075,19 @@ export default function SchoolAdminSkillsHubPage() {
               <div className="flex justify-between items-center border-b pb-4">
                 <h3 className="font-black text-slate-800 text-lg flex items-center gap-2">
                   <Folder className="w-5 h-5 text-indigo-500" />
-                  المحاور (Clusters)
+                  {language === 'ar' ? 'المحاور (Clusters)' : 'Clusters'}
                 </h3>
                 <button
                   onClick={() => setClusterModal({ open: true, data: { name: "", description: "" } })}
                   className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-black text-xs flex items-center gap-1 transition-all"
                 >
                   <Plus className="w-4 h-4" />
-                  أضف محور
+                  {language === 'ar' ? 'أضف محور' : 'Add Cluster'}
                 </button>
               </div>
 
               {isLoading ? (
-                <div className="text-center py-12 text-slate-400 font-bold">جاري التحميل...</div>
+                <div className="text-center py-12 text-slate-400 font-bold">{language === 'ar' ? 'جاري التحميل...' : 'Loading...'}</div>
               ) : clusters.length > 0 ? (
                 <div className="space-y-3">
                   {clusters.map((cluster) => {
@@ -713,7 +1104,7 @@ export default function SchoolAdminSkillsHubPage() {
                       >
                         <div className="flex justify-between items-start">
                           <h4 className="font-black text-slate-800 text-sm flex-1">{cluster.name}</h4>
-                          <div className="flex gap-1 shrink-0 mr-2">
+                          <div className={`flex gap-1 shrink-0 ${language === 'ar' ? 'mr-2' : 'ml-2'}`}>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -738,10 +1129,10 @@ export default function SchoolAdminSkillsHubPage() {
                           <p className="text-slate-400 text-xs font-bold mt-1 line-clamp-1">{cluster.description}</p>
                         )}
                         <div className="flex items-center gap-2 mt-3 text-[10px] text-slate-400 font-bold">
-                          <span>{cluster._count?.skills || 0} مهارات فرعية</span>
+                          <span>{cluster._count?.skills || 0} {language === 'ar' ? 'مهارات فرعية' : 'Sub-skills'}</span>
                           {cluster.isCentral && (
                             <span className="px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded border border-amber-100">
-                              مركزي
+                              {language === 'ar' ? 'مركزي' : 'Central'}
                             </span>
                           )}
                         </div>
@@ -750,7 +1141,7 @@ export default function SchoolAdminSkillsHubPage() {
                   })}
                 </div>
               ) : (
-                <div className="text-center py-12 text-slate-400 font-bold">لا توجد محاور مسجلة في هذا الصف والمادة.</div>
+                <div className="text-center py-12 text-slate-400 font-bold">{language === 'ar' ? 'لا توجد محاور مسجلة في هذا الصف والمادة.' : 'No clusters registered for this grade and subject.'}</div>
               )}
             </div>
 
@@ -759,7 +1150,7 @@ export default function SchoolAdminSkillsHubPage() {
               <div className="flex justify-between items-center border-b pb-4">
                 <h3 className="font-black text-slate-800 text-lg flex items-center gap-2">
                   <BookOpen className="w-5 h-5 text-emerald-500" />
-                  المهارات الفرعية (Skills)
+                  {language === 'ar' ? 'المهارات الفرعية (Skills)' : 'Sub-Skills (Lessons)'}
                 </h3>
                 {selectedCluster && (
                   <button
@@ -767,14 +1158,14 @@ export default function SchoolAdminSkillsHubPage() {
                     className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl font-black text-xs flex items-center gap-1 transition-all"
                   >
                     <Plus className="w-4 h-4" />
-                    أضف مهارة
+                    {language === 'ar' ? 'أضف مهارة' : 'Add Skill'}
                   </button>
                 )}
               </div>
 
               {!selectedCluster ? (
                 <div className="text-center py-20 text-slate-400 font-bold">
-                  الرجاء اختيار محور مهاراتي أولاً لعرض مهاراته.
+                  {language === 'ar' ? 'الرجاء اختيار محور مهاراتي أولاً لعرض مهاراته.' : 'Please select a skill cluster first to view its sub-skills.'}
                 </div>
               ) : lessons.length > 0 ? (
                 <div className="space-y-3">
@@ -792,7 +1183,7 @@ export default function SchoolAdminSkillsHubPage() {
                       >
                         <div className="flex justify-between items-start">
                           <h4 className="font-black text-slate-800 text-sm flex-1">{lesson.name}</h4>
-                          <div className="flex gap-1 shrink-0 mr-2">
+                          <div className={`flex gap-1 shrink-0 ${language === 'ar' ? 'mr-2' : 'ml-2'}`}>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -814,49 +1205,79 @@ export default function SchoolAdminSkillsHubPage() {
                           </div>
                         </div>
                         {lesson.description && (
-                          <p className="text-slate-400 text-xs font-bold mt-1 line-clamp-1">{lesson.description}</p>
+                          <p className="text-slate-400 text-xs font-bold mt-1 line-clamp-1">{getCleanDescription(lesson.description)}</p>
                         )}
                         <span className="text-[10px] text-slate-400 font-bold mt-3 block">
-                          {lesson._count?.activities || 0} أنشطة تفاعلية
+                          {lesson._count?.activities || 0} {language === 'ar' ? 'أنشطة تفاعلية' : 'Interactive activities'}
                         </span>
                       </div>
                     );
                   })}
                 </div>
               ) : (
-                <div className="text-center py-12 text-slate-400 font-bold">لا توجد مهارات مسجلة في هذا المحور.</div>
+                <div className="text-center py-12 text-slate-400 font-bold">{language === 'ar' ? 'لا توجد مهارات مسجلة في هذا المحور.' : 'No sub-skills registered in this cluster.'}</div>
               )}
             </div>
 
             {/* 3. Interactive Activities Column (Right 1/3) */}
             <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6">
-              <div className="flex justify-between items-center border-b pb-4">
-                <h3 className="font-black text-slate-800 text-lg flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-purple-500" />
-                  الأنشطة (Activities)
-                </h3>
+              <div className="flex flex-col gap-4 border-b pb-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-black text-slate-800 text-lg flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-purple-500" />
+                    {language === 'ar' ? 'الأنشطة (Activities)' : 'Activities'}
+                  </h3>
+                  {selectedLesson && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleSeedDemoActivities}
+                        className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-indigo-700 rounded-xl font-black text-xs flex items-center gap-1 transition-all cursor-pointer"
+                        title={language === 'ar' ? 'توليد أنشطة تجريبية تلقائياً لتجربتها' : 'Seed 24 demo activities to test'}
+                      >
+                        🌱 {language === 'ar' ? 'توليد أنشطة' : 'Seed Demos'}
+                      </button>
+                      <button
+                        onClick={handleOpenActivityCreate}
+                        className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-xl font-black text-xs flex items-center gap-1 transition-all cursor-pointer"
+                      >
+                        <Plus className="w-4 h-4" />
+                        {language === 'ar' ? 'أضف نشاطاً' : 'Add Activity'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Scope & Sequence Metadata Excel Actions */}
                 {selectedLesson && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleSeedDemoActivities}
-                      className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl font-black text-xs flex items-center gap-1 transition-all cursor-pointer"
-                    >
-                      🌱 توليد 24 نشاطاً تجريبياً
-                    </button>
-                    <button
-                      onClick={handleOpenActivityCreate}
-                      className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-xl font-black text-xs flex items-center gap-1 transition-all cursor-pointer"
-                    >
-                      <Plus className="w-4 h-4" />
-                      أضف نشاطاً
-                    </button>
+                  <div className="flex justify-between items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                      {language === 'ar' ? 'المعايير والمخرجات:' : 'Scope & Sequence:'}
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleExcelUpload}
+                        className="px-2 py-1 bg-white hover:bg-emerald-50 border border-slate-200 text-emerald-700 rounded-lg text-[10px] font-black flex items-center gap-1 transition-all"
+                      >
+                        <Upload className="w-3 h-3" />
+                        {language === 'ar' ? 'استيراد Excel' : 'Import Excel'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={downloadMetadataTemplate}
+                        className="px-2 py-1 bg-white hover:bg-sky-50 border border-slate-200 text-sky-700 rounded-lg text-[10px] font-black flex items-center gap-1 transition-all"
+                      >
+                        <Download className="w-3 h-3" />
+                        {language === 'ar' ? 'النموذج' : 'Template'}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
 
               {!selectedLesson ? (
                 <div className="text-center py-20 text-slate-400 font-bold">
-                  الرجاء اختيار مهارة فرعية لعرض أنشطتها.
+                  {language === 'ar' ? 'الرجاء اختيار مهارة فرعية لعرض أنشطتها.' : 'Please select a sub-skill to view its activities.'}
                 </div>
               ) : activities.length > 0 ? (
                 <div className="space-y-3">
@@ -873,9 +1294,17 @@ export default function SchoolAdminSkillsHubPage() {
                           </span>
                         </div>
                         <div className="flex gap-1 shrink-0">
+                          {/* Play/Preview button */}
+                          <button
+                            onClick={() => startPreviewActivity(activity)}
+                            className="p-1.5 text-slate-400 hover:text-sky-650 rounded-lg hover:bg-white transition-all animate-none"
+                            title={language === 'ar' ? 'عرض كطالب / معاينة' : 'Student Preview'}
+                          >
+                            <Play className="w-3.5 h-3.5 fill-current" />
+                          </button>
                           <button
                             onClick={() => handleOpenActivityEdit(activity)}
-                            className="p-1.5 text-slate-400 hover:text-purple-600 rounded-lg hover:bg-white transition-all animate-none"
+                            className="p-1.5 text-slate-400 hover:text-purple-650 rounded-lg hover:bg-white transition-all animate-none"
                           >
                             <Edit className="w-3.5 h-3.5" />
                           </button>
@@ -890,15 +1319,15 @@ export default function SchoolAdminSkillsHubPage() {
                       <div className="flex items-center gap-2 mt-3 text-[10px] text-slate-400 font-bold">
                         <span>XP: {activity.points}</span>
                         <span>•</span>
-                        <span>{activity.difficulty === "Easy" ? "سهل" : activity.difficulty === "Hard" ? "صعب" : "متوسط"}</span>
+                        <span>{activity.difficulty === "Easy" ? (language === 'ar' ? "سهل" : "Easy") : activity.difficulty === "Hard" ? (language === 'ar' ? "صعب" : "Hard") : (language === 'ar' ? "متوسط" : "Medium")}</span>
                         <span>•</span>
-                        <span>{activity.estimatedTime} ث</span>
+                        <span>{activity.estimatedTime} {language === 'ar' ? 'ثواني' : 'seconds'}</span>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12 text-slate-400 font-bold">لا توجد أنشطة مسجلة في هذه المهارة.</div>
+                <div className="text-center py-12 text-slate-400 font-bold">{language === 'ar' ? 'لا توجد أنشطة مسجلة في هذه المهارة.' : 'No activities registered for this sub-skill.'}</div>
               )}
             </div>
 
@@ -911,10 +1340,36 @@ export default function SchoolAdminSkillsHubPage() {
             
             {/* Form Header */}
             <div className="flex justify-between items-center border-b pb-4">
-              <h3 className="font-black text-slate-800 text-lg flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-indigo-500" />
-                {editingActivity ? "تعديل النشاط التفاعلي" : "إنشاء نشاط تفاعلي جديد"}
-              </h3>
+              <div className="flex items-center gap-4">
+                <h3 className="font-black text-slate-800 text-lg flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-indigo-500" />
+                  {editingActivity 
+                    ? (language === 'ar' ? "تعديل النشاط التفاعلي" : "Edit Interactive Activity") 
+                    : (language === 'ar' ? "إنشاء نشاط تفاعلي جديد" : "Create New Interactive Activity")}
+                </h3>
+
+                {/* Autosave Status */}
+                <div className="flex items-center gap-2 text-xs font-bold">
+                  {autoSaveStatus === "saving" && (
+                    <span className="text-amber-500 animate-pulse flex items-center gap-1">
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                      {language === 'ar' ? '⏱️ جاري الحفظ تلقائياً...' : '⏱️ Auto-saving...'}
+                    </span>
+                  )}
+                  {autoSaveStatus === "saved" && (
+                    <span className="text-emerald-500 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      {language === 'ar' ? '✅ تم الحفظ تلقائياً' : '✅ Auto-saved'}
+                    </span>
+                  )}
+                  {autoSaveStatus === "error" && (
+                    <span className="text-rose-500 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {language === 'ar' ? '❌ خطأ في الحفظ التلقائي' : '❌ Auto-save error'}
+                    </span>
+                  )}
+                </div>
+              </div>
               <button
                 onClick={() => setActiveTab("list")}
                 className="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-500 flex items-center justify-center transition-colors"
@@ -929,7 +1384,7 @@ export default function SchoolAdminSkillsHubPage() {
               <div className="lg:col-span-2 bg-slate-50/50 p-6 rounded-3xl border border-slate-100 space-y-6">
                 <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b pb-2 flex items-center gap-2">
                   <Layers className="w-5 h-5 text-indigo-500 animate-none" />
-                  خيارات اللعبة والإجابة الصحيحة
+                  {language === 'ar' ? 'خيارات اللعبة والإجابة الصحيحة' : 'Game Options & Correct Answer'}
                 </h4>
                 
                 <div className="bg-white rounded-2xl border border-slate-200 p-4 min-h-[300px]">
@@ -958,52 +1413,58 @@ export default function SchoolAdminSkillsHubPage() {
                 {/* Base Fields */}
                 <div className="grid grid-cols-1 gap-6 bg-slate-50/50 p-6 rounded-3xl border border-slate-100">
                   <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-500 uppercase block">عنوان النشاط / السؤال</label>
+                    <label className="text-xs font-black text-slate-500 uppercase block">
+                      {language === 'ar' ? 'عنوان النشاط / السؤال' : 'Activity Title / Question'}
+                    </label>
                     <input
                       type="text"
                       value={activityForm.title}
                       onChange={(e) => updateActivityForm("title", e.target.value)}
                       className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                      placeholder="مثال: قراءة الساعة ومطابقة العقارب"
+                      placeholder={language === 'ar' ? 'مثال: قراءة الساعة ومطابقة العقارب' : 'e.g. Clock reading and clock hands matching'}
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-500 uppercase block">نوع النشاط</label>
+                    <label className="text-xs font-black text-slate-500 uppercase block">
+                      {language === 'ar' ? 'نوع النشاط' : 'Activity Type'}
+                    </label>
                     <select
                       value={activityForm.type}
                       onChange={(e) => updateActivityForm("type", e.target.value)}
                       className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-black outline-none focus:border-indigo-500"
                     >
-                      <option value="MCQ">اختيار من متعدد (MCQ)</option>
-                      <option value="TRUE_FALSE">صح أم خطأ (True/False)</option>
-                      <option value="MULTI_SELECT">اختيارات متعددة (Multi-Select)</option>
-                      <option value="MATCHING">سؤال التوصيل (Matching)</option>
-                      <option value="DRAG_DROP_FILL">سحب الفراغات (Drag & Drop Fill)</option>
-                      <option value="GROUP_SORTING">تصنيف المجموعات (Group Sorting)</option>
-                      <option value="NUMBER_LINE">خط الأعداد (Number Line)</option>
-                      <option value="CLOCK">عقارب الساعة (Clock)</option>
-                      <option value="MIND_MAP">خريطة مفاهيم (Mind Map)</option>
-                      <option value="VIDEO_CHECKPOINT">فيديو تفاعلي (Video Checkpoint)</option>
-                      <option value="SWIPE_SORT">سحب سريع لليمين/اليسار (Swipe Sort)</option>
-                      <option value="MAZE">المتاهة التعليمية (Maze)</option>
-                      <option value="WORD_SEARCH">البحث عن الكلمات (Word Search)</option>
-                      <option value="GEOGEBRA">جيوجيبرا (GeoGebra)</option>
-                      <option value="FLASH_CARD">البطاقات التعليمية (Flash Cards)</option>
-                      <option value="MEMORY_GAME">لعبة الذاكرة (Memory Game)</option>
-                      <option value="WORD_SCRAMBLE">ترتيب الحروف (Word Scramble)</option>
-                      <option value="SENTENCE_REORDER">ترتيب الجملة (Sentence Reorder)</option>
-                      <option value="MATH_EQUATION">معادلة حسابية (Math Equation)</option>
-                      <option value="SEQUENCE_ORDER">ترتيب التسلسل (Sequence Order)</option>
-                      <option value="CROSSWORD">الكلمات المتقاطعة (Crossword)</option>
-                      <option value="COUNT_OBJECTS">عد العناصر (Count Objects)</option>
-                      <option value="IMAGE_LABEL">تسمية الصورة (Image Labeling)</option>
-                      <option value="COLOR_MATCH">تطابق الألوان (Color Match)</option>
+                      <option value="MCQ">{language === 'ar' ? 'اختيار من متعدد (MCQ)' : 'Multiple Choice (MCQ)'}</option>
+                      <option value="TRUE_FALSE">{language === 'ar' ? 'صح أم خطأ (True/False)' : 'True/False'}</option>
+                      <option value="MULTI_SELECT">{language === 'ar' ? 'اختيارات متعددة (Multi-Select)' : 'Multi-Select'}</option>
+                      <option value="MATCHING">{language === 'ar' ? 'سؤال التوصيل (Matching)' : 'Matching Game'}</option>
+                      <option value="DRAG_DROP_FILL">{language === 'ar' ? 'سحب الفراغات (Drag & Drop Fill)' : 'Drag & Drop Fill'}</option>
+                      <option value="GROUP_SORTING">{language === 'ar' ? 'تصنيف المجموعات (Group Sorting)' : 'Group Sorting'}</option>
+                      <option value="NUMBER_LINE">{language === 'ar' ? 'خط الأعداد (Number Line)' : 'Number Line'}</option>
+                      <option value="CLOCK">{language === 'ar' ? 'عقارب الساعة (Clock)' : 'Clock Hands'}</option>
+                      <option value="MIND_MAP">{language === 'ar' ? 'خريطة مفاهيم (Mind Map)' : 'Mind Map'}</option>
+                      <option value="VIDEO_CHECKPOINT">{language === 'ar' ? 'فيديو تفاعلي (Video Checkpoint)' : 'Video Checkpoint'}</option>
+                      <option value="SWIPE_SORT">{language === 'ar' ? 'سحب سريع لليمين/اليسار (Swipe Sort)' : 'Swipe Sort'}</option>
+                      <option value="MAZE">{language === 'ar' ? 'المتاهة التعليمية (Maze)' : 'Maze Challenge'}</option>
+                      <option value="WORD_SEARCH">{language === 'ar' ? 'البحث عن الكلمات (Word Search)' : 'Word Search'}</option>
+                      <option value="GEOGEBRA">{language === 'ar' ? 'جيوجيبرا (GeoGebra)' : 'GeoGebra Widget'}</option>
+                      <option value="FLASH_CARD">{language === 'ar' ? 'البطاقات التعليمية (Flash Cards)' : 'Flash Cards'}</option>
+                      <option value="MEMORY_GAME">{language === 'ar' ? 'لعبة الذاكرة (Memory Game)' : 'Memory Game'}</option>
+                      <option value="WORD_SCRAMBLE">{language === 'ar' ? 'ترتيب الحروف (Word Scramble)' : 'Word Scramble'}</option>
+                      <option value="SENTENCE_REORDER">{language === 'ar' ? 'ترتيب الجملة (Sentence Reorder)' : 'Sentence Reorder'}</option>
+                      <option value="MATH_EQUATION">{language === 'ar' ? 'معادلة حسابية (Math Equation)' : 'Math Equation'}</option>
+                      <option value="SEQUENCE_ORDER">{language === 'ar' ? 'ترتيب التسلسل (Sequence Order)' : 'Sequence Order'}</option>
+                      <option value="CROSSWORD">{language === 'ar' ? 'الكلمات المتقاطعة (Crossword)' : 'Crossword puzzle'}</option>
+                      <option value="COUNT_OBJECTS">{language === 'ar' ? 'عد العناصر (Count Objects)' : 'Count Objects'}</option>
+                      <option value="IMAGE_LABEL">{language === 'ar' ? 'تسمية الصورة (Image Labeling)' : 'Image Labeling'}</option>
+                      <option value="COLOR_MATCH">{language === 'ar' ? 'تطابق الألوان (Color Match)' : 'Color Match'}</option>
                     </select>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-500 uppercase block">نقاط الخبرة XP</label>
+                    <label className="text-xs font-black text-slate-500 uppercase block">
+                      {language === 'ar' ? 'نقاط الخبرة XP' : 'Experience Points (XP)'}
+                    </label>
                     <input
                       type="number"
                       value={activityForm.points}
@@ -1013,7 +1474,9 @@ export default function SchoolAdminSkillsHubPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-500 uppercase block">الزمن التقديري (ثواني)</label>
+                    <label className="text-xs font-black text-slate-500 uppercase block">
+                      {language === 'ar' ? 'الزمن التقديري (ثواني)' : 'Estimated Time (seconds)'}
+                    </label>
                     <input
                       type="number"
                       value={activityForm.estimatedTime}
@@ -1023,28 +1486,32 @@ export default function SchoolAdminSkillsHubPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-500 uppercase block">مستوى الصعوبة</label>
+                    <label className="text-xs font-black text-slate-500 uppercase block">
+                      {language === 'ar' ? 'مستوى الصعوبة' : 'Difficulty Level'}
+                    </label>
                     <select
                       value={activityForm.difficulty}
                       onChange={(e) => updateActivityForm("difficulty", e.target.value)}
                       className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-black outline-none focus:border-indigo-500"
                     >
-                      <option value="Easy">سهل</option>
-                      <option value="Medium">متوسط</option>
-                      <option value="Hard">صعب</option>
+                      <option value="Easy">{language === 'ar' ? 'سهل' : 'Easy'}</option>
+                      <option value="Medium">{language === 'ar' ? 'متوسط' : 'Medium'}</option>
+                      <option value="Hard">{language === 'ar' ? 'صعب' : 'Hard'}</option>
                     </select>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-500 uppercase block">مستوى DOK</label>
+                    <label className="text-xs font-black text-slate-500 uppercase block">
+                      {language === 'ar' ? 'مستوى DOK' : 'DOK Level'}
+                    </label>
                     <select
                       value={activityForm.dok || ""}
                       onChange={(e) => updateActivityForm("dok", e.target.value)}
                       className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-black outline-none focus:border-indigo-500"
                     >
-                      <option value="1">DOK 1: التذكر واستدعاء المعرفة</option>
-                      <option value="2">DOK 2: التطبيق والربط الذهني</option>
-                      <option value="3">DOK 3: التفكير النقدي وحل المشكلات</option>
+                      <option value="1">{language === 'ar' ? 'DOK 1: التذكر واستدعاء المعرفة' : 'DOK 1: Recall & Reproduction'}</option>
+                      <option value="2">{language === 'ar' ? 'DOK 2: التطبيق والربط الذهني' : 'DOK 2: Skills & Concepts'}</option>
+                      <option value="3">{language === 'ar' ? 'DOK 3: التفكير النقدي وحل المشكلات' : 'DOK 3: Strategic Thinking'}</option>
                     </select>
                   </div>
                 </div>
@@ -1053,38 +1520,127 @@ export default function SchoolAdminSkillsHubPage() {
                 <div className="bg-slate-50/50 p-6 rounded-3xl border border-slate-100 space-y-4">
                   <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                     <Settings className="w-4 h-4" />
-                    المعايير والمخرجات (Scope & Sequence Metadata)
+                    {language === 'ar' ? 'المعايير والمخرجات (Scope & Sequence Metadata)' : 'Standards & Outcomes (Scope & Sequence Metadata)'}
                   </h4>
                   <div className="grid grid-cols-1 gap-6">
+                    {/* Standard Select Dropdown */}
                     <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-500 uppercase block">المعيار (Standard)</label>
-                      <input
-                        type="text"
-                        value={activityForm.standard}
-                        onChange={(e) => updateActivityForm("standard", e.target.value)}
-                        className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                        placeholder="مثل: MA-3-1"
-                      />
+                      <label className="text-xs font-black text-slate-500 uppercase block">
+                        {language === 'ar' ? 'المعيار (Standard)' : 'Standard'}
+                      </label>
+                      <select
+                        value={activityForm.standard || ""}
+                        onChange={async (e) => {
+                          const val = e.target.value;
+                          if (val === "add_custom") {
+                            const newVal = prompt(language === 'ar' ? "أدخل معيار مخصص جديد:" : "Enter custom standard:");
+                            if (newVal && newVal.trim()) {
+                              const trimmed = newVal.trim();
+                              const lessonMetadata = getLessonMetadata(selectedLesson);
+                              const updatedMetadata = {
+                                ...lessonMetadata,
+                                standards: Array.from(new Set([...lessonMetadata.standards, trimmed]))
+                              };
+                              await saveLessonMetadata(updatedMetadata);
+                              updateActivityForm("standard", trimmed);
+                            }
+                          } else {
+                            updateActivityForm("standard", val);
+                          }
+                        }}
+                        className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-black outline-none focus:border-indigo-500"
+                      >
+                        <option value="">{language === 'ar' ? '-- اختر المعيار --' : '-- Select Standard --'}</option>
+                        {getLessonMetadata(selectedLesson).standards.map((std: string) => (
+                          <option key={std} value={std}>{std}</option>
+                        ))}
+                        {activityForm.standard && !getLessonMetadata(selectedLesson).standards.includes(activityForm.standard) && (
+                          <option value={activityForm.standard}>{activityForm.standard}</option>
+                        )}
+                        <option value="add_custom" className="text-indigo-650 font-bold">
+                          {language === 'ar' ? '+ إضافة معيار مخصص...' : '+ Add Custom Standard...'}
+                        </option>
+                      </select>
                     </div>
+
+                    {/* Indicator Select Dropdown */}
                     <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-500 uppercase block">المؤشر (Indicator)</label>
-                      <input
-                        type="text"
-                        value={activityForm.indicator}
-                        onChange={(e) => updateActivityForm("indicator", e.target.value)}
-                        className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                        placeholder="مثل: IND-2"
-                      />
+                      <label className="text-xs font-black text-slate-500 uppercase block">
+                        {language === 'ar' ? 'المؤشر (Indicator)' : 'Indicator'}
+                      </label>
+                      <select
+                        value={activityForm.indicator || ""}
+                        onChange={async (e) => {
+                          const val = e.target.value;
+                          if (val === "add_custom") {
+                            const newVal = prompt(language === 'ar' ? "أدخل مؤشر مخصص جديد:" : "Enter custom indicator:");
+                            if (newVal && newVal.trim()) {
+                              const trimmed = newVal.trim();
+                              const lessonMetadata = getLessonMetadata(selectedLesson);
+                              const updatedMetadata = {
+                                ...lessonMetadata,
+                                indicators: Array.from(new Set([...lessonMetadata.indicators, trimmed]))
+                              };
+                              await saveLessonMetadata(updatedMetadata);
+                              updateActivityForm("indicator", trimmed);
+                            }
+                          } else {
+                            updateActivityForm("indicator", val);
+                          }
+                        }}
+                        className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-black outline-none focus:border-indigo-500"
+                      >
+                        <option value="">{language === 'ar' ? '-- اختر المؤشر --' : '-- Select Indicator --'}</option>
+                        {getLessonMetadata(selectedLesson).indicators.map((ind: string) => (
+                          <option key={ind} value={ind}>{ind}</option>
+                        ))}
+                        {activityForm.indicator && !getLessonMetadata(selectedLesson).indicators.includes(activityForm.indicator) && (
+                          <option value={activityForm.indicator}>{activityForm.indicator}</option>
+                        )}
+                        <option value="add_custom" className="text-indigo-650 font-bold">
+                          {language === 'ar' ? '+ إضافة مؤشر مخصص...' : '+ Add Custom Indicator...'}
+                        </option>
+                      </select>
                     </div>
+
+                    {/* Learning Outcome Select Dropdown */}
                     <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-500 uppercase block">مخرجات التعلم (Learning Outcome)</label>
-                      <input
-                        type="text"
-                        value={activityForm.learningOutcome}
-                        onChange={(e) => updateActivityForm("learningOutcome", e.target.value)}
-                        className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                        placeholder="مثل: التعرف على عقارب الساعات"
-                      />
+                      <label className="text-xs font-black text-slate-500 uppercase block">
+                        {language === 'ar' ? 'مخرجات التعلم (Learning Outcome)' : 'Learning Outcome'}
+                      </label>
+                      <select
+                        value={activityForm.learningOutcome || ""}
+                        onChange={async (e) => {
+                          const val = e.target.value;
+                          if (val === "add_custom") {
+                            const newVal = prompt(language === 'ar' ? "أدخل مخرج تعلم مخصص جديد:" : "Enter custom learning outcome:");
+                            if (newVal && newVal.trim()) {
+                              const trimmed = newVal.trim();
+                              const lessonMetadata = getLessonMetadata(selectedLesson);
+                              const updatedMetadata = {
+                                ...lessonMetadata,
+                                outcomes: Array.from(new Set([...lessonMetadata.outcomes, trimmed]))
+                              };
+                              await saveLessonMetadata(updatedMetadata);
+                              updateActivityForm("learningOutcome", trimmed);
+                            }
+                          } else {
+                            updateActivityForm("learningOutcome", val);
+                          }
+                        }}
+                        className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-black outline-none focus:border-indigo-500"
+                      >
+                        <option value="">{language === 'ar' ? '-- اختر مخرج التعلم --' : '-- Select Learning Outcome --'}</option>
+                        {getLessonMetadata(selectedLesson).outcomes.map((out: string) => (
+                          <option key={out} value={out}>{out}</option>
+                        ))}
+                        {activityForm.learningOutcome && !getLessonMetadata(selectedLesson).outcomes.includes(activityForm.learningOutcome) && (
+                          <option value={activityForm.learningOutcome}>{activityForm.learningOutcome}</option>
+                        )}
+                        <option value="add_custom" className="text-indigo-650 font-bold">
+                          {language === 'ar' ? '+ إضافة مخرج تعلم مخصص...' : '+ Add Custom Outcome...'}
+                        </option>
+                      </select>
                     </div>
                   </div>
                 </div>
@@ -1093,47 +1649,55 @@ export default function SchoolAdminSkillsHubPage() {
                 <div className="bg-slate-50/50 p-6 rounded-3xl border border-slate-100 space-y-4">
                   <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                     <Info className="w-4 h-4" />
-                    مساعدات التعلم والتغذية الراجعة
+                    {language === 'ar' ? 'مساعدات التعلم والتغذية الراجعة' : 'Learning Aids & Feedback'}
                   </h4>
                   <div className="grid grid-cols-1 gap-6">
                     <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-500 uppercase block">تلميح للطالب (Hint)</label>
+                      <label className="text-xs font-black text-slate-500 uppercase block">
+                        {language === 'ar' ? 'تلميح للطالب (Hint)' : 'Student Hint'}
+                      </label>
                       <textarea
                         value={activityForm.hint}
                         onChange={(e) => updateActivityForm("hint", e.target.value)}
                         rows={2}
                         className="w-full bg-white border border-slate-200 p-3 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                        placeholder="يظهر للطالب عند طلبه المساعدة."
+                        placeholder={language === 'ar' ? 'يظهر للطالب عند طلبه المساعدة.' : 'Shown to the student when they request help.'}
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-500 uppercase block">نصيحة ذكية (Tip)</label>
+                      <label className="text-xs font-black text-slate-500 uppercase block">
+                        {language === 'ar' ? 'نصيحة ذكية (Tip)' : 'Smart Tip'}
+                      </label>
                       <textarea
                         value={activityForm.tip}
                         onChange={(e) => updateActivityForm("tip", e.target.value)}
                         rows={2}
                         className="w-full bg-white border border-slate-200 p-3 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                        placeholder="نصيحة تعزز الفكرة الرياضية."
+                        placeholder={language === 'ar' ? 'نصيحة تعزز الفكرة الرياضية.' : 'A tip reinforcing the educational concept.'}
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-500 uppercase block">شرح الإجابة المفصل (Answer Explanation)</label>
+                      <label className="text-xs font-black text-slate-500 uppercase block">
+                        {language === 'ar' ? 'شرح الإجابة المفصل (Answer Explanation)' : 'Detailed Explanation'}
+                      </label>
                       <textarea
                         value={activityForm.explanation}
                         onChange={(e) => updateActivityForm("explanation", e.target.value)}
                         rows={3}
                         className="w-full bg-white border border-slate-200 p-3 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                        placeholder="شرح كامل للحل يظهر للطالب بعد إنهاء النشاط."
+                        placeholder={language === 'ar' ? 'شرح كامل للحل يظهر للطالب بعد إنهاء النشاط.' : 'Detailed explanation of the solution shown after submission.'}
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-500 uppercase block">فكرة جوهرية (Key Insight)</label>
+                      <label className="text-xs font-black text-slate-500 uppercase block">
+                        {language === 'ar' ? 'فكرة جوهرية (Key Insight)' : 'Key Insight'}
+                      </label>
                       <textarea
                         value={activityForm.keyInsight}
                         onChange={(e) => updateActivityForm("keyInsight", e.target.value)}
                         rows={3}
                         className="w-full bg-white border border-slate-200 p-3 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                        placeholder="الدرس المستخلص من اللعبة أو النشاط."
+                        placeholder={language === 'ar' ? 'الدرس المستخلص من اللعبة أو النشاط.' : 'The lesson or takeaways from the activity.'}
                       />
                     </div>
                   </div>
@@ -1148,16 +1712,26 @@ export default function SchoolAdminSkillsHubPage() {
                 onClick={() => setActiveTab("list")}
                 className="px-6 py-3.5 rounded-2xl border-2 border-slate-200 hover:bg-slate-50 text-slate-500 font-black text-sm transition-all active:scale-95 animate-none"
               >
-                إلغاء العودة
+                {language === 'ar' ? 'إلغاء وتراجع' : 'Cancel & Return'}
               </button>
               
-              <button
-                onClick={handleSaveActivity}
-                className="px-10 py-3.5 rounded-2xl bg-slate-950 hover:bg-slate-900 text-white font-black text-sm flex items-center gap-2 active:scale-95 shadow-md border border-slate-800 transition-all animate-none"
-              >
-                <span>حفظ النشاط تفاعلياً</span>
-                <Save className="w-4 h-4" />
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleSaveActivityAndContinue}
+                  className="px-6 py-3.5 rounded-2xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black text-sm flex items-center gap-2 active:scale-95 shadow-sm border border-indigo-200 transition-all animate-none cursor-pointer"
+                >
+                  <span>{language === 'ar' ? 'حفظ واستمرار التعديل' : 'Save & Continue'}</span>
+                  <Save className="w-4 h-4" />
+                </button>
+                
+                <button
+                  onClick={handleSaveActivity}
+                  className="px-8 py-3.5 rounded-2xl bg-slate-950 hover:bg-slate-900 text-white font-black text-sm flex items-center gap-2 active:scale-95 shadow-md border border-slate-800 transition-all animate-none cursor-pointer"
+                >
+                  <span>{language === 'ar' ? 'حفظ وإغلاق' : 'Save & Exit'}</span>
+                  <CheckCircle2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
           </div>
@@ -1168,11 +1742,13 @@ export default function SchoolAdminSkillsHubPage() {
           <div className="fixed inset-0 z-[110] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
             <form
               onSubmit={handleSaveCluster}
-              className="bg-white w-full max-w-md rounded-[32px] shadow-2xl p-6 border border-slate-100 space-y-4 text-right animate-in zoom-in-95 duration-200"
+              className={`bg-white w-full max-w-md rounded-[32px] shadow-2xl p-6 border border-slate-100 space-y-4 animate-in zoom-in-95 duration-200 ${language === 'ar' ? 'text-right' : 'text-left'}`}
             >
               <div className="flex justify-between items-center border-b pb-3">
                 <h4 className="font-black text-lg text-slate-800">
-                  {clusterModal.open && clusterModal.data?.id ? "تعديل محور مهاراتي" : "إضافة محور مهاراتي جديد"}
+                  {clusterModal.data?.id 
+                    ? (language === 'ar' ? "تعديل محور مهاراتي" : "Edit Skill Cluster") 
+                    : (language === 'ar' ? "إضافة محور مهاراتي جديد" : "Add New Skill Cluster")}
                 </h4>
                 <button
                   type="button"
@@ -1185,23 +1761,23 @@ export default function SchoolAdminSkillsHubPage() {
 
               <div className="space-y-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-black text-slate-450 block">اسم المحور</label>
+                  <label className="text-xs font-black text-slate-450 block">{language === 'ar' ? 'اسم المحور' : 'Cluster Name'}</label>
                   <input
                     type="text"
                     required
                     value={clusterModal.data?.name || ""}
                     onChange={(e) => updateClusterModalData("name", e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                    placeholder="مثال: العمليات والجمع والطرح"
+                    placeholder={language === 'ar' ? 'مثال: العمليات والجمع والطرح' : 'e.g. Operations, Addition, Subtraction'}
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-black text-slate-450 block">وصف مختصر</label>
+                  <label className="text-xs font-black text-slate-450 block">{language === 'ar' ? 'وصف مختصر' : 'Description'}</label>
                   <textarea
                     value={clusterModal.data?.description || ""}
                     onChange={(e) => updateClusterModalData("description", e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                    placeholder="تنمية مهارات الحساب الذهني..."
+                    placeholder={language === 'ar' ? 'تنمية مهارات الحساب الذهني...' : 'Development of mental math...'}
                     rows={3}
                   />
                 </div>
@@ -1212,14 +1788,14 @@ export default function SchoolAdminSkillsHubPage() {
                   type="submit"
                   className="flex-1 py-3 bg-indigo-600 hover:bg-slate-900 text-white rounded-xl font-black text-sm transition-colors shadow-sm"
                 >
-                  حفظ البيانات
+                  {language === 'ar' ? 'حفظ البيانات' : 'Save'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setClusterModal({ open: false, data: null })}
                   className="flex-1 py-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-500 rounded-xl font-black text-sm transition-colors"
                 >
-                  إلغاء
+                  {language === 'ar' ? 'إلغاء' : 'Cancel'}
                 </button>
               </div>
             </form>
@@ -1231,11 +1807,13 @@ export default function SchoolAdminSkillsHubPage() {
           <div className="fixed inset-0 z-[110] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
             <form
               onSubmit={handleSaveLesson}
-              className="bg-white w-full max-w-md rounded-[32px] shadow-2xl p-6 border border-slate-100 space-y-4 text-right animate-in zoom-in-95 duration-200"
+              className={`bg-white w-full max-w-md rounded-[32px] shadow-2xl p-6 border border-slate-100 space-y-4 animate-in zoom-in-95 duration-200 ${language === 'ar' ? 'text-right' : 'text-left'}`}
             >
               <div className="flex justify-between items-center border-b pb-3">
                 <h4 className="font-black text-lg text-slate-800">
-                  {lessonModal.open && lessonModal.data?.id ? "تعديل مهارة فرعية" : "إضافة مهارة فرعية جديدة"}
+                  {lessonModal.data?.id 
+                    ? (language === 'ar' ? "تعديل مهارة فرعية" : "Edit Sub-Skill") 
+                    : (language === 'ar' ? "إضافة مهارة فرعية جديدة" : "Add New Sub-Skill")}
                 </h4>
                 <button
                   type="button"
@@ -1248,28 +1826,28 @@ export default function SchoolAdminSkillsHubPage() {
 
               <div className="space-y-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-black text-slate-450 block">اسم المهارة</label>
+                  <label className="text-xs font-black text-slate-450 block">{language === 'ar' ? 'اسم المهارة' : 'Sub-Skill Name'}</label>
                   <input
                     type="text"
                     required
                     value={lessonModal.data?.name || ""}
                     onChange={(e) => updateLessonModalData("name", e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                    placeholder="مثال: الجمع بتكوين العشرات"
+                    placeholder={language === 'ar' ? 'مثال: الجمع بتكوين العشرات' : 'e.g. Addition by making tens'}
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-black text-slate-450 block">تفاصيل المهارة</label>
+                  <label className="text-xs font-black text-slate-450 block">{language === 'ar' ? 'تفاصيل المهارة' : 'Description'}</label>
                   <textarea
-                    value={lessonModal.data?.description || ""}
+                    value={getCleanDescription(lessonModal.data?.description)}
                     onChange={(e) => updateLessonModalData("description", e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                    placeholder="أهداف التعلم المراد تحقيقها..."
+                    placeholder={language === 'ar' ? 'أهداف التعلم المراد تحقيقها...' : 'Learning objectives to achieve...'}
                     rows={3}
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-black text-slate-450 block">ترتيب المهارة</label>
+                  <label className="text-xs font-black text-slate-450 block">{language === 'ar' ? 'ترتيب المهارة' : 'Display Order'}</label>
                   <input
                     type="number"
                     value={lessonModal.data?.order || 0}
@@ -1284,17 +1862,281 @@ export default function SchoolAdminSkillsHubPage() {
                   type="submit"
                   className="flex-1 py-3 bg-emerald-600 hover:bg-slate-900 text-white rounded-xl font-black text-sm transition-colors shadow-sm"
                 >
-                  حفظ البيانات
+                  {language === 'ar' ? 'حفظ البيانات' : 'Save'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setLessonModal({ open: false, data: null })}
                   className="flex-1 py-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-500 rounded-xl font-black text-sm transition-colors"
                 >
-                  إلغاء
+                  {language === 'ar' ? 'إلغاء' : 'Cancel'}
                 </button>
               </div>
             </form>
+          </div>
+        )}
+
+        {/* ── IMMERSIVE FULL-SCREEN 3D GAME PLAYER OVERLAY (Student Preview) ── */}
+        {previewActivity && (
+          <div className="fixed inset-0 z-[150] bg-slate-900/65 backdrop-blur-md flex items-center justify-center p-0 md:p-6 overflow-y-auto" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+            <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 w-full max-w-5xl md:rounded-[40px] shadow-2xl flex flex-col min-h-screen md:min-h-[85vh] md:max-h-[90vh] overflow-y-auto md:overflow-hidden border border-white/10 animate-in zoom-in-95 duration-200">
+              
+              {/* Game Player Header */}
+              <div className="bg-gradient-to-r from-indigo-700 to-violet-850 p-6 text-white flex justify-between items-center shadow-md">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-300 floating" />
+                    <span className="text-[10px] font-black tracking-widest uppercase">
+                      {language === 'ar' ? 'معاينة الطالب' : 'Student Preview'}
+                    </span>
+                  </div>
+                  <h3 className="text-lg md:text-xl font-black truncate max-w-xl">{translateText(previewActivity.title, language)}</h3>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-1 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10 text-xs font-black">
+                    <Clock className="w-4 h-4 text-indigo-200" />
+                    <span>{language === 'ar' ? `الزمن المقدر: ${previewActivity.estimatedTime} ثانية` : `Estimated: ${previewActivity.estimatedTime}s`}</span>
+                  </div>
+                  <button
+                    onClick={() => setPreviewActivity(null)}
+                    className="w-10 h-10 rounded-xl bg-white/10 hover:bg-rose-600 text-white flex items-center justify-center transition-colors border border-white/10"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Game Player Body */}
+              <div className="flex-1 md:overflow-y-auto p-4 md:p-8 flex flex-col lg:flex-row gap-8">
+                
+                {/* Right: Helpers Panel */}
+                <div className="w-full lg:w-64 space-y-4 shrink-0">
+                  <div className="bg-white rounded-3xl border border-slate-100 p-5 shadow-sm space-y-4">
+                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b pb-2 flex items-center gap-2">
+                      <BrainCircuit className="w-4 h-4 text-indigo-500" />
+                      {language === 'ar' ? 'تلميحات ومساعدات التعلم' : 'Hints & Learning Aids'}
+                    </h4>
+                    
+                    {/* Hint Button */}
+                    <button
+                      onClick={() => {
+                        setPreviewHintsUsed(prev => prev + 1);
+                        setPreviewHelperModal({
+                          type: "hint",
+                          content: translateText(previewActivity.hint, language) || (language === 'ar' ? "لا يوجد تلميح مسجل لهذا النشاط." : "No hint recorded for this activity.")
+                        });
+                      }}
+                      className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-amber-100 bg-amber-50/50 hover:bg-amber-50 hover:scale-[1.02] text-amber-800 font-black text-sm transition-all cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2">{language === 'ar' ? '💡 فكرة للمساعدة' : '💡 Help Hint'}</span>
+                      {language === 'ar' ? <ArrowLeft className="w-4 h-4 text-amber-500" /> : <ArrowRight className="w-4 h-4 text-amber-500" />}
+                    </button>
+
+                    {/* Tip Button */}
+                    <button
+                      onClick={() => {
+                        setPreviewHelperModal({
+                          type: "tip",
+                          content: translateText(previewActivity.tip, language) || (language === 'ar' ? "لا توجد نصيحة ذكية مسجلة." : "No smart tip recorded.")
+                        });
+                      }}
+                      className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-emerald-100 bg-emerald-50/50 hover:bg-emerald-50 hover:scale-[1.02] text-emerald-800 font-black text-sm transition-all cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2">{language === 'ar' ? '🧠 نصيحة ذكية' : '🧠 Smart Tip'}</span>
+                      {language === 'ar' ? <ArrowLeft className="w-4 h-4 text-emerald-500" /> : <ArrowRight className="w-4 h-4 text-emerald-500" />}
+                    </button>
+
+                    {/* Key Insight Button */}
+                    <button
+                      onClick={() => {
+                        setPreviewHelperModal({
+                          type: "keyInsight",
+                          content: translateText(previewActivity.keyInsight, language) || (language === 'ar' ? "لا توجد فكرة جوهرية مسجلة." : "No key insight recorded.")
+                        });
+                      }}
+                      className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-indigo-100 bg-indigo-50/50 hover:bg-indigo-50 hover:scale-[1.02] text-indigo-800 font-black text-sm transition-all cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2">{language === 'ar' ? '📘 فكرة جوهرية' : '📘 Key Insight'}</span>
+                      {language === 'ar' ? <ArrowLeft className="w-4 h-4 text-indigo-500" /> : <ArrowRight className="w-4 h-4 text-indigo-500" />}
+                    </button>
+                  </div>
+                  
+                  {/* Metadata display */}
+                  <div className="bg-white rounded-3xl border border-slate-100 p-5 shadow-sm space-y-3 text-xs font-bold text-slate-500">
+                    {previewActivity.standard && <p>{language === 'ar' ? '🔍 المعيار: ' : '🔍 Standard: '}<span className="text-slate-800 font-black">{previewActivity.standard}</span></p>}
+                    {previewActivity.indicator && <p>{language === 'ar' ? '🎯 المؤشر: ' : '🎯 Indicator: '}<span className="text-slate-800 font-black">{previewActivity.indicator}</span></p>}
+                    <p>{language === 'ar' ? '🏆 النقاط: ' : '🏆 Points: '}<span className="text-indigo-600 font-black">{previewActivity.points} {language === 'ar' ? 'نقطة' : 'XP'}</span></p>
+                  </div>
+                </div>
+
+                {/* Left: Interactive Workspace */}
+                <div className="flex-1 bg-white rounded-3xl border border-slate-150 p-6 md:p-8 flex flex-col justify-between shadow-sm min-h-[400px]">
+                  
+                  {/* Renderer */}
+                  <div className="space-y-6 flex-1">
+                    <InteractiveQuestionRenderer
+                      question={previewActivity}
+                      value={previewAnswer}
+                      onChange={setPreviewAnswer}
+                      language={language}
+                    />
+                  </div>
+
+                  {/* Submission Footer */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t border-slate-100">
+                    <button
+                      onClick={() => setPreviewActivity(null)}
+                      className="px-6 py-3.5 rounded-2xl bg-slate-50/80 border-2 border-slate-200/60 text-slate-900 hover:bg-slate-100 font-black text-sm transition-all active:scale-95 w-full sm:w-auto cursor-pointer"
+                    >
+                      {language === 'ar' ? 'إغلاق المعاينة' : 'Close Preview'}
+                    </button>
+
+                    <button
+                      onClick={submitPreviewAnswer}
+                      disabled={!previewAnswer || previewIsSubmitting}
+                      className={`px-10 py-3.5 rounded-2xl font-black text-sm transition-all flex items-center gap-2 active:scale-95 w-full sm:w-auto justify-center cursor-pointer ${
+                        !previewAnswer || previewIsSubmitting
+                          ? "bg-sky-200/40 text-slate-400 cursor-not-allowed border border-sky-300/10 shadow-none"
+                          : "bg-sky-450 text-slate-950 hover:bg-sky-500 shadow-xl shadow-sky-200/40 border border-sky-500/20"
+                      }`}
+                    >
+                      {previewIsSubmitting ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          {language === 'ar' ? 'جاري التقييم...' : 'Evaluating...'}
+                        </>
+                      ) : (
+                        <>
+                          <span>{language === 'ar' ? 'أرسل الحل للتصحيح' : 'Submit for review'}</span>
+                          <CheckCircle2 className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── PREVIEW ATTEMPT RESULT POPUP MODAL (Inside Player) ── */}
+              {previewResult && (
+                <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[160] overflow-y-auto">
+                  <div className="bg-white w-full max-w-lg rounded-[36px] shadow-2xl p-8 border border-slate-100 text-center space-y-6 animate-in zoom-in-95 duration-200">
+                    
+                    {/* Stars animation */}
+                    <div className="space-y-4">
+                      <div className="flex justify-center gap-3">
+                        {[1, 2, 3].map(index => {
+                          const isFilled = index <= previewResult.stars;
+                          return isFilled ? (
+                            <Star key={index} className="w-16 h-16 fill-amber-400 text-amber-400 drop-shadow-md scale-[1.1] animate-pulse" />
+                          ) : (
+                            <StarOff key={index} className="w-16 h-16 text-slate-200" />
+                          );
+                        })}
+                      </div>
+                      
+                      <h4 className={`text-2xl font-black ${
+                        previewResult.isCorrect ? "text-emerald-600" : "text-rose-600"
+                      }`}>
+                        {previewResult.isCorrect ? (
+                          previewResult.stars === 3 
+                            ? (language === 'ar' ? "ممتاز! حل مثالي ورائع 🏆" : "Excellent! Perfect solution 🏆") 
+                            : previewResult.stars === 2
+                            ? (language === 'ar' ? "رائع! إجابة صحيحة مع محاولة إضافية ⭐⭐" : "Great! Correct with extra attempt ⭐⭐")
+                            : (language === 'ar' ? "جيد! تم الحل بنجاح بعد عدة محاولات ⭐" : "Good! Solved after multiple attempts ⭐")
+                        ) : (
+                          (language === 'ar' ? "حاول مرة أخرى! الإجابة غير صحيحة ❌" : "Try again! Incorrect answer ❌")
+                        )}
+                      </h4>
+                      
+                      <p className="text-slate-500 font-bold text-sm">
+                        {previewResult.isCorrect 
+                          ? (language === 'ar' ? `لقد حصلت على ${previewResult.score} نقطة خبرة!` : `You earned ${previewResult.score} XP!`)
+                          : (language === 'ar' ? "راجع المعطيات أو اطلب تلميحاً للمساعدة" : "Review the question details or request a hint")}
+                      </p>
+                    </div>
+
+                    {/* Explanations & Key Insights */}
+                    {previewResult.isCorrect && (
+                      <div className="space-y-4 text-right bg-slate-50 p-6 rounded-3xl border border-slate-100 max-h-60 overflow-y-auto text-xs" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+                        {previewResult.explanation && (
+                          <div className="space-y-1">
+                            <span className="font-black text-slate-700 block">{language === 'ar' ? '📘 شرح الحل بالتفصيل:' : '📘 Detailed Explanation:'}</span>
+                            <p className="text-slate-500 font-bold leading-relaxed">{translateText(previewResult.explanation, language)}</p>
+                          </div>
+                        )}
+                        {previewResult.keyInsight && (
+                          <div className="space-y-1 border-t border-slate-200/60 pt-3">
+                            <span className="font-black text-indigo-700 block">{language === 'ar' ? '💡 الفكرة الجوهرية للتعلم:' : '💡 Core Key Insight:'}</span>
+                            <p className="text-indigo-650 font-bold leading-relaxed">{translateText(previewResult.keyInsight, language)}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Action buttons inside popup */}
+                    <div className="flex gap-4">
+                      {previewResult.isCorrect ? (
+                        <button
+                          onClick={() => setPreviewResult(null)}
+                          className="flex-1 py-4 rounded-2xl bg-indigo-600 hover:bg-slate-900 text-white font-black text-sm shadow-lg transition-colors cursor-pointer"
+                        >
+                          {language === 'ar' ? 'رائع، استمر' : 'Awesome, continue'}
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={handlePreviewRetry}
+                            className="flex-1 py-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black text-sm shadow-md transition-colors cursor-pointer"
+                          >
+                            {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
+                          </button>
+                          <button
+                            onClick={() => setPreviewResult(null)}
+                            className="flex-1 py-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-sm transition-colors cursor-pointer"
+                          >
+                            {language === 'ar' ? 'إغلاق وتصحيح' : 'Close'}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Helper explanation box (Hint, Tip, Key Insight) */}
+              {previewHelperModal.type && (
+                <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[170]">
+                  <div className="bg-white w-full max-w-md rounded-[32px] shadow-2xl p-6 border border-slate-100 text-right space-y-4 animate-in zoom-in-95 duration-200" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+                    <div className="flex justify-between items-center border-b pb-3">
+                      <span className={`px-3 py-1 text-[10px] font-black rounded-lg uppercase tracking-wider ${
+                        previewHelperModal.type === "hint" ? "bg-amber-50 text-amber-700 border border-amber-100" :
+                        previewHelperModal.type === "tip" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" :
+                        "bg-indigo-50 text-indigo-700 border border-indigo-100"
+                      }`}>
+                        {previewHelperModal.type === "hint" ? (language === 'ar' ? "💡 تلميح للمساعدة" : "💡 Help Hint") :
+                         previewHelperModal.type === "tip" ? (language === 'ar' ? "🧠 نصيحة ذكية" : "🧠 Smart Tip") :
+                         (language === 'ar' ? "📘 فكرة جوهرية" : "📘 Key Insight")}
+                      </span>
+                      <button
+                        onClick={() => setPreviewHelperModal({ type: null, content: "" })}
+                        className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 cursor-pointer"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <p className="text-slate-600 font-bold text-sm leading-relaxed">{previewHelperModal.content}</p>
+                    <button
+                      onClick={() => setPreviewHelperModal({ type: null, content: "" })}
+                      className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-black text-sm transition-colors cursor-pointer"
+                    >
+                      {language === 'ar' ? 'حسناً، فهمت' : 'OK, I got it'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+            </div>
           </div>
         )}
 

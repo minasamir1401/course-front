@@ -6,11 +6,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   Sparkles, Plus, Trash2, Edit, ChevronDown, ChevronUp,
   ArrowRight, ArrowLeft, Save, CheckCircle2, AlertCircle, X,
-  Folder, BookOpen, FileText, Info, HelpCircle, Layers, Settings, Globe, School
+  Folder, BookOpen, FileText, Info, HelpCircle, Layers, Settings, Globe, School,
+  Play, BrainCircuit, RefreshCw, Star, StarOff, Upload, Download, Eye, Clock
 } from "lucide-react";
 import { API_URL } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import InteractiveQuestionEditor from "@/components/InteractiveQuestionEditor";
+import InteractiveQuestionRenderer from "@/components/InteractiveQuestionRenderer";
+import * as XLSX from "xlsx";
 
 const METADATA_OPTIONS: Record<string, { standards: string[], indicators: string[], outcomes: string[] }> = {
   "الرياضيات": {
@@ -105,6 +108,240 @@ export default function SuperAdminSkillsHubPage() {
   const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const autoSaveTimeoutRef = useRef<any>(null);
   const isFirstLoadRef = useRef<boolean>(true);
+
+  // Excel Template Import/Export Ref
+  const metadataExcelRef = useRef<HTMLInputElement>(null);
+
+  // Preview Play States
+  const [previewActivity, setPreviewActivity] = useState<any>(null);
+  const [previewAnswer, setPreviewAnswer] = useState<string>("");
+  const [previewIsSubmitting, setPreviewIsSubmitting] = useState(false);
+  const [previewResult, setPreviewResult] = useState<any>(null);
+  const [previewStartTime, setPreviewStartTime] = useState<number>(0);
+  const [previewHintsUsed, setPreviewHintsUsed] = useState<number>(0);
+  const [previewAttemptCount, setPreviewAttemptCount] = useState<number>(1);
+  const [previewHelperModal, setPreviewHelperModal] = useState<{ type: "hint" | "tip" | "keyInsight" | null; content: string }>({
+    type: null,
+    content: ""
+  });
+
+  const getCleanDescription = (desc: string | null) => {
+    if (!desc) return "";
+    const trimmed = desc.trim();
+    if (trimmed.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        return parsed.description || "";
+      } catch {}
+    }
+    return desc;
+  };
+
+  const getLessonMetadata = (lesson: any) => {
+    if (!lesson || !lesson.description) return { description: "", standards: [], indicators: [], outcomes: [] };
+    const desc = lesson.description.trim();
+    if (desc.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(desc);
+        return {
+          description: parsed.description || "",
+          standards: parsed.standards || [],
+          indicators: parsed.indicators || [],
+          outcomes: parsed.outcomes || []
+        };
+      } catch {}
+    }
+    return {
+      description: lesson.description,
+      standards: [],
+      indicators: [],
+      outcomes: []
+    };
+  };
+
+  const saveLessonMetadata = async (updatedMetadata: any) => {
+    if (!token || !selectedLesson) return;
+    const updatedDescription = JSON.stringify(updatedMetadata);
+    try {
+      const res = await fetch(`${API_URL}/skills-hub/lessons/${selectedLesson.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          clusterId: selectedCluster.id,
+          name: selectedLesson.name,
+          description: updatedDescription,
+          order: selectedLesson.order
+        })
+      });
+      if (res.ok) {
+        const updatedLesson = await res.json();
+        const nextLesson = updatedLesson.lesson || updatedLesson;
+        setSelectedLesson(nextLesson);
+        fetchLessons(selectedCluster.id);
+      }
+    } catch (err) {
+      console.error("Error saving lesson metadata:", err);
+    }
+  };
+
+  const handleExcelUpload = () => {
+    metadataExcelRef.current?.click();
+  };
+
+  const handleMetadataExcelChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!selectedLesson) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const wb = XLSX.read(data, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+
+        if (rows.length < 2) {
+          alert(language === 'ar' ? "ملف Excel فارغ أو لا يحتوي على صفوف بيانات" : "Excel file is empty or does not contain data rows");
+          return;
+        }
+
+        const headers = (rows[0] as string[]).map((h) => String(h).trim().toLowerCase());
+
+        const stdIdx = headers.findIndex(h => h.includes("standard") || h.includes("معيار") || h.includes("المعايير"));
+        const indIdx = headers.findIndex(h => h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشرات"));
+        const loIdx = headers.findIndex(h => h.includes("outcome") || h.includes("ناتج") || h.includes("مخرج") || h.includes("النواتج") || h.includes("المخرجات"));
+        const titleIdx = headers.findIndex(h => h.includes("title") || h.includes("درس") || h.includes("المهارة") || h.includes("الفرعية"));
+
+        if (stdIdx === -1 && indIdx === -1 && loIdx === -1) {
+          alert(language === 'ar' ? "لم يتم العثور على أعمدة متوافقة (المعايير، المؤشرات، المخرجات)" : "Could not find matching columns (Standards, Indicators, Outcomes)");
+          return;
+        }
+
+        const dataRows = rows.slice(1).filter(r => r.some(c => String(c).trim() !== ""));
+
+        let filteredRows = dataRows;
+        if (titleIdx >= 0 && selectedLesson.name) {
+          const lessonNameLower = selectedLesson.name.trim().toLowerCase();
+          const matchingRows = dataRows.filter(r => {
+            const rowTitle = String(r[titleIdx] ?? "").trim().toLowerCase();
+            return rowTitle && (lessonNameLower.includes(rowTitle) || rowTitle.includes(lessonNameLower));
+          });
+          if (matchingRows.length > 0) {
+            filteredRows = matchingRows;
+          }
+        }
+
+        if (filteredRows.length === 0) {
+          alert(language === 'ar' ? "لم يتم العثور على بيانات مطابقة لهذه المهارة" : "No matching data rows found for this sub-skill");
+          return;
+        }
+
+        const standardsList = filteredRows.map(r => stdIdx >= 0 ? String(r[stdIdx] ?? "").trim() : "").filter(Boolean);
+        const indicatorsList = filteredRows.map(r => indIdx >= 0 ? String(r[indIdx] ?? "").trim() : "").filter(Boolean);
+        const outcomesList = filteredRows.map(r => loIdx >= 0 ? String(r[loIdx] ?? "").trim() : "").filter(Boolean);
+
+        const existingMetadata = getLessonMetadata(selectedLesson);
+        const nextStandards = Array.from(new Set([...existingMetadata.standards, ...standardsList]));
+        const nextIndicators = Array.from(new Set([...existingMetadata.indicators, ...indicatorsList]));
+        const nextOutcomes = Array.from(new Set([...existingMetadata.outcomes, ...outcomesList]));
+
+        await saveLessonMetadata({
+          description: existingMetadata.description,
+          standards: nextStandards,
+          indicators: nextIndicators,
+          outcomes: nextOutcomes
+        });
+
+        alert(language === 'ar' ? "تم استيراد المعايير والمؤشرات بنجاح" : "Standards and indicators imported successfully");
+      } catch (err) {
+        console.error("Error importing metadata:", err);
+        alert(language === 'ar' ? "حدث خطأ أثناء قراءة ملف Excel" : "Error reading Excel file");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = "";
+  };
+
+  const downloadMetadataTemplate = () => {
+    const wsData = [
+      ["Sub-Skill Title", "Standard", "Indicator", "Outcome"],
+      [selectedLesson?.name || "اسم المهارة الفرعية", "MATH.3.A.1", "MATH.IND.1", "القدرة على تكوين العشرات"],
+      [selectedLesson?.name || "اسم المهارة الفرعية", "MATH.3.A.2", "MATH.IND.2", "قراءة الساعات بدقة"]
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Metadata Template");
+    XLSX.writeFile(wb, "skills_metadata_template.xlsx");
+  };
+
+  // Preview Play Handlers
+  const startPreviewActivity = async (act: any) => {
+    if (!token) return;
+    try {
+      setIsLoading(true);
+      const res = await fetch(`${API_URL}/skills-hub/activities/${act.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const activity = await res.json();
+        setPreviewActivity(activity);
+        setPreviewAnswer("");
+        setPreviewStartTime(Date.now());
+        setPreviewHintsUsed(0);
+        setPreviewAttemptCount(1);
+        setPreviewResult(null);
+      }
+    } catch (err) {
+      console.error("Error loading activity for preview:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const submitPreviewAnswer = async () => {
+    if (!token || !previewActivity || previewIsSubmitting) return;
+    setPreviewIsSubmitting(true);
+    const timeTaken = Math.round((Date.now() - previewStartTime) / 1000);
+    
+    try {
+      const res = await fetch(`${API_URL}/skills-hub/activities/${previewActivity.id}/attempt`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          selectedAnswer: previewAnswer,
+          timeTaken,
+          hintsUsed: previewHintsUsed,
+          attemptCount: previewAttemptCount
+        })
+      });
+      
+      if (res.ok) {
+        const result = await res.json();
+        setPreviewResult(result);
+      } else {
+        const errData = await res.json();
+        alert(errData.error || (language === 'ar' ? "خطأ في الإرسال" : "Submission failed"));
+      }
+    } catch (err) {
+      console.error("Error submitting preview attempt:", err);
+    } finally {
+      setPreviewIsSubmitting(false);
+    }
+  };
+
+  const handlePreviewRetry = () => {
+    setPreviewResult(null);
+    setPreviewAnswer("");
+    setPreviewStartTime(Date.now());
+    setPreviewAttemptCount(prev => prev + 1);
+  };
 
   const GRADES_LIST = [
     "الصف الأول الابتدائي", "الصف الثاني الابتدائي", "الصف الثالث الابتدائي",
@@ -471,12 +708,12 @@ export default function SuperAdminSkillsHubPage() {
     const payload = {
       lessonId: selectedLesson.id,
       ...activityForm,
-      title: JSON.stringify({ ar: activityForm.titleEn, en: activityForm.titleEn }),
-      hint: JSON.stringify({ ar: activityForm.hintEn, en: activityForm.hintEn }),
-      tip: JSON.stringify({ ar: activityForm.tipEn, en: activityForm.tipEn }),
-      explanation: JSON.stringify({ ar: activityForm.explanationEn, en: activityForm.explanationEn }),
-      keyInsight: JSON.stringify({ ar: activityForm.keyInsightEn, en: activityForm.keyInsightEn }),
-      learningOutcome: JSON.stringify({ ar: activityForm.learningOutcomeEn, en: activityForm.learningOutcomeEn }),
+      title: JSON.stringify({ ar: activityForm.titleAr, en: activityForm.titleEn }),
+      hint: JSON.stringify({ ar: activityForm.hintAr, en: activityForm.hintEn }),
+      tip: JSON.stringify({ ar: activityForm.tipAr, en: activityForm.tipEn }),
+      explanation: JSON.stringify({ ar: activityForm.explanationAr, en: activityForm.explanationEn }),
+      keyInsight: JSON.stringify({ ar: activityForm.keyInsightAr, en: activityForm.keyInsightEn }),
+      learningOutcome: JSON.stringify({ ar: activityForm.learningOutcomeAr, en: activityForm.learningOutcomeEn }),
       options: typeof activityForm.options === "string" ? activityForm.options : JSON.stringify(activityForm.options),
       correctAnswer: typeof activityForm.correctAnswer === "string" ? activityForm.correctAnswer : JSON.stringify(activityForm.correctAnswer)
     };
@@ -496,10 +733,62 @@ export default function SuperAdminSkillsHubPage() {
         fetchActivities(selectedLesson.id);
       } else {
         const err = await res.json();
-        alert(err.error || "حدث خطأ أثناء حفظ النشاط");
+        alert(err.error || (language === 'ar' ? "حدث خطأ أثناء حفظ النشاط" : "Error saving activity"));
       }
     } catch (err) {
       console.error("Error saving activity:", err);
+    }
+  };
+
+  // Save & Continue Handler
+  const handleSaveActivityAndContinue = async () => {
+    if (!token || !selectedLesson) return;
+    const isEdit = !!editingActivity;
+    const url = isEdit
+      ? `${API_URL}/skills-hub/activities/${editingActivity.id}`
+      : `${API_URL}/skills-hub/activities`;
+    const method = isEdit ? "PUT" : "POST";
+
+    const payload = {
+      lessonId: selectedLesson.id,
+      ...activityForm,
+      title: JSON.stringify({ ar: activityForm.titleAr, en: activityForm.titleEn }),
+      hint: JSON.stringify({ ar: activityForm.hintAr, en: activityForm.hintEn }),
+      tip: JSON.stringify({ ar: activityForm.tipAr, en: activityForm.tipEn }),
+      explanation: JSON.stringify({ ar: activityForm.explanationAr, en: activityForm.explanationEn }),
+      keyInsight: JSON.stringify({ ar: activityForm.keyInsightAr, en: activityForm.keyInsightEn }),
+      learningOutcome: JSON.stringify({ ar: activityForm.learningOutcomeAr, en: activityForm.learningOutcomeEn }),
+      options: typeof activityForm.options === "string" ? activityForm.options : JSON.stringify(activityForm.options),
+      correctAnswer: typeof activityForm.correctAnswer === "string" ? activityForm.correctAnswer : JSON.stringify(activityForm.correctAnswer)
+    };
+
+    try {
+      setAutoSaveStatus("saving");
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setAutoSaveStatus("saved");
+        if (!isEdit && data.activity) {
+          setEditingActivity(data.activity);
+        }
+        fetchActivities(selectedLesson.id);
+        alert(language === 'ar' ? "تم حفظ النشاط بنجاح" : "Activity saved successfully");
+      } else {
+        setAutoSaveStatus("error");
+        const err = await res.json();
+        alert(err.error || (language === 'ar' ? "حدث خطأ أثناء حفظ النشاط" : "Error saving activity"));
+      }
+    } catch (err) {
+      console.error("Error saving activity:", err);
+      setAutoSaveStatus("error");
     }
   };
 
@@ -527,12 +816,12 @@ export default function SuperAdminSkillsHubPage() {
         const payload = {
           lessonId: selectedLesson.id,
           ...activityForm,
-          title: JSON.stringify({ ar: activityForm.titleEn, en: activityForm.titleEn }),
-          hint: JSON.stringify({ ar: activityForm.hintEn, en: activityForm.hintEn }),
-          tip: JSON.stringify({ ar: activityForm.tipEn, en: activityForm.tipEn }),
-          explanation: JSON.stringify({ ar: activityForm.explanationEn, en: activityForm.explanationEn }),
-          keyInsight: JSON.stringify({ ar: activityForm.keyInsightEn, en: activityForm.keyInsightEn }),
-          learningOutcome: JSON.stringify({ ar: activityForm.learningOutcomeEn, en: activityForm.learningOutcomeEn }),
+          title: JSON.stringify({ ar: activityForm.titleAr, en: activityForm.titleEn }),
+          hint: JSON.stringify({ ar: activityForm.hintAr, en: activityForm.hintEn }),
+          tip: JSON.stringify({ ar: activityForm.tipAr, en: activityForm.tipEn }),
+          explanation: JSON.stringify({ ar: activityForm.explanationAr, en: activityForm.explanationEn }),
+          keyInsight: JSON.stringify({ ar: activityForm.keyInsightAr, en: activityForm.keyInsightEn }),
+          learningOutcome: JSON.stringify({ ar: activityForm.learningOutcomeAr, en: activityForm.learningOutcomeEn }),
           options: typeof activityForm.options === "string" ? activityForm.options : JSON.stringify(activityForm.options),
           correctAnswer: typeof activityForm.correctAnswer === "string" ? activityForm.correctAnswer : JSON.stringify(activityForm.correctAnswer)
         };
@@ -822,6 +1111,13 @@ export default function SuperAdminSkillsHubPage() {
 
   return (
     <DashboardLayout>
+      <input
+        type="file"
+        ref={metadataExcelRef}
+        style={{ display: "none" }}
+        accept=".xlsx,.xls"
+        onChange={handleMetadataExcelChange}
+      />
       <div className="max-w-7xl mx-auto space-y-8 pb-24 px-4 overflow-x-hidden" dir={language === 'ar' ? 'rtl' : 'ltr'}>
         
         {/* Header Section */}
@@ -1026,26 +1322,55 @@ export default function SuperAdminSkillsHubPage() {
 
             {/* 3. Interactive Activities Column (Right 1/3) */}
             <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6">
-              <div className="flex justify-between items-center border-b pb-4">
-                <h3 className="font-black text-slate-800 text-lg flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-purple-500" />
-                  {language === 'ar' ? 'الأنشطة (Activities)' : 'Interactive Activities'}
-                </h3>
+              <div className="flex flex-col gap-4 border-b pb-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-black text-slate-800 text-lg flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-purple-500" />
+                    {language === 'ar' ? 'الأنشطة (Activities)' : 'Interactive Activities'}
+                  </h3>
+                  {selectedLesson && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleSeedDemoActivities}
+                        className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl font-black text-xs flex items-center gap-1 transition-all cursor-pointer"
+                      >
+                        {language === 'ar' ? '🌱  توليد أنشطة' : '🌱 Seed Demos'}
+                      </button>
+                      <button
+                        onClick={handleOpenActivityCreate}
+                        className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-xl font-black text-xs flex items-center gap-1 transition-all cursor-pointer"
+                      >
+                        <Plus className="w-4 h-4" />
+                        {language === 'ar' ? 'أضف نشاطاً' : 'Add Activity'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Scope & Sequence Metadata Excel Actions */}
                 {selectedLesson && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleSeedDemoActivities}
-                      className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl font-black text-xs flex items-center gap-1 transition-all cursor-pointer"
-                    >
-                      {language === 'ar' ? '🌱  توليد 24 نشاطاً تجريبياً' : '🌱 Seed 24 Demo Activities'}
-                    </button>
-                    <button
-                      onClick={handleOpenActivityCreate}
-                      className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-xl font-black text-xs flex items-center gap-1 transition-all cursor-pointer"
-                    >
-                      <Plus className="w-4 h-4" />
-                      {language === 'ar' ? 'أضف نشاطاً' : 'Add Activity'}
-                    </button>
+                  <div className="flex justify-between items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                      {language === 'ar' ? 'المعايير والمخرجات:' : 'Scope & Sequence:'}
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleExcelUpload}
+                        className="px-2 py-1 bg-white hover:bg-emerald-50 border border-slate-200 text-emerald-700 rounded-lg text-[10px] font-black flex items-center gap-1 transition-all cursor-pointer"
+                      >
+                        <Upload className="w-3 h-3" />
+                        {language === 'ar' ? 'استيراد Excel' : 'Import Excel'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={downloadMetadataTemplate}
+                        className="px-2 py-1 bg-white hover:bg-sky-50 border border-slate-200 text-sky-700 rounded-lg text-[10px] font-black flex items-center gap-1 transition-all cursor-pointer"
+                      >
+                        <Download className="w-3 h-3" />
+                        {language === 'ar' ? 'النموذج' : 'Template'}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1069,15 +1394,23 @@ export default function SuperAdminSkillsHubPage() {
                           </span>
                         </div>
                         <div className="flex gap-1 shrink-0">
+                          {/* Play/Preview button */}
+                          <button
+                            onClick={() => startPreviewActivity(activity)}
+                            className="p-1.5 text-slate-400 hover:text-sky-650 rounded-lg hover:bg-white transition-all animate-none cursor-pointer"
+                            title={language === 'ar' ? 'عرض كطالب / معاينة' : 'Student Preview'}
+                          >
+                            <Play className="w-3.5 h-3.5 fill-current" />
+                          </button>
                           <button
                             onClick={() => handleOpenActivityEdit(activity)}
-                            className="p-1.5 text-slate-400 hover:text-purple-600 rounded-lg hover:bg-white transition-all animate-none"
+                            className="p-1.5 text-slate-400 hover:text-purple-650 rounded-lg hover:bg-white transition-all animate-none cursor-pointer"
                           >
                             <Edit className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => handleDeleteActivity(activity.id)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-white transition-all animate-none"
+                            className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-white transition-all animate-none cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -1279,13 +1612,34 @@ export default function SuperAdminSkillsHubPage() {
                       <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'المعيار (Standard)' : 'Standard'}</label>
                       <select
                         value={activityForm.standard || ""}
-                        onChange={(e) => updateActivityForm("standard", e.target.value)}
+                        onChange={async (e) => {
+                          const val = e.target.value;
+                          if (val === "add_custom") {
+                            const newVal = prompt(language === 'ar' ? "أدخل معيار مخصص جديد:" : "Enter custom standard:");
+                            if (newVal && newVal.trim()) {
+                              const trimmed = newVal.trim();
+                              const lessonMetadata = getLessonMetadata(selectedLesson);
+                              const updatedMetadata = {
+                                ...lessonMetadata,
+                                standards: Array.from(new Set([...lessonMetadata.standards, trimmed]))
+                              };
+                              await saveLessonMetadata(updatedMetadata);
+                              updateActivityForm("standard", trimmed);
+                            }
+                          } else {
+                            updateActivityForm("standard", val);
+                          }
+                        }}
                         className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-black outline-none focus:border-indigo-500"
                       >
                         <option value="">{language === 'ar' ? '-- اختر المعيار --' : '-- Select Standard --'}</option>
                         {(() => {
                           const currentOptions = METADATA_OPTIONS[subject] || METADATA_OPTIONS["الرياضيات"];
-                          const list = [...currentOptions.standards];
+                          const lessonMetadata = getLessonMetadata(selectedLesson);
+                          const list = Array.from(new Set([
+                            ...currentOptions.standards,
+                            ...lessonMetadata.standards
+                          ]));
                           if (activityForm.standard && !list.includes(activityForm.standard)) {
                             list.push(activityForm.standard);
                           }
@@ -1293,19 +1647,43 @@ export default function SuperAdminSkillsHubPage() {
                             <option key={std} value={std}>{std}</option>
                           ));
                         })()}
+                        <option value="add_custom" className="text-indigo-650 font-bold">
+                          {language === 'ar' ? '+ إضافة معيار مخصص...' : '+ Add Custom Standard...'}
+                        </option>
                       </select>
                     </div>
                     <div className="space-y-2">
                       <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'المؤشر (Indicator)' : 'Indicator'}</label>
                       <select
                         value={activityForm.indicator || ""}
-                        onChange={(e) => updateActivityForm("indicator", e.target.value)}
+                        onChange={async (e) => {
+                          const val = e.target.value;
+                          if (val === "add_custom") {
+                            const newVal = prompt(language === 'ar' ? "أدخل مؤشر مخصص جديد:" : "Enter custom indicator:");
+                            if (newVal && newVal.trim()) {
+                              const trimmed = newVal.trim();
+                              const lessonMetadata = getLessonMetadata(selectedLesson);
+                              const updatedMetadata = {
+                                ...lessonMetadata,
+                                indicators: Array.from(new Set([...lessonMetadata.indicators, trimmed]))
+                              };
+                              await saveLessonMetadata(updatedMetadata);
+                              updateActivityForm("indicator", trimmed);
+                            }
+                          } else {
+                            updateActivityForm("indicator", val);
+                          }
+                        }}
                         className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-black outline-none focus:border-indigo-500"
                       >
                         <option value="">{language === 'ar' ? '-- اختر المؤشر --' : '-- Select Indicator --'}</option>
                         {(() => {
                           const currentOptions = METADATA_OPTIONS[subject] || METADATA_OPTIONS["الرياضيات"];
-                          const list = [...currentOptions.indicators];
+                          const lessonMetadata = getLessonMetadata(selectedLesson);
+                          const list = Array.from(new Set([
+                            ...currentOptions.indicators,
+                            ...lessonMetadata.indicators
+                          ]));
                           if (activityForm.indicator && !list.includes(activityForm.indicator)) {
                             list.push(activityForm.indicator);
                           }
@@ -1313,22 +1691,45 @@ export default function SuperAdminSkillsHubPage() {
                             <option key={ind} value={ind}>{ind}</option>
                           ));
                         })()}
+                        <option value="add_custom" className="text-indigo-650 font-bold">
+                          {language === 'ar' ? '+ إضافة مؤشر مخصص...' : '+ Add Custom Indicator...'}
+                        </option>
                       </select>
                     </div>
                     <div className="space-y-2">
                       <label className="text-xs font-black text-slate-500 uppercase block">{language === 'ar' ? 'مخرجات التعلم' : 'Learning Outcome'}</label>
                       <select
                         value={activityForm.learningOutcomeEn || ""}
-                        onChange={(e) => {
-                          updateActivityForm("learningOutcomeEn", e.target.value);
-                          updateActivityForm("learningOutcomeAr", e.target.value);
+                        onChange={async (e) => {
+                          const val = e.target.value;
+                          if (val === "add_custom") {
+                            const newVal = prompt(language === 'ar' ? "أدخل مخرج تعلم مخصص جديد:" : "Enter custom learning outcome:");
+                            if (newVal && newVal.trim()) {
+                              const trimmed = newVal.trim();
+                              const lessonMetadata = getLessonMetadata(selectedLesson);
+                              const updatedMetadata = {
+                                ...lessonMetadata,
+                                outcomes: Array.from(new Set([...lessonMetadata.outcomes, trimmed]))
+                              };
+                              await saveLessonMetadata(updatedMetadata);
+                              updateActivityForm("learningOutcomeEn", trimmed);
+                              updateActivityForm("learningOutcomeAr", trimmed);
+                            }
+                          } else {
+                            updateActivityForm("learningOutcomeEn", val);
+                            updateActivityForm("learningOutcomeAr", val);
+                          }
                         }}
                         className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-black outline-none focus:border-indigo-500"
                       >
                         <option value="">{language === 'ar' ? '-- اختر مخرج التعلم --' : '-- Select Learning Outcome --'}</option>
                         {(() => {
                           const currentOptions = METADATA_OPTIONS[subject] || METADATA_OPTIONS["الرياضيات"];
-                          const list = [...currentOptions.outcomes];
+                          const lessonMetadata = getLessonMetadata(selectedLesson);
+                          const list = Array.from(new Set([
+                            ...currentOptions.outcomes,
+                            ...lessonMetadata.outcomes
+                          ]));
                           if (activityForm.learningOutcomeEn && !list.includes(activityForm.learningOutcomeEn)) {
                             list.push(activityForm.learningOutcomeEn);
                           }
@@ -1336,6 +1737,9 @@ export default function SuperAdminSkillsHubPage() {
                             <option key={otc} value={otc}>{otc}</option>
                           ));
                         })()}
+                        <option value="add_custom" className="text-indigo-650 font-bold">
+                          {language === 'ar' ? '+ إضافة مخرج تعلم مخصص...' : '+ Add Custom Outcome...'}
+                        </option>
                       </select>
                     </div>
                   </div>
@@ -1414,18 +1818,28 @@ export default function SuperAdminSkillsHubPage() {
             <div className="flex items-center justify-between border-t border-slate-100 pt-6">
               <button
                 onClick={() => setActiveTab("list")}
-                className="px-6 py-3.5 rounded-2xl border-2 border-slate-200 hover:bg-slate-50 text-slate-500 font-black text-sm transition-all active:scale-95 animate-none"
+                className="px-6 py-3.5 rounded-2xl border-2 border-slate-200 hover:bg-slate-50 text-slate-500 font-black text-sm transition-all active:scale-95 animate-none cursor-pointer"
               >
                 {language === 'ar' ? 'إلغاء وتراجع' : 'Cancel & Return'}
               </button>
               
-              <button
-                onClick={handleSaveActivity}
-                className="px-10 py-3.5 rounded-2xl bg-slate-950 hover:bg-slate-900 text-white font-black text-sm flex items-center gap-2 active:scale-95 shadow-md border border-slate-800 transition-all animate-none"
-              >
-                <span>{language === 'ar' ? 'حفظ النشاط تفاوضياً' : 'Save Activity'}</span>
-                <Save className="w-4 h-4" />
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleSaveActivityAndContinue}
+                  className="px-6 py-3.5 rounded-2xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black text-sm flex items-center gap-2 active:scale-95 shadow-sm border border-indigo-200 transition-all animate-none cursor-pointer"
+                >
+                  <span>{language === 'ar' ? 'حفظ واستمرار التعديل' : 'Save & Continue'}</span>
+                  <Save className="w-4 h-4" />
+                </button>
+                
+                <button
+                  onClick={handleSaveActivity}
+                  className="px-8 py-3.5 rounded-2xl bg-slate-950 hover:bg-slate-900 text-white font-black text-sm flex items-center gap-2 active:scale-95 shadow-md border border-slate-800 transition-all animate-none cursor-pointer"
+                >
+                  <span>{language === 'ar' ? 'حفظ وإغلاق' : 'Save & Exit'}</span>
+                  <CheckCircle2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
           </div>
@@ -1572,7 +1986,7 @@ export default function SuperAdminSkillsHubPage() {
                 <div className="space-y-1">
                   <label className="text-xs font-black text-slate-450 block">{language === 'ar' ? 'تفاصيل المهارة' : 'Sub-Skill Description'}</label>
                   <textarea
-                    value={lessonModal.data?.description || ""}
+                    value={getCleanDescription(lessonModal.data?.description)}
                     onChange={(e) => updateLessonModalData("description", e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
                     placeholder={language === 'ar' ? 'أهداف التعلم المراد تحقيقها...' : 'Learning objectives to be achieved...'}
@@ -1606,6 +2020,270 @@ export default function SuperAdminSkillsHubPage() {
                 </button>
               </div>
             </form>
+          </div>
+        )}
+
+        {/* ── IMMERSIVE FULL-SCREEN 3D GAME PLAYER OVERLAY (Student Preview) ── */}
+        {previewActivity && (
+          <div className="fixed inset-0 z-[150] bg-slate-900/65 backdrop-blur-md flex items-center justify-center p-0 md:p-6 overflow-y-auto" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+            <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 w-full max-w-5xl md:rounded-[40px] shadow-2xl flex flex-col min-h-screen md:min-h-[85vh] md:max-h-[90vh] overflow-y-auto md:overflow-hidden border border-white/10 animate-in zoom-in-95 duration-200">
+              
+              {/* Game Player Header */}
+              <div className="bg-gradient-to-r from-indigo-700 to-violet-850 p-6 text-white flex justify-between items-center shadow-md">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-300 floating" />
+                    <span className="text-[10px] font-black tracking-widest uppercase">
+                      {language === 'ar' ? 'معاينة الطالب' : 'Student Preview'}
+                    </span>
+                  </div>
+                  <h3 className="text-lg md:text-xl font-black truncate max-w-xl">{translateText(previewActivity.title, language)}</h3>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-1 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10 text-xs font-black">
+                    <Clock className="w-4 h-4 text-indigo-200" />
+                    <span>{language === 'ar' ? `الزمن المقدر: ${previewActivity.estimatedTime} ثانية` : `Estimated: ${previewActivity.estimatedTime}s`}</span>
+                  </div>
+                  <button
+                    onClick={() => setPreviewActivity(null)}
+                    className="w-10 h-10 rounded-xl bg-white/10 hover:bg-rose-600 text-white flex items-center justify-center transition-colors border border-white/10"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Game Player Body */}
+              <div className="flex-1 md:overflow-y-auto p-4 md:p-8 flex flex-col lg:flex-row gap-8">
+                
+                {/* Right: Helpers Panel */}
+                <div className="w-full lg:w-64 space-y-4 shrink-0">
+                  <div className="bg-white rounded-3xl border border-slate-100 p-5 shadow-sm space-y-4">
+                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b pb-2 flex items-center gap-2">
+                      <BrainCircuit className="w-4 h-4 text-indigo-500" />
+                      {language === 'ar' ? 'تلميحات ومساعدات التعلم' : 'Hints & Learning Aids'}
+                    </h4>
+                    
+                    {/* Hint Button */}
+                    <button
+                      onClick={() => {
+                        setPreviewHintsUsed(prev => prev + 1);
+                        setPreviewHelperModal({
+                          type: "hint",
+                          content: translateText(previewActivity.hint, language) || (language === 'ar' ? "لا يوجد تلميح مسجل لهذا النشاط." : "No hint recorded for this activity.")
+                        });
+                      }}
+                      className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-amber-100 bg-amber-50/50 hover:bg-amber-50 hover:scale-[1.02] text-amber-800 font-black text-sm transition-all cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2">{language === 'ar' ? '💡 فكرة للمساعدة' : '💡 Help Hint'}</span>
+                      {language === 'ar' ? <ArrowLeft className="w-4 h-4 text-amber-500" /> : <ArrowRight className="w-4 h-4 text-amber-500" />}
+                    </button>
+
+                    {/* Tip Button */}
+                    <button
+                      onClick={() => {
+                        setPreviewHelperModal({
+                          type: "tip",
+                          content: translateText(previewActivity.tip, language) || (language === 'ar' ? "لا توجد نصيحة ذكية مسجلة." : "No smart tip recorded.")
+                        });
+                      }}
+                      className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-emerald-100 bg-emerald-50/50 hover:bg-emerald-50 hover:scale-[1.02] text-emerald-800 font-black text-sm transition-all cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2">{language === 'ar' ? '🧠 نصيحة ذكية' : '🧠 Smart Tip'}</span>
+                      {language === 'ar' ? <ArrowLeft className="w-4 h-4 text-emerald-500" /> : <ArrowRight className="w-4 h-4 text-emerald-500" />}
+                    </button>
+
+                    {/* Key Insight Button */}
+                    <button
+                      onClick={() => {
+                        setPreviewHelperModal({
+                          type: "keyInsight",
+                          content: translateText(previewActivity.keyInsight, language) || (language === 'ar' ? "لا توجد فكرة جوهرية مسجلة." : "No key insight recorded.")
+                        });
+                      }}
+                      className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-indigo-100 bg-indigo-50/50 hover:bg-indigo-50 hover:scale-[1.02] text-indigo-800 font-black text-sm transition-all cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2">{language === 'ar' ? '📘 فكرة جوهرية' : '📘 Key Insight'}</span>
+                      {language === 'ar' ? <ArrowLeft className="w-4 h-4 text-indigo-500" /> : <ArrowRight className="w-4 h-4 text-indigo-500" />}
+                    </button>
+                  </div>
+                  
+                  {/* Metadata display */}
+                  <div className="bg-white rounded-3xl border border-slate-100 p-5 shadow-sm space-y-3 text-xs font-bold text-slate-500">
+                    {previewActivity.standard && <p>{language === 'ar' ? '🔍 المعيار: ' : '🔍 Standard: '}<span className="text-slate-800 font-black">{previewActivity.standard}</span></p>}
+                    {previewActivity.indicator && <p>{language === 'ar' ? '🎯 المؤشر: ' : '🎯 Indicator: '}<span className="text-slate-800 font-black">{previewActivity.indicator}</span></p>}
+                    <p>{language === 'ar' ? '🏆 النقاط: ' : '🏆 Points: '}<span className="text-indigo-600 font-black">{previewActivity.points} {language === 'ar' ? 'نقطة' : 'XP'}</span></p>
+                  </div>
+                </div>
+
+                {/* Left: Interactive Workspace */}
+                <div className="flex-1 bg-white rounded-3xl border border-slate-150 p-6 md:p-8 flex flex-col justify-between shadow-sm min-h-[400px]">
+                  
+                  {/* Renderer */}
+                  <div className="space-y-6 flex-1">
+                    <InteractiveQuestionRenderer
+                      question={previewActivity}
+                      value={previewAnswer}
+                      onChange={setPreviewAnswer}
+                      language={language}
+                    />
+                  </div>
+
+                  {/* Submission Footer */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t border-slate-100">
+                    <button
+                      onClick={() => setPreviewActivity(null)}
+                      className="px-6 py-3.5 rounded-2xl bg-slate-50/80 border-2 border-slate-200/60 text-slate-900 hover:bg-slate-100 font-black text-sm transition-all active:scale-95 w-full sm:w-auto cursor-pointer"
+                    >
+                      {language === 'ar' ? 'إغلاق المعاينة' : 'Close Preview'}
+                    </button>
+
+                    <button
+                      onClick={submitPreviewAnswer}
+                      disabled={!previewAnswer || previewIsSubmitting}
+                      className={`px-10 py-3.5 rounded-2xl font-black text-sm transition-all flex items-center gap-2 active:scale-95 w-full sm:w-auto justify-center cursor-pointer ${
+                        !previewAnswer || previewIsSubmitting
+                          ? "bg-sky-200/40 text-slate-400 cursor-not-allowed border border-sky-300/10 shadow-none"
+                          : "bg-sky-450 text-slate-950 hover:bg-sky-500 shadow-xl shadow-sky-200/40 border border-sky-500/20"
+                      }`}
+                    >
+                      {previewIsSubmitting ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          {language === 'ar' ? 'جاري التقييم...' : 'Evaluating...'}
+                        </>
+                      ) : (
+                        <>
+                          <span>{language === 'ar' ? 'أرسل الحل للتصحيح' : 'Submit for review'}</span>
+                          <CheckCircle2 className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── PREVIEW ATTEMPT RESULT POPUP MODAL (Inside Player) ── */}
+              {previewResult && (
+                <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[160] overflow-y-auto">
+                  <div className="bg-white w-full max-w-lg rounded-[36px] shadow-2xl p-8 border border-slate-100 text-center space-y-6 animate-in zoom-in-95 duration-200">
+                    
+                    {/* Stars animation */}
+                    <div className="space-y-4">
+                      <div className="flex justify-center gap-3">
+                        {[1, 2, 3].map(index => {
+                          const isFilled = index <= previewResult.stars;
+                          return isFilled ? (
+                            <Star key={index} className="w-16 h-16 fill-amber-400 text-amber-400 drop-shadow-md scale-[1.1] animate-pulse" />
+                          ) : (
+                            <StarOff key={index} className="w-16 h-16 text-slate-200" />
+                          );
+                        })}
+                      </div>
+                      
+                      <h4 className={`text-2xl font-black ${
+                        previewResult.isCorrect ? "text-emerald-600" : "text-rose-600"
+                      }`}>
+                        {previewResult.isCorrect ? (
+                          previewResult.stars === 3 
+                            ? (language === 'ar' ? "ممتاز! حل مثالي ورائع 🏆" : "Excellent! Perfect solution 🏆") 
+                            : previewResult.stars === 2
+                            ? (language === 'ar' ? "رائع! إجابة صحيحة مع محاولة إضافية ⭐⭐" : "Great! Correct with extra attempt ⭐⭐")
+                            : (language === 'ar' ? "جيد! تم الحل بنجاح بعد عدة محاولات ⭐" : "Good! Solved after multiple attempts ⭐")
+                        ) : (
+                          (language === 'ar' ? "حاول مرة أخرى! الإجابة غير صحيحة ❌" : "Try again! Incorrect answer ❌")
+                        )}
+                      </h4>
+                      
+                      <p className="text-slate-500 font-bold text-sm">
+                        {previewResult.isCorrect 
+                          ? (language === 'ar' ? `لقد حصلت على ${previewResult.score} نقطة خبرة!` : `You earned ${previewResult.score} XP!`)
+                          : (language === 'ar' ? "راجع المعطيات أو اطلب تلميحاً للمساعدة" : "Review the question details or request a hint")}
+                      </p>
+                    </div>
+
+                    {/* Explanations & Key Insights */}
+                    {previewResult.isCorrect && (
+                      <div className="space-y-4 text-right bg-slate-50 p-6 rounded-3xl border border-slate-100 max-h-60 overflow-y-auto text-xs" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+                        {previewResult.explanation && (
+                          <div className="space-y-1">
+                            <span className="font-black text-slate-700 block">{language === 'ar' ? '📘 شرح الحل بالتفصيل:' : '📘 Detailed Explanation:'}</span>
+                            <p className="text-slate-500 font-bold leading-relaxed">{translateText(previewResult.explanation, language)}</p>
+                          </div>
+                        )}
+                        {previewResult.keyInsight && (
+                          <div className="space-y-1 border-t border-slate-200/60 pt-3">
+                            <span className="font-black text-indigo-700 block">{language === 'ar' ? '💡 الفكرة الجوهرية للتعلم:' : '💡 Core Key Insight:'}</span>
+                            <p className="text-indigo-650 font-bold leading-relaxed">{translateText(previewResult.keyInsight, language)}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Action buttons inside popup */}
+                    <div className="flex gap-4">
+                      {previewResult.isCorrect ? (
+                        <button
+                          onClick={() => setPreviewResult(null)}
+                          className="flex-1 py-4 rounded-2xl bg-indigo-600 hover:bg-slate-900 text-white font-black text-sm shadow-lg transition-colors cursor-pointer"
+                        >
+                          {language === 'ar' ? 'رائع، استمر' : 'Awesome, continue'}
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={handlePreviewRetry}
+                            className="flex-1 py-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black text-sm shadow-md transition-colors cursor-pointer"
+                          >
+                            {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
+                          </button>
+                          <button
+                            onClick={() => setPreviewResult(null)}
+                            className="flex-1 py-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-sm transition-colors cursor-pointer"
+                          >
+                            {language === 'ar' ? 'إغلاق وتصحيح' : 'Close'}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Helper explanation box (Hint, Tip, Key Insight) */}
+              {previewHelperModal.type && (
+                <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[170]">
+                  <div className="bg-white w-full max-w-md rounded-[32px] shadow-2xl p-6 border border-slate-100 text-right space-y-4 animate-in zoom-in-95 duration-200" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+                    <div className="flex justify-between items-center border-b pb-3">
+                      <span className={`px-3 py-1 text-[10px] font-black rounded-lg uppercase tracking-wider ${
+                        previewHelperModal.type === "hint" ? "bg-amber-50 text-amber-700 border border-amber-100" :
+                        previewHelperModal.type === "tip" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" :
+                        "bg-indigo-50 text-indigo-700 border border-indigo-100"
+                      }`}>
+                        {previewHelperModal.type === "hint" ? (language === 'ar' ? "💡 تلميح للمساعدة" : "💡 Help Hint") :
+                         previewHelperModal.type === "tip" ? (language === 'ar' ? "🧠 نصيحة ذكية" : "🧠 Smart Tip") :
+                         (language === 'ar' ? "📘 فكرة جوهرية" : "📘 Key Insight")}
+                      </span>
+                      <button
+                        onClick={() => setPreviewHelperModal({ type: null, content: "" })}
+                        className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 cursor-pointer"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <p className="text-slate-600 font-bold text-sm leading-relaxed">{previewHelperModal.content}</p>
+                    <button
+                      onClick={() => setPreviewHelperModal({ type: null, content: "" })}
+                      className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-black text-sm transition-colors cursor-pointer"
+                    >
+                      {language === 'ar' ? 'حسناً، فهمت' : 'OK, I got it'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+            </div>
           </div>
         )}
 
