@@ -1,2145 +1,330 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { useRouter, useSearchParams } from "next/navigation";
-import {
-  Sparkles, Plus, Trash2, Edit, ChevronDown, ChevronUp,
-  ArrowRight, ArrowLeft, Save, CheckCircle2, AlertCircle, X,
-  Folder, BookOpen, FileText, Info, HelpCircle, Layers, Settings,
-  Play, BrainCircuit, RefreshCw, Star, StarOff, Upload, Download, Globe, School, Eye, Clock
+import { 
+  Plus, Search, Book,
+  BookOpen, Layers, Edit2,
+  Trash2, Monitor, Filter, BrainCircuit
 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { API_URL } from "@/lib/api";
+import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import InteractiveQuestionEditor from "@/components/InteractiveQuestionEditor";
-import InteractiveQuestionRenderer from "@/components/InteractiveQuestionRenderer";
-import * as XLSX from "xlsx";
 
 export default function SchoolAdminSkillsHubPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const action = searchParams.get("action");
+  const { showToast } = useNotification();
   const { language } = useLanguage();
-  const [token, setToken] = useState<string | null>(null);
+  const [clusters, setClusters] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [schoolId, setSchoolId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  
+  // Stats
+  const [apiStats, setApiStats] = useState({ totalClusters: 0, totalLessons: 0, totalSubjects: 0 });
 
-  // Auto-Save States & Refs
-  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const autoSaveTimeoutRef = useRef<any>(null);
-  const isFirstLoadRef = useRef<boolean>(true);
+  useEffect(() => {
+    const storedUser = localStorage.getItem("school_admin_user");
+    if (storedUser) {
+      try {
+        const u = JSON.parse(storedUser);
+        setSchoolId(u.schoolId);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }, []);
 
-  // Metadata Excel upload ref
-  const metadataExcelRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-  // Preview Play States
-  const [previewActivity, setPreviewActivity] = useState<any>(null);
-  const [previewAnswer, setPreviewAnswer] = useState<string>("");
-  const [previewIsSubmitting, setPreviewIsSubmitting] = useState(false);
-  const [previewResult, setPreviewResult] = useState<any>(null);
-  const [previewStartTime, setPreviewStartTime] = useState<number>(0);
-  const [previewHintsUsed, setPreviewHintsUsed] = useState<number>(0);
-  const [previewAttemptCount, setPreviewAttemptCount] = useState<number>(1);
-  const [previewHelperModal, setPreviewHelperModal] = useState<{ type: "hint" | "tip" | "keyInsight" | null; content: string }>({
-    type: null,
-    content: ""
-  });
+  useEffect(() => {
+    fetchClusters();
+  }, [debouncedSearch]);
 
-  const getGradeLabel = (g: string) => {
-    if (language === "ar") return g;
-    const map: Record<string, string> = {
+  const fetchClusters = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("school_admin_token");
+      if (!token) {
+        router.push("/school-admin/login");
+        return;
+      }
+      
+      const url = new URL(`${API_URL}/skills-hub/clusters`);
+      const res = await fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.status === 400 || res.status === 401) {
+        localStorage.removeItem("school_admin_token");
+        router.push("/school-admin/login");
+        return;
+      }
+
+      const data = await res.json();
+      let filtered = Array.isArray(data) ? data : [];
+      if (debouncedSearch) {
+        filtered = filtered.filter((c: any) => 
+          c.name?.toLowerCase().includes(debouncedSearch.toLowerCase()) || 
+          c.subject?.toLowerCase().includes(debouncedSearch.toLowerCase())
+        );
+      }
+
+      setClusters(filtered);
+
+      // Calculate stats locally
+      const uniqueSubjects = new Set(filtered.map((c: any) => c.subject)).size;
+      const totalLessons = filtered.reduce((acc: number, c: any) => acc + (c._count?.skills || 0), 0);
+      
+      setApiStats({
+        totalClusters: filtered.length,
+        totalLessons,
+        totalSubjects: uniqueSubjects
+      });
+
+    } catch (e) {
+      console.error(e);
+      showToast(language === 'ar' ? "فشل تحميل المحاور المهاراتية" : "Error loading skill clusters", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getGradeName = (grade: string) => {
+    if (language === 'ar') {
+      const translations: { [key: string]: string } = {
+        "Elementary": "المرحلة الابتدائية",
+        "Middle School": "المرحلة الإعدادية",
+        "High School": "المرحلة الثانوية",
+        "الصف الأول الابتدائي": "الصف الأول الابتدائي",
+        "الصف الثاني الابتدائي": "الصف الثاني الابتدائي",
+        "الصف الثالث الابتدائي": "الصف الثالث الابتدائي",
+        "الصف الرابع الابتدائي": "الصف الرابع الابتدائي",
+        "الصف الخامس الابتدائي": "الصف الخامس الابتدائي",
+        "الصف السادس الابتدائي": "الصف السادس الابتدائي",
+        "الصف الأول الإعدادي": "الصف الأول الإعدادي",
+        "الصف الثاني الإعدادي": "الصف الثاني الإعدادي",
+        "الصف الثالث الإعدادي": "الصف الثالث الإعدادي",
+        "الصف الأول الثانوي": "الصف الأول الثانوي",
+        "الصف الثاني الثانوي": "الصف الثاني الثانوي",
+        "الصف الثالث الثانوي": "الصف الثالث الثانوي"
+      };
+      return translations[grade] || grade;
+    }
+    const translations: { [key: string]: string } = {
+      "Elementary": "Elementary",
+      "Middle School": "Middle School",
+      "High School": "High School",
       "الصف الأول الابتدائي": "Grade 1 Primary",
       "الصف الثاني الابتدائي": "Grade 2 Primary",
       "الصف الثالث الابتدائي": "Grade 3 Primary",
       "الصف الرابع الابتدائي": "Grade 4 Primary",
       "الصف الخامس الابتدائي": "Grade 5 Primary",
       "الصف السادس الابتدائي": "Grade 6 Primary",
-      "الصف الأول الإعدادي": "Grade 7 Preparatory",
-      "الصف الثاني الإعدادي": "Grade 8 Preparatory",
-      "الصف الثالث الإعدادي": "Grade 9 Preparatory",
+      "الصف الأول الإعدادي": "Grade 7 Prep",
+      "الصف الثاني الإعدادي": "Grade 8 Prep",
+      "الصف الثالث الإعدادي": "Grade 9 Prep",
       "الصف الأول الثانوي": "Grade 10 Secondary",
       "الصف الثاني الثانوي": "Grade 11 Secondary",
       "الصف الثالث الثانوي": "Grade 12 Secondary"
     };
-    return map[g] || g;
+    return translations[grade] || grade;
   };
 
-  const getCleanDescription = (desc: string | null) => {
-    if (!desc) return "";
-    const trimmed = desc.trim();
-    if (trimmed.startsWith("{")) {
-      try {
-        const parsed = JSON.parse(trimmed);
-        return parsed.description || "";
-      } catch {}
-    }
-    return desc;
-  };
-
-  const getLessonMetadata = (lesson: any) => {
-    if (!lesson || !lesson.description) return { description: "", standards: [], indicators: [], outcomes: [] };
-    const desc = lesson.description.trim();
-    if (desc.startsWith("{")) {
-      try {
-        const parsed = JSON.parse(desc);
-        return {
-          description: parsed.description || "",
-          standards: parsed.standards || [],
-          indicators: parsed.indicators || [],
-          outcomes: parsed.outcomes || []
-        };
-      } catch {}
-    }
-    return {
-      description: lesson.description,
-      standards: [],
-      indicators: [],
-      outcomes: []
-    };
-  };
-
-  const translateText = (val: any, lang: string = "ar") => {
-    if (!val) return "";
-    if (typeof val === "string") {
-      try {
-        const parsed = JSON.parse(val);
-        if (parsed && typeof parsed === "object") {
-          return parsed[lang] || parsed["ar"] || parsed["en"] || "";
-        }
-      } catch {}
-      return val;
-    }
-    if (typeof val === "object" && val !== null) {
-      return val[lang] || val["ar"] || val["en"] || "";
-    }
-    return String(val);
-  };
-
-  // Filter States
-  const [subject, setSubject] = useState<string>("الرياضيات");
-  const [grade, setGrade] = useState<string>("الصف الثالث الابتدائي");
-
-  // Data Lists
-  const [clusters, setClusters] = useState<any[]>([]);
-  const [selectedCluster, setSelectedCluster] = useState<any>(null);
-  const [lessons, setLessons] = useState<any[]>([]);
-  const [selectedLesson, setSelectedLesson] = useState<any>(null);
-  const [activities, setActivities] = useState<any[]>([]);
-
-  // Active Modes
-  const [activeTab, setActiveTab] = useState<"list" | "activity-form">("list");
-  const [editingActivity, setEditingActivity] = useState<any>(null);
-
-  // Modal States
-  const [clusterModal, setClusterModal] = useState<{ open: boolean; data: any }>({ open: false, data: null });
-  const [lessonModal, setLessonModal] = useState<{ open: boolean; data: any }>({ open: false, data: null });
-
-  // Activity Form States
-  const [activityForm, setActivityForm] = useState<any>({
-    title: "",
-    type: "MCQ",
-    options: "[]",
-    correctAnswer: "",
-    points: 10,
-    difficulty: "Medium",
-    dok: "2",
-    estimatedTime: 60,
-    standard: "",
-    indicator: "",
-    learningOutcome: "",
-    hint: "",
-    tip: "",
-    explanation: "",
-    keyInsight: ""
-  });
-
-  const GRADES_LIST = [
-    "الصف الأول الابتدائي", "الصف الثاني الابتدائي", "الصف الثالث الابتدائي",
-    "الصف الرابع الابتدائي", "الصف الخامس الابتدائي", "الصف السادس الابتدائي",
-    "الصف الأول الإعدادي", "الصف الثاني الإعدادي", "الصف الثالث الإعدادي",
-    "الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"
-  ];
-
-  // Helper State Modifiers
-  const updateActivityForm = (key: string, val: any) => {
-    setActivityForm((prev: any) => ({ ...prev, [key]: val }));
-  };
-
-  const updateClusterModalData = (key: string, val: any) => {
-    setClusterModal((prev: any) => ({
-      ...prev,
-      data: { ...prev.data, [key]: val }
-    }));
-  };
-
-  const updateLessonModalData = (key: string, val: any) => {
-    setLessonModal((prev: any) => ({
-      ...prev,
-      data: { ...prev.data, [key]: val }
-    }));
-  };
-
-  useEffect(() => {
-    const storedToken = localStorage.getItem("school_admin_token");
-    const storedUser = localStorage.getItem("school_admin_user");
-    if (!storedToken) {
-      router.push("/school-admin/login");
-      return;
-    }
-    setToken(storedToken);
-    if (storedUser) {
-      try {
-        const u = JSON.parse(storedUser);
-        setSchoolId(u.schoolId);
-      } catch {}
-    }
-    fetchClusters(storedToken, subject, grade);
-  }, [router, subject, grade]);
-
-  useEffect(() => {
-    if (action === "add-cluster" && token) {
-      setClusterModal({ open: true, data: { name: "", description: "" } });
-    }
-  }, [action, token]);
-
-  // Fetch Clusters
-  const fetchClusters = async (authToken: string, currentSubject: string, currentGrade: string) => {
-    setIsLoading(true);
+  const handleDelete = async (id: string) => {
+    if (!window.confirm(language === 'ar' ? "هل أنت متأكد من حذف هذا المحور بالكامل؟" : "Are you sure you want to delete this cluster?")) return;
     try {
-      const res = await fetch(
-        `${API_URL}/skills-hub/clusters?subject=${encodeURIComponent(currentSubject)}&grade=${encodeURIComponent(currentGrade)}`,
-        { headers: { Authorization: `Bearer ${authToken}` } }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setClusters(data);
-      }
-    } catch (err) {
-      console.error("Error fetching clusters:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Fetch Lessons for a Cluster
-  const fetchLessons = async (clusterId: string) => {
-    if (!token) return;
-    try {
-      const res = await fetch(`${API_URL}/skills-hub/clusters/${clusterId}/lessons`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setLessons(data);
-        setSelectedLesson(null);
-        setActivities([]);
-      }
-    } catch (err) {
-      console.error("Error fetching lessons:", err);
-    }
-  };
-
-  // Fetch Activities for a Lesson
-  const fetchActivities = async (lessonId: string) => {
-    if (!token) return;
-    try {
-      const res = await fetch(`${API_URL}/skills-hub/lessons/${lessonId}/activities`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setActivities(data);
-      }
-    } catch (err) {
-      console.error("Error fetching activities:", err);
-    }
-  };
-
-  // Select Cluster
-  const handleSelectCluster = (cluster: any) => {
-    setSelectedCluster(cluster);
-    fetchLessons(cluster.id);
-  };
-
-  // Select Lesson
-  const handleSelectLesson = (lesson: any) => {
-    setSelectedLesson(lesson);
-    fetchActivities(lesson.id);
-  };
-
-  // Cluster Create / Update
-  const handleSaveCluster = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!token) return;
-    const isEdit = !!clusterModal.data?.id;
-    const url = isEdit
-      ? `${API_URL}/skills-hub/clusters/${clusterModal.data.id}`
-      : `${API_URL}/skills-hub/clusters`;
-    const method = isEdit ? "PUT" : "POST";
-
-    try {
-      const res = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          name: clusterModal.data.name,
-          description: clusterModal.data.description,
-          subject,
-          grade
-        })
-      });
-
-      if (res.ok) {
-        setClusterModal({ open: false, data: null });
-        fetchClusters(token, subject, grade);
-        if (isEdit && selectedCluster?.id === clusterModal.data.id) {
-          setSelectedCluster(null);
-          setLessons([]);
-          setSelectedLesson(null);
-          setActivities([]);
-        }
-      }
-    } catch (err) {
-      console.error("Error saving cluster:", err);
-    }
-  };
-
-  // Delete Cluster
-  const handleDeleteCluster = async (id: string) => {
-    if (!token || !confirm("هل أنت متأكد من حذف هذا المحور المهاراتي بالكامل؟ سيتم حذف جميع المهارات والأنشطة التابعة له.")) return;
-    try {
+      const token = localStorage.getItem("school_admin_token");
       const res = await fetch(`${API_URL}/skills-hub/clusters/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        fetchClusters(token, subject, grade);
-        if (selectedCluster?.id === id) {
-          setSelectedCluster(null);
-          setLessons([]);
-          setSelectedLesson(null);
-          setActivities([]);
-        }
-      }
-    } catch (err) {
-      console.error("Error deleting cluster:", err);
-    }
-  };
-
-  // Lesson Create / Update
-  const handleSaveLesson = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!token || !selectedCluster) return;
-    const isEdit = !!lessonModal.data?.id;
-    const url = isEdit
-      ? `${API_URL}/skills-hub/lessons/${lessonModal.data.id}`
-      : `${API_URL}/skills-hub/lessons`;
-    const method = isEdit ? "PUT" : "POST";
-
-    const existingMetadata = getLessonMetadata(lessonModal.data);
-    const finalDescription = JSON.stringify({
-      description: lessonModal.data.description || "",
-      standards: existingMetadata.standards || [],
-      indicators: existingMetadata.indicators || [],
-      outcomes: existingMetadata.outcomes || []
-    });
-
-    try {
-      const res = await fetch(url, {
-        method,
+        method: 'DELETE',
         headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          clusterId: selectedCluster.id,
-          name: lessonModal.data.name,
-          description: finalDescription,
-          order: Number(lessonModal.data.order) || 0
-        })
-      });
-
-      if (res.ok) {
-        setLessonModal({ open: false, data: null });
-        fetchLessons(selectedCluster.id);
-      }
-    } catch (err) {
-      console.error("Error saving lesson:", err);
-    }
-  };
-
-  // Delete Lesson
-  const handleDeleteLesson = async (id: string) => {
-    if (!token || !confirm("هل أنت متأكد من حذف هذه المهارة الفرعية؟ سيتم حذف الأنشطة التابعة لها.")) return;
-    try {
-      const res = await fetch(`${API_URL}/skills-hub/lessons/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        fetchLessons(selectedCluster.id);
-        if (selectedLesson?.id === id) {
-          setSelectedLesson(null);
-          setActivities([]);
+          'Authorization': `Bearer ${token}`
         }
-      }
-    } catch (err) {
-      console.error("Error deleting lesson:", err);
-    }
-  };
-
-  // Create Activity Handler
-  const handleOpenActivityCreate = () => {
-    if (!selectedLesson) return;
-    setEditingActivity(null);
-    setActivityForm({
-      title: "",
-      type: "MCQ",
-      options: JSON.stringify({ choices: ["", "", "", ""] }),
-      correctAnswer: "",
-      points: 10,
-      difficulty: "Medium",
-      dok: "2",
-      estimatedTime: 60,
-      standard: "",
-      indicator: "",
-      learningOutcome: "",
-      hint: "",
-      tip: "",
-      explanation: "",
-      keyInsight: ""
-    });
-    isFirstLoadRef.current = true;
-    setAutoSaveStatus("idle");
-    setActiveTab("activity-form");
-  };
-
-  // Edit Activity Handler
-  const handleOpenActivityEdit = (act: any) => {
-    setEditingActivity(act);
-    setActivityForm({
-      title: act.title,
-      type: act.type,
-      options: typeof act.options === "string" ? act.options : JSON.stringify(act.options),
-      correctAnswer: typeof act.correctAnswer === "string" ? act.correctAnswer : JSON.stringify(act.correctAnswer),
-      points: act.points,
-      difficulty: act.difficulty,
-      dok: act.dok || "2",
-      estimatedTime: act.estimatedTime,
-      standard: act.standard || "",
-      indicator: act.indicator || "",
-      learningOutcome: act.learningOutcome || "",
-      hint: act.hint || "",
-      tip: act.tip || "",
-      explanation: act.explanation || "",
-      keyInsight: act.keyInsight || ""
-    });
-    isFirstLoadRef.current = true;
-    setAutoSaveStatus("idle");
-    setActiveTab("activity-form");
-  };
-
-  const handleDeleteActivity = async (id: string) => {
-    if (!token || !confirm(language === 'ar' ? "هل أنت متأكد من حذف هذا النشاط التفاعلي؟" : "Are you sure you want to delete this interactive activity?")) return;
-    try {
-      const res = await fetch(`${API_URL}/skills-hub/activities/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
-        fetchActivities(selectedLesson.id);
-      }
-    } catch (err) {
-      console.error("Error deleting activity:", err);
-    }
-  };
-
-  // Submit Activity
-  const handleSaveActivity = async () => {
-    if (!token || !selectedLesson) return;
-    const isEdit = !!editingActivity;
-    const url = isEdit
-      ? `${API_URL}/skills-hub/activities/${editingActivity.id}`
-      : `${API_URL}/skills-hub/activities`;
-    const method = isEdit ? "PUT" : "POST";
-
-    const payload = {
-      lessonId: selectedLesson.id,
-      ...activityForm,
-      // Pass clean strings for prisma options
-      options: typeof activityForm.options === "string" ? activityForm.options : JSON.stringify(activityForm.options),
-      correctAnswer: typeof activityForm.correctAnswer === "string" ? activityForm.correctAnswer : JSON.stringify(activityForm.correctAnswer)
-    };
-
-    try {
-      const res = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (res.ok) {
-        setActiveTab("list");
-        fetchActivities(selectedLesson.id);
+        showToast(language === 'ar' ? "تم الحذف بنجاح" : "Deleted successfully", "success");
+        setClusters(prev => prev.filter(c => c.id !== id));
+        fetchClusters();
       } else {
-        const err = await res.json();
-        alert(err.error || (language === 'ar' ? "حدث خطأ أثناء حفظ النشاط" : "Error saving activity"));
+        showToast(language === 'ar' ? "فشل الحذف" : "Delete failed", "error");
       }
-    } catch (err) {
-      console.error("Error saving activity:", err);
-    }
-  };
-
-  // Save & Continue Handler
-  const handleSaveActivityAndContinue = async () => {
-    if (!token || !selectedLesson) return;
-    const isEdit = !!editingActivity;
-    const url = isEdit
-      ? `${API_URL}/skills-hub/activities/${editingActivity.id}`
-      : `${API_URL}/skills-hub/activities`;
-    const method = isEdit ? "PUT" : "POST";
-
-    const payload = {
-      lessonId: selectedLesson.id,
-      ...activityForm,
-      options: typeof activityForm.options === "string" ? activityForm.options : JSON.stringify(activityForm.options),
-      correctAnswer: typeof activityForm.correctAnswer === "string" ? activityForm.correctAnswer : JSON.stringify(activityForm.correctAnswer)
-    };
-
-    try {
-      setAutoSaveStatus("saving");
-      const res = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setAutoSaveStatus("saved");
-        if (!isEdit && data.activity) {
-          setEditingActivity(data.activity);
-        }
-        fetchActivities(selectedLesson.id);
-        alert(language === 'ar' ? "تم حفظ النشاط بنجاح" : "Activity saved successfully");
-      } else {
-        setAutoSaveStatus("error");
-        const err = await res.json();
-        alert(err.error || (language === 'ar' ? "حدث خطأ أثناء حفظ النشاط" : "Error saving activity"));
-      }
-    } catch (err) {
-      console.error("Error saving activity:", err);
-      setAutoSaveStatus("error");
-    }
-  };
-
-  // Auto-Save Effect Hook
-  useEffect(() => {
-    if (activeTab !== "activity-form" || !token || !selectedLesson) return;
-    
-    // Prevent auto-save on initial form load
-    if (isFirstLoadRef.current) {
-      isFirstLoadRef.current = false;
-      return;
-    }
-
-    setAutoSaveStatus("saving");
-    if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
-
-    autoSaveTimeoutRef.current = setTimeout(async () => {
-      const isEdit = !!editingActivity;
-      const url = isEdit
-        ? `${API_URL}/skills-hub/activities/${editingActivity.id}`
-        : `${API_URL}/skills-hub/activities`;
-      const method = isEdit ? "PUT" : "POST";
-
-      const payload = {
-        lessonId: selectedLesson.id,
-        ...activityForm,
-        options: typeof activityForm.options === "string" ? activityForm.options : JSON.stringify(activityForm.options),
-        correctAnswer: typeof activityForm.correctAnswer === "string" ? activityForm.correctAnswer : JSON.stringify(activityForm.correctAnswer)
-      };
-
-      try {
-        const res = await fetch(url, {
-          method,
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify(payload)
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          setAutoSaveStatus("saved");
-          if (!isEdit && data.activity) {
-            setEditingActivity(data.activity);
-          }
-          fetchActivities(selectedLesson.id);
-        } else {
-          setAutoSaveStatus("error");
-        }
-      } catch (err) {
-        console.error("Autosave error:", err);
-        setAutoSaveStatus("error");
-      }
-    }, 1500);
-
-    return () => {
-      if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
-    };
-  }, [activityForm, activeTab]);
-
-  // Lesson Metadata Excel Import / Export
-  const saveLessonMetadata = async (updatedMetadata: any) => {
-    if (!token || !selectedLesson) return;
-    const updatedDescription = JSON.stringify(updatedMetadata);
-    try {
-      const res = await fetch(`${API_URL}/skills-hub/lessons/${selectedLesson.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          name: selectedLesson.name,
-          description: updatedDescription,
-          order: selectedLesson.order
-        })
-      });
-      if (res.ok) {
-        const updatedLesson = await res.json();
-        setSelectedLesson(updatedLesson.lesson);
-        setLessons(prev => prev.map(l => l.id === selectedLesson.id ? updatedLesson.lesson : l));
-      }
-    } catch (err) {
-      console.error("Error saving lesson metadata:", err);
-    }
-  };
-
-  const handleExcelUpload = () => {
-    metadataExcelRef.current?.click();
-  };
-
-  const handleMetadataExcelChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!selectedLesson) return;
-
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      try {
-        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-        const wb = XLSX.read(data, { type: "array" });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
-
-        if (rows.length < 2) {
-          alert(language === 'ar' ? "ملف Excel فارغ أو لا يحتوي على صفوف بيانات" : "Excel file is empty or does not contain data rows");
-          return;
-        }
-
-        const headers = (rows[0] as string[]).map((h) => String(h).trim().toLowerCase());
-
-        const stdIdx = headers.findIndex(h => h.includes("standard") || h.includes("معيار") || h.includes("المعايير"));
-        const indIdx = headers.findIndex(h => h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشرات"));
-        const loIdx = headers.findIndex(h => h.includes("outcome") || h.includes("ناتج") || h.includes("مخرج") || h.includes("النواتج") || h.includes("المخرجات"));
-        const titleIdx = headers.findIndex(h => h.includes("title") || h.includes("درس") || h.includes("المهارة") || h.includes("الفرعية"));
-
-        if (stdIdx === -1 && indIdx === -1 && loIdx === -1) {
-          alert(language === 'ar' ? "لم يتم العثور على أعمدة متوافقة (المعايير، المؤشرات، المخرجات)" : "Could not find matching columns (Standards, Indicators, Outcomes)");
-          return;
-        }
-
-        const dataRows = rows.slice(1).filter(r => r.some(c => String(c).trim() !== ""));
-
-        let filteredRows = dataRows;
-        if (titleIdx >= 0 && selectedLesson.name) {
-          const lessonNameLower = selectedLesson.name.trim().toLowerCase();
-          const matchingRows = dataRows.filter(r => {
-            const rowTitle = String(r[titleIdx] ?? "").trim().toLowerCase();
-            return rowTitle && (lessonNameLower.includes(rowTitle) || rowTitle.includes(lessonNameLower));
-          });
-          if (matchingRows.length > 0) {
-            filteredRows = matchingRows;
-          }
-        }
-
-        if (filteredRows.length === 0) {
-          alert(language === 'ar' ? "لم يتم العثور على بيانات مطابقة لهذه المهارة" : "No matching data rows found for this sub-skill");
-          return;
-        }
-
-        const standardsList = filteredRows.map(r => stdIdx >= 0 ? String(r[stdIdx] ?? "").trim() : "").filter(Boolean);
-        const indicatorsList = filteredRows.map(r => indIdx >= 0 ? String(r[indIdx] ?? "").trim() : "").filter(Boolean);
-        const outcomesList = filteredRows.map(r => loIdx >= 0 ? String(r[loIdx] ?? "").trim() : "").filter(Boolean);
-
-        const existingMetadata = getLessonMetadata(selectedLesson);
-        const nextStandards = Array.from(new Set([...existingMetadata.standards, ...standardsList]));
-        const nextIndicators = Array.from(new Set([...existingMetadata.indicators, ...indicatorsList]));
-        const nextOutcomes = Array.from(new Set([...existingMetadata.outcomes, ...outcomesList]));
-
-        await saveLessonMetadata({
-          description: existingMetadata.description,
-          standards: nextStandards,
-          indicators: nextIndicators,
-          outcomes: nextOutcomes
-        });
-
-        alert(language === 'ar' ? "تم استيراد المعايير والمؤشرات بنجاح" : "Standards and indicators imported successfully");
-      } catch (err) {
-        console.error("Error importing metadata:", err);
-        alert(language === 'ar' ? "حدث خطأ أثناء قراءة ملف Excel" : "Error reading Excel file");
-      }
-    };
-    reader.readAsArrayBuffer(file);
-    e.target.value = "";
-  };
-
-  const downloadMetadataTemplate = () => {
-    const wsData = [
-      ["Sub-Skill Title", "Standard", "Indicator", "Outcome"],
-      [selectedLesson?.name || "اسم المهارة الفرعية", "MATH.3.A.1", "MATH.IND.1", "القدرة على تكوين العشرات"],
-      [selectedLesson?.name || "اسم المهارة الفرعية", "MATH.3.A.2", "MATH.IND.2", "قراءة الساعات بدقة"]
-    ];
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Metadata Template");
-    XLSX.writeFile(wb, "skills_metadata_template.xlsx");
-  };
-
-  // Preview / Play Handlers
-  const startPreviewActivity = async (act: any) => {
-    if (!token) return;
-    try {
-      setIsLoading(true);
-      const res = await fetch(`${API_URL}/skills-hub/activities/${act.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const activity = await res.json();
-        setPreviewActivity(activity);
-        setPreviewAnswer("");
-        setPreviewStartTime(Date.now());
-        setPreviewHintsUsed(0);
-        setPreviewAttemptCount(1);
-        setPreviewResult(null);
-      }
-    } catch (err) {
-      console.error("Error loading activity for preview:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const submitPreviewAnswer = async () => {
-    if (!token || !previewActivity || previewIsSubmitting) return;
-    setPreviewIsSubmitting(true);
-    const timeTaken = Math.round((Date.now() - previewStartTime) / 1000);
-    
-    try {
-      const res = await fetch(`${API_URL}/skills-hub/activities/${previewActivity.id}/attempt`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          selectedAnswer: previewAnswer,
-          timeTaken,
-          hintsUsed: previewHintsUsed,
-          attemptCount: previewAttemptCount
-        })
-      });
-      
-      if (res.ok) {
-        const result = await res.json();
-        setPreviewResult(result);
-      } else {
-        const errData = await res.json();
-        alert(errData.error || (language === 'ar' ? "خطأ في الإرسال" : "Submission failed"));
-      }
-    } catch (err) {
-      console.error("Error submitting preview attempt:", err);
-    } finally {
-      setPreviewIsSubmitting(false);
-    }
-  };
-
-  const handlePreviewRetry = () => {
-    setPreviewResult(null);
-    setPreviewAnswer("");
-    setPreviewStartTime(Date.now());
-    setPreviewAttemptCount(prev => prev + 1);
-  };
-
-  const handleSeedDemoActivities = async () => {
-    if (!token || !selectedLesson) return;
-    if (!confirm("هل أنت متأكد من توليد 24 نشاطاً تجريبياً (مثال لكل نوع) في هذه المهارة الفرعية؟")) return;
-    
-    const demoActivities = [
-      {
-        title: "تحدي اختيار من متعدد - عواصم الدول",
-        type: "MCQ",
-        options: { choices: ["القاهرة", "الرياض", "المنامة", "عمان"] },
-        correctAnswer: "القاهرة",
-        points: 10,
-        difficulty: "Easy"
-      },
-      {
-        title: "صح أم خطأ - كوكب الأرض",
-        type: "TRUE_FALSE",
-        options: { choices: ["صح", "خطأ"] },
-        correctAnswer: "صح",
-        points: 10,
-        difficulty: "Easy"
-      },
-      {
-        title: "اختيارات متعددة - الأعداد الأولية أصغر من 10",
-        type: "MULTI_SELECT",
-        options: { choices: ["2", "3", "4", "5"] },
-        correctAnswer: ["2", "3", "5"],
-        points: 15,
-        difficulty: "Medium"
-      },
-      {
-        title: "توصيل المفاهيم - عواصم وقارات",
-        type: "MATCHING",
-        options: { left: ["مصر", "فرنسا", "اليابان"], right: ["القاهرة", "باريس", "طوكيو"] },
-        correctAnswer: { "مصر": "القاهرة", "فرنسا": "باريس", "اليابان": "طوكيو" },
-        points: 15,
-        difficulty: "Medium"
-      },
-      {
-        title: "سحب الفراغات - الاتجاهات الأساسية",
-        type: "DRAG_DROP_FILL",
-        options: { sentence: "تشرق الشمس من [slot0] وتغرب من [slot1].", choices: ["الشرق", "الغرب", "الشمال", "الجنوب"] },
-        correctAnswer: ["الشرق", "الغرب"],
-        points: 15,
-        difficulty: "Medium"
-      },
-      {
-        title: "تصنيف المجموعات - كائنات حية وأشياء جامدة",
-        type: "GROUP_SORTING",
-        options: { groups: ["حيوان", "نبات"], items: ["أسد", "تفاحة", "نمر", "شجرة موز"] },
-        correctAnswer: { "أسد": "حيوان", "تفاحة": "نبات", "نمر": "حيوان", "شجرة موز": "نبات" },
-        points: 20,
-        difficulty: "Hard"
-      },
-      {
-        title: "قراءة عقارب الساعة - الخامسة والنصف",
-        type: "CLOCK",
-        options: { minuteStep: 5 },
-        correctAnswer: "05:30",
-        points: 10,
-        difficulty: "Easy"
-      },
-      {
-        title: "خريطة المفاهيم - أركان الإسلام",
-        type: "MIND_MAP",
-        options: { nodes: [{ id: "1", label: "أركان الإسلام", parent: null, isBlank: false }, { id: "2", label: "شهادة أن لا إله إلا الله", parent: "1", isBlank: true }, { id: "3", label: "إقام الصلاة", parent: "1", isBlank: true }] },
-        correctAnswer: { "2": "شهادة أن لا إله إلا الله", "3": "إقام الصلاة" },
-        points: 20,
-        difficulty: "Hard"
-      },
-      {
-        title: "فيديو تفاعلي - رحلة في الكون الفسيح",
-        type: "VIDEO_CHECKPOINT",
-        options: { videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", checkpoints: [{ time: 10, question: "ما هو الكوكب الأقرب للشمس؟", choices: ["عطارد", "الزهرة", "الأرض"] }] },
-        correctAnswer: { "10": "عطارد" },
-        points: 20,
-        difficulty: "Medium"
-      },
-      {
-        title: "خط الأعداد - تحديد المنتصف بين 0 و 20",
-        type: "NUMBER_LINE",
-        options: { min: 0, max: 20, step: 2, labels: ["0", "10", "20"] },
-        correctAnswer: "10",
-        points: 10,
-        difficulty: "Easy"
-      },
-      {
-        title: "فرز سريع - الأعداد الزوجية والفردية",
-        type: "SWIPE_SORT",
-        options: { leftGroup: "فردي", rightGroup: "زوجي", items: ["3", "8", "15", "22"] },
-        correctAnswer: { "3": "left", "8": "right", "15": "left", "22": "right" },
-        points: 15,
-        difficulty: "Medium"
-      },
-      {
-        title: "المتاهة التعليمية - مسار الأرقام الصحيح",
-        type: "MAZE",
-        options: { mazeGrid: [[1,1,0,0,0],[0,1,1,0,0],[0,0,1,1,0],[0,0,0,1,1],[0,0,0,0,1]], start: [0, 0], end: [4, 4] },
-        correctAnswer: ["0,0", "0,1", "1,1", "1,2", "2,2", "2,3", "3,3", "3,4", "4,4"],
-        points: 20,
-        difficulty: "Hard"
-      },
-      {
-        title: "البحث عن الكلمات - الفواكه اللذيذة",
-        type: "WORD_SEARCH",
-        options: { grid: [["ت", "ف", "ا", "ح", "خ", "ص", "ض", "ط"], ["م", "و", "ز", "ع", "غ", "ف", "ق", "ك"], ["ا", "ل", "ل", "هـ", "و", "ي", "ب", "ت"], ["ج", "ح", "خ", "د", "ذ", "ر", "ز", "س"], ["ش", "ص", "ض", "ط", "ظ", "ع", "غ", "ف"], ["ق", "ك", "ل", "م", "ن", "هـ", "و", "ي"], ["ا", "ب", "ت", "ث", "ج", "ح", "خ", "د"], ["ذ", "ر", "ز", "س", "ش", "ص", "ض", "ط"]], words: ["تفاح", "موز"] },
-        correctAnswer: ["تفاح", "موز"],
-        points: 15,
-        difficulty: "Medium"
-      },
-      {
-        title: "جيوجيبرا - رسم مثلث قائم الزاوية",
-        type: "GEOGEBRA",
-        options: { materialId: "m9b7v5cx", width: 800, height: 500, iframeUrl: "https://www.geogebra.org/material/iframe/id/m9b7v5cx" },
-        correctAnswer: "90",
-        points: 20,
-        difficulty: "Hard"
-      },
-      {
-        title: "البطاقة التعليمية - عاصمة جمهورية مصر العربية",
-        type: "FLASH_CARD",
-        options: { front: "ما هي عاصمة مصر؟", back: "القاهرة" },
-        correctAnswer: "القاهرة",
-        points: 10,
-        difficulty: "Easy"
-      },
-      {
-        title: "لعبة الذاكرة - مرادفات الكلمات العربية",
-        type: "MEMORY_GAME",
-        options: { pairs: [{ left: "سعيد", right: "مبتهج" }, { left: "حزين", right: "كئيب" }] },
-        correctAnswer: [{ left: "سعيد", right: "مبتهج" }, { left: "حزين", right: "كئيب" }],
-        points: 15,
-        difficulty: "Medium"
-      },
-      {
-        title: "ترتيب حروف الكلمة - مدرسة",
-        type: "WORD_SCRAMBLE",
-        options: { word: "مدرسة" },
-        correctAnswer: "مدرسة",
-        points: 10,
-        difficulty: "Easy"
-      },
-      {
-        title: "ترتيب الكلمات لتكوين جملة صحيحة",
-        type: "SENTENCE_REORDER",
-        options: { words: ["العلم", "نور", "والجهل", "ظلام"] },
-        correctAnswer: "العلم نور والجهل ظلام",
-        points: 15,
-        difficulty: "Medium"
-      },
-      {
-        title: "معادلة حسابية - حساب قيمة x",
-        type: "MATH_EQUATION",
-        options: { equation: "3x + 6 = 15" },
-        correctAnswer: "3",
-        points: 15,
-        difficulty: "Medium"
-      },
-      {
-        title: "ترتيب تسلسل دورة حياة الفراشة",
-        type: "SEQUENCE_ORDER",
-        options: { items: ["بيضة", "يرقة", "شرنقة", "فراشة كاملة"] },
-        correctAnswer: ["بيضة", "يرقة", "شرنقة", "فراشة كاملة"],
-        points: 15,
-        difficulty: "Medium"
-      },
-      {
-        title: "الكلمات المتقاطعة - لغز حيوانات الغابة",
-        type: "CROSSWORD",
-        options: { words: [{ word: "أسد", clue: "ملك الغابة" }, { word: "فيل", clue: "أضخم حيوان بري" }] },
-        correctAnswer: [{ word: "أسد", clue: "ملك الغابة" }, { word: "فيل", clue: "أضخم حيوان بري" }],
-        points: 20,
-        difficulty: "Hard"
-      },
-      {
-        title: "عد العناصر - كم عدد التفاحات الحمراء؟",
-        type: "COUNT_OBJECTS",
-        options: { itemImage: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=200", itemName: "تفاحة" },
-        correctAnswer: "5",
-        points: 10,
-        difficulty: "Easy"
-      },
-      {
-        title: "تسمية أجزاء زهرة النبات على الصورة",
-        type: "IMAGE_LABEL",
-        options: { imageUrl: "https://images.unsplash.com/photo-1507269837357-1037ae918498?w=500", labels: [{ x: 50, y: 30, text: "بتلة" }, { x: 50, y: 70, text: "ساق" }] },
-        correctAnswer: [{ x: 50, y: 30, text: "بتلة" }, { x: 50, y: 70, text: "ساق" }],
-        points: 20,
-        difficulty: "Hard"
-      }
-    ];
-
-    try {
-      for (const act of demoActivities) {
-        const payload = {
-          lessonId: selectedLesson.id,
-          title: act.title,
-          type: act.type,
-          options: JSON.stringify(act.options),
-          correctAnswer: JSON.stringify(act.correctAnswer),
-          points: act.points,
-          difficulty: act.difficulty,
-          dok: "2",
-          estimatedTime: 60,
-          standard: "",
-          indicator: "",
-          learningOutcome: "",
-          hint: "",
-          tip: "",
-          explanation: "",
-          keyInsight: ""
-        };
-
-        await fetch(`${API_URL}/skills-hub/activities`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify(payload)
-        });
-      }
-      fetchActivities(selectedLesson.id);
-      alert(language === 'ar' ? "تم توليد الـ 24 نشاطاً تجريبياً بنجاح! يمكنك الآن استعراضها وتعديلها." : "Demo activities generated successfully!");
-    } catch (err) {
-      console.error("Error seeding demo activities:", err);
-      alert(language === 'ar' ? "حدث خطأ أثناء توليد الأنشطة التجريبية." : "Error generating demo activities.");
+    } catch (e) {
+      showToast(language === 'ar' ? "فشل الحذف" : "Delete failed", "error");
     }
   };
 
   return (
     <DashboardLayout>
-      <input
-        type="file"
-        ref={metadataExcelRef}
-        style={{ display: "none" }}
-        accept=".xlsx,.xls"
-        onChange={handleMetadataExcelChange}
-      />
-      <div className="max-w-7xl mx-auto space-y-8 pb-24 px-4 overflow-x-hidden" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-        
-        {/* Header Section */}
-        <div className={`flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-indigo-600 font-black">
-              <Sparkles className="w-5 h-5 floating" />
-              <span>{language === 'ar' ? 'لوحة الإشراف والتعديل' : 'Administration & Edit Board'}</span>
-            </div>
-            <h1 className="text-2xl md:text-4xl font-black text-slate-900 leading-tight">
-              {language === 'ar' ? 'إدارة مكتبة المهارات التفاعلية' : 'Interactive Skills Hub Library'}
-            </h1>
-            <p className="text-slate-500 font-medium text-sm">
-              {language === 'ar' ? 'أضف محاور، مهارات، وأنشطة تعليمية تفاعلية مخصصة لطلاب مدرستك ومطابقة للـ Scope & Sequence.' : 'Add custom skill clusters, lessons, and interactive educational activities tailored to your school and aligned with Scope & Sequence.'}
-            </p>
-          </div>
+      <div className="space-y-6 sm:space-y-10" dir={language === 'ar' ? 'rtl' : 'ltr'}>
           
-          {/* Main filters inside header */}
-          {activeTab === "list" && (
-            <div className="flex flex-wrap gap-3 bg-slate-50 p-2 rounded-2xl border border-slate-100">
-              {/* Subject Select */}
-              <select
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                className="bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-black outline-none focus:border-indigo-500"
-              >
-                <option value="الرياضيات">{language === 'ar' ? '📐 الرياضيات' : '📐 Mathematics'}</option>
-                <option value="القراءة">{language === 'ar' ? '📚 القراءة' : '📚 Reading'}</option>
-                <option value="العلوم">{language === 'ar' ? '🔬 العلوم' : '🔬 Science'}</option>
-              </select>
-
-              {/* Grade Select */}
-              <select
-                value={grade}
-                onChange={(e) => setGrade(e.target.value)}
-                className="bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-black outline-none focus:border-indigo-500"
-              >
-                {GRADES_LIST.map((g) => (
-                  <option key={g} value={g}>{getGradeLabel(g)}</option>
-                ))}
-              </select>
-            </div>
-          )}
-        </div>
-
-        {/* ── LIST TAB VIEW ── */}
-        {activeTab === "list" && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            {/* 1. Skill Clusters Column (Left 1/3) */}
-            <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6">
-              <div className="flex justify-between items-center border-b pb-4">
-                <h3 className="font-black text-slate-800 text-lg flex items-center gap-2">
-                  <Folder className="w-5 h-5 text-indigo-500" />
-                  {language === 'ar' ? 'المحاور (Clusters)' : 'Clusters'}
-                </h3>
-                <button
-                  onClick={() => setClusterModal({ open: true, data: { name: "", description: "" } })}
-                  className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-black text-xs flex items-center gap-1 transition-all"
-                >
-                  <Plus className="w-4 h-4" />
-                  {language === 'ar' ? 'أضف محور' : 'Add Cluster'}
-                </button>
-              </div>
-
-              {isLoading ? (
-                <div className="text-center py-12 text-slate-400 font-bold">{language === 'ar' ? 'جاري التحميل...' : 'Loading...'}</div>
-              ) : clusters.length > 0 ? (
-                <div className="space-y-3">
-                  {clusters.map((cluster) => {
-                    const isSelected = selectedCluster?.id === cluster.id;
-                    return (
-                      <div
-                        key={cluster.id}
-                        onClick={() => handleSelectCluster(cluster)}
-                        className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
-                          isSelected
-                            ? "border-indigo-500 bg-indigo-50/20 shadow-sm"
-                            : "border-slate-100 bg-slate-50/50 hover:bg-slate-50"
-                        }`}
-                      >
-                        <div className="flex justify-between items-start">
-                          <h4 className="font-black text-slate-800 text-sm flex-1">{cluster.name}</h4>
-                          <div className={`flex gap-1 shrink-0 ${language === 'ar' ? 'mr-2' : 'ml-2'}`}>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setClusterModal({ open: true, data: cluster });
-                              }}
-                              className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-white transition-all"
-                            >
-                              <Edit className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteCluster(cluster.id);
-                              }}
-                              className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-white transition-all"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                        {cluster.description && (
-                          <p className="text-slate-400 text-xs font-bold mt-1 line-clamp-1">{cluster.description}</p>
-                        )}
-                        <div className="flex items-center gap-2 mt-3 text-[10px] text-slate-400 font-bold">
-                          <span>{cluster._count?.skills || 0} {language === 'ar' ? 'مهارات فرعية' : 'Sub-skills'}</span>
-                          {cluster.isCentral && (
-                            <span className="px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded border border-amber-100">
-                              {language === 'ar' ? 'مركزي' : 'Central'}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-12 text-slate-400 font-bold">{language === 'ar' ? 'لا توجد محاور مسجلة في هذا الصف والمادة.' : 'No clusters registered for this grade and subject.'}</div>
-              )}
-            </div>
-
-            {/* 2. Skill Lessons Column (Middle 1/3) */}
-            <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6">
-              <div className="flex justify-between items-center border-b pb-4">
-                <h3 className="font-black text-slate-800 text-lg flex items-center gap-2">
-                  <BookOpen className="w-5 h-5 text-emerald-500" />
-                  {language === 'ar' ? 'المهارات الفرعية (Skills)' : 'Sub-Skills (Lessons)'}
-                </h3>
-                {selectedCluster && (
-                  <button
-                    onClick={() => setLessonModal({ open: true, data: { name: "", description: "", order: lessons.length } })}
-                    className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl font-black text-xs flex items-center gap-1 transition-all"
-                  >
-                    <Plus className="w-4 h-4" />
-                    {language === 'ar' ? 'أضف مهارة' : 'Add Skill'}
-                  </button>
-                )}
-              </div>
-
-              {!selectedCluster ? (
-                <div className="text-center py-20 text-slate-400 font-bold">
-                  {language === 'ar' ? 'الرجاء اختيار محور مهاراتي أولاً لعرض مهاراته.' : 'Please select a skill cluster first to view its sub-skills.'}
-                </div>
-              ) : lessons.length > 0 ? (
-                <div className="space-y-3">
-                  {lessons.map((lesson) => {
-                    const isSelected = selectedLesson?.id === lesson.id;
-                    return (
-                      <div
-                        key={lesson.id}
-                        onClick={() => handleSelectLesson(lesson)}
-                        className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
-                          isSelected
-                            ? "border-emerald-500 bg-emerald-50/20 shadow-sm"
-                            : "border-slate-100 bg-slate-50/50 hover:bg-slate-50"
-                        }`}
-                      >
-                        <div className="flex justify-between items-start">
-                          <h4 className="font-black text-slate-800 text-sm flex-1">{lesson.name}</h4>
-                          <div className={`flex gap-1 shrink-0 ${language === 'ar' ? 'mr-2' : 'ml-2'}`}>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setLessonModal({ open: true, data: lesson });
-                              }}
-                              className="p-1.5 text-slate-400 hover:text-emerald-600 rounded-lg hover:bg-white transition-all"
-                            >
-                              <Edit className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteLesson(lesson.id);
-                              }}
-                              className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-white transition-all"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                        {lesson.description && (
-                          <p className="text-slate-400 text-xs font-bold mt-1 line-clamp-1">{getCleanDescription(lesson.description)}</p>
-                        )}
-                        <span className="text-[10px] text-slate-400 font-bold mt-3 block">
-                          {lesson._count?.activities || 0} {language === 'ar' ? 'أنشطة تفاعلية' : 'Interactive activities'}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-12 text-slate-400 font-bold">{language === 'ar' ? 'لا توجد مهارات مسجلة في هذا المحور.' : 'No sub-skills registered in this cluster.'}</div>
-              )}
-            </div>
-
-            {/* 3. Interactive Activities Column (Right 1/3) */}
-            <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6">
-              <div className="flex flex-col gap-4 border-b pb-4">
-                <div className="flex justify-between items-center">
-                  <h3 className="font-black text-slate-800 text-lg flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-purple-500" />
-                    {language === 'ar' ? 'الأنشطة (Activities)' : 'Activities'}
-                  </h3>
-                  {selectedLesson && (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={handleSeedDemoActivities}
-                        className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-indigo-700 rounded-xl font-black text-xs flex items-center gap-1 transition-all cursor-pointer"
-                        title={language === 'ar' ? 'توليد أنشطة تجريبية تلقائياً لتجربتها' : 'Seed 24 demo activities to test'}
-                      >
-                        🌱 {language === 'ar' ? 'توليد أنشطة' : 'Seed Demos'}
-                      </button>
-                      <button
-                        onClick={handleOpenActivityCreate}
-                        className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-xl font-black text-xs flex items-center gap-1 transition-all cursor-pointer"
-                      >
-                        <Plus className="w-4 h-4" />
-                        {language === 'ar' ? 'أضف نشاطاً' : 'Add Activity'}
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Scope & Sequence Metadata Excel Actions */}
-                {selectedLesson && (
-                  <div className="flex justify-between items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                      {language === 'ar' ? 'المعايير والمخرجات:' : 'Scope & Sequence:'}
-                    </span>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={handleExcelUpload}
-                        className="px-2 py-1 bg-white hover:bg-emerald-50 border border-slate-200 text-emerald-700 rounded-lg text-[10px] font-black flex items-center gap-1 transition-all"
-                      >
-                        <Upload className="w-3 h-3" />
-                        {language === 'ar' ? 'استيراد Excel' : 'Import Excel'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={downloadMetadataTemplate}
-                        className="px-2 py-1 bg-white hover:bg-sky-50 border border-slate-200 text-sky-700 rounded-lg text-[10px] font-black flex items-center gap-1 transition-all"
-                      >
-                        <Download className="w-3 h-3" />
-                        {language === 'ar' ? 'النموذج' : 'Template'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {!selectedLesson ? (
-                <div className="text-center py-20 text-slate-400 font-bold">
-                  {language === 'ar' ? 'الرجاء اختيار مهارة فرعية لعرض أنشطتها.' : 'Please select a sub-skill to view its activities.'}
-                </div>
-              ) : activities.length > 0 ? (
-                <div className="space-y-3">
-                  {activities.map((activity) => (
-                    <div
-                      key={activity.id}
-                      className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 flex flex-col justify-between"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-1">
-                          <h4 className="font-black text-slate-800 text-sm">{activity.title}</h4>
-                          <span className="px-2 py-0.5 bg-purple-50 border border-purple-100 text-purple-700 text-[9px] font-black rounded uppercase block w-fit">
-                            {activity.type}
-                          </span>
-                        </div>
-                        <div className="flex gap-1 shrink-0">
-                          {/* Play/Preview button */}
-                          <button
-                            onClick={() => startPreviewActivity(activity)}
-                            className="p-1.5 text-slate-400 hover:text-sky-650 rounded-lg hover:bg-white transition-all animate-none"
-                            title={language === 'ar' ? 'عرض كطالب / معاينة' : 'Student Preview'}
-                          >
-                            <Play className="w-3.5 h-3.5 fill-current" />
-                          </button>
-                          <button
-                            onClick={() => handleOpenActivityEdit(activity)}
-                            className="p-1.5 text-slate-400 hover:text-purple-650 rounded-lg hover:bg-white transition-all animate-none"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteActivity(activity.id)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-white transition-all animate-none"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 mt-3 text-[10px] text-slate-400 font-bold">
-                        <span>XP: {activity.points}</span>
-                        <span>•</span>
-                        <span>{activity.difficulty === "Easy" ? (language === 'ar' ? "سهل" : "Easy") : activity.difficulty === "Hard" ? (language === 'ar' ? "صعب" : "Hard") : (language === 'ar' ? "متوسط" : "Medium")}</span>
-                        <span>•</span>
-                        <span>{activity.estimatedTime} {language === 'ar' ? 'ثواني' : 'seconds'}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12 text-slate-400 font-bold">{language === 'ar' ? 'لا توجد أنشطة مسجلة في هذه المهارة.' : 'No activities registered for this sub-skill.'}</div>
-              )}
-            </div>
-
-          </div>
-        )}
-
-        {/* ── ACTIVITY CREATOR/EDITOR FORM ── */}
-        {activeTab === "activity-form" && (
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 md:p-8 space-y-8 animate-in zoom-in-95 duration-200">
-            
-            {/* Form Header */}
-            <div className="flex justify-between items-center border-b pb-4">
-              <div className="flex items-center gap-4">
-                <h3 className="font-black text-slate-800 text-lg flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-indigo-500" />
-                  {editingActivity 
-                    ? (language === 'ar' ? "تعديل النشاط التفاعلي" : "Edit Interactive Activity") 
-                    : (language === 'ar' ? "إنشاء نشاط تفاعلي جديد" : "Create New Interactive Activity")}
-                </h3>
-
-                {/* Autosave Status */}
-                <div className="flex items-center gap-2 text-xs font-bold">
-                  {autoSaveStatus === "saving" && (
-                    <span className="text-amber-500 animate-pulse flex items-center gap-1">
-                      <RefreshCw className="w-3 h-3 animate-spin" />
-                      {language === 'ar' ? '⏱️ جاري الحفظ تلقائياً...' : '⏱️ Auto-saving...'}
-                    </span>
-                  )}
-                  {autoSaveStatus === "saved" && (
-                    <span className="text-emerald-500 flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" />
-                      {language === 'ar' ? '✅ تم الحفظ تلقائياً' : '✅ Auto-saved'}
-                    </span>
-                  )}
-                  {autoSaveStatus === "error" && (
-                    <span className="text-rose-500 flex items-center gap-1">
-                      <AlertCircle className="w-3 h-3" />
-                      {language === 'ar' ? '❌ خطأ في الحفظ التلقائي' : '❌ Auto-save error'}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <button
-                onClick={() => setActiveTab("list")}
-                className="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-500 flex items-center justify-center transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              
-              {/* 1. Interactive Options Editor (Left/Middle 2/3) */}
-              <div className="lg:col-span-2 bg-slate-50/50 p-6 rounded-3xl border border-slate-100 space-y-6">
-                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b pb-2 flex items-center gap-2">
-                  <Layers className="w-5 h-5 text-indigo-500 animate-none" />
-                  {language === 'ar' ? 'خيارات اللعبة والإجابة الصحيحة' : 'Game Options & Correct Answer'}
-                </h4>
-                
-                <div className="bg-white rounded-2xl border border-slate-200 p-4 min-h-[300px]">
-                  <InteractiveQuestionEditor
-                    question={{
-                      type: activityForm.type,
-                      options: activityForm.options,
-                      correctAnswer: activityForm.correctAnswer,
-                      text: activityForm.title // Pass title as text
-                    }}
-                    language={language}
-                    onChange={(updated) => {
-                      setActivityForm((prev: any) => ({
-                        ...prev,
-                        options: typeof updated.options === "string" ? updated.options : JSON.stringify(updated.options),
-                        correctAnswer: typeof updated.correctAnswer === "string" ? updated.correctAnswer : JSON.stringify(updated.correctAnswer)
-                      }));
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* 2. Form Side Inputs (Right 1/3) */}
-              <div className="lg:col-span-1 space-y-6">
-                
-                {/* Base Fields */}
-                <div className="grid grid-cols-1 gap-6 bg-slate-50/50 p-6 rounded-3xl border border-slate-100">
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-500 uppercase block">
-                      {language === 'ar' ? 'عنوان النشاط / السؤال' : 'Activity Title / Question'}
-                    </label>
-                    <input
-                      type="text"
-                      value={activityForm.title}
-                      onChange={(e) => updateActivityForm("title", e.target.value)}
-                      className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                      placeholder={language === 'ar' ? 'مثال: قراءة الساعة ومطابقة العقارب' : 'e.g. Clock reading and clock hands matching'}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-500 uppercase block">
-                      {language === 'ar' ? 'نوع النشاط' : 'Activity Type'}
-                    </label>
-                    <select
-                      value={activityForm.type}
-                      onChange={(e) => updateActivityForm("type", e.target.value)}
-                      className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-black outline-none focus:border-indigo-500"
-                    >
-                      <option value="MCQ">{language === 'ar' ? 'اختيار من متعدد (MCQ)' : 'Multiple Choice (MCQ)'}</option>
-                      <option value="TRUE_FALSE">{language === 'ar' ? 'صح أم خطأ (True/False)' : 'True/False'}</option>
-                      <option value="MULTI_SELECT">{language === 'ar' ? 'اختيارات متعددة (Multi-Select)' : 'Multi-Select'}</option>
-                      <option value="MATCHING">{language === 'ar' ? 'سؤال التوصيل (Matching)' : 'Matching Game'}</option>
-                      <option value="DRAG_DROP_FILL">{language === 'ar' ? 'سحب الفراغات (Drag & Drop Fill)' : 'Drag & Drop Fill'}</option>
-                      <option value="GROUP_SORTING">{language === 'ar' ? 'تصنيف المجموعات (Group Sorting)' : 'Group Sorting'}</option>
-                      <option value="NUMBER_LINE">{language === 'ar' ? 'خط الأعداد (Number Line)' : 'Number Line'}</option>
-                      <option value="CLOCK">{language === 'ar' ? 'عقارب الساعة (Clock)' : 'Clock Hands'}</option>
-                      <option value="MIND_MAP">{language === 'ar' ? 'خريطة مفاهيم (Mind Map)' : 'Mind Map'}</option>
-                      <option value="VIDEO_CHECKPOINT">{language === 'ar' ? 'فيديو تفاعلي (Video Checkpoint)' : 'Video Checkpoint'}</option>
-                      <option value="SWIPE_SORT">{language === 'ar' ? 'سحب سريع لليمين/اليسار (Swipe Sort)' : 'Swipe Sort'}</option>
-                      <option value="MAZE">{language === 'ar' ? 'المتاهة التعليمية (Maze)' : 'Maze Challenge'}</option>
-                      <option value="WORD_SEARCH">{language === 'ar' ? 'البحث عن الكلمات (Word Search)' : 'Word Search'}</option>
-                      <option value="GEOGEBRA">{language === 'ar' ? 'جيوجيبرا (GeoGebra)' : 'GeoGebra Widget'}</option>
-                      <option value="FLASH_CARD">{language === 'ar' ? 'البطاقات التعليمية (Flash Cards)' : 'Flash Cards'}</option>
-                      <option value="MEMORY_GAME">{language === 'ar' ? 'لعبة الذاكرة (Memory Game)' : 'Memory Game'}</option>
-                      <option value="WORD_SCRAMBLE">{language === 'ar' ? 'ترتيب الحروف (Word Scramble)' : 'Word Scramble'}</option>
-                      <option value="SENTENCE_REORDER">{language === 'ar' ? 'ترتيب الجملة (Sentence Reorder)' : 'Sentence Reorder'}</option>
-                      <option value="MATH_EQUATION">{language === 'ar' ? 'معادلة حسابية (Math Equation)' : 'Math Equation'}</option>
-                      <option value="SEQUENCE_ORDER">{language === 'ar' ? 'ترتيب التسلسل (Sequence Order)' : 'Sequence Order'}</option>
-                      <option value="CROSSWORD">{language === 'ar' ? 'الكلمات المتقاطعة (Crossword)' : 'Crossword puzzle'}</option>
-                      <option value="COUNT_OBJECTS">{language === 'ar' ? 'عد العناصر (Count Objects)' : 'Count Objects'}</option>
-                      <option value="IMAGE_LABEL">{language === 'ar' ? 'تسمية الصورة (Image Labeling)' : 'Image Labeling'}</option>
-                      <option value="COLOR_MATCH">{language === 'ar' ? 'تطابق الألوان (Color Match)' : 'Color Match'}</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-500 uppercase block">
-                      {language === 'ar' ? 'نقاط الخبرة XP' : 'Experience Points (XP)'}
-                    </label>
-                    <input
-                      type="number"
-                      value={activityForm.points}
-                      onChange={(e) => updateActivityForm("points", parseInt(e.target.value) || 10)}
-                      className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-500 uppercase block">
-                      {language === 'ar' ? 'الزمن التقديري (ثواني)' : 'Estimated Time (seconds)'}
-                    </label>
-                    <input
-                      type="number"
-                      value={activityForm.estimatedTime}
-                      onChange={(e) => updateActivityForm("estimatedTime", parseInt(e.target.value) || 60)}
-                      className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-500 uppercase block">
-                      {language === 'ar' ? 'مستوى الصعوبة' : 'Difficulty Level'}
-                    </label>
-                    <select
-                      value={activityForm.difficulty}
-                      onChange={(e) => updateActivityForm("difficulty", e.target.value)}
-                      className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-black outline-none focus:border-indigo-500"
-                    >
-                      <option value="Easy">{language === 'ar' ? 'سهل' : 'Easy'}</option>
-                      <option value="Medium">{language === 'ar' ? 'متوسط' : 'Medium'}</option>
-                      <option value="Hard">{language === 'ar' ? 'صعب' : 'Hard'}</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-500 uppercase block">
-                      {language === 'ar' ? 'مستوى DOK' : 'DOK Level'}
-                    </label>
-                    <select
-                      value={activityForm.dok || ""}
-                      onChange={(e) => updateActivityForm("dok", e.target.value)}
-                      className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-black outline-none focus:border-indigo-500"
-                    >
-                      <option value="1">{language === 'ar' ? 'DOK 1: التذكر واستدعاء المعرفة' : 'DOK 1: Recall & Reproduction'}</option>
-                      <option value="2">{language === 'ar' ? 'DOK 2: التطبيق والربط الذهني' : 'DOK 2: Skills & Concepts'}</option>
-                      <option value="3">{language === 'ar' ? 'DOK 3: التفكير النقدي وحل المشكلات' : 'DOK 3: Strategic Thinking'}</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Educational Metadata & Standards */}
-                <div className="bg-slate-50/50 p-6 rounded-3xl border border-slate-100 space-y-4">
-                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                    <Settings className="w-4 h-4" />
-                    {language === 'ar' ? 'المعايير والمخرجات (Scope & Sequence Metadata)' : 'Standards & Outcomes (Scope & Sequence Metadata)'}
-                  </h4>
-                  <div className="grid grid-cols-1 gap-6">
-                    {/* Standard Select Dropdown */}
-                    <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-500 uppercase block">
-                        {language === 'ar' ? 'المعيار (Standard)' : 'Standard'}
-                      </label>
-                      <select
-                        value={activityForm.standard || ""}
-                        onChange={async (e) => {
-                          const val = e.target.value;
-                          if (val === "add_custom") {
-                            const newVal = prompt(language === 'ar' ? "أدخل معيار مخصص جديد:" : "Enter custom standard:");
-                            if (newVal && newVal.trim()) {
-                              const trimmed = newVal.trim();
-                              const lessonMetadata = getLessonMetadata(selectedLesson);
-                              const updatedMetadata = {
-                                ...lessonMetadata,
-                                standards: Array.from(new Set([...lessonMetadata.standards, trimmed]))
-                              };
-                              await saveLessonMetadata(updatedMetadata);
-                              updateActivityForm("standard", trimmed);
-                            }
-                          } else {
-                            updateActivityForm("standard", val);
-                          }
-                        }}
-                        className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-black outline-none focus:border-indigo-500"
-                      >
-                        <option value="">{language === 'ar' ? '-- اختر المعيار --' : '-- Select Standard --'}</option>
-                        {getLessonMetadata(selectedLesson).standards.map((std: string) => (
-                          <option key={std} value={std}>{std}</option>
-                        ))}
-                        {activityForm.standard && !getLessonMetadata(selectedLesson).standards.includes(activityForm.standard) && (
-                          <option value={activityForm.standard}>{activityForm.standard}</option>
-                        )}
-                        <option value="add_custom" className="text-indigo-650 font-bold">
-                          {language === 'ar' ? '+ إضافة معيار مخصص...' : '+ Add Custom Standard...'}
-                        </option>
-                      </select>
-                    </div>
-
-                    {/* Indicator Select Dropdown */}
-                    <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-500 uppercase block">
-                        {language === 'ar' ? 'المؤشر (Indicator)' : 'Indicator'}
-                      </label>
-                      <select
-                        value={activityForm.indicator || ""}
-                        onChange={async (e) => {
-                          const val = e.target.value;
-                          if (val === "add_custom") {
-                            const newVal = prompt(language === 'ar' ? "أدخل مؤشر مخصص جديد:" : "Enter custom indicator:");
-                            if (newVal && newVal.trim()) {
-                              const trimmed = newVal.trim();
-                              const lessonMetadata = getLessonMetadata(selectedLesson);
-                              const updatedMetadata = {
-                                ...lessonMetadata,
-                                indicators: Array.from(new Set([...lessonMetadata.indicators, trimmed]))
-                              };
-                              await saveLessonMetadata(updatedMetadata);
-                              updateActivityForm("indicator", trimmed);
-                            }
-                          } else {
-                            updateActivityForm("indicator", val);
-                          }
-                        }}
-                        className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-black outline-none focus:border-indigo-500"
-                      >
-                        <option value="">{language === 'ar' ? '-- اختر المؤشر --' : '-- Select Indicator --'}</option>
-                        {getLessonMetadata(selectedLesson).indicators.map((ind: string) => (
-                          <option key={ind} value={ind}>{ind}</option>
-                        ))}
-                        {activityForm.indicator && !getLessonMetadata(selectedLesson).indicators.includes(activityForm.indicator) && (
-                          <option value={activityForm.indicator}>{activityForm.indicator}</option>
-                        )}
-                        <option value="add_custom" className="text-indigo-650 font-bold">
-                          {language === 'ar' ? '+ إضافة مؤشر مخصص...' : '+ Add Custom Indicator...'}
-                        </option>
-                      </select>
-                    </div>
-
-                    {/* Learning Outcome Select Dropdown */}
-                    <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-500 uppercase block">
-                        {language === 'ar' ? 'مخرجات التعلم (Learning Outcome)' : 'Learning Outcome'}
-                      </label>
-                      <select
-                        value={activityForm.learningOutcome || ""}
-                        onChange={async (e) => {
-                          const val = e.target.value;
-                          if (val === "add_custom") {
-                            const newVal = prompt(language === 'ar' ? "أدخل مخرج تعلم مخصص جديد:" : "Enter custom learning outcome:");
-                            if (newVal && newVal.trim()) {
-                              const trimmed = newVal.trim();
-                              const lessonMetadata = getLessonMetadata(selectedLesson);
-                              const updatedMetadata = {
-                                ...lessonMetadata,
-                                outcomes: Array.from(new Set([...lessonMetadata.outcomes, trimmed]))
-                              };
-                              await saveLessonMetadata(updatedMetadata);
-                              updateActivityForm("learningOutcome", trimmed);
-                            }
-                          } else {
-                            updateActivityForm("learningOutcome", val);
-                          }
-                        }}
-                        className="w-full bg-white border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-black outline-none focus:border-indigo-500"
-                      >
-                        <option value="">{language === 'ar' ? '-- اختر مخرج التعلم --' : '-- Select Learning Outcome --'}</option>
-                        {getLessonMetadata(selectedLesson).outcomes.map((out: string) => (
-                          <option key={out} value={out}>{out}</option>
-                        ))}
-                        {activityForm.learningOutcome && !getLessonMetadata(selectedLesson).outcomes.includes(activityForm.learningOutcome) && (
-                          <option value={activityForm.learningOutcome}>{activityForm.learningOutcome}</option>
-                        )}
-                        <option value="add_custom" className="text-indigo-650 font-bold">
-                          {language === 'ar' ? '+ إضافة مخرج تعلم مخصص...' : '+ Add Custom Outcome...'}
-                        </option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Educational Helper Modals (Hint, Tip, Explanation, Insight) */}
-                <div className="bg-slate-50/50 p-6 rounded-3xl border border-slate-100 space-y-4">
-                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                    <Info className="w-4 h-4" />
-                    {language === 'ar' ? 'مساعدات التعلم والتغذية الراجعة' : 'Learning Aids & Feedback'}
-                  </h4>
-                  <div className="grid grid-cols-1 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-500 uppercase block">
-                        {language === 'ar' ? 'تلميح للطالب (Hint)' : 'Student Hint'}
-                      </label>
-                      <textarea
-                        value={activityForm.hint}
-                        onChange={(e) => updateActivityForm("hint", e.target.value)}
-                        rows={2}
-                        className="w-full bg-white border border-slate-200 p-3 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                        placeholder={language === 'ar' ? 'يظهر للطالب عند طلبه المساعدة.' : 'Shown to the student when they request help.'}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-500 uppercase block">
-                        {language === 'ar' ? 'نصيحة ذكية (Tip)' : 'Smart Tip'}
-                      </label>
-                      <textarea
-                        value={activityForm.tip}
-                        onChange={(e) => updateActivityForm("tip", e.target.value)}
-                        rows={2}
-                        className="w-full bg-white border border-slate-200 p-3 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                        placeholder={language === 'ar' ? 'نصيحة تعزز الفكرة الرياضية.' : 'A tip reinforcing the educational concept.'}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-500 uppercase block">
-                        {language === 'ar' ? 'شرح الإجابة المفصل (Answer Explanation)' : 'Detailed Explanation'}
-                      </label>
-                      <textarea
-                        value={activityForm.explanation}
-                        onChange={(e) => updateActivityForm("explanation", e.target.value)}
-                        rows={3}
-                        className="w-full bg-white border border-slate-200 p-3 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                        placeholder={language === 'ar' ? 'شرح كامل للحل يظهر للطالب بعد إنهاء النشاط.' : 'Detailed explanation of the solution shown after submission.'}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-500 uppercase block">
-                        {language === 'ar' ? 'فكرة جوهرية (Key Insight)' : 'Key Insight'}
-                      </label>
-                      <textarea
-                        value={activityForm.keyInsight}
-                        onChange={(e) => updateActivityForm("keyInsight", e.target.value)}
-                        rows={3}
-                        className="w-full bg-white border border-slate-200 p-3 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                        placeholder={language === 'ar' ? 'الدرس المستخلص من اللعبة أو النشاط.' : 'The lesson or takeaways from the activity.'}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
-            {/* Save Actions */}
-            <div className="flex items-center justify-between border-t border-slate-100 pt-6">
-              <button
-                onClick={() => setActiveTab("list")}
-                className="px-6 py-3.5 rounded-2xl border-2 border-slate-200 hover:bg-slate-50 text-slate-500 font-black text-sm transition-all active:scale-95 animate-none"
-              >
-                {language === 'ar' ? 'إلغاء وتراجع' : 'Cancel & Return'}
-              </button>
-              
-              <div className="flex gap-3">
-                <button
-                  onClick={handleSaveActivityAndContinue}
-                  className="px-6 py-3.5 rounded-2xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black text-sm flex items-center gap-2 active:scale-95 shadow-sm border border-indigo-200 transition-all animate-none cursor-pointer"
-                >
-                  <span>{language === 'ar' ? 'حفظ واستمرار التعديل' : 'Save & Continue'}</span>
-                  <Save className="w-4 h-4" />
-                </button>
-                
-                <button
-                  onClick={handleSaveActivity}
-                  className="px-8 py-3.5 rounded-2xl bg-slate-950 hover:bg-slate-900 text-white font-black text-sm flex items-center gap-2 active:scale-95 shadow-md border border-slate-800 transition-all animate-none cursor-pointer"
-                >
-                  <span>{language === 'ar' ? 'حفظ وإغلاق' : 'Save & Exit'}</span>
-                  <CheckCircle2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-          </div>
-        )}
-
-        {/* ── MODALS (Add/Edit Cluster) ── */}
-        {clusterModal.open && (
-          <div className="fixed inset-0 z-[110] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-            <form
-              onSubmit={handleSaveCluster}
-              className={`bg-white w-full max-w-md rounded-[32px] shadow-2xl p-6 border border-slate-100 space-y-4 animate-in zoom-in-95 duration-200 ${language === 'ar' ? 'text-right' : 'text-left'}`}
-            >
-              <div className="flex justify-between items-center border-b pb-3">
-                <h4 className="font-black text-lg text-slate-800">
-                  {clusterModal.data?.id 
-                    ? (language === 'ar' ? "تعديل محور مهاراتي" : "Edit Skill Cluster") 
-                    : (language === 'ar' ? "إضافة محور مهاراتي جديد" : "Add New Skill Cluster")}
-                </h4>
-                <button
-                  type="button"
-                  onClick={() => setClusterModal({ open: false, data: null })}
-                  className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-black text-slate-450 block">{language === 'ar' ? 'اسم المحور' : 'Cluster Name'}</label>
-                  <input
-                    type="text"
-                    required
-                    value={clusterModal.data?.name || ""}
-                    onChange={(e) => updateClusterModalData("name", e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                    placeholder={language === 'ar' ? 'مثال: العمليات والجمع والطرح' : 'e.g. Operations, Addition, Subtraction'}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-black text-slate-450 block">{language === 'ar' ? 'وصف مختصر' : 'Description'}</label>
-                  <textarea
-                    value={clusterModal.data?.description || ""}
-                    onChange={(e) => updateClusterModalData("description", e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                    placeholder={language === 'ar' ? 'تنمية مهارات الحساب الذهني...' : 'Development of mental math...'}
-                    rows={3}
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-4 border-t border-slate-100">
-                <button
-                  type="submit"
-                  className="flex-1 py-3 bg-indigo-600 hover:bg-slate-900 text-white rounded-xl font-black text-sm transition-colors shadow-sm"
-                >
-                  {language === 'ar' ? 'حفظ البيانات' : 'Save'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setClusterModal({ open: false, data: null })}
-                  className="flex-1 py-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-500 rounded-xl font-black text-sm transition-colors"
-                >
-                  {language === 'ar' ? 'إلغاء' : 'Cancel'}
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* ── MODALS (Add/Edit Lesson) ── */}
-        {lessonModal.open && (
-          <div className="fixed inset-0 z-[110] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-            <form
-              onSubmit={handleSaveLesson}
-              className={`bg-white w-full max-w-md rounded-[32px] shadow-2xl p-6 border border-slate-100 space-y-4 animate-in zoom-in-95 duration-200 ${language === 'ar' ? 'text-right' : 'text-left'}`}
-            >
-              <div className="flex justify-between items-center border-b pb-3">
-                <h4 className="font-black text-lg text-slate-800">
-                  {lessonModal.data?.id 
-                    ? (language === 'ar' ? "تعديل مهارة فرعية" : "Edit Sub-Skill") 
-                    : (language === 'ar' ? "إضافة مهارة فرعية جديدة" : "Add New Sub-Skill")}
-                </h4>
-                <button
-                  type="button"
-                  onClick={() => setLessonModal({ open: false, data: null })}
-                  className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-black text-slate-450 block">{language === 'ar' ? 'اسم المهارة' : 'Sub-Skill Name'}</label>
-                  <input
-                    type="text"
-                    required
-                    value={lessonModal.data?.name || ""}
-                    onChange={(e) => updateLessonModalData("name", e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                    placeholder={language === 'ar' ? 'مثال: الجمع بتكوين العشرات' : 'e.g. Addition by making tens'}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-black text-slate-450 block">{language === 'ar' ? 'تفاصيل المهارة' : 'Description'}</label>
-                  <textarea
-                    value={getCleanDescription(lessonModal.data?.description)}
-                    onChange={(e) => updateLessonModalData("description", e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                    placeholder={language === 'ar' ? 'أهداف التعلم المراد تحقيقها...' : 'Learning objectives to achieve...'}
-                    rows={3}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-black text-slate-450 block">{language === 'ar' ? 'ترتيب المهارة' : 'Display Order'}</label>
-                  <input
-                    type="number"
-                    value={lessonModal.data?.order || 0}
-                    onChange={(e) => updateLessonModalData("order", parseInt(e.target.value) || 0)}
-                    className="w-full bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl text-sm font-bold outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-4 border-t border-slate-100">
-                <button
-                  type="submit"
-                  className="flex-1 py-3 bg-emerald-600 hover:bg-slate-900 text-white rounded-xl font-black text-sm transition-colors shadow-sm"
-                >
-                  {language === 'ar' ? 'حفظ البيانات' : 'Save'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLessonModal({ open: false, data: null })}
-                  className="flex-1 py-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-500 rounded-xl font-black text-sm transition-colors"
-                >
-                  {language === 'ar' ? 'إلغاء' : 'Cancel'}
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* ── IMMERSIVE FULL-SCREEN 3D GAME PLAYER OVERLAY (Student Preview) ── */}
-        {previewActivity && (
-          <div className="fixed inset-0 z-[150] bg-slate-900/65 backdrop-blur-md flex items-center justify-center p-0 md:p-6 overflow-y-auto" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-            <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 w-full max-w-5xl md:rounded-[40px] shadow-2xl flex flex-col min-h-screen md:min-h-[85vh] md:max-h-[90vh] overflow-y-auto md:overflow-hidden border border-white/10 animate-in zoom-in-95 duration-200">
-              
-              {/* Game Player Header */}
-              <div className="bg-gradient-to-r from-indigo-700 to-violet-850 p-6 text-white flex justify-between items-center shadow-md">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-amber-300 floating" />
-                    <span className="text-[10px] font-black tracking-widest uppercase">
-                      {language === 'ar' ? 'معاينة الطالب' : 'Student Preview'}
-                    </span>
-                  </div>
-                  <h3 className="text-lg md:text-xl font-black truncate max-w-xl">{translateText(previewActivity.title, language)}</h3>
-                </div>
-                
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-1 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10 text-xs font-black">
-                    <Clock className="w-4 h-4 text-indigo-200" />
-                    <span>{language === 'ar' ? `الزمن المقدر: ${previewActivity.estimatedTime} ثانية` : `Estimated: ${previewActivity.estimatedTime}s`}</span>
-                  </div>
-                  <button
-                    onClick={() => setPreviewActivity(null)}
-                    className="w-10 h-10 rounded-xl bg-white/10 hover:bg-rose-600 text-white flex items-center justify-center transition-colors border border-white/10"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Game Player Body */}
-              <div className="flex-1 md:overflow-y-auto p-4 md:p-8 flex flex-col lg:flex-row gap-8">
-                
-                {/* Right: Helpers Panel */}
-                <div className="w-full lg:w-64 space-y-4 shrink-0">
-                  <div className="bg-white rounded-3xl border border-slate-100 p-5 shadow-sm space-y-4">
-                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b pb-2 flex items-center gap-2">
-                      <BrainCircuit className="w-4 h-4 text-indigo-500" />
-                      {language === 'ar' ? 'تلميحات ومساعدات التعلم' : 'Hints & Learning Aids'}
-                    </h4>
-                    
-                    {/* Hint Button */}
-                    <button
-                      onClick={() => {
-                        setPreviewHintsUsed(prev => prev + 1);
-                        setPreviewHelperModal({
-                          type: "hint",
-                          content: translateText(previewActivity.hint, language) || (language === 'ar' ? "لا يوجد تلميح مسجل لهذا النشاط." : "No hint recorded for this activity.")
-                        });
-                      }}
-                      className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-amber-100 bg-amber-50/50 hover:bg-amber-50 hover:scale-[1.02] text-amber-800 font-black text-sm transition-all cursor-pointer"
-                    >
-                      <span className="flex items-center gap-2">{language === 'ar' ? '💡 فكرة للمساعدة' : '💡 Help Hint'}</span>
-                      {language === 'ar' ? <ArrowLeft className="w-4 h-4 text-amber-500" /> : <ArrowRight className="w-4 h-4 text-amber-500" />}
-                    </button>
-
-                    {/* Tip Button */}
-                    <button
-                      onClick={() => {
-                        setPreviewHelperModal({
-                          type: "tip",
-                          content: translateText(previewActivity.tip, language) || (language === 'ar' ? "لا توجد نصيحة ذكية مسجلة." : "No smart tip recorded.")
-                        });
-                      }}
-                      className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-emerald-100 bg-emerald-50/50 hover:bg-emerald-50 hover:scale-[1.02] text-emerald-800 font-black text-sm transition-all cursor-pointer"
-                    >
-                      <span className="flex items-center gap-2">{language === 'ar' ? '🧠 نصيحة ذكية' : '🧠 Smart Tip'}</span>
-                      {language === 'ar' ? <ArrowLeft className="w-4 h-4 text-emerald-500" /> : <ArrowRight className="w-4 h-4 text-emerald-500" />}
-                    </button>
-
-                    {/* Key Insight Button */}
-                    <button
-                      onClick={() => {
-                        setPreviewHelperModal({
-                          type: "keyInsight",
-                          content: translateText(previewActivity.keyInsight, language) || (language === 'ar' ? "لا توجد فكرة جوهرية مسجلة." : "No key insight recorded.")
-                        });
-                      }}
-                      className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-indigo-100 bg-indigo-50/50 hover:bg-indigo-50 hover:scale-[1.02] text-indigo-800 font-black text-sm transition-all cursor-pointer"
-                    >
-                      <span className="flex items-center gap-2">{language === 'ar' ? '📘 فكرة جوهرية' : '📘 Key Insight'}</span>
-                      {language === 'ar' ? <ArrowLeft className="w-4 h-4 text-indigo-500" /> : <ArrowRight className="w-4 h-4 text-indigo-500" />}
-                    </button>
-                  </div>
-                  
-                  {/* Metadata display */}
-                  <div className="bg-white rounded-3xl border border-slate-100 p-5 shadow-sm space-y-3 text-xs font-bold text-slate-500">
-                    {previewActivity.standard && <p>{language === 'ar' ? '🔍 المعيار: ' : '🔍 Standard: '}<span className="text-slate-800 font-black">{previewActivity.standard}</span></p>}
-                    {previewActivity.indicator && <p>{language === 'ar' ? '🎯 المؤشر: ' : '🎯 Indicator: '}<span className="text-slate-800 font-black">{previewActivity.indicator}</span></p>}
-                    <p>{language === 'ar' ? '🏆 النقاط: ' : '🏆 Points: '}<span className="text-indigo-600 font-black">{previewActivity.points} {language === 'ar' ? 'نقطة' : 'XP'}</span></p>
-                  </div>
-                </div>
-
-                {/* Left: Interactive Workspace */}
-                <div className="flex-1 bg-white rounded-3xl border border-slate-150 p-6 md:p-8 flex flex-col justify-between shadow-sm min-h-[400px]">
-                  
-                  {/* Renderer */}
-                  <div className="space-y-6 flex-1">
-                    <InteractiveQuestionRenderer
-                      question={previewActivity}
-                      value={previewAnswer}
-                      onChange={setPreviewAnswer}
-                      language={language}
-                    />
-                  </div>
-
-                  {/* Submission Footer */}
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t border-slate-100">
-                    <button
-                      onClick={() => setPreviewActivity(null)}
-                      className="px-6 py-3.5 rounded-2xl bg-slate-50/80 border-2 border-slate-200/60 text-slate-900 hover:bg-slate-100 font-black text-sm transition-all active:scale-95 w-full sm:w-auto cursor-pointer"
-                    >
-                      {language === 'ar' ? 'إغلاق المعاينة' : 'Close Preview'}
-                    </button>
-
-                    <button
-                      onClick={submitPreviewAnswer}
-                      disabled={!previewAnswer || previewIsSubmitting}
-                      className={`px-10 py-3.5 rounded-2xl font-black text-sm transition-all flex items-center gap-2 active:scale-95 w-full sm:w-auto justify-center cursor-pointer ${
-                        !previewAnswer || previewIsSubmitting
-                          ? "bg-sky-200/40 text-slate-400 cursor-not-allowed border border-sky-300/10 shadow-none"
-                          : "bg-sky-450 text-slate-950 hover:bg-sky-500 shadow-xl shadow-sky-200/40 border border-sky-500/20"
-                      }`}
-                    >
-                      {previewIsSubmitting ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                          {language === 'ar' ? 'جاري التقييم...' : 'Evaluating...'}
-                        </>
-                      ) : (
-                        <>
-                          <span>{language === 'ar' ? 'أرسل الحل للتصحيح' : 'Submit for review'}</span>
-                          <CheckCircle2 className="w-4 h-4" />
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* ── PREVIEW ATTEMPT RESULT POPUP MODAL (Inside Player) ── */}
-              {previewResult && (
-                <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[160] overflow-y-auto">
-                  <div className="bg-white w-full max-w-lg rounded-[36px] shadow-2xl p-8 border border-slate-100 text-center space-y-6 animate-in zoom-in-95 duration-200">
-                    
-                    {/* Stars animation */}
-                    <div className="space-y-4">
-                      <div className="flex justify-center gap-3">
-                        {[1, 2, 3].map(index => {
-                          const isFilled = index <= previewResult.stars;
-                          return isFilled ? (
-                            <Star key={index} className="w-16 h-16 fill-amber-400 text-amber-400 drop-shadow-md scale-[1.1] animate-pulse" />
-                          ) : (
-                            <StarOff key={index} className="w-16 h-16 text-slate-200" />
-                          );
-                        })}
-                      </div>
-                      
-                      <h4 className={`text-2xl font-black ${
-                        previewResult.isCorrect ? "text-emerald-600" : "text-rose-600"
-                      }`}>
-                        {previewResult.isCorrect ? (
-                          previewResult.stars === 3 
-                            ? (language === 'ar' ? "ممتاز! حل مثالي ورائع 🏆" : "Excellent! Perfect solution 🏆") 
-                            : previewResult.stars === 2
-                            ? (language === 'ar' ? "رائع! إجابة صحيحة مع محاولة إضافية ⭐⭐" : "Great! Correct with extra attempt ⭐⭐")
-                            : (language === 'ar' ? "جيد! تم الحل بنجاح بعد عدة محاولات ⭐" : "Good! Solved after multiple attempts ⭐")
-                        ) : (
-                          (language === 'ar' ? "حاول مرة أخرى! الإجابة غير صحيحة ❌" : "Try again! Incorrect answer ❌")
-                        )}
-                      </h4>
-                      
-                      <p className="text-slate-500 font-bold text-sm">
-                        {previewResult.isCorrect 
-                          ? (language === 'ar' ? `لقد حصلت على ${previewResult.score} نقطة خبرة!` : `You earned ${previewResult.score} XP!`)
-                          : (language === 'ar' ? "راجع المعطيات أو اطلب تلميحاً للمساعدة" : "Review the question details or request a hint")}
+          {/* Header Section */}
+          <div className="relative bg-white rounded-[20px] sm:rounded-[50px] p-4 sm:p-12 overflow-hidden shadow-sm border border-slate-100">
+             <div className="relative z-10 flex flex-col lg:flex-row justify-between items-center gap-6 sm:gap-10">
+                <div className={`flex flex-col sm:flex-row items-center gap-4 sm:gap-8 ${language === 'ar' ? 'text-right sm:items-start' : 'text-left sm:items-start'}`}>
+                   <div className="w-12 h-12 sm:w-24 h-24 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl sm:rounded-[35px] flex items-center justify-center shadow-xl sm:shadow-2xl shadow-amber-500/20 transform -rotate-3 hover:rotate-0 transition-all duration-500 shrink-0">
+                      <BrainCircuit className="w-6 h-6 sm:w-12 h-12 text-white" />
+                   </div>
+                   <div>
+                      <h1 className="text-lg sm:text-4xl font-black text-slate-900 mb-1 sm:mb-3 tracking-tight">
+                         {language === 'ar' ? "المهارات التفاعلية" : "Interactive Skills Hub"}
+                      </h1>
+                      <p className="text-slate-500 text-[10px] sm:text-lg font-medium max-w-xl leading-relaxed opacity-80">
+                         {language === 'ar' ? "إدارة المحاور المهاراتية، الدروس، والأنشطة التفاعلية لمدرستك." : "Manage skill clusters, lessons, and interactive activities for your school."}
                       </p>
-                    </div>
-
-                    {/* Explanations & Key Insights */}
-                    {previewResult.isCorrect && (
-                      <div className="space-y-4 text-right bg-slate-50 p-6 rounded-3xl border border-slate-100 max-h-60 overflow-y-auto text-xs" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-                        {previewResult.explanation && (
-                          <div className="space-y-1">
-                            <span className="font-black text-slate-700 block">{language === 'ar' ? '📘 شرح الحل بالتفصيل:' : '📘 Detailed Explanation:'}</span>
-                            <p className="text-slate-500 font-bold leading-relaxed">{translateText(previewResult.explanation, language)}</p>
-                          </div>
-                        )}
-                        {previewResult.keyInsight && (
-                          <div className="space-y-1 border-t border-slate-200/60 pt-3">
-                            <span className="font-black text-indigo-700 block">{language === 'ar' ? '💡 الفكرة الجوهرية للتعلم:' : '💡 Core Key Insight:'}</span>
-                            <p className="text-indigo-650 font-bold leading-relaxed">{translateText(previewResult.keyInsight, language)}</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Action buttons inside popup */}
-                    <div className="flex gap-4">
-                      {previewResult.isCorrect ? (
-                        <button
-                          onClick={() => setPreviewResult(null)}
-                          className="flex-1 py-4 rounded-2xl bg-indigo-600 hover:bg-slate-900 text-white font-black text-sm shadow-lg transition-colors cursor-pointer"
-                        >
-                          {language === 'ar' ? 'رائع، استمر' : 'Awesome, continue'}
-                        </button>
-                      ) : (
-                        <>
-                          <button
-                            onClick={handlePreviewRetry}
-                            className="flex-1 py-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-black text-sm shadow-md transition-colors cursor-pointer"
-                          >
-                            {language === 'ar' ? 'إعادة المحاولة' : 'Try Again'}
-                          </button>
-                          <button
-                            onClick={() => setPreviewResult(null)}
-                            className="flex-1 py-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-black text-sm transition-colors cursor-pointer"
-                          >
-                            {language === 'ar' ? 'إغلاق وتصحيح' : 'Close'}
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
+                   </div>
                 </div>
-              )}
 
-              {/* Helper explanation box (Hint, Tip, Key Insight) */}
-              {previewHelperModal.type && (
-                <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[170]">
-                  <div className="bg-white w-full max-w-md rounded-[32px] shadow-2xl p-6 border border-slate-100 text-right space-y-4 animate-in zoom-in-95 duration-200" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-                    <div className="flex justify-between items-center border-b pb-3">
-                      <span className={`px-3 py-1 text-[10px] font-black rounded-lg uppercase tracking-wider ${
-                        previewHelperModal.type === "hint" ? "bg-amber-50 text-amber-700 border border-amber-100" :
-                        previewHelperModal.type === "tip" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" :
-                        "bg-indigo-50 text-indigo-700 border border-indigo-100"
-                      }`}>
-                        {previewHelperModal.type === "hint" ? (language === 'ar' ? "💡 تلميح للمساعدة" : "💡 Help Hint") :
-                         previewHelperModal.type === "tip" ? (language === 'ar' ? "🧠 نصيحة ذكية" : "🧠 Smart Tip") :
-                         (language === 'ar' ? "📘 فكرة جوهرية" : "📘 Key Insight")}
-                      </span>
-                      <button
-                        onClick={() => setPreviewHelperModal({ type: null, content: "" })}
-                        className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 cursor-pointer"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <p className="text-slate-600 font-bold text-sm leading-relaxed">{previewHelperModal.content}</p>
-                    <button
-                      onClick={() => setPreviewHelperModal({ type: null, content: "" })}
-                      className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-black text-sm transition-colors cursor-pointer"
-                    >
-                      {language === 'ar' ? 'حسناً، فهمت' : 'OK, I got it'}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-            </div>
+                <Link 
+                  href="/school-admin/skills-hub/create"
+                  className="group bg-slate-900 text-white px-6 sm:px-12 py-3 sm:py-5 rounded-xl sm:rounded-[22px] font-black text-xs sm:text-xl shadow-xl shadow-slate-900/10 hover:scale-105 transition-all flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-center"
+                >
+                  <Plus className="w-4 h-4 sm:w-6 h-6 group-hover:rotate-90 transition-transform" />
+                  {language === 'ar' ? "إنشاء محور مهاراتي" : "Create Skill Cluster"}
+                </Link>
+             </div>
+             
+             {/* Decorative elements */}
+             <div className="absolute top-0 right-0 w-1/3 h-full bg-amber-500/5 blur-[120px] rounded-full -mr-20"></div>
           </div>
-        )}
 
+          {/* Stats & Filters */}
+          <div className="flex flex-col xl:flex-row gap-4 sm:gap-6 items-center justify-between">
+             <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 w-full xl:w-auto">
+                 {[
+                   { label: language === 'ar' ? "المحاور المهاراتية" : "Skill Clusters", value: apiStats.totalClusters, icon: Layers, color: "orange" },
+                   { label: language === 'ar' ? "المهارات الفرعية" : "Skill Lessons", value: apiStats.totalLessons, icon: Monitor, color: "amber" },
+                   { label: language === 'ar' ? "المواد الدراسية" : "Subjects", value: apiStats.totalSubjects, icon: Book, color: "emerald" }
+                 ].map((stat, i) => (
+                   <div key={i} className="bg-white p-3 sm:p-5 px-4 sm:px-8 rounded-xl sm:rounded-[28px] border border-slate-100 shadow-sm flex items-center gap-3 sm:gap-5">
+                      <div className={`w-8 h-8 sm:w-12 h-12 rounded-lg sm:rounded-2xl bg-${stat.color}-50 text-${stat.color}-600 flex items-center justify-center shrink-0`}>
+                         <stat.icon className="w-4 h-4 sm:w-6 h-6" />
+                      </div>
+                      <div className={language === 'ar' ? 'text-right' : 'text-left'}>
+                         <p className="text-[8px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{stat.label}</p>
+                         <p className="text-sm sm:text-xl font-black text-slate-900 leading-tight">
+                            {loading ? (
+                              <span className="inline-block w-8 h-4 bg-slate-100 animate-pulse rounded"></span>
+                            ) : (
+                              stat.value
+                            )}
+                          </p>
+                      </div>
+                   </div>
+                 ))}
+             </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
+                 <div className="relative flex-1 xl:w-96">
+                    <Search className={`absolute ${language === 'ar' ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-5 h-5`} />
+                    <input 
+                      type="text" 
+                      placeholder={language === 'ar' ? "ابحث عن محور مهاراتي..." : "Search clusters..."}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className={`w-full ${language === 'ar' ? 'pr-9 sm:pr-12 pl-4' : 'pl-9 sm:pl-12 pr-4'} py-2.5 sm:py-4 rounded-xl sm:rounded-2xl bg-white border border-slate-200 text-[10px] sm:text-sm font-bold focus:outline-none focus:ring-4 focus:ring-amber-600/5 transition-all`}
+                    />
+                 </div>
+                 <button className="w-full sm:w-14 h-10 sm:h-14 bg-white border border-slate-200 rounded-xl sm:rounded-2xl flex items-center justify-center text-slate-400 hover:bg-slate-50 transition-all shadow-sm">
+                    <Filter className="w-4 h-4 sm:w-6 h-6" />
+                 </button>
+              </div>
+          </div>
+
+          {/* Main Grid */}
+          {loading ? (
+             <div className="flex flex-col gap-4 sm:gap-6">
+                {[1, 2, 3].map((n) => (
+                   <div key={n} className="bg-slate-100 animate-pulse rounded-2xl h-32 w-full"></div>
+                ))}
+             </div>
+          ) : clusters.length === 0 ? (
+               <div className="bg-white border-2 sm:border-4 border-dashed border-slate-100 rounded-[24px] sm:rounded-[60px] p-8 sm:p-32 text-center">
+                  <div className="w-12 h-12 sm:w-24 h-24 bg-slate-50 rounded-xl sm:rounded-[40px] flex items-center justify-center mx-auto mb-4 sm:mb-8">
+                     <BrainCircuit className="w-6 h-6 sm:w-12 h-12 text-slate-200" />
+                  </div>
+                  <h3 className="text-base sm:text-2xl font-black text-slate-900 mb-2">
+                    {language === 'ar' ? "لا يوجد محاور مهاراتية" : "No Skill Clusters Found"}
+                  </h3>
+                  <p className="text-slate-500 font-bold max-w-sm mx-auto mb-6 sm:mb-10 opacity-70 text-[10px] sm:text-base">
+                    {language === 'ar' ? "ابدأ بإضافة أول محور مهاراتي لربط الدروس والأنشطة التفاعلية." : "Start by creating a skill cluster to organize lessons and activities."}
+                  </p>
+                  <Link href="/school-admin/skills-hub/create" className="bg-amber-500 text-white px-6 sm:px-10 py-2.5 sm:py-4 rounded-xl sm:rounded-2xl font-black shadow-xl shadow-amber-500/20 inline-block text-[10px] sm:text-base">
+                     {language === 'ar' ? "إنشاء محور مهاراتي" : "Create Skill Cluster"}
+                  </Link>
+               </div>
+          ) : (
+              <>
+                <div className="flex flex-col gap-4 sm:gap-6 pb-10 sm:pb-20">
+                   {clusters.map((cluster) => {
+                      const canEditOrDelete = !cluster.isCentral && (cluster.schoolId === schoolId || !cluster.schoolId);
+                      return (
+                        <div key={cluster.id} className="group bg-white rounded-[20px] sm:rounded-[30px] border border-slate-100 p-4 sm:p-6 hover:shadow-3xl hover:shadow-amber-500/10 transition-all duration-500 relative overflow-hidden flex flex-col md:flex-row items-center gap-6">
+                          <div className="absolute top-0 right-0 w-1.5 h-full bg-gradient-to-b from-amber-400 to-orange-500 transform scale-y-0 group-hover:scale-y-100 transition-transform duration-500 origin-top"></div>
+                          
+                          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-amber-50 rounded-lg sm:rounded-2xl flex items-center justify-center group-hover:scale-110 transition-all duration-500 overflow-hidden border border-slate-100 shrink-0">
+                              <Layers className="w-8 h-8 text-amber-500" />
+                          </div>
+   
+                          <div className={`flex-1 min-w-0 w-full md:w-auto text-center ${language === 'ar' ? 'md:text-right' : 'md:text-left'}`}>
+                             <div className={`flex flex-wrap items-center justify-center ${language === 'ar' ? 'md:justify-start' : 'md:justify-end'} gap-2 mb-2`}>
+                                <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-2.5 py-1 rounded-md uppercase tracking-widest shrink-0">{cluster.subject || (language === 'ar' ? "عام" : "General")}</span>
+                                <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md uppercase tracking-widest shrink-0">{getGradeName(cluster.grade) || (language === 'ar' ? "عام" : "General")}</span>
+                                {cluster.isCentral && (
+                                   <span className="text-[10px] font-black text-amber-700 bg-amber-50 px-2.5 py-1 rounded-md uppercase tracking-widest shrink-0 border border-amber-100">
+                                      {language === 'ar' ? "مركزي" : "Central"}
+                                   </span>
+                                )}
+                             </div>
+                             <h3 className="text-xl sm:text-2xl font-black text-slate-900 group-hover:text-amber-500 transition-colors leading-tight mb-1.5 truncate">{cluster.name}</h3>
+                             <p className="text-slate-400 text-xs sm:text-sm font-bold line-clamp-1">{cluster.description || (language === 'ar' ? "محور مهاراتي." : "Skill Cluster.")}</p>
+                          </div>
+   
+                          <div className="flex items-center gap-6 shrink-0 w-full md:w-auto justify-between md:justify-end border-t border-slate-50 md:border-none pt-4 md:pt-0">
+                             <div className="flex items-center gap-4 text-xs font-black text-slate-400 uppercase tracking-widest">
+                                <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
+                                   <Monitor className="w-4 h-4 text-amber-400" />
+                                   <span className="hidden sm:inline">{language === 'ar' ? "درس" : "lesson(s)"}</span> {cluster._count?.skills || 0}
+                                </div>
+                             </div>
+                             
+                             <div className="flex items-center gap-2">
+                                <button 
+                                  onClick={() => router.push(`/school-admin/skills-hub/edit?id=${cluster.id}`)}
+                                  className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                                  title={canEditOrDelete ? (language === 'ar' ? "تعديل" : "Edit") : (language === 'ar' ? "عرض التفاصيل" : "View Details")}
+                                >
+                                   <Edit2 className="w-5 h-5" />
+                                </button>
+                                {canEditOrDelete && (
+                                  <button 
+                                    onClick={() => handleDelete(cluster.id)}
+                                    className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center hover:bg-red-600 hover:text-white transition-all shadow-sm"
+                                    title={language === 'ar' ? "حذف" : "Delete"}
+                                  >
+                                     <Trash2 className="w-5 h-5" />
+                                  </button>
+                                )}
+                             </div>
+                          </div>
+   
+                           {/* Decoration */}
+                           <div className="absolute -bottom-12 -left-12 w-32 h-32 text-slate-50 group-hover:text-amber-50/50 transition-colors duration-500 -rotate-12 pointer-events-none">
+                              <BrainCircuit className="w-full h-full" />
+                           </div>
+                        </div>
+                      );
+                   })}
+                </div>
+              </>
+          )}
       </div>
     </DashboardLayout>
   );

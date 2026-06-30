@@ -76,7 +76,7 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose, onToggle, rol
         { href: "/school-admin/exams", icon: ClipboardList, label: t('schoolAdmin.sidebar.exams') },
         { href: "/school-admin/courses", icon: BookOpen, label: t('schoolAdmin.sidebar.courses') },
         { href: "/school-admin/skills-hub", icon: BookOpen, label: language === 'ar' ? 'أنشطة ومهارات كليفروا' : 'Klevro Skills Hub' },
-        { href: "/school-admin/skills-hub?action=add-cluster", icon: Plus, label: language === 'ar' ? 'إضافة محور مهاراتي' : 'Add Skill Cluster' },
+        { href: "/school-admin/skills-hub/create", icon: Plus, label: language === 'ar' ? 'إضافة محور مهاراتي' : 'Add Skill Cluster' },
       ]
     },
     {
