@@ -68,6 +68,11 @@ export default function CreateSkillClusterPage() {
       const res = await fetch(`${API_URL}/admin/schools`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
+      if (res.status === 400 || res.status === 401) {
+        localStorage.removeItem("super_admin_token");
+        router.push("/super-admin/login");
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         setSchools(Array.isArray(data) ? data : (data.schools || []));

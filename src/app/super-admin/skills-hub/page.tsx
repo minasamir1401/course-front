@@ -46,9 +46,15 @@ export default function SuperAdminSkillsHubPage() {
       const res = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${token}` }
       });
+
+      if (res.status === 400 || res.status === 401) {
+        localStorage.removeItem("super_admin_token");
+        router.push("/super-admin/login");
+        return;
+      }
+
       const data = await res.json();
-      
-      let filtered = data || [];
+      let filtered = Array.isArray(data) ? data : [];
       if (debouncedSearch) {
         filtered = filtered.filter((c: any) => 
           c.name?.toLowerCase().includes(debouncedSearch.toLowerCase()) || 

@@ -94,6 +94,11 @@ export default function EditSkillClusterPage() {
   const fetchSchools = async (token: string) => {
     try {
       const res = await fetch(`${API_URL}/admin/schools`, { headers: { "Authorization": `Bearer ${token}` } });
+      if (res.status === 400 || res.status === 401) {
+        localStorage.removeItem("super_admin_token");
+        router.push("/super-admin/login");
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         setSchools(Array.isArray(data) ? data : (data.schools || []));
@@ -110,7 +115,13 @@ export default function EditSkillClusterPage() {
       
       // Fetch clusters and find ours (since there's no single cluster GET endpoint)
       const res = await fetch(`${API_URL}/skills-hub/clusters`, { headers: { "Authorization": `Bearer ${token}` } });
-      const clusters = await res.json();
+      if (res.status === 400 || res.status === 401) {
+        localStorage.removeItem("super_admin_token");
+        router.push("/super-admin/login");
+        return;
+      }
+      const data = await res.json();
+      const clusters = Array.isArray(data) ? data : [];
       const current = clusters.find((c: any) => c.id === clusterId);
       
       if (current) {
