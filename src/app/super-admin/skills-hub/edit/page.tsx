@@ -9,11 +9,12 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
 import { 
-  ArrowLeft, Save, BookOpen, Layers, Monitor, Plus, Edit2, Trash2, 
+  ArrowLeft, ArrowRight, Save, BookOpen, Layers, Monitor, Plus, Edit2, Trash2, 
   ChevronDown, ChevronUp, Settings, ListOrdered, CheckCircle2, Sparkles,
-  Upload, Download
+  Upload, Download, Play, Clock, X, Info, BrainCircuit, Star, StarOff, RefreshCw
 } from "lucide-react";
 import InteractiveQuestionEditor from "@/components/InteractiveQuestionEditor";
+import InteractiveQuestionRenderer from "@/components/InteractiveQuestionRenderer";
 
 export default function EditSkillClusterPage() {
   const { t, language } = useLanguage();
@@ -49,6 +50,20 @@ export default function EditSkillClusterPage() {
   // Excel Upload State
   const [uploadingLessonId, setUploadingLessonId] = useState<string | null>(null);
   const excelInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Student Preview Play Modal States
+  const [previewActivity, setPreviewActivity] = useState<any>(null);
+  const [previewAnswer, setPreviewAnswer] = useState<string>("");
+  const [previewIsSubmitting, setPreviewIsSubmitting] = useState(false);
+  const [previewResult, setPreviewResult] = useState<any>(null);
+  const [previewStartTime, setPreviewStartTime] = useState<number>(0);
+  const [previewHintsUsed, setPreviewHintsUsed] = useState<number>(0);
+  const [previewAttemptCount, setPreviewAttemptCount] = useState<number>(1);
+  const [previewHelperModal, setPreviewHelperModal] = useState<{ type: "hint" | "tip" | "keyInsight" | null; content: string }>({
+    type: null,
+    content: ""
+  });
+  const [previewActivitiesList, setPreviewActivitiesList] = useState<any[]>([]);
 
   const [mounted, setMounted] = useState(false);
 
@@ -331,6 +346,140 @@ export default function EditSkillClusterPage() {
     } catch (e) {
       showToast(language === 'ar' ? "فشل الحذف" : "Delete failed", "error");
     }
+  };
+
+  const translateText = (val: any, lang: string = "ar") => {
+    if (!val) return "";
+    if (typeof val === "string") {
+      try {
+        const parsed = JSON.parse(val);
+        if (parsed && typeof parsed === "object") {
+          return parsed[lang] || parsed["ar"] || parsed["en"] || "";
+        }
+      } catch {}
+      return val;
+    }
+    if (typeof val === "object" && val !== null) {
+      return val[lang] || val["ar"] || val["en"] || "";
+    }
+    return String(val);
+  };
+
+  // STUDENT PREVIEW PLAY HANDLERS
+  const startPreviewActivity = async (act: any, activitiesList?: any[]) => {
+    const token = localStorage.getItem("super_admin_token");
+    if (!token) return;
+    try {
+      setIsLoading(true);
+      const res = await fetch(`${API_URL}/skills-hub/activities/${act.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const activity = await res.json();
+        setPreviewActivity(activity);
+        setPreviewAnswer("");
+        setPreviewStartTime(Date.now());
+        setPreviewHintsUsed(0);
+        setPreviewAttemptCount(1);
+        setPreviewResult(null);
+        if (activitiesList) {
+          setPreviewActivitiesList(activitiesList);
+        } else {
+          const list = activitiesData[act.lessonId] || [];
+          setPreviewActivitiesList(list);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading activity for preview:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const startPreviewLesson = async (lessonId: string) => {
+    const token = localStorage.getItem("super_admin_token");
+    if (!token) return;
+    try {
+      setIsLoading(true);
+      let lessonActivities = activitiesData[lessonId];
+      if (!lessonActivities) {
+        const res = await fetch(`${API_URL}/skills-hub/lessons/${lessonId}/activities`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          lessonActivities = Array.isArray(data) ? data : [];
+          setActivitiesData(prev => ({ ...prev, [lessonId]: lessonActivities }));
+        }
+      }
+      if (lessonActivities && lessonActivities.length > 0) {
+        await startPreviewActivity(lessonActivities[0], lessonActivities);
+      } else {
+        showToast(language === 'ar' ? "لا توجد أسئلة في هذا الدرس لمعاينتها." : "No activities in this lesson to preview.", "error");
+      }
+    } catch (err) {
+      console.error("Error starting lesson preview:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const currentPreviewIdx = previewActivitiesList.findIndex((act: any) => act.id === previewActivity?.id);
+  const hasPreviewNext = currentPreviewIdx !== -1 && currentPreviewIdx < previewActivitiesList.length - 1;
+  const hasPreviewPrev = currentPreviewIdx > 0;
+
+  const handlePreviewNext = () => {
+    if (hasPreviewNext) {
+      startPreviewActivity(previewActivitiesList[currentPreviewIdx + 1], previewActivitiesList);
+    }
+  };
+
+  const handlePreviewPrev = () => {
+    if (hasPreviewPrev) {
+      startPreviewActivity(previewActivitiesList[currentPreviewIdx - 1], previewActivitiesList);
+    }
+  };
+
+  const submitPreviewAnswer = async () => {
+    const token = localStorage.getItem("super_admin_token");
+    if (!token || !previewActivity || previewIsSubmitting) return;
+    setPreviewIsSubmitting(true);
+    const timeTaken = Math.round((Date.now() - previewStartTime) / 1000);
+    
+    try {
+      const res = await fetch(`${API_URL}/skills-hub/activities/${previewActivity.id}/attempt`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          selectedAnswer: previewAnswer,
+          timeTaken,
+          hintsUsed: previewHintsUsed,
+          attemptCount: previewAttemptCount
+        })
+      });
+      
+      if (res.ok) {
+        const result = await res.json();
+        setPreviewResult(result);
+      } else {
+        const errData = await res.json();
+        showToast(errData.error || (language === 'ar' ? "خطأ في الإرسال" : "Submission failed"), "error");
+      }
+    } catch (err) {
+      console.error("Error submitting preview attempt:", err);
+    } finally {
+      setPreviewIsSubmitting(false);
+    }
+  };
+
+  const handlePreviewRetry = () => {
+    setPreviewResult(null);
+    setPreviewAnswer("");
+    setPreviewStartTime(Date.now());
+    setPreviewAttemptCount(prev => prev + 1);
   };
 
   // EXCEL HANDLERS
@@ -678,6 +827,16 @@ export default function EditSkillClusterPage() {
                            </div>
                         </div>
                         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                            {(lesson._count?.activities || 0) > 0 && (
+                              <button
+                                onClick={() => startPreviewLesson(lesson.id)}
+                                className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-bold text-sm transition-all"
+                                title={language === 'ar' ? "معاينة الاختبار كامل" : "Preview Full Test"}
+                              >
+                                <Play className="w-4 h-4 fill-current text-white" />
+                                <span className="hidden md:inline">{language === 'ar' ? "معاينة الاختبار كامل" : "Preview Full Test"}</span>
+                              </button>
+                            )}
                            <button 
                              onClick={() => toggleLessonExpand(lesson.id)}
                              className="flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-700 rounded-lg font-bold text-sm hover:bg-slate-100 transition-all"
@@ -757,6 +916,13 @@ export default function EditSkillClusterPage() {
                                         </div>
                                      </div>
                                      <div className="flex items-center gap-2 shrink-0">
+                                         <button 
+                                           onClick={() => startPreviewActivity(activity, activitiesData[lesson.id])}
+                                           className="text-slate-400 hover:text-sky-650 p-2 hover:bg-sky-50 rounded-lg transition-all"
+                                           title={language === 'ar' ? "معاينة الطالب" : "Student Preview"}
+                                         >
+                                            <Play className="w-4 h-4 fill-current" />
+                                         </button>
                                         <button 
                                           onClick={() => openEditActivity(activity)}
                                           className="text-slate-400 hover:text-blue-600 p-2 hover:bg-blue-50 rounded-lg transition-all"
@@ -969,6 +1135,275 @@ export default function EditSkillClusterPage() {
               <button onClick={handleSaveActivity} className="px-8 py-3 rounded-xl font-black text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 flex items-center gap-2 transition-all">
                 <CheckCircle2 className="w-5 h-5" />
                 {language === 'ar' ? "حفظ النشاط" : "Save Activity"}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Student Preview Play Modal */}
+      {mounted && previewActivity && createPortal(
+        <div className="fixed inset-0 z-[150] bg-slate-900/65 backdrop-blur-md flex items-center justify-center p-0 md:p-6 overflow-y-auto" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+          <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 w-full max-w-5xl md:rounded-[40px] shadow-2xl flex flex-col min-h-screen md:min-h-[85vh] md:max-h-[90vh] overflow-y-auto md:overflow-hidden border border-white/10 animate-in zoom-in-95 duration-200">
+            
+            {/* Game Player Header */}
+            <div className="bg-gradient-to-r from-indigo-700 to-violet-850 p-6 text-white flex justify-between items-center shadow-md">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-300 floating animate-pulse" />
+                  <span className="text-[10px] font-black tracking-widest uppercase">
+                    {language === 'ar' ? 'معاينة الطالب' : 'Student Preview'}
+                  </span>
+                  {previewActivitiesList.length > 1 && (
+                    <span className="bg-white/20 px-2.5 py-0.5 rounded text-xs font-black">
+                      {currentPreviewIdx + 1} / {previewActivitiesList.length}
+                    </span>
+                  )}
+                </div>
+                <h3 className="text-lg md:text-xl font-black truncate max-w-xl">{translateText(previewActivity.title, language)}</h3>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10 text-xs font-black">
+                  <Clock className="w-4 h-4 text-indigo-200" />
+                  <span>{language === 'ar' ? `الزمن المقدر: ${previewActivity.estimatedTime} ثانية` : `Estimated: ${previewActivity.estimatedTime}s`}</span>
+                </div>
+                <button
+                  onClick={() => setPreviewActivity(null)}
+                  className="w-10 h-10 rounded-xl bg-white/10 hover:bg-rose-600 text-white flex items-center justify-center transition-colors border border-white/10"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Game Player Body */}
+            <div className="flex-1 md:overflow-y-auto p-4 md:p-8 flex flex-col lg:flex-row gap-8">
+              
+              {/* Right: Helpers Panel */}
+              <div className="w-full lg:w-64 space-y-4 shrink-0">
+                <div className="bg-white rounded-3xl border border-slate-100 p-5 shadow-sm space-y-4">
+                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b pb-2 flex items-center gap-2">
+                    <BrainCircuit className="w-4 h-4 text-indigo-500" />
+                    {language === 'ar' ? 'تلميحات ومساعدات التعلم' : 'Hints & Learning Aids'}
+                  </h4>
+                  
+                  {/* Hint Button */}
+                  <button
+                    onClick={() => {
+                      setPreviewHintsUsed(prev => prev + 1);
+                      setPreviewHelperModal({
+                        type: "hint",
+                        content: translateText(previewActivity.hint, language) || (language === 'ar' ? "لا يوجد تلميح مسجل لهذا النشاط." : "No hint recorded for this activity.")
+                      });
+                    }}
+                    className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-amber-100 bg-amber-50/50 hover:bg-amber-50 hover:scale-[1.02] text-amber-800 font-black text-sm transition-all cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2">{language === 'ar' ? '💡 فكرة للمساعدة' : '💡 Help Hint'}</span>
+                    {language === 'ar' ? <ArrowLeft className="w-4 h-4 text-amber-500" /> : <ArrowRight className="w-4 h-4 text-amber-500" />}
+                  </button>
+
+                  {/* Tip Button */}
+                  <button
+                    onClick={() => {
+                      setPreviewHelperModal({
+                        type: "tip",
+                        content: translateText(previewActivity.tip, language) || (language === 'ar' ? "لا توجد نصيحة ذكية مسجلة." : "No smart tip recorded.")
+                      });
+                    }}
+                    className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-emerald-100 bg-emerald-50/50 hover:bg-emerald-50 hover:scale-[1.02] text-emerald-850 font-black text-sm transition-all cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2">{language === 'ar' ? '🧠 نصيحة ذكية' : '🧠 Smart Tip'}</span>
+                    {language === 'ar' ? <ArrowLeft className="w-4 h-4 text-emerald-500" /> : <ArrowRight className="w-4 h-4 text-emerald-500" />}
+                  </button>
+
+                  {/* Key Insight Button */}
+                  <button
+                    onClick={() => {
+                      setPreviewHelperModal({
+                        type: "keyInsight",
+                        content: translateText(previewActivity.keyInsight, language) || (language === 'ar' ? "لا توجد فكرة جوهرية مسجلة." : "No key insight recorded.")
+                      });
+                    }}
+                    className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-indigo-100 bg-indigo-50/50 hover:bg-indigo-50 hover:scale-[1.02] text-indigo-800 font-black text-sm transition-all cursor-pointer"
+                  >
+                    <span className="flex items-center gap-2">{language === 'ar' ? '📘 فكرة جوهرية' : '📘 Key Insight'}</span>
+                    {language === 'ar' ? <ArrowLeft className="w-4 h-4 text-indigo-500" /> : <ArrowRight className="w-4 h-4 text-indigo-500" />}
+                  </button>
+                </div>
+                
+                {/* Metadata display */}
+                <div className="bg-white rounded-3xl border border-slate-100 p-5 shadow-sm space-y-3 text-xs font-bold text-slate-500">
+                  {previewActivity.standard && <p>{language === 'ar' ? '🔍 المعيار: ' : '🔍 Standard: '}<span className="text-slate-800 font-black">{previewActivity.standard}</span></p>}
+                  {previewActivity.indicator && <p>{language === 'ar' ? '🎯 المؤشر: ' : '🎯 Indicator: '}<span className="text-slate-800 font-black">{previewActivity.indicator}</span></p>}
+                  <p>{language === 'ar' ? '🏆 النقاط: ' : '🏆 Points: '}<span className="text-indigo-650 font-black">{previewActivity.points} {language === 'ar' ? 'نقطة' : 'XP'}</span></p>
+                </div>
+              </div>
+
+              {/* Left: Interactive Workspace */}
+              <div className="flex-1 bg-white rounded-3xl border border-slate-150 p-6 md:p-8 flex flex-col justify-between shadow-sm min-h-[400px]">
+                
+                {/* Renderer */}
+                <div className="space-y-6 flex-1">
+                  <InteractiveQuestionRenderer
+                    question={previewActivity}
+                    value={previewAnswer}
+                    onChange={setPreviewAnswer}
+                    language={language}
+                  />
+                </div>
+
+                {/* Submission Footer */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t border-slate-100">
+                  <button
+                    onClick={() => setPreviewActivity(null)}
+                    className="px-6 py-3.5 rounded-2xl bg-slate-50/80 border-2 border-slate-200/60 text-slate-900 hover:bg-slate-100 font-black text-sm transition-all active:scale-95 w-full sm:w-auto cursor-pointer"
+                  >
+                    {language === 'ar' ? 'إغلاق المعاينة' : 'Close Preview'}
+                  </button>
+
+                  <div className="flex items-center gap-2.5 w-full sm:w-auto justify-center">
+                    <button
+                      type="button"
+                      onClick={handlePreviewPrev}
+                      disabled={!hasPreviewPrev}
+                      className={`px-5 py-3.5 rounded-2xl border-2 font-black text-sm transition-all active:scale-95 flex items-center gap-2 w-full sm:w-auto justify-center ${
+                        hasPreviewPrev
+                          ? "bg-slate-50/80 border-2 border-slate-200/60 text-slate-900 hover:bg-slate-100 cursor-pointer"
+                          : "bg-slate-50/30 border-2 border-slate-200/20 text-slate-350 cursor-not-allowed"
+                      }`}
+                    >
+                      {language === 'ar' ? <ArrowRight className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />}
+                      <span>{language === 'ar' ? 'السابق' : 'Previous'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handlePreviewNext}
+                      disabled={!hasPreviewNext}
+                      className={`px-5 py-3.5 rounded-2xl border-2 font-black text-sm transition-all active:scale-95 flex items-center gap-2 w-full sm:w-auto justify-center ${
+                        hasPreviewNext
+                          ? "bg-slate-50/80 border-2 border-slate-200/60 text-slate-900 hover:bg-slate-100 cursor-pointer"
+                          : "bg-slate-50/30 border-2 border-slate-200/20 text-slate-350 cursor-not-allowed"
+                      }`}
+                    >
+                      <span>{language === 'ar' ? 'التالي' : 'Next'}</span>
+                      {language === 'ar' ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={submitPreviewAnswer}
+                    disabled={!previewAnswer || previewIsSubmitting}
+                    className={`px-10 py-3.5 rounded-2xl font-black text-sm transition-all flex items-center gap-2 active:scale-95 w-full sm:w-auto justify-center cursor-pointer ${
+                      !previewAnswer || previewIsSubmitting
+                        ? "bg-sky-200/40 text-slate-400 cursor-not-allowed border border-sky-300/10 shadow-none"
+                        : "bg-sky-500 text-slate-950 hover:bg-sky-650 shadow-xl shadow-sky-200/40 border border-sky-500/20"
+                    }`}
+                  >
+                    {previewIsSubmitting ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        {language === 'ar' ? 'جاري التقييم...' : 'Evaluating...'}
+                      </>
+                    ) : (
+                      <>
+                        <span>{language === 'ar' ? 'أرسل الحل للتصحيح' : 'Submit for review'}</span>
+                        <CheckCircle2 className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* PREVIEW ATTEMPT RESULT POPUP MODAL (Inside Player) */}
+            {previewResult && (
+              <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[160] overflow-y-auto">
+                <div className="bg-white w-full max-w-lg rounded-[36px] shadow-2xl p-8 border border-slate-100 text-center space-y-6 animate-in zoom-in-95 duration-200">
+                  
+                  {/* Stars animation */}
+                  <div className="space-y-4">
+                    <div className="flex justify-center gap-3">
+                      {[1, 2, 3].map(index => {
+                        const isFilled = index <= previewResult.stars;
+                        return isFilled ? (
+                          <Star key={index} className="w-16 h-16 fill-amber-400 text-amber-400 drop-shadow-md scale-[1.1] animate-pulse" />
+                        ) : (
+                          <StarOff key={index} className="w-16 h-16 text-slate-200" />
+                        );
+                      })}
+                    </div>
+                    
+                    <h4 className={`text-2xl font-black ${
+                      previewResult.isCorrect ? "text-emerald-600" : "text-rose-600"
+                    }`}>
+                      {previewResult.isCorrect ? (
+                        previewResult.stars === 3 
+                          ? (language === 'ar' ? "ممتاز! حل مثالي ورائع 🏆" : "Excellent! Perfect solution 🏆") 
+                          : previewResult.stars === 2
+                          ? (language === 'ar' ? "رائع! إجابة صحيحة ⭐⭐" : "Great! Correct ⭐⭐")
+                          : (language === 'ar' ? "جيد! تم الحل ⭐" : "Good! Solved ⭐")
+                      ) : (
+                        (language === 'ar' ? "حاول مرة أخرى! ❌" : "Try again! ❌")
+                      )}
+                    </h4>
+
+                    {previewResult.explanation && (
+                      <div className="bg-slate-50 p-4 rounded-2xl border border-slate-150 text-slate-600 text-sm font-bold text-start space-y-1">
+                        <span className="text-xs text-slate-400 font-black uppercase tracking-wider block">{language === 'ar' ? "شرح وتفسير الإجابة:" : "Explanation:"}</span>
+                        <p>{translateText(previewResult.explanation, language)}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex justify-center gap-3">
+                    {!previewResult.isCorrect && (
+                      <button
+                        onClick={handlePreviewRetry}
+                        className="px-8 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-black text-sm transition-all active:scale-95 shadow-md shadow-amber-500/20 cursor-pointer"
+                      >
+                        {language === 'ar' ? "حاول مجدداً" : "Retry"}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        setPreviewResult(null);
+                        setPreviewActivity(null);
+                      }}
+                      className="px-8 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-sm transition-all active:scale-95 shadow-lg shadow-slate-900/10 cursor-pointer"
+                    >
+                      {language === 'ar' ? "إغلاق نافذة المعاينة" : "Close Workspace"}
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+            )}
+
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Helper Modal Popup inside play preview */}
+      {mounted && previewHelperModal.type && createPortal(
+        <div className="fixed inset-0 z-[170] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-[32px] shadow-2xl p-6 border border-slate-100 space-y-4 animate-in zoom-in-95 duration-200">
+            <h4 className="text-base font-black text-slate-900 flex items-center gap-2">
+              <Info className="w-5 h-5 text-indigo-500" />
+              {previewHelperModal.type === "hint" && (language === 'ar' ? "💡 فكرة للمساعدة (Hint)" : "💡 Hint")}
+              {previewHelperModal.type === "tip" && (language === 'ar' ? "🧠 نصيحة ذكية (Tip)" : "🧠 Smart Tip")}
+              {previewHelperModal.type === "keyInsight" && (language === 'ar' ? "📘 فكرة جوهرية (Key Insight)" : "📘 Key Insight")}
+            </h4>
+            <p className="text-slate-600 text-sm font-bold leading-relaxed">{previewHelperModal.content}</p>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setPreviewHelperModal({ type: null, content: "" })}
+                className="px-6 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs shadow-md cursor-pointer"
+              >
+                {language === 'ar' ? "حسناً" : "Close"}
               </button>
             </div>
           </div>

@@ -63,6 +63,7 @@ export default function EditSchoolSkillClusterPage() {
     type: null,
     content: ""
   });
+  const [previewActivitiesList, setPreviewActivitiesList] = useState<any[]>([]);
 
   const [mounted, setMounted] = useState(false);
 
@@ -670,7 +671,7 @@ export default function EditSchoolSkillClusterPage() {
   };
 
   // STUDENT PREVIEW PLAY HANDLERS
-  const startPreviewActivity = async (act: any) => {
+  const startPreviewActivity = async (act: any, activitiesList?: any[]) => {
     const token = localStorage.getItem("school_admin_token");
     if (!token) return;
     try {
@@ -686,11 +687,61 @@ export default function EditSchoolSkillClusterPage() {
         setPreviewHintsUsed(0);
         setPreviewAttemptCount(1);
         setPreviewResult(null);
+        if (activitiesList) {
+          setPreviewActivitiesList(activitiesList);
+        } else {
+          const list = activitiesData[act.lessonId] || [];
+          setPreviewActivitiesList(list);
+        }
       }
     } catch (err) {
       console.error("Error loading activity for preview:", err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const startPreviewLesson = async (lessonId: string) => {
+    const token = localStorage.getItem("school_admin_token");
+    if (!token) return;
+    try {
+      setIsLoading(true);
+      let lessonActivities = activitiesData[lessonId];
+      if (!lessonActivities) {
+        const res = await fetch(`${API_URL}/skills-hub/lessons/${lessonId}/activities`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          lessonActivities = Array.isArray(data) ? data : [];
+          setActivitiesData(prev => ({ ...prev, [lessonId]: lessonActivities }));
+        }
+      }
+      if (lessonActivities && lessonActivities.length > 0) {
+        await startPreviewActivity(lessonActivities[0], lessonActivities);
+      } else {
+        showToast(language === 'ar' ? "لا توجد أسئلة في هذا الدرس لمعاينتها." : "No activities in this lesson to preview.", "error");
+      }
+    } catch (err) {
+      console.error("Error starting lesson preview:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const currentPreviewIdx = previewActivitiesList.findIndex((act: any) => act.id === previewActivity?.id);
+  const hasPreviewNext = currentPreviewIdx !== -1 && currentPreviewIdx < previewActivitiesList.length - 1;
+  const hasPreviewPrev = currentPreviewIdx > 0;
+
+  const handlePreviewNext = () => {
+    if (hasPreviewNext) {
+      startPreviewActivity(previewActivitiesList[currentPreviewIdx + 1], previewActivitiesList);
+    }
+  };
+
+  const handlePreviewPrev = () => {
+    if (hasPreviewPrev) {
+      startPreviewActivity(previewActivitiesList[currentPreviewIdx - 1], previewActivitiesList);
     }
   };
 
@@ -929,6 +980,16 @@ export default function EditSchoolSkillClusterPage() {
                            </div>
                         </div>
                         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                           {(lesson._count?.activities || 0) > 0 && (
+                             <button
+                               onClick={() => startPreviewLesson(lesson.id)}
+                               className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-bold text-sm transition-all"
+                               title={language === 'ar' ? "معاينة الاختبار كامل" : "Preview Full Test"}
+                             >
+                               <Play className="w-4 h-4 fill-current text-white" />
+                               <span className="hidden md:inline">{language === 'ar' ? "معاينة الاختبار كامل" : "Preview Full Test"}</span>
+                             </button>
+                           )}
                            <button 
                              onClick={() => toggleLessonExpand(lesson.id)}
                              className="flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-700 rounded-lg font-bold text-sm hover:bg-slate-100 transition-all"
@@ -1035,7 +1096,7 @@ export default function EditSchoolSkillClusterPage() {
                                      </div>
                                      <div className="flex items-center gap-2 shrink-0">
                                         <button 
-                                          onClick={() => startPreviewActivity(activity)}
+                                          onClick={() => startPreviewActivity(activity, activitiesData[lesson.id])}
                                           className="text-slate-400 hover:text-sky-650 p-2 hover:bg-sky-50 rounded-lg transition-all"
                                           title={language === 'ar' ? "معاينة الطالب" : "Student Preview"}
                                         >
@@ -1423,6 +1484,11 @@ export default function EditSchoolSkillClusterPage() {
                   <span className="text-[10px] font-black tracking-widest uppercase">
                     {language === 'ar' ? 'معاينة الطالب' : 'Student Preview'}
                   </span>
+                  {previewActivitiesList.length > 1 && (
+                    <span className="bg-white/20 px-2.5 py-0.5 rounded text-xs font-black">
+                      {currentPreviewIdx + 1} / {previewActivitiesList.length}
+                    </span>
+                  )}
                 </div>
                 <h3 className="text-lg md:text-xl font-black truncate max-w-xl">{translateText(previewActivity.title, language)}</h3>
               </div>
@@ -1525,6 +1591,36 @@ export default function EditSchoolSkillClusterPage() {
                   >
                     {language === 'ar' ? 'إغلاق المعاينة' : 'Close Preview'}
                   </button>
+
+                  <div className="flex items-center gap-2.5 w-full sm:w-auto justify-center">
+                    <button
+                      type="button"
+                      onClick={handlePreviewPrev}
+                      disabled={!hasPreviewPrev}
+                      className={`px-5 py-3.5 rounded-2xl border-2 font-black text-sm transition-all active:scale-95 flex items-center gap-2 w-full sm:w-auto justify-center ${
+                        hasPreviewPrev
+                          ? "bg-slate-50/80 border-2 border-slate-200/60 text-slate-900 hover:bg-slate-100 cursor-pointer"
+                          : "bg-slate-50/30 border-2 border-slate-200/20 text-slate-350 cursor-not-allowed"
+                      }`}
+                    >
+                      {language === 'ar' ? <ArrowRight className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />}
+                      <span>{language === 'ar' ? 'السابق' : 'Previous'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handlePreviewNext}
+                      disabled={!hasPreviewNext}
+                      className={`px-5 py-3.5 rounded-2xl border-2 font-black text-sm transition-all active:scale-95 flex items-center gap-2 w-full sm:w-auto justify-center ${
+                        hasPreviewNext
+                          ? "bg-slate-50/80 border-2 border-slate-200/60 text-slate-900 hover:bg-slate-100 cursor-pointer"
+                          : "bg-slate-50/30 border-2 border-slate-200/20 text-slate-350 cursor-not-allowed"
+                      }`}
+                    >
+                      <span>{language === 'ar' ? 'التالي' : 'Next'}</span>
+                      {language === 'ar' ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+                    </button>
+                  </div>
 
                   <button
                     onClick={submitPreviewAnswer}
