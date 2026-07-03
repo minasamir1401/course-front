@@ -629,40 +629,48 @@ export default function ActivitiesPage() {
 
          {/* ── IMMERSIVE FULL-SCREEN 3D GAME PLAYER OVERLAY ── */}
         {activeActivity && (
-          <div className="fixed inset-0 z-[100] bg-slate-900/65 backdrop-blur-md flex items-center justify-center p-0 md:p-6 overflow-y-auto" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-            <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 w-full max-w-5xl md:rounded-[40px] shadow-2xl flex flex-col min-h-screen md:min-h-[85vh] md:max-h-[90vh] overflow-y-auto md:overflow-hidden border border-white/10 animate-in zoom-in-95 duration-200">
-              
-              {/* Game Player Header */}
-              <div className="bg-gradient-to-r from-indigo-700 to-violet-850 p-6 text-white flex justify-between items-center shadow-md">
+          <div className="fixed inset-0 z-[100] bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-0 md:p-6 overflow-y-auto" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+            {/* Modal Card — white, styled like stats cards */}
+            <div className="bg-white w-full max-w-5xl md:rounded-[32px] shadow-2xl flex flex-col min-h-screen md:min-h-[85vh] md:max-h-[90vh] overflow-y-auto md:overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 relative">
+              {/* Colored gradient top bar — same as stat cards */}
+              <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-indigo-500 to-purple-500 md:rounded-t-[32px] z-10" />
+
+              {/* Game Player Header — white card style */}
+              <div className="pt-3 px-6 pb-5 bg-white border-b border-slate-100 flex justify-between items-center">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-amber-300 floating" />
-                    <span className="text-[10px] font-black tracking-widest uppercase">Klevro Skills Play</span>
+                    <Sparkles className="w-4 h-4 text-indigo-500" />
+                    <span className="text-[10px] font-black tracking-widest uppercase text-slate-400">Klevro Skills Play</span>
+                    <span className="px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 text-[10px] font-black border border-indigo-100">
+                      {translateText(activeActivity.type)}
+                    </span>
                   </div>
-                  <h3 className="text-lg md:text-xl font-black truncate max-w-xl">{translateText(activeActivity.title)}</h3>
+                  <h3 className="text-lg md:text-xl font-black text-slate-900 truncate max-w-xl">{translateText(activeActivity.title)}</h3>
                 </div>
-                
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-1 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10 text-xs font-black">
-                    <Clock className="w-4 h-4 text-indigo-200" />
+
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-black text-slate-500">
+                    <Clock className="w-4 h-4 text-indigo-400" />
                     <span>{language === 'ar' ? `الزمن المقدر: ${activeActivity.estimatedTime} ثانية` : `Estimated: ${activeActivity.estimatedTime}s`}</span>
                   </div>
                   <button
                     onClick={closePlayer}
-                    className="w-10 h-10 rounded-xl bg-white/10 hover:bg-rose-600 text-white flex items-center justify-center transition-colors border border-white/10"
+                    className="w-10 h-10 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-500 hover:text-rose-600 flex items-center justify-center transition-colors border border-slate-200 hover:border-rose-200"
                   >
                     <X className="w-5 h-5" />
                   </button>
                 </div>
               </div>
-
               {/* Game Player Body */}
-              <div className="flex-1 md:overflow-y-auto p-4 md:p-8 flex flex-col lg:flex-row gap-8">
+              <div className="flex-1 md:overflow-y-auto p-4 md:p-8 flex flex-col lg:flex-row gap-6 bg-slate-50/60">
                 
                 {/* Right: Helpers Panel (1/4 width on desktop) */}
                 <div className="w-full lg:w-64 space-y-4 shrink-0">
-                  <div className="bg-white rounded-3xl border border-slate-100 p-5 shadow-sm space-y-4">
-                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b pb-2 flex items-center gap-2">
+                  {/* Hints Panel */}
+                  <div className="bg-white rounded-[24px] border border-slate-100 p-5 shadow-sm space-y-4 relative overflow-hidden">
+                    {/* Amber top accent */}
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-400 to-orange-400" />
+                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2 flex items-center gap-2 pt-1">
                       <BrainCircuit className="w-4 h-4 text-indigo-500" />
                       {language === 'ar' ? 'تلميحات ومساعدات التعلم' : 'Hints & Learning Aids'}
                     </h4>
@@ -702,16 +710,32 @@ export default function ActivitiesPage() {
                     </button>
                   </div>
                   
-                  {/* Metadata display */}
-                  <div className="bg-white rounded-3xl border border-slate-100 p-5 shadow-sm space-y-3 text-xs font-bold text-slate-500">
-                    {activeActivity.standard && <p>{language === 'ar' ? '🔍 المعيار: ' : '🔍 Standard: '}<span className="text-slate-800 font-black">{activeActivity.standard}</span></p>}
-                    {activeActivity.indicator && <p>{language === 'ar' ? '🎯 المؤشر: ' : '🎯 Indicator: '}<span className="text-slate-800 font-black">{activeActivity.indicator}</span></p>}
-                    <p>{language === 'ar' ? '🏆 النقاط: ' : '🏆 Points: '}<span className="text-indigo-650 font-black">{activeActivity.points} {language === 'ar' ? 'نقطة' : 'XP'}</span></p>
+                  {/* Metadata card */}
+                  <div className="bg-white rounded-[24px] border border-slate-100 p-5 shadow-sm space-y-3 text-xs font-bold text-slate-500 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-teal-400" />
+                    <div className="pt-1 space-y-3">
+                      {activeActivity.standard && <p>{language === 'ar' ? '🔍 المعيار: ' : '🔍 Standard: '}<span className="text-slate-800 font-black">{activeActivity.standard}</span></p>}
+                      {activeActivity.indicator && <p>{language === 'ar' ? '🎯 المؤشر: ' : '🎯 Indicator: '}<span className="text-slate-800 font-black">{activeActivity.indicator}</span></p>}
+                      <p>{language === 'ar' ? '🏆 النقاط: ' : '🏆 Points: '}<span className="text-indigo-600 font-black">{activeActivity.points} {language === 'ar' ? 'نقطة' : 'XP'}</span></p>
+                      <p><span className={`px-2 py-0.5 rounded-lg text-[10px] font-black ${
+                        activeActivity.difficulty === 'Easy' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                        activeActivity.difficulty === 'Hard' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
+                        'bg-amber-50 text-amber-700 border border-amber-100'
+                      }`}>
+                        {activeActivity.difficulty === 'Easy' ? (language === 'ar' ? 'سهل' : 'Easy') : activeActivity.difficulty === 'Hard' ? (language === 'ar' ? 'صعب' : 'Hard') : (language === 'ar' ? 'متوسط' : 'Medium')}
+                      </span></p>
+                    </div>
                   </div>
                 </div>
 
                 {/* Left: Interactive Workspace */}
-                <div className="flex-1 bg-white rounded-3xl border border-slate-150 p-6 md:p-8 flex flex-col justify-between shadow-sm min-h-[400px]">
+                <div className="flex-1 bg-white rounded-[24px] border border-slate-100 relative overflow-hidden p-6 md:p-8 flex flex-col justify-between shadow-sm min-h-[400px]">
+                  {/* Colored top accent bar per activity type */}
+                  <div className={`absolute top-0 left-0 w-full h-1 ${
+                    activeActivity.difficulty === 'Easy' ? 'bg-gradient-to-r from-emerald-400 to-teal-400' :
+                    activeActivity.difficulty === 'Hard' ? 'bg-gradient-to-r from-rose-500 to-orange-500' :
+                    'bg-gradient-to-r from-blue-500 to-cyan-400'
+                  }`} />
                   
                   {/* Renderer */}
                   <div className="space-y-6 flex-1">
@@ -797,7 +821,7 @@ export default function ActivitiesPage() {
 
               {/* ── ATTEMPT RESULT POPUP MODAL (Inside Player) ── */}
               {attemptResult && (
-                <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[110] overflow-y-auto">
+                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center p-4 z-[110] overflow-y-auto">
                   <div className="bg-white w-full max-w-lg rounded-[36px] shadow-2xl p-8 border border-slate-100 text-center space-y-6 animate-in zoom-in-95 duration-200">
                     
                     {/* Stars animation */}
