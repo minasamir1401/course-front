@@ -1,6 +1,7 @@
 "use client";
 
-import { API_URL } from '@/lib/api';
+import { API_URL, apiFetch } from '@/lib/api';
+
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { 
@@ -46,7 +47,8 @@ export default function SchoolsManagement() {
     setIsLoading(true);
     const token = localStorage.getItem("super_admin_token");
     try {
-      const res = await fetch(API_URL + "/admin/schools", {
+      const res = await apiFetch(API_URL + "/admin/schools", {
+
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -71,7 +73,8 @@ export default function SchoolsManagement() {
     setIsSubmitting(true);
     const token = localStorage.getItem("super_admin_token");
     try {
-      const res = await fetch(API_URL + "/admin/schools", {
+      const res = await apiFetch(API_URL + "/admin/schools", {
+
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
@@ -129,7 +132,8 @@ export default function SchoolsManagement() {
 
     try {
       // 1. Update School Name
-      const schoolRes = await fetch(`${API_URL}/admin/schools/${selectedSchool.id}`, {
+      const schoolRes = await apiFetch(`${API_URL}/admin/schools/${selectedSchool.id}`, {
+
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -152,7 +156,8 @@ export default function SchoolsManagement() {
           payload.password = editFormData.adminPassword;
         }
 
-        const userRes = await fetch(`${API_URL}/admin/users/${editFormData.adminId}`, {
+        const userRes = await apiFetch(`${API_URL}/admin/users/${editFormData.adminId}`, {
+
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -191,7 +196,8 @@ export default function SchoolsManagement() {
 
     const token = localStorage.getItem("super_admin_token");
     try {
-      const res = await fetch(API_URL + `/admin/schools/${id}`, {
+      const res = await apiFetch(API_URL + `/admin/schools/${id}`, {
+
         method: "DELETE",
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -217,7 +223,8 @@ export default function SchoolsManagement() {
     const token = localStorage.getItem("super_admin_token");
     
     try {
-      const res = await fetch(`${API_URL}/admin/impersonate/${admin.id}`, {
+      const res = await apiFetch(`${API_URL}/admin/impersonate/${admin.id}`, {
+
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,

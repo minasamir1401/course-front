@@ -1,6 +1,7 @@
 "use client";
 
-import { API_URL } from '@/lib/api';
+import { API_URL, apiFetch } from '@/lib/api';
+
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -52,7 +53,8 @@ export default function SuperAdminDashboard() {
 
     const fetchStats = async () => {
       try {
-        const res = await fetch(API_URL + "/super-admin/stats", {
+        const res = await apiFetch(API_URL + "/super-admin/stats", {
+
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (res.ok) {

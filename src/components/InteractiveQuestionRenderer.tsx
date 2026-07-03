@@ -413,11 +413,18 @@ function MultiSelectRenderer({ question, value, onChange, language }: any) {
 function MatchingRenderer({ question, value, onChange, language, containerRef }: any) {
   const opts = parseJson(question.options, { left: [], right: [] });
   const leftItems = Array.isArray(opts?.left) ? opts.left : [];
-  const rightItems = Array.isArray(opts?.right) ? opts.right : [];
+  const rightItemsRaw = Array.isArray(opts?.right) ? opts.right : [];
   const matchingState = parseJson(value, {});
 
   const [selectedLeft, setSelectedLeft] = useState<string | null>(null);
   const [coords, setCoords] = useState<{ x1: number; y1: number; x2: number; y2: number; color: string }[]>([]);
+
+  // Shuffle right items once on mount so they are randomized
+  const [rightItems, setRightItems] = useState<string[]>([]);
+  useEffect(() => {
+    const shuffled = [...rightItemsRaw].sort(() => Math.random() - 0.5);
+    setRightItems(shuffled);
+  }, [question.options]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -1004,15 +1011,40 @@ function VideoCheckpointRenderer({ question, value, onChange, language }: any) {
     onChange(JSON.stringify({ answeredCheckpoints: nextAns }));
   };
 
+  // Convert any YouTube URL format to embed URL
+  const getEmbedUrl = (url: string): string => {
+    if (!url) return "";
+    // Already embed URL
+    if (url.includes("/embed/")) return url;
+    // youtu.be/ID
+    const shortMatch = url.match(/youtu\.be\/([\w-]+)/);
+    if (shortMatch) return `https://www.youtube.com/embed/${shortMatch[1]}`;
+    // youtube.com/watch?v=ID
+    const watchMatch = url.match(/[?&]v=([\w-]+)/);
+    if (watchMatch) return `https://www.youtube.com/embed/${watchMatch[1]}`;
+    // Treat as raw video ID
+    if (/^[\w-]{11}$/.test(url.trim())) return `https://www.youtube.com/embed/${url.trim()}`;
+    return url;
+  };
+
+  const embedUrl = getEmbedUrl(videoUrl);
+
   return (
     <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
-      {videoUrl && (
+      <h4 className="text-lg font-black text-slate-800">{translateText(question.title, language)}</h4>
+      {embedUrl && (
         <div className="w-full aspect-video rounded-3xl overflow-hidden border border-slate-200 bg-black">
           <iframe
-            src={videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be") ? videoUrl : `https://www.youtube.com/embed/${videoUrl}`}
+            src={embedUrl}
             className="w-full h-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           />
+        </div>
+      )}
+      {!embedUrl && (
+        <div className="w-full aspect-video rounded-3xl bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center">
+          <span className="text-slate-400 font-bold text-sm">{language === 'ar' ? 'لا يوجد رابط فيديو' : 'No video URL'}</span>
         </div>
       )}
       <div className="space-y-4">
@@ -1195,8 +1227,16 @@ function MazeRenderer({ question, value, onChange, language }: any) {
     onChange(JSON.stringify([`${start[0]},${start[1]}`]));
   };
 
+  const isAtEnd = currentPath.length > 0 && currentPath[currentPath.length - 1] === `${end[0]},${end[1]}`;
+
   return (
     <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <h4 className="text-lg font-black text-slate-800">{translateText(question.title, language)}</h4>
+      {isAtEnd && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 text-center">
+          <span className="font-black text-emerald-700 text-sm">🎉 {language === 'ar' ? 'وصلت للمخرج! أحسنت!' : 'You reached the exit! Well done!'}</span>
+        </div>
+      )}
       <div className="flex justify-between items-center">
         <span className="text-xs font-bold text-slate-500">
           {language === "ar" ? "ارسم مساراً من البداية حتى المخرج:" : "Draw a path from start to end:"}
@@ -1312,9 +1352,17 @@ function GeoGebraRenderer({ question, value, onChange, language }: any) {
 
   return (
     <div className="flex flex-col items-center gap-6 w-full max-w-full" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <h4 className={`text-lg font-black text-slate-800 w-full ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+        {translateText(question.title, language)}
+      </h4>
       {iframeUrl && (
         <div className="w-full aspect-[16/10] max-w-2xl rounded-2xl overflow-hidden border border-slate-200 bg-white">
           <GeoGebraWidget materialId={materialId} iframeUrl={iframeUrl} w={w} h={h} />
+        </div>
+      )}
+      {!iframeUrl && materialId && (
+        <div className="w-full aspect-[16/10] max-w-2xl rounded-2xl overflow-hidden border border-slate-200 bg-white">
+          <GeoGebraWidget materialId={materialId} iframeUrl={`https://www.geogebra.org/material/iframe/id/${materialId}`} w={w} h={h} />
         </div>
       )}
       <div className="w-full max-w-md space-y-2">
@@ -1337,22 +1385,66 @@ function GeoGebraRenderer({ question, value, onChange, language }: any) {
 // 🎴 15. FLASH_CARD (البطاقات التعليمية)
 // -------------------------------------------------------------
 function FlashCardRenderer({ question, value, onChange, language }: any) {
-  const opts = parseJson(question.options, { front: "", back: "" });
+  const opts = parseJson(question.options, { front: "", back: "", cards: [] });
+  // Support both single card (front/back) and multi-card array
+  const cards: { front: string; back: string }[] = Array.isArray(opts.cards) && opts.cards.length > 0
+    ? opts.cards
+    : [{ front: opts.front || "", back: opts.back || "" }];
+
+  const [currentIdx, setCurrentIdx] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
+
+  const currentCard = cards[currentIdx] || { front: "", back: "" };
+
+  const goNext = () => {
+    setCurrentIdx(i => Math.min(i + 1, cards.length - 1));
+    setIsFlipped(false);
+  };
+  const goPrev = () => {
+    setCurrentIdx(i => Math.max(i - 1, 0));
+    setIsFlipped(false);
+  };
 
   return (
     <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <h4 className="text-lg font-black text-slate-800 text-center">{translateText(question.title, language)}</h4>
+
+      {/* Card Navigator */}
+      {cards.length > 1 && (
+        <div className="flex items-center justify-center gap-3">
+          <button type="button" onClick={goPrev} disabled={currentIdx === 0}
+            className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center font-black text-slate-600 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+            {language === 'ar' ? '›' : '‹'}
+          </button>
+          <span className="text-xs font-black text-slate-500">{currentIdx + 1} / {cards.length}</span>
+          <button type="button" onClick={goNext} disabled={currentIdx === cards.length - 1}
+            className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center font-black text-slate-600 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+            {language === 'ar' ? '‹' : '›'}
+          </button>
+        </div>
+      )}
+
+      {/* Flip Card */}
       <div className="flex justify-center py-4">
         <div
           onClick={() => setIsFlipped(!isFlipped)}
-          className={`w-72 h-44 rounded-3xl border-2 p-6 flex flex-col justify-center items-center text-center cursor-pointer transition-all duration-500 relative ${isFlipped ? "bg-slate-950 border-slate-950 text-white" : "bg-white border-slate-250 text-slate-800"}`}
+          className={`w-80 h-48 rounded-3xl border-2 p-6 flex flex-col justify-center items-center text-center cursor-pointer transition-all duration-500 relative shadow-md animate-pop-in ${
+            isFlipped ? "bg-slate-950 border-slate-950 text-white" : "bg-white border-slate-250 text-slate-800"
+          }`}
         >
-          <p className="text-base font-black leading-relaxed">{isFlipped ? translateText(opts.back, language) : translateText(opts.front, language)}</p>
+          <span className="absolute top-3 text-[9px] font-black uppercase tracking-widest opacity-40">
+            {isFlipped ? (language === 'ar' ? 'الجهة الخلفية' : 'Back') : (language === 'ar' ? 'الجهة الأمامية' : 'Front')}
+          </span>
+          <p className="text-base font-black leading-relaxed">
+            {isFlipped ? translateText(currentCard.back, language) : translateText(currentCard.front, language)}
+          </p>
           <span className="absolute bottom-3 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-            {language === "ar" ? "اضغط لقلب البطاقة" : "Click to flip card"}
+            {language === "ar" ? "اضغط لقلب البطاقة" : "Click to flip"}
           </span>
         </div>
       </div>
+
+      {/* Answer input */}
       <div className="w-full max-w-md mx-auto space-y-2">
         <label className="text-xs font-bold text-slate-500 block text-center">
           {language === "ar" ? "اكتب إجابتك للتحقق:" : "Type your answer to verify:"}
@@ -1706,24 +1798,26 @@ function CrosswordRenderer({ question, value, onChange, language }: any) {
 // 🔢 22. COUNT_OBJECTS (عد العناصر)
 // -------------------------------------------------------------
 function CountObjectsRenderer({ question, value, onChange, language }: any) {
-  const opts = parseJson(question.options, { itemImage: "", itemName: "" });
+  const opts = parseJson(question.options, { itemImage: "", itemName: "", count: 5 });
   const itemName = translateText(opts.itemName, language) || "item";
   const itemImage = opts.itemImage || "https://images.unsplash.com/photo-1560807707-8cc77767d783?w=150";
+  // Use count from options (default 5)
+  const itemCount = Math.max(1, Math.min(20, parseInt(opts.count ?? 5) || 5));
 
   return (
     <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
       <h4 className="text-base font-black text-slate-800 text-center">
-        {language === "ar" ? `كم عدد الـ ${itemName} الموجودة بالأسفل؟` : `How many ${itemName} are shown below?`}
+        {translateText(question.title, language) || (language === "ar" ? `كم عدد الـ ${itemName} الموجودة بالأسفل؟` : `How many ${itemName} are shown below?`)}
       </h4>
       
-      <div className="flex flex-wrap gap-4 justify-center py-6 bg-slate-50 rounded-3xl border border-slate-150">
-        {Array.from({ length: 5 }).map((_, i) => (
+      <div className="flex flex-wrap gap-3 justify-center py-6 bg-slate-50 rounded-3xl border border-slate-150">
+        {Array.from({ length: itemCount }).map((_, i) => (
           <img
             key={i}
             src={itemImage}
             alt={itemName}
-            className="w-16 h-16 object-cover rounded-xl border border-white shadow-md animate-gravity animate-float"
-            style={{ animationDelay: `${i * 150}ms` }}
+            className="w-20 h-20 object-cover rounded-xl border-2 border-white shadow-md animate-gravity"
+            style={{ animationDelay: `${i * 100}ms` }}
           />
         ))}
       </div>
@@ -1733,7 +1827,7 @@ function CountObjectsRenderer({ question, value, onChange, language }: any) {
         <input
           type="number"
           min="0"
-          className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-center font-bold text-sm"
+          className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-center font-bold text-2xl"
           value={value || ""}
           onChange={(e) => onChange(e.target.value)}
           placeholder={language === "ar" ? "اكتب العدد..." : "Type number..."}

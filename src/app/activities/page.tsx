@@ -129,10 +129,11 @@ export default function ActivitiesPage() {
   };
 
   // Submit Answer
-  const submitAnswer = async () => {
+  const submitAnswer = async (overrideAnswer?: string) => {
     if (!token || !activeActivity || isSubmitting) return;
     setIsSubmitting(true);
     const timeTaken = Math.round((Date.now() - startTime) / 1000);
+    const answer = overrideAnswer !== undefined ? overrideAnswer : currentAnswer;
     
     try {
       const res = await fetch(`${API_URL}/skills-hub/activities/${activeActivity.id}/attempt`, {
@@ -142,7 +143,7 @@ export default function ActivitiesPage() {
           Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
-          selectedAnswer: currentAnswer,
+          selectedAnswer: answer,
           timeTaken,
           hintsUsed,
           attemptCount
@@ -163,6 +164,18 @@ export default function ActivitiesPage() {
       console.error("Error submitting attempt:", err);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Types that get instant feedback (no Submit button needed)
+  const autoSubmitTypes = ["MCQ", "TRUE_FALSE"];
+
+  // Handle answer change — auto-submits for MCQ/TRUE_FALSE
+  const handleAnswerChange = (val: string) => {
+    setCurrentAnswer(val);
+    if (activeActivity && autoSubmitTypes.includes(activeActivity.type)) {
+      // Slight delay to show selection visually before submitting
+      setTimeout(() => submitAnswer(val), 350);
     }
   };
 
@@ -705,7 +718,7 @@ export default function ActivitiesPage() {
                     <InteractiveQuestionRenderer
                       question={activeActivity}
                       value={currentAnswer}
-                      onChange={setCurrentAnswer}
+                      onChange={handleAnswerChange}
                       language={language}
                     />
                   </div>
@@ -749,27 +762,35 @@ export default function ActivitiesPage() {
                       </button>
                     </div>
 
-                    <button
-                      onClick={submitAnswer}
-                      disabled={!currentAnswer || isSubmitting}
-                      className={`px-10 py-3.5 rounded-2xl font-black text-sm transition-all flex items-center gap-2 active:scale-95 w-full sm:w-auto justify-center ${
-                        !currentAnswer || isSubmitting
-                          ? "bg-sky-200/40 text-slate-400 cursor-not-allowed border border-sky-300/10 shadow-none"
-                          : "bg-sky-400 text-slate-950 hover:bg-sky-500 shadow-xl shadow-sky-200/40 border border-sky-500/20"
-                      }`}
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                          {language === 'ar' ? 'جاري التقييم...' : 'Evaluating...'}
-                        </>
-                      ) : (
-                        <>
-                          <span>{language === 'ar' ? 'أرسل الحل للتصحيح' : 'Submit for review'}</span>
-                          <CheckCircle2 className="w-4 h-4" />
-                        </>
-                      )}
-                    </button>
+                    {/* Submit Button - hidden for auto-submit types (MCQ/TRUE_FALSE) */}
+                    {!autoSubmitTypes.includes(activeActivity.type) ? (
+                      <button
+                        onClick={() => submitAnswer()}
+                        disabled={!currentAnswer || isSubmitting}
+                        className={`px-10 py-3.5 rounded-2xl font-black text-sm transition-all flex items-center gap-2 active:scale-95 w-full sm:w-auto justify-center ${
+                          !currentAnswer || isSubmitting
+                            ? "bg-sky-200/40 text-slate-400 cursor-not-allowed border border-sky-300/10 shadow-none"
+                            : "bg-sky-400 text-slate-950 hover:bg-sky-500 shadow-xl shadow-sky-200/40 border border-sky-500/20"
+                        }`}
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                            {language === 'ar' ? 'جاري التقييم...' : 'Evaluating...'}
+                          </>
+                        ) : (
+                          <>
+                            <span>{language === 'ar' ? 'أرسل الحل للتصحيح' : 'Submit for review'}</span>
+                            <CheckCircle2 className="w-4 h-4" />
+                          </>
+                        )}
+                      </button>
+                    ) : isSubmitting ? (
+                      <div className="flex items-center gap-2 text-sky-400 font-black text-sm px-4">
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>{language === 'ar' ? 'جاري التقييم الفوري...' : 'Instant evaluation...'}</span>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </div>

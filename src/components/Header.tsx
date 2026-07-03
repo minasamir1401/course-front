@@ -11,7 +11,8 @@ import Link from "next/link";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { logout, stopImpersonation } from "@/lib/auth";
 import { LucideIcon } from "lucide-react";
-import { API_URL } from '@/lib/api';
+import { API_URL, apiFetch } from '@/lib/api';
+
 
 interface NavLink {
   label: string;
@@ -92,7 +93,8 @@ export default function Header({
     if (isSuperAdmin && token) {
       const fetchSchools = async () => {
         try {
-          const res = await fetch(API_URL + "/admin/schools", {
+          const res = await apiFetch(API_URL + "/admin/schools", {
+
             headers: { "Authorization": `Bearer ${token}` }
           });
           if (res.ok) {
