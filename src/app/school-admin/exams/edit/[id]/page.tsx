@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { 
-  Save, Plus, Trash2, Image as ImageIcon, CheckCircle, HelpCircle, 
+  Save, Plus, Trash2, Image as ImageIcon, CheckCircle2, HelpCircle, 
   ArrowRight, Settings, ListPlus, Globe, Layout, Loader2, 
   Clock, Lock, Calendar, Eye, EyeOff, FileText, AlertCircle, BookOpen, ChevronLeft,
   ChevronDown, ChevronUp, Edit3, Play, X, CheckCircle2, Target,
@@ -232,7 +232,7 @@ export function SchoolAdminEditExamPageContent({ presetType }: { presetType?: 'E
 
   const VISIBILITY_OPTIONS = [
     { id: "SHOW_SCORE", label: "الدرجة فقط", desc: "سيرى الطالب مجموع درجاته فقط", icon: Eye },
-    { id: "SHOW_ANSWERS", label: "الإجابات الصحيحة", desc: "سيتمكن الطالب من مراجعة كل إجابة مع النموذج الصحيح", icon: CheckCircle },
+    { id: "SHOW_ANSWERS", label: "الإجابات الصحيحة", desc: "سيتمكن الطالب من مراجعة كل إجابة مع النموذج الصحيح", icon: CheckCircle2 },
     { id: "SHOW_MARK_ONLY", label: "الصح والغلط", desc: "سيرى الطالب إذا كانت إجابته صحيحة أم خاطئة بدون معرفة النموذج الصحيح", icon: HelpCircle },
     { id: "HIDE_ALL", label: "إخفاء النتائج بالكامل", desc: "لن تظهر أي نتائج حتى تقوم بتغيير هذه السياسة", icon: EyeOff },
   ];

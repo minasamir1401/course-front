@@ -9,7 +9,7 @@ import {
   Building2, Users, Shield, BookOpen,
   TrendingUp, Plus, Search, Settings,
   LogOut, Bell, LayoutDashboard, Globe, GraduationCap,
-  ClipboardList, CheckCircle, Clock, ArrowUpRight, Activity,
+  ClipboardList, CheckCircle2, Clock, ArrowUpRight, Activity,
   BarChart3, UserCheck, ChevronRight
 } from "lucide-react";
 import Link from "next/link";

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { 
-  Save, Plus, Trash2, Image as ImageIcon, CheckCircle, HelpCircle, 
+  Save, Plus, Trash2, Image as ImageIcon, CheckCircle2, HelpCircle, 
   ArrowRight, Settings, ListPlus, Globe, Layout, Loader2, 
   Clock, Lock, Calendar, Eye, EyeOff, FileText, AlertCircle, BookOpen,
   ChevronDown, ChevronUp, Edit3, Play, X, CheckCircle2, Target,
@@ -194,7 +194,7 @@ export function SchoolAdminNewExamPageContent({ presetType, presetCourseId }: { 
 
   const VISIBILITY_OPTIONS = [
     { id: "SHOW_SCORE", label: t('schoolAdmin.examsNewPage.scoreOnly'), desc: t('schoolAdmin.examsNewPage.scoreOnlyDesc'), icon: Eye },
-    { id: "SHOW_ANSWERS", label: t('schoolAdmin.examsNewPage.correctAnswers'), desc: t('schoolAdmin.examsNewPage.correctAnswersDesc'), icon: CheckCircle },
+    { id: "SHOW_ANSWERS", label: t('schoolAdmin.examsNewPage.correctAnswers'), desc: t('schoolAdmin.examsNewPage.correctAnswersDesc'), icon: CheckCircle2 },
     { id: "SHOW_MARK_ONLY", label: t('schoolAdmin.examsNewPage.correctIncorrectOnly'), desc: t('schoolAdmin.examsNewPage.correctIncorrectOnlyDesc'), icon: HelpCircle },
     { id: "HIDE_ALL", label: t('schoolAdmin.examsNewPage.hideAll'), desc: t('schoolAdmin.examsNewPage.hideAllDesc'), icon: EyeOff },
   ];

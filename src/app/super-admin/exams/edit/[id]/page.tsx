@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import {
-  Save, Plus, Trash2, Image as ImageIcon, CheckCircle, HelpCircle,
+  Save, Plus, Trash2, Image as ImageIcon, CheckCircle2, HelpCircle,
   ArrowRight, Settings, ListPlus, Globe, Layout, Loader2,
   Clock, Lock, Calendar, Eye, EyeOff, FileText, AlertCircle, BookOpen, ChevronLeft,
   ChevronDown, ChevronUp, Edit2, Edit3, Play, X, CheckCircle2, Target,
@@ -248,7 +248,7 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
 
   const VISIBILITY_OPTIONS = [
     { id: "SHOW_SCORE", label: "Score Only", desc: "Student will only see their total score", icon: Eye },
-    { id: "SHOW_ANSWERS", label: "Show Correct Answers", desc: "Student can review each question with the correct model answer", icon: CheckCircle },
+    { id: "SHOW_ANSWERS", label: "Show Correct Answers", desc: "Student can review each question with the correct model answer", icon: CheckCircle2 },
     { id: "SHOW_MARK_ONLY", label: "Show Correct/Incorrect Only", desc: "Student will see which answers were right or wrong, but not the correct model", icon: HelpCircle },
     { id: "HIDE_ALL", label: "Hide All Results", desc: "No results will be shown until you change this policy", icon: EyeOff },
   ];

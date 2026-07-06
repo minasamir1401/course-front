@@ -12,7 +12,7 @@ import {
   ChevronDown, ChevronUp, Play, Layout, Target,
   CheckCircle2, AlertCircle, Upload, Download, Settings,
   Eye, Monitor, ListOrdered, FileJson, FileDown, Clock,
-  Lightbulb, MessageSquareQuote, TriangleAlert, Search, CheckCircle
+  Lightbulb, MessageSquareQuote, TriangleAlert, Search, CheckCircle2
 } from "lucide-react";
 import * as XLSX from 'xlsx';
 import RichTextEditor from "@/components/RichTextEditor";
@@ -88,7 +88,7 @@ export default function CreateCoursePage() {
       badge: "bg-emerald-100 text-emerald-700",
     },
     EXPLANATION: {
-      icon: CheckCircle,
+      icon: CheckCircle2,
       label: language === 'ar' ? "تفسير" : "Explanation",
       container: "bg-amber-50/70 border-amber-200",
       badge: "bg-amber-100 text-amber-700",

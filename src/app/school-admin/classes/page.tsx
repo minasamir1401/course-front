@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { 
   Layout, Plus, Search, Trash2, Users, GraduationCap, 
-  BookOpen, X, ChevronDown, CheckCircle, Edit2
+  BookOpen, X, ChevronDown, CheckCircle2, Edit2
 } from "lucide-react";
 import { API_URL } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";

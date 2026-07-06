@@ -7,7 +7,7 @@ import { API_URL, getFullImageUrl } from '@/lib/api';
 import { fetchStudentStats, readCachedStudentStats } from "@/lib/student-stats";
 import {
   PlaySquare, FileText, HelpCircle, ChevronLeft, ChevronRight,
-  BookOpen, Clock, CheckCircle, List,
+  BookOpen, Clock, CheckCircle2, List,
   Bookmark, MessageSquare, Download, Share2, Paperclip,
   Check, Lock, Play, Sparkles, Calendar, ArrowRight
 } from "lucide-react";

@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { API_URL } from '@/lib/api';
 import DashboardLayout from "@/components/DashboardLayout";
 import {
-  Play, Pause, ChevronLeft, ChevronRight, CheckCircle,
+  Play, Pause, ChevronLeft, ChevronRight, CheckCircle2,
   HelpCircle, BookOpen, Target, Layout, Monitor,
   MessageSquare, FileDown, Clock, Info, X, Maximize,
   Volume2, Settings, ArrowRight, ArrowLeft, Star, Award, RotateCcw,
