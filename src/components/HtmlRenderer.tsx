@@ -20,6 +20,7 @@ export default function HtmlRenderer({ html, className = "", tag: Tag = "div" }:
         delimiters: [
           { left: '$$', right: '$$', display: true },
           { left: '\\[', right: '\\]', display: true },
+          { left: '$', right: '$', display: false },
           { left: '\\(', right: '\\)', display: false }
         ],
         throwOnError: false

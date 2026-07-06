@@ -48,10 +48,9 @@ const renderExplanation = (explanationString: string) => {
           <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-widest">
             شرح وتوضيح الإجابة
           </p>
-          <div 
+          <HtmlRenderer 
+            html={explanationString}
             className="text-slate-600 leading-relaxed font-medium prose prose-sm max-w-none"
-            dir="auto"
-            dangerouslySetInnerHTML={{ __html: explanationString }}
           />
         </div>
       </div>
@@ -69,7 +68,7 @@ const renderExplanation = (explanationString: string) => {
               <Icon className="w-5 h-5 shrink-0" />
               <span>{preset.label}</span>
             </div>
-            <div className={`prose prose-sm max-w-none ${preset.text}`} dir="auto" dangerouslySetInnerHTML={{ __html: sec.content }} />
+            <HtmlRenderer html={sec.content} className={`prose prose-sm max-w-none ${preset.text}`} />
           </div>
         );
       })}
@@ -334,10 +333,10 @@ export default function ExamResultPage() {
                       </div>
                     )}
                   </div>
-                  <h4 
+                  <HtmlRenderer 
+                    html={answer.question.text}
+                    tag="h4"
                     className="text-xl font-bold text-slate-800 mb-8 leading-relaxed"
-                    dir="auto"
-                    dangerouslySetInnerHTML={{ __html: answer.question.text }}
                   />
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">

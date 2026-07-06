@@ -307,7 +307,7 @@ function McqRenderer({ question, value, onChange, language }: any) {
   return (
     <div className={`space-y-4 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
       <div className="flex justify-between items-center mb-4 gap-4">
-        <h4 className="text-lg font-black text-slate-800 leading-snug">{translateText(question.title, language)}</h4>
+        <HtmlRenderer html={translateText(question.title, language)} tag="h4" className="text-lg font-black text-slate-800 leading-snug" />
         <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 text-amber-700 px-3 py-1.5 rounded-2xl font-black text-xs shrink-0 select-none shadow-sm animate-pulse">
           <Award className="w-4 h-4 text-amber-500" />
           <span>+10 XP</span>
@@ -327,7 +327,7 @@ function McqRenderer({ question, value, onChange, language }: any) {
                   : "bg-white border-slate-200 text-slate-700 hover:border-slate-350 hover:bg-slate-50/50"
               }`}
             >
-              <span className={`font-black text-base transition-colors ${isSelected ? "text-indigo-950" : "text-slate-700"}`}>{translateText(choice, language)}</span>
+              <HtmlRenderer html={translateText(choice, language)} tag="span" className={`font-black text-base transition-colors ${isSelected ? "text-indigo-950" : "text-slate-700"}`} />
               <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? "border-indigo-650 bg-indigo-650 text-white" : "border-slate-300 bg-white"}`}>
                 {isSelected && <span className="w-2.5 h-2.5 rounded-full bg-white" />}
               </div>
@@ -355,7 +355,7 @@ function TrueFalseRenderer({ question, value, onChange, language }: any) {
   return (
     <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
       <div className="flex justify-between items-center mb-4 gap-4">
-        <h4 className="text-lg font-black text-slate-800 leading-snug">{translateText(question.title, language)}</h4>
+        <HtmlRenderer html={translateText(question.title, language)} tag="h4" className="text-lg font-black text-slate-800 leading-snug" />
         <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 text-amber-700 px-3 py-1.5 rounded-2xl font-black text-xs shrink-0 select-none shadow-sm animate-pulse">
           <Award className="w-4 h-4 text-amber-500" />
           <span>+10 XP</span>
@@ -417,7 +417,7 @@ function MultiSelectRenderer({ question, value, onChange, language }: any) {
   return (
     <div className={`space-y-4 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
       <div className="flex justify-between items-center mb-4 gap-4">
-        <h4 className="text-lg font-black text-slate-800 leading-snug">{translateText(question.title, language)}</h4>
+        <HtmlRenderer html={translateText(question.title, language)} tag="h4" className="text-lg font-black text-slate-800 leading-snug" />
         <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 text-amber-700 px-3 py-1.5 rounded-2xl font-black text-xs shrink-0 select-none shadow-sm animate-pulse">
           <Award className="w-4 h-4 text-amber-500" />
           <span>+10 XP</span>
@@ -437,7 +437,7 @@ function MultiSelectRenderer({ question, value, onChange, language }: any) {
                   : "bg-white border-slate-200 text-slate-700 hover:border-slate-350 hover:bg-slate-50/50"
               }`}
             >
-              <span className={`font-black text-base transition-colors ${isSelected ? "text-indigo-950" : "text-slate-700"}`}>{translateText(choice, language)}</span>
+              <HtmlRenderer html={translateText(choice, language)} tag="span" className={`font-black text-base transition-colors ${isSelected ? "text-indigo-950" : "text-slate-700"}`} />
               <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${isSelected ? "border-indigo-650 bg-indigo-650 text-white" : "border-slate-300 bg-white"}`}>
                 {isSelected && <CheckCircle2 className="w-4 h-4 text-white" />}
               </div>

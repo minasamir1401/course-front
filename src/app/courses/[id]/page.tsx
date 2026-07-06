@@ -58,7 +58,10 @@ export default function CourseDetailsPage() {
 
           try {
             const cached = readCachedStudentStats();
-            const token = localStorage.getItem("lms_token");
+            const token = localStorage.getItem("lms_token") ||
+                          localStorage.getItem("school_admin_token") ||
+                          localStorage.getItem("super_admin_token") ||
+                          localStorage.getItem("token");
             const stats = cached || (token ? await fetchStudentStats(token) : null);
             const progresses = stats?.courseProgresses || [];
             const progressItem = progresses.find((p: any) =>

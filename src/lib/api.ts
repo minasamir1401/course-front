@@ -47,18 +47,22 @@ export const apiFetch = async (
 
       if (isTokenError) {
         const path = window.location.pathname;
-        if (path.startsWith('/super-admin')) {
-          localStorage.removeItem('super_admin_token');
-          localStorage.removeItem('super_admin_user');
-          if (!path.endsWith('/login')) window.location.replace('/super-admin/login');
-        } else if (path.startsWith('/school-admin')) {
-          localStorage.removeItem('school_admin_token');
-          localStorage.removeItem('school_admin_user');
-          if (!path.endsWith('/login')) window.location.replace('/school-admin/login');
-        } else {
-          localStorage.removeItem('lms_token');
-          localStorage.removeItem('lms_user');
-          if (!path.endsWith('/login')) window.location.replace('/login');
+        const isPreview = window.location.search.includes('preview=true');
+
+        if (!isPreview) {
+          if (path.startsWith('/super-admin')) {
+            localStorage.removeItem('super_admin_token');
+            localStorage.removeItem('super_admin_user');
+            if (!path.endsWith('/login')) window.location.replace('/super-admin/login');
+          } else if (path.startsWith('/school-admin')) {
+            localStorage.removeItem('school_admin_token');
+            localStorage.removeItem('school_admin_user');
+            if (!path.endsWith('/login')) window.location.replace('/school-admin/login');
+          } else {
+            localStorage.removeItem('lms_token');
+            localStorage.removeItem('lms_user');
+            if (!path.endsWith('/login')) window.location.replace('/login');
+          }
         }
       }
     } catch (_) { /* not JSON, ignore */ }

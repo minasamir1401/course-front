@@ -22,7 +22,10 @@ export default function CoursesPage() {
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-        const token = localStorage.getItem("lms_token");
+        const token = localStorage.getItem("lms_token") ||
+                      localStorage.getItem("school_admin_token") ||
+                      localStorage.getItem("super_admin_token") ||
+                      localStorage.getItem("token");
         if (!token) {
           router.push("/login");
           return;

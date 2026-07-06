@@ -51,6 +51,25 @@ export default function ActivitiesPage() {
   const [startTime, setStartTime] = useState<number>(0);
   const [hintsUsed, setHintsUsed] = useState<number>(0);
   const [attemptCount, setAttemptCount] = useState<number>(1);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!activeActivity || timeLeft === null || attemptResult !== null) return;
+    if (timeLeft <= 0) {
+      setAttemptResult({
+        isCorrect: false,
+        stars: 0,
+        score: 0,
+        timeExpired: true,
+        explanation: language === 'ar' ? "انتهى الوقت المحدد للإجابة على هذا السؤال! ⏰" : "Time allocated for this question has expired! ⏰"
+      });
+      return;
+    }
+    const timer = setTimeout(() => {
+      setTimeLeft(prev => (prev !== null && prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [activeActivity, timeLeft, attemptResult, language]);
   
   // Helper Modal States
   const [helperModal, setHelperModal] = useState<{ type: "hint" | "tip" | "keyInsight" | null; content: string }>({
@@ -145,6 +164,7 @@ export default function ActivitiesPage() {
         setHintsUsed(0);
         setAttemptCount(1);
         setAttemptResult(null);
+        setTimeLeft(activity.estimatedTime && Number(activity.estimatedTime) > 0 ? Number(activity.estimatedTime) : null);
       }
     } catch (err) {
       console.error("Error loading activity:", err);
@@ -210,12 +230,16 @@ export default function ActivitiesPage() {
     setCurrentAnswer("");
     setStartTime(Date.now());
     setAttemptCount(prev => prev + 1);
+    if (activeActivity?.estimatedTime && Number(activeActivity.estimatedTime) > 0) {
+      setTimeLeft(Number(activeActivity.estimatedTime));
+    }
   };
 
   // Close Game Player
   const closePlayer = () => {
     setActiveActivity(null);
     setAttemptResult(null);
+    setTimeLeft(null);
   };
 
   // Render Stars
@@ -676,9 +700,16 @@ export default function ActivitiesPage() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-black text-slate-500">
-                    <Clock className="w-4 h-4 text-indigo-400" />
-                    <span>{language === 'ar' ? `الزمن المقدر: ${activeActivity.estimatedTime} ثانية` : `Estimated: ${activeActivity.estimatedTime}s`}</span>
+                  <div className={`flex items-center gap-1.5 border px-3 py-1.5 rounded-xl text-xs font-black ${
+                    timeLeft !== null && timeLeft <= 10 ? 'bg-rose-50 border-rose-200 text-rose-600 animate-pulse' : 'bg-slate-50 border-slate-200 text-slate-500'
+                  }`}>
+                    <Clock className={`w-4 h-4 ${timeLeft !== null && timeLeft <= 10 ? 'text-rose-500' : 'text-indigo-400'}`} />
+                    <span>
+                      {timeLeft !== null 
+                        ? (language === 'ar' ? `المتبقي: ${Math.floor(timeLeft / 60)}:${(timeLeft % 60).toString().padStart(2, '0')}` : `Time: ${Math.floor(timeLeft / 60)}:${(timeLeft % 60).toString().padStart(2, '0')}`)
+                        : (language === 'ar' ? `الزمن المقدر: ${activeActivity.estimatedTime} ثانية` : `Estimated: ${activeActivity.estimatedTime}s`)
+                      }
+                    </span>
                   </div>
                   <button
                     onClick={closePlayer}
@@ -867,7 +898,9 @@ export default function ActivitiesPage() {
                       <h4 className={`text-2xl font-black ${
                         attemptResult.isCorrect ? "text-emerald-600" : "text-rose-600"
                       }`}>
-                        {attemptResult.isCorrect ? (
+                        {attemptResult.timeExpired ? (
+                          language === 'ar' ? "انتهى الوقت المحدد للسؤال! ⏰" : "Time's Up! ⏰"
+                        ) : attemptResult.isCorrect ? (
                           attemptResult.stars === 3 
                             ? (language === 'ar' ? "ممتاز! حل مثالي ورائع 🏆" : "Excellent! Perfect solution 🏆") 
                             : (language === 'ar' ? "أحسنت! إجابة صحيحة 🌟" : "Good job! Correct answer 🌟")
@@ -876,6 +909,35 @@ export default function ActivitiesPage() {
                         )}
                       </h4>
                     </div>
+
+                    {!attemptResult.isCorrect && attemptCount < 2 && !attemptResult.timeExpired && (
+                      <div className="bg-blue-50 border border-blue-100 p-4 rounded-2xl text-blue-900 font-bold text-sm">
+                        {language === 'ar' ? '💡 لديك محاولة أخيرة أخرى! فكر جيداً واستخدم التلميحات قبل الإجابة مجدداً.' : '💡 You have 1 final attempt remaining! Think carefully and check hints.'}
+                      </div>
+                    )}
+
+                    {/* Show Correct Answer & Explanation when failed after 2nd attempt or time expired */}
+                    {(!attemptResult.isCorrect && (attemptCount >= 2 || attemptResult.timeExpired)) && (
+                      <div className={`space-y-3 bg-amber-50/70 p-5 rounded-2xl border border-amber-200 text-sm ${language === 'ar' ? 'text-right' : 'text-left'} animate-in fade-in duration-300`}>
+                        <h5 className="font-black text-amber-900 flex items-center gap-1.5 text-base">
+                          <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                          {language === 'ar' ? 'الإجابة الصحيحة النموذجية:' : 'Correct Answer:'}
+                        </h5>
+                        <div className="bg-white p-3.5 rounded-xl border border-amber-100 font-black text-slate-800 text-base">
+                          {translateText(activeActivity?.correctAnswer)}
+                        </div>
+                        {(attemptResult.explanation || activeActivity?.explanation) && (
+                          <div className="pt-2 border-t border-amber-200/50">
+                            <span className="font-black text-amber-950 block mb-1">
+                              {language === 'ar' ? '💡 التفسير العلمي والخطوات:' : '💡 Scientific Explanation:'}
+                            </span>
+                            <p className="text-amber-900 leading-relaxed font-bold">
+                              {translateText(attemptResult.explanation || activeActivity?.explanation)}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Stats */}
                     <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100 text-slate-500 font-bold text-sm">
@@ -893,30 +955,44 @@ export default function ActivitiesPage() {
                       </div>
                     </div>
 
-                    {/* Explanation */}
-                    {attemptResult.explanation && (
+                    {/* Explanation when correct */}
+                    {attemptResult.isCorrect && (attemptResult.explanation || activeActivity?.explanation) && (
                       <div className={`space-y-2 bg-indigo-50/40 p-5 rounded-2xl border border-indigo-50 text-sm ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                         <h5 className="font-black text-indigo-950 flex items-center gap-1.5">
                           <Info className="w-4 h-4 text-indigo-650" />
                           {language === 'ar' ? 'شرح الحل والخطوات العلمية:' : 'Solution Explanation:'}
                         </h5>
-                        <p className="text-indigo-900 leading-relaxed font-medium">{translateText(attemptResult.explanation)}</p>
+                        <p className="text-indigo-900 leading-relaxed font-medium">{translateText(attemptResult.explanation || activeActivity?.explanation)}</p>
                       </div>
                     )}
 
                     {/* Footer Actions */}
-                    <div className="flex gap-4 pt-2">
-                      <button
-                        onClick={handleRetry}
-                        className="flex-1 py-4 rounded-2xl border-2 border-slate-200 hover:bg-slate-50 text-slate-700 font-black text-sm transition-all active:scale-95"
-                      >
-                        {language === 'ar' ? 'أعد المحاولة' : 'Try Again'}
-                      </button>
+                    <div className="flex flex-wrap gap-3 pt-2">
+                      {!attemptResult.isCorrect && attemptCount < 2 && !attemptResult.timeExpired && (
+                        <button
+                          onClick={handleRetry}
+                          className="flex-1 py-4 rounded-2xl border-2 border-slate-200 hover:bg-slate-50 text-slate-700 font-black text-sm transition-all active:scale-95 cursor-pointer"
+                        >
+                          {language === 'ar' ? 'أعد المحاولة 🔄' : 'Try Again 🔄'}
+                        </button>
+                      )}
+                      {hasNext && (
+                        <button
+                          onClick={() => {
+                            setAttemptResult(null);
+                            handleNextActivity();
+                          }}
+                          className="flex-1 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm shadow-lg shadow-emerald-100 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <span>{language === 'ar' ? 'السؤال التالي' : 'Next Question'}</span>
+                          {language === 'ar' ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+                        </button>
+                      )}
                       <button
                         onClick={closePlayer}
-                        className="flex-1 py-4 rounded-2xl bg-indigo-600 hover:bg-slate-900 text-white font-black text-sm shadow-lg shadow-indigo-100 transition-all active:scale-95"
+                        className="flex-1 py-4 rounded-2xl bg-indigo-600 hover:bg-slate-900 text-white font-black text-sm shadow-lg shadow-indigo-100 transition-all active:scale-95 cursor-pointer"
                       >
-                        {language === 'ar' ? 'إغلاق ومتابعة' : 'Close & Continue'}
+                        {hasNext ? (language === 'ar' ? 'إغلاق ومتابعة' : 'Close') : (language === 'ar' ? 'إنهاء التمارين' : 'Finish Exercises')}
                       </button>
                     </div>
                   </div>

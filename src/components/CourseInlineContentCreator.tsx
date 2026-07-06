@@ -105,7 +105,7 @@ export default function CourseInlineContentCreator({ courseId, type, language, o
 
   const addItem = () => {
     if (!currentItem.text.trim()) {
-      showToast(isQuiz ? "اكتب نص السؤال أولاً" : "اكتب وصف التكليف أولاً", "error");
+      showToast(isQuiz ? "يرجى كتابة نص السؤال أولاً (Question text is necessary) ⚠️" : "يرجى كتابة وصف التكليف أولاً ⚠️", "error");
       return;
     }
 
@@ -114,12 +114,12 @@ export default function CourseInlineContentCreator({ courseId, type, language, o
       const hasCorrectAnswer = currentItem.type === "MULTI_SELECT" ? currentItem.correctAnswers.length > 0 : Boolean(currentItem.correctAnswer);
 
       if (options.length < 2) {
-        showToast("أضف اختيارين على الأقل", "error");
+        showToast("يرجى إضافة خيارين على الأقل لهذا السؤال ⚠️", "error");
         return;
       }
 
       if (!hasCorrectAnswer) {
-        showToast("حدد الإجابة الصحيحة", "error");
+        showToast("يرجى تحديد الإجابة الصحيحة بالضغط على علامة الصح بجانب الخيار الصحيح ⚠️", "error");
         return;
       }
     }
@@ -130,17 +130,17 @@ export default function CourseInlineContentCreator({ courseId, type, language, o
 
     setItems([...items, itemToSave]);
     setCurrentItem(createEmptyItem(type));
-    showToast(isQuiz ? "تمت إضافة السؤال" : "تمت إضافة بند التكليف", "success");
+    showToast(isQuiz ? "تمت إضافة السؤال بنجاح ✅" : "تمت إضافة بند التكليف بنجاح ✅", "success");
   };
 
   const saveContent = async () => {
     if (!info.title.trim()) {
-      showToast(isQuiz ? "عنوان الاختبار مطلوب" : "عنوان التكليف مطلوب", "error");
+      showToast(isQuiz ? "يرجى كتابة عنوان الاختبار أولاً (Title is required) ⚠️" : "يرجى كتابة عنوان التكليف أولاً ⚠️", "error");
       return;
     }
 
     if (items.length === 0) {
-      showToast(isQuiz ? "أضف سؤالاً واحداً على الأقل" : "أضف بنداً واحداً على الأقل", "error");
+      showToast(isQuiz ? "يرجى إضافة سؤال واحد على الأقل قبل الحفظ ⚠️" : "يرجى إضافة بند تكليف واحد على الأقل قبل الحفظ ⚠️", "error");
       return;
     }
 

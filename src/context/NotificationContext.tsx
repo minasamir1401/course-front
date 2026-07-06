@@ -28,8 +28,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   } | null>(null);
 
   const [isOnline, setIsOnline] = useState(true);
-  const [isSessionValid, setIsSessionValid] = useState(true);
-  const [sessionErrorType, setSessionErrorType] = useState<'expired' | 'missing' | null>(null);
 
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -60,59 +58,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   };
 
-  const checkSession = useCallback((pathname: string) => {
-    if (typeof window === 'undefined') return { valid: true, type: null };
-    
-    if (pathname.endsWith('/login') || pathname === '/login') {
-      return { valid: true, type: null };
-    }
-    
-    if (pathname.startsWith('/super-admin')) {
-      const token = localStorage.getItem('super_admin_token');
-      if (!token) {
-        return { valid: false, type: 'missing' as const };
-      }
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        if (payload.exp && payload.exp * 1000 < Date.now()) {
-          return { valid: false, type: 'expired' as const };
-        }
-      } catch (_) {
-        return { valid: false, type: 'expired' as const };
-      }
-    } else if (pathname.startsWith('/school-admin')) {
-      const token = localStorage.getItem('school_admin_token');
-      if (!token) {
-        return { valid: false, type: 'missing' as const };
-      }
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        if (payload.exp && payload.exp * 1000 < Date.now()) {
-          return { valid: false, type: 'expired' as const };
-        }
-      } catch (_) {
-        return { valid: false, type: 'expired' as const };
-      }
-    } else {
-      const authenticatedRoutes = ['/courses', '/exams', '/profile', '/assignments', '/calendar', '/lessons', '/activities'];
-      const isAuthRoute = authenticatedRoutes.some(route => pathname.startsWith(route));
-      if (isAuthRoute) {
-        const token = localStorage.getItem('lms_token');
-        if (!token) {
-          return { valid: false, type: 'missing' as const };
-        }
-        try {
-          const payload = JSON.parse(atob(token.split('.')[1]));
-          if (payload.exp && payload.exp * 1000 < Date.now()) {
-            return { valid: false, type: 'expired' as const };
-          }
-        } catch (_) {
-          return { valid: false, type: 'expired' as const };
-        }
-      }
-    }
-    return { valid: true, type: null };
-  }, []);
+
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -148,18 +94,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           : 'تنبيه: أنت غير متصل بالإنترنت حالياً. قد لا يتم حفظ تعديلاتك.',
         'error'
       );
-    } else {
-      const session = checkSession(path);
-      setIsSessionValid(session.valid);
-      setSessionErrorType(session.type);
-      if (!session.valid) {
-        showToast(
-          localStorage.getItem('language') === 'en'
-            ? 'Warning: Your session has expired or is invalid. Please log in.'
-            : 'تنبيه: الجلسة منتهية الصلاحية أو غير صالحة. يرجى تسجيل الدخول.',
-          'error'
-        );
-      }
     }
 
     const originalFetch = window.fetch;
@@ -179,20 +113,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         throw new TypeError('Failed to fetch (offline)');
       }
 
-      if (isMutation && isApiCall && !urlStr.includes('/login')) {
-        const currentSession = checkSession(window.location.pathname);
-        if (!currentSession.valid) {
-          setIsSessionValid(false);
-          setSessionErrorType(currentSession.type);
-          showToast(
-            localStorage.getItem('language') === 'en'
-              ? 'Blocked: Session expired or invalid. Please login.'
-              : 'تم حظر الإرسال: الجلسة منتهية أو غير صالحة. يرجى تسجيل الدخول.',
-            'error'
-          );
-          throw new TypeError('Failed to fetch (session expired)');
-        }
-      }
+
 
       try {
         const response = await originalFetch(input, init);
@@ -246,12 +167,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       window.removeEventListener('offline', handleOffline);
       window.fetch = originalFetch;
     };
-  }, [checkSession, showToast]);
+  }, [showToast]);
 
   return (
     <NotificationContext.Provider value={{ showToast, confirm }}>
       {/* Sticky Top Warning Banner (يافطة) */}
-      {(!isOnline || !isSessionValid) && (
+      {!isOnline && (
         <div className="fixed top-0 left-0 right-0 z-[10001] bg-gradient-to-r from-amber-600/95 via-rose-600/95 to-amber-600/95 backdrop-blur-md text-white shadow-lg border-b border-white/10 animate-in slide-in-from-top duration-300">
           <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4 text-right" dir="rtl">
             <div className="flex items-center gap-3">
@@ -261,39 +182,22 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
               </span>
               <AlertCircle className="w-5 h-5 flex-shrink-0 animate-bounce" />
               <p className="font-bold text-sm md:text-base leading-relaxed">
-                {!isOnline ? (
-                  localStorage.getItem('language') === 'en'
+                {localStorage.getItem('language') === 'en'
                     ? 'Offline Mode: You are not connected to the internet. Please check connection to prevent losing your progress.'
                     : 'وضع عدم الاتصال: أنت غير متصل بالإنترنت حالياً. يرجى التأكد من الاتصال لتفادي فقدان التعديلات.'
-                ) : (
-                  localStorage.getItem('language') === 'en'
-                    ? 'Session Expired: Your session is invalid or has expired. Please log in in another tab to keep your progress.'
-                    : 'انتهت الجلسة: الجلسة غير صالحة أو انتهت صلاحيتها. يرجى تسجيل الدخول في نافذة أخرى لحفظ عملك الحالي.'
-                )}
+                }
               </p>
             </div>
-            {!isOnline && (
-              <button 
-                onClick={() => {
-                  if (typeof window !== 'undefined') {
-                    setIsOnline(navigator.onLine);
-                  }
-                }}
-                className="px-4 py-1.5 bg-white/15 hover:bg-white/25 rounded-xl text-xs font-black transition-all border border-white/10"
-              >
-                {localStorage.getItem('language') === 'en' ? 'Retry Connection' : 'إعادة محاولة الاتصال'}
-              </button>
-            )}
-            {isOnline && !isSessionValid && (
-              <a 
-                href={typeof window !== 'undefined' && window.location.pathname.startsWith('/super-admin') ? '/super-admin/login' : (typeof window !== 'undefined' && window.location.pathname.startsWith('/school-admin') ? '/school-admin/login' : '/login')}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-4 py-1.5 bg-white text-rose-600 hover:bg-white/95 rounded-xl text-xs font-black transition-all shadow-md"
-              >
-                {localStorage.getItem('language') === 'en' ? 'Login Now' : 'تسجيل الدخول الآن'}
-              </a>
-            )}
+            <button 
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  setIsOnline(navigator.onLine);
+                }
+              }}
+              className="px-4 py-1.5 bg-white/15 hover:bg-white/25 rounded-xl text-xs font-black transition-all border border-white/10"
+            >
+              {localStorage.getItem('language') === 'en' ? 'Retry Connection' : 'إعادة محاولة الاتصال'}
+            </button>
           </div>
         </div>
       )}

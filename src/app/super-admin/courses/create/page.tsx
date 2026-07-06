@@ -3274,18 +3274,49 @@ export default function CreateCoursePage() {
                                   <option value="XLS">XLS</option>
                                   <option value="IMAGE">IMAGE</option>
                                 </select>
-                                <input 
-                                  type="text"
-                                  value={att.url}
-                                  onChange={(e) => {
-                                    const atts = [...currentLesson.attachments];
-                                    atts[attIdx].url = e.target.value;
-                                    setCurrentLesson({...currentLesson, attachments: atts});
-                                  }}
-                                  className="flex-1 bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 text-xs outline-none text-left font-mono focus:border-indigo-600"
-                                  placeholder={t('courseCreate.externalUrl') || "External File URL (URL)"}
-                                  dir="ltr"
-                                />
+                                <div className="flex-1 flex items-center gap-2">
+                                  <input 
+                                    type="text"
+                                    value={att.url}
+                                    onChange={(e) => {
+                                      const atts = [...currentLesson.attachments];
+                                      atts[attIdx].url = e.target.value;
+                                      setCurrentLesson({...currentLesson, attachments: atts});
+                                    }}
+                                    className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 text-xs outline-none text-left font-mono focus:border-indigo-600"
+                                    placeholder={t('courseCreate.externalUrl') || "External File URL (URL)"}
+                                    dir="ltr"
+                                  />
+                                  <label className="p-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl cursor-pointer transition-all flex items-center justify-center shrink-0 shadow-sm border border-indigo-200" title={language === 'ar' ? "رفع ملف (PDF, PPT, DOC...)" : "Upload File"}>
+                                    <Upload className="w-4 h-4" />
+                                    <input 
+                                      type="file" 
+                                      className="hidden" 
+                                      accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,image/*" 
+                                      onChange={async (e: any) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                          try {
+                                            const { uploadFileToServer } = await import("@/lib/image-utils");
+                                            const url = await uploadFileToServer(file);
+                                            const atts = [...currentLesson.attachments];
+                                            atts[attIdx].url = url;
+                                            if (!atts[attIdx].name) atts[attIdx].name = file.name;
+                                            if (file.name.toLowerCase().endsWith('.pdf')) atts[attIdx].type = 'PDF';
+                                            else if (file.name.match(/\.(ppt|pptx)$/i)) atts[attIdx].type = 'PPT';
+                                            else if (file.name.match(/\.(doc|docx)$/i)) atts[attIdx].type = 'DOC';
+                                            else if (file.name.match(/\.(xls|xlsx)$/i)) atts[attIdx].type = 'XLS';
+                                            else if (file.type.startsWith('image/')) atts[attIdx].type = 'IMAGE';
+                                            setCurrentLesson({...currentLesson, attachments: atts});
+                                            showToast(language === 'ar' ? "تم رفع الملف بنجاح ✅" : "File uploaded successfully ✅", "success");
+                                          } catch (error) {
+                                            showToast(language === 'ar' ? "فشل رفع الملف ❌" : "File upload failed ❌", "error");
+                                          }
+                                        }
+                                      }} 
+                                    />
+                                  </label>
+                                </div>
                               </div>
                             </div>
                           </div>

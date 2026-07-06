@@ -461,10 +461,10 @@ export default function TakeExamPage() {
               )}
             </div>
             </div>
-            <h2 
+            <HtmlRenderer 
+              html={sanitizeHtml(question.text)}
+              tag="h2"
               className="text-2xl font-bold text-slate-800 mb-8 leading-relaxed animate-in fade-in duration-500"
-              dir="auto"
-              dangerouslySetInnerHTML={{ __html: sanitizeHtml(question.text) }}
             />
             {question.imageUrl && (
               <img
@@ -550,7 +550,7 @@ export default function TakeExamPage() {
                           <Icon className="w-5 h-5 animate-bounce-slow shrink-0" />
                           <span>{preset.label}</span>
                         </div>
-                        <div className={`prose prose-sm max-w-none ${preset.text}`} dir="auto" dangerouslySetInnerHTML={{ __html: sanitizeHtml(sec.content) }} />
+                        <HtmlRenderer html={sanitizeHtml(sec.content)} className={`prose prose-sm max-w-none ${preset.text}`} />
                       </div>
                     );
                   })}

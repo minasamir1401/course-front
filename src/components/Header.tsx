@@ -74,8 +74,10 @@ export default function Header({
         token = localStorage.getItem("lms_token") || "";
       }
 
+      const isPreview = window.location.search.includes('preview=true');
+
       if (!token) {
-        if (!path.endsWith("/login") && path !== "/login" && path !== "/") {
+        if (!path.endsWith("/login") && path !== "/login" && path !== "/" && !isPreview) {
           setIsSessionValid(false);
         } else {
           setIsSessionValid(true);
@@ -85,7 +87,7 @@ export default function Header({
 
       try {
         const payload = JSON.parse(atob(token.split(".")[1]));
-        if (payload.exp && payload.exp * 1000 < Date.now()) {
+        if (payload.exp && payload.exp * 1000 < Date.now() && !isPreview) {
           setIsSessionValid(false);
         } else {
           setIsSessionValid(true);

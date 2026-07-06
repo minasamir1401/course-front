@@ -64,6 +64,8 @@ export default function EditSchoolSkillClusterPage() {
     content: ""
   });
   const [previewActivitiesList, setPreviewActivitiesList] = useState<any[]>([]);
+  const [previewTimeLeft, setPreviewTimeLeft] = useState<number | null>(null);
+  const [previewIsLoading, setPreviewIsLoading] = useState<boolean>(false);
 
   const [mounted, setMounted] = useState(false);
 
@@ -296,8 +298,8 @@ export default function EditSchoolSkillClusterPage() {
   };
 
   const handleSaveLesson = async () => {
-    if (!editingLesson.name) {
-      showToast(language === 'ar' ? "اسم الدرس مطلوب" : "Lesson name required", "error");
+    if (!editingLesson.name || !editingLesson.name.trim()) {
+      showToast(language === 'ar' ? "يرجى كتابة اسم الدرس أو المهارة الفرعية أولاً ⚠️" : "Lesson name required ⚠️", "error");
       return;
     }
     
@@ -325,14 +327,16 @@ export default function EditSchoolSkillClusterPage() {
       });
       
       if (res.ok) {
-        showToast(language === 'ar' ? "تم حفظ الدرس بنجاح" : "Lesson saved successfully", "success");
+        showToast(language === 'ar' ? "تم حفظ الدرس بنجاح ✅" : "Lesson saved successfully ✅", "success");
         setIsLessonModalOpen(false);
         fetchLessons();
       } else {
-        throw new Error("Save failed");
+        const errData = await res.json().catch(() => ({}));
+        const errMsg = errData.error || errData.message || (language === 'ar' ? "فشل حفظ الدرس، يرجى التأكد من البيانات المدخلة" : "Save failed, please check inputs");
+        showToast(errMsg, "error");
       }
-    } catch (e) {
-      showToast(language === 'ar' ? "خطأ في حفظ الدرس" : "Error saving lesson", "error");
+    } catch (e: any) {
+      showToast(e.message || (language === 'ar' ? "خطأ في الاتصال بالخادم عند حفظ الدرس" : "Error saving lesson"), "error");
     }
   };
 
@@ -418,9 +422,47 @@ export default function EditSchoolSkillClusterPage() {
   };
 
   const handleSaveActivity = async () => {
-    if (!editingActivity.title || !editingActivity.type) {
-      showToast(language === 'ar' ? "عنوان السؤال ونوعه مطلوبان" : "Title and type are required", "error");
+    if (!editingActivity.title || !editingActivity.title.trim()) {
+      showToast(language === 'ar' ? "يرجى كتابة عنوان السؤال أولاً (Question title is necessary) ⚠️" : "Question title is necessary ⚠️", "error");
       return;
+    }
+    if (!editingActivity.type) {
+      showToast(language === 'ar' ? "يرجى تحديد نوع السؤال أولاً ⚠️" : "Please select question type ⚠️", "error");
+      return;
+    }
+    
+    // ✅ التحقق التوجيهي الذكي حسب نوع السؤال كما طلب المعلمون
+    if (editingActivity.type === "MCQ") {
+      const choices = editingActivity.options?.choices || [];
+      if (!Array.isArray(choices) || choices.filter((c: string) => c && c.trim()).length < 2) {
+        showToast(language === 'ar' ? "يرجى إضافة خيارين على الأقل لسؤال الاختيار من متعدد ⚠️" : "Please add at least 2 choices for MCQ ⚠️", "error");
+        return;
+      }
+      if (editingActivity.correctAnswer === undefined || editingActivity.correctAnswer === null || editingActivity.correctAnswer === "") {
+        showToast(language === 'ar' ? "يرجى تحديد الإجابة الصحيحة لسؤال الاختيار من متعدد (MCQ) ⚠️" : "Please select the correct answer for MCQ ⚠️", "error");
+        return;
+      }
+    } else if (editingActivity.type === "TRUE_FALSE") {
+      if (!editingActivity.correctAnswer && editingActivity.correctAnswer !== "TRUE" && editingActivity.correctAnswer !== "FALSE" && editingActivity.correctAnswer !== "صح" && editingActivity.correctAnswer !== "خطأ") {
+        showToast(language === 'ar' ? "يرجى تحديد الإجابة الصحيحة (صح أم خطأ) ⚠️" : "Please select True or False ⚠️", "error");
+        return;
+      }
+    } else if (editingActivity.type === "MULTI_SELECT") {
+      const choices = Array.isArray(editingActivity.options) ? editingActivity.options : (editingActivity.options?.choices || []);
+      if (!Array.isArray(choices) || choices.filter((c: string) => c && c.trim()).length < 2) {
+        showToast(language === 'ar' ? "يرجى إضافة خيارين على الأقل للاختيارات المتعددة ⚠️" : "Please add at least 2 options ⚠️", "error");
+        return;
+      }
+      const correctArr = Array.isArray(editingActivity.correctAnswer) ? editingActivity.correctAnswer : [];
+      if (correctArr.length === 0) {
+        showToast(language === 'ar' ? "يرجى تحديد إجابة صحيحة واحدة على الأقل في الاختيارات المتعددة ⚠️" : "Please select at least one correct answer ⚠️", "error");
+        return;
+      }
+    } else if (["MATCHING", "DRAG_DROP_FILL", "GROUP_SORTING"].includes(editingActivity.type)) {
+      if (!editingActivity.correctAnswer || (Array.isArray(editingActivity.correctAnswer) && editingActivity.correctAnswer.length === 0)) {
+        showToast(language === 'ar' ? "يرجى إكمال تحديد الإجابات النموذجية وعناصر الربط لهذا السؤال ⚠️" : "Please complete setting up correct answers/pairs ⚠️", "error");
+        return;
+      }
     }
     
     try {
@@ -439,14 +481,16 @@ export default function EditSchoolSkillClusterPage() {
       });
       
       if (res.ok) {
-        showToast(language === 'ar' ? "تم حفظ النشاط بنجاح" : "Activity saved successfully", "success");
+        showToast(language === 'ar' ? "تم حفظ النشاط بنجاح ✅" : "Activity saved successfully ✅", "success");
         setIsActivityModalOpen(false);
         fetchActivities(editingActivity.lessonId);
       } else {
-        throw new Error("Save failed");
+        const errData = await res.json().catch(() => ({}));
+        const errMsg = errData.error || errData.message || (language === 'ar' ? "فشل حفظ النشاط، يرجى التأكد من اكتمال جميع الحقول المطلوبة ⚠️" : "Failed to save activity, check required fields ⚠️");
+        showToast(errMsg, "error");
       }
-    } catch (e) {
-      showToast(language === 'ar' ? "خطأ في حفظ النشاط" : "Error saving activity", "error");
+    } catch (e: any) {
+      showToast(e.message || (language === 'ar' ? "خطأ في الاتصال بالخادم أثناء حفظ النشاط ⚠️" : "Error saving activity ⚠️"), "error");
     }
   };
 
@@ -700,7 +744,11 @@ export default function EditSchoolSkillClusterPage() {
     const token = localStorage.getItem("school_admin_token");
     if (!token) return;
     try {
-      setIsLoading(true);
+      if (!previewActivity) {
+        setIsLoading(true);
+      } else {
+        setPreviewIsLoading(true);
+      }
       const res = await fetch(`${API_URL}/skills-hub/activities/${act.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -712,6 +760,7 @@ export default function EditSchoolSkillClusterPage() {
         setPreviewHintsUsed(0);
         setPreviewAttemptCount(1);
         setPreviewResult(null);
+        setPreviewTimeLeft(activity?.estimatedTime && Number(activity.estimatedTime) > 0 ? Number(activity.estimatedTime) : null);
         if (activitiesList) {
           setPreviewActivitiesList(activitiesList);
         } else {
@@ -723,6 +772,7 @@ export default function EditSchoolSkillClusterPage() {
       console.error("Error loading activity for preview:", err);
     } finally {
       setIsLoading(false);
+      setPreviewIsLoading(false);
     }
   };
 
@@ -810,7 +860,26 @@ export default function EditSchoolSkillClusterPage() {
     setPreviewAnswer("");
     setPreviewStartTime(Date.now());
     setPreviewAttemptCount(prev => prev + 1);
+    setPreviewTimeLeft(previewActivity?.estimatedTime && Number(previewActivity.estimatedTime) > 0 ? Number(previewActivity.estimatedTime) : null);
   };
+
+  useEffect(() => {
+    if (!previewActivity || previewTimeLeft === null || previewResult !== null || previewIsLoading) return;
+    if (previewTimeLeft <= 0) {
+      setPreviewResult({
+        isCorrect: false,
+        stars: 0,
+        score: 0,
+        timeExpired: true,
+        explanation: language === 'ar' ? "انتهى الوقت المحدد للإجابة على هذا السؤال! ⏰" : "Time allocated for this question has expired! ⏰"
+      });
+      return;
+    }
+    const timer = setTimeout(() => {
+      setPreviewTimeLeft(prev => (prev !== null && prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [previewActivity, previewTimeLeft, previewResult, previewIsLoading, language]);
 
   if (isLoading) {
     return (
@@ -1534,9 +1603,15 @@ export default function EditSchoolSkillClusterPage() {
               </div>
               
               <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1 bg-slate-50 text-slate-600 px-3 py-1.5 rounded-xl border border-slate-150 text-xs font-black">
-                  <Clock className="w-4 h-4 text-indigo-600" />
-                  <span>{language === 'ar' ? `الزمن المقدر: ${previewActivity.estimatedTime} ثانية` : `Estimated: ${previewActivity.estimatedTime}s`}</span>
+                <div className={`flex items-center gap-1 px-3 py-1.5 rounded-xl border text-xs font-black transition-all ${
+                  previewTimeLeft !== null && previewTimeLeft <= 10 ? 'bg-rose-50 border-rose-200 text-rose-600 animate-pulse' : 'bg-slate-50 border-slate-150 text-slate-600'
+                }`}>
+                  <Clock className={`w-4 h-4 ${previewTimeLeft !== null && previewTimeLeft <= 10 ? 'text-rose-500' : 'text-indigo-600'}`} />
+                  <span>
+                    {previewTimeLeft !== null
+                      ? (language === 'ar' ? `المتبقي: ${Math.floor(previewTimeLeft / 60)}:${(previewTimeLeft % 60).toString().padStart(2, '0')}` : `Time: ${Math.floor(previewTimeLeft / 60)}:${(previewTimeLeft % 60).toString().padStart(2, '0')}`)
+                      : (language === 'ar' ? `الزمن المقدر: ${previewActivity.estimatedTime} ثانية` : `Estimated: ${previewActivity.estimatedTime}s`)}
+                  </span>
                 </div>
                 <button
                   onClick={() => setPreviewActivity(null)}
@@ -1548,7 +1623,12 @@ export default function EditSchoolSkillClusterPage() {
             </div>
 
             {/* Game Player Body */}
-            <div className="flex-1 md:overflow-y-auto p-4 md:p-8 flex flex-col lg:flex-row gap-8">
+            {previewIsLoading ? (
+              <div className="flex-1 flex items-center justify-center min-h-[400px]">
+                <div className="animate-spin w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full"></div>
+              </div>
+            ) : (
+              <div className="flex-1 md:overflow-y-auto p-4 md:p-8 flex flex-col lg:flex-row gap-8">
               
               {/* Right: Helpers Panel */}
               <div className="w-full lg:w-64 space-y-4 shrink-0">
@@ -1686,6 +1766,7 @@ export default function EditSchoolSkillClusterPage() {
                 </div>
               </div>
             </div>
+            )}
 
             {/* PREVIEW ATTEMPT RESULT POPUP MODAL (Inside Player) */}
             {previewResult && (
@@ -1715,9 +1796,24 @@ export default function EditSchoolSkillClusterPage() {
                           ? (language === 'ar' ? "رائع! إجابة صحيحة ⭐⭐" : "Great! Correct ⭐⭐")
                           : (language === 'ar' ? "جيد! تم الحل ⭐" : "Good! Solved ⭐")
                       ) : (
-                        (language === 'ar' ? "حاول مرة أخرى! ❌" : "Try again! ❌")
+                        previewResult.timeExpired
+                          ? (language === 'ar' ? "انتهى الوقت! ⏰" : "Time Expired! ⏰")
+                          : (language === 'ar' ? "حاول مرة أخرى! ❌" : "Try again! ❌")
                       )}
                     </h4>
+
+                    {/* Show Correct Answer & Explanation when failed in preview */}
+                    {!previewResult.isCorrect && (
+                      <div className={`space-y-3 bg-amber-50/70 p-5 rounded-2xl border border-amber-200 text-sm ${language === 'ar' ? 'text-right' : 'text-left'} animate-in fade-in duration-300`}>
+                        <h5 className="font-black text-amber-900 flex items-center gap-1.5 text-base">
+                          <CheckCircle className="w-5 h-5 text-emerald-600" />
+                          {language === 'ar' ? 'الإجابة الصحيحة النموذجية:' : 'Correct Answer:'}
+                        </h5>
+                        <div className="bg-white p-3.5 rounded-xl border border-amber-100 font-black text-slate-800 text-base">
+                          {translateText(previewActivity?.correctAnswer, language)}
+                        </div>
+                      </div>
+                    )}
 
                     {previewResult.explanation && (
                       <div className="bg-slate-50 p-4 rounded-2xl border border-slate-150 text-slate-600 text-sm font-bold text-start space-y-1">
@@ -1727,13 +1823,25 @@ export default function EditSchoolSkillClusterPage() {
                     )}
                   </div>
 
-                  <div className="flex justify-center gap-3">
+                  <div className="flex flex-wrap justify-center gap-3">
                     {!previewResult.isCorrect && (
                       <button
                         onClick={handlePreviewRetry}
                         className="px-8 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-black text-sm transition-all active:scale-95 shadow-md shadow-amber-500/20 cursor-pointer"
                       >
-                        {language === 'ar' ? "حاول مجدداً" : "Retry"}
+                        {language === 'ar' ? "حاول مجدداً 🔄" : "Retry 🔄"}
+                      </button>
+                    )}
+                    {hasPreviewNext && (
+                      <button
+                        onClick={() => {
+                          setPreviewResult(null);
+                          handlePreviewNext();
+                        }}
+                        className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-sm transition-all active:scale-95 shadow-lg shadow-emerald-500/20 cursor-pointer flex items-center gap-2"
+                      >
+                        <span>{language === 'ar' ? "السابق / السؤال التالي" : "Next Question"}</span>
+                        {language === 'ar' ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
                       </button>
                     )}
                     <button
@@ -1743,7 +1851,7 @@ export default function EditSchoolSkillClusterPage() {
                       }}
                       className="px-8 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-sm transition-all active:scale-95 shadow-lg shadow-slate-900/10 cursor-pointer"
                     >
-                      {language === 'ar' ? "إغلاق نافذة المعاينة" : "Close Workspace"}
+                      {hasPreviewNext ? (language === 'ar' ? "إغلاق المعاينة" : "Close Preview") : (language === 'ar' ? "إنهاء المعاينة" : "Finish Preview")}
                     </button>
                   </div>
 

@@ -645,6 +645,9 @@ function MatchingEditor({ question, updateQuestionData, language }: { question: 
                 <span className="font-black text-slate-800 truncate">{leftKey}</span>
                 <span className="text-indigo-500 font-bold text-[10px] shrink-0">↔</span>
                 <span className="font-bold text-slate-600 truncate">{correctMap[leftKey]}</span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-black text-[10px] border border-emerald-200 shrink-0">
+                  ✅ {language === 'ar' ? "مطابق صحيح" : "Correct Match"}
+                </span>
               </div>
               <button
                 type="button"
@@ -961,7 +964,12 @@ function GroupSortingEditor({ question, updateQuestionData, language }: { questi
               return (
                 <div key={grp} className={`rounded-2xl border-2 p-4 flex flex-col min-h-[140px] shadow-sm ${color.bg}`}>
                   <div className="flex justify-between items-center border-b border-black/5 pb-2 mb-3 shrink-0">
-                    <span className="font-black text-sm">{grp}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-black text-sm">{grp}</span>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-black text-[10px] shadow-xs">
+                        ✅ {language === 'ar' ? "تصنيف صحيح" : "Correct Category"}
+                      </span>
+                    </div>
                     <button
                       type="button"
                       onClick={() => removeGroup(grp)}
@@ -976,8 +984,11 @@ function GroupSortingEditor({ question, updateQuestionData, language }: { questi
                       <span className="text-[10px] font-bold text-slate-400/80 italic block text-center py-4">{language === 'ar' ? "مجموعة فارغة. أضف بطاقات." : "Empty group. Add items."}</span>
                     ) : (
                       grpItems.map((item: any) => (
-                        <div key={item} className="bg-white/80 border border-slate-150 p-2 rounded-xl flex justify-between items-center text-xs shadow-sm">
-                          <span className="font-bold text-slate-800 truncate">{item}</span>
+                        <div key={item} className="bg-white/90 border border-emerald-300 p-2 rounded-xl flex justify-between items-center text-xs shadow-sm">
+                          <div className="flex items-center gap-1.5 truncate">
+                            <span className="text-emerald-600 font-black">✔</span>
+                            <span className="font-bold text-slate-800 truncate">{item}</span>
+                          </div>
                           <button
                             type="button"
                             onClick={() => removeItem(item)}
@@ -1618,26 +1629,42 @@ function SwipeSortEditor({ question, updateQuestionData, language }: { question:
           <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">البطاقات المضافة وتصنيفاتها:</h6>
           <div className="flex flex-col gap-3">
             <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-150 space-y-2">
-              <span className="text-[10px] font-black text-rose-500 uppercase">{leftGroup} (←)</span>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black text-rose-500 uppercase">{leftGroup} (←)</span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-black text-[9px] border border-emerald-200">
+                  ✅ {language === 'ar' ? "فرز يسار صحيح" : "Correct Left Sort"}
+                </span>
+              </div>
               <div className="space-y-1">
                 {items
                   .filter((item: string) => correctMap[item] === "left")
                   .map((item: string) => (
-                    <div key={item} className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-100 text-xs font-bold gap-2">
-                      <span className="truncate">{item}</span>
+                    <div key={item} className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-emerald-200 text-xs font-bold gap-2 shadow-2xs">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <span className="text-emerald-600 font-black">✔</span>
+                        <span className="truncate">{item}</span>
+                      </div>
                       <button type="button" onClick={() => removeCard(item)} className="text-rose-500 hover:text-rose-700 cursor-pointer shrink-0">×</button>
                     </div>
                   ))}
               </div>
             </div>
             <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-150 space-y-2">
-              <span className="text-[10px] font-black text-emerald-500 uppercase">{rightGroup} (→)</span>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black text-emerald-500 uppercase">{rightGroup} (→)</span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-black text-[9px] border border-emerald-200">
+                  ✅ {language === 'ar' ? "فرز يمين صحيح" : "Correct Right Sort"}
+                </span>
+              </div>
               <div className="space-y-1">
                 {items
                   .filter((item: string) => correctMap[item] === "right")
                   .map((item: string) => (
-                    <div key={item} className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-100 text-xs font-bold gap-2">
-                      <span className="truncate">{item}</span>
+                    <div key={item} className="flex justify-between items-center bg-white p-2.5 rounded-xl border border-emerald-200 text-xs font-bold gap-2 shadow-2xs">
+                      <div className="flex items-center gap-1.5 truncate">
+                        <span className="text-emerald-600 font-black">✔</span>
+                        <span className="truncate">{item}</span>
+                      </div>
                       <button type="button" onClick={() => removeCard(item)} className="text-rose-500 hover:text-rose-700 cursor-pointer shrink-0">×</button>
                     </div>
                   ))}
@@ -2347,9 +2374,15 @@ function SequenceOrderEditor({ question, updateQuestionData, language }: { quest
 
       <div className="space-y-2 max-h-40 overflow-y-auto">
         {items.map((item: string, idx: number) => (
-          <div key={idx} className="p-2.5 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center text-xs gap-2 min-w-0">
-            <span className="font-bold text-slate-700 truncate min-w-0">{idx + 1}. {item}</span>
-            <button type="button" onClick={() => removeItem(idx)} className="text-rose-500 hover:text-rose-700">
+          <div key={idx} className="p-2.5 bg-white rounded-xl border border-emerald-200 flex justify-between items-center text-xs gap-2 min-w-0 shadow-2xs">
+            <div className="flex items-center gap-2 truncate min-w-0">
+              <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 font-black flex items-center justify-center shrink-0 text-[10px]">{idx + 1}</span>
+              <span className="font-bold text-slate-800 truncate min-w-0">{item}</span>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-black text-[9px] border border-emerald-200 shrink-0">
+                ✅ {language === 'ar' ? `الترتيب ${idx + 1} الصحيح` : `Correct Step ${idx + 1}`}
+              </span>
+            </div>
+            <button type="button" onClick={() => removeItem(idx)} className="text-rose-500 hover:text-rose-700 shrink-0">
               <Trash2 className="w-4 h-4" />
             </button>
           </div>

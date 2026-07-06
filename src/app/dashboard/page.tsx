@@ -33,8 +33,14 @@ export default function StudentDashboard() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const token = localStorage.getItem("lms_token");
-        const userStr = localStorage.getItem("lms_user");
+        const token = localStorage.getItem("lms_token") || 
+                      localStorage.getItem("school_admin_token") || 
+                      localStorage.getItem("super_admin_token") || 
+                      localStorage.getItem("token");
+        const userStr = localStorage.getItem("lms_user") || 
+                        localStorage.getItem("school_admin_user") || 
+                        localStorage.getItem("super_admin_user") || 
+                        localStorage.getItem("user");
         if (!token || !userStr) {
           router.push("/login");
           return;
