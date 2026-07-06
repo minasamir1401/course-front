@@ -306,7 +306,13 @@ function McqRenderer({ question, value, onChange, language }: any) {
 
   return (
     <div className={`space-y-4 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
-      <h4 className="text-lg font-black text-slate-800 mb-4">{translateText(question.title, language)}</h4>
+      <div className="flex justify-between items-center mb-4 gap-4">
+        <h4 className="text-lg font-black text-slate-800 leading-snug">{translateText(question.title, language)}</h4>
+        <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 text-amber-700 px-3 py-1.5 rounded-2xl font-black text-xs shrink-0 select-none shadow-sm animate-pulse">
+          <Award className="w-4 h-4 text-amber-500" />
+          <span>+10 XP</span>
+        </div>
+      </div>
       <div className="flex flex-col gap-3">
         {choices.map((choice: any, idx: number) => {
           const isSelected = value === choice;
@@ -315,13 +321,15 @@ function McqRenderer({ question, value, onChange, language }: any) {
               key={idx}
               type="button"
               onClick={() => onChange(choice)}
-              className={`w-full p-5 rounded-3xl border-2 transition-all flex justify-between items-center game-card-3d-violet cursor-pointer select-none ${
-                language === 'ar' ? 'text-right' : 'text-left'
-              } ${isSelected ? "game-btn-3d-selected" : ""}`}
+              className={`w-full p-5 rounded-2xl border-2 transition-all flex justify-between items-center cursor-pointer select-none duration-200 ${
+                isSelected 
+                  ? "bg-indigo-50/90 backdrop-blur-sm border-indigo-500 shadow-md shadow-indigo-500/10 text-indigo-950 scale-[1.01]" 
+                  : "bg-white border-slate-200 text-slate-700 hover:border-slate-350 hover:bg-slate-50/50"
+              }`}
             >
-              <span className={`font-black text-base ${isSelected ? "text-slate-900" : "text-slate-700"}`}>{translateText(choice, language)}</span>
-              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${isSelected ? "border-white bg-white text-slate-950" : "border-slate-350 bg-white"}`}>
-                {isSelected && <span className="w-2.5 h-2.5 rounded-full bg-slate-950" />}
+              <span className={`font-black text-base transition-colors ${isSelected ? "text-indigo-950" : "text-slate-700"}`}>{translateText(choice, language)}</span>
+              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? "border-indigo-650 bg-indigo-650 text-white" : "border-slate-300 bg-white"}`}>
+                {isSelected && <span className="w-2.5 h-2.5 rounded-full bg-white" />}
               </div>
             </button>
           );
@@ -341,25 +349,48 @@ function TrueFalseRenderer({ question, value, onChange, language }: any) {
   const isTrueVal = (v: any) => ["صح", "صحيح", "صواب", "true", "1"].includes(String(v || "").trim().toLowerCase()) || String(v) === "True";
   const isFalseVal = (v: any) => ["خطأ", "false", "0", "غير صحيح"].includes(String(v || "").trim().toLowerCase()) || String(v) === "False";
 
+  const isTrue = isTrueVal(value);
+  const isFalse = isFalseVal(value);
+
   return (
     <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
-      <h4 className="text-lg font-black text-slate-800 mb-6">{translateText(question.title, language)}</h4>
+      <div className="flex justify-between items-center mb-4 gap-4">
+        <h4 className="text-lg font-black text-slate-800 leading-snug">{translateText(question.title, language)}</h4>
+        <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 text-amber-700 px-3 py-1.5 rounded-2xl font-black text-xs shrink-0 select-none shadow-sm animate-pulse">
+          <Award className="w-4 h-4 text-amber-500" />
+          <span>+10 XP</span>
+        </div>
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        {[trueLabel, falseLabel].map((choice) => {
-          const isSelected = (choice === trueLabel && isTrueVal(value)) || (choice === falseLabel && isFalseVal(value));
-          return (
-            <button
-              key={choice}
-              type="button"
-              onClick={() => onChange(choice === trueLabel ? "صح" : "خطأ")}
-              className={`p-6 rounded-3xl border-2 text-center font-black text-xl transition-all cursor-pointer select-none game-card-3d-violet ${
-                isSelected ? "game-btn-3d-selected" : ""
-              }`}
-            >
-              <span>{choice}</span>
-            </button>
-          );
-        })}
+        <button
+          type="button"
+          onClick={() => onChange("صح")}
+          className={`p-6 rounded-3xl border-2 text-center font-black text-xl transition-all cursor-pointer select-none duration-200 ${
+            isTrue 
+              ? "bg-emerald-50/90 backdrop-blur-sm border-emerald-500 shadow-md shadow-emerald-500/10 text-emerald-950 scale-[1.01]" 
+              : "bg-white border-slate-200 text-slate-700 hover:border-slate-350 hover:bg-slate-50/50"
+          }`}
+        >
+          <div className="flex items-center justify-center gap-2">
+            {isTrue && <CheckCircle2 className="w-6 h-6 text-emerald-600 animate-bounce" />}
+            <span>{trueLabel}</span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onChange("خطأ")}
+          className={`p-6 rounded-3xl border-2 text-center font-black text-xl transition-all cursor-pointer select-none duration-200 ${
+            isFalse 
+              ? "bg-rose-50/90 backdrop-blur-sm border-rose-500 shadow-md shadow-rose-500/10 text-rose-950 scale-[1.01]" 
+              : "bg-white border-slate-200 text-slate-700 hover:border-slate-350 hover:bg-slate-50/50"
+          }`}
+        >
+          <div className="flex items-center justify-center gap-2">
+            {isFalse && <AlertCircle className="w-6 h-6 text-rose-600 animate-bounce" />}
+            <span>{falseLabel}</span>
+          </div>
+        </button>
       </div>
     </div>
   );
@@ -385,7 +416,13 @@ function MultiSelectRenderer({ question, value, onChange, language }: any) {
 
   return (
     <div className={`space-y-4 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
-      <h4 className="text-lg font-black text-slate-800 mb-4">{translateText(question.title, language)}</h4>
+      <div className="flex justify-between items-center mb-4 gap-4">
+        <h4 className="text-lg font-black text-slate-800 leading-snug">{translateText(question.title, language)}</h4>
+        <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 text-amber-700 px-3 py-1.5 rounded-2xl font-black text-xs shrink-0 select-none shadow-sm animate-pulse">
+          <Award className="w-4 h-4 text-amber-500" />
+          <span>+10 XP</span>
+        </div>
+      </div>
       <div className="flex flex-col gap-3">
         {choices.map((choice: any, idx: number) => {
           const isSelected = selectedList.includes(choice);
@@ -394,13 +431,15 @@ function MultiSelectRenderer({ question, value, onChange, language }: any) {
               key={idx}
               type="button"
               onClick={() => handleToggle(choice)}
-              className={`w-full p-5 rounded-3xl border-2 transition-all flex justify-between items-center game-card-3d-violet cursor-pointer select-none ${
-                language === 'ar' ? 'text-right' : 'text-left'
-              } ${isSelected ? "game-btn-3d-selected" : ""}`}
+              className={`w-full p-5 rounded-2xl border-2 transition-all flex justify-between items-center cursor-pointer select-none duration-200 ${
+                isSelected 
+                  ? "bg-indigo-50/90 backdrop-blur-sm border-indigo-500 shadow-md shadow-indigo-500/10 text-indigo-950 scale-[1.01]" 
+                  : "bg-white border-slate-200 text-slate-700 hover:border-slate-350 hover:bg-slate-50/50"
+              }`}
             >
-              <span className={`font-black text-base ${isSelected ? "text-slate-900" : "text-slate-700"}`}>{translateText(choice, language)}</span>
-              <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center ${isSelected ? "border-white bg-white text-slate-950" : "border-slate-350 bg-white"}`}>
-                {isSelected && <CheckCircle2 className="w-4 h-4 text-slate-950" />}
+              <span className={`font-black text-base transition-colors ${isSelected ? "text-indigo-950" : "text-slate-700"}`}>{translateText(choice, language)}</span>
+              <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${isSelected ? "border-indigo-650 bg-indigo-650 text-white" : "border-slate-300 bg-white"}`}>
+                {isSelected && <CheckCircle2 className="w-4 h-4 text-white" />}
               </div>
             </button>
           );
@@ -423,7 +462,6 @@ function MatchingRenderer({ question, value, onChange, language }: any) {
   const [coords, setCoords] = useState<{ x1: number; y1: number; x2: number; y2: number; color: string }[]>([]);
   const localRef = useRef<HTMLDivElement>(null);
 
-  // Shuffle right items once on mount so they are randomized
   const [rightItems, setRightItems] = useState<string[]>([]);
   useEffect(() => {
     const shuffled = [...rightItemsRaw].sort(() => Math.random() - 0.5);
@@ -436,9 +474,9 @@ function MatchingRenderer({ question, value, onChange, language }: any) {
     const updateCoords = () => {
       const containerRect = container.getBoundingClientRect();
       const newCoords: typeof coords = [];
-      const colors = ["#6366F1", "#8B5CF6", "#3B82F6", "#10B981", "#F59E0B"];
+      const colors = ["#6366F1", "#10B981", "#F59E0B", "#EF4444", "#3B82F6"];
 
-      const getEl = (attr: string, val: string) => container.querySelector(`[${attr}="${val}"]`);
+      const getEl = (attr: string, val: string) => container.querySelector(`[${attr}="${CSS.escape(val)}"]`);
 
       Object.entries(matchingState).forEach(([lKey, rVal], idx) => {
         const leftEl = getEl("data-left-id", lKey);
@@ -446,10 +484,14 @@ function MatchingRenderer({ question, value, onChange, language }: any) {
         if (leftEl && rightEl) {
           const lRect = leftEl.getBoundingClientRect();
           const rRect = rightEl.getBoundingClientRect();
+          
+          const x1Val = (language === "ar" ? lRect.left : lRect.right) - containerRect.left;
+          const x2Val = (language === "ar" ? rRect.right : rRect.left) - containerRect.left;
+
           newCoords.push({
-            x1: (language === "ar" ? lRect.left : lRect.right) - containerRect.left,
+            x1: x1Val,
             y1: lRect.top + lRect.height / 2 - containerRect.top,
-            x2: (language === "ar" ? rRect.right : rRect.left) - containerRect.left,
+            x2: x2Val,
             y2: rRect.top + rRect.height / 2 - containerRect.top,
             color: colors[idx % colors.length]
           });
@@ -465,7 +507,7 @@ function MatchingRenderer({ question, value, onChange, language }: any) {
       window.removeEventListener("resize", updateCoords);
       clearTimeout(timeout);
     };
-  }, [value, question, language]);
+  }, [value, question, language, rightItems]);
 
   const handleLeftClick = (item: string) => {
     setSelectedLeft(item);
@@ -486,6 +528,14 @@ function MatchingRenderer({ question, value, onChange, language }: any) {
 
   return (
     <div ref={localRef} className="space-y-6 relative w-full overflow-hidden" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <div className="flex justify-between items-center mb-4 gap-4">
+        <h4 className="text-lg font-black text-slate-800 leading-snug">{translateText(question.title, language)}</h4>
+        <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 text-amber-700 px-3 py-1.5 rounded-2xl font-black text-xs shrink-0 select-none shadow-sm animate-pulse">
+          <Award className="w-4 h-4 text-amber-500" />
+          <span>+10 XP</span>
+        </div>
+      </div>
+
       <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">
         {coords.map((c, idx) => (
           <path
@@ -498,9 +548,10 @@ function MatchingRenderer({ question, value, onChange, language }: any) {
           />
         ))}
       </svg>
-      <div className="grid grid-cols-2 gap-8 min-h-[250px]">
+
+      <div className="grid grid-cols-2 gap-8 min-h-[250px] relative z-20">
         <div className="flex flex-col gap-4">
-          <span className="text-xs font-black text-slate-400 block uppercase">
+          <span className="text-[10px] font-black text-slate-400 block uppercase tracking-wider">
             {language === "ar" ? "العمود الأول (اضغط للتوصيل)" : "First Column (Click to match)"}
           </span>
           {leftItems.map((item: any, i: number) => {
@@ -511,17 +562,27 @@ function MatchingRenderer({ question, value, onChange, language }: any) {
                 key={i}
                 data-left-id={item}
                 onClick={() => handleLeftClick(item)}
-                className={`p-4 rounded-2xl border-2 transition-all flex justify-between items-center game-card-3d-violet cursor-pointer relative ${isSelected ? "game-btn-3d-selected" : ""} ${matched ? "game-btn-3d-matched" : ""}`}
+                className={`p-4 rounded-2xl border-2 transition-all duration-200 flex justify-between items-center cursor-pointer relative select-none ${
+                  isSelected 
+                    ? "bg-indigo-50 border-indigo-500 text-indigo-950 scale-[1.01] shadow-sm shadow-indigo-500/10" 
+                    : matched 
+                      ? "bg-indigo-50/30 border-indigo-200 text-indigo-900" 
+                      : "bg-white border-slate-200 text-slate-700 hover:border-slate-350"
+                }`}
               >
                 <span className="font-bold text-sm truncate">{translateText(item, language)}</span>
                 
                 {/* Visual anchor dot */}
-                <div className={`absolute w-3 h-3 rounded-full border-2 border-indigo-400 bg-white top-1/2 -translate-y-1/2 transition-transform ${
-                  language === 'ar' ? '-left-1.5' : '-right-1.5'
+                <div className={`absolute w-3.5 h-3.5 rounded-full border-2 border-indigo-400 bg-white top-1/2 -translate-y-1/2 transition-transform ${
+                  language === 'ar' ? '-left-1.75' : '-right-1.75'
                 } ${isSelected || matched ? 'scale-125 bg-indigo-600 border-white shadow' : ''}`} />
 
                 {matched && (
-                  <button type="button" onClick={(e) => { e.stopPropagation(); clearMatch(item); }} className="text-rose-500 font-bold hover:underline text-xs z-20">
+                  <button 
+                    type="button" 
+                    onClick={(e) => { e.stopPropagation(); clearMatch(item); }} 
+                    className="text-rose-500 font-black hover:text-rose-700 hover:underline text-xs z-30 shrink-0 ml-2"
+                  >
                     {language === "ar" ? "مسح" : "Clear"}
                   </button>
                 )}
@@ -529,8 +590,9 @@ function MatchingRenderer({ question, value, onChange, language }: any) {
             );
           })}
         </div>
+
         <div className="flex flex-col gap-4">
-          <span className="text-xs font-black text-slate-400 block uppercase">
+          <span className="text-[10px] font-black text-slate-400 block uppercase tracking-wider">
             {language === "ar" ? "العمود الثاني" : "Second Column"}
           </span>
           {rightItems.map((item: any, i: number) => {
@@ -540,12 +602,16 @@ function MatchingRenderer({ question, value, onChange, language }: any) {
                 key={i}
                 data-right-id={item}
                 onClick={() => handleRightClick(item)}
-                className={`p-4 rounded-2xl border-2 transition-all text-center game-card-3d-teal cursor-pointer relative ${isMatched ? "bg-sky-200 border-sky-300 text-slate-900 opacity-60 pointer-events-none" : ""}`}
+                className={`p-4 rounded-2xl border-2 transition-all duration-200 text-center relative select-none ${
+                  isMatched 
+                    ? "bg-emerald-50/70 border-emerald-300 text-emerald-950 opacity-60 pointer-events-none scale-95" 
+                    : "bg-white border-slate-200 text-slate-700 hover:border-slate-350 cursor-pointer"
+                }`}
               >
                 {/* Visual anchor dot */}
-                <div className={`absolute w-3 h-3 rounded-full border-2 border-teal-400 bg-white top-1/2 -translate-y-1/2 transition-transform ${
-                  language === 'ar' ? '-right-1.5' : '-left-1.5'
-                } ${isMatched ? 'scale-125 bg-teal-600 border-white shadow' : ''}`} />
+                <div className={`absolute w-3.5 h-3.5 rounded-full border-2 border-teal-400 bg-white top-1/2 -translate-y-1/2 transition-transform ${
+                  language === 'ar' ? '-right-1.75' : '-left-1.75'
+                } ${isMatched ? 'scale-125 bg-emerald-600 border-white shadow' : ''}`} />
 
                 <span className="font-bold text-sm truncate">{translateText(item, language)}</span>
               </div>
@@ -605,32 +671,49 @@ function DragDropFillRenderer({ question, value, onChange, language }: any) {
       if (match) {
         const slotIdx = parseInt(match[1]);
         const wordInSlot = currentSlots[slotIdx];
+        const isSelectedSlot = activeWord && !wordInSlot;
+
         return (
           <span
             key={idx}
             onClick={() => handleSlotClick(slotIdx)}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => handleDrop(e, slotIdx)}
-            className={`inline-block min-w-[80px] h-9 mx-1.5 align-middle rounded-xl text-center font-black text-xs pt-2 border transition-all cursor-pointer ${wordInSlot ? "bg-sky-200 border-sky-300 text-slate-900" : "bg-slate-100 border-dashed border-slate-350 text-slate-400"}`}
+            className={`inline-flex items-center justify-center min-w-[90px] h-9 mx-1.5 align-middle rounded-xl text-center font-black text-xs px-2.5 border transition-all cursor-pointer ${
+              wordInSlot 
+                ? "bg-indigo-50 border-indigo-400 text-indigo-950 scale-100 shadow-sm" 
+                : isSelectedSlot
+                  ? "bg-amber-50 border-amber-400 text-amber-700 animate-pulse border-2"
+                  : "bg-slate-100/80 border-dashed border-slate-305 text-slate-400 hover:border-slate-400 hover:bg-slate-100"
+            }`}
           >
-            {translateText(wordInSlot, language) || (language === "ar" ? `فراغ ${slotIdx + 1}` : `Slot ${slotIdx + 1}`)}
+            {translateText(wordInSlot, language) || (language === "ar" ? `فراغ ${slotIdx + 1}` : `Blank ${slotIdx + 1}`)}
           </span>
         );
       }
-      return <span key={idx} className="font-bold text-slate-800">{part}</span>;
+      return <span key={idx} className="font-bold text-slate-800 leading-loose">{part}</span>;
     });
   };
 
   return (
     <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
-      <div className={`bg-slate-50 p-6 rounded-3xl border border-slate-150 leading-loose text-base ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+      <div className="flex justify-between items-center mb-4 gap-4">
+        <h4 className="text-lg font-black text-slate-800 leading-snug">{translateText(question.title, language)}</h4>
+        <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 text-amber-700 px-3 py-1.5 rounded-2xl font-black text-xs shrink-0 select-none shadow-sm animate-pulse">
+          <Award className="w-4 h-4 text-amber-500" />
+          <span>+10 XP</span>
+        </div>
+      </div>
+
+      <div className={`bg-white/60 backdrop-blur-sm p-6 rounded-3xl border border-slate-200 leading-loose text-base ${language === 'ar' ? 'text-right' : 'text-left'} shadow-sm`}>
         {renderSentence()}
       </div>
+
       <div className="space-y-3">
-        <span className="text-xs font-black text-slate-400 block uppercase">
+        <span className="text-[10px] font-black text-slate-400 block uppercase tracking-wider">
           {language === "ar" ? "الكلمات المتاحة (اسحبها للمكان المناسب أو اضغط عليها):" : "Available words (drag or click to place):"}
         </span>
-        <div className="flex flex-wrap gap-2.5 justify-start">
+        <div className="flex flex-wrap gap-2.5 justify-start p-4 bg-slate-50/50 rounded-2xl border border-slate-200">
           {choices.map((word: any, i: number) => {
             const isPlaced = currentSlots.includes(word);
             const isSelected = activeWord === word;
@@ -641,7 +724,13 @@ function DragDropFillRenderer({ question, value, onChange, language }: any) {
                 draggable={!isPlaced}
                 onDragStart={(e) => handleDragStart(e, word)}
                 onClick={() => setActiveWord(isSelected ? null : word)}
-                className={`px-5 py-3 rounded-2xl border-2 transition-all font-black text-xs select-none cursor-grab ${isPlaced ? "opacity-30 cursor-not-allowed bg-slate-100 border-slate-200" : isSelected ? "bg-sky-200 border-sky-300 text-slate-900" : "bg-white border-slate-200 hover:border-slate-400"}`}
+                className={`px-4 py-2.5 rounded-xl border-2 transition-all font-black text-xs select-none cursor-grab active:cursor-grabbing ${
+                  isPlaced 
+                    ? "opacity-30 cursor-not-allowed bg-slate-100 border-slate-200 text-slate-400" 
+                    : isSelected 
+                      ? "bg-indigo-650 border-indigo-650 text-white scale-[1.03] shadow-md shadow-indigo-650/15" 
+                      : "bg-white border-slate-200 text-slate-700 hover:border-slate-350 hover:bg-slate-50"
+                }`}
               >
                 {translateText(word, language)}
               </button>
@@ -692,17 +781,33 @@ function GroupSortingRenderer({ question, value, onChange, language }: any) {
     onChange(JSON.stringify(newState));
   };
 
+  const groupColors = [
+    { bg: "bg-indigo-50/60 border-indigo-200 text-indigo-900", header: "text-indigo-950 border-indigo-100", itemBg: "bg-white border-indigo-150 text-indigo-900" },
+    { bg: "bg-emerald-50/60 border-emerald-200 text-emerald-900", header: "text-emerald-950 border-emerald-100", itemBg: "bg-white border-emerald-150 text-emerald-900" },
+    { bg: "bg-amber-50/60 border-amber-200 text-amber-900", header: "text-amber-950 border-amber-100", itemBg: "bg-white border-amber-150 text-amber-900" },
+    { bg: "bg-rose-50/60 border-rose-200 text-rose-900", header: "text-rose-950 border-rose-100", itemBg: "bg-white border-rose-150 text-rose-900" },
+    { bg: "bg-sky-50/60 border-sky-200 text-sky-900", header: "text-sky-950 border-sky-100", itemBg: "bg-white border-sky-150 text-sky-900" }
+  ];
+
+  const unsortedItems = items.filter((i: string) => !sortingState[i]);
+
   return (
     <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <div className="flex justify-between items-center mb-4 gap-4">
+        <h4 className="text-lg font-black text-slate-800 leading-snug">{translateText(question.title, language)}</h4>
+        <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-205 text-amber-700 px-3 py-1.5 rounded-2xl font-black text-xs shrink-0 select-none shadow-sm animate-pulse">
+          <Award className="w-4 h-4 text-amber-500" />
+          <span>+10 XP</span>
+        </div>
+      </div>
+
       <div className="space-y-3">
-        <span className="text-xs font-black text-slate-400 block uppercase">
+        <span className="text-[10px] font-black text-slate-400 block uppercase tracking-wider">
           {language === "ar" ? "عناصر للتصنيف (اسحب العنصر للمجموعة المناسبة أو اضغط عليه):" : "Items to sort (drag or click to group):"}
         </span>
-        <div className="flex flex-wrap gap-2.5 justify-start min-h-[60px] p-4 bg-slate-50 rounded-3xl border border-slate-150">
-          {items.map((item: any) => {
-            const isSorted = !!sortingState[item];
+        <div className="flex flex-wrap gap-2.5 justify-start min-h-[60px] p-4 bg-slate-50/60 rounded-2xl border border-slate-200 transition-all">
+          {unsortedItems.map((item: any) => {
             const isSelected = activeItem === item;
-            if (isSorted) return null;
             return (
               <button
                 key={item}
@@ -710,44 +815,64 @@ function GroupSortingRenderer({ question, value, onChange, language }: any) {
                 draggable="true"
                 onDragStart={(e) => handleDragStart(e, item)}
                 onClick={() => setActiveItem(isSelected ? null : item)}
-                className={`px-5 py-3 rounded-2xl border-2 transition-all font-black text-xs cursor-grab ${isSelected ? "bg-sky-200 border-sky-300 text-slate-900" : "bg-white border-slate-200 hover:border-slate-400"}`}
+                className={`px-4 py-2.5 rounded-xl border-2 transition-all font-black text-xs cursor-grab active:cursor-grabbing ${
+                  isSelected 
+                    ? "bg-indigo-650 border-indigo-650 text-white scale-[1.03] shadow-md shadow-indigo-650/15" 
+                    : "bg-white border-slate-200 text-slate-700 hover:border-slate-350 hover:bg-slate-50"
+                }`}
               >
                 {translateText(item, language)}
               </button>
             );
           })}
-          {items.filter((i: string) => !sortingState[i]).length === 0 && (
-            <p className="text-slate-555 text-xs font-black w-full text-center">
-              {language === "ar" ? "أحسنت! تم تصنيف جميع العناصر بنجاح." : "Excellent! All items classified."}
+          {unsortedItems.length === 0 && (
+            <p className="text-emerald-700 text-xs font-black w-full text-center py-2 flex items-center justify-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>{language === "ar" ? "أحسنت! تم تصنيف جميع العناصر بنجاح." : "Excellent! All items classified."}</span>
             </p>
           )}
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        {groups.map((grp: any) => (
-          <div
-            key={grp}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => handleDrop(e, grp)}
-            onClick={() => placeItem(grp)}
-            className="bg-white rounded-3xl border-2 border-slate-200 p-5 min-h-[160px] flex flex-col justify-between hover:border-slate-800 transition-all cursor-pointer"
-          >
-            <div className="border-b pb-2 mb-3">
-              <span className="font-black text-sm text-slate-950">{translateText(grp, language)}</span>
+        {groups.map((grp: any, index: number) => {
+          const color = groupColors[index % groupColors.length];
+          const isTargetGroup = activeItem;
+
+          return (
+            <div
+              key={grp}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => handleDrop(e, grp)}
+              onClick={() => placeItem(grp)}
+              className={`rounded-2xl border-2 p-5 min-h-[160px] flex flex-col justify-between transition-all cursor-pointer ${color.bg} ${
+                isTargetGroup 
+                  ? "border-amber-400 ring-2 ring-amber-400/20 scale-[1.01]" 
+                  : "hover:border-slate-400"
+              }`}
+            >
+              <div className={`border-b pb-2 mb-3 ${color.header} shrink-0`}>
+                <span className="font-black text-sm">{translateText(grp, language)}</span>
+              </div>
+              <div className="flex-1 flex flex-wrap gap-2 items-start content-start">
+                {Object.keys(sortingState)
+                  .filter((item) => sortingState[item] === grp)
+                  .map((item) => (
+                    <div key={item} className={`px-3 py-1.5 rounded-xl border flex items-center gap-1.5 text-xs font-black shadow-sm animate-pop-in ${color.itemBg}`}>
+                      <span>{translateText(item, language)}</span>
+                      <button 
+                        type="button" 
+                        onClick={(e) => { e.stopPropagation(); clearItem(item); }} 
+                        className="text-slate-400 hover:text-rose-500 font-black text-sm shrink-0 ml-1"
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  ))}
+              </div>
             </div>
-            <div className="flex-1 flex flex-wrap gap-2 align-start">
-              {Object.keys(sortingState)
-                .filter((item) => sortingState[item] === grp)
-                .map((item) => (
-                  <div key={item} className="bg-sky-200 border border-sky-300 text-slate-900 px-3.5 py-2 rounded-xl flex items-center gap-1.5 text-xs font-black animate-pop-in">
-                    <span>{translateText(item, language)}</span>
-                    <button type="button" onClick={(e) => { e.stopPropagation(); clearItem(item); }} className="text-rose-400 font-black hover:text-rose-500">×</button>
-                  </div>
-                ))}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

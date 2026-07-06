@@ -31,6 +31,7 @@ export default function CreateSkillClusterPage() {
   });
 
   const GRADES = [
+    "KG 1", "KG 2",
     "الصف الأول الابتدائي", "الصف الثاني الابتدائي", "الصف الثالث الابتدائي",
     "الصف الرابع الابتدائي", "الصف الخامس الابتدائي", "الصف السادس الابتدائي",
     "الصف الأول الإعدادي", "الصف الثاني الإعدادي", "الصف الثالث الإعدادي",
@@ -39,11 +40,27 @@ export default function CreateSkillClusterPage() {
 
   const SUBJECTS = [
     "اللغة العربية", "اللغة الإنجليزية", "اللغة الفرنسية", "اللغة الألمانية", "اللغة الإيطالية",
-    "الرياضيات", "الفيزياء", "الكيمياء", "الأحياء", "الجيولوجيا", "الميكانيكا",
+    "الرياضيات", "العلوم", "الدراسات الاجتماعية", "اكتشف (متعدد التخصصات)",
+    "الفيزياء", "الكيمياء", "الأحياء", "الجيولوجيا", "الميكانيكا",
     "التاريخ", "الجغرافيا", "الفلسفة", "علم النفس", "الاقتصاد", "الإحصاء",
     "التربية الدينية", "التربية الوطنية", "الحاسب الآلي",
     "SAT Math", "SAT English"
   ];
+
+  const isGrade123 = (g: string) => [
+    "الصف الأول الابتدائي",
+    "الصف الثاني الابتدائي",
+    "الصف الثالث الابتدائي"
+  ].includes(g);
+
+  const handleGradeChange = (newGrade: string) => {
+    if (isGrade123(newGrade) && clusterData.subject === "العلوم") {
+      setClusterData({ ...clusterData, grade: newGrade, subject: "" });
+      showToast(language === 'ar' ? "تنبيه: مادة العلوم غير مقررة على الصفوف الابتدائية الثلاثة الأولى." : "Notice: Science is not applicable for Grades 1-3 Primary.", "info");
+    } else {
+      setClusterData({ ...clusterData, grade: newGrade });
+    }
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("super_admin_token");
@@ -204,7 +221,7 @@ export default function CreateSkillClusterPage() {
                     </label>
                     <select 
                       value={clusterData.grade}
-                      onChange={(e) => setClusterData({ ...clusterData, grade: e.target.value })}
+                      onChange={(e) => handleGradeChange(e.target.value)}
                       className="w-full px-6 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-amber-500 focus:bg-white transition-all outline-none font-bold text-slate-700 appearance-none"
                     >
                        <option value="">{language === 'ar' ? "اختر الصف الدراسي..." : "Select Grade..."}</option>
@@ -222,7 +239,13 @@ export default function CreateSkillClusterPage() {
                     </label>
                     <select 
                       value={clusterData.subject}
-                      onChange={(e) => setClusterData({ ...clusterData, subject: e.target.value })}
+                      onChange={(e) => {
+                        if (e.target.value === "العلوم" && isGrade123(clusterData.grade)) {
+                          showToast(language === 'ar' ? "تنبيه: مادة العلوم غير مقررة على الصفوف الابتدائية الثلاثة الأولى." : "Notice: Science is not applicable for Grades 1-3 Primary.", "error");
+                          return;
+                        }
+                        setClusterData({ ...clusterData, subject: e.target.value });
+                      }}
                       className="w-full px-6 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-amber-500 focus:bg-white transition-all outline-none font-bold text-slate-700 appearance-none"
                     >
                        <option value="">{language === 'ar' ? "اختر المادة..." : "Select Subject..."}</option>

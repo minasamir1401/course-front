@@ -68,6 +68,7 @@ export default function EditSkillClusterPage() {
   const [mounted, setMounted] = useState(false);
 
   const GRADES = [
+    "KG 1", "KG 2",
     "الصف الأول الابتدائي", "الصف الثاني الابتدائي", "الصف الثالث الابتدائي",
     "الصف الرابع الابتدائي", "الصف الخامس الابتدائي", "الصف السادس الابتدائي",
     "الصف الأول الإعدادي", "الصف الثاني الإعدادي", "الصف الثالث الإعدادي",
@@ -76,11 +77,27 @@ export default function EditSkillClusterPage() {
 
   const SUBJECTS = [
     "اللغة العربية", "اللغة الإنجليزية", "اللغة الفرنسية", "اللغة الألمانية", "اللغة الإيطالية",
-    "الرياضيات", "الفيزياء", "الكيمياء", "الأحياء", "الجيولوجيا", "الميكانيكا",
+    "الرياضيات", "العلوم", "الدراسات الاجتماعية", "اكتشف (متعدد التخصصات)",
+    "الفيزياء", "الكيمياء", "الأحياء", "الجيولوجيا", "الميكانيكا",
     "التاريخ", "الجغرافيا", "الفلسفة", "علم النفس", "الاقتصاد", "الإحصاء",
     "التربية الدينية", "التربية الوطنية", "الحاسب الآلي",
     "SAT Math", "SAT English"
   ];
+
+  const isGrade123 = (g: string) => [
+    "الصف الأول الابتدائي",
+    "الصف الثاني الابتدائي",
+    "الصف الثالث الابتدائي"
+  ].includes(g);
+
+  const handleGradeChange = (newGrade: string) => {
+    if (isGrade123(newGrade) && clusterData.subject === "العلوم") {
+      setClusterData({ ...clusterData, grade: newGrade, subject: "" });
+      showToast(language === 'ar' ? "تنبيه: مادة العلوم غير مقررة على الصفوف الابتدائية الثلاثة الأولى." : "Notice: Science is not applicable for Grades 1-3 Primary.", "info");
+    } else {
+      setClusterData({ ...clusterData, grade: newGrade });
+    }
+  };
 
   useEffect(() => {
     if (!clusterId) {
@@ -291,7 +308,8 @@ export default function EditSkillClusterPage() {
       dok: "",
       estimatedTime: 60,
       standard: "", indicator: "", learningOutcome: "",
-      explanation: ""
+      explanation: "",
+      hint: "", tip: "", keyInsight: ""
     });
     setIsActivityModalOpen(true);
   };
@@ -511,14 +529,26 @@ export default function EditSkillClusterPage() {
         language === 'ar' ? "الدرجة" : "Points",
         language === 'ar' ? "مستوى الصعوبة" : "Difficulty Level",
         "DOK",
-        language === 'ar' ? "التفسير" : "Explanation"
+        language === 'ar' ? "التفسير" : "Explanation",
+        language === 'ar' ? "المعيار التعليمي" : "Educational Standard",
+        language === 'ar' ? "مؤشر الأداء" : "Performance Indicator",
+        language === 'ar' ? "مخرج التعلم المستهدف" : "Learning Outcome",
+        language === 'ar' ? "التلميح المساعد" : "Hint",
+        language === 'ar' ? "نصيحة تعليمية" : "Tip",
+        language === 'ar' ? "الرؤية المعرفية / الخلاصة" : "Key Insight"
       ],
       [
         language === 'ar' ? "ما هو ناتج 5 + 5؟" : "What is 5 + 5?",
         "MCQ",
         "8", "9", "10", "11", "",
         "10", "", "10", "Easy", "DOK 1",
-        language === 'ar' ? "لأن 5 زائد 5 يساوي 10" : "Because 5 + 5 = 10"
+        language === 'ar' ? "لأن 5 زائد 5 يساوي 10" : "Because 5 + 5 = 10",
+        language === 'ar' ? "معيار الرياضيات 1.1" : "Math Standard 1.1",
+        language === 'ar' ? "مؤشر الرياضيات 1.1.a" : "Math Indicator 1.1.a",
+        language === 'ar' ? "الجمع البسيط" : "Simple addition",
+        language === 'ar' ? "استخدم أصابعك أو جدول الجمع" : "Use your fingers or addition table",
+        language === 'ar' ? "انتبه إلى علامة الجمع (+)" : "Pay attention to the addition symbol (+)",
+        language === 'ar' ? "الجمع هو عملية دمج مجموعتين" : "Addition is the process of combining two groups"
       ]
     ];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
@@ -557,6 +587,12 @@ export default function EditSkillClusterPage() {
         const diffIdx = headers.findIndex(h => h.includes("difficulty") || h.includes("صعوبة") || h.includes("الصعوبة"));
         const dokIdx = headers.findIndex(h => h.includes("dok"));
         const expIdx = headers.findIndex(h => h.includes("explanation") || h.includes("تفسير") || h.includes("شرح"));
+        const stdIdx = headers.findIndex(h => h.includes("standard") || h.includes("معيار") || h.includes("المعيار"));
+        const indIdx = headers.findIndex(h => h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشر"));
+        const outIdx = headers.findIndex(h => h.includes("outcome") || h.includes("مخرج") || h.includes("مخرجات"));
+        const hintIdx = headers.findIndex(h => h.includes("hint") || h.includes("تلميح") || h.includes("التلميح"));
+        const tipIdx = headers.findIndex(h => h.includes("tip") || h.includes("نصيحة") || h.includes("النصيحة"));
+        const keyIdx = headers.findIndex(h => h.includes("insight") || h.includes("رؤية") || h.includes("خلاصة") || h.includes("الرؤية"));
 
         let successCount = 0;
         const token = localStorage.getItem("super_admin_token");
@@ -602,6 +638,12 @@ export default function EditSkillClusterPage() {
           const dok = ["DOK 1", "DOK 2", "DOK 3", "DOK 4"].includes(dokRaw) ? dokRaw : "";
           
           const explanation = expIdx >= 0 ? String(row[expIdx] ?? "").trim() : "";
+          const standard = stdIdx >= 0 ? String(row[stdIdx] ?? "").trim() : "";
+          const indicator = indIdx >= 0 ? String(row[indIdx] ?? "").trim() : "";
+          const learningOutcome = outIdx >= 0 ? String(row[outIdx] ?? "").trim() : "";
+          const hint = hintIdx >= 0 ? String(row[hintIdx] ?? "").trim() : "";
+          const tip = tipIdx >= 0 ? String(row[tipIdx] ?? "").trim() : "";
+          const keyInsight = keyIdx >= 0 ? String(row[keyIdx] ?? "").trim() : "";
 
           const payload = {
             lessonId: uploadingLessonId,
@@ -613,7 +655,13 @@ export default function EditSkillClusterPage() {
             difficulty,
             dok,
             estimatedTime: 60,
-            explanation
+            explanation,
+            standard,
+            indicator,
+            learningOutcome,
+            hint,
+            tip,
+            keyInsight
           };
 
           const res = await fetch(`${API_URL}/skills-hub/activities`, {
@@ -741,7 +789,7 @@ export default function EditSkillClusterPage() {
                        {language === 'ar' ? "المرحلة / الصف" : "Grade"} <span className="text-red-500">*</span>
                     </label>
                     <select 
-                      value={clusterData.grade} onChange={(e) => setClusterData({ ...clusterData, grade: e.target.value })}
+                      value={clusterData.grade} onChange={(e) => handleGradeChange(e.target.value)}
                       className="w-full px-6 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-amber-500 focus:bg-white transition-all outline-none font-bold text-slate-700 appearance-none"
                     >
                        <option value="">{language === 'ar' ? "اختر..." : "Select..."}</option>
@@ -753,12 +801,9 @@ export default function EditSkillClusterPage() {
                     <label className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
                        {language === 'ar' ? "المادة" : "Subject"} <span className="text-red-500">*</span>
                     </label>
-                    <select 
-                      value={clusterData.subject} onChange={(e) => setClusterData({ ...clusterData, subject: e.target.value })}
-                      className="w-full px-6 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-amber-500 focus:bg-white transition-all outline-none font-bold text-slate-700 appearance-none"
-                    >
+                    <select value={clusterData.subject} onChange={(e) => { if (e.target.value === "العلوم" && isGrade123(clusterData.grade)) { showToast(language === 'ar' ? "تنبيه: مادة العلوم غير مقرر للصفوف 1-3." : "Notice: Science is not applicable for Grades 1-3 Primary.", "error"); return; } setClusterData({ ...clusterData, subject: e.target.value }); }} className="w-full px-6 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-amber-500 focus:bg-white transition-all outline-none font-bold text-slate-700 appearance-none">
                        <option value="">{language === 'ar' ? "اختر..." : "Select..."}</option>
-                       {SUBJECTS.map(subject => <option key={subject} value={subject}>{subject}</option>)}
+                       {SUBJECTS.map(subject => <option key={subject} value={subject} disabled={subject === "العلوم" && isGrade123(clusterData.grade)}>{subject}{subject === "العلوم" && isGrade123(clusterData.grade) ? (language === 'ar' ? " (غير مقرر للصفوف 1-3)" : " (N/A for Grades 1-3)") : ""}</option>)}
                     </select>
                  </div>
               </div>
@@ -821,10 +866,22 @@ export default function EditSkillClusterPage() {
 
             <div className="space-y-4">
               {lessons.length === 0 ? (
-                 <div className="bg-white border-2 border-dashed border-slate-200 rounded-[24px] p-12 text-center">
-                    <Monitor className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                    <p className="text-slate-500 font-bold">{language === 'ar' ? "لا يوجد دروس بعد. ابدأ بإضافة درس جديد." : "No lessons yet. Start by adding one."}</p>
-                 </div>
+                  <div className="bg-white border border-slate-100 rounded-[32px] p-16 text-center shadow-sm max-w-lg mx-auto my-8 animate-in fade-in duration-300">
+                     <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                        <BookOpen className="w-10 h-10 text-indigo-500" />
+                     </div>
+                     <h3 className="text-lg font-black text-slate-900 mb-2">{language === 'ar' ? "المحور خالي من الدروس" : "No Lessons Found"}</h3>
+                     <p className="text-slate-500 text-sm font-bold max-w-sm mx-auto mb-6 leading-relaxed">
+                        {language === 'ar' ? "لم يتم إنشاء أي دروس في هذا المحور حتى الآن. أضف أول درس للبدء في بناء الأنشطة التفاعلية." : "This cluster has no lessons yet. Add your first lesson to start building interactive activities."}
+                     </p>
+                     <button 
+                       onClick={openAddLesson}
+                       className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-black text-sm flex items-center gap-2 mx-auto shadow-md shadow-indigo-600/10 transition-all"
+                     >
+                        <Plus className="w-4 h-4" />
+                        {language === 'ar' ? "إنشاء أول درس" : "Create First Lesson"}
+                     </button>
+                  </div>
               ) : (
                 lessons.map((lesson) => (
                   <div key={lesson.id} className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden transition-all hover:shadow-md">
@@ -843,11 +900,11 @@ export default function EditSkillClusterPage() {
                             {(lesson._count?.activities || 0) > 0 && (
                               <button
                                 onClick={() => startPreviewLesson(lesson.id)}
-                                className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-bold text-sm transition-all"
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-100 rounded-lg font-black text-[10px] transition-all shadow-sm"
                                 title={language === 'ar' ? "معاينة الاختبار كامل" : "Preview Full Test"}
                               >
-                                <Play className="w-4 h-4 fill-current text-white" />
-                                <span className="hidden md:inline">{language === 'ar' ? "معاينة الاختبار كامل" : "Preview Full Test"}</span>
+                                <Play className="w-3 h-3 fill-current" />
+                                <span>{language === 'ar' ? "معاينة" : "Preview"}</span>
                               </button>
                             )}
                            <button 
@@ -910,9 +967,7 @@ export default function EditSkillClusterPage() {
                               {!activitiesData[lesson.id] ? (
                                 <div className="text-center p-4 text-slate-400 font-bold text-sm animate-pulse">Loading...</div>
                               ) : activitiesData[lesson.id]?.length === 0 ? (
-                                <div className="text-center p-6 bg-white border border-slate-200 rounded-xl text-slate-400 font-bold text-sm">
-                                  {language === 'ar' ? "لا توجد أنشطة في هذا الدرس." : "No activities in this lesson."}
-                                </div>
+                                <div className="text-center p-8 bg-white border border-slate-100 rounded-2xl shadow-sm text-slate-500 font-bold text-sm max-w-md mx-auto my-4 w-full"> <Sparkles className="w-8 h-8 text-amber-400 mx-auto mb-3 animate-pulse" /> <p className="text-slate-800 font-black mb-1">{language === 'ar' ? "الدرس فارغ حالياً" : "Lesson is Empty"}</p> <p className="text-slate-400 text-xs mb-4 font-bold">{language === 'ar' ? "لم تقم بإضافة أي أنشطة أو أسئلة تفاعلية بعد." : "You have not added any interactive activities or questions yet."}</p> <button onClick={() => openAddActivity(lesson.id)} className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-650 border border-indigo-100 rounded-xl font-black text-xs transition-all mx-auto block">{language === 'ar' ? "إضافة أول نشاط" : "Add First Activity"}</button> </div>
                               ) : (
                                 activitiesData[lesson.id].map((activity, idx) => (
                                   <div key={activity.id} className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-indigo-300 transition-all shadow-sm">
@@ -1138,6 +1193,86 @@ export default function EditSkillClusterPage() {
                   placeholder={language === 'ar' ? "اكتب شرحاً يوضح سبب الإجابة الصحيحة للطالب..." : "Explain why the answer is correct..."}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none resize-none"
                 />
+              </div>
+
+              {/* Educational Standards & Alignment */}
+              <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-4">
+                <h4 className="text-sm font-black text-slate-900 border-b border-slate-100 pb-2 uppercase tracking-wider flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-indigo-500" />
+                  {language === 'ar' ? "المواءمة والمعايير التعليمية" : "Educational Standards & Alignment"}
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "المعيار التعليمي" : "Educational Standard"}</label>
+                    <input 
+                      type="text" value={editingActivity.standard || ""} onChange={(e) => setEditingActivity({...editingActivity, standard: e.target.value})}
+                      placeholder={language === 'ar' ? "مثال: معيار العلوم 4.1" : "e.g. Science Standard 4.1"}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "مؤشر الأداء" : "Performance Indicator"}</label>
+                    <input 
+                      type="text" value={editingActivity.indicator || ""} onChange={(e) => setEditingActivity({...editingActivity, indicator: e.target.value})}
+                      placeholder={language === 'ar' ? "مثال: مؤشر العلوم 4.1.2" : "e.g. Science Indicator 4.1.2"}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "مخرج التعلم المستهدف" : "Learning Outcome"}</label>
+                    <input 
+                      type="text" value={editingActivity.learningOutcome || ""} onChange={(e) => setEditingActivity({...editingActivity, learningOutcome: e.target.value})}
+                      placeholder={language === 'ar' ? "مثال: فهم عملية التمثيل الضوئي" : "e.g. Understanding photosynthesis"}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Learning Aids & Supports */}
+              <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-4">
+                <h4 className="text-sm font-black text-slate-900 border-b border-slate-100 pb-2 uppercase tracking-wider flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  {language === 'ar' ? "مساعدات التعلم والتوجيه الذكي" : "Learning Supports & Intelligent Guidance"}
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-sky-500"></span>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "التلميح المساعد" : "Hint"}</label>
+                    </div>
+                    <textarea 
+                      value={editingActivity.hint || ""} onChange={(e) => setEditingActivity({...editingActivity, hint: e.target.value})}
+                      rows={2}
+                      placeholder={language === 'ar' ? "تلميح بسيط لمساعدة الطالب على الحل..." : "Simple hint to help the student..."}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none resize-none"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "نصيحة تعليمية" : "Tip"}</label>
+                    </div>
+                    <textarea 
+                      value={editingActivity.tip || ""} onChange={(e) => setEditingActivity({...editingActivity, tip: e.target.value})}
+                      rows={2}
+                      placeholder={language === 'ar' ? "نصيحة لتجنب الأخطاء الشائعة..." : "Tip to avoid common mistakes..."}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none resize-none"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "الرؤية المعرفية / الخلاصة" : "Key Insight"}</label>
+                    </div>
+                    <textarea 
+                      value={editingActivity.keyInsight || ""} onChange={(e) => setEditingActivity({...editingActivity, keyInsight: e.target.value})}
+                      rows={2}
+                      placeholder={language === 'ar' ? "الخلاصة أو الفكرة الكبرى من السؤال..." : "The big idea or summary behind the question..."}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none resize-none"
+                    />
+                  </div>
+                </div>
               </div>
 
             </div>

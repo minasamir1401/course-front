@@ -310,6 +310,9 @@ export default function InteractiveQuestionEditor({ question, onChange, language
 // -------------------------------------------------------------
 // 📝 1. MCQ (اختيار من متعدد)
 // -------------------------------------------------------------
+// -------------------------------------------------------------
+// 📝 1. MCQ (اختيار من متعدد)
+// -------------------------------------------------------------
 function McqEditor({ question, updateQuestionData, language }: { question: any; updateQuestionData: any; language: string }) {
   const opts = parseJson(question.options, { choices: ["", "", "", ""] });
   const choices = Array.isArray(opts?.choices) ? opts.choices : ["", "", "", ""];
@@ -321,34 +324,77 @@ function McqEditor({ question, updateQuestionData, language }: { question: any; 
     updateQuestionData({ choices: nextChoices }, correctVal);
   };
 
+  const addChoiceField = () => {
+    updateQuestionData({ choices: [...choices, ""] }, correctVal);
+  };
+
+  const removeChoiceField = (idx: number) => {
+    if (choices.length <= 2) return;
+    const targetVal = choices[idx];
+    const nextChoices = choices.filter((_: any, i: number) => i !== idx);
+    const nextCorrect = correctVal === targetVal ? "" : correctVal;
+    updateQuestionData({ choices: nextChoices }, nextCorrect);
+  };
+
   return (
     <div className="space-y-4 text-right w-full max-w-full overflow-hidden" dir="rtl">
-      <h5 className="text-xs font-black text-slate-500 uppercase tracking-widest">
-        خيارات السؤال (اختيار من متعدد MCQ):
-      </h5>
-      <div className="space-y-3">
-        {choices.map((c: string, idx: number) => (
-          <div key={idx} className="flex gap-2 items-center w-full">
-            <input
-              type="radio"
-              name="mcq-correct"
-              checked={correctVal === c && c !== ""}
-              disabled={c === ""}
-              onChange={() => updateQuestionData({ choices }, c)}
-              className="w-4 h-4 accent-indigo-650 cursor-pointer shrink-0"
-            />
-            <input
-              type="text"
-              placeholder={`الخيار ${idx + 1}...`}
-              className="flex-1 min-w-0 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
-              value={c}
-              onChange={(e) => handleChoiceChange(idx, e.target.value)}
-            />
-          </div>
-        ))}
+      <div className="flex justify-between items-center">
+        <h5 className="text-xs font-black text-slate-500 uppercase tracking-widest">
+          {language === 'ar' ? "خيارات الإجابة (اختيار من متعدد MCQ):" : "Answer Choices (Multiple Choice MCQ):"}
+        </h5>
+        <button
+          type="button"
+          onClick={addChoiceField}
+          className="text-xs font-black text-indigo-650 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span>{language === 'ar' ? "إضافة خيار" : "Add Option"}</span>
+        </button>
       </div>
-      <p className="text-[10px] text-slate-400 font-bold">
-        💡 اكتب الخيارات في الحقول ثم اختر الإجابة الصحيحة عبر النقر على الدائرة بجانبها.
+
+      <div className="space-y-3">
+        {choices.map((c: string, idx: number) => {
+          const isCorrect = correctVal === c && c !== "";
+          return (
+            <div 
+              key={idx} 
+              className={`flex gap-3 items-center w-full p-3 rounded-2xl border transition-all duration-200 ${
+                isCorrect 
+                  ? "bg-indigo-50/40 border-indigo-300 shadow-sm" 
+                  : "bg-slate-50 border-slate-200"
+              }`}
+            >
+              <input
+                type="radio"
+                name={`mcq-correct-${question.id || 'new'}`}
+                checked={isCorrect}
+                disabled={c === ""}
+                onChange={() => updateQuestionData({ choices }, c)}
+                className="w-5 h-5 accent-indigo-600 cursor-pointer shrink-0"
+              />
+              <input
+                type="text"
+                placeholder={language === 'ar' ? `اكتب الخيار ${idx + 1}...` : `Option ${idx + 1}...`}
+                className="flex-1 min-w-0 bg-transparent border-none outline-none font-bold text-slate-800 text-xs py-1"
+                value={c}
+                onChange={(e) => handleChoiceChange(idx, e.target.value)}
+              />
+              {choices.length > 2 && (
+                <button
+                  type="button"
+                  onClick={() => removeChoiceField(idx)}
+                  className="text-slate-400 hover:text-rose-500 p-1.5 hover:bg-white rounded-lg transition-all shrink-0"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+        <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+        <span>{language === 'ar' ? "اكتب خيارات السؤال وحدد الدائرة للإجابة الصحيحة (تنبيه: يجب ألا تكون فارغة لتحديدها)." : "Type the options and select the radio button for the correct answer (Note: cannot select empty option)."}</span>
       </p>
     </div>
   );
@@ -362,34 +408,52 @@ function TrueFalseEditor({ question, updateQuestionData, language }: { question:
   const isTrueVal = (v: any) => ["صح", "صحيح", "صواب", "true", "1"].includes(String(v || "").trim().toLowerCase()) || String(v) === "True";
   const isFalseVal = (v: any) => ["خطأ", "false", "0", "غير صحيح"].includes(String(v || "").trim().toLowerCase()) || String(v) === "False";
 
-  const radioName = `tf-correct-${question.id || 'new'}`;
+  const setCorrect = (val: string) => {
+    updateQuestionData({ choices: ["صح", "خطأ"] }, val);
+  };
+
+  const isTrue = isTrueVal(correctVal);
+  const isFalse = isFalseVal(correctVal);
 
   return (
     <div className="space-y-4 text-right w-full max-w-full overflow-hidden" dir="rtl">
-      <h5 className="text-xs font-black text-slate-500 uppercase tracking-widest">
-        سؤال صح أم خطأ (True/False):
+      <h5 className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+        <span>{language === 'ar' ? "حدد الإجابة الصحيحة للنشاط:" : "Select the Correct Answer:"}</span>
       </h5>
-      <div className="flex gap-6 items-center justify-start py-4 flex-wrap">
-        <label className="flex items-center gap-2 cursor-pointer font-black text-sm text-slate-700">
-          <input
-            type="radio"
-            name={radioName}
-            checked={isTrueVal(correctVal)}
-            onChange={() => updateQuestionData({ choices: ["صح", "خطأ"] }, "صح")}
-            className="w-5 h-5 accent-indigo-650 shrink-0"
-          />
-          <span>صح (صواب)</span>
-        </label>
-        <label className="flex items-center gap-2 cursor-pointer font-black text-sm text-slate-700">
-          <input
-            type="radio"
-            name={radioName}
-            checked={isFalseVal(correctVal)}
-            onChange={() => updateQuestionData({ choices: ["صح", "خطأ"] }, "خطأ")}
-            className="w-5 h-5 accent-indigo-650 shrink-0"
-          />
-          <span>خطأ</span>
-        </label>
+      <div className="grid grid-cols-2 gap-4 py-2">
+        <button
+          type="button"
+          onClick={() => setCorrect("صح")}
+          className={`flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all duration-200 cursor-pointer ${
+            isTrue 
+              ? "bg-emerald-50/70 border-emerald-500 shadow-md shadow-emerald-500/10 text-emerald-700" 
+              : "bg-slate-50/50 border-slate-200 text-slate-500 hover:bg-slate-50 hover:border-slate-300"
+          }`}
+        >
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 transition-colors ${isTrue ? "bg-emerald-500 text-white" : "bg-slate-200 text-slate-400"}`}>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-6 h-6">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
+          </div>
+          <span className="font-black text-sm">{language === 'ar' ? "صح (صواب)" : "True"}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setCorrect("خطأ")}
+          className={`flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all duration-200 cursor-pointer ${
+            isFalse 
+              ? "bg-rose-50/70 border-rose-500 shadow-md shadow-rose-500/10 text-rose-700" 
+              : "bg-slate-50/50 border-slate-200 text-slate-500 hover:bg-slate-50 hover:border-slate-300"
+          }`}
+        >
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 transition-colors ${isFalse ? "bg-rose-500 text-white" : "bg-slate-200 text-slate-400"}`}>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-6 h-6">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </div>
+          <span className="font-black text-sm">{language === 'ar' ? "خطأ (خاطئ)" : "False"}</span>
+        </button>
       </div>
     </div>
   );
@@ -410,6 +474,18 @@ function MultiSelectEditor({ question, updateQuestionData, language }: { questio
     updateQuestionData({ choices: nextChoices }, correctList);
   };
 
+  const addChoiceField = () => {
+    updateQuestionData({ choices: [...choices, ""] }, correctList);
+  };
+
+  const removeChoiceField = (idx: number) => {
+    if (choices.length <= 2) return;
+    const targetVal = choices[idx];
+    const nextChoices = choices.filter((_: any, i: number) => i !== idx);
+    const nextCorrect = correctList.filter(x => x !== targetVal);
+    updateQuestionData({ choices: nextChoices }, nextCorrect);
+  };
+
   const handleCheckChange = (c: string, checked: boolean) => {
     let nextCorrect = [...correctList];
     if (checked) {
@@ -422,31 +498,62 @@ function MultiSelectEditor({ question, updateQuestionData, language }: { questio
 
   return (
     <div className="space-y-4 text-right w-full max-w-full overflow-hidden" dir="rtl">
-      <h5 className="text-xs font-black text-slate-500 uppercase tracking-widest">
-        سؤال اختيارات متعددة (Multi-Select):
-      </h5>
-      <div className="space-y-3">
-        {choices.map((c: string, idx: number) => (
-          <div key={idx} className="flex gap-2 items-center w-full">
-            <input
-              type="checkbox"
-              checked={correctList.includes(c) && c !== ""}
-              disabled={c === ""}
-              onChange={(e) => handleCheckChange(c, e.target.checked)}
-              className="w-5 h-5 accent-indigo-650 cursor-pointer rounded shrink-0"
-            />
-            <input
-              type="text"
-              placeholder={`الخيار ${idx + 1}...`}
-              className="flex-1 min-w-0 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
-              value={c}
-              onChange={(e) => handleChoiceChange(idx, e.target.value)}
-            />
-          </div>
-        ))}
+      <div className="flex justify-between items-center">
+        <h5 className="text-xs font-black text-slate-500 uppercase tracking-widest">
+          {language === 'ar' ? "خيارات الإجابة (اختيار متعدد Checkboxes):" : "Answer Choices (Multi-Select Checkboxes):"}
+        </h5>
+        <button
+          type="button"
+          onClick={addChoiceField}
+          className="text-xs font-black text-indigo-650 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span>{language === 'ar' ? "إضافة خيار" : "Add Option"}</span>
+        </button>
       </div>
-      <p className="text-[10px] text-slate-400 font-bold">
-        💡 يمكنك تفعيل أكثر من إجابة صحيحة بالضغط على المربعات.
+
+      <div className="space-y-3">
+        {choices.map((c: string, idx: number) => {
+          const isCorrect = correctList.includes(c) && c !== "";
+          return (
+            <div 
+              key={idx} 
+              className={`flex gap-3 items-center w-full p-3 rounded-2xl border transition-all duration-200 ${
+                isCorrect 
+                  ? "bg-indigo-50/40 border-indigo-300 shadow-sm" 
+                  : "bg-slate-50 border-slate-200"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={isCorrect}
+                disabled={c === ""}
+                onChange={(e) => handleCheckChange(c, e.target.checked)}
+                className="w-5 h-5 accent-indigo-650 cursor-pointer rounded shrink-0"
+              />
+              <input
+                type="text"
+                placeholder={language === 'ar' ? `اكتب الخيار ${idx + 1}...` : `Option ${idx + 1}...`}
+                className="flex-1 min-w-0 bg-transparent border-none outline-none font-bold text-slate-800 text-xs py-1"
+                value={c}
+                onChange={(e) => handleChoiceChange(idx, e.target.value)}
+              />
+              {choices.length > 2 && (
+                <button
+                  type="button"
+                  onClick={() => removeChoiceField(idx)}
+                  className="text-slate-400 hover:text-rose-500 p-1.5 hover:bg-white rounded-lg transition-all shrink-0"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+        <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+        <span>{language === 'ar' ? "يمكنك تفعيل أكثر من إجابة صحيحة بالضغط على مربعات الصح." : "You can select multiple correct options by checking the checkboxes."}</span>
       </p>
     </div>
   );
@@ -488,45 +595,67 @@ function MatchingEditor({ question, updateQuestionData, language }: { question: 
 
   return (
     <div className="space-y-4 text-right w-full max-w-full overflow-hidden" dir="rtl">
-      <h5 className="text-xs font-black text-slate-500 uppercase tracking-widest">سؤال التوصيل (Matching):</h5>
+      <h5 className="text-xs font-black text-slate-500 uppercase tracking-widest">
+        {language === 'ar' ? "تعديل عناصر التوصيل والربط:" : "Edit Matching Elements:"}
+      </h5>
       
-      <div className="flex flex-col gap-2 w-full">
-        <input
-          type="text"
-          placeholder="العنصر الأيمن..."
-          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
-          value={leftInput}
-          onChange={(e) => setLeftInput(e.target.value)}
-        />
-        <input
-          type="text"
-          placeholder="العنصر المقابل المطابق..."
-          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
-          value={rightInput}
-          onChange={(e) => setRightInput(e.target.value)}
-        />
+      <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{language === 'ar' ? "العنصر الأيمن" : "Right Side Element"}</label>
+            <input
+              type="text"
+              placeholder={language === 'ar' ? "مثال: الكلمة..." : "e.g. Word..."}
+              className="w-full bg-white border border-slate-250 rounded-xl px-4 py-2.5 text-xs font-bold focus:border-indigo-500 outline-none transition-all"
+              value={leftInput}
+              onChange={(e) => setLeftInput(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{language === 'ar' ? "العنصر الأيسر المطابق" : "Matching Left Element"}</label>
+            <input
+              type="text"
+              placeholder={language === 'ar' ? "مثال: التعريف أو الصورة..." : "e.g. Definition or Image URL..."}
+              className="w-full bg-white border border-slate-250 rounded-xl px-4 py-2.5 text-xs font-bold focus:border-indigo-500 outline-none transition-all"
+              value={rightInput}
+              onChange={(e) => setRightInput(e.target.value)}
+            />
+          </div>
+        </div>
         <button
           type="button"
           onClick={addPair}
-          className="w-full py-2 bg-slate-950 text-white rounded-xl text-xs font-black cursor-pointer"
+          className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-755 text-white rounded-xl text-xs font-black shadow-md shadow-indigo-600/10 hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
         >
-          إضافة الزوج المطابق
+          <Plus className="w-4 h-4" />
+          <span>{language === 'ar' ? "إضافة زوج مطابق" : "Add Match Pair"}</span>
         </button>
       </div>
 
-      <div className="space-y-2 max-h-40 overflow-y-auto">
-        {Object.keys(correctMap).map((leftKey) => (
-          <div key={leftKey} className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center text-xs w-full gap-2">
-            <span className="font-bold text-slate-700 truncate min-w-0">{leftKey} ↔ {correctMap[leftKey]}</span>
-            <button
-              type="button"
-              onClick={() => removePair(leftKey)}
-              className="text-rose-500 hover:text-rose-700 cursor-pointer shrink-0 animate-none"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+      <div className="space-y-2 max-h-56 overflow-y-auto">
+        {Object.keys(correctMap).length === 0 ? (
+          <div className="text-center p-6 text-slate-400 text-xs font-bold bg-white border border-slate-150 rounded-2xl">
+            {language === 'ar' ? "لا توجد أزواج توصيل مضافة بعد. أضف أزواجاً في الأعلى للبدء." : "No matching pairs added yet. Add some above to start."}
           </div>
-        ))}
+        ) : (
+          Object.keys(correctMap).map((leftKey, idx) => (
+            <div key={leftKey} className="p-3 bg-white hover:border-indigo-200 rounded-xl border border-slate-200 flex justify-between items-center text-xs w-full gap-3 shadow-sm transition-all">
+              <span className="w-6 h-6 rounded bg-slate-100 text-slate-500 font-black flex items-center justify-center shrink-0">{idx + 1}</span>
+              <div className="flex-1 min-w-0 flex items-center gap-2">
+                <span className="font-black text-slate-800 truncate">{leftKey}</span>
+                <span className="text-indigo-500 font-bold text-[10px] shrink-0">↔</span>
+                <span className="font-bold text-slate-600 truncate">{correctMap[leftKey]}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => removePair(leftKey)}
+                className="text-slate-400 hover:text-rose-500 p-1.5 hover:bg-rose-50 rounded-lg transition-all shrink-0 cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
@@ -580,78 +709,127 @@ function DragDropFillEditor({ question, updateQuestionData, language }: { questi
     saveChanges(sentence, choicesList, updatedSlots);
   };
 
+  const insertSlotToken = (token: string) => {
+    const el = document.getElementById("sentence-textarea") as HTMLTextAreaElement;
+    if (!el) {
+      const newSentence = sentence + " " + token;
+      setSentence(newSentence);
+      saveChanges(newSentence, choicesList, correctAnswerSlots);
+      return;
+    }
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const text = el.value;
+    const before = text.substring(0, start);
+    const after  = text.substring(end, text.length);
+    const newText = before + token + after;
+    setSentence(newText);
+    saveChanges(newText, choicesList, correctAnswerSlots);
+    
+    setTimeout(() => {
+      el.focus();
+      el.selectionStart = el.selectionEnd = start + token.length;
+    }, 10);
+  };
+
   const slotsCount = (sentence.match(/\[slot\d+\]/g) || []).length;
 
   return (
     <div className="space-y-6 text-right w-full max-w-full overflow-hidden" dir="rtl">
       <h5 className="text-xs font-black text-slate-500 uppercase tracking-widest">
-        محرر سؤال سحب الفراغات (Drag & Drop):
+        {language === 'ar' ? "محرر سحب وإفلات الفراغات (Drag & Drop):" : "Drag & Drop Fill in the Blanks Editor:"}
       </h5>
       
       <div className="flex flex-col gap-2">
-        <label className="text-[10px] font-black text-slate-400 leading-relaxed">
-          اكتب النص واستبدل كل فراغ بالرمز [slot0] للفراغ الأول، و [slot1] للفراغ الثاني، وهكذا:
-        </label>
+        <div className="flex justify-between items-center">
+          <label className="text-[10px] font-black text-slate-400 leading-relaxed">
+            {language === 'ar' ? "اكتب النص الكامل ثم أدرج رمز الفراغ في الموضع المطلوب:" : "Type the text and insert slots where blanks should appear:"}
+          </label>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {Array.from({ length: Math.min(8, slotsCount + 1) }).map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => insertSlotToken(`[slot${i}]`)}
+                className="text-[9px] font-black bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-2 py-1 rounded transition-all cursor-pointer"
+              >
+                {language === 'ar' ? `+ فراغ [slot${i}]` : `+ Slot ${i}`}
+              </button>
+            ))}
+          </div>
+        </div>
         <textarea
-          className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs font-bold text-right"
+          id="sentence-textarea"
+          className="w-full bg-white border border-slate-250 rounded-2xl p-4 text-xs font-bold text-right focus:border-indigo-500 outline-none transition-all resize-none"
           rows={3}
           value={sentence}
           onChange={(e) => {
             setSentence(e.target.value);
             saveChanges(e.target.value, choicesList, correctAnswerSlots);
           }}
-          placeholder="مثال: تقع عاصمة مصر في [slot0] بينما تقع عاصمة فرنسا في [slot1]."
+          placeholder={language === 'ar' ? "مثال: تقع أهرامات الجيزة في محافظة [slot0] بينما يقع معبد أبو سمبل في محافظة [slot1]." : "e.g. The pyramids are in [slot0] while Luxor Temple is in [slot1]."}
         />
       </div>
 
-      <div className="flex flex-col gap-2">
-        <input
-          type="text"
-          placeholder="أضف خيار إجابة جديد (كلمة)..."
-          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
-          value={choiceInput}
-          onChange={(e) => setChoiceInput(e.target.value)}
-        />
-        <button
-          type="button"
-          onClick={addChoice}
-          className="w-full py-2 bg-slate-950 text-white rounded-xl text-xs font-black cursor-pointer"
-        >
-          إضافة خيار
-        </button>
-      </div>
-
-      <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto py-1">
-        {choicesList.map((c, i) => (
-          <div key={i} className="bg-slate-50 px-2 py-1 rounded-lg border border-slate-200 flex items-center gap-1.5 text-xs font-bold truncate max-w-full">
-            <span className="truncate">{c}</span>
-            <button type="button" onClick={() => removeChoice(c)} className="text-rose-500 hover:text-rose-700 cursor-pointer shrink-0">×</button>
-          </div>
-        ))}
+      <div className="space-y-3">
+        <label className="text-[10px] font-black text-slate-400 block">{language === 'ar' ? "خيارات الكلمات المتاحة للسحب:" : "Available Word Choices to Drag:"}</label>
+        <div className="flex gap-2 w-full">
+          <input
+            type="text"
+            placeholder={language === 'ar' ? "اكتب كلمة الخيار الجديدة..." : "Write choice word..."}
+            className="flex-1 bg-white border border-slate-250 rounded-xl px-4 py-2.5 text-xs font-bold focus:border-indigo-500 outline-none transition-all"
+            value={choiceInput}
+            onChange={(e) => setChoiceInput(e.target.value)}
+            onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); addChoice(); } }}
+          />
+          <button
+            type="button"
+            onClick={addChoice}
+            className="px-5 py-2.5 bg-indigo-650 hover:bg-indigo-750 text-white rounded-xl text-xs font-black shadow-md shadow-indigo-650/10 transition-all cursor-pointer shrink-0"
+          >
+            {language === 'ar' ? "إضافة كلمة" : "Add Word"}
+          </button>
+        </div>
+        
+        <div className="flex flex-wrap gap-1.5 p-3 bg-slate-50 border border-slate-100 rounded-xl max-h-36 overflow-y-auto">
+          {choicesList.length === 0 ? (
+            <span className="text-[10px] text-slate-400 font-bold">{language === 'ar' ? "لا توجد كلمات سحب مضافة. أضف كلمات في الحقل أعلاه." : "No drag choices added yet. Add some above."}</span>
+          ) : (
+            choicesList.map((c, i) => (
+              <div key={i} className="bg-white px-2.5 py-1 rounded-lg border border-slate-200 flex items-center gap-2 text-xs font-bold shadow-sm">
+                <span className="text-slate-800">{c}</span>
+                <button type="button" onClick={() => removeChoice(c)} className="text-rose-500 hover:text-rose-700 font-black cursor-pointer text-sm">×</button>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       {slotsCount > 0 && (
         <div className="space-y-3 pt-3 border-t border-slate-100">
-          <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-            اختر الكلمة الصحيحة لكل فراغ:
+          <h6 className="text-[10px] font-black text-indigo-900 uppercase tracking-widest flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            <span>{language === 'ar' ? "حدد الكلمة الصحيحة لكل فراغ من النص:" : "Define the Correct Word for each Slot:"}</span>
           </h6>
-          {Array.from({ length: slotsCount }).map((_, slotIdx) => (
-            <div key={slotIdx} className="flex flex-col gap-1.5 text-xs">
-              <span className="font-bold text-slate-500">
-                الفراغ {slotIdx}:
-              </span>
-              <select
-                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-xs"
-                value={correctAnswerSlots[slotIdx] || ""}
-                onChange={(e) => handleSlotMapChange(slotIdx, e.target.value)}
-              >
-                <option value="">-- اختر الكلمة --</option>
-                {choicesList.map((c, idx) => (
-                  <option key={idx} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
-          ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {Array.from({ length: slotsCount }).map((_, slotIdx) => (
+              <div key={slotIdx} className="p-3 bg-indigo-50/30 border border-indigo-100 rounded-xl flex items-center gap-3 justify-between">
+                <span className="font-black text-slate-700 text-xs shrink-0">
+                  {language === 'ar' ? `الفراغ [slot${slotIdx}]` : `Slot [slot${slotIdx}]`}:
+                </span>
+                <select
+                  className="bg-white border border-slate-250 rounded-lg px-3 py-1.5 font-bold text-xs flex-1 outline-none"
+                  value={correctAnswerSlots[slotIdx] || ""}
+                  onChange={(e) => handleSlotMapChange(slotIdx, e.target.value)}
+                >
+                  <option value="">{language === 'ar' ? "-- اختر الحل --" : "-- Select --"}</option>
+                  {choicesList.map((c, idx) => (
+                    <option key={idx} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -703,55 +881,60 @@ function GroupSortingEditor({ question, updateQuestionData, language }: { questi
     updateQuestionData({ groups, items: updatedItems }, newCorrect);
   };
 
+  const groupColors = [
+    { bg: "bg-indigo-50/70 border-indigo-200 text-indigo-900", label: "indigo" },
+    { bg: "bg-emerald-50/70 border-emerald-200 text-emerald-900", label: "emerald" },
+    { bg: "bg-amber-50/70 border-amber-200 text-amber-900", label: "amber" },
+    { bg: "bg-rose-50/70 border-rose-200 text-rose-900", label: "rose" },
+    { bg: "bg-sky-50/70 border-sky-200 text-sky-900", label: "sky" },
+    { bg: "bg-purple-50/70 border-purple-200 text-purple-900", label: "purple" }
+  ];
+
   return (
     <div className="space-y-6 text-right w-full max-w-full overflow-hidden" dir="rtl">
       <h5 className="text-xs font-black text-slate-500 uppercase tracking-widest">
-        محرر تصنيف المجموعات (Group Sorting):
+        {language === 'ar' ? "محرر تصنيف المجموعات (Group Sorting):" : "Group Sorting Editor:"}
       </h5>
 
       <div className="space-y-3">
-        <div className="flex flex-col gap-2 w-full">
+        <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{language === 'ar' ? "المجموعات / التصنيفات المتاحة:" : "Available Groups / Classifications:"}</label>
+        <div className="flex gap-2 w-full">
           <input
             type="text"
-            placeholder="مجموعة جديدة (مثل: ثدييات)..."
-            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
+            placeholder={language === 'ar' ? "اسم مجموعة جديدة (مثل: ثدييات)..." : "New group name (e.g. Mammals)..."}
+            className="flex-1 bg-white border border-slate-250 rounded-xl px-4 py-2.5 text-xs font-bold focus:border-indigo-500 outline-none transition-all"
             value={groupInput}
             onChange={(e) => setGroupInput(e.target.value)}
+            onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); addGroup(); } }}
           />
           <button
             type="button"
             onClick={addGroup}
-            className="w-full py-2 bg-slate-950 text-white rounded-xl text-xs font-black cursor-pointer"
+            className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black shadow-md transition-all cursor-pointer shrink-0"
           >
-            إضافة مجموعة
+            {language === 'ar' ? "إضافة مجموعة" : "Add Group"}
           </button>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {groups.map((g: string, i: number) => (
-            <div key={i} className="bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200 flex items-center gap-1.5 text-xs font-bold truncate max-w-full">
-              <span className="truncate">{g}</span>
-              <button type="button" onClick={() => removeGroup(g)} className="text-rose-500 hover:text-rose-700 cursor-pointer shrink-0">×</button>
-            </div>
-          ))}
         </div>
       </div>
 
       {groups.length > 0 && (
-        <div className="space-y-3 pt-3 border-t border-slate-100">
-          <div className="flex flex-col gap-2 w-full">
+        <div className="space-y-3 pt-4 border-t border-slate-100">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{language === 'ar' ? "إضافة كارت عنصر جديد للمجموعات:" : "Add New Item Card to Groups:"}</label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
             <input
               type="text"
-              placeholder="بطاقة عنصر (مثل: أسد)..."
-              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold"
+              placeholder={language === 'ar' ? "اسم العنصر (مثل: أسد)..." : "Item text (e.g. Lion)..."}
+              className="md:col-span-1 bg-white border border-slate-250 rounded-xl px-4 py-2.5 text-xs font-bold focus:border-indigo-500 outline-none transition-all"
               value={itemInput}
               onChange={(e) => setItemInput(e.target.value)}
+              onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); addItem(); } }}
             />
             <select
-              className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold min-h-[34px]"
+              className="md:col-span-1 bg-white border border-slate-250 rounded-xl px-3 py-2.5 text-xs font-bold outline-none"
               value={targetGroup}
               onChange={(e) => setTargetGroup(e.target.value)}
             >
-              <option value="">اختر المجموعة المقابلة...</option>
+              <option value="">{language === 'ar' ? "اختر المجموعة المقابلة..." : "Select Group..."}</option>
               {groups.map((g: string, idx: number) => (
                 <option key={idx} value={g}>{g}</option>
               ))}
@@ -759,21 +942,56 @@ function GroupSortingEditor({ question, updateQuestionData, language }: { questi
             <button
               type="button"
               onClick={addItem}
-              className="w-full py-2 bg-slate-950 text-white rounded-xl text-xs font-black cursor-pointer"
+              className="md:col-span-1 py-2.5 bg-indigo-600 hover:bg-indigo-755 text-white rounded-xl text-xs font-black shadow-md shadow-indigo-600/10 transition-all cursor-pointer"
             >
-              إضافة بطاقة
+              {language === 'ar' ? "إضافة بطاقة" : "Add Card"}
             </button>
           </div>
+        </div>
+      )}
 
-          <div className="space-y-2 max-h-40 overflow-y-auto">
-            {Object.keys(correctMap).map((item) => (
-              <div key={item} className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center text-xs gap-2 min-w-0">
-                <span className="font-bold text-slate-700 truncate min-w-0">{item} → <span className="underline">{correctMap[item]}</span></span>
-                <button type="button" onClick={() => removeItem(item)} className="text-rose-500 hover:text-rose-700 cursor-pointer shrink-0">
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
+      {groups.length > 0 && (
+        <div className="space-y-4 pt-4 border-t border-slate-100">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-2">{language === 'ar' ? "الهيكل العام للمجموعات والعناصر:" : "Group & Items Breakdown Structure:"}</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {groups.map((grp: string, index: number) => {
+              const color = groupColors[index % groupColors.length];
+              const grpItems = items.filter((item: any) => correctMap[item] === grp);
+
+              return (
+                <div key={grp} className={`rounded-2xl border-2 p-4 flex flex-col min-h-[140px] shadow-sm ${color.bg}`}>
+                  <div className="flex justify-between items-center border-b border-black/5 pb-2 mb-3 shrink-0">
+                    <span className="font-black text-sm">{grp}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeGroup(grp)}
+                      className="text-slate-400 hover:text-rose-500 p-1 hover:bg-white rounded transition-all shrink-0 cursor-pointer font-black"
+                      title={language === 'ar' ? "حذف المجموعة وكل عناصرها" : "Delete group and all its items"}
+                    >
+                      &times;
+                    </button>
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    {grpItems.length === 0 ? (
+                      <span className="text-[10px] font-bold text-slate-400/80 italic block text-center py-4">{language === 'ar' ? "مجموعة فارغة. أضف بطاقات." : "Empty group. Add items."}</span>
+                    ) : (
+                      grpItems.map((item: any) => (
+                        <div key={item} className="bg-white/80 border border-slate-150 p-2 rounded-xl flex justify-between items-center text-xs shadow-sm">
+                          <span className="font-bold text-slate-800 truncate">{item}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeItem(item)}
+                            className="text-slate-400 hover:text-rose-500 p-1 hover:bg-slate-50 rounded transition-all shrink-0 cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
