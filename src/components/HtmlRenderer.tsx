@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from 'react';
+import React, { useLayoutEffect, useEffect, useRef } from 'react';
 // @ts-expect-error katex auto-render does not ship TypeScript declarations.
 import renderMathInElement from 'katex/dist/contrib/auto-render';
 import 'katex/dist/katex.min.css';
@@ -11,10 +11,12 @@ interface HtmlRendererProps {
   tag?: React.ElementType;
 }
 
-export default function HtmlRenderer({ html, className = "", tag: Tag = "div" }: HtmlRendererProps) {
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+
+function HtmlRenderer({ html, className = "", tag: Tag = "div" }: HtmlRendererProps) {
   const containerRef = useRef<HTMLElement>(null);
 
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (containerRef.current) {
       renderMathInElement(containerRef.current, {
         delimiters: [
@@ -26,7 +28,7 @@ export default function HtmlRenderer({ html, className = "", tag: Tag = "div" }:
         throwOnError: false
       });
     }
-  }, [html]);
+  }, [html, className, Tag]);
 
   const combinedClassName = className.includes("prose") ? className : `prose ${className}`.trim();
 
@@ -34,8 +36,11 @@ export default function HtmlRenderer({ html, className = "", tag: Tag = "div" }:
     <Tag 
       ref={containerRef as any} 
       className={combinedClassName} 
-      dangerouslySetInnerHTML={{ __html: html }} 
+      dangerouslySetInnerHTML={{ __html: html || "" }} 
       dir="auto" 
     />
   );
 }
+
+export default React.memo(HtmlRenderer);
+

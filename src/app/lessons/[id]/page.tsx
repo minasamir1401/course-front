@@ -13,6 +13,7 @@ const VideoPlayer = dynamic(() => import('@/components/VideoPlayer'), { ssr: fal
 const Confetti = dynamic(() => import('react-confetti'), { ssr: false });
 const InteractiveQuestionRenderer = dynamic(() => import('@/components/InteractiveQuestionRenderer'), { ssr: false });
 import HtmlRenderer from '@/components/HtmlRenderer';
+import { getOptionLetter, cleanOptionText } from '@/lib/utils';
 
 const QuestionFeedback = ({ isCorrect, correctAnswer, language }: any) => {
   if (!isCorrect) {
@@ -935,9 +936,18 @@ export default function LessonPlayerPage() {
                                   className={`relative p-6 rounded-3xl border-4 text-right transition-all group overflow-hidden ${isSelected ? (isCorrect ? 'border-emerald-500 bg-emerald-50' : isWrong ? 'border-red-500 bg-red-50' : 'border-indigo-500 bg-indigo-50') : 'border-slate-100 bg-white hover:border-indigo-200'} ${isSubmitted && !isSelected && !isCorrect ? 'opacity-50' : ''}`}
                                   disabled={isSubmitted}
                                 >
-                                  <span className={`text-xl font-bold ${isSelected ? (isCorrect ? 'text-emerald-700' : isWrong ? 'text-red-700' : 'text-indigo-700') : 'text-slate-700'}`}>
-                                    <HtmlRenderer html={opt} tag="span" />
-                                  </span>
+                                  <div className="flex items-center gap-3.5 flex-1 text-start">
+                                    <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 transition-colors ${
+                                      isSelected
+                                        ? (isCorrect ? "bg-emerald-600 text-white" : isWrong ? "bg-red-600 text-white" : "bg-indigo-600 text-white")
+                                        : "bg-slate-100 text-slate-600 group-hover:bg-slate-200"
+                                    }`}>
+                                      {getOptionLetter(oIdx, language)}
+                                    </span>
+                                    <span className={`text-xl font-bold flex-1 ${isSelected ? (isCorrect ? 'text-emerald-700' : isWrong ? 'text-red-700' : 'text-indigo-700') : 'text-slate-700'}`}>
+                                      <HtmlRenderer html={cleanOptionText(opt)} tag="span" />
+                                    </span>
+                                  </div>
                                   {isSelected && !isSubmitted && <CheckCircle2 className="absolute top-1/2 left-6 -translate-y-1/2 w-8 h-8 text-indigo-500" />}
                                   {isCorrect && <CheckCircle2 className="absolute top-1/2 left-6 -translate-y-1/2 w-8 h-8 text-emerald-500" />}
                                   {isWrong && <X className="absolute top-1/2 left-6 -translate-y-1/2 w-8 h-8 text-red-500" />}
@@ -1108,9 +1118,18 @@ export default function LessonPlayerPage() {
                                         className={`relative p-5 rounded-3xl border-4 text-right transition-all group overflow-hidden ${isSelected ? (isCorrect ? 'border-emerald-500 bg-emerald-50' : isWrong ? 'border-red-500 bg-red-50' : 'border-indigo-500 bg-indigo-50') : 'border-slate-100 bg-white hover:border-indigo-200'} ${isSubmitted && !isSelected && !isCorrect ? 'opacity-50' : ''}`}
                                         disabled={isSubmitted}
                                       >
-                                        <span className={`text-lg font-bold ${isSelected ? (isCorrect ? 'text-emerald-700' : isWrong ? 'text-red-700' : 'text-indigo-700') : 'text-slate-700'}`}>
-                                          <HtmlRenderer html={opt} tag="span" />
-                                        </span>
+                                        <div className="flex items-center gap-3.5 flex-1 text-start">
+                                          <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 transition-colors ${
+                                            isSelected
+                                              ? (isCorrect ? "bg-emerald-600 text-white" : isWrong ? "bg-red-600 text-white" : "bg-indigo-600 text-white")
+                                              : "bg-slate-100 text-slate-600 group-hover:bg-slate-200"
+                                          }`}>
+                                            {getOptionLetter(oIdx, language)}
+                                          </span>
+                                          <span className={`text-lg font-bold flex-1 ${isSelected ? (isCorrect ? 'text-emerald-700' : isWrong ? 'text-red-700' : 'text-indigo-700') : 'text-slate-700'}`}>
+                                            <HtmlRenderer html={cleanOptionText(opt)} tag="span" />
+                                          </span>
+                                        </div>
                                         {isSelected && !isSubmitted && <CheckCircle2 className="absolute top-1/2 left-4 -translate-y-1/2 w-6 h-6 text-indigo-500" />}
                                         {isCorrect && <CheckCircle2 className="absolute top-1/2 left-4 -translate-y-1/2 w-6 h-6 text-emerald-500" />}
                                         {isWrong && <X className="absolute top-1/2 left-4 -translate-y-1/2 w-6 h-6 text-red-500" />}
@@ -1311,10 +1330,23 @@ export default function LessonPlayerPage() {
                                   className={`p-5 md:p-6 rounded-[25px] border-4 text-start transition-all duration-300 font-black text-sm md:text-base relative break-words overflow-hidden ${isSelected ? (isCorrect ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : isWrong ? 'border-red-500 bg-red-50 text-red-700' : 'bg-indigo-600 border-white text-white shadow-xl shadow-indigo-100') : 'bg-white border-slate-50 text-slate-600 hover:border-indigo-200'} ${isSubmitted && !isSelected && !isCorrect ? 'opacity-50' : ''}`}
                                 >
                                   <div className="flex items-center justify-between gap-4">
-                                    <span className={`flex-1 break-words leading-relaxed ${isSelected && !isSubmitted ? 'text-white' : ''}`}>
-                                      <HtmlRenderer html={opt} tag="span" />
-                                    </span>
-                                    <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${isSelected && !isSubmitted ? 'border-white bg-white/20' : isCorrect ? 'border-emerald-500 bg-emerald-500 text-white' : isWrong ? 'border-red-500 bg-red-505 text-white' : 'border-slate-200'}`}>
+                                    <div className="flex items-center gap-3.5 flex-1 text-start">
+                                      <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 transition-colors ${
+                                        isSelected && !isSubmitted
+                                          ? "bg-white/20 text-white"
+                                          : isCorrect
+                                            ? "bg-emerald-600 text-white"
+                                            : isWrong
+                                              ? "bg-red-600 text-white"
+                                              : "bg-slate-100 text-slate-600 group-hover:bg-slate-200"
+                                      }`}>
+                                        {getOptionLetter(oIdx, language)}
+                                      </span>
+                                      <span className={`flex-1 break-words leading-relaxed ${isSelected && !isSubmitted ? 'text-white' : ''}`}>
+                                        <HtmlRenderer html={cleanOptionText(opt)} tag="span" />
+                                      </span>
+                                    </div>
+                                    <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${isSelected && !isSubmitted ? 'border-white bg-white/20' : isCorrect ? 'border-emerald-500 bg-emerald-500 text-white' : isWrong ? 'border-red-500 bg-red-500 text-white' : 'border-slate-200'}`}>
                                       {isSelected && !isSubmitted && <CheckCircle2 className="w-4 h-4" />}
                                       {isCorrect && <CheckCircle2 className="w-4 h-4" />}
                                       {isWrong && <X className="w-4 h-4" />}

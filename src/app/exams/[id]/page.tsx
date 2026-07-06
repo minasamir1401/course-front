@@ -9,6 +9,7 @@ import { useNotification } from "@/context/NotificationContext";
 import VideoPlayer from "@/components/VideoPlayer";
 import HtmlRenderer from "@/components/HtmlRenderer";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { getOptionLetter, cleanOptionText } from "@/lib/utils";
 
 export default function TakeExamPage() {
   const { id } = useParams();
@@ -498,8 +499,20 @@ export default function TakeExamPage() {
                             : "bg-white border-slate-100 hover:border-slate-300 hover:bg-slate-50"
                         }`}
                       >
+                        <div className="flex items-center gap-3.5 flex-1 text-start">
+                          <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 transition-colors ${
+                            isSelected
+                              ? "bg-indigo-600 text-white shadow-sm"
+                              : "bg-slate-100 text-slate-600 group-hover:bg-slate-200"
+                          }`}>
+                            {getOptionLetter(i, language)}
+                          </span>
+                          <span className={`text-lg font-bold ${isSelected ? "text-indigo-900" : "text-slate-700"}`}>
+                            <HtmlRenderer html={cleanOptionText(option)} tag="span" />
+                          </span>
+                        </div>
                         <div
-                          className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${
+                          className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ms-3 ${
                             isSelected
                               ? "bg-indigo-600 border-indigo-600"
                               : "border-slate-300 group-hover:border-indigo-400"
@@ -511,9 +524,6 @@ export default function TakeExamPage() {
                               : <div className="w-2 h-2 bg-white rounded-full"></div>
                           )}
                         </div>
-                        <span className={`text-lg font-bold ${isSelected ? "text-indigo-900" : "text-slate-700"}`}>
-                          <HtmlRenderer html={option} tag="span" />
-                        </span>
                       </button>
                     );
                   })

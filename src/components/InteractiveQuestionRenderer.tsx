@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { CheckCircle2, AlertCircle, HelpCircle, Info, Sparkles, BookOpen, Clock as ClockIcon, Award, Play } from 'lucide-react';
 import HtmlRenderer from "./HtmlRenderer";
 import GeoGebraWidget from "./GeoGebraWidget";
+import { getOptionLetter, cleanOptionText } from "@/lib/utils";
 
 interface QuestionProps {
   question: any;
@@ -327,8 +328,17 @@ function McqRenderer({ question, value, onChange, language }: any) {
                   : "bg-white border-slate-200 text-slate-700 hover:border-slate-350 hover:bg-slate-50/50"
               }`}
             >
-              <HtmlRenderer html={translateText(choice, language)} tag="span" className={`font-black text-base transition-colors ${isSelected ? "text-indigo-950" : "text-slate-700"}`} />
-              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? "border-indigo-650 bg-indigo-650 text-white" : "border-slate-300 bg-white"}`}>
+              <div className="flex items-center gap-3.5 flex-1 text-start">
+                <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 transition-colors ${
+                  isSelected
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "bg-slate-100 text-slate-600 group-hover:bg-slate-200"
+                }`}>
+                  {getOptionLetter(idx, language)}
+                </span>
+                <HtmlRenderer html={translateText(cleanOptionText(choice), language)} tag="span" className={`font-black text-base transition-colors ${isSelected ? "text-indigo-950" : "text-slate-700"}`} />
+              </div>
+              <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ms-3 ${isSelected ? "border-indigo-650 bg-indigo-650 text-white" : "border-slate-300 bg-white"}`}>
                 {isSelected && <span className="w-2.5 h-2.5 rounded-full bg-white" />}
               </div>
             </button>
@@ -437,8 +447,17 @@ function MultiSelectRenderer({ question, value, onChange, language }: any) {
                   : "bg-white border-slate-200 text-slate-700 hover:border-slate-350 hover:bg-slate-50/50"
               }`}
             >
-              <HtmlRenderer html={translateText(choice, language)} tag="span" className={`font-black text-base transition-colors ${isSelected ? "text-indigo-950" : "text-slate-700"}`} />
-              <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${isSelected ? "border-indigo-650 bg-indigo-650 text-white" : "border-slate-300 bg-white"}`}>
+              <div className="flex items-center gap-3.5 flex-1 text-start">
+                <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 transition-colors ${
+                  isSelected
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "bg-slate-100 text-slate-600 group-hover:bg-slate-200"
+                }`}>
+                  {getOptionLetter(idx, language)}
+                </span>
+                <HtmlRenderer html={translateText(cleanOptionText(choice), language)} tag="span" className={`font-black text-base transition-colors ${isSelected ? "text-indigo-950" : "text-slate-700"}`} />
+              </div>
+              <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all shrink-0 ms-3 ${isSelected ? "border-indigo-650 bg-indigo-650 text-white" : "border-slate-300 bg-white"}`}>
                 {isSelected && <CheckCircle2 className="w-4 h-4 text-white" />}
               </div>
             </button>

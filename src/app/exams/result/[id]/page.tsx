@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useNotification } from "@/context/NotificationContext";
 import HtmlRenderer from "@/components/HtmlRenderer";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { getOptionLetter, cleanOptionText } from "@/lib/utils";
 
 const renderExplanation = (explanationString: string) => {
   if (!explanationString) return null;
@@ -380,7 +381,18 @@ export default function ExamResultPage() {
 
                         return (
                           <div key={oIdx} className={`p-5 rounded-2xl border-2 transition-all flex items-center justify-between ${bgClass}`}>
-                            <span className={`font-bold ${textClass}`}><HtmlRenderer html={answer.question.type === 'TRUE_FALSE' ? translateTrueFalse(opt) : opt} tag="span" /></span>
+                            <div className="flex items-center gap-3.5 flex-1 text-start">
+                              <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 transition-colors ${
+                                bgClass.includes('emerald')
+                                  ? "bg-emerald-600 text-white shadow-sm"
+                                  : bgClass.includes('rose')
+                                    ? "bg-rose-600 text-white shadow-sm"
+                                    : "bg-slate-100 text-slate-600"
+                              }`}>
+                                {getOptionLetter(oIdx, language)}
+                              </span>
+                              <span className={`font-bold flex-1 ${textClass}`}><HtmlRenderer html={answer.question.type === 'TRUE_FALSE' ? translateTrueFalse(opt) : cleanOptionText(opt)} tag="span" /></span>
+                            </div>
                             {icon}
                           </div>
                         );

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Plus, Trash2, HelpCircle, Sparkles, Info } from 'lucide-react';
 import GeoGebraWidget from "./GeoGebraWidget";
+import { getOptionLetter } from "@/lib/utils";
 
 interface EditorProps {
   question: any;
@@ -372,9 +373,12 @@ function McqEditor({ question, updateQuestionData, language }: { question: any; 
                 onChange={() => updateQuestionData({ choices }, c)}
                 className="w-5 h-5 accent-indigo-600 cursor-pointer shrink-0"
               />
+              <span className="w-6 h-6 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-[11px] text-indigo-600 shrink-0 select-none">
+                {getOptionLetter(idx, language)}
+              </span>
               <input
                 type="text"
-                placeholder={language === 'ar' ? `اكتب الخيار ${idx + 1}...` : `Option ${idx + 1}...`}
+                placeholder={language === 'ar' ? `اكتب الخيار ${idx + 1} (بدون أ، ب، ج)...` : `Option ${idx + 1} (without A, B, C)...`}
                 className="flex-1 min-w-0 bg-transparent border-none outline-none font-bold text-slate-800 text-xs py-1"
                 value={c}
                 onChange={(e) => handleChoiceChange(idx, e.target.value)}
@@ -531,9 +535,12 @@ function MultiSelectEditor({ question, updateQuestionData, language }: { questio
                 onChange={(e) => handleCheckChange(c, e.target.checked)}
                 className="w-5 h-5 accent-indigo-650 cursor-pointer rounded shrink-0"
               />
+              <span className="w-6 h-6 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-[11px] text-indigo-600 shrink-0 select-none">
+                {getOptionLetter(idx, language)}
+              </span>
               <input
                 type="text"
-                placeholder={language === 'ar' ? `اكتب الخيار ${idx + 1}...` : `Option ${idx + 1}...`}
+                placeholder={language === 'ar' ? `اكتب الخيار ${idx + 1} (بدون أ، ب، ج)...` : `Option ${idx + 1} (without A, B, C)...`}
                 className="flex-1 min-w-0 bg-transparent border-none outline-none font-bold text-slate-800 text-xs py-1"
                 value={c}
                 onChange={(e) => handleChoiceChange(idx, e.target.value)}

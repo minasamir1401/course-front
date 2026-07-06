@@ -10,8 +10,8 @@ import { ArrowLeft, Plus, Trash2, Video, FileText, HelpCircle, BookOpen, Save, L
 import * as XLSX from 'xlsx';
 import RichTextEditor from "@/components/RichTextEditor";
 import { compressImage } from "@/lib/image-utils";
-import FileUpload from "@/components/FileUpload";
 import InteractiveQuestionEditor from "@/components/InteractiveQuestionEditor";
+import { getOptionLetter, cleanOptionText } from "@/lib/utils";
 
 // Safely parse JSON
 const parseJson = (str: any, fallback: any = {}) => {
@@ -1310,6 +1310,9 @@ export default function CreateCoursePage() {
                                     >
                                       {isSelected && opt && <CheckCircle2 className="w-4 h-4 text-white" />}
                                     </div>
+                                    <span className="w-6 h-6 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-[11px] text-indigo-600 shrink-0 select-none">
+                                      {getOptionLetter(oIdx, language)}
+                                    </span>
                                     <input
                                       type="text"
                                       value={opt}
@@ -1318,7 +1321,7 @@ export default function CreateCoursePage() {
                                         newOpts[oIdx] = e.target.value;
                                         updateBlock(source, sIdx, 'options', newOpts);
                                       }}
-                                      placeholder={language === 'ar' ? `الخيار ${oIdx + 1}` : `Option ${oIdx + 1}`}
+                                      placeholder={language === 'ar' ? `الخيار ${oIdx + 1} (بدون أ، ب، ج)` : `Option ${oIdx + 1} (no A, B, C)`}
                                       className="bg-transparent outline-none font-bold text-slate-700 flex-1"
                                     />
                                     {block.options.length > 2 && (
@@ -1881,10 +1884,13 @@ export default function CreateCoursePage() {
                                       : q.correctAnswer === opt;
                                     return (
                                       <div key={oIdx} className={`p-3 rounded-xl border flex items-center gap-3 text-xs font-bold transition-all ${isCorrect ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-white border-slate-100 text-slate-600'}`}>
-                                        <div className={`w-5 h-5 rounded-full flex items-center justify-center ${isCorrect ? 'bg-emerald-500 text-white' : 'bg-slate-100'}`}>
+                                        <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${isCorrect ? 'bg-emerald-500 text-white' : 'bg-slate-100'}`}>
                                           {isCorrect ? '✓' : ''}
                                         </div>
-                                        <span>{opt}</span>
+                                        <span className="w-5 h-5 rounded-md bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-[10px] text-indigo-600 shrink-0">
+                                          {getOptionLetter(oIdx, language)}
+                                        </span>
+                                        <span>{cleanOptionText(opt)}</span>
                                       </div>
                                     );
                                   })}
@@ -2186,9 +2192,12 @@ export default function CreateCoursePage() {
                           >
                             {isQuestionCorrectAnswer(opt) && opt !== "" && <CheckCircle2 className="w-5 h-5 text-white" />}
                           </div>
+                          <span className="w-7 h-7 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-xs text-indigo-600 shrink-0 select-none">
+                            {getOptionLetter(oIndex, language)}
+                          </span>
                           <input
                             type="text"
-                            placeholder={language === 'ar' ? `الخيار ${oIndex + 1}` : `Option ${oIndex + 1}`}
+                            placeholder={language === 'ar' ? `الخيار ${oIndex + 1} (بدون أ، ب، ج)` : `Option ${oIndex + 1} (no A, B, C)`}
                             className="bg-transparent flex-1 outline-none font-bold text-slate-700 placeholder:text-slate-300 text-sm"
                             value={opt}
                             onChange={(e) => updateQuestionOption(oIndex, e.target.value)}
