@@ -4,10 +4,7 @@ import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useParams, useRouter } from "next/navigation";
 import { API_URL } from "@/lib/api";
-import { 
-  BarChart3, Users, CheckCircle2, XCircle, 
-  Clock, ArrowRight, Download, Globe, Building2 
-} from "lucide-react";
+import { BarChart3, Users, CheckCircle2, XCircle, Clock, ArrowRight, Download, Globe, Building2 } from 'lucide-react';
 
 export default function SuperAdminExamResultsPage() {
   const { id } = useParams();

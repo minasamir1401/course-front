@@ -2,7 +2,7 @@
 
 import React from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { ClipboardList } from "lucide-react";
+import { ClipboardList } from 'lucide-react';
 
 import { useLanguage } from "@/contexts/LanguageContext";
 

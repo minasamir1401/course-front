@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Sigma, X, Check } from "lucide-react";
+import { Sigma, X, Check } from 'lucide-react';
 
 interface MathInputProps {
   value: string;

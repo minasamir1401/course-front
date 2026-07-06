@@ -2,11 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import {
-  Sparkles, Award, Trophy, Play, CheckCircle2, AlertCircle,
-  HelpCircle, Info, ChevronDown, ChevronUp, BookOpen, Clock,
-  Target, X, Lock, RefreshCw, Star, StarOff, BrainCircuit, ArrowLeft, ArrowRight
-} from "lucide-react";
+import { Sparkles, Award, Trophy, Play, CheckCircle2, AlertCircle, HelpCircle, Info, ChevronDown, ChevronUp, BookOpen, Clock, Target, X, Lock, RefreshCw, Star, StarOff, BrainCircuit, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useRouter } from "next/navigation";
 import { API_URL } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";

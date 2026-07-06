@@ -3,7 +3,7 @@
 import { API_URL } from '@/lib/api';
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, User, BookOpen, GraduationCap } from "lucide-react";
+import { Lock, User, BookOpen, GraduationCap } from 'lucide-react';
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function StudentLoginPage() {

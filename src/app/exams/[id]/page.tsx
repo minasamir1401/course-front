@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { API_URL } from "@/lib/api";
 import { sanitizeHtml } from "@/lib/sanitize";
-import { Clock, ChevronRight, ChevronLeft, Send, AlertCircle, HelpCircle, Lock, Play, Calendar, ShieldCheck, CheckCircle2, Target, Info, Sparkles, BookOpen, MessageSquare } from "lucide-react";
+import { Clock, ChevronRight, ChevronLeft, Send, AlertCircle, HelpCircle, Lock, Play, Calendar, ShieldCheck, CheckCircle2, Target, Info, Sparkles, BookOpen, MessageSquare } from 'lucide-react';
 import { useNotification } from "@/context/NotificationContext";
 import VideoPlayer from "@/components/VideoPlayer";
 import HtmlRenderer from "@/components/HtmlRenderer";

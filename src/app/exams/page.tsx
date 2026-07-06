@@ -2,12 +2,7 @@
 
 import React from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import {
-  FileText, Clock, AlertCircle, CheckCircle2,
-  ChevronRight, ChevronLeft, Calendar, ArrowUpRight, Filter, Search,
-  PlayCircle, Timer, Award, Lock, Eye, EyeOff, Hourglass, CalendarClock,
-  Sparkles, Target, ArrowLeft
-} from "lucide-react";
+import { FileText, Clock, AlertCircle, CheckCircle2, ChevronRight, ChevronLeft, Calendar, ArrowUpRight, Filter, Search, PlayCircle, Timer, Award, Lock, Eye, EyeOff, Hourglass, CalendarClock, Sparkles, Target, ArrowLeft } from 'lucide-react';
 import Link from "next/link";
 
 import { API_URL } from "@/lib/api";

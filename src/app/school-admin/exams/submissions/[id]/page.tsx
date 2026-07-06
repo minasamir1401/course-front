@@ -4,11 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { API_URL } from "@/lib/api";
 import DashboardLayout from "@/components/DashboardLayout";
-import { 
-  CheckCircle2, XCircle, ChevronRight, LayoutDashboard, 
-  RefreshCw, Award, Target, Clock, User, Mail, 
-  ArrowRight, FileText, BarChart3
-} from "lucide-react";
+import { CheckCircle2, XCircle, ChevronRight, LayoutDashboard, RefreshCw, Award, Target, Clock, User, Mail, ArrowRight, FileText, BarChart3 } from 'lucide-react';
 import Link from "next/link";
 import { useNotification } from "@/context/NotificationContext";
 import HtmlRenderer from "@/components/HtmlRenderer";

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { API_URL } from "@/lib/api";
-import { CheckCircle2, XCircle, ChevronRight, ChevronLeft, LayoutDashboard, RefreshCw, Award, Target, Clock, MessageCircle, Lock, EyeOff, HelpCircle, Info, AlertCircle, Sparkles, BookOpen, MessageSquare } from "lucide-react";
+import { CheckCircle2, XCircle, ChevronRight, ChevronLeft, LayoutDashboard, RefreshCw, Award, Target, Clock, MessageCircle, Lock, EyeOff, HelpCircle, Info, AlertCircle, Sparkles, BookOpen, MessageSquare } from 'lucide-react';
 import Link from "next/link";
 import { useNotification } from "@/context/NotificationContext";
 import HtmlRenderer from "@/components/HtmlRenderer";

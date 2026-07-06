@@ -2,9 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { 
-  Users, Plus, Search, Trash2, Edit2, Shield, X, Mail, Phone, BookOpen, GraduationCap
-} from "lucide-react";
+import { Users, Plus, Search, Trash2, Edit2, Shield, X, Mail, Phone, BookOpen, GraduationCap } from 'lucide-react';
 import { API_URL } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";

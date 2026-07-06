@@ -2,10 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { 
-  Settings, Save, Globe, Lock, Bell, 
-  Database, Shield, Palette, Smartphone, Sparkles, Key
-} from "lucide-react";
+import { Settings, Save, Globe, Lock, Bell, Database, Shield, Palette, Smartphone, Sparkles, Key } from 'lucide-react';
 import { API_URL } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";
 import { useRouter } from "next/navigation";

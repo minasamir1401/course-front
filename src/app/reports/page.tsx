@@ -4,11 +4,7 @@ import { API_URL } from '@/lib/api';
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
-import { 
-  BarChart2, TrendingUp, Star, BookOpen, ClipboardList, 
-  Clock, CheckCircle2, Award, Download, Filter, Search,
-  Calendar, ArrowUpRight, ArrowDownRight, MoreVertical
-} from "lucide-react";
+import { BarChart2, TrendingUp, Star, BookOpen, ClipboardList, Clock, CheckCircle2, Award, Download, Filter, Search, Calendar, ArrowUpRight, ArrowDownRight, MoreVertical } from 'lucide-react';
 import { 
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, 
   CartesianGrid, Tooltip, BarChart, Bar, Cell, PieChart, Pie

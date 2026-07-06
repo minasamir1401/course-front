@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookOpen, BarChart, Shield, Zap, Globe, ArrowLeft, Users, GraduationCap, Play, Menu, X } from "lucide-react";
+import { BookOpen, BarChart, Shield, Zap, Globe, ArrowLeft, Users, GraduationCap, Play, Menu, X } from 'lucide-react';
 
 export default function LandingPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);

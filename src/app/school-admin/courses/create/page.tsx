@@ -6,14 +6,7 @@ import { API_URL } from '@/lib/api';
 import { useNotification } from "@/context/NotificationContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useLanguage } from "@/contexts/LanguageContext";
-import {
-  ArrowLeft, Plus, Trash2, Video, FileText,
-  HelpCircle, BookOpen, Save, Layers, Edit2, X,
-  ChevronDown, ChevronUp, Play, Layout, Target,
-  CheckCircle2, AlertCircle, Upload, Download, Settings,
-  Eye, Monitor, ListOrdered, FileJson, FileDown, Clock,
-  Lightbulb, MessageSquareQuote, TriangleAlert, Search, CheckCircle2
-} from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Video, FileText, HelpCircle, BookOpen, Save, Layers, Edit2, X, ChevronDown, ChevronUp, Play, Layout, Target, CheckCircle2, AlertCircle, Upload, Download, Settings, Eye, Monitor, ListOrdered, FileJson, FileDown, Clock, Lightbulb, MessageSquareQuote, TriangleAlert, Search } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import RichTextEditor from "@/components/RichTextEditor";
 import { compressImage } from "@/lib/image-utils";

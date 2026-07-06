@@ -2,11 +2,7 @@
 
 import React from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { 
-  PlaySquare, CheckCircle2, Clock, Calendar, Lock, Play, FileText, 
-  MessageSquare, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
-  Maximize, Settings, Volume2, Info, MessageCircle, FileDown
-} from "lucide-react";
+import { PlaySquare, CheckCircle2, Clock, Calendar, Lock, Play, FileText, MessageSquare, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Maximize, Settings, Volume2, Info, MessageCircle, FileDown } from 'lucide-react';
 
 export default function LessonPage() {
   return (

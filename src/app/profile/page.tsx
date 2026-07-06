@@ -2,7 +2,7 @@
 
 import React from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { User } from "lucide-react";
+import { User } from 'lucide-react';
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function ProfilePage() {

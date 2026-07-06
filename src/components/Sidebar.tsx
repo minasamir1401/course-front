@@ -3,11 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import {
-  LayoutDashboard, Users, GraduationCap, ClipboardList,
-  Settings, LogOut, Menu, X, BookOpen, UserCheck,
-  BarChart3, ShieldCheck, Plus
-} from "lucide-react";
+import { LayoutDashboard, Users, GraduationCap, ClipboardList, Settings, LogOut, Menu, X, BookOpen, UserCheck, BarChart3, ShieldCheck, Plus } from 'lucide-react';
 import { logout } from "@/lib/auth";
 import { useLanguage } from "@/contexts/LanguageContext";
 

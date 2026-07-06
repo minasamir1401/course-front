@@ -2,11 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { 
-  Plus, Search, Book,
-  BookOpen, Layers, Edit2,
-  Trash2, Monitor, Filter, BrainCircuit
-} from "lucide-react";
+import { Plus, Search, Book, BookOpen, Layers, Edit2, Trash2, Monitor, Filter, BrainCircuit } from 'lucide-react';
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { API_URL } from "@/lib/api";

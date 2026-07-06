@@ -2,14 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { 
-  Save, Plus, Trash2, Image as ImageIcon, CheckCircle2, HelpCircle, 
-  ArrowRight, Settings, ListPlus, Globe, Layout, Loader2, 
-  Clock, Lock, Calendar, Eye, EyeOff, FileText, AlertCircle,
-  Bold, Italic, Underline, List, ListOrdered, AlignRight, Code,
-  ChevronDown, ChevronUp, Edit2, Edit3, Play, GripVertical, X, CheckCircle2, Target,
-  Info, Sparkles, BookOpen, MessageSquare, Upload, Download
-} from "lucide-react";
+import { Save, Plus, Trash2, Image as ImageIcon, CheckCircle2, HelpCircle, ArrowRight, Settings, ListPlus, Globe, Layout, Loader2, Clock, Lock, Calendar, Eye, EyeOff, FileText, AlertCircle, Bold, Italic, Underline, List, ListOrdered, AlignRight, Code, ChevronDown, ChevronUp, Edit2, Edit3, Play, GripVertical, X, Target, Info, Sparkles, BookOpen, MessageSquare, Upload, Download } from 'lucide-react';
 import RichTextEditor from "@/components/RichTextEditor";
 import * as XLSX from 'xlsx';
 import VideoPlayer from "@/components/VideoPlayer";

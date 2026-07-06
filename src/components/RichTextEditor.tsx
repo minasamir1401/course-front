@@ -1,13 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import {
-  Bold, Italic, Underline, List, ListOrdered,
-  AlignLeft, AlignCenter, AlignRight,
-  Type, Eraser, Palette, Heading1, Heading2,
-  ChevronDown, Image as ImageIcon, Table, Sigma, X,
-  Highlighter, Trash2
-} from "lucide-react";
+import { Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Type, Eraser, Palette, Heading1, Heading2, ChevronDown, Image as ImageIcon, Table, Sigma, X, Highlighter, Trash2 } from 'lucide-react';
 import { compressImage, uploadFileToServer } from "@/lib/image-utils";
 import katex from "katex";
 import "katex/dist/katex.min.css";

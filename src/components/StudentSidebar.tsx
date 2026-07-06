@@ -3,19 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  BookOpen,
-  ClipboardList,
-  BarChart3,
-  Settings,
-  LogOut,
-  GraduationCap,
-  ChevronLeft,
-  Calendar,
-  MessageSquare,
-  Award
-} from "lucide-react";
+import { LayoutDashboard, BookOpen, ClipboardList, BarChart3, Settings, LogOut, GraduationCap, ChevronLeft, Calendar, MessageSquare, Award } from 'lucide-react';
 
 const NAV_ITEMS = [
   { label: "لوحة التحكم", href: "/dashboard", icon: LayoutDashboard },

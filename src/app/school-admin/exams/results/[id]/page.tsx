@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 import { API_URL } from "@/lib/api";
-import { Users, Award, Search, ArrowRight, UserCheck, BarChart3, TrendingUp } from "lucide-react";
+import { Users, Award, Search, ArrowRight, UserCheck, BarChart3, TrendingUp } from 'lucide-react';
 import Link from "next/link";
 
 export default function ExamResultsPage() {

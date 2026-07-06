@@ -3,12 +3,7 @@
 import { API_URL } from '@/lib/api';
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  Users, Plus, Search, Shield,
-  User, ChevronRight,
-  Trash2, Key, X, GraduationCap, School,
-  Sparkles, Edit
-} from "lucide-react";
+import { Users, Plus, Search, Shield, User, ChevronRight, Trash2, Key, X, GraduationCap, School, Sparkles, Edit } from 'lucide-react';
 import Link from "next/link";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useNotification } from "@/context/NotificationContext";

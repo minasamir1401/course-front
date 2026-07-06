@@ -2,13 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { 
-  BookOpen, Video, Plus, Search, Layers, Edit2, 
-  Trash2, Monitor, HelpCircle, FileText, ChevronLeft,
-  Settings, Layout, Target, CheckCircle2, X, Save,
-  ArrowRight, Activity, Calendar, Download, MoreVertical,
-  GraduationCap, ArrowUpRight
-} from "lucide-react";
+import { BookOpen, Video, Plus, Search, Layers, Edit2, Trash2, Monitor, HelpCircle, FileText, ChevronLeft, Settings, Layout, Target, CheckCircle2, X, Save, ArrowRight, Activity, Calendar, Download, MoreVertical, GraduationCap, ArrowUpRight } from 'lucide-react';
 import { useRouter } from "next/navigation";
 import { API_URL } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";

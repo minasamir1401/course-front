@@ -4,14 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { API_URL } from '@/lib/api';
 import DashboardLayout from "@/components/DashboardLayout";
-import {
-  Play, Pause, ChevronLeft, ChevronRight, CheckCircle2,
-  HelpCircle, BookOpen, Target, Layout, Monitor,
-  MessageSquare, FileDown, Clock, Info, X, Maximize,
-  Volume2, Settings, ArrowRight, ArrowLeft, Star, Award, RotateCcw,
-  CheckCircle2, AlertCircle, Sparkles, Lock, Timer,
-  ArrowUpRight, ListOrdered, TrendingUp, GraduationCap
-} from "lucide-react";
+import { Play, Pause, ChevronLeft, ChevronRight, CheckCircle2, HelpCircle, BookOpen, Target, Layout, Monitor, MessageSquare, FileDown, Clock, Info, X, Maximize, Volume2, Settings, ArrowRight, ArrowLeft, Star, Award, RotateCcw, AlertCircle, Sparkles, Lock, Timer, ArrowUpRight, ListOrdered, TrendingUp, GraduationCap } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";

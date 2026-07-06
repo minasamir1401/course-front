@@ -2,7 +2,7 @@
 
 import React from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Mail } from "lucide-react";
+import { Mail } from 'lucide-react';
 
 import { useLanguage } from "@/contexts/LanguageContext";
 

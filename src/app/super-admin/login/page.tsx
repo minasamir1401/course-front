@@ -3,7 +3,7 @@
 import { API_URL } from '@/lib/api';
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, User, Shield, BookOpen } from "lucide-react";
+import { Lock, User, Shield, BookOpen } from 'lucide-react';
 import Link from "next/link";
 import { useLanguage } from "@/contexts/LanguageContext";
 

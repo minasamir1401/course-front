@@ -3,10 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import {
-  LayoutDashboard, GraduationCap, Users, PanelsTopLeft,
-  ClipboardList, BarChart2, LogOut, School, X, Menu, Plus
-} from "lucide-react";
+import { LayoutDashboard, GraduationCap, Users, PanelsTopLeft, ClipboardList, BarChart2, LogOut, School, X, Menu, Plus } from 'lucide-react';
 
 export default function SchoolAdminSidebar() {
   const pathname = usePathname();

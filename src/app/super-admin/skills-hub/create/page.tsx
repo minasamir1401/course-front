@@ -6,9 +6,7 @@ import { API_URL } from '@/lib/api';
 import { useNotification } from "@/context/NotificationContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { 
-  ArrowLeft, Save, BookOpen, Layers, Target, CheckCircle2, AlertCircle
-} from "lucide-react";
+import { ArrowLeft, Save, BookOpen, Layers, Target, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function CreateSkillClusterPage() {
   const { t, language } = useLanguage();

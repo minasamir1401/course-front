@@ -2,12 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { 
-  Plus, Search, Book, ArrowUpRight,
-  BookOpen, Layers, Edit2,
-  Trash2, Monitor, GraduationCap,
-  Sparkles, Filter
-} from "lucide-react";
+import { Plus, Search, Book, ArrowUpRight, BookOpen, Layers, Edit2, Trash2, Monitor, GraduationCap, Sparkles, Filter } from 'lucide-react';
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { API_URL, getFullImageUrl } from "@/lib/api";

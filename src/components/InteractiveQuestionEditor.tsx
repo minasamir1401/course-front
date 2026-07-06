@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, Trash2, HelpCircle, Sparkles, Info } from "lucide-react";
+import { Plus, Trash2, HelpCircle, Sparkles, Info } from 'lucide-react';
 import GeoGebraWidget from "./GeoGebraWidget";
 
 interface EditorProps {

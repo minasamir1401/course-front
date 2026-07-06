@@ -1,16 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  Search, Bell, Menu, ChevronDown, LogOut, Settings,
-  User, ArrowLeftCircle, Sparkles,
-  Globe, Zap, Building2
-} from "lucide-react";
+import { Search, Bell, Menu, ChevronDown, LogOut, Settings, User, ArrowLeftCircle, Sparkles, Globe, Zap, Building2 } from 'lucide-react';
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { logout, stopImpersonation } from "@/lib/auth";
-import { LucideIcon } from "lucide-react";
+import { LucideIcon } from 'lucide-react';
 import { API_URL, apiFetch } from '@/lib/api';
 
 

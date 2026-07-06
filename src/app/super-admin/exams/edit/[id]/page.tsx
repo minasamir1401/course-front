@@ -2,13 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import {
-  Save, Plus, Trash2, Image as ImageIcon, CheckCircle2, HelpCircle,
-  ArrowRight, Settings, ListPlus, Globe, Layout, Loader2,
-  Clock, Lock, Calendar, Eye, EyeOff, FileText, AlertCircle, BookOpen, ChevronLeft,
-  ChevronDown, ChevronUp, Edit2, Edit3, Play, X, CheckCircle2, Target,
-  Info, Sparkles, MessageSquare, Upload, Download
-} from "lucide-react";
+import { Save, Plus, Trash2, Image as ImageIcon, CheckCircle2, HelpCircle, ArrowRight, Settings, ListPlus, Globe, Layout, Loader2, Clock, Lock, Calendar, Eye, EyeOff, FileText, AlertCircle, BookOpen, ChevronLeft, ChevronDown, ChevronUp, Edit2, Edit3, Play, X, Target, Info, Sparkles, MessageSquare, Upload, Download } from 'lucide-react';
 import { API_URL } from "@/lib/api";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { useRouter, useParams, useSearchParams } from "next/navigation";

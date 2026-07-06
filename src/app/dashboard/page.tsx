@@ -2,12 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import {
-  BookOpen, Clock, TrendingUp, Award,
-  Play, ArrowUpRight, FileText, Sparkles,
-  Zap, ListOrdered, GraduationCap, Target, Calendar,
-  ArrowLeft, ChevronLeft
-} from "lucide-react";
+import { BookOpen, Clock, TrendingUp, Award, Play, ArrowUpRight, FileText, Sparkles, Zap, ListOrdered, GraduationCap, Target, Calendar, ArrowLeft, ChevronLeft } from 'lucide-react';
 import { useRouter } from "next/navigation";
 import { fetchStudentStats } from "@/lib/student-stats";
 import { useLanguage } from "@/contexts/LanguageContext";

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { API_URL } from "@/lib/api";
-import { CheckCircle2, XCircle, Search, Filter, Loader2, Download, Building2, GraduationCap, ClipboardList } from "lucide-react";
+import { CheckCircle2, XCircle, Search, Filter, Loader2, Download, Building2, GraduationCap, ClipboardList } from 'lucide-react';
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "SCHOOL_ADMIN" }) {

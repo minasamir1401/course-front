@@ -2,10 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import {
-  BookOpen, Play, Clock, CheckCircle2, Sparkles, Search,
-  Target, ArrowUpRight, Filter, ChevronRight, Layers, Flame, Star
-} from "lucide-react";
+import { BookOpen, Play, Clock, CheckCircle2, Sparkles, Search, Target, ArrowUpRight, Filter, ChevronRight, Layers, Flame, Star } from 'lucide-react';
 import { useRouter } from "next/navigation";
 import { API_URL, getFullImageUrl } from "@/lib/api";
 import { readCachedStudentStats, fetchStudentStats } from "@/lib/student-stats";

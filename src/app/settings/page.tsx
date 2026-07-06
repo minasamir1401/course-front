@@ -2,7 +2,7 @@
 
 import React from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Settings } from "lucide-react";
+import { Settings } from 'lucide-react';
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function SettingsPage() {

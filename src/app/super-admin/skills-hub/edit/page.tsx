@@ -8,11 +8,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-import { 
-  ArrowLeft, ArrowRight, Save, BookOpen, Layers, Monitor, Plus, Edit2, Trash2, 
-  ChevronDown, ChevronUp, Settings, ListOrdered, CheckCircle2, Sparkles,
-  Upload, Download, Play, Clock, X, Info, BrainCircuit, Star, StarOff, RefreshCw
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, Save, BookOpen, Layers, Monitor, Plus, Edit2, Trash2, ChevronDown, ChevronUp, Settings, ListOrdered, CheckCircle2, Sparkles, Upload, Download, Play, Clock, X, Info, BrainCircuit, Star, StarOff, RefreshCw } from 'lucide-react';
 import InteractiveQuestionEditor from "@/components/InteractiveQuestionEditor";
 import InteractiveQuestionRenderer from "@/components/InteractiveQuestionRenderer";
 

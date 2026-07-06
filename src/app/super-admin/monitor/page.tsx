@@ -4,11 +4,7 @@ import React, { useEffect, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { API_URL } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
-import {
-  Activity, AlertTriangle, Bell, BookOpen, Building2,
-  ChevronRight, Code2, Database, Layers, ShieldAlert, Server,
-  Table2, Users, ClipboardList, FileText, Bug, RefreshCw
-} from "lucide-react";
+import { Activity, AlertTriangle, Bell, BookOpen, Building2, ChevronRight, Code2, Database, Layers, ShieldAlert, Server, Table2, Users, ClipboardList, FileText, Bug, RefreshCw } from 'lucide-react';
 
 type DiagnosticsPayload = {
   ok?: boolean;

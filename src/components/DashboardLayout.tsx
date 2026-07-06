@@ -6,7 +6,7 @@ import SuperAdminSidebar from "./SuperAdminSidebar";
 import Header from "./Header";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, ClipboardList, BookOpen, Settings, BarChart3, Sparkles } from "lucide-react";
+import { LayoutDashboard, ClipboardList, BookOpen, Settings, BarChart3, Sparkles } from 'lucide-react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import AdminErrorBridge from "@/components/AdminErrorBridge";
 

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useCallback } from "react";
-import { Upload, X, FileText, Image, Film, FileArchive, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Upload, X, FileText, Image, Film, FileArchive, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface FileUploadProps {

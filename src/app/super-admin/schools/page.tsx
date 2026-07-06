@@ -4,11 +4,7 @@ import { API_URL, apiFetch } from '@/lib/api';
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { 
-  Building2, Plus, Search, ChevronRight,
-  Trash2, Shield, X, Sparkles, Edit,
-  GraduationCap, Users, Heart
-} from "lucide-react";
+import { Building2, Plus, Search, ChevronRight, Trash2, Shield, X, Sparkles, Edit, GraduationCap, Users, Heart } from 'lucide-react';
 import Link from "next/link";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useNotification } from "@/context/NotificationContext";

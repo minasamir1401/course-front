@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { CheckCircle2, AlertCircle, HelpCircle, Info, Sparkles, BookOpen, Clock as ClockIcon, Award, Play } from "lucide-react";
+import { CheckCircle2, AlertCircle, HelpCircle, Info, Sparkles, BookOpen, Clock as ClockIcon, Award, Play } from 'lucide-react';
 import HtmlRenderer from "./HtmlRenderer";
 import GeoGebraWidget from "./GeoGebraWidget";
 
