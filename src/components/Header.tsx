@@ -49,6 +49,62 @@ export default function Header({
   const [currentSchoolName, setCurrentSchoolName] = useState<string>("");
   const [schoolSearchQuery, setSchoolSearchQuery] = useState("");
 
+  const [isOnline, setIsOnline] = useState(true);
+  const [isSessionValid, setIsSessionValid] = useState(true);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    setIsOnline(navigator.onLine);
+
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    const checkToken = () => {
+      const path = pathname || window.location.pathname;
+      let token = "";
+      if (path.startsWith("/super-admin")) {
+        token = localStorage.getItem("super_admin_token") || "";
+      } else if (path.startsWith("/school-admin")) {
+        token = localStorage.getItem("school_admin_token") || "";
+      } else {
+        token = localStorage.getItem("lms_token") || "";
+      }
+
+      if (!token) {
+        if (!path.endsWith("/login") && path !== "/login" && path !== "/") {
+          setIsSessionValid(false);
+        } else {
+          setIsSessionValid(true);
+        }
+        return;
+      }
+
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        if (payload.exp && payload.exp * 1000 < Date.now()) {
+          setIsSessionValid(false);
+        } else {
+          setIsSessionValid(true);
+        }
+      } catch (_) {
+        setIsSessionValid(false);
+      }
+    };
+
+    checkToken();
+    const interval = setInterval(checkToken, 15000);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+      clearInterval(interval);
+    };
+  }, [pathname]);
+
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
@@ -286,6 +342,30 @@ export default function Header({
           >
             {language === 'ar' ? 'EN' : 'AR'}
           </button>
+          {/* Connection Status Badge */}
+          <div className={`hidden xs:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl border text-[10px] font-black transition-all duration-300 ${
+            !isOnline
+              ? "bg-rose-50 border-rose-200 text-rose-600 shadow-sm animate-pulse"
+              : !isSessionValid
+                ? "bg-amber-50 border-amber-200 text-amber-600 shadow-sm animate-pulse"
+                : "bg-emerald-50 border-emerald-100 text-emerald-600"
+          }`}>
+            <span className={`h-2 w-2 rounded-full ${
+              !isOnline 
+                ? "bg-rose-500 animate-ping" 
+                : !isSessionValid 
+                  ? "bg-amber-500 animate-pulse" 
+                  : "bg-emerald-500"
+            }`} />
+            <span className="hidden sm:inline">
+              {!isOnline
+                ? (language === 'ar' ? "غير متصل بالإنترنت" : "Offline")
+                : !isSessionValid
+                  ? (language === 'ar' ? "انتهت الجلسة" : "Session Expired")
+                  : (language === 'ar' ? "متصل بالخادم" : "Connected")}
+            </span>
+          </div>
+
           <button className="relative w-8 h-8 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-xl hover:shadow-indigo-100/20 transition-all border border-transparent hover:border-slate-100">
             <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
             <span className="absolute top-2 right-2 sm:top-3 sm:right-3 w-2 h-2 rounded-full bg-rose-500 ring-4 ring-white animate-pulse" />
@@ -314,7 +394,13 @@ export default function Header({
                 <div className="w-7 h-7 sm:w-11 sm:h-11 rounded-lg sm:rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-700 flex items-center justify-center text-white font-black text-xs sm:text-sm shadow-xl shadow-indigo-100 group-hover:rotate-6 transition-transform">
                   {userInitials}
                 </div>
-                <div className="absolute -bottom-1 -end-1 w-4 h-4 bg-emerald-500 border-2 border-white rounded-full" />
+                <div className={`absolute -bottom-1 -end-1 w-4 h-4 border-2 border-white rounded-full transition-colors duration-300 ${
+                  !isOnline 
+                    ? "bg-rose-500" 
+                    : !isSessionValid 
+                      ? "bg-amber-500" 
+                      : "bg-emerald-500"
+                }`} />
               </div>
 
               <div className="text-start hidden sm:block min-w-0">
