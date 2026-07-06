@@ -720,102 +720,110 @@ export default function LessonPlayerPage() {
           </div>
         )}
 
-        {/* ── TOP HEADER BAR ── */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-6 px-1 sm:px-2">
-          <div className="flex items-center gap-4 sm:gap-6 w-full sm:w-auto">
-            {prevLesson ? (
-              <button
-                onClick={() => goToLesson(prevLesson)}
-                className="w-12 h-12 rounded-2xl bg-white border-2 border-slate-100 flex items-center justify-center hover:border-indigo-400 hover:bg-indigo-50 transition-all shadow-sm group shrink-0"
-                title={prevLesson.title}
-              >
-                <ChevronRight className="w-6 h-6 text-slate-400 group-hover:text-indigo-600 transition-colors" />
-              </button>
-            ) : (
-              <button
-                onClick={() => router.back()}
-                className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center hover:bg-slate-50 transition-all shadow-sm"
-              >
-                <ArrowRight className="w-6 h-6 text-slate-900" />
-              </button>
-            )}
-            <div>
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 tracking-tight leading-tight">{lesson.title}</h1>
-              <p className="text-indigo-600 font-bold text-sm flex items-center gap-2">
-                <BookOpen className="w-4 h-4" />
-                {course?.title || t('lesson.educationalCourse')}
-              </p>
+        {/* ── IMMERSIVE LESSON HEADER ── */}
+        <div className="relative w-full rounded-[32px] md:rounded-[40px] bg-[#0f172a] overflow-hidden p-6 md:p-10 shadow-2xl border border-slate-800 group">
+          <div className="absolute top-[-50%] right-[-10%] w-[500px] h-[500px] bg-indigo-600/20 rounded-full blur-[120px] pointer-events-none group-hover:bg-indigo-600/30 transition-all duration-1000" />
+          <div className="absolute bottom-[-50%] left-[-10%] w-[400px] h-[400px] bg-violet-600/20 rounded-full blur-[100px] pointer-events-none" />
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03]"></div>
+          
+          <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+            <div className="flex items-center gap-4 md:gap-6 w-full md:w-auto">
+              {prevLesson ? (
+                <button
+                  onClick={() => goToLesson(prevLesson)}
+                  className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:border-indigo-400/50 hover:bg-white/10 transition-all shadow-sm group/nav shrink-0 backdrop-blur-md"
+                  title={prevLesson.title}
+                >
+                  <ChevronRight className={`w-6 h-6 text-slate-300 group-hover/nav:text-white transition-transform ${language === 'ar' ? 'group-hover/nav:translate-x-1' : 'group-hover/nav:-translate-x-1'}`} />
+                </button>
+              ) : (
+                <button
+                  onClick={() => router.back()}
+                  className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all shadow-sm shrink-0 backdrop-blur-md"
+                  title={language === 'ar' ? 'رجوع' : 'Back'}
+                >
+                  <ArrowRight className={`w-6 h-6 text-slate-300 ${language === 'en' && 'rotate-180'}`} />
+                </button>
+              )}
+              <div className="flex-1">
+                <p className="text-indigo-400 font-black text-[10px] md:text-xs flex items-center gap-2 mb-1.5 uppercase tracking-widest">
+                  <BookOpen className="w-4 h-4" />
+                  {course?.title || t('lesson.educationalCourse')}
+                </p>
+                <h1 className="text-xl sm:text-2xl md:text-4xl font-black text-white tracking-tight leading-tight line-clamp-2">{lesson.title}</h1>
+              </div>
+              {nextLesson && (
+                <button
+                  onClick={() => goToLesson(nextLesson)}
+                  className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-indigo-600 border border-indigo-500 flex items-center justify-center hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-500/20 group/nav shrink-0"
+                  title={nextLesson.title}
+                >
+                  <ChevronLeft className={`w-6 h-6 text-white transition-transform ${language === 'ar' ? 'group-hover/nav:-translate-x-1' : 'group-hover/nav:translate-x-1 rotate-180'}`} />
+                </button>
+              )}
             </div>
-            {nextLesson && (
-              <button
-                onClick={() => goToLesson(nextLesson)}
-                className="w-12 h-12 rounded-2xl bg-indigo-600 border-2 border-indigo-600 flex items-center justify-center hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 group shrink-0"
-                title={nextLesson.title}
-              >
-                <ChevronLeft className="w-6 h-6 text-white group-hover:scale-110 transition-transform" />
-              </button>
-            )}
-          </div>
 
-          <div className="flex items-center gap-3">
-            <div className="hidden md:flex gap-1.5 p-2 bg-slate-100/50 rounded-2xl">
-              {['welcome', 'slides', 'assignments', 'exercises', 'summary'].map((s) => (
-                <div key={s} className={`h-2 rounded-full transition-all duration-500 ${currentStage === s ? 'w-10 bg-indigo-600 shadow-lg shadow-indigo-100' : 'w-4 bg-slate-200'}`}></div>
-              ))}
-            </div>
-            <div className="h-10 w-px bg-slate-100 mx-2"></div>
-            <div className="bg-indigo-600 text-white px-6 py-3 rounded-2xl text-sm font-black flex items-center gap-3 shadow-xl shadow-indigo-100">
-              <Star className="w-5 h-5 fill-current text-amber-300" />
-              {score} {t('lesson.pointsEarned')}
+            <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end border-t border-white/10 md:border-none pt-4 md:pt-0 mt-2 md:mt-0">
+              <div className="hidden lg:flex gap-1.5 p-2 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-md">
+                {['welcome', 'slides', 'assignments', 'exercises', 'summary'].map((s) => (
+                  <div key={s} className={`h-2 rounded-full transition-all duration-500 ${currentStage === s ? 'w-12 bg-indigo-500 shadow-lg shadow-indigo-500/50' : 'w-4 bg-white/20'}`}></div>
+                ))}
+              </div>
+              <div className="hidden lg:block h-10 w-px bg-white/10 mx-2"></div>
+              <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-3 md:py-4 rounded-2xl text-sm md:text-base font-black flex items-center gap-3 shadow-xl shadow-amber-500/20 hover:scale-105 transition-transform cursor-default border border-amber-400/50">
+                <Star className="w-5 h-5 fill-current text-amber-100" />
+                {score} {t('lesson.pointsEarned')}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Elegant Next/Prev Lesson Switcher Bar (Placed directly below the header) */}
         {(prevLesson || nextLesson) && (
-          <div className="premium-card p-4 rounded-[30px] flex flex-col sm:flex-row items-center justify-between border-r-4 border-indigo-600 shadow-sm animate-in fade-in slide-in-from-top-2 duration-500 gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 shrink-0">
+          <div className="bg-white/60 backdrop-blur-xl border border-slate-200/80 p-4 rounded-[30px] flex flex-col sm:flex-row items-center justify-between shadow-sm hover:shadow-md animate-in fade-in slide-in-from-top-2 duration-500 gap-4 transition-all relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-2 h-full bg-indigo-500 rounded-l-[30px]"></div>
+            <div className="flex items-center gap-4 pl-4 rtl:pl-0 rtl:pr-4">
+              <div className="w-12 h-12 bg-indigo-50 rounded-[18px] flex items-center justify-center text-indigo-600 shrink-0 border border-indigo-100/50">
                 <BookOpen className="w-5 h-5" />
               </div>
               <div className="text-start">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                   {language === 'ar' ? 'تنقل سريع بين الدروس' : 'Quick Lesson Navigation'}
                 </p>
-                <p className="text-sm font-black text-slate-700 truncate max-w-[250px]">
+                <p className="text-sm md:text-base font-black text-slate-800 truncate max-w-[200px] md:max-w-[300px]">
                   {course?.title || (language === 'ar' ? "الكورس الدراسي" : "Educational Course")}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-4 w-full sm:w-auto justify-end">
+            <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
               {prevLesson && (
                 <button
                   onClick={() => goToLesson(prevLesson)}
                   title={prevLesson.title}
-                  className="flex items-center gap-3 px-6 py-3 bg-slate-50/80 border-2 border-slate-200/60 text-slate-900 rounded-2xl font-black text-sm hover:bg-slate-100 transition-all shadow-sm group cursor-pointer"
+                  className="flex items-center gap-3 px-5 py-3 bg-white border border-slate-200 text-slate-900 rounded-2xl font-black text-sm hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 transition-all shadow-sm group cursor-pointer"
                 >
-                  <ChevronRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform text-slate-400 group-hover:text-indigo-650" />
-                  <div className="flex flex-col text-start">
-                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                  <ChevronRight className={`w-5 h-5 transition-transform text-slate-400 group-hover:text-indigo-600 ${language === 'ar' ? 'group-hover:translate-x-1' : 'group-hover:-translate-x-1'}`} />
+                  <div className="flex flex-col text-start hidden md:flex">
+                    <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">
                       {language === 'ar' ? 'الدرس السابق' : 'Previous Lesson'}
                     </span>
                     <span className="truncate max-w-[140px] text-xs sm:text-sm font-black">{prevLesson.title}</span>
                   </div>
                 </button>
               )}
-              {nextLesson && (
+               {nextLesson && (
                 <button
                   onClick={() => goToLesson(nextLesson)}
                   title={nextLesson.title}
-                  className="flex items-center gap-3 px-6 py-3 bg-sky-400 text-slate-950 rounded-2xl font-black text-sm hover:bg-sky-500 transition-all shadow-lg hover:shadow-sky-200/40 group cursor-pointer border border-sky-500/20"
+                  className="flex items-center gap-3 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-black text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 group cursor-pointer border border-indigo-500/20"
                 >
                   <div className="flex flex-col text-start">
-                    <span className="text-[10px] text-slate-900 font-bold uppercase tracking-wider">
+                    <span className="text-[10px] text-indigo-100 font-bold uppercase tracking-wider">
                       {language === 'ar' ? 'الدرس التالي' : 'Next Lesson'}
                     </span>
                     <span className="truncate max-w-[140px] text-xs sm:text-sm font-black">{nextLesson.title}</span>
                   </div>
-                  <ChevronLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform text-slate-900" />
+                  <ChevronLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform text-white" />
                 </button>
               )}
             </div>
@@ -852,7 +860,7 @@ export default function LessonPlayerPage() {
                 <div className="mt-12 text-center space-y-6">
                   <button
                     onClick={() => setCurrentStage('slides')}
-                    className="bg-sky-400 text-slate-950 hover:bg-sky-500 px-12 py-5 rounded-[25px] font-black text-lg hover:scale-105 transition-all shadow-2xl shadow-sky-200/40 flex items-center gap-4 mx-auto border border-sky-500/20"
+                    className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:from-indigo-700 hover:to-violet-700 px-12 py-5 rounded-[25px] font-black text-lg hover:scale-105 transition-all shadow-xl shadow-indigo-100 flex items-center gap-4 mx-auto border border-indigo-500/20"
                   >
                     {t('lesson.showExplanation')}
                     <ArrowLeft className={`w-5 h-5 ${language === 'en' ? 'rotate-180' : ''}`} />
@@ -888,10 +896,12 @@ export default function LessonPlayerPage() {
                       />
                     </div>
                   )}
-                  <HtmlRenderer
-                    html={lesson.slides[currentSlideIndex].content}
-                    className="text-base md:text-xl text-slate-600 leading-[1.8] max-w-5xl font-bold prose prose-indigo break-words w-full animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150 text-start"
-                  />
+                  <div className={`w-full max-w-5xl mb-8 ${isQuestionLike(lesson.slides[currentSlideIndex]) ? 'question-frame' : 'text-frame'}`}>
+                    <HtmlRenderer
+                      html={lesson.slides[currentSlideIndex].content}
+                      className="text-base md:text-xl text-slate-600 leading-[1.8] font-bold prose prose-indigo break-words w-full animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150 text-start"
+                    />
+                  </div>
                   {isQuestionLike(lesson.slides[currentSlideIndex]) && lesson.slides[currentSlideIndex].dok && (
                     <div className="w-full max-w-4xl text-start mt-2">
                       <span className="px-3 py-1.5 bg-yellow-50 text-yellow-700 border border-yellow-100 rounded-lg text-xs font-bold uppercase tracking-wider">
@@ -965,7 +975,7 @@ export default function LessonPlayerPage() {
                   {isQuestionLike(lesson.slides[currentSlideIndex]) && slideAnswers[currentSlideIndex] && !slideSubmitted[currentSlideIndex] && (
                     <button
                       onClick={() => setSlideSubmitted({ ...slideSubmitted, [currentSlideIndex]: true })}
-                      className="mt-6 bg-sky-400 text-slate-950 hover:bg-sky-500 px-8 py-3 rounded-2xl font-black text-lg shadow-xl shadow-sky-200/40 border border-sky-500/20"
+                      className="mt-6 bg-emerald-600 text-white hover:bg-emerald-700 px-8 py-3 rounded-2xl font-black text-lg shadow-xl shadow-emerald-100 border border-emerald-500/20"
                     >
                       {language === 'ar' ? 'تأكيد الإجابة ✓' : 'Confirm Answer ✓'}
                     </button>
@@ -1018,7 +1028,7 @@ export default function LessonPlayerPage() {
 
                   <div className="flex gap-2 flex-wrap justify-center">
                     {lesson.slides.map((_: any, i: number) => (
-                      <div key={i} className={`h-1.5 rounded-full transition-all duration-700 ${currentSlideIndex === i ? 'w-8 bg-sky-400' : 'w-1.5 bg-slate-200'}`}></div>
+                      <div key={i} className={`h-1.5 rounded-full transition-all duration-700 ${currentSlideIndex === i ? 'w-8 bg-indigo-600' : 'w-1.5 bg-slate-200'}`}></div>
                     ))}
                   </div>
 
@@ -1030,9 +1040,9 @@ export default function LessonPlayerPage() {
                         }
                         setCurrentSlideIndex(prev => prev + 1);
                       }}
-                      className="w-12 h-12 rounded-2xl bg-sky-400 text-slate-950 flex items-center justify-center hover:bg-sky-500 shadow-xl shadow-sky-200/40 transition-all border border-sky-500/20"
+                      className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all border border-indigo-500/20"
                     >
-                      <ChevronLeft className="w-6 h-6 text-slate-950" />
+                      <ChevronLeft className="w-6 h-6 text-white" />
                     </button>
                   ) : (
                     <button
@@ -1042,7 +1052,7 @@ export default function LessonPlayerPage() {
                         }
                         setCurrentStage('assignments');
                       }}
-                      className="bg-sky-400 text-slate-950 px-6 py-3 rounded-2xl font-black text-base hover:bg-sky-500 shadow-xl shadow-sky-200/40 flex items-center gap-3 shrink-0 border border-sky-500/20"
+                      className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black text-base hover:bg-indigo-700 shadow-xl shadow-indigo-100 flex items-center gap-3 shrink-0 border border-indigo-500/20"
                     >
                       {t('lesson.showAssignments')}
                     </button>
@@ -1138,7 +1148,7 @@ export default function LessonPlayerPage() {
                         {isQuestionLike(as) && assignmentAnswers[idx] && !isSubmitted && (
                           <button
                             onClick={() => setAssignmentSubmitted({ ...assignmentSubmitted, [idx]: true })}
-                            className="mt-6 bg-sky-400 text-slate-950 hover:bg-sky-500 px-8 py-3 rounded-2xl font-black text-lg shadow-xl shadow-sky-200/40 border border-sky-500/20"
+                            className="mt-6 bg-emerald-600 text-white hover:bg-emerald-700 px-8 py-3 rounded-2xl font-black text-lg shadow-xl shadow-emerald-100 border border-emerald-500/20"
                           >
                             {language === 'ar' ? 'تأكيد الإجابة' : 'Confirm Answer'}
                           </button>
@@ -1199,7 +1209,7 @@ export default function LessonPlayerPage() {
                       setAssignmentSubmitted(newSubmitted);
                       setCurrentStage('exercises');
                     }}
-                    className="bg-sky-400 text-slate-950 px-12 py-5 rounded-[25px] font-black text-lg hover:scale-105 transition-all shadow-2xl shadow-sky-200/40 flex items-center gap-4 border border-sky-500/20"
+                    className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-12 py-5 rounded-[25px] font-black text-lg hover:scale-105 transition-all shadow-xl shadow-indigo-100 flex items-center gap-4 border border-indigo-500/20"
                   >
                     {t('lesson.startExercises')}
                     <ArrowLeft className={`w-5 h-5 ${language === 'en' ? 'rotate-180' : ''}`} />
@@ -1287,7 +1297,9 @@ export default function LessonPlayerPage() {
                           </div>
                         </div>
 
-                        <HtmlRenderer html={lesson.questions[currentQuestionIndex].text} tag="h3" className="text-lg md:text-2xl font-black text-slate-900 mb-8 leading-relaxed tracking-tight break-words w-full text-start" />
+                        <div className="question-frame mb-8 w-full">
+                          <HtmlRenderer html={lesson.questions[currentQuestionIndex].text} tag="h3" className="text-lg md:text-2xl font-black text-slate-900 leading-relaxed tracking-tight break-words w-full text-start" />
+                        </div>
 
                         {['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(lesson.questions[currentQuestionIndex].type || lesson.questions[currentQuestionIndex].label || 'MCQ') ? (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-4 mb-6">
@@ -1340,7 +1352,7 @@ export default function LessonPlayerPage() {
                         {answers[currentQuestionIndex] && !quizSubmitted[currentQuestionIndex] && (
                           <button
                             onClick={() => setQuizSubmitted({ ...quizSubmitted, [currentQuestionIndex]: true })}
-                            className="mt-2 mb-6 bg-sky-400 text-slate-950 hover:bg-sky-500 px-8 py-3 rounded-2xl font-black text-lg shadow-xl shadow-sky-200/40 border border-sky-500/20"
+                            className="mt-2 mb-6 bg-emerald-600 text-white hover:bg-emerald-700 px-8 py-3 rounded-2xl font-black text-lg shadow-xl shadow-emerald-100 border border-emerald-500/20"
                           >
                             {language === 'ar' ? 'تأكيد الإجابة' : 'Confirm Answer'}
                           </button>
@@ -1384,10 +1396,10 @@ export default function LessonPlayerPage() {
                         </button>
                         <button
                           onClick={handleNextQuestion}
-                          className="px-8 py-3.5 rounded-2xl font-black transition-all flex items-center gap-3 text-base shadow-xl border border-sky-500/20 bg-sky-400 text-slate-950 hover:bg-sky-500"
+                          className="px-8 py-3.5 rounded-2xl font-black transition-all flex items-center gap-3 text-base shadow-xl border border-indigo-500/20 bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100"
                         >
                           {currentQuestionIndex < lesson.questions.length - 1 ? t('lesson.next') : t('lesson.finishQuiz')}
-                          <ChevronLeft className="w-5 h-5 transition-transform text-slate-900" />
+                          <ChevronLeft className="w-5 h-5 transition-transform text-white" />
                         </button>
                       </div>
                     </>
@@ -1593,7 +1605,7 @@ export default function LessonPlayerPage() {
                           setCurrentSlideIndex(0);
                           setCurrentQuestionIndex(0);
                         }}
-                        className="bg-sky-400 text-slate-950 px-10 py-5 rounded-[25px] font-black text-xl hover:scale-105 transition-all shadow-2xl shadow-sky-200/40 border border-sky-500/20"
+                        className="bg-amber-500 text-white px-10 py-5 rounded-[25px] font-black text-xl hover:scale-105 transition-all shadow-xl shadow-amber-100 border border-amber-500/20 hover:bg-amber-600"
                       >
                         {language === 'ar' ? 'إعادة المحاولة 🔄' : 'Try Again 🔄'}
                       </button>
@@ -1628,13 +1640,13 @@ export default function LessonPlayerPage() {
                         {nextLesson && (
                           <button
                             onClick={() => goToLesson(nextLesson)}
-                            className="flex items-center gap-3 px-8 py-4 bg-sky-400 text-slate-950 rounded-[22px] font-black hover:bg-sky-500 transition-all shadow-xl shadow-sky-200/40 group border border-sky-500/20"
+                            className="flex items-center gap-3 px-8 py-4 bg-indigo-600 text-white rounded-[22px] font-black hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 group border border-indigo-500/20"
                           >
                             <div className="text-right">
-                              <p className="text-[10px] text-slate-900 uppercase tracking-widest">{language === 'ar' ? 'الدرس التالي' : 'Next Lesson'}</p>
+                              <p className="text-[10px] text-indigo-100 uppercase tracking-widest">{language === 'ar' ? 'الدرس التالي' : 'Next Lesson'}</p>
                               <p className="text-sm font-black truncate max-w-[160px]">{nextLesson.title}</p>
                             </div>
-                            <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform text-slate-900" />
+                            <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform text-white" />
                           </button>
                         )}
                       </div>

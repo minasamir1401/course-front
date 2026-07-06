@@ -59,7 +59,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (!mounted) return <div className="min-h-screen bg-slate-50" />;
 
   return (
-    <div className="flex min-h-screen font-sans overflow-x-hidden bg-transparent relative" dir={language === 'ar' ? "rtl" : "ltr"}>
+    <div className={`flex min-h-screen font-sans overflow-x-hidden bg-transparent relative ${isStudent ? 'klevro-watermark' : ''}`} dir={language === 'ar' ? "rtl" : "ltr"}>
       <AdminErrorBridge />
       {/* Background Ornaments */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">

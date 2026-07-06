@@ -233,15 +233,15 @@ export default function TakeExamPage() {
       <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-6 rtl" dir="rtl">
         <div className="max-w-2xl w-full bg-white rounded-[50px] shadow-2xl shadow-slate-200 border border-slate-100 overflow-hidden">
           {/* Header */}
-          <div className="bg-[#1a1a2e] p-12 text-center relative overflow-hidden">
+          <div className="bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 p-12 text-center relative overflow-hidden shadow-2xl shadow-indigo-200/50">
             <div className="relative z-10">
-              <div className="w-20 h-20 bg-indigo-500/20 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-indigo-500/30">
-                <ShieldCheck className="w-10 h-10 text-indigo-400" />
+              <div className="w-20 h-20 bg-white/10 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-white/20">
+                <ShieldCheck className="w-10 h-10 text-amber-300" />
               </div>
               <h1 className="text-3xl md:text-4xl font-black text-white mb-3">{exam.title}</h1>
-              <p className="text-indigo-200/60 font-medium">يرجى قراءة التعليمات بعناية قبل البدء.</p>
+              <p className="text-indigo-100 font-medium">يرجى قراءة التعليمات بعناية قبل البدء.</p>
             </div>
-            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 blur-[100px] -mr-32 -mt-32"></div>
+            <div className="absolute top-0 right-0 w-64 h-64 bg-violet-400/20 blur-[100px] -mr-32 -mt-32"></div>
           </div>
 
           {/* Body */}
@@ -353,7 +353,7 @@ export default function TakeExamPage() {
             <div className="flex flex-col gap-4">
               <button
                 onClick={handleSubmit}
-                className={`w-full py-4 rounded-2xl font-bold text-lg shadow-xl transition-all hover:scale-105 ${unansweredCount > 0 ? 'bg-amber-600 shadow-amber-100 hover:bg-amber-700 text-black' : 'bg-green-600 shadow-green-100 hover:bg-green-700 text-white'}`}
+                className={`w-full py-4 rounded-2xl font-bold text-lg shadow-xl transition-all hover:scale-105 ${unansweredCount > 0 ? 'bg-amber-600 shadow-amber-100 hover:bg-amber-700 text-black' : 'bg-emerald-600 shadow-emerald-100 hover:bg-emerald-700 text-white'}`}
               >
                 نعم، قم بالتسليم الآن
               </button>
@@ -393,7 +393,7 @@ export default function TakeExamPage() {
             <button
               onClick={() => setShowSubmitModal(true)}
               disabled={submitting}
-              className="bg-green-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-green-700 transition-colors shadow-md shadow-green-100 flex items-center gap-2"
+              className="bg-emerald-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-emerald-700 transition-colors shadow-md shadow-emerald-100 flex items-center gap-2"
             >
               {submitting ? "جاري الإرسال..." : "تسليم الإجابات"}
               <Send className="w-4 h-4" />

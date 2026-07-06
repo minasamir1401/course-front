@@ -4,30 +4,44 @@ import React from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Mail } from "lucide-react";
 
+import { useLanguage } from "@/contexts/LanguageContext";
+
 export default function MessagesPage() {
+  const { language } = useLanguage();
+
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-6">
-        <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-          <div>
-            <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-              الرسائل
-            </h2>
-            <div className="text-sm text-slate-500 mt-1 flex items-center gap-2">
-              <span>الرئيسية</span> <span className="text-slate-300">/</span> <span>الرسائل</span>
+      <div className={`flex flex-col gap-8 max-w-6xl mx-auto ${language === 'ar' ? 'rtl' : 'ltr'}`} dir={language === 'ar' ? "rtl" : "ltr"}>
+        {/* Header Section */}
+        <div className="relative overflow-hidden rounded-[32px] md:rounded-[48px] premium-gradient-primary p-8 md:p-12 group shadow-2xl shadow-indigo-500/20 text-white flex justify-between items-center">
+          <div className="absolute top-[-20%] right-[-10%] w-96 h-96 bg-white/10 blur-[100px] rounded-full animate-pulse" />
+          <div className="relative z-10 space-y-2">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 glass rounded-full border-white/20 mb-1">
+               <span className="text-amber-300">✨</span>
+               <span className="text-white text-[10px] font-black uppercase tracking-widest">{language === 'ar' ? 'الرئيسية / الرسائل' : 'Home / Messages'}</span>
             </div>
+            <h1 className="text-3xl md:text-5xl font-black text-white leading-tight tracking-tight flex items-center gap-3.5">
+              <Mail className="w-8 h-8 md:w-10 md:h-10 text-indigo-200" />
+              {language === 'ar' ? 'الرسائل والمحادثات' : 'Messages & Chat'}
+            </h1>
           </div>
-          <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-primary">
-            <Mail className="w-6 h-6" />
+          <div className="relative z-10 w-16 h-16 md:w-20 md:h-20 glass rounded-3xl flex items-center justify-center text-white border-white/30 shadow-2xl floating">
+            <Mail className="w-8 h-8 md:w-10 md:h-10" />
           </div>
         </div>
         
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-12 text-center flex flex-col items-center justify-center min-h-[400px]">
-          <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4">
-            <Mail className="w-10 h-10" />
+        {/* Under Development Card */}
+        <div className="premium-card rounded-[40px] md:rounded-[50px] p-12 md:p-20 text-center flex flex-col items-center justify-center min-h-[450px] relative overflow-hidden shadow-xl border border-indigo-50/60">
+          <div className="absolute inset-0 bg-gradient-to-b from-indigo-50/30 via-transparent to-transparent pointer-events-none" />
+          <div className="w-24 h-24 md:w-28 md:h-28 bg-gradient-to-br from-indigo-50 to-violet-100 rounded-[30px] flex items-center justify-center text-indigo-600 mb-6 shadow-xl shadow-indigo-100/60 border border-indigo-200/50 floating">
+            <Mail className="w-12 h-12 md:w-14 md:h-14 animate-pulse" />
           </div>
-          <h3 className="text-xl font-bold text-slate-800 mb-2">صفحة الرسائل قيد التطوير</h3>
-          <p className="text-slate-500 max-w-md">نحن نعمل على تجهيز هذه الصفحة بكامل المميزات قريباً.</p>
+          <h3 className="text-2xl md:text-3xl font-black text-slate-900 mb-3 tracking-tight">{language === 'ar' ? 'صفحة الرسائل قيد التطوير' : 'Messages Page Under Development'}</h3>
+          <p className="text-slate-500 max-w-md font-bold text-base md:text-lg leading-relaxed">{language === 'ar' ? 'نحن نعمل على تجهيز هذه الصفحة بكامل المميزات قريباً.' : 'We are working hard to bring you a fully-featured messaging experience soon.'}</p>
+          <div className="mt-8 inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-indigo-50 text-indigo-600 font-black text-xs md:text-sm border border-indigo-100 shadow-sm">
+            <span>⚡</span>
+            <span>{language === 'ar' ? 'قريباً: التواصل المباشر مع المعلمين والطلاب' : 'Coming Soon: Direct chat with teachers & peers'}</span>
+          </div>
         </div>
       </div>
     </DashboardLayout>

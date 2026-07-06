@@ -1,34 +1,59 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 interface GeoGebraWidgetProps {
-  materialId: string;
-  iframeUrl: string;
+  materialId?: string;
+  iframeUrl?: string;
   w?: number;
   h?: number;
 }
 
-export default function GeoGebraWidget({ materialId, iframeUrl, w, h }: GeoGebraWidgetProps) {
+export default function GeoGebraWidget({ materialId = "", iframeUrl = "", w = 800, h = 500 }: GeoGebraWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [useIframe, setUseIframe] = useState(true);
+
+  const extractId = (urlOrId: string) => {
+    if (!urlOrId) return "";
+    const cleanUrl = urlOrId.trim();
+    // Match ggbm.at/<id>
+    const ggbmMatch = cleanUrl.match(/ggbm\.at\/([a-zA-Z0-9]+)/i);
+    if (ggbmMatch) return ggbmMatch[1];
+    
+    // Match geogebra.org/.../<id>
+    const geoMatch = cleanUrl.match(/geogebra\.org\/(?:[a-zA-Z0-9_\-\/]*\/)?(?:id\/)?([a-zA-Z0-9]+)/i);
+    if (geoMatch) {
+      const id = geoMatch[1];
+      const keywords = ["classic", "calculator", "geometry", "3d", "notes", "applet", "evaluator", "material", "show", "edit", "m"];
+      if (!keywords.includes(id.toLowerCase())) {
+        return id;
+      }
+    }
+    
+    if (/^[a-zA-Z0-9]+$/.test(cleanUrl)) {
+      return cleanUrl;
+    }
+    return "";
+  };
+
+  const id = extractId(iframeUrl) || extractId(materialId) || materialId;
+
+  let finalUrl = "";
+  if (id) {
+    finalUrl = `https://www.geogebra.org/material/iframe/id/${id}/width/${w}/height/${h}/border/888888/sfsb/true/smb/false/stb/false/stbh/false/ai/false/asb/false/sri/true/rc/false/ld/false/sdz/false/ctl/false`;
+  } else if (iframeUrl && iframeUrl.startsWith("http")) {
+    finalUrl = iframeUrl;
+  }
 
   useEffect(() => {
+    if (finalUrl) return;
+
     const scriptId = "geogebra-deploy-script";
     let script = document.getElementById(scriptId) as HTMLScriptElement;
 
-    // Extract ID from URL if materialId is empty
-    let id = materialId;
-    if (!id && iframeUrl) {
-      const idMatch = iframeUrl.match(/(?:geogebra\.org\/(?:calculator|m|material|classic|geometry|3d|notes|applet)\/|id\/)([a-zA-Z0-9]+)/i);
-      id = idMatch ? idMatch[1] : (iframeUrl.match(/^[a-zA-Z0-9]+$/) ? iframeUrl : "");
-    }
-
     const injectApplet = () => {
       if (!containerRef.current || !(window as any).GGBApplet) return;
-
-      // Clear any previous children
       containerRef.current.innerHTML = "";
-
       const params = {
         "appName": "classic",
         "material_id": id,
@@ -43,28 +68,7 @@ export default function GeoGebraWidget({ materialId, iframeUrl, w, h }: GeoGebra
         "enableShiftDragZoom": true,
         "showZoomButtons": true,
         "errorDialogsActive": false,
-        "perspective": "G", // Graphics only view (hides Algebra equations list)
-        "appletOnLoad": (api: any) => {
-          try {
-            api.setPerspective("G"); // Reinforce hiding the sidebar/equations list
-            api.showAlgebraInput(false);
-          } catch (e) {
-            console.error("Error setting perspective:", e);
-          }
-          // Reinforce again after 500ms and 1500ms to override any saved state layout settings
-          setTimeout(() => {
-            try {
-              api.setPerspective("G");
-              api.showAlgebraInput(false);
-            } catch (e) {}
-          }, 500);
-          setTimeout(() => {
-            try {
-              api.setPerspective("G");
-              api.showAlgebraInput(false);
-            } catch (e) {}
-          }, 1500);
-        }
+        "perspective": "G",
       };
 
       try {
@@ -88,23 +92,32 @@ export default function GeoGebraWidget({ materialId, iframeUrl, w, h }: GeoGebra
       } else {
         const handleLoad = () => injectApplet();
         script.addEventListener("load", handleLoad);
-        return () => {
-          script.removeEventListener("load", handleLoad);
-        };
+        return () => script.removeEventListener("load", handleLoad);
       }
     }
 
     return () => {
-      if (containerRef.current) {
-        containerRef.current.innerHTML = "";
-      }
+      if (containerRef.current) containerRef.current.innerHTML = "";
     };
-  }, [materialId, iframeUrl, w, h]);
+  }, [id, finalUrl, w, h]);
+
+  if (finalUrl) {
+    return (
+      <div className="w-full h-full min-h-[400px] bg-slate-50 rounded-2xl overflow-hidden relative border border-slate-200">
+        <iframe
+          src={finalUrl}
+          className="w-full h-full min-h-[400px] border-0"
+          allow="fullscreen; autoplay; camera; microphone"
+          title="GeoGebra Interactive Applet"
+        />
+      </div>
+    );
+  }
 
   return (
     <div 
       ref={containerRef} 
-      className="w-full h-full min-h-[400px] flex items-center justify-center bg-slate-50 rounded-2xl overflow-hidden" 
+      className="w-full h-full min-h-[400px] flex items-center justify-center bg-slate-50 rounded-2xl overflow-hidden border border-slate-200" 
     />
   );
 }

@@ -35,6 +35,7 @@ export default function ActivitiesPage() {
     return map[g] || g;
   };
   const [token, setToken] = useState<string | null>(null);
+  const [userGrade, setUserGrade] = useState<string>("");
   
   // Data States
   const [subject, setSubject] = useState<string>("الرياضيات"); // Default subject
@@ -57,7 +58,31 @@ export default function ActivitiesPage() {
     content: ""
   });
 
+  const isStudentGrade123 = [
+    "الصف الأول الابتدائي",
+    "الصف الثاني الابتدائي",
+    "الصف الثالث الابتدائي"
+  ].includes(userGrade || progressData?.grade || "");
+
   useEffect(() => {
+    const storedUser = localStorage.getItem("lms_user");
+    if (storedUser) {
+      try {
+        const u = JSON.parse(storedUser);
+        if (u && u.grade) {
+          setUserGrade(u.grade);
+        }
+      } catch (e) {
+        console.error("Error parsing user", e);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (subject === "العلوم" && isStudentGrade123) {
+      setSubject("الرياضيات");
+      return;
+    }
     const storedToken = localStorage.getItem("lms_token");
     if (!storedToken) {
       router.push("/login");
@@ -65,7 +90,7 @@ export default function ActivitiesPage() {
     }
     setToken(storedToken);
     fetchProgress(storedToken, subject);
-  }, [router, subject]);
+  }, [router, subject, isStudentGrade123]);
 
   const fetchProgress = async (authToken: string, currentSubject: string) => {
     setIsLoading(true);
@@ -357,7 +382,7 @@ export default function ActivitiesPage() {
         ` }} />
 
         {/* ── PREMIUM HEADER ── */}
-        <div className="relative overflow-hidden rounded-[36px] bg-gradient-to-br from-indigo-750 via-violet-850 to-purple-900 p-8 md:p-12 text-white shadow-2xl">
+        <div className="relative overflow-hidden rounded-[36px] bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 p-8 md:p-12 text-white shadow-2xl shadow-indigo-200/50">
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')] opacity-15" />
           <div className="absolute -top-12 -left-12 w-64 h-64 bg-violet-400/20 blur-[80px] rounded-full animate-pulse" />
           
@@ -383,23 +408,25 @@ export default function ActivitiesPage() {
             
             {/* Subject Tabs */}
             <div className="flex gap-3 bg-black/15 p-2 rounded-2xl border border-white/10 shrink-0">
-              {["الرياضيات", "القراءة", "العلوم"].map((subj) => (
-                <button
-                  key={subj}
-                  onClick={() => setSubject(subj)}
-                  className={`px-6 py-3 rounded-xl text-sm font-black transition-all ${
-                    subject === subj
-                      ? "bg-white text-indigo-900 shadow-md scale-105"
-                      : "text-white/70 hover:text-white hover:bg-white/5"
-                  }`}
-                >
-                  {subj === "الرياضيات" 
-                    ? (language === 'ar' ? "📐 الرياضيات" : "📐 Mathematics") 
-                    : subj === "القراءة"
-                    ? (language === 'ar' ? "📚 القراءة" : "📚 Reading")
-                    : (language === 'ar' ? "🔬 العلوم" : "🔬 Science")}
-                </button>
-              ))}
+              {["الرياضيات", "القراءة", "العلوم"]
+                .filter((subj) => !(subj === "العلوم" && isStudentGrade123))
+                .map((subj) => (
+                  <button
+                    key={subj}
+                    onClick={() => setSubject(subj)}
+                    className={`px-6 py-3 rounded-xl text-sm font-black transition-all ${
+                      subject === subj
+                        ? "bg-white text-indigo-900 shadow-md scale-105"
+                        : "text-white/70 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    {subj === "الرياضيات" 
+                      ? (language === 'ar' ? "📐 الرياضيات" : "📐 Mathematics") 
+                      : subj === "القراءة"
+                      ? (language === 'ar' ? "📚 القراءة" : "📚 Reading")
+                      : (language === 'ar' ? "🔬 العلوم" : "🔬 Science")}
+                  </button>
+                ))}
             </div>
           </div>
         </div>
@@ -729,7 +756,7 @@ export default function ActivitiesPage() {
                 </div>
 
                 {/* Left: Interactive Workspace */}
-                <div className="flex-1 bg-white rounded-[24px] border border-slate-100 relative overflow-hidden p-6 md:p-8 flex flex-col justify-between shadow-sm min-h-[400px]">
+                <div className="flex-1 activity-frame p-6 md:p-8 flex flex-col justify-between min-h-[400px]">
                   {/* Colored top accent bar per activity type */}
                   <div className={`absolute top-0 left-0 w-full h-1 ${
                     activeActivity.difficulty === 'Easy' ? 'bg-gradient-to-r from-emerald-400 to-teal-400' :
@@ -793,8 +820,8 @@ export default function ActivitiesPage() {
                         disabled={!currentAnswer || isSubmitting}
                         className={`px-10 py-3.5 rounded-2xl font-black text-sm transition-all flex items-center gap-2 active:scale-95 w-full sm:w-auto justify-center ${
                           !currentAnswer || isSubmitting
-                            ? "bg-sky-200/40 text-slate-400 cursor-not-allowed border border-sky-300/10 shadow-none"
-                            : "bg-sky-400 text-slate-950 hover:bg-sky-500 shadow-xl shadow-sky-200/40 border border-sky-500/20"
+                            ? "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200 shadow-none"
+                            : "bg-emerald-600 text-white hover:bg-emerald-700 shadow-xl shadow-emerald-100 border border-emerald-500/20 hover:scale-[1.02]"
                         }`}
                       >
                         {isSubmitting ? (
@@ -810,7 +837,7 @@ export default function ActivitiesPage() {
                         )}
                       </button>
                     ) : isSubmitting ? (
-                      <div className="flex items-center gap-2 text-sky-400 font-black text-sm px-4">
+                      <div className="flex items-center gap-2 text-indigo-600 font-black text-sm px-4">
                         <RefreshCw className="w-4 h-4 animate-spin" />
                         <span>{language === 'ar' ? 'جاري التقييم الفوري...' : 'Instant evaluation...'}</span>
                       </div>

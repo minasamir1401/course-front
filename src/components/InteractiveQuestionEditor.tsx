@@ -17,14 +17,19 @@ const parseJson = (str: any, fallback: any = {}) => {
     let parsed = str;
     if (typeof str === "string") {
       const trimmed = str.trim();
-      if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
-        parsed = JSON.parse(trimmed);
+      if (trimmed.startsWith("{") || trimmed.startsWith("[") || (trimmed.startsWith('"') && trimmed.endsWith('"'))) {
+        try {
+          parsed = JSON.parse(trimmed);
+        } catch {
+          parsed = trimmed;
+        }
       } else {
         return fallback;
       }
     }
     if (typeof parsed !== "object" || parsed === null) {
-      return fallback;
+      // If it parsed into a plain string/number/boolean, return it
+      return parsed;
     }
     if (fallback && !Array.isArray(fallback) && Array.isArray(parsed)) {
       return fallback;
@@ -294,7 +299,9 @@ export default function InteractiveQuestionEditor({ question, onChange, language
     <div className="space-y-6 w-full max-w-full text-right" dir="rtl">
       <GameGuide type={question.type} />
       <div className="pt-6 border-t border-slate-100">
-        {renderEditor()}
+        <div key={`${question.type}-${question.id || question.title || 'new'}`}>
+          {renderEditor()}
+        </div>
       </div>
     </div>
   );
@@ -352,6 +359,10 @@ function McqEditor({ question, updateQuestionData, language }: { question: any; 
 // -------------------------------------------------------------
 function TrueFalseEditor({ question, updateQuestionData, language }: { question: any; updateQuestionData: any; language: string }) {
   const correctVal = question.correctAnswer || "صح";
+  const isTrueVal = (v: any) => ["صح", "صحيح", "صواب", "true", "1"].includes(String(v || "").trim().toLowerCase()) || String(v) === "True";
+  const isFalseVal = (v: any) => ["خطأ", "false", "0", "غير صحيح"].includes(String(v || "").trim().toLowerCase()) || String(v) === "False";
+
+  const radioName = `tf-correct-${question.id || 'new'}`;
 
   return (
     <div className="space-y-4 text-right w-full max-w-full overflow-hidden" dir="rtl">
@@ -362,8 +373,8 @@ function TrueFalseEditor({ question, updateQuestionData, language }: { question:
         <label className="flex items-center gap-2 cursor-pointer font-black text-sm text-slate-700">
           <input
             type="radio"
-            name="tf-correct"
-            checked={correctVal === "صح" || correctVal === "True"}
+            name={radioName}
+            checked={isTrueVal(correctVal)}
             onChange={() => updateQuestionData({ choices: ["صح", "خطأ"] }, "صح")}
             className="w-5 h-5 accent-indigo-650 shrink-0"
           />
@@ -372,8 +383,8 @@ function TrueFalseEditor({ question, updateQuestionData, language }: { question:
         <label className="flex items-center gap-2 cursor-pointer font-black text-sm text-slate-700">
           <input
             type="radio"
-            name="tf-correct"
-            checked={correctVal === "خطأ" || correctVal === "False"}
+            name={radioName}
+            checked={isFalseVal(correctVal)}
             onChange={() => updateQuestionData({ choices: ["صح", "خطأ"] }, "خطأ")}
             className="w-5 h-5 accent-indigo-650 shrink-0"
           />
@@ -774,8 +785,21 @@ function GroupSortingEditor({ question, updateQuestionData, language }: { questi
 // 🕰️ 7. CLOCK (عقارب الساعة التفاعلية)
 // -------------------------------------------------------------
 function ClockEditor({ question, updateQuestionData, language }: { question: any; updateQuestionData: any; language: string }) {
-  const currentCorrect = question.correctAnswer || "12:00";
-  const parts = currentCorrect.split(":");
+  let timeStr = "12:00";
+  if (typeof question.correctAnswer === "string") {
+    const t = question.correctAnswer.trim();
+    if (t.startsWith("{")) {
+      try {
+        const p = JSON.parse(t);
+        timeStr = p.time || `${String(p.hour || 12).padStart(2, "0")}:${String(p.minute || 0).padStart(2, "0")}`;
+      } catch {}
+    } else {
+      timeStr = t;
+    }
+  } else if (typeof question.correctAnswer === "object" && question.correctAnswer) {
+    timeStr = question.correctAnswer.time || `${String(question.correctAnswer.hour || 12).padStart(2, "0")}:${String(question.correctAnswer.minute || 0).padStart(2, "0")}`;
+  }
+  const parts = timeStr.split(":");
   const hour = parseInt(parts[0]) || 12;
   const minute = parseInt(parts[1]) || 0;
 
@@ -862,8 +886,11 @@ function MindMapEditor({ question, updateQuestionData, language }: { question: a
   return (
     <div className="space-y-6 text-right w-full max-w-full overflow-hidden" dir="rtl">
       <h5 className="text-xs font-black text-slate-500 uppercase tracking-widest">
-        خريطة مفاهيم (Mind Map):
+        خريطة المفاهيم الشجرية (Tree Mind Map):
       </h5>
+      <div className="bg-indigo-50 border border-indigo-200 p-3 rounded-2xl text-xs text-indigo-900 leading-relaxed font-bold">
+        <span>💡 هيكلة الشجرة: قم بإنشاء عقدة رئيسية (Root) بدون أب، ثم أضف المفاهيم الفرعية تحتها لإنشاء تسلسل شجري (Tree Structure) منظم وواضح للطالب!</span>
+      </div>
       <div className="flex flex-col gap-3.5 w-full">
         <div className="flex flex-col gap-1 w-full">
           <span className="text-[10px] font-black text-slate-400">
@@ -1509,6 +1536,9 @@ function WordSearchEditor({ question, updateQuestionData, language }: { question
       <h5 className="text-xs font-black text-slate-500 uppercase tracking-widest">
         محرر الكلمات المتقاطعة والبحث عن الكلمات (Word Search):
       </h5>
+      <div className="bg-indigo-50 border border-indigo-200 p-3 rounded-2xl text-xs text-indigo-900 leading-relaxed font-bold">
+        <span>💡 فكرة النشاط: الطالب يختار الكلمة الهدف من الأسفل، ثم يضغط على الحروف المتتالية داخل الشبكة لتحديدها وشطبها!</span>
+      </div>
 
       <div className="flex flex-col gap-2 w-full">
         <input
@@ -1576,7 +1606,7 @@ function WordSearchEditor({ question, updateQuestionData, language }: { question
 // -------------------------------------------------------------
 function MazeEditor({ question, updateQuestionData, language }: { question: any; updateQuestionData: any; language: string }) {
   const defaultGrid = Array.from({ length: 5 }, () => Array(5).fill(1));
-  const opts = parseJson(question.options, { mazeGrid: defaultGrid, start: [0, 0], end: [4, 4] });
+  const opts = parseJson(question.options, { mazeGrid: defaultGrid, start: [0, 0], end: [4, 4], labels: {} });
   const gridData = Array.isArray(opts?.mazeGrid) ? opts.mazeGrid : defaultGrid;
   const correctVal = parseJson(question.correctAnswer, []);
 
@@ -1584,7 +1614,8 @@ function MazeEditor({ question, updateQuestionData, language }: { question: any;
   const [start, setStart] = useState<number[]>(opts.start || [0, 0]);
   const [end, setEnd] = useState<number[]>(opts.end || [4, 4]);
   const [path, setPath] = useState<string[]>(Array.isArray(correctVal) ? correctVal : []);
-  const [mode, setMode] = useState<"WALL" | "START" | "END" | "PATH">("WALL");
+  const [labels, setLabels] = useState<Record<string, string>>(opts.labels || {});
+  const [mode, setMode] = useState<"WALL" | "START" | "END" | "PATH" | "LABEL">("WALL");
 
   useEffect(() => {
     const loadedGrid = Array.isArray(opts?.mazeGrid) && opts.mazeGrid.length > 0 ? opts.mazeGrid : defaultGrid;
@@ -1592,10 +1623,11 @@ function MazeEditor({ question, updateQuestionData, language }: { question: any;
     setStart(opts.start || [0, 0]);
     setEnd(opts.end || [4, 4]);
     setPath(Array.isArray(correctVal) ? correctVal : []);
+    setLabels(opts.labels || {});
   }, [question.options, question.correctAnswer]);
 
-  const saveChanges = (newGrid: number[][], newStart: number[], newEnd: number[], newPath: string[]) => {
-    updateQuestionData({ mazeGrid: newGrid, start: newStart, end: newEnd }, newPath);
+  const saveChanges = (newGrid: number[][], newStart: number[], newEnd: number[], newPath: string[], nextLabels = labels) => {
+    updateQuestionData({ mazeGrid: newGrid, start: newStart, end: newEnd, labels: nextLabels }, newPath);
   };
 
   const handleCellClick = (r: number, c: number) => {
@@ -1643,6 +1675,12 @@ function MazeEditor({ question, updateQuestionData, language }: { question: any;
     }
   };
 
+  const handleLabelChange = (r: number, c: number, val: string) => {
+    const nextLabels = { ...labels, [`${r},${c}`]: val };
+    setLabels(nextLabels);
+    saveChanges(grid, start, end, path, nextLabels);
+  };
+
   const handleResetPath = () => {
     const updatedPath = [`${start[0]},${start[1]}`];
     setPath(updatedPath);
@@ -1651,7 +1689,21 @@ function MazeEditor({ question, updateQuestionData, language }: { question: any;
 
   return (
     <div className="space-y-6 text-right w-full max-w-full overflow-hidden" dir="rtl">
-      <h5 className="text-xs font-black text-slate-500 uppercase tracking-widest">محرر مسار المتاهة (Maze):</h5>
+      <h5 className="text-xs font-black text-slate-500 uppercase tracking-widest">
+        محرر مسار المتاهة التعليمي (Maze Path):
+      </h5>
+      <div className="bg-amber-50 border border-amber-200 p-3.5 rounded-2xl text-xs text-amber-900 leading-relaxed font-bold space-y-1">
+        <div className="flex items-center gap-1.5 font-black text-amber-950 text-sm">
+          <span>💡 فكرة النشاط وكيفية إعداده:</span>
+        </div>
+        <p>المتاهة التعليمية هي لعبة تفاعلية يقوم فيها الطالب بالوصول من <b>نقطة البداية 🟢</b> إلى <b>نقطة النهاية 🔴</b> من خلال تتبع مسار الإجابات الصحيحة (مثلاً: تتبع مضاعفات العدد 5، أو تتبع الكلمات التي تبدأ بحرف اللام).</p>
+        <ul className="list-disc list-inside space-y-0.5 text-[11px] pt-1 text-amber-800">
+          <li><b>1. رسم الجدران ⬛:</b> حدد المربعات التي تمثل حوائط مغلقة لا يمكن للطالب المرور منها.</li>
+          <li><b>2. تحديد البداية 🟢 والنهاية 🔴:</b> اختر نقطة انطلاق ونقطة خروج الطالب.</li>
+          <li><b>3. رسم المسار الصحيح 🟡:</b> اضغط على المربعات المتتالية لرسم ممر الحل.</li>
+          <li><b>4. كتابة النصوص ✍️:</b> اضغط على زر "كتابة نصوص الخلايا" واكتب محتوى كل خلية (أرقام أو كلمات) ليرشد الطالب.</li>
+        </ul>
+      </div>
       <div className="flex flex-col gap-2 w-full">
         <button
           type="button"
@@ -1681,6 +1733,13 @@ function MazeEditor({ question, updateQuestionData, language }: { question: any;
         >
           رسم مسار الحل النموذجي
         </button>
+        <button
+          type="button"
+          onClick={() => setMode("LABEL")}
+          className={`w-full py-2 rounded-xl text-xs font-bold cursor-pointer transition-all border ${mode === "LABEL" ? "bg-amber-600 text-white border-amber-700 animate-none" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 animate-none"}`}
+        >
+          كتابة نصوص الخلايا (Labels)
+        </button>
       </div>
 
       <div className="flex flex-col items-center gap-4 w-full">
@@ -1689,6 +1748,7 @@ function MazeEditor({ question, updateQuestionData, language }: { question: any;
           {mode === "START" && "💡 انقر على خلية لتحديدها كنقطة بداية."}
           {mode === "END" && "💡 انقر على خلية لتحديدها كمخرج."}
           {mode === "PATH" && "💡 انقر على الممرات المجاورة بالتتابع لرسم مسار الحل."}
+          {mode === "LABEL" && "✍️ اكتب النصوص أو الأرقام المناسبة في المربعات مباشرة."}
         </div>
 
         <div className="w-full overflow-x-auto pb-2 flex justify-center">
@@ -1707,13 +1767,27 @@ function MazeEditor({ question, updateQuestionData, language }: { question: any;
                     <button
                       key={cIdx}
                       type="button"
-                      onClick={() => handleCellClick(rIdx, cIdx)}
-                      className={`w-10 h-10 rounded-lg border transition-all flex flex-col items-center justify-center font-black text-[9px] relative shrink-0 ${isWall ? "bg-slate-800 border-slate-900 text-slate-400" : isStart ? "bg-indigo-650 border-indigo-750 text-white shadow-sm" : isEnd ? "bg-emerald-500 border-emerald-600 text-white shadow-sm" : isPathSelected ? "bg-violet-100 border-violet-400 text-violet-850" : "bg-white border-slate-200"}`}
+                      onClick={() => mode !== "LABEL" && handleCellClick(rIdx, cIdx)}
+                      className={`w-14 h-14 rounded-lg border transition-all flex flex-col items-center justify-center font-black text-[10px] relative shrink-0 ${isWall ? "bg-slate-800 border-slate-900 text-slate-400" : isStart ? "bg-indigo-650 border-indigo-750 text-white shadow-sm" : isEnd ? "bg-emerald-500 border-emerald-600 text-white shadow-sm" : isPathSelected ? "bg-violet-100 border-violet-400 text-violet-850" : "bg-white border-slate-200"}`}
                     >
-                      {isStart && <span>بداية</span>}
-                      {isEnd && <span>مخرج</span>}
-                      {!isStart && !isEnd && isPathSelected && (
-                        <span>{pathIndex + 1}</span>
+                      {mode === "LABEL" && !isWall ? (
+                        <input
+                          type="text"
+                          value={labels[coordStr] || ""}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => handleLabelChange(rIdx, cIdx, e.target.value)}
+                          placeholder="..."
+                          className="w-full h-full text-center bg-transparent border-0 font-bold text-xs outline-none text-slate-800"
+                        />
+                      ) : (
+                        <>
+                          {isStart && <span>بداية</span>}
+                          {isEnd && <span>مخرج</span>}
+                          {labels[coordStr] && <span className="text-[10px] text-slate-500 font-bold">{labels[coordStr]}</span>}
+                          {!isStart && !isEnd && isPathSelected && (
+                            <span className="absolute bottom-0.5 right-0.5 text-[8px] text-slate-400">{pathIndex + 1}</span>
+                          )}
+                        </>
                       )}
                     </button>
                   );
@@ -1742,10 +1816,30 @@ function GeoGebraEditor({ question, updateQuestionData, language }: { question: 
   const correctVal = question.correctAnswer || "";
   const [inputValue, setInputValue] = useState(opts.iframeUrl || (opts.materialId ? `https://www.geogebra.org/material/iframe/id/${opts.materialId}` : ""));
 
+  const extractId = (urlOrId: string) => {
+    if (!urlOrId) return "";
+    const cleanUrl = urlOrId.trim();
+    const ggbmMatch = cleanUrl.match(/ggbm\.at\/([a-zA-Z0-9]+)/i);
+    if (ggbmMatch) return ggbmMatch[1];
+    
+    const geoMatch = cleanUrl.match(/geogebra\.org\/(?:[a-zA-Z0-9_\-\/]*\/)?(?:id\/)?([a-zA-Z0-9]+)/i);
+    if (geoMatch) {
+      const id = geoMatch[1];
+      const keywords = ["classic", "calculator", "geometry", "3d", "notes", "applet", "evaluator", "material", "show", "edit", "m"];
+      if (!keywords.includes(id.toLowerCase())) {
+        return id;
+      }
+    }
+    
+    if (/^[a-zA-Z0-9]+$/.test(cleanUrl)) {
+      return cleanUrl;
+    }
+    return "";
+  };
+
   const getCleanGeoGebraUrl = (urlOrId: string) => {
     if (!urlOrId) return "";
-    const idMatch = urlOrId.match(/(?:geogebra\.org\/(?:calculator|m|material|classic|geometry|3d|notes|applet)\/|id\/)([a-zA-Z0-9]+)/i);
-    const id = idMatch ? idMatch[1] : (urlOrId.match(/^[a-zA-Z0-9]+$/) ? urlOrId : "");
+    const id = extractId(urlOrId);
     if (id) {
       return `https://www.geogebra.org/material/iframe/id/${id}/width/800/height/500/border/888888/sfsb/true/smb/false/stb/false/stbh/false/ai/false/asb/false/sri/true/rc/false/ld/false/sdz/false/ctl/false`;
     }
@@ -1762,8 +1856,7 @@ function GeoGebraEditor({ question, updateQuestionData, language }: { question: 
       extractedUrl = rawInput.trim();
     }
     const cleanUrl = getCleanGeoGebraUrl(extractedUrl);
-    const idMatch = extractedUrl.match(/(?:geogebra\.org\/(?:calculator|m|material|classic|geometry|3d|notes|applet)\/|id\/)([a-zA-Z0-9]+)/i);
-    const id = idMatch ? idMatch[1] : (extractedUrl.match(/^[a-zA-Z0-9]+$/) ? extractedUrl : "");
+    const id = extractId(extractedUrl);
     updateQuestionData({ materialId: id || "", width: opts.width || 800, height: opts.height || 500, iframeUrl: cleanUrl }, correct.trim());
   };
 

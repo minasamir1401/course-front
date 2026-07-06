@@ -338,17 +338,20 @@ function TrueFalseRenderer({ question, value, onChange, language }: any) {
   const trueLabel = language === "ar" ? "صح" : "True";
   const falseLabel = language === "ar" ? "خطأ" : "False";
 
+  const isTrueVal = (v: any) => ["صح", "صحيح", "صواب", "true", "1"].includes(String(v || "").trim().toLowerCase()) || String(v) === "True";
+  const isFalseVal = (v: any) => ["خطأ", "false", "0", "غير صحيح"].includes(String(v || "").trim().toLowerCase()) || String(v) === "False";
+
   return (
     <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
       <h4 className="text-lg font-black text-slate-800 mb-6">{translateText(question.title, language)}</h4>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         {[trueLabel, falseLabel].map((choice) => {
-          const isSelected = value === choice;
+          const isSelected = (choice === trueLabel && isTrueVal(value)) || (choice === falseLabel && isFalseVal(value));
           return (
             <button
               key={choice}
               type="button"
-              onClick={() => onChange(choice)}
+              onClick={() => onChange(choice === trueLabel ? "صح" : "خطأ")}
               className={`p-6 rounded-3xl border-2 text-center font-black text-xl transition-all cursor-pointer select-none game-card-3d-violet ${
                 isSelected ? "game-btn-3d-selected" : ""
               }`}
@@ -410,7 +413,7 @@ function MultiSelectRenderer({ question, value, onChange, language }: any) {
 // -------------------------------------------------------------
 // 🤝 4. MATCHING (توصيل)
 // -------------------------------------------------------------
-function MatchingRenderer({ question, value, onChange, language, containerRef }: any) {
+function MatchingRenderer({ question, value, onChange, language }: any) {
   const opts = parseJson(question.options, { left: [], right: [] });
   const leftItems = Array.isArray(opts?.left) ? opts.left : [];
   const rightItemsRaw = Array.isArray(opts?.right) ? opts.right : [];
@@ -418,6 +421,7 @@ function MatchingRenderer({ question, value, onChange, language, containerRef }:
 
   const [selectedLeft, setSelectedLeft] = useState<string | null>(null);
   const [coords, setCoords] = useState<{ x1: number; y1: number; x2: number; y2: number; color: string }[]>([]);
+  const localRef = useRef<HTMLDivElement>(null);
 
   // Shuffle right items once on mount so they are randomized
   const [rightItems, setRightItems] = useState<string[]>([]);
@@ -427,13 +431,14 @@ function MatchingRenderer({ question, value, onChange, language, containerRef }:
   }, [question.options]);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    const container = localRef.current;
+    if (!container) return;
     const updateCoords = () => {
-      const containerRect = containerRef.current.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
       const newCoords: typeof coords = [];
-      const colors = ["#020617", "#0f172a", "#1e293b", "#334155", "#475569"];
+      const colors = ["#6366F1", "#8B5CF6", "#3B82F6", "#10B981", "#F59E0B"];
 
-      const getEl = (attr: string, val: string) => containerRef.current.querySelector(`[${attr}="${val}"]`);
+      const getEl = (attr: string, val: string) => container.querySelector(`[${attr}="${val}"]`);
 
       Object.entries(matchingState).forEach(([lKey, rVal], idx) => {
         const leftEl = getEl("data-left-id", lKey);
@@ -460,7 +465,7 @@ function MatchingRenderer({ question, value, onChange, language, containerRef }:
       window.removeEventListener("resize", updateCoords);
       clearTimeout(timeout);
     };
-  }, [value, question, language, containerRef]);
+  }, [value, question, language]);
 
   const handleLeftClick = (item: string) => {
     setSelectedLeft(item);
@@ -480,7 +485,7 @@ function MatchingRenderer({ question, value, onChange, language, containerRef }:
   };
 
   return (
-    <div className="space-y-6 relative w-full overflow-hidden" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+    <div ref={localRef} className="space-y-6 relative w-full overflow-hidden" dir={language === 'ar' ? 'rtl' : 'ltr'}>
       <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">
         {coords.map((c, idx) => (
           <path
@@ -506,11 +511,17 @@ function MatchingRenderer({ question, value, onChange, language, containerRef }:
                 key={i}
                 data-left-id={item}
                 onClick={() => handleLeftClick(item)}
-                className={`p-4 rounded-2xl border-2 transition-all flex justify-between items-center game-card-3d-violet cursor-pointer ${isSelected ? "game-btn-3d-selected" : ""} ${matched ? "game-btn-3d-matched" : ""}`}
+                className={`p-4 rounded-2xl border-2 transition-all flex justify-between items-center game-card-3d-violet cursor-pointer relative ${isSelected ? "game-btn-3d-selected" : ""} ${matched ? "game-btn-3d-matched" : ""}`}
               >
                 <span className="font-bold text-sm truncate">{translateText(item, language)}</span>
+                
+                {/* Visual anchor dot */}
+                <div className={`absolute w-3 h-3 rounded-full border-2 border-indigo-400 bg-white top-1/2 -translate-y-1/2 transition-transform ${
+                  language === 'ar' ? '-left-1.5' : '-right-1.5'
+                } ${isSelected || matched ? 'scale-125 bg-indigo-600 border-white shadow' : ''}`} />
+
                 {matched && (
-                  <button type="button" onClick={(e) => { e.stopPropagation(); clearMatch(item); }} className="text-rose-500 font-bold hover:underline text-xs">
+                  <button type="button" onClick={(e) => { e.stopPropagation(); clearMatch(item); }} className="text-rose-500 font-bold hover:underline text-xs z-20">
                     {language === "ar" ? "مسح" : "Clear"}
                   </button>
                 )}
@@ -529,8 +540,13 @@ function MatchingRenderer({ question, value, onChange, language, containerRef }:
                 key={i}
                 data-right-id={item}
                 onClick={() => handleRightClick(item)}
-                className={`p-4 rounded-2xl border-2 transition-all text-center game-card-3d-teal cursor-pointer ${isMatched ? "bg-sky-200 border-sky-300 text-slate-900 opacity-60 pointer-events-none" : ""}`}
+                className={`p-4 rounded-2xl border-2 transition-all text-center game-card-3d-teal cursor-pointer relative ${isMatched ? "bg-sky-200 border-sky-300 text-slate-900 opacity-60 pointer-events-none" : ""}`}
               >
+                {/* Visual anchor dot */}
+                <div className={`absolute w-3 h-3 rounded-full border-2 border-teal-400 bg-white top-1/2 -translate-y-1/2 transition-transform ${
+                  language === 'ar' ? '-right-1.5' : '-left-1.5'
+                } ${isMatched ? 'scale-125 bg-teal-600 border-white shadow' : ''}`} />
+
                 <span className="font-bold text-sm truncate">{translateText(item, language)}</span>
               </div>
             );
@@ -741,7 +757,22 @@ function GroupSortingRenderer({ question, value, onChange, language }: any) {
 // 🕰️ 7. CLOCK (عقارب الساعة التفاعلية)
 // -------------------------------------------------------------
 function ClockRenderer({ question, value, onChange, language }: any) {
-  const parts = (value || "12:00").split(":");
+  let timeStr = "12:00";
+  const valToParse = value || question?.correctAnswer || "12:00";
+  if (typeof valToParse === "string") {
+    const t = valToParse.trim();
+    if (t.startsWith("{")) {
+      try {
+        const p = JSON.parse(t);
+        timeStr = p.time || `${String(p.hour || 12).padStart(2, "0")}:${String(p.minute || 0).padStart(2, "0")}`;
+      } catch {}
+    } else {
+      timeStr = t;
+    }
+  } else if (typeof valToParse === "object" && valToParse) {
+    timeStr = valToParse.time || `${String(valToParse.hour || 12).padStart(2, "0")}:${String(valToParse.minute || 0).padStart(2, "0")}`;
+  }
+  const parts = timeStr.split(":");
   const hour = parseInt(parts[0]) || 12;
   const minute = parseInt(parts[1]) || 0;
 
@@ -875,48 +906,12 @@ function ClockRenderer({ question, value, onChange, language }: any) {
 // -------------------------------------------------------------
 // 🗺️ 8. MIND_MAP (خريطة المفاهيم)
 // -------------------------------------------------------------
-function MindMapRenderer({ question, value, onChange, language, containerRef }: any) {
+function MindMapRenderer({ question, value, onChange, language }: any) {
   const opts = parseJson(question.options, { nodes: [] });
   const nodes = Array.isArray(opts?.nodes) ? opts.nodes : [];
   const mapAnswers = parseJson(value, {});
 
   const [activeWord, setActiveWord] = useState<string | null>(null);
-  const [coords, setCoords] = useState<{ x1: number; y1: number; x2: number; y2: number }[]>([]);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const updateCoords = () => {
-      const containerRect = containerRef.current.getBoundingClientRect();
-      const newCoords: typeof coords = [];
-      const getEl = (id: string) => containerRef.current.querySelector(`[data-node-id="${id}"]`);
-
-      nodes.forEach((node: any) => {
-        if (node.parent) {
-          const parentEl = getEl(node.parent);
-          const childEl = getEl(node.id);
-          if (parentEl && childEl) {
-            const pRect = parentEl.getBoundingClientRect();
-            const cRect = childEl.getBoundingClientRect();
-            newCoords.push({
-              x1: pRect.left + pRect.width / 2 - containerRect.left,
-              y1: pRect.bottom - containerRect.top,
-              x2: cRect.left + cRect.width / 2 - containerRect.left,
-              y2: cRect.top - containerRect.top
-            });
-          }
-        }
-      });
-      setCoords(newCoords);
-    };
-
-    updateCoords();
-    window.addEventListener("resize", updateCoords);
-    const timeout = setTimeout(updateCoords, 100);
-    return () => {
-      window.removeEventListener("resize", updateCoords);
-      clearTimeout(timeout);
-    };
-  }, [value, question, containerRef]);
 
   const handleNodeClick = (nodeId: string, node: any) => {
     if (!node.isBlank) return;
@@ -932,38 +927,69 @@ function MindMapRenderer({ question, value, onChange, language, containerRef }: 
   };
 
   const blanksList = nodes.filter((n: any) => n.isBlank).map((n: any) => n.label);
+  const rootNodes = nodes.filter((n: any) => !n.parent);
+
+  const renderTreeNode = (node: any) => {
+    const children = nodes.filter((n: any) => n.parent === node.id);
+    const isBlank = node.isBlank;
+    const nodeAns = mapAnswers[node.id];
+    
+    const isRoot = !node.parent;
+    const nodeClass = isBlank
+      ? (nodeAns
+        ? "bg-emerald-50 border-emerald-300 text-emerald-800 scale-105 shadow-md shadow-emerald-100/60"
+        : "border-dashed border-2 border-indigo-300 bg-indigo-50/50 text-indigo-400 animate-pulse")
+      : (isRoot
+        ? "premium-gradient-primary text-white shadow-xl scale-105 border-none"
+        : "bg-white border-2 border-slate-200 text-slate-800 shadow-sm");
+
+    return (
+      <div key={node.id} className="flex flex-col items-center">
+        {/* Node card */}
+        <div
+          data-node-id={node.id}
+          onClick={() => handleNodeClick(node.id, node)}
+          className={`px-5 py-3.5 rounded-2xl transition-all cursor-pointer font-black text-sm min-w-[140px] max-w-[200px] text-center z-20 border ${nodeClass}`}
+        >
+          {isBlank ? (translateText(nodeAns, language) || "?") : translateText(node.label, language)}
+        </div>
+
+        {/* Children rendering */}
+        {children.length > 0 && (
+          <div className="flex flex-col items-center w-full">
+            {/* Vertical connector from parent */}
+            <div className="w-0.5 h-4 bg-slate-350" />
+            
+            {/* Row of children */}
+            <div className="flex justify-center gap-8 w-full">
+              {children.map((child: any, idx: number) => {
+                const isFirst = idx === 0;
+                const isLast = idx === children.length - 1;
+                return (
+                  <div key={child.id} className="relative flex flex-col items-center pt-4">
+                    {/* Horizontal connecting line */}
+                    {children.length > 1 && (
+                      <div className={`absolute top-0 h-0.5 bg-slate-350 ${
+                        isFirst ? 'left-1/2 right-0' : isLast ? 'left-0 right-1/2' : 'left-0 right-0'
+                      }`} />
+                    )}
+                    {/* Vertical connector down to child card */}
+                    <div className="absolute top-0 w-0.5 h-4 bg-slate-350 left-1/2 -translate-x-1/2" />
+                    {renderTreeNode(child)}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-8 relative w-full overflow-hidden" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-      <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">
-        {coords.map((c, idx) => (
-          <line key={idx} x1={c.x1} y1={c.y1} x2={c.x2} y2={c.y2} stroke="#cbd5e1" strokeWidth="3" />
-        ))}
-      </svg>
-
-      <div className="flex flex-wrap justify-center gap-6 py-4">
-        {nodes.map((node: any) => {
-          const isBlank = node.isBlank;
-          const nodeAns = mapAnswers[node.id];
-          const nodeClass = isBlank
-            ? (nodeAns
-              ? "bg-sky-200 border-sky-300 text-slate-900 animate-pop-in"
-              : "border-dashed border-slate-300 bg-slate-50 text-slate-400")
-            : (node.parent
-              ? "bg-white border-slate-200 text-slate-800"
-              : "bg-sky-100 border-sky-200 text-slate-900");
-
-          return (
-            <div
-              key={node.id}
-              data-node-id={node.id}
-              onClick={() => handleNodeClick(node.id, node)}
-              className={`p-4.5 rounded-2xl border-2 transition-all cursor-pointer font-black text-sm min-w-[125px] text-center ${nodeClass}`}
-            >
-              {isBlank ? (translateText(nodeAns, language) || "?") : translateText(node.label, language)}
-            </div>
-          );
-        })}
+      <div className="flex flex-wrap justify-center gap-12 py-6 relative z-20 w-full overflow-x-auto pb-6">
+        {rootNodes.map(renderTreeNode)}
       </div>
 
       {blanksList.length > 0 && (
@@ -1014,25 +1040,38 @@ function VideoCheckpointRenderer({ question, value, onChange, language }: any) {
   // Convert any YouTube URL format to embed URL
   const getEmbedUrl = (url: string): string => {
     if (!url) return "";
-    // Already embed URL
-    if (url.includes("/embed/")) return url;
-    // youtu.be/ID
-    const shortMatch = url.match(/youtu\.be\/([\w-]+)/);
-    if (shortMatch) return `https://www.youtube.com/embed/${shortMatch[1]}`;
-    // youtube.com/watch?v=ID
-    const watchMatch = url.match(/[?&]v=([\w-]+)/);
-    if (watchMatch) return `https://www.youtube.com/embed/${watchMatch[1]}`;
-    // Treat as raw video ID
-    if (/^[\w-]{11}$/.test(url.trim())) return `https://www.youtube.com/embed/${url.trim()}`;
-    return url;
+    const cleanUrl = url.trim();
+    if (cleanUrl.includes("/embed/")) return cleanUrl;
+    
+    // Support youtube.com/shorts/ID or youtube.com/watch?v=ID or youtu.be/ID
+    const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const ytMatch = cleanUrl.match(ytRegex);
+    if (ytMatch && ytMatch[1]) {
+      return `https://www.youtube.com/embed/${ytMatch[1]}`;
+    }
+    
+    // Vimeo
+    const vimeoRegex = /(?:vimeo\.com\/|player\.vimeo\.com\/video\/)(\d+)/;
+    const vimeoMatch = cleanUrl.match(vimeoRegex);
+    if (vimeoMatch && vimeoMatch[1]) {
+      return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+    }
+    
+    return cleanUrl;
   };
 
-  const embedUrl = getEmbedUrl(videoUrl);
+  const isDirectVideo = /\.(mp4|webm|ogg|mov)$/i.test(videoUrl) || videoUrl.startsWith("blob:") || videoUrl.startsWith("data:video");
+  const embedUrl = isDirectVideo ? "" : getEmbedUrl(videoUrl);
 
   return (
     <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
       <h4 className="text-lg font-black text-slate-800">{translateText(question.title, language)}</h4>
-      {embedUrl && (
+      {isDirectVideo && (
+        <div className="w-full aspect-video rounded-3xl overflow-hidden border border-slate-200 bg-black">
+          <video src={videoUrl} controls className="w-full h-full" />
+        </div>
+      )}
+      {!isDirectVideo && embedUrl && (
         <div className="w-full aspect-video rounded-3xl overflow-hidden border border-slate-200 bg-black">
           <iframe
             src={embedUrl}
@@ -1042,9 +1081,9 @@ function VideoCheckpointRenderer({ question, value, onChange, language }: any) {
           />
         </div>
       )}
-      {!embedUrl && (
+      {!isDirectVideo && !embedUrl && (
         <div className="w-full aspect-video rounded-3xl bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center">
-          <span className="text-slate-400 font-bold text-sm">{language === 'ar' ? 'لا يوجد رابط فيديو' : 'No video URL'}</span>
+          <span className="text-slate-400 font-bold text-sm">{language === 'ar' ? 'لا يوجد رابط فيديو صالح' : 'No valid video URL'}</span>
         </div>
       )}
       <div className="space-y-4">
@@ -1105,22 +1144,30 @@ function NumberLineRenderer({ question, value, onChange, language }: any) {
         {language === "ar" ? "حرّك المؤشر لتحديد الرقم المطلوب:" : "Move the slider to select the correct number:"}
       </h4>
       
-      <div className="flex flex-col gap-4 py-8 items-center">
-        <input
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={currentVal}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full accent-slate-950 h-3 bg-slate-250 rounded-lg appearance-none cursor-pointer"
-        />
-        <div className="flex justify-between w-full px-2 text-xs font-black text-slate-500">
-          <span>{min}</span>
-          {labels.map((lbl: any, i: number) => (
-            <span key={i}>{translateText(lbl, language)}</span>
-          ))}
-          <span>{max}</span>
+      <div className="flex flex-col gap-4 py-8 items-center w-full relative">
+        <div className="relative w-full flex items-center py-2">
+          <div className="absolute inset-x-0 h-3 bg-slate-200 rounded-full shadow-inner pointer-events-none" />
+          <input
+            type="range"
+            min={min}
+            max={max}
+            step={step}
+            value={currentVal}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full h-3 bg-transparent accent-indigo-600 rounded-lg cursor-pointer relative z-10"
+          />
+        </div>
+        <div className="flex justify-between w-full px-1 text-xs font-black text-slate-600 flex-wrap gap-1">
+          {labels && labels.length > 0 ? (
+            labels.map((lbl: any, i: number) => (
+              <span key={i} className="bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">{translateText(lbl, language)}</span>
+            ))
+          ) : (
+            <div className="flex justify-between w-full">
+              <span className="bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">{min}</span>
+              <span className="bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">{max}</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1196,10 +1243,11 @@ function SwipeSortRenderer({ question, value, onChange, language }: any) {
 // -------------------------------------------------------------
 function MazeRenderer({ question, value, onChange, language }: any) {
   const defaultGrid = Array.from({ length: 5 }, () => Array(5).fill(1));
-  const opts = parseJson(question.options, { mazeGrid: defaultGrid, start: [0, 0], end: [4, 4] });
+  const opts = parseJson(question.options, { mazeGrid: defaultGrid, start: [0, 0], end: [4, 4], labels: {} });
   const grid = Array.isArray(opts?.mazeGrid) ? opts.mazeGrid : defaultGrid;
   const start = opts.start || [0, 0];
   const end = opts.end || [4, 4];
+  const labels = opts.labels || {};
   
   const currentPath = parseJson(value, []);
 
@@ -1239,7 +1287,7 @@ function MazeRenderer({ question, value, onChange, language }: any) {
       )}
       <div className="flex justify-between items-center">
         <span className="text-xs font-bold text-slate-500">
-          {language === "ar" ? "ارسم مساراً من البداية حتى المخرج:" : "Draw a path from start to end:"}
+          {language === "ar" ? "ارسم مساراً من البداية حتى المخرج بالتتبع الصحيح:" : "Draw a path from start to end by tracking correctly:"}
         </span>
         <button type="button" onClick={handleReset} className="text-xs text-rose-500 font-bold hover:underline">
           {language === "ar" ? "إعادة تعيين" : "Reset"}
@@ -1257,17 +1305,20 @@ function MazeRenderer({ question, value, onChange, language }: any) {
                 const isEnd = end[0] === rIdx && end[1] === cIdx;
                 const isPath = currentPath.includes(coordStr);
                 const pathIndex = currentPath.indexOf(coordStr);
+                const label = labels[coordStr] || "";
 
                 return (
                   <button
                     key={cIdx}
                     type="button"
                     onClick={() => handleCellClick(rIdx, cIdx)}
-                    className={`w-10 h-10 rounded-lg border transition-all flex flex-col items-center justify-center font-black text-[9px] relative shrink-0 ${isWall ? "bg-slate-800 border-slate-900 text-slate-400 cursor-not-allowed" : isStart ? "bg-slate-950 border-slate-950 text-white" : isEnd ? "bg-emerald-650 border-emerald-700 text-white" : isPath ? "bg-slate-800 border-slate-800 text-white" : "bg-white border-slate-200 hover:border-slate-350"}`}
+                    disabled={isWall}
+                    className={`w-12 h-12 rounded-lg border transition-all flex flex-col items-center justify-center font-black text-xs relative shrink-0 ${isWall ? "bg-slate-800 border-slate-900 text-slate-400 cursor-not-allowed" : isStart ? "bg-slate-950 border-slate-950 text-white" : isEnd ? "bg-emerald-650 border-emerald-700 text-white" : isPath ? "bg-indigo-600 border-indigo-650 text-white" : "bg-white border-slate-200 hover:border-slate-350"}`}
                   >
-                    {isStart && <span>{language === "ar" ? "البداية" : "Start"}</span>}
-                    {isEnd && <span>{language === "ar" ? "المخرج" : "Exit"}</span>}
-                    {!isStart && !isEnd && isPath && <span>{pathIndex + 1}</span>}
+                    {isStart && <span className="text-[7px] absolute top-0.5 opacity-80">{language === "ar" ? "البداية" : "Start"}</span>}
+                    {isEnd && <span className="text-[7px] absolute top-0.5 opacity-80">{language === "ar" ? "المخرج" : "Exit"}</span>}
+                    {label && <span className={`${isStart || isEnd ? "pt-2 text-[9px]" : "text-xs"}`}>{label}</span>}
+                    {!isStart && !isEnd && isPath && <span className="absolute bottom-0.5 right-0.5 text-[7px] text-slate-350">{pathIndex + 1}</span>}
                   </button>
                 );
               })}
@@ -1288,28 +1339,113 @@ function WordSearchRenderer({ question, value, onChange, language }: any) {
   const words = Array.isArray(opts?.words) ? opts.words : [];
   const foundWords = parseJson(value, []);
 
-  const handleWordClick = (w: string) => {
-    let nextFound = [...foundWords];
-    if (nextFound.includes(w)) {
-      nextFound = nextFound.filter((x) => x !== w);
+  const [activeWord, setActiveWord] = useState<string | null>(null);
+  const [selectedCells, setSelectedCells] = useState<string[]>([]);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSelectedCells([]);
+    setErrorMsg(null);
+  }, [activeWord]);
+
+  const handleCellClick = (r: number, c: number, letter: string) => {
+    if (!activeWord) return;
+    setErrorMsg(null);
+    const coord = `${r},${c}`;
+    if (selectedCells.includes(coord)) {
+      setSelectedCells(selectedCells.filter((x) => x !== coord));
     } else {
-      nextFound.push(w);
+      setSelectedCells([...selectedCells, coord]);
     }
-    onChange(JSON.stringify(nextFound));
+  };
+
+  const handleConfirmWord = () => {
+    if (!activeWord) return;
+    if (selectedCells.length === 0) return;
+
+    // Join selected letters in click order and verify if it matches activeWord (or reversed)
+    const spelled = selectedCells.map(coord => {
+      const [r, c] = coord.split(',').map(Number);
+      return grid[r]?.[c] || "";
+    }).join("");
+
+    const reversed = spelled.split("").reverse().join("");
+
+    if (spelled !== activeWord && reversed !== activeWord) {
+      setErrorMsg(language === 'ar' ? "⚠️ الحروف المحددة لا تطابق الكلمة المطلوبة! تأكد من ترتيب الحروف." : "⚠️ Selected letters do not match the word! Make sure of the order.");
+      return;
+    }
+
+    if (!foundWords.includes(activeWord)) {
+      const nextFound = [...foundWords, activeWord];
+      onChange(JSON.stringify(nextFound));
+    }
+    setActiveWord(null);
+    setSelectedCells([]);
+    setErrorMsg(null);
   };
 
   return (
     <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <h4 className="text-lg font-black text-slate-800">{translateText(question.title, language)}</h4>
+
+      {activeWord && (
+        <div className="bg-indigo-50 border-2 border-indigo-200 p-4 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4 animate-pop-in">
+          <div className="flex flex-col gap-1 items-start">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-black text-indigo-900">
+                {language === "ar" ? `الكلمة المحددة للبحث: ` : `Searching for: `}
+              </span>
+              <span className="px-3 py-1 bg-indigo-600 text-white font-black rounded-xl text-sm shadow-sm">{activeWord}</span>
+            </div>
+            {errorMsg && <span className="text-[10px] text-rose-500 font-bold mt-1">{errorMsg}</span>}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleConfirmWord}
+              disabled={selectedCells.length === 0}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white font-black text-xs rounded-xl shadow cursor-pointer transition-all"
+            >
+              {language === "ar" ? "✓ تأكيد تحديد الكلمة" : "✓ Confirm Word Found"}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setActiveWord(null); setSelectedCells([]); }}
+              className="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl cursor-pointer transition-all"
+            >
+              {language === "ar" ? "إلغاء" : "Cancel"}
+            </button>
+          </div>
+        </div>
+      )}
+
       {grid.length > 0 && (
         <div className="w-full overflow-x-auto pb-2 flex justify-center">
           <div className="bg-slate-50 p-3 border border-slate-150 rounded-2xl flex flex-col gap-1.5 w-fit mx-auto shadow-inner">
             {grid.map((row: string[], r: number) => (
               <div key={r} className="flex gap-1.5">
-                {row.map((letter: string, c: number) => (
-                  <div key={c} className="w-8 h-8 bg-white border border-slate-200 rounded-lg flex items-center justify-center font-black text-slate-700 text-xs shadow-sm uppercase shrink-0">
-                    {letter}
-                  </div>
-                ))}
+                {row.map((letter: string, c: number) => {
+                  const coord = `${r},${c}`;
+                  const isSelected = selectedCells.includes(coord);
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => handleCellClick(r, c, letter)}
+                      disabled={!activeWord}
+                      className={`w-9 h-9 border rounded-lg flex items-center justify-center font-black text-xs shadow-sm uppercase shrink-0 transition-all ${
+                        isSelected
+                          ? "bg-amber-400 border-amber-500 text-slate-950 scale-105 shadow-md"
+                          : activeWord
+                          ? "bg-white border-slate-200 text-slate-800 hover:border-indigo-400 hover:bg-indigo-50/50 cursor-pointer"
+                          : "bg-white border-slate-200 text-slate-700 opacity-80 cursor-default"
+                      }`}
+                    >
+                      {letter}
+                    </button>
+                  );
+                })}
               </div>
             ))}
           </div>
@@ -1318,19 +1454,26 @@ function WordSearchRenderer({ question, value, onChange, language }: any) {
 
       <div className="space-y-3">
         <span className="text-xs font-black text-slate-400 block uppercase">
-          {language === "ar" ? "الكلمات المخفية بالجدول (اضغط الكلمة التي تعثر عليها لشطبها):" : "Hidden words (click word to scratch out):"}
+          {language === "ar" ? "الخطوة 1: اضغط على الكلمة بالأسفل لاختيارها، ثم الخطوة 2: اضغط على حروفها بالجدول أعلاه:" : "Step 1: Click word below, Step 2: Click its letters in grid:"}
         </span>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {words.map((w: any) => {
             const isFound = foundWords.includes(w);
+            const isTarget = activeWord === w;
             return (
               <button
                 key={w}
                 type="button"
-                onClick={() => handleWordClick(w)}
-                className={`p-3.5 rounded-xl border-2 transition-all font-black text-xs text-center cursor-pointer ${isFound ? "bg-slate-950 border-slate-950 text-white line-through" : "bg-white border-slate-200"}`}
+                onClick={() => !isFound && setActiveWord(isTarget ? null : w)}
+                className={`p-3.5 rounded-xl border-2 transition-all font-black text-xs text-center cursor-pointer ${
+                  isFound
+                    ? "bg-slate-950 border-slate-950 text-white line-through opacity-60"
+                    : isTarget
+                    ? "bg-indigo-600 border-indigo-600 text-white shadow-md scale-105"
+                    : "bg-white border-slate-200 hover:border-indigo-400"
+                }`}
               >
-                {translateText(w, language)}
+                {translateText(w, language)} {isFound && "✓"}
               </button>
             );
           })}
@@ -1427,7 +1570,13 @@ function FlashCardRenderer({ question, value, onChange, language }: any) {
       {/* Flip Card */}
       <div className="flex justify-center py-4">
         <div
-          onClick={() => setIsFlipped(!isFlipped)}
+          onClick={() => {
+            const nextFlipped = !isFlipped;
+            setIsFlipped(nextFlipped);
+            if (onChange && !value) {
+              onChange(currentCard.back || "FLIPPED");
+            }
+          }}
           className={`w-80 h-48 rounded-3xl border-2 p-6 flex flex-col justify-center items-center text-center cursor-pointer transition-all duration-500 relative shadow-md animate-pop-in ${
             isFlipped ? "bg-slate-950 border-slate-950 text-white" : "bg-white border-slate-250 text-slate-800"
           }`}
@@ -1442,20 +1591,6 @@ function FlashCardRenderer({ question, value, onChange, language }: any) {
             {language === "ar" ? "اضغط لقلب البطاقة" : "Click to flip"}
           </span>
         </div>
-      </div>
-
-      {/* Answer input */}
-      <div className="w-full max-w-md mx-auto space-y-2">
-        <label className="text-xs font-bold text-slate-500 block text-center">
-          {language === "ar" ? "اكتب إجابتك للتحقق:" : "Type your answer to verify:"}
-        </label>
-        <input
-          type="text"
-          className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-center font-bold text-sm"
-          value={value || ""}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={language === "ar" ? "إجابتك..." : "Your answer..."}
-        />
       </div>
     </div>
   );

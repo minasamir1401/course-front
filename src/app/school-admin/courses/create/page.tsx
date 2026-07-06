@@ -20,6 +20,34 @@ import { compressImage } from "@/lib/image-utils";
 import FileUpload from "@/components/FileUpload";
 import InteractiveQuestionEditor from "@/components/InteractiveQuestionEditor";
 
+// Safely parse JSON
+const parseJson = (str: any, fallback: any = {}) => {
+  try {
+    if (str === undefined || str === null) return fallback;
+    let parsed = str;
+    if (typeof str === "string") {
+      const trimmed = str.trim();
+      if (trimmed.startsWith("{") || trimmed.startsWith("[") || (trimmed.startsWith('"') && trimmed.endsWith('"'))) {
+        try {
+          parsed = JSON.parse(trimmed);
+        } catch {
+          parsed = trimmed;
+        }
+      } else {
+        return fallback;
+      }
+    }
+    if (typeof parsed !== "object" || parsed === null) {
+      return parsed;
+    }
+    if (fallback && !Array.isArray(fallback) && Array.isArray(parsed)) {
+      return fallback;
+    }
+    return parsed;
+  } catch {
+    return fallback;
+  }
+};
 
 export default function CreateCoursePage() {
   const { t, language } = useLanguage();
@@ -1851,22 +1879,34 @@ export default function CreateCoursePage() {
                         <div className="space-y-4">
                           {q.type !== 'TEXT' && (
                             <>
-                              <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'خيارات الإجابة:' : 'Options & Correct Answer:'}</h5>
-                              <div className="space-y-2">
-                                {(q.options || []).filter(Boolean).map((opt: string, oIdx: number) => {
-                                  const isCorrect = q.type === 'MULTI_SELECT'
-                                    ? (q.correctAnswers || []).includes(opt)
-                                    : q.correctAnswer === opt;
-                                  return (
-                                    <div key={oIdx} className={`p-3 rounded-xl border flex items-center gap-3 text-xs font-bold transition-all ${isCorrect ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-white border-slate-100 text-slate-600'}`}>
-                                      <div className={`w-5 h-5 rounded-full flex items-center justify-center ${isCorrect ? 'bg-emerald-500 text-white' : 'bg-slate-100'}`}>
-                                        {isCorrect ? '✓' : ''}
+                              <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'معاينة السؤال:' : 'Question Preview:'}</h5>
+                              {['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(q.type) ? (
+                                <div className="space-y-2">
+                                  {Array.isArray(q.options) && q.options.filter(Boolean).map((opt: string, oIdx: number) => {
+                                    const isCorrect = q.type === 'MULTI_SELECT'
+                                      ? (q.correctAnswers || []).includes(opt)
+                                      : q.correctAnswer === opt;
+                                    return (
+                                      <div key={oIdx} className={`p-3 rounded-xl border flex items-center gap-3 text-xs font-bold transition-all ${isCorrect ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-white border-slate-100 text-slate-600'}`}>
+                                        <div className={`w-5 h-5 rounded-full flex items-center justify-center ${isCorrect ? 'bg-emerald-500 text-white' : 'bg-slate-100'}`}>
+                                          {isCorrect ? '✓' : ''}
+                                        </div>
+                                        <span>{opt}</span>
                                       </div>
-                                      <span>{opt}</span>
-                                    </div>
-                                  );
-                                })}
-                              </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : q.type === 'FLASH_CARD' ? (
+                                <div className="p-4 bg-slate-50 border border-slate-150 rounded-2xl text-xs space-y-2 font-bold text-right" dir="rtl">
+                                  <p className="text-slate-800"><span className="text-indigo-650">🎴 {language === 'ar' ? 'الوجه الأمامي (السؤال):' : 'Front (Question):'}</span> {parseJson(q.options, {front: ""}).front || q.text}</p>
+                                  <p className="text-slate-800"><span className="text-indigo-650">✨ {language === 'ar' ? 'الوجه الخلفي (الإجابة):' : 'Back (Answer):'}</span> {parseJson(q.options, {back: ""}).back || q.correctAnswer}</p>
+                                </div>
+                              ) : (
+                                <div className="p-4 bg-slate-50 border border-slate-150 rounded-2xl text-xs space-y-1.5 font-bold text-right" dir="rtl">
+                                  <p className="text-slate-400">{language === 'ar' ? `نوع النشاط: ${q.type}` : `Activity Type: ${q.type}`}</p>
+                                  <p className="text-slate-800"><span className="text-emerald-600">✓ {language === 'ar' ? 'الإجابة النموذجية:' : 'Correct Answer:'}</span> {typeof q.correctAnswer === 'object' ? JSON.stringify(q.correctAnswer) : String(q.correctAnswer || "")}</p>
+                                </div>
+                              )}
                             </>
                           )}
 

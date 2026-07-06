@@ -149,57 +149,76 @@ export default function CourseDetailsPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto space-y-6 md:space-y-10 pb-20 px-1 sm:px-0 overflow-x-hidden" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <div className={`w-full max-w-[1400px] mx-auto space-y-8 md:space-y-12 pb-24 px-4 sm:px-6 md:px-8 bg-slate-50/50 min-h-screen overflow-x-hidden ${language === 'ar' ? 'rtl' : 'ltr'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
 
-        {/* Course Folder Header */}
-        <div className="bg-white rounded-[48px] border border-slate-100 shadow-sm relative overflow-hidden group min-h-[300px] flex flex-col justify-end">
-          {course.coverImage ? (
-            <div className="absolute top-0 left-0 w-full h-full">
-              <img src={getFullImageUrl(course.coverImage) || ""} className="w-full h-full object-cover" alt={course.title} />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent"></div>
-            </div>
-          ) : (
-            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-indigo-500 to-blue-600">
-              <div className="absolute inset-0 bg-grid-white/[0.1] bg-[size:20px_20px]"></div>
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent opacity-60"></div>
-            </div>
-          )}
+        {/* ── IMMERSIVE COURSE HERO ── */}
+        <div className="relative w-full rounded-[40px] bg-gradient-to-br from-indigo-900 via-indigo-800 to-violet-900 overflow-hidden p-8 md:p-14 shadow-2xl border border-indigo-500/20 flex flex-col lg:flex-row items-center justify-between gap-10 group">
+          {/* Animated Background Ornaments */}
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/20 rounded-full blur-[120px] pointer-events-none group-hover:bg-indigo-500/30 transition-colors duration-1000" />
+          <div className="absolute bottom-[-20%] left-[-10%] w-[400px] h-[400px] bg-violet-600/30 rounded-full blur-[100px] pointer-events-none" />
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.05]"></div>
+          
+          <div className="relative z-10 flex flex-col md:flex-row items-center md:items-stretch gap-10 w-full">
+            {/* Cover Image (Poster Style) */}
+            {course.coverImage && getFullImageUrl(course.coverImage) ? (
+              <div className="relative w-full md:w-[280px] lg:w-[340px] aspect-[4/5] rounded-[32px] overflow-hidden border border-white/10 shadow-2xl shrink-0 transition-transform duration-700 group-hover:scale-105 group-hover:shadow-indigo-500/50">
+                <img src={getFullImageUrl(course.coverImage)!} className="w-full h-full object-cover" alt={course.title} />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent"></div>
+              </div>
+            ) : (
+              <div className="relative w-full md:w-[280px] lg:w-[340px] aspect-[4/5] rounded-[32px] overflow-hidden bg-white/5 backdrop-blur-md shrink-0 border border-white/10 shadow-2xl flex items-center justify-center text-white/50 transition-transform duration-700 group-hover:scale-105">
+                <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:16px_16px]"></div>
+                <BookOpen className="w-24 h-24 opacity-30 animate-pulse" />
+              </div>
+            )}
 
-          <div className="relative z-10 p-8 md:p-12 flex flex-col md:flex-row justify-between gap-8 items-end">
-            <div className="flex-1 space-y-4">
-              <div className="flex items-center gap-3">
-                <span className="px-4 py-1.5 bg-indigo-500 text-white text-[10px] font-black rounded-full shadow-lg uppercase tracking-widest">
-                  {course.subject || "Course"}
+            {/* Course Information */}
+            <div className="flex-1 flex flex-col justify-center space-y-6 text-center md:text-start w-full">
+              <div className={`flex flex-wrap items-center justify-center md:justify-start gap-3`}>
+                <span className="px-4 py-2 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-wider bg-white/10 text-indigo-100 border border-white/20 backdrop-blur-md flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                  <span>{course.subject || (language === 'ar' ? "كورس تعليمي" : "Course")}</span>
                 </span>
-                <span className="text-white/60 font-bold text-xs flex items-center gap-1">
-                  <List className="w-3.5 h-3.5" />
-                  {totalLessons} {t('courseDetails.lessons')}
+                <span className="px-4 py-2 rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-wider bg-white/5 text-white/70 border border-white/10 backdrop-blur-md flex items-center gap-2">
+                  <List className="w-4 h-4 text-white/50" />
+                  <span>{totalLessons} {t('courseDetails.lessons')}</span>
                 </span>
               </div>
-              <h1 className="text-2xl sm:text-3xl md:text-6xl font-black text-white leading-tight">
+
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight tracking-tight">
                 {course.title}
               </h1>
-              <p className="text-white/70 font-bold text-lg max-w-2xl">
+              
+              <p className="text-indigo-100/80 font-bold text-sm sm:text-base md:text-lg leading-relaxed max-w-2xl whitespace-pre-line">
                 {course.description || t('courseDetails.defaultDescription')}
               </p>
-            </div>
 
-            {/* Overall Progress Circle/Card */}
-            <div className="hidden sm:flex bg-white/10 backdrop-blur-md text-white p-6 md:p-8 rounded-[32px] border border-white/20 shadow-2xl flex-col items-center justify-center min-w-[180px] animate-in zoom-in duration-700">
-              <div className="relative w-24 h-24 mb-4">
-                <svg className="w-full h-full" viewBox="0 0 36 36">
-                  <path className="stroke-white/10 stroke-[3] fill-none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                  <path
-                    className="stroke-indigo-400 stroke-[3] fill-none transition-all duration-1000 ease-out"
-                    strokeDasharray={`${progressPercent}, 100`}
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center font-black text-xl">
-                  {progressPercent}%
+              {/* Progress & Quick Stats */}
+              <div className="pt-6 flex items-center justify-center md:justify-start gap-6 border-t border-white/10 mt-auto">
+                <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-[24px]">
+                  <div className="relative w-14 h-14 shrink-0">
+                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                      <circle className="stroke-white/10 stroke-[4] fill-none" cx="18" cy="18" r="15.9155" />
+                      <circle
+                        className="stroke-emerald-400 stroke-[4] stroke-linecap-round fill-none transition-all duration-1000 ease-out"
+                        strokeDasharray={`${progressPercent}, 100`}
+                        cx="18"
+                        cy="18"
+                        r="15.9155"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center font-black text-sm text-white">
+                      {progressPercent}%
+                    </div>
+                  </div>
+                  <div className={language === 'ar' ? 'text-right' : 'text-left'}>
+                    <p className="text-[10px] font-black uppercase tracking-[2px] text-indigo-200">{t('courseDetails.totalProgress')}</p>
+                    <p className="text-sm font-bold text-white">
+                      {progressPercent === 100 ? (language === 'ar' ? 'اكتمل الكورس بالكامل! 🎉' : 'Course fully completed! 🎉') : (language === 'ar' ? 'استمر في التعلم برافو' : 'Keep up the good work')}
+                    </p>
+                  </div>
                 </div>
               </div>
-              <p className="text-[10px] font-black uppercase tracking-[2px] text-white/50">{t('courseDetails.totalProgress')}</p>
             </div>
           </div>
         </div>

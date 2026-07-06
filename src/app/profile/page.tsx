@@ -10,27 +10,37 @@ export default function ProfilePage() {
 
   return (
     <DashboardLayout>
-      <div className={`flex flex-col gap-6 ${language === 'ar' ? 'rtl' : 'ltr'}`} dir={language === 'ar' ? "rtl" : "ltr"}>
-        <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-          <div>
-            <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-              {t('profile.title')}
-            </h2>
-            <div className="text-sm text-slate-500 mt-1 flex items-center gap-2">
-              <span>{t('profile.home')}</span> <span className="text-slate-300">/</span> <span>{t('profile.title')}</span>
+      <div className={`flex flex-col gap-8 max-w-6xl mx-auto ${language === 'ar' ? 'rtl' : 'ltr'}`} dir={language === 'ar' ? "rtl" : "ltr"}>
+        {/* Header Section */}
+        <div className="relative overflow-hidden rounded-[32px] md:rounded-[48px] premium-gradient-primary p-8 md:p-12 group shadow-2xl shadow-indigo-500/20 text-white flex justify-between items-center">
+          <div className="absolute top-[-20%] right-[-10%] w-96 h-96 bg-white/10 blur-[100px] rounded-full animate-pulse" />
+          <div className="relative z-10 space-y-2">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 glass rounded-full border-white/20 mb-1">
+               <span className="text-amber-300">✨</span>
+               <span className="text-white text-[10px] font-black uppercase tracking-widest">{t('profile.home')} / {t('profile.title')}</span>
             </div>
+            <h1 className="text-3xl md:text-5xl font-black text-white leading-tight tracking-tight flex items-center gap-3.5">
+              <User className="w-8 h-8 md:w-10 md:h-10 text-indigo-200" />
+              {t('profile.title')}
+            </h1>
           </div>
-          <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-primary">
-            <User className="w-6 h-6" />
+          <div className="relative z-10 w-16 h-16 md:w-20 md:h-20 glass rounded-3xl flex items-center justify-center text-white border-white/30 shadow-2xl floating">
+            <User className="w-8 h-8 md:w-10 md:h-10" />
           </div>
         </div>
         
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-12 text-center flex flex-col items-center justify-center min-h-[400px]">
-          <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4">
-            <User className="w-10 h-10" />
+        {/* Under Development Card */}
+        <div className="premium-card rounded-[40px] md:rounded-[50px] p-12 md:p-20 text-center flex flex-col items-center justify-center min-h-[450px] relative overflow-hidden shadow-xl border border-indigo-50/60">
+          <div className="absolute inset-0 bg-gradient-to-b from-indigo-50/30 via-transparent to-transparent pointer-events-none" />
+          <div className="w-24 h-24 md:w-28 md:h-28 bg-gradient-to-br from-indigo-50 to-violet-100 rounded-[30px] flex items-center justify-center text-indigo-600 mb-6 shadow-xl shadow-indigo-100/60 border border-indigo-200/50 floating">
+            <User className="w-12 h-12 md:w-14 md:h-14 animate-pulse" />
           </div>
-          <h3 className="text-xl font-bold text-slate-800 mb-2">{t('profile.underDev')}</h3>
-          <p className="text-slate-500 max-w-md">{t('profile.underDevDesc')}</p>
+          <h3 className="text-2xl md:text-3xl font-black text-slate-900 mb-3 tracking-tight">{t('profile.underDev')}</h3>
+          <p className="text-slate-500 max-w-md font-bold text-base md:text-lg leading-relaxed">{t('profile.underDevDesc')}</p>
+          <div className="mt-8 inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-indigo-50 text-indigo-600 font-black text-xs md:text-sm border border-indigo-100 shadow-sm">
+            <span>⚡</span>
+            <span>قريباً: تخصيص الملف الشخصي والإنجازات والشارات</span>
+          </div>
         </div>
       </div>
     </DashboardLayout>

@@ -130,12 +130,13 @@ export default function Header({
   const handleLogout = () => logout(router, pathname ?? undefined);
 
   return (
-    <header className="sticky top-0 z-40 w-full h-24 transition-all duration-500">
+    <header className={`sticky top-0 z-50 w-full transition-all duration-700 ${scrolled ? 'pt-2 px-2 md:pt-4 md:px-4' : 'pt-0 px-0 md:pt-6 md:px-6'}`}>
       <div
-        className={`flex items-center justify-between px-1.5 sm:px-3 md:px-8 w-full transition-all duration-500 border ${scrolled
-            ? "h-20 glass shadow-lg shadow-indigo-500/5 mt-2 mx-2 md:mx-4 rounded-[32px] border-white/40 max-w-[calc(100%-16px)] md:max-w-[calc(100%-32px)]"
-            : "h-24 bg-transparent border-transparent max-w-full mx-0 mt-0 rounded-none"
-          }`}
+        className={`mx-auto flex items-center justify-between transition-all duration-700 ${
+          scrolled
+            ? "h-16 md:h-20 bg-white/80 backdrop-blur-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-[32px] md:rounded-[40px] border border-white px-3 md:px-6 max-w-7xl"
+            : "h-20 md:h-24 bg-white/40 backdrop-blur-xl border-b border-slate-200/50 md:border md:border-white/60 md:rounded-[40px] px-4 md:px-8 max-w-[1600px] shadow-sm hover:shadow-xl hover:bg-white/60"
+        }`}
       >
         {/* ── RIGHT SIDE: Navigation & Logo ── */}
         <div className="flex items-center gap-1.5 sm:gap-3 xl:gap-8 flex-1 min-w-0">
@@ -151,12 +152,18 @@ export default function Header({
               </button>
             )}
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-indigo-600 shadow-xl shadow-indigo-200 flex items-center justify-center transform group-hover:rotate-12 transition-transform">
-                <Zap className="w-4 h-4 sm:w-6 sm:h-6 text-white fill-current" />
+              <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 shadow-xl shadow-indigo-200 flex items-center justify-center transform group-hover:rotate-12 transition-transform">
+                <svg className="w-4 h-4 sm:w-6 sm:h-6 text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor"/>
+                  <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
               </div>
               <div className="hidden sm:block">
-                <h2 className="text-lg font-black text-slate-900 tracking-tight leading-none mb-1 uppercase">KLEVRO</h2>
-                <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">Premium Learning</p>
+                <h2 className="text-lg font-black text-slate-900 tracking-tight leading-none mb-1 flex items-center gap-0.5">
+                  <span className="text-indigo-600">K</span>LEVRO
+                </h2>
+                <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest leading-none mt-1">LMS Platform</p>
               </div>
             </div>
           </div>

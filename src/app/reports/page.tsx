@@ -78,42 +78,47 @@ export default function ReportsPage() {
       <div className={`max-w-7xl mx-auto space-y-6 overflow-x-hidden px-1 sm:px-0 ${language === 'ar' ? 'rtl' : 'ltr'}`} dir={language === 'ar' ? "rtl" : "ltr"}>
         
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-          <div className={language === 'ar' ? 'text-right' : 'text-left'}>
-            <h1 className="text-2xl font-black text-slate-900 mb-1 flex items-center gap-3">
-              <BarChart2 className="w-7 h-7 text-primary" />
+        <div className="relative overflow-hidden rounded-[32px] md:rounded-[48px] premium-gradient-primary p-8 md:p-12 group shadow-2xl shadow-indigo-500/20 text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div className="absolute top-[-20%] right-[-10%] w-96 h-96 bg-white/10 blur-[100px] rounded-full animate-pulse" />
+          <div className={`relative z-10 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 glass rounded-full border-white/20 mb-3">
+               <span className="text-amber-300">✨</span>
+               <span className="text-white text-[10px] font-black uppercase tracking-widest">{t('reports.title')}</span>
+            </div>
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-black text-white leading-tight tracking-tight flex items-center gap-3">
+              <BarChart2 className="w-8 h-8 md:w-10 md:h-10 text-indigo-200" />
               {t('reports.title')}
             </h1>
-            <p className="text-sm text-slate-500 font-bold">{t('reports.subtitle')}</p>
+            <p className="text-indigo-100 font-medium text-sm md:text-base mt-2 max-w-xl">{t('reports.subtitle')}</p>
           </div>
-          <div className="flex items-center gap-3 no-print">
-            <button onClick={handleExportPDF} className="btn-outline text-xs">
+          <div className="relative z-10 flex items-center gap-3 no-print w-full md:w-auto">
+            <button onClick={handleExportPDF} className="flex-1 md:flex-none px-6 py-3.5 rounded-2xl glass border border-white/20 text-white font-black text-xs md:text-sm hover:bg-white/20 transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer">
               <Download className="w-4 h-4" />
               {t('reports.exportPdf')}
             </button>
-            <button onClick={fetchStats} className="btn-primary text-xs px-6 py-3">
+            <button onClick={fetchStats} className="flex-1 md:flex-none px-6 py-3.5 rounded-2xl bg-white text-indigo-900 font-black text-xs md:text-sm hover:bg-indigo-50 transition-all shadow-xl active:scale-95 cursor-pointer">
               {t('reports.refresh')}
             </button>
           </div>
         </div>
 
         {/* Tabs Navigation */}
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl w-full sm:w-fit overflow-x-auto no-print">
+        <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl w-full sm:w-fit overflow-x-auto no-print border border-slate-200/60">
           <button 
             onClick={() => setActiveReportTab('OVERVIEW')}
-            className={`px-3 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${activeReportTab === 'OVERVIEW' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+            className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all whitespace-nowrap cursor-pointer ${activeReportTab === 'OVERVIEW' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100' : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'}`}
           >
             {t('reports.tabs.overview')}
           </button>
           <button 
             onClick={() => setActiveReportTab('EXAMS')}
-            className={`px-3 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${activeReportTab === 'EXAMS' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+            className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all whitespace-nowrap cursor-pointer ${activeReportTab === 'EXAMS' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100' : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'}`}
           >
             {t('reports.tabs.exams')}
           </button>
           <button 
             onClick={() => setActiveReportTab('COURSES')}
-            className={`px-3 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${activeReportTab === 'COURSES' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+            className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all whitespace-nowrap cursor-pointer ${activeReportTab === 'COURSES' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100' : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'}`}
           >
             {t('reports.tabs.courses')}
           </button>
@@ -122,42 +127,42 @@ export default function ReportsPage() {
         {activeReportTab === 'OVERVIEW' && (
           <>
             {/* Summary Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-              <div className={`card p-6 flex items-center gap-4 border-b-4 border-b-blue-500 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
-                  <Star className="w-6 h-6" />
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+              <div className={`premium-card p-6 md:p-8 rounded-[30px] flex items-center gap-4 border-b-4 border-b-blue-500 group hover:scale-[1.02] transition-all ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform shadow-inner">
+                  <Star className="w-6 h-6 md:w-7 md:h-7" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase">{t('reports.avgScore')}</p>
-                  <h3 className="text-2xl font-black text-slate-800">{stats?.avgScore || 0}%</h3>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{t('reports.avgScore')}</p>
+                  <h3 className="text-2xl md:text-3xl font-black text-slate-900 mt-0.5">{stats?.avgScore || 0}%</h3>
                 </div>
               </div>
-              <div className={`card p-6 flex items-center gap-4 border-b-4 border-b-emerald-500 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-                  <CheckCircle2 className="w-6 h-6" />
+              <div className={`premium-card p-6 md:p-8 rounded-[30px] flex items-center gap-4 border-b-4 border-b-emerald-500 group hover:scale-[1.02] transition-all ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform shadow-inner">
+                  <CheckCircle2 className="w-6 h-6 md:w-7 md:h-7" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase">{t('reports.completedLessons')}</p>
-                  <h3 className="text-2xl font-black text-slate-800">{stats?.lessonProgresses?.filter((p:any)=>p.isCompleted).length || 0}</h3>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{t('reports.completedLessons')}</p>
+                  <h3 className="text-2xl md:text-3xl font-black text-slate-900 mt-0.5">{stats?.lessonProgresses?.filter((p:any)=>p.isCompleted).length || 0}</h3>
                 </div>
               </div>
-              <div className={`card p-6 flex items-center gap-4 border-b-4 border-b-indigo-500 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-                  <BookOpen className="w-6 h-6" />
+              <div className={`premium-card p-6 md:p-8 rounded-[30px] flex items-center gap-4 border-b-4 border-b-indigo-500 group hover:scale-[1.02] transition-all ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform shadow-inner">
+                  <BookOpen className="w-6 h-6 md:w-7 md:h-7" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase">{t('reports.courseProgress')}</p>
-                  <h3 className="text-2xl font-black text-slate-800">{stats?.overallCourseProgress || 0}%</h3>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{t('reports.courseProgress')}</p>
+                  <h3 className="text-2xl md:text-3xl font-black text-slate-900 mt-0.5">{stats?.overallCourseProgress || 0}%</h3>
                 </div>
               </div>
-              <div className={`card p-6 flex items-center gap-4 border-b-4 border-b-orange-500 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600">
-                  <Clock className="w-6 h-6" />
+              <div className={`premium-card p-6 md:p-8 rounded-[30px] flex items-center gap-4 border-b-4 border-b-amber-500 group hover:scale-[1.02] transition-all ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 group-hover:scale-110 transition-transform shadow-inner">
+                  <Clock className="w-6 h-6 md:w-7 md:h-7" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase">{t('reports.studyTime')}</p>
-                  <h3 className="text-2xl font-black text-slate-800">
-                    {Math.round((stats?.lessonProgresses?.reduce((acc:any, p:any) => acc + p.watchedSeconds, 0) || 0) / 60)}
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{t('reports.studyTime')}</p>
+                  <h3 className="text-2xl md:text-3xl font-black text-slate-900 mt-0.5">
+                    {Math.round((stats?.lessonProgresses?.reduce((acc:any, p:any) => acc + p.watchedSeconds, 0) || 0) / 60)} <span className="text-xs text-slate-400">{language === 'ar' ? 'دقيقة' : 'm'}</span>
                   </h3>
                 </div>
               </div>
@@ -165,8 +170,8 @@ export default function ReportsPage() {
 
             {/* Performance Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="card p-6">
-                <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2">
+              <div className="premium-card p-6 md:p-8 rounded-[35px] shadow-lg">
+                <h3 className="font-black text-slate-900 mb-6 flex items-center gap-2 text-lg">
                   <TrendingUp className="w-5 h-5 text-emerald-500" />
                   {t('reports.examCurve')}
                 </h3>
@@ -191,9 +196,9 @@ export default function ReportsPage() {
                 </div>
               </div>
 
-              <div className="card p-6">
-                <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2">
-                  <BookOpen className="w-5 h-5 text-blue-500" />
+              <div className="premium-card p-6 md:p-8 rounded-[35px] shadow-lg">
+                <h3 className="font-black text-slate-900 mb-6 flex items-center gap-2 text-lg">
+                  <BookOpen className="w-5 h-5 text-indigo-500" />
                   {t('reports.courseProgressDist')}
                 </h3>
                 <div className="h-[300px] w-full" dir="ltr">
@@ -206,7 +211,7 @@ export default function ReportsPage() {
                         <Tooltip />
                         <Bar dataKey="progressPercent" radius={[4, 4, 0, 0]}>
                           {stats?.courseProgresses?.map((entry:any, index:number) => (
-                            <Cell key={`cell-${index}`} fill={['#4361EE', '#3F37C9', '#4CC9F0', '#4895EF'][index % 4]} />
+                            <Cell key={`cell-${index}`} fill={['#6366F1', '#4F46E5', '#3B82F6', '#10B981'][index % 4]} />
                           ))}
                         </Bar>
                       </BarChart>
@@ -219,7 +224,7 @@ export default function ReportsPage() {
         )}
 
         {activeReportTab === 'EXAMS' && (
-          <div className="card overflow-hidden border-none shadow-xl">
+          <div className="premium-card overflow-hidden rounded-[35px] shadow-xl border border-slate-100">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
               <h3 className="font-black text-slate-800">{t('reports.attemptsHistory')}</h3>
               <div className="flex gap-2">
@@ -277,9 +282,9 @@ export default function ReportsPage() {
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {stats?.courseProgresses?.map((course:any) => (
-                <div key={course.id} className="card p-6 space-y-4">
+                <div key={course.id} className="premium-card p-6 rounded-[30px] space-y-4 group hover:scale-[1.02] transition-all">
                     <div className="flex justify-between items-start">
-                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
                       <BookOpen className="w-6 h-6" />
                     </div>
                     <span className="text-[10px] font-black bg-slate-50 px-2 py-1 rounded-lg text-slate-400 uppercase">
@@ -287,23 +292,23 @@ export default function ReportsPage() {
                     </span>
                   </div>
                   <div className={language === 'ar' ? 'text-right' : 'text-left'}>
-                    <h4 className="font-bold text-slate-800 mb-1">{course.title}</h4>
-                    <p className="text-xs text-slate-500">{course.subject}</p>
+                    <h4 className="font-black text-slate-900 mb-1 text-lg group-hover:text-indigo-600 transition-colors">{course.title}</h4>
+                    <p className="text-xs text-slate-400 font-bold">{course.subject}</p>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-[10px] font-black">
-                      <span className="text-slate-400">{t('reports.actualProgress')}</span>
+                      <span className="text-slate-400 uppercase tracking-wider">{t('reports.actualProgress')}</span>
                       <span className="text-indigo-600">{course.progressPercent}%</span>
                     </div>
-                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${course.progressPercent}%` }}></div>
+                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden shadow-inner p-0.5">
+                      <div className="h-full bg-indigo-600 rounded-full transition-all duration-1000" style={{ width: `${course.progressPercent}%` }}></div>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="card overflow-hidden">
+            <div className="premium-card overflow-hidden rounded-[35px] shadow-xl border border-slate-100">
               <div className="p-6 border-b border-slate-100">
                 <h3 className="font-black text-slate-800">{t('reports.watchHistory')}</h3>
               </div>

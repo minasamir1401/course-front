@@ -301,7 +301,7 @@ export default function EditSkillClusterPage() {
     const parseField = (val: any) => {
       if (typeof val !== 'string') return val;
       const t = val.trim();
-      if (t.startsWith('{') || t.startsWith('[')) {
+      if (t.startsWith('{') || t.startsWith('[') || (t.startsWith('"') && t.endsWith('"'))) {
         try { return JSON.parse(t); } catch { return val; }
       }
       return val;
@@ -1158,33 +1158,33 @@ export default function EditSkillClusterPage() {
       {/* Student Preview Play Modal */}
       {mounted && previewActivity && createPortal(
         <div className="fixed inset-0 z-[150] bg-slate-900/65 backdrop-blur-md flex items-center justify-center p-0 md:p-6 overflow-y-auto" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-          <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 w-full max-w-5xl md:rounded-[40px] shadow-2xl flex flex-col min-h-screen md:min-h-[85vh] md:max-h-[90vh] overflow-y-auto md:overflow-hidden border border-white/10 animate-in zoom-in-95 duration-200">
+          <div className="bg-slate-50 w-full max-w-5xl md:rounded-[40px] shadow-2xl flex flex-col min-h-screen md:min-h-[85vh] md:max-h-[90vh] overflow-y-auto md:overflow-hidden border border-slate-200/80 animate-in zoom-in-95 duration-200">
             
             {/* Game Player Header */}
-            <div className="bg-gradient-to-r from-indigo-700 to-violet-850 p-6 text-white flex justify-between items-center shadow-md">
+            <div className="bg-white p-6 text-slate-800 flex justify-between items-center shadow-sm border-b border-slate-150">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-amber-300 floating animate-pulse" />
-                  <span className="text-[10px] font-black tracking-widest uppercase">
+                  <Sparkles className="w-4 h-4 text-amber-500 floating animate-pulse" />
+                  <span className="text-[10px] font-black tracking-widest uppercase text-slate-400">
                     {language === 'ar' ? 'معاينة الطالب' : 'Student Preview'}
                   </span>
                   {previewActivitiesList.length > 1 && (
-                    <span className="bg-white/20 px-2.5 py-0.5 rounded text-xs font-black">
+                    <span className="bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded text-xs font-black">
                       {currentPreviewIdx + 1} / {previewActivitiesList.length}
                     </span>
                   )}
                 </div>
-                <h3 className="text-lg md:text-xl font-black truncate max-w-xl">{translateText(previewActivity.title, language)}</h3>
+                <h3 className="text-lg md:text-xl font-black truncate max-w-xl text-slate-900">{translateText(previewActivity.title, language)}</h3>
               </div>
               
               <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10 text-xs font-black">
-                  <Clock className="w-4 h-4 text-indigo-200" />
+                <div className="flex items-center gap-1 bg-slate-50 text-slate-600 px-3 py-1.5 rounded-xl border border-slate-150 text-xs font-black">
+                  <Clock className="w-4 h-4 text-indigo-600" />
                   <span>{language === 'ar' ? `الزمن المقدر: ${previewActivity.estimatedTime} ثانية` : `Estimated: ${previewActivity.estimatedTime}s`}</span>
                 </div>
                 <button
                   onClick={() => setPreviewActivity(null)}
-                  className="w-10 h-10 rounded-xl bg-white/10 hover:bg-rose-600 text-white flex items-center justify-center transition-colors border border-white/10"
+                  className="w-10 h-10 rounded-xl bg-slate-50 hover:bg-rose-50 hover:text-rose-600 text-slate-400 flex items-center justify-center transition-colors border border-slate-150 animate-none"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1255,10 +1255,10 @@ export default function EditSkillClusterPage() {
               </div>
 
               {/* Left: Interactive Workspace */}
-              <div className="flex-1 bg-white rounded-3xl border border-slate-150 p-6 md:p-8 flex flex-col justify-between shadow-sm min-h-[400px]">
+              <div className="flex-1 w-full max-w-full min-w-0 bg-white rounded-3xl border border-slate-150 p-6 md:p-8 flex flex-col justify-between shadow-sm min-h-[400px] overflow-hidden">
                 
                 {/* Renderer */}
-                <div className="space-y-6 flex-1">
+                <div className="space-y-6 flex-1 w-full max-w-full min-w-0 overflow-x-auto">
                   <InteractiveQuestionRenderer
                     question={previewActivity}
                     value={previewAnswer}

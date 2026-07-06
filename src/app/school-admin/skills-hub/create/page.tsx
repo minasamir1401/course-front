@@ -34,12 +34,18 @@ export default function CreateSchoolSkillClusterPage() {
   ];
 
   const SUBJECTS = [
-    "اللغة العربية", "اللغة الإنجليزية", "اللغة الفرنسية", "اللغة الألمانية", "اللغة الإيطالية",
-    "الرياضيات", "الفيزياء", "الكيمياء", "الأحياء", "الجيولوجيا", "الميكانيكا",
+    "اللغة العربية", "القراءة", "اللغة الإنجليزية", "اللغة الفرنسية", "اللغة الألمانية", "اللغة الإيطالية",
+    "الرياضيات", "العلوم", "الفيزياء", "الكيمياء", "الأحياء", "الجيولوجيا", "الميكانيكا",
     "التاريخ", "الجغرافيا", "الفلسفة", "علم النفس", "الاقتصاد", "الإحصاء",
     "التربية الدينية", "التربية الوطنية", "الحاسب الآلي",
     "SAT Math", "SAT English"
   ];
+
+  const isGrade123 = (grade: string) => [
+    "الصف الأول الابتدائي",
+    "الصف الثاني الابتدائي",
+    "الصف الثالث الابتدائي"
+  ].includes(grade);
 
   useEffect(() => {
     const token = localStorage.getItem("school_admin_token");
@@ -51,6 +57,16 @@ export default function CreateSchoolSkillClusterPage() {
   const handleSaveCluster = async () => {
     if (!clusterData.name || !clusterData.subject || !clusterData.grade) {
       showToast(language === 'ar' ? "يرجى تعبئة كافة الحقول الإلزامية." : "Please fill all required fields.", "error");
+      return;
+    }
+
+    if (clusterData.subject === "العلوم" && isGrade123(clusterData.grade)) {
+      showToast(
+        language === 'ar' 
+          ? "مادة العلوم غير متاحة للصفوف الأول والثاني والثالث الابتدائي." 
+          : "Science is not available for Grade 1, 2, and 3 Primary.", 
+        "error"
+      );
       return;
     }
 
@@ -174,7 +190,7 @@ export default function CreateSchoolSkillClusterPage() {
                       className="w-full px-6 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-amber-500 focus:bg-white transition-all outline-none font-bold text-slate-700 appearance-none"
                     >
                        <option value="">{language === 'ar' ? "اختر الصف الدراسي..." : "Select Grade..."}</option>
-                       {GRADES.map(grade => (
+                       {GRADES.filter(grade => !(clusterData.subject === "العلوم" && isGrade123(grade))).map(grade => (
                          <option key={grade} value={grade}>{grade}</option>
                        ))}
                     </select>
@@ -191,10 +207,10 @@ export default function CreateSchoolSkillClusterPage() {
                       onChange={(e) => setClusterData({ ...clusterData, subject: e.target.value })}
                       className="w-full px-6 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-amber-500 focus:bg-white transition-all outline-none font-bold text-slate-700 appearance-none"
                     >
-                       <option value="">{language === 'ar' ? "اختر المادة..." : "Select Subject..."}</option>
-                       {SUBJECTS.map(subject => (
-                         <option key={subject} value={subject}>{subject}</option>
-                       ))}
+                        <option value="">{language === 'ar' ? "اختر المادة..." : "Select Subject..."}</option>
+                        {SUBJECTS.filter(subject => !(subject === "العلوم" && isGrade123(clusterData.grade))).map(subject => (
+                          <option key={subject} value={subject}>{subject}</option>
+                        ))}
                     </select>
                  </div>
               </div>

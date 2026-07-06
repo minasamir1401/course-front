@@ -39,12 +39,18 @@ export default function StudentSidebar() {
     <aside className="fixed right-0 top-0 h-screen w-64 bg-white border-l border-slate-100 z-50 hidden lg:flex flex-col shadow-2xl shadow-indigo-100/20" dir="rtl">
       {/* Brand Section */}
       <div className="p-8 border-b border-slate-50 flex items-center gap-3 group cursor-pointer">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-700 flex items-center justify-center shadow-lg shadow-indigo-100 transition-transform group-hover:scale-110">
-          <GraduationCap className="w-7 h-7 text-white" />
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 flex items-center justify-center shadow-lg shadow-indigo-100 transition-transform group-hover:scale-110">
+          <svg className="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor"/>
+            <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
         </div>
         <div className="animate-in fade-in slide-in-from-right duration-500">
-          <h1 className="text-xl font-black text-slate-900 italic tracking-tighter leading-none">Klevro</h1>
-          <span className="text-indigo-600 text-[10px] block font-black not-italic tracking-[2px] uppercase mt-1">Student Portal</span>
+          <h1 className="text-xl font-black text-slate-900 italic tracking-tighter leading-none flex items-center gap-0.5">
+            <span className="text-indigo-600">K</span>LEVRO
+          </h1>
+          <span className="text-indigo-600 text-[10px] block font-black not-italic tracking-[2px] uppercase mt-1">LMS Portal</span>
         </div>
       </div>
 
