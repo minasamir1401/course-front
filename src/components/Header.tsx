@@ -160,7 +160,7 @@ export default function Header({
                 </svg>
               </div>
               <div className="hidden sm:block">
-                <h2 className="text-lg font-black text-slate-900 tracking-tight leading-none mb-1 flex items-center gap-0.5">
+                <h2 className="text-lg font-black text-slate-900 tracking-tight leading-none mb-1 flex items-center gap-0.5" dir="ltr">
                   <span className="text-indigo-600">K</span>LEVRO
                 </h2>
                 <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest leading-none mt-1">LMS Platform</p>

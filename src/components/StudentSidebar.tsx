@@ -47,7 +47,7 @@ export default function StudentSidebar() {
           </svg>
         </div>
         <div className="animate-in fade-in slide-in-from-right duration-500">
-          <h1 className="text-xl font-black text-slate-900 italic tracking-tighter leading-none flex items-center gap-0.5">
+          <h1 className="text-xl font-black text-slate-900 italic tracking-tighter leading-none flex items-center gap-0.5" dir="ltr">
             <span className="text-indigo-600">K</span>LEVRO
           </h1>
           <span className="text-indigo-600 text-[10px] block font-black not-italic tracking-[2px] uppercase mt-1">LMS Portal</span>
