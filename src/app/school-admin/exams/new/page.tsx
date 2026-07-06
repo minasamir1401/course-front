@@ -1521,7 +1521,7 @@ export function SchoolAdminNewExamPageContent({ presetType, presetCourseId }: { 
                                 onClick={() => updateCorrectAnswers(0)}
                                 className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isCorrectAnswer(currentQuestion, t('schoolAdmin.examsNewPage.correct') || "صحيح") ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200'}`}
                               >
-                                {isCorrectAnswer(currentQuestion, t('schoolAdmin.examsNewPage.correct') || "صحيح") && <CheckCircle className="w-5 h-5 text-white" />}
+                                {isCorrectAnswer(currentQuestion, t('schoolAdmin.examsNewPage.correct') || "صحيح") && <CheckCircle2 className="w-5 h-5 text-white" />}
                               </div>
                               <span className="bg-transparent flex-1 outline-none font-bold text-slate-700">{t('schoolAdmin.examsNewPage.correct')}</span>
                             </div>
@@ -1530,7 +1530,7 @@ export function SchoolAdminNewExamPageContent({ presetType, presetCourseId }: { 
                                 onClick={() => updateCorrectAnswers(1)}
                                 className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isCorrectAnswer(currentQuestion, t('schoolAdmin.examsNewPage.incorrect') || "خطأ") ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200'}`}
                               >
-                                {isCorrectAnswer(currentQuestion, t('schoolAdmin.examsNewPage.incorrect') || "خطأ") && <CheckCircle className="w-5 h-5 text-white" />}
+                                {isCorrectAnswer(currentQuestion, t('schoolAdmin.examsNewPage.incorrect') || "خطأ") && <CheckCircle2 className="w-5 h-5 text-white" />}
                               </div>
                               <span className="bg-transparent flex-1 outline-none font-bold text-slate-700">{t('schoolAdmin.examsNewPage.incorrect')}</span>
                             </div>
@@ -1543,7 +1543,7 @@ export function SchoolAdminNewExamPageContent({ presetType, presetCourseId }: { 
                                   onClick={() => updateCorrectAnswers(oIndex)}
                                   className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isCorrectAnswer(currentQuestion, opt) && opt !== "" ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200'}`}
                                 >
-                                  {isCorrectAnswer(currentQuestion, opt) && opt !== "" && <CheckCircle className="w-5 h-5 text-white" />}
+                                  {isCorrectAnswer(currentQuestion, opt) && opt !== "" && <CheckCircle2 className="w-5 h-5 text-white" />}
                                 </div>
                                 <MathInput 
                                   placeholder={t('schoolAdmin.examsNewPage.optionLabel').replace('{n}', String(oIndex + 1))}

@@ -218,7 +218,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             `}
           >
             <div className="flex items-center gap-3">
-              {toast.type === 'success' && <CheckCircle className="w-5 h-5 flex-shrink-0" />}
+              {toast.type === 'success' && <CheckCircle2 className="w-5 h-5 flex-shrink-0" />}
               {toast.type === 'error' && <XCircle className="w-5 h-5 flex-shrink-0" />}
               {toast.type === 'info' && <AlertCircle className="w-5 h-5 flex-shrink-0" />}
               <p className="font-bold text-sm leading-tight">{toast.message}</p>

@@ -1806,7 +1806,7 @@ export default function EditSchoolSkillClusterPage() {
                     {!previewResult.isCorrect && (
                       <div className={`space-y-3 bg-amber-50/70 p-5 rounded-2xl border border-amber-200 text-sm ${language === 'ar' ? 'text-right' : 'text-left'} animate-in fade-in duration-300`}>
                         <h5 className="font-black text-amber-900 flex items-center gap-1.5 text-base">
-                          <CheckCircle className="w-5 h-5 text-emerald-600" />
+                          <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                           {language === 'ar' ? 'الإجابة الصحيحة النموذجية:' : 'Correct Answer:'}
                         </h5>
                         <div className="bg-white p-3.5 rounded-xl border border-amber-100 font-black text-slate-800 text-base">

@@ -253,7 +253,7 @@ export default function FileUpload({
           )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
               <p className="text-xs font-black text-emerald-700">{t('superAdmin.fileUpload.uploaded')}</p>
             </div>
             {fileName && <p className="text-sm font-bold text-slate-700 truncate">{fileName}</p>}

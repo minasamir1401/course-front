@@ -47,7 +47,7 @@ export default function LessonPage() {
                 <div className="border border-slate-200 rounded-xl overflow-hidden">
                   <button className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 transition-colors text-sm font-bold text-slate-700">
                     <div className="flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
                       <span>الفصل الأول: الأساسيات</span>
                     </div>
                     <ChevronDown className="w-4 h-4 text-slate-400" />
@@ -58,7 +58,7 @@ export default function LessonPage() {
                 <div className="border border-slate-200 rounded-xl overflow-hidden">
                   <button className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 transition-colors text-sm font-bold text-slate-700">
                     <div className="flex items-center gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
                       <span>الفصل الثاني: النهايات والاتصال</span>
                     </div>
                     <ChevronDown className="w-4 h-4 text-slate-400" />
@@ -76,15 +76,15 @@ export default function LessonPage() {
                   </button>
                   <div className="bg-white p-2 space-y-1">
                     <div className="flex items-center justify-between p-2 rounded-lg text-sm text-slate-600 hover:bg-slate-50 cursor-pointer">
-                      <div className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-500" /> الدرس 1: مفهوم المشتقة</div>
+                      <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-green-500" /> الدرس 1: مفهوم المشتقة</div>
                       <span className="text-xs text-slate-400">30:45</span>
                     </div>
                     <div className="flex items-center justify-between p-2 rounded-lg text-sm text-slate-600 hover:bg-slate-50 cursor-pointer">
-                      <div className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-500" /> الدرس 2: قواعد الاشتقاق</div>
+                      <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-green-500" /> الدرس 2: قواعد الاشتقاق</div>
                       <span className="text-xs text-slate-400">28:10</span>
                     </div>
                     <div className="flex items-center justify-between p-2 rounded-lg text-sm text-slate-600 hover:bg-slate-50 cursor-pointer">
-                      <div className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-green-500" /> الدرس 3: مشتقة الدوال المركبة</div>
+                      <div className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-green-500" /> الدرس 3: مشتقة الدوال المركبة</div>
                       <span className="text-xs text-slate-400">26:30</span>
                     </div>
                     <div className="flex items-center justify-between p-2 rounded-lg text-sm text-primary bg-blue-50 font-bold cursor-pointer">
@@ -206,15 +206,15 @@ export default function LessonPage() {
                   <h3 className="font-bold text-slate-800 mb-4 text-lg">أهداف الدرس</h3>
                   <div className="space-y-3">
                     <div className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
+                      <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
                       <p className="text-slate-700">أن يتعرف الطالب على مفهوم المشتقة هندسياً</p>
                     </div>
                     <div className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
+                      <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
                       <p className="text-slate-700">أن يحسب مشتقة الدوال الأساسية وقواعد الاشتقاق</p>
                     </div>
                     <div className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
+                      <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
                       <p className="text-slate-700">أن يطبق المشتقات في حل مسائل عملية</p>
                     </div>
                   </div>

@@ -321,7 +321,7 @@ export default function CourseDetailsPage() {
                                       ? 'bg-slate-100 text-slate-400 shadow-none'
                                       : 'bg-indigo-50 text-indigo-600 shadow-indigo-100'
                                   }`}>
-                                  {isCompleted ? <CheckCircle className="w-8 h-8" /> : isLocked ? <Lock className="w-7 h-7" /> : <Play className="w-7 h-7 fill-current" />}
+                                  {isCompleted ? <CheckCircle2 className="w-8 h-8" /> : isLocked ? <Lock className="w-7 h-7" /> : <Play className="w-7 h-7 fill-current" />}
                                 </div>
                               </div>
 
