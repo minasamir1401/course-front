@@ -97,6 +97,81 @@ export default function EditSkillClusterPage() {
     }
   };
 
+  const parseField = (val: any) => {
+    if (typeof val !== 'string') return val;
+    const t = val.trim();
+    if (t.startsWith('{') || t.startsWith('[') || (t.startsWith('"') && t.endsWith('"'))) {
+      try { return JSON.parse(t); } catch { return val; }
+    }
+    return val;
+  };
+
+  const getCleanDescription = (desc: string | null) => {
+    if (!desc) return "";
+    const trimmed = desc.trim();
+    if (trimmed.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        return parsed.description || "";
+      } catch {}
+    }
+    return desc;
+  };
+
+  const getLessonMetadata = (lesson: any) => {
+    if (!lesson || !lesson.description) return { description: "", standards: [], indicators: [], outcomes: [] };
+    const desc = lesson.description.trim();
+    if (desc.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(desc);
+        return {
+          description: parsed.description || "",
+          standards: parsed.standards || [],
+          indicators: parsed.indicators || [],
+          outcomes: parsed.outcomes || []
+        };
+      } catch {}
+    }
+    return {
+      description: lesson.description,
+      standards: [],
+      indicators: [],
+      outcomes: []
+    };
+  };
+
+  const saveLessonMetadata = async (lessonId: string, updatedMetadata: any) => {
+    const token = localStorage.getItem("super_admin_token");
+    if (!token) return;
+
+    const lesson = lessons.find(l => l.id === lessonId);
+    if (!lesson) return;
+
+    const updatedDescription = JSON.stringify(updatedMetadata);
+    try {
+      const res = await fetch(`${API_URL}/skills-hub/lessons/${lessonId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: lesson.name,
+          description: updatedDescription,
+          order: lesson.order,
+          clusterId
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setLessons(prev => prev.map(l => l.id === lessonId ? data.lesson : l));
+        return data.lesson;
+      }
+    } catch (err) {
+      console.error("Error saving lesson metadata:", err);
+    }
+  };
+
   useEffect(() => {
     if (!clusterId) {
       router.push("/super-admin/skills-hub");
@@ -246,7 +321,16 @@ export default function EditSkillClusterPage() {
   };
 
   const openEditLesson = (lesson: any) => {
-    setEditingLesson({ ...lesson });
+    const metadata = getLessonMetadata(lesson);
+    setEditingLesson({
+      id: lesson.id,
+      name: lesson.name,
+      order: lesson.order,
+      description: metadata.description,
+      standards: metadata.standards,
+      indicators: metadata.indicators,
+      outcomes: metadata.outcomes
+    });
     setIsLessonModalOpen(true);
   };
 
@@ -260,11 +344,23 @@ export default function EditSkillClusterPage() {
       const token = localStorage.getItem("super_admin_token");
       const isEdit = !!editingLesson.id;
       const url = isEdit ? `${API_URL}/skills-hub/lessons/${editingLesson.id}` : `${API_URL}/skills-hub/lessons`;
+
+      const finalDescription = JSON.stringify({
+        description: editingLesson.description || "",
+        standards: editingLesson.standards || [],
+        indicators: editingLesson.indicators || [],
+        outcomes: editingLesson.outcomes || []
+      });
       
       const res = await fetch(url, {
         method: isEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify({ ...editingLesson, clusterId })
+        body: JSON.stringify({
+          clusterId,
+          name: editingLesson.name,
+          order: Number(editingLesson.order) || 0,
+          description: finalDescription
+        })
       });
       
       if (res.ok) {
@@ -315,15 +411,6 @@ export default function EditSkillClusterPage() {
   };
 
   const openEditActivity = (activity: any) => {
-    // Parse options and correctAnswer from JSON strings so editors receive proper objects
-    const parseField = (val: any) => {
-      if (typeof val !== 'string') return val;
-      const t = val.trim();
-      if (t.startsWith('{') || t.startsWith('[') || (t.startsWith('"') && t.endsWith('"'))) {
-        try { return JSON.parse(t); } catch { return val; }
-      }
-      return val;
-    };
     setEditingActivity({
       ...activity,
       options: parseField(activity.options),
@@ -333,44 +420,48 @@ export default function EditSkillClusterPage() {
   };
 
   const handleSaveActivity = async () => {
+    const options = parseField(editingActivity.options);
+    const correctAnswer = parseField(editingActivity.correctAnswer);
+    const activity = { ...editingActivity, options, correctAnswer };
+
     if (!editingActivity.title || !editingActivity.title.trim()) {
       showToast(language === 'ar' ? "يرجى كتابة عنوان السؤال أولاً (Question title is necessary) ⚠️" : "Question title is necessary ⚠️", "error");
       return;
     }
-    if (!editingActivity.type) {
+    if (!activity.type) {
       showToast(language === 'ar' ? "يرجى تحديد نوع السؤال أولاً ⚠️" : "Please select question type ⚠️", "error");
       return;
     }
     
     // ✅ التحقق التوجيهي الذكي حسب نوع السؤال كما طلب المعلمون
-    if (editingActivity.type === "MCQ") {
-      const choices = editingActivity.options?.choices || [];
+    if (activity.type === "MCQ") {
+      const choices = activity.options?.choices || [];
       if (!Array.isArray(choices) || choices.filter((c: string) => c && c.trim()).length < 2) {
         showToast(language === 'ar' ? "يرجى إضافة خيارين على الأقل لسؤال الاختيار من متعدد ⚠️" : "Please add at least 2 choices for MCQ ⚠️", "error");
         return;
       }
-      if (editingActivity.correctAnswer === undefined || editingActivity.correctAnswer === null || editingActivity.correctAnswer === "") {
+      if (activity.correctAnswer === undefined || activity.correctAnswer === null || activity.correctAnswer === "") {
         showToast(language === 'ar' ? "يرجى تحديد الإجابة الصحيحة لسؤال الاختيار من متعدد (MCQ) ⚠️" : "Please select the correct answer for MCQ ⚠️", "error");
         return;
       }
-    } else if (editingActivity.type === "TRUE_FALSE") {
-      if (!editingActivity.correctAnswer && editingActivity.correctAnswer !== "TRUE" && editingActivity.correctAnswer !== "FALSE" && editingActivity.correctAnswer !== "صح" && editingActivity.correctAnswer !== "خطأ") {
+    } else if (activity.type === "TRUE_FALSE") {
+      if (!activity.correctAnswer && activity.correctAnswer !== "TRUE" && activity.correctAnswer !== "FALSE" && activity.correctAnswer !== "صح" && activity.correctAnswer !== "خطأ") {
         showToast(language === 'ar' ? "يرجى تحديد الإجابة الصحيحة (صح أم خطأ) ⚠️" : "Please select True or False ⚠️", "error");
         return;
       }
-    } else if (editingActivity.type === "MULTI_SELECT") {
-      const choices = Array.isArray(editingActivity.options) ? editingActivity.options : (editingActivity.options?.choices || []);
+    } else if (activity.type === "MULTI_SELECT") {
+      const choices = Array.isArray(activity.options) ? activity.options : (activity.options?.choices || []);
       if (!Array.isArray(choices) || choices.filter((c: string) => c && c.trim()).length < 2) {
         showToast(language === 'ar' ? "يرجى إضافة خيارين على الأقل للاختيارات المتعددة ⚠️" : "Please add at least 2 options ⚠️", "error");
         return;
       }
-      const correctArr = Array.isArray(editingActivity.correctAnswer) ? editingActivity.correctAnswer : [];
+      const correctArr = Array.isArray(activity.correctAnswer) ? activity.correctAnswer : [];
       if (correctArr.length === 0) {
         showToast(language === 'ar' ? "يرجى تحديد إجابة صحيحة واحدة على الأقل في الاختيارات المتعددة ⚠️" : "Please select at least one correct answer ⚠️", "error");
         return;
       }
-    } else if (["MATCHING", "DRAG_DROP_FILL", "GROUP_SORTING"].includes(editingActivity.type)) {
-      if (!editingActivity.correctAnswer || (Array.isArray(editingActivity.correctAnswer) && editingActivity.correctAnswer.length === 0)) {
+    } else if (["MATCHING", "DRAG_DROP_FILL", "GROUP_SORTING"].includes(activity.type)) {
+      if (!activity.correctAnswer || (Array.isArray(activity.correctAnswer) && activity.correctAnswer.length === 0)) {
         showToast(language === 'ar' ? "يرجى إكمال تحديد الإجابات النموذجية وعناصر الربط لهذا السؤال ⚠️" : "Please complete setting up correct answers/pairs ⚠️", "error");
         return;
       }
@@ -378,10 +469,10 @@ export default function EditSkillClusterPage() {
     
     try {
       const token = localStorage.getItem("super_admin_token");
-      const isEdit = !!editingActivity.id;
-      const url = isEdit ? `${API_URL}/skills-hub/activities/${editingActivity.id}` : `${API_URL}/skills-hub/activities`;
+      const isEdit = !!activity.id;
+      const url = isEdit ? `${API_URL}/skills-hub/activities/${activity.id}` : `${API_URL}/skills-hub/activities`;
       
-      const payload = { ...editingActivity };
+      const payload = { ...activity };
       if (typeof payload.options === 'object') payload.options = JSON.stringify(payload.options);
       if (typeof payload.correctAnswer === 'object') payload.correctAnswer = JSON.stringify(payload.correctAnswer);
 
@@ -394,7 +485,7 @@ export default function EditSkillClusterPage() {
       if (res.ok) {
         showToast(language === 'ar' ? "تم حفظ النشاط بنجاح ✅" : "Activity saved successfully ✅", "success");
         setIsActivityModalOpen(false);
-        fetchActivities(editingActivity.lessonId);
+        fetchActivities(activity.lessonId);
       } else {
         const errData = await res.json().catch(() => ({}));
         const errMsg = errData.error || errData.message || (language === 'ar' ? "فشل حفظ النشاط، يرجى التأكد من اكتمال جميع الحقول المطلوبة ⚠️" : "Failed to save activity, check required fields ⚠️");
@@ -958,7 +1049,7 @@ export default function EditSkillClusterPage() {
                            </div>
                            <div>
                               <h3 className="text-lg font-black text-slate-900">{lesson.name}</h3>
-                              <p className="text-slate-500 text-sm font-bold line-clamp-1">{lesson.description || (language === 'ar' ? "لا يوجد وصف" : "No description")}</p>
+                              <p className="text-slate-500 text-sm font-bold line-clamp-1">{getCleanDescription(lesson.description) || (language === 'ar' ? "لا يوجد وصف" : "No description")}</p>
                            </div>
                         </div>
                         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
@@ -1269,27 +1360,117 @@ export default function EditSkillClusterPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "المعيار التعليمي" : "Educational Standard"}</label>
-                    <input 
-                      type="text" value={editingActivity.standard || ""} onChange={(e) => setEditingActivity({...editingActivity, standard: e.target.value})}
-                      placeholder={language === 'ar' ? "مثال: معيار العلوم 4.1" : "e.g. Science Standard 4.1"}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none"
-                    />
+                    <select
+                      value={editingActivity.standard || ""}
+                      onChange={async (e) => {
+                        const val = e.target.value;
+                        const lesson = lessons.find(l => l.id === editingActivity.lessonId);
+                        const lessonMetadata = getLessonMetadata(lesson);
+
+                        if (val === "add_custom") {
+                          const newVal = prompt(language === 'ar' ? "أدخل معيار مخصص جديد:" : "Enter custom standard:");
+                          if (newVal && newVal.trim()) {
+                            const trimmed = newVal.trim();
+                            const updatedMetadata = {
+                              ...lessonMetadata,
+                              standards: Array.from(new Set([...lessonMetadata.standards, trimmed]))
+                            };
+                            await saveLessonMetadata(editingActivity.lessonId, updatedMetadata);
+                            setEditingActivity({ ...editingActivity, standard: trimmed });
+                          }
+                        } else {
+                          setEditingActivity({ ...editingActivity, standard: val });
+                        }
+                      }}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none"
+                    >
+                      <option value="">{language === 'ar' ? '-- اختر المعيار --' : '-- Select Standard --'}</option>
+                      {getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).standards.map((std: string) => (
+                        <option key={std} value={std}>{std}</option>
+                      ))}
+                      {editingActivity.standard && !getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).standards.includes(editingActivity.standard) && (
+                        <option value={editingActivity.standard}>{editingActivity.standard}</option>
+                      )}
+                      <option value="add_custom" className="text-indigo-600 font-bold">
+                        {language === 'ar' ? '+ إضافة معيار مخصص...' : '+ Add Custom Standard...'}
+                      </option>
+                    </select>
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "مؤشر الأداء" : "Performance Indicator"}</label>
-                    <input 
-                      type="text" value={editingActivity.indicator || ""} onChange={(e) => setEditingActivity({...editingActivity, indicator: e.target.value})}
-                      placeholder={language === 'ar' ? "مثال: مؤشر العلوم 4.1.2" : "e.g. Science Indicator 4.1.2"}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none"
-                    />
+                    <select
+                      value={editingActivity.indicator || ""}
+                      onChange={async (e) => {
+                        const val = e.target.value;
+                        const lesson = lessons.find(l => l.id === editingActivity.lessonId);
+                        const lessonMetadata = getLessonMetadata(lesson);
+
+                        if (val === "add_custom") {
+                          const newVal = prompt(language === 'ar' ? "أدخل مؤشر مخصص جديد:" : "Enter custom indicator:");
+                          if (newVal && newVal.trim()) {
+                            const trimmed = newVal.trim();
+                            const updatedMetadata = {
+                              ...lessonMetadata,
+                              indicators: Array.from(new Set([...lessonMetadata.indicators, trimmed]))
+                            };
+                            await saveLessonMetadata(editingActivity.lessonId, updatedMetadata);
+                            setEditingActivity({ ...editingActivity, indicator: trimmed });
+                          }
+                        } else {
+                          setEditingActivity({ ...editingActivity, indicator: val });
+                        }
+                      }}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none"
+                    >
+                      <option value="">{language === 'ar' ? '-- اختر المؤشر --' : '-- Select Indicator --'}</option>
+                      {getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).indicators.map((ind: string) => (
+                        <option key={ind} value={ind}>{ind}</option>
+                      ))}
+                      {editingActivity.indicator && !getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).indicators.includes(editingActivity.indicator) && (
+                        <option value={editingActivity.indicator}>{editingActivity.indicator}</option>
+                      )}
+                      <option value="add_custom" className="text-indigo-600 font-bold">
+                        {language === 'ar' ? '+ إضافة مؤشر مخصص...' : '+ Add Custom Indicator...'}
+                      </option>
+                    </select>
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "مخرج التعلم المستهدف" : "Learning Outcome"}</label>
-                    <input 
-                      type="text" value={editingActivity.learningOutcome || ""} onChange={(e) => setEditingActivity({...editingActivity, learningOutcome: e.target.value})}
-                      placeholder={language === 'ar' ? "مثال: فهم عملية التمثيل الضوئي" : "e.g. Understanding photosynthesis"}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none"
-                    />
+                    <select
+                      value={editingActivity.learningOutcome || ""}
+                      onChange={async (e) => {
+                        const val = e.target.value;
+                        const lesson = lessons.find(l => l.id === editingActivity.lessonId);
+                        const lessonMetadata = getLessonMetadata(lesson);
+
+                        if (val === "add_custom") {
+                          const newVal = prompt(language === 'ar' ? "أدخل مخرج تعلم مخصص جديد:" : "Enter custom learning outcome:");
+                          if (newVal && newVal.trim()) {
+                            const trimmed = newVal.trim();
+                            const updatedMetadata = {
+                              ...lessonMetadata,
+                              outcomes: Array.from(new Set([...lessonMetadata.outcomes, trimmed]))
+                            };
+                            await saveLessonMetadata(editingActivity.lessonId, updatedMetadata);
+                            setEditingActivity({ ...editingActivity, learningOutcome: trimmed });
+                          }
+                        } else {
+                          setEditingActivity({ ...editingActivity, learningOutcome: val });
+                        }
+                      }}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none"
+                    >
+                      <option value="">{language === 'ar' ? '-- اختر مخرج التعلم --' : '-- Select Learning Outcome --'}</option>
+                      {getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).outcomes.map((out: string) => (
+                        <option key={out} value={out}>{out}</option>
+                      ))}
+                      {editingActivity.learningOutcome && !getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).outcomes.includes(editingActivity.learningOutcome) && (
+                        <option value={editingActivity.learningOutcome}>{editingActivity.learningOutcome}</option>
+                      )}
+                      <option value="add_custom" className="text-indigo-600 font-bold">
+                        {language === 'ar' ? '+ إضافة مخرج مخصص...' : '+ Add Custom Outcome...'}
+                      </option>
+                    </select>
                   </div>
                 </div>
               </div>
