@@ -1507,16 +1507,45 @@ function WordSearchRenderer({ question, value, onChange, language }: any) {
     if (!activeWord) return;
     if (selectedCells.length === 0) return;
 
-    // Join selected letters in click order and verify if it matches activeWord (or reversed)
-    const spelled = selectedCells.map(coord => {
-      const [r, c] = coord.split(',').map(Number);
-      return grid[r]?.[c] || "";
-    }).join("");
+    const targetWord = activeWord.replace(/\s+/g, "").toUpperCase();
 
-    const reversed = spelled.split("").reverse().join("");
+    // Verify if selection forms a valid contiguous straight line (horizontal or vertical) and matches targetWord
+    const verifySelection = (coords: string[], target: string) => {
+      if (coords.length !== target.length) return false;
+      const parsed = coords.map(c => {
+        const [row, col] = c.split(',').map(Number);
+        return { r: row, c: col };
+      });
+      // Check if horizontal (all cells share the same row)
+      const firstR = parsed[0].r;
+      const isH = parsed.every(p => p.r === firstR);
+      // Check if vertical (all cells share the same column)
+      const firstC = parsed[0].c;
+      const isV = parsed.every(p => p.c === firstC);
+      
+      if (!isH && !isV) return false;
+      
+      if (isH) {
+        parsed.sort((a, b) => a.c - b.c);
+        for (let i = 1; i < parsed.length; i++) {
+          if (parsed[i].c !== parsed[i-1].c + 1) return false;
+        }
+      } else {
+        parsed.sort((a, b) => a.r - b.r);
+        for (let i = 1; i < parsed.length; i++) {
+          if (parsed[i].r !== parsed[i-1].r + 1) return false;
+        }
+      }
+      
+      const spelled = parsed.map(p => grid[p.r]?.[p.c] || "").join("").toUpperCase();
+      const reversed = spelled.split("").reverse().join("");
+      return spelled === target || reversed === target;
+    };
 
-    if (spelled !== activeWord && reversed !== activeWord) {
-      setErrorMsg(language === 'ar' ? "⚠️ الحروف المحددة لا تطابق الكلمة المطلوبة! تأكد من ترتيب الحروف." : "⚠️ Selected letters do not match the word! Make sure of the order.");
+    if (!verifySelection(selectedCells, targetWord)) {
+      setErrorMsg(language === 'ar' 
+        ? "⚠️ التحديد غير صحيح! يجب اختيار جميع حروف الكلمة متتابعة في خط مستقيم (أفقي أو رأسي)." 
+        : "⚠️ Invalid selection! You must select all letters of the word contiguously in a straight line (horizontal or vertical).");
       return;
     }
 

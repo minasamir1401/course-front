@@ -1058,14 +1058,16 @@ export default function EditCoursePage() {
   };
 
   const updateBlock = (source: 'slides' | 'assignments' | 'questions' = 'slides', index: number, field: string, value: any) => {
-    const newSlides = [...(currentLesson[source] || [])];
-    newSlides[index] = { ...newSlides[index], [field]: value };
-    if (field === 'content') {
-      newSlides[index].text = value;
-    } else if (field === 'text') {
-      newSlides[index].content = value;
-    }
-    setCurrentLesson({ ...currentLesson, [source]: newSlides });
+    setCurrentLesson((prev: any) => {
+      const newSlides = [...(prev[source] || [])];
+      newSlides[index] = { ...newSlides[index], [field]: value };
+      if (field === 'content') {
+        newSlides[index].text = value;
+      } else if (field === 'text') {
+        newSlides[index].content = value;
+      }
+      return { ...prev, [source]: newSlides };
+    });
   };
 
   const updateBlockTypeAndReset = (source: 'slides' | 'assignments' | 'questions', index: number, newType: string) => {
@@ -1098,21 +1100,26 @@ export default function EditCoursePage() {
       } else if (newType === 'VIDEO_CHECKPOINT') {
         defaultOptions = JSON.stringify({ videoUrl: "", checkpoints: [] });
         defaultCorrect = JSON.stringify({});
+      } else if (newType === 'GEOGEBRA') {
+        defaultOptions = JSON.stringify({ materialId: "", width: 800, height: 500, iframeUrl: "" });
+        defaultCorrect = "";
       } else {
         defaultOptions = JSON.stringify({ choices: [] });
         defaultCorrect = "";
       }
     }
     
-    const newSlides = [...(currentLesson[source] || [])];
-    newSlides[index] = { 
-      ...newSlides[index], 
-      label: newType,
-      options: defaultOptions,
-      correctAnswer: defaultCorrect,
-      correctAnswers: newType === 'MULTI_SELECT' ? [] : undefined
-    };
-    setCurrentLesson({ ...currentLesson, [source]: newSlides });
+    setCurrentLesson((prev: any) => {
+      const newSlides = [...(prev[source] || [])];
+      newSlides[index] = { 
+        ...newSlides[index], 
+        label: newType,
+        options: defaultOptions,
+        correctAnswer: defaultCorrect,
+        correctAnswers: newType === 'MULTI_SELECT' ? [] : undefined
+      };
+      return { ...prev, [source]: newSlides };
+    });
   };
 
   const removeBlock = (source: 'slides' | 'assignments' | 'questions' = 'slides', index: number) => {
@@ -1583,14 +1590,22 @@ export default function EditCoursePage() {
                             type: block.label || 'MCQ'
                           }}
                           onChange={(updatedQ) => {
-                            updateBlock(source, sIdx, 'options', updatedQ.options);
-                            updateBlock(source, sIdx, 'correctAnswer', updatedQ.correctAnswer);
-                            if (updatedQ.type === 'MULTI_SELECT') {
-                              try {
-                                const parsed = JSON.parse(updatedQ.correctAnswer);
-                                updateBlock(source, sIdx, 'correctAnswers', parsed);
-                              } catch (e) {}
-                            }
+                            setCurrentLesson((prev: any) => {
+                              const newSlides = [...(prev[source] || [])];
+                              newSlides[sIdx] = {
+                                ...newSlides[sIdx],
+                                options: updatedQ.options,
+                                correctAnswer: updatedQ.correctAnswer,
+                                ...(updatedQ.type === 'MULTI_SELECT' ? (() => {
+                                  try {
+                                    return { correctAnswers: JSON.parse(updatedQ.correctAnswer) };
+                                  } catch (e) {
+                                    return {};
+                                  }
+                                })() : {})
+                              };
+                              return { ...prev, [source]: newSlides };
+                            });
                           }}
                           language={language}
                         />

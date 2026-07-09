@@ -1127,6 +1127,9 @@ export default function EditCoursePage() {
       } else if (newType === 'VIDEO_CHECKPOINT') {
         defaultOptions = JSON.stringify({ videoUrl: "", checkpoints: [] });
         defaultCorrect = JSON.stringify({});
+      } else if (newType === 'GEOGEBRA') {
+        defaultOptions = JSON.stringify({ materialId: "", width: 800, height: 500, iframeUrl: "" });
+        defaultCorrect = "";
       } else {
         defaultOptions = JSON.stringify({ choices: [] });
         defaultCorrect = "";
@@ -1612,14 +1615,22 @@ export default function EditCoursePage() {
                             type: block.label || 'MCQ'
                           }}
                           onChange={(updatedQ) => {
-                            updateBlock(source, sIdx, 'options', updatedQ.options);
-                            updateBlock(source, sIdx, 'correctAnswer', updatedQ.correctAnswer);
-                            if (updatedQ.type === 'MULTI_SELECT') {
-                              try {
-                                const parsed = JSON.parse(updatedQ.correctAnswer);
-                                updateBlock(source, sIdx, 'correctAnswers', parsed);
-                              } catch (e) {}
-                            }
+                            setCurrentLesson((prev: any) => {
+                              const newSlides = [...(prev[source] || [])];
+                              newSlides[sIdx] = {
+                                ...newSlides[sIdx],
+                                options: updatedQ.options,
+                                correctAnswer: updatedQ.correctAnswer,
+                                ...(updatedQ.type === 'MULTI_SELECT' ? (() => {
+                                  try {
+                                    return { correctAnswers: JSON.parse(updatedQ.correctAnswer) };
+                                  } catch (e) {
+                                    return {};
+                                  }
+                                })() : {})
+                              };
+                              return { ...prev, [source]: newSlides };
+                            });
                           }}
                           language={language}
                         />

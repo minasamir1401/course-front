@@ -374,6 +374,8 @@ export default function LessonPlayerPage() {
   const [answers, setAnswers] = useState<Record<number, any>>({});
   const [score, setScore] = useState(0);
   const [quizTimer, setQuizTimer] = useState(0);
+  const [assignmentTimer, setAssignmentTimer] = useState(0);
+  const [currentAssignmentIndex, setCurrentAssignmentIndex] = useState(0);
 
   const [slideAnswers, setSlideAnswers] = useState<Record<number, any>>({});
   const [slideSubmitted, setSlideSubmitted] = useState<Record<number, boolean>>({});
@@ -498,6 +500,18 @@ export default function LessonPlayerPage() {
       }, 1000);
     } else {
       setQuizTimer(0);
+    }
+    return () => clearInterval(interval);
+  }, [currentStage]);
+
+  useEffect(() => {
+    let interval: any;
+    if (currentStage === 'assignments') {
+      interval = setInterval(() => {
+        setAssignmentTimer(prev => prev + 1);
+      }, 1000);
+    } else {
+      setAssignmentTimer(0);
     }
     return () => clearInterval(interval);
   }, [currentStage]);
@@ -628,12 +642,37 @@ export default function LessonPlayerPage() {
   };
 
   const handleNextQuestion = () => {
-    if (isQuestionLike(lesson.questions[currentQuestionIndex]) && !quizSubmitted[currentQuestionIndex]) {
-      setQuizSubmitted({ ...quizSubmitted, [currentQuestionIndex]: true });
-    }
     if (currentQuestionIndex < lesson.questions.length - 1) {
+      if (isQuestionLike(lesson.questions[currentQuestionIndex]) && !quizSubmitted[currentQuestionIndex]) {
+        setQuizSubmitted({ ...quizSubmitted, [currentQuestionIndex]: true });
+      }
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
+      // Check if there are unanswered questions in the quiz
+      const unanswered = [];
+      for (let i = 0; i < lesson.questions.length; i++) {
+        if (isQuestionLike(lesson.questions[i]) && !answers[i]) {
+          unanswered.push(i + 1);
+        }
+      }
+
+      if (unanswered.length > 0) {
+        const confirmMsg = language === 'ar'
+          ? `⚠️ لديك أسئلة لم تقم بالإجابة عليها (أرقام: ${unanswered.join(', ')}). هل أنت متأكد من رغبتك في الإنهاء؟`
+          : `⚠️ You have unanswered questions (numbers: ${unanswered.join(', ')}). Are you sure you want to finish?`;
+        if (!window.confirm(confirmMsg)) {
+          return; // Stop submission
+        }
+      }
+
+      // Mark all as submitted
+      const nextSubmitted = { ...quizSubmitted };
+      lesson.questions.forEach((q: any, idx: number) => {
+        if (isQuestionLike(q)) {
+          nextSubmitted[idx] = true;
+        }
+      });
+      setQuizSubmitted(nextSubmitted);
       setCurrentStage('summary');
     }
   };
@@ -821,6 +860,62 @@ export default function LessonPlayerPage() {
                 </button>
               )}
             </div>
+          </div>
+        )}
+
+        {/* ── STAGE NAVIGATION TABS ── */}
+        {currentStage !== 'summary' && (
+          <div className="w-full bg-white/80 backdrop-blur-xl border border-slate-200/80 p-3 rounded-[24px] shadow-sm flex flex-wrap items-center justify-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+            <button
+              onClick={() => {
+                if (isQuestionLike(lesson.slides[currentSlideIndex]) && !slideSubmitted[currentSlideIndex]) {
+                  setSlideSubmitted({ ...slideSubmitted, [currentSlideIndex]: true });
+                }
+                setCurrentStage('slides');
+              }}
+              className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-sm transition-all cursor-pointer ${
+                currentStage === 'slides' || currentStage === 'welcome'
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 scale-105'
+                  : 'text-slate-500 hover:bg-slate-50'
+              }`}
+            >
+              <BookOpen className="w-4 h-4" />
+              <span>{language === 'ar' ? 'الشرح والدرس' : 'Explanation Content'}</span>
+            </button>
+
+            <button
+              onClick={() => {
+                if (isQuestionLike(lesson.assignments[currentAssignmentIndex]) && !assignmentSubmitted[currentAssignmentIndex]) {
+                  setAssignmentSubmitted({ ...assignmentSubmitted, [currentAssignmentIndex]: true });
+                }
+                setCurrentStage('assignments');
+              }}
+              className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-sm transition-all cursor-pointer ${
+                currentStage === 'assignments'
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 scale-105'
+                  : 'text-slate-500 hover:bg-slate-50'
+              }`}
+            >
+              <FileDown className="w-4 h-4" />
+              <span>{language === 'ar' ? 'الواجبات' : 'Assignment'}</span>
+            </button>
+
+            <button
+              onClick={() => {
+                if (isQuestionLike(lesson.questions[currentQuestionIndex]) && !quizSubmitted[currentQuestionIndex]) {
+                  setQuizSubmitted({ ...quizSubmitted, [currentQuestionIndex]: true });
+                }
+                setCurrentStage('exercises');
+              }}
+              className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-sm transition-all cursor-pointer ${
+                currentStage === 'exercises'
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 scale-105'
+                  : 'text-slate-500 hover:bg-slate-50'
+              }`}
+            >
+              <HelpCircle className="w-4 h-4" />
+              <span>{language === 'ar' ? 'الاختبار' : 'Quiz'}</span>
+            </button>
           </div>
         )}
 
@@ -1065,90 +1160,147 @@ export default function LessonPlayerPage() {
             )}
 
             {currentStage === 'assignments' && (
-              <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                <div className="text-center">
-                  <h2 className="text-2xl md:text-3xl font-black text-slate-900 mb-2">{t('lesson.assignments')}</h2>
-                  <p className="text-slate-400 font-bold">{t('lesson.assignmentsMsg')}</p>
+              <div className="space-y-6 animate-in slide-in-from-bottom-8 duration-700 flex flex-col items-center w-full">
+                {/* 1. Header Navigation Bar for Assignment */}
+                <div className="premium-card p-4 rounded-[30px] flex flex-col md:flex-row items-center justify-between border-b-4 border-indigo-600 w-full max-w-4xl mx-auto gap-4 shrink-0">
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {lesson.assignments?.map((_: any, i: number) => (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          if (isQuestionLike(lesson.assignments[currentAssignmentIndex]) && !assignmentSubmitted[currentAssignmentIndex]) {
+                            setAssignmentSubmitted({ ...assignmentSubmitted, [currentAssignmentIndex]: true });
+                          }
+                          setCurrentAssignmentIndex(i);
+                        }}
+                        className={`w-9 h-9 md:w-10 md:h-10 rounded-xl font-black transition-all border-2 flex items-center justify-center text-xs ${currentAssignmentIndex === i ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg' : assignmentAnswers[i] ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-white border-slate-100 text-slate-400'}`}
+                      >
+                        {i + 1}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2 bg-slate-100 text-slate-600 px-4 py-2 rounded-xl font-mono font-bold text-sm shadow-sm shrink-0">
+                    <Clock className="w-4 h-4 text-indigo-600" />
+                    {Math.floor(assignmentTimer / 60)}:{(assignmentTimer % 60).toString().padStart(2, '0')}
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-6 max-w-4xl mx-auto w-full">
-                  {lesson.assignments?.length > 0 ? lesson.assignments.map((as: any, idx: number) => {
-                    const isSubmitted = assignmentSubmitted[idx];
-                    return (
-                      <div key={idx} className="premium-card p-8 rounded-[40px] border-r-8 border-indigo-600">
-                        <div className="flex items-center gap-4 mb-6">
-                          <span className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center font-black">
-                            {idx + 1}
-                          </span>
-                          <div className="flex flex-col text-start">
-                            <h3 className="font-black text-slate-900 text-lg">{as.type === 'QUESTION' ? t('lesson.requiredAssignment') : t('lesson.requiredAssignment')}</h3>
-                            {as.dok && (
-                              <span className="px-2.5 py-1 bg-yellow-50 text-yellow-700 border border-yellow-100 rounded-lg text-[10px] font-bold uppercase tracking-wider w-fit mt-1">
-                                {language === 'ar' ? `عمق المعرفة: ${as.dok}` : `DOK: ${as.dok}`}
+                {/* 2. Main Question Card for Assignment */}
+                <div className="premium-card rounded-[40px] overflow-hidden shadow-2xl border-indigo-50 w-full max-w-5xl mx-auto flex flex-col">
+                  {lesson.assignments?.length > 0 && lesson.assignments[currentAssignmentIndex] ? (
+                    <>
+                      <div className="p-8 md:p-10">
+                        {/* Metadata Row */}
+                        <div className="flex justify-between items-start mb-6">
+                          <div className="flex flex-wrap items-center gap-3 max-w-full w-full">
+                            <span className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-xs md:text-sm font-black uppercase tracking-wider shadow-sm max-w-full break-words whitespace-normal text-right">
+                              {language === 'ar' ? 'الواجب' : 'Assignment'} {currentAssignmentIndex + 1}
+                            </span>
+                            {lesson.assignments[currentAssignmentIndex].level && (
+                              <span className="px-3 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs md:text-sm font-bold uppercase tracking-wider max-w-full break-words whitespace-normal text-right">
+                                {t('lesson.level')}: {lesson.assignments[currentAssignmentIndex].level === 'Easy' ? t('lesson.easy') : lesson.assignments[currentAssignmentIndex].level === 'Medium' ? t('lesson.medium') : t('lesson.hard')}
+                              </span>
+                            )}
+                            {lesson.assignments[currentAssignmentIndex].dok && (
+                              <span className="px-3 py-2 bg-yellow-50 text-yellow-700 border border-yellow-100 rounded-lg text-xs md:text-sm font-bold uppercase tracking-wider max-w-full break-words whitespace-normal text-right">
+                                {language === 'ar' ? `عمق المعرفة: ${lesson.assignments[currentAssignmentIndex].dok}` : `DOK: ${lesson.assignments[currentAssignmentIndex].dok}`}
+                              </span>
+                            )}
+                            {lesson.assignments[currentAssignmentIndex].skill && (
+                              <span className="px-3 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs md:text-sm font-bold uppercase tracking-wider max-w-full break-words whitespace-normal text-right">
+                                {t('lesson.skill')}: {lesson.assignments[currentAssignmentIndex].skill}
+                              </span>
+                            )}
+                            {lesson.assignments[currentAssignmentIndex].standard && (
+                              <span className="px-3 py-2 bg-blue-50 text-blue-600 border border-blue-100 rounded-lg text-xs md:text-sm font-bold uppercase tracking-wider max-w-full break-words whitespace-normal text-right">
+                                {t('lesson.standard')}: {lesson.assignments[currentAssignmentIndex].standard}
+                              </span>
+                            )}
+                            {lesson.assignments[currentAssignmentIndex].indicator && (
+                              <span className="px-3 py-2 bg-purple-50 text-purple-600 border border-purple-100 rounded-lg text-xs md:text-sm font-bold uppercase tracking-wider max-w-full break-words whitespace-normal text-right">
+                                {t('lesson.indicator')}: {lesson.assignments[currentAssignmentIndex].indicator}
+                              </span>
+                            )}
+                            {lesson.assignments[currentAssignmentIndex].learningOutcome && (
+                              <span className="flex items-start gap-1.5 px-3 py-2 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg text-xs md:text-sm font-bold uppercase tracking-wider max-w-full break-words whitespace-normal text-right">
+                                <Target className="w-4 h-4 shrink-0 mt-0.5" />
+                                <span>{t('lesson.outcome')}: {lesson.assignments[currentAssignmentIndex].learningOutcome}</span>
                               </span>
                             )}
                           </div>
                         </div>
-                        <HtmlRenderer html={as.text} className="text-slate-600 text-lg leading-relaxed prose prose-indigo mb-6 text-start" />
 
-                        {isQuestionLike(as) && (
+                        {/* Question Text */}
+                        <div className="question-frame mb-8 w-full">
+                          <HtmlRenderer html={lesson.assignments[currentAssignmentIndex].text} tag="h3" className="text-lg md:text-2xl font-black text-slate-900 leading-relaxed tracking-tight break-words w-full text-start" />
+                        </div>
+
+                        {/* Question Input */}
+                        {isQuestionLike(lesson.assignments[currentAssignmentIndex]) && (
                           <>
-                            {['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(as.label || as.type || 'MCQ') ? (
-                              getQuestionOptions(as, language).length > 0 && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-                                  {getQuestionOptions(as, language).map((opt: string, oIdx: number) => {
-                                    const isMulti = as.type === 'MULTI_SELECT' || as.label === 'MULTI_SELECT';
-                                    const isSelected = isMulti ? (assignmentAnswers[idx] || []).includes(opt) : assignmentAnswers[idx] === opt;
-                                    const isCorrect = isSubmitted && (isMulti ? (as.correctAnswers || []).includes(opt) : ((!as.correctAnswer && isSelected) || normalizeAnswerGlobal(opt) === normalizeAnswerGlobal(as.correctAnswer)));
-                                    const isWrong = isSubmitted && isSelected && !isCorrect;
-                                    return (
-                                      <button
-                                        key={oIdx}
-                                        onClick={() => {
-                                          if (!isSubmitted) {
-                                            if (isMulti) {
-                                              const currentArr = assignmentAnswers[idx] || [];
-                                              const newArr = currentArr.includes(opt) ? currentArr.filter((a: string) => a !== opt) : [...currentArr, opt];
-                                              setAssignmentAnswers({ ...assignmentAnswers, [idx]: newArr });
-                                            } else {
-                                              setAssignmentAnswers({ ...assignmentAnswers, [idx]: opt });
-                                            }
-                                          }
-                                        }}
-                                        className={`relative p-5 rounded-3xl border-4 text-right transition-all group overflow-hidden ${isSelected ? (isCorrect ? 'border-emerald-500 bg-emerald-50' : isWrong ? 'border-red-500 bg-red-50' : 'border-indigo-500 bg-indigo-50') : 'border-slate-100 bg-white hover:border-indigo-200'} ${isSubmitted && !isSelected && !isCorrect ? 'opacity-50' : ''}`}
-                                        disabled={isSubmitted}
-                                      >
+                            {['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(lesson.assignments[currentAssignmentIndex].type || lesson.assignments[currentAssignmentIndex].label || 'MCQ') ? (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-4 mb-6">
+                                {getQuestionOptions(lesson.assignments[currentAssignmentIndex], language).map((opt: string, oIdx: number) => {
+                                  const isMulti = lesson.assignments[currentAssignmentIndex].type === 'MULTI_SELECT' || lesson.assignments[currentAssignmentIndex].label === 'MULTI_SELECT';
+                                  const isSelected = isMulti ? (assignmentAnswers[currentAssignmentIndex] || []).includes(opt) : assignmentAnswers[currentAssignmentIndex] === opt;
+                                  const isSubmitted = assignmentSubmitted[currentAssignmentIndex];
+                                  const isCorrect = isSubmitted && (isMulti ? (lesson.assignments[currentAssignmentIndex].correctAnswers || []).includes(opt) : ((!lesson.assignments[currentAssignmentIndex].correctAnswer && isSelected) || normalizeAnswerGlobal(opt) === normalizeAnswerGlobal(lesson.assignments[currentAssignmentIndex].correctAnswer)));
+                                  const isWrong = isSubmitted && isSelected && !isCorrect;
+
+                                  return (
+                                    <button
+                                      key={oIdx}
+                                      onClick={() => {
+                                        if (isSubmitted) return;
+                                        if (isMulti) {
+                                          const currentArr = assignmentAnswers[currentAssignmentIndex] || [];
+                                          const newArr = currentArr.includes(opt) ? currentArr.filter((a: string) => a !== opt) : [...currentArr, opt];
+                                          setAssignmentAnswers({ ...assignmentAnswers, [currentAssignmentIndex]: newArr });
+                                        } else {
+                                          setAssignmentAnswers({ ...assignmentAnswers, [currentAssignmentIndex]: opt });
+                                        }
+                                      }}
+                                      disabled={isSubmitted}
+                                      className={`p-5 md:p-6 rounded-[25px] border-4 text-start transition-all duration-300 font-black text-sm md:text-base relative break-words overflow-hidden ${isSelected ? (isCorrect ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : isWrong ? 'border-red-500 bg-red-50 text-red-700' : 'bg-indigo-600 border-white text-white shadow-xl shadow-indigo-100') : 'bg-white border-slate-50 text-slate-600 hover:border-indigo-200'} ${isSubmitted && !isSelected && !isCorrect ? 'opacity-50' : ''}`}
+                                    >
+                                      <div className="flex items-center justify-between gap-4">
                                         <div className="flex items-center gap-3.5 flex-1 text-start">
                                           <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 transition-colors ${
-                                            isSelected
-                                              ? (isCorrect ? "bg-emerald-600 text-white" : isWrong ? "bg-red-600 text-white" : "bg-indigo-600 text-white")
-                                              : "bg-slate-100 text-slate-600 group-hover:bg-slate-200"
+                                            isSelected && !isSubmitted
+                                              ? "bg-white/20 text-white"
+                                              : isCorrect
+                                                ? "bg-emerald-600 text-white"
+                                                : isWrong
+                                                  ? "bg-red-600 text-white"
+                                                  : "bg-slate-100 text-slate-600 group-hover:bg-slate-200"
                                           }`}>
                                             {getOptionLetter(oIdx, language)}
                                           </span>
-                                          <span className={`text-lg font-bold flex-1 ${isSelected ? (isCorrect ? 'text-emerald-700' : isWrong ? 'text-red-700' : 'text-indigo-700') : 'text-slate-700'}`}>
+                                          <span className={`flex-1 break-words leading-relaxed ${isSelected && !isSubmitted ? 'text-white' : ''}`}>
                                             <HtmlRenderer html={cleanOptionText(opt)} tag="span" />
                                           </span>
                                         </div>
-                                        {isSelected && !isSubmitted && <CheckCircle2 className="absolute top-1/2 left-4 -translate-y-1/2 w-6 h-6 text-indigo-500" />}
-                                        {isCorrect && <CheckCircle2 className="absolute top-1/2 left-4 -translate-y-1/2 w-6 h-6 text-emerald-500" />}
-                                        {isWrong && <X className="absolute top-1/2 left-4 -translate-y-1/2 w-6 h-6 text-red-500" />}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              )
+                                        <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${isSelected && !isSubmitted ? 'border-white bg-white/20' : isCorrect ? 'border-emerald-500 bg-emerald-500 text-white' : isWrong ? 'border-red-500 bg-red-500 text-white' : 'border-slate-200'}`}>
+                                          {isSelected && !isSubmitted && <CheckCircle2 className="w-4 h-4" />}
+                                          {isCorrect && <CheckCircle2 className="w-4 h-4" />}
+                                          {isWrong && <X className="w-4 h-4" />}
+                                        </div>
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
                             ) : (
-                              <div className="w-full text-start bg-slate-50 p-6 rounded-3xl border border-slate-200">
+                              <div className="w-full text-start bg-slate-50 p-6 rounded-3xl border border-slate-200 mb-6">
                                 <InteractiveQuestionRenderer
                                   question={{
-                                    ...as,
-                                    type: as.label || as.type || 'MCQ'
+                                    ...lesson.assignments[currentAssignmentIndex],
+                                    type: lesson.assignments[currentAssignmentIndex].type || lesson.assignments[currentAssignmentIndex].label || 'MCQ'
                                   }}
-                                  value={assignmentAnswers[idx] || ''}
+                                  value={assignmentAnswers[currentAssignmentIndex] || ''}
                                   onChange={(val: any) => {
-                                    if (!isSubmitted) {
-                                      setAssignmentAnswers({ ...assignmentAnswers, [idx]: typeof val === 'string' ? val : JSON.stringify(val) });
+                                    if (!assignmentSubmitted[currentAssignmentIndex]) {
+                                      setAssignmentAnswers({ ...assignmentAnswers, [currentAssignmentIndex]: typeof val === 'string' ? val : JSON.stringify(val) });
                                     }
                                   }}
                                   language={language}
@@ -1157,29 +1309,30 @@ export default function LessonPlayerPage() {
                             )}
                           </>
                         )}
-                        {isQuestionLike(as) && assignmentAnswers[idx] && !isSubmitted && (
+
+                        {assignmentAnswers[currentAssignmentIndex] && !assignmentSubmitted[currentAssignmentIndex] && (
                           <button
-                            onClick={() => setAssignmentSubmitted({ ...assignmentSubmitted, [idx]: true })}
-                            className="mt-6 bg-emerald-600 text-white hover:bg-emerald-700 px-8 py-3 rounded-2xl font-black text-lg shadow-xl shadow-emerald-100 border border-emerald-500/20"
+                            onClick={() => setAssignmentSubmitted({ ...assignmentSubmitted, [currentAssignmentIndex]: true })}
+                            className="mt-2 mb-6 bg-emerald-600 text-white hover:bg-emerald-700 px-8 py-3 rounded-2xl font-black text-lg shadow-xl shadow-emerald-100 border border-emerald-500/20"
                           >
                             {language === 'ar' ? 'تأكيد الإجابة' : 'Confirm Answer'}
                           </button>
                         )}
 
-                        {isSubmitted && isQuestionLike(as) && (() => {
-                          const isMulti = as.type === 'MULTI_SELECT' || as.label === 'MULTI_SELECT';
-                          const isStandard = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(as.label || as.type || 'MCQ');
-                          const studentAnswers = assignmentAnswers[idx] || (isMulti ? [] : '');
+                        {assignmentSubmitted[currentAssignmentIndex] && isQuestionLike(lesson.assignments[currentAssignmentIndex]) && (() => {
+                          const isMulti = lesson.assignments[currentAssignmentIndex].type === 'MULTI_SELECT' || lesson.assignments[currentAssignmentIndex].label === 'MULTI_SELECT';
+                          const isStandard = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(lesson.assignments[currentAssignmentIndex].type || lesson.assignments[currentAssignmentIndex].label || 'MCQ');
+                          const studentAnswers = assignmentAnswers[currentAssignmentIndex] || (isMulti ? [] : '');
                           
                           const isCorrect = isStandard
-                            ? (isMulti ? studentAnswers.length === (as.correctAnswers || []).length && studentAnswers.every((a: string) => (as.correctAnswers || []).includes(a)) : (!as.correctAnswer || normalizeAnswerGlobal(assignmentAnswers[idx]) === normalizeAnswerGlobal(as.correctAnswer)))
-                            : checkAdvancedCorrect(as, assignmentAnswers[idx]);
+                            ? (isMulti ? studentAnswers.length === (lesson.assignments[currentAssignmentIndex].correctAnswers || []).length && studentAnswers.every((a: string) => (lesson.assignments[currentAssignmentIndex].correctAnswers || []).includes(a)) : (!lesson.assignments[currentAssignmentIndex].correctAnswer || normalizeAnswerGlobal(assignmentAnswers[currentAssignmentIndex]) === normalizeAnswerGlobal(lesson.assignments[currentAssignmentIndex].correctAnswer)))
+                            : checkAdvancedCorrect(lesson.assignments[currentAssignmentIndex], assignmentAnswers[currentAssignmentIndex]);
 
                           return (
-                            <div className="mt-8">
+                            <div className="mt-4 animate-in fade-in slide-in-from-top-2">
                               <QuestionFeedback
                                 isCorrect={isCorrect}
-                                correctAnswer={isMulti ? as.correctAnswers : as.correctAnswer}
+                                correctAnswer={isMulti ? lesson.assignments[currentAssignmentIndex].correctAnswers : lesson.assignments[currentAssignmentIndex].correctAnswer}
                                 language={language}
                               />
                             </div>
@@ -1187,45 +1340,77 @@ export default function LessonPlayerPage() {
                         })()}
 
                         <AssignmentSectionsToggle 
-                          assignment={as} 
-                          assignmentIndex={idx}
+                          assignment={lesson.assignments[currentAssignmentIndex]} 
+                          assignmentIndex={currentAssignmentIndex}
                           assignmentSubmitted={assignmentSubmitted} 
                           assignmentAnswers={assignmentAnswers}
                           language={language}
                         />
                       </div>
-                    );
-                  }) : (
-                    <div className="premium-card p-12 rounded-[40px] text-center text-slate-400 font-bold">
-                      {t('lesson.noAssignments')}
+
+                      {/* Footer Actions for Assignment */}
+                      <div className="p-6 md:p-8 border-t border-slate-100 bg-slate-50/30 flex justify-between items-center shrink-0">
+                        <button
+                          onClick={() => setCurrentAssignmentIndex(prev => Math.max(0, prev - 1))}
+                          disabled={currentAssignmentIndex === 0}
+                          className="bg-slate-50/80 border-2 border-slate-200/60 text-slate-900 px-6 py-3 rounded-xl font-black hover:bg-slate-100 disabled:opacity-20 text-sm"
+                        >
+                          {t('lesson.previous')}
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (isQuestionLike(lesson.assignments[currentAssignmentIndex]) && !assignmentSubmitted[currentAssignmentIndex]) {
+                              setAssignmentSubmitted({ ...assignmentSubmitted, [currentAssignmentIndex]: true });
+                            }
+                            if (currentAssignmentIndex < lesson.assignments.length - 1) {
+                              setCurrentAssignmentIndex(prev => prev + 1);
+                            } else {
+                              // Checking for skipped assignment questions
+                              const unanswered = [];
+                              for (let i = 0; i < lesson.assignments.length; i++) {
+                                if (isQuestionLike(lesson.assignments[i]) && !assignmentAnswers[i]) {
+                                  unanswered.push(i + 1);
+                                }
+                              }
+
+                              if (unanswered.length > 0) {
+                                const confirmMsg = language === 'ar'
+                                  ? `⚠️ لديك واجبات لم تقم بالإجابة عليها (أرقام: ${unanswered.join(', ')}). هل أنت متأكد من رغبتك في الانتقال للتمارين؟`
+                                  : `⚠️ You have unanswered assignments (numbers: ${unanswered.join(', ')}). Are you sure you want to go to exercises?`;
+                                if (!window.confirm(confirmMsg)) {
+                                  return; // Stop transition
+                                }
+                              }
+
+                              // Mark all as submitted
+                              const nextSubmitted = { ...assignmentSubmitted };
+                              lesson.assignments.forEach((as: any, idx: number) => {
+                                if (isQuestionLike(as)) {
+                                  nextSubmitted[idx] = true;
+                                }
+                              });
+                              setAssignmentSubmitted(nextSubmitted);
+                              setCurrentStage('exercises');
+                            }
+                          }}
+                          className="px-8 py-3.5 rounded-2xl font-black transition-all flex items-center gap-3 text-base shadow-xl border border-indigo-500/20 bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100"
+                        >
+                          {currentAssignmentIndex < lesson.assignments.length - 1 ? t('lesson.next') : (language === 'ar' ? 'بدء التمارين' : 'Start Exercises')}
+                          <ChevronLeft className="w-5 h-5 transition-transform text-white" />
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-20 space-y-6 flex-1 flex flex-col items-center justify-center">
+                      <p className="text-slate-400 font-bold text-base">{language === 'ar' ? 'لا توجد واجبات لهذا الدرس' : 'No assignments for this lesson'}</p>
+                      <button
+                        onClick={() => setCurrentStage('exercises')}
+                        className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-black"
+                      >
+                        {language === 'ar' ? 'انتقل للتمارين' : 'Go to Exercises'}
+                      </button>
                     </div>
                   )}
-                </div>
-
-                <div className="flex justify-center pt-8 gap-4 flex-wrap">
-                  <button
-                    onClick={() => setCurrentStage('slides')}
-                    className="bg-slate-50/80 border-2 border-slate-200/60 text-slate-900 px-8 py-5 rounded-[25px] font-black text-lg hover:bg-slate-100 transition-all flex items-center gap-4"
-                  >
-                    <ArrowRight className={`w-5 h-5 ${language === 'en' ? 'rotate-180' : ''}`} />
-                    {t('lesson.previous')}
-                  </button>
-                  <button
-                    onClick={() => {
-                      const newSubmitted = { ...assignmentSubmitted };
-                      lesson.assignments?.forEach((as: any, idx: number) => {
-                        if (isQuestionLike(as) && !newSubmitted[idx]) {
-                          newSubmitted[idx] = true;
-                        }
-                      });
-                      setAssignmentSubmitted(newSubmitted);
-                      setCurrentStage('exercises');
-                    }}
-                    className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-12 py-5 rounded-[25px] font-black text-lg hover:scale-105 transition-all shadow-xl shadow-indigo-100 flex items-center gap-4 border border-indigo-500/20"
-                  >
-                    {t('lesson.startExercises')}
-                    <ArrowLeft className={`w-5 h-5 ${language === 'en' ? 'rotate-180' : ''}`} />
-                  </button>
                 </div>
               </div>
             )}
@@ -1549,7 +1734,7 @@ export default function LessonPlayerPage() {
                             {language === 'ar' ? 'الوقت المستغرق' : 'Time Spent'}
                           </span>
                           <span className="text-lg font-black text-slate-800">
-                            {Math.floor(quizTimer / 60)} {language === 'ar' ? 'دقيقة' : 'min'}
+                            {Math.floor((quizTimer + assignmentTimer) / 60)} {language === 'ar' ? 'دقيقة' : 'min'}
                           </span>
                         </div>
 
@@ -1581,37 +1766,102 @@ export default function LessonPlayerPage() {
                         </div>
                       </div>
 
-                      {/* Detailed Breakdown */}
-                      {lesson.questions && lesson.questions.length > 0 && (
-                        <div className="space-y-3 pt-2 text-start">
-                          <h4 className="text-sm font-black text-slate-800 flex items-center gap-2 justify-start">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                            <span>{language === 'ar' ? 'تقرير الإجابات والتقييم الذاتي' : 'Answers Report & Self-Evaluation'}</span>
-                          </h4>
-                          
-                          <div className="space-y-2 max-h-[200px] overflow-y-auto custom-scrollbar pr-1">
-                            {lesson.questions?.map((q: any, qIdx: number) => {
-                              const isMulti = q.type === 'MULTI_SELECT';
-                              const studentAns = answers[qIdx];
-                              const isSubmitted = quizSubmitted[qIdx];
-                              const isCorrect = isSubmitted && (isMulti
-                                ? Array.isArray(studentAns) && studentAns.length === (q.correctAnswers || []).length && studentAns.every((a: string) => (q.correctAnswers || []).includes(a))
-                                : studentAns === q.correctAnswer);
-                              
-                              return (
-                                <div key={qIdx} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs">
-                                  <span className="font-bold text-slate-700 truncate max-w-[70%]">
-                                    {language === 'ar' ? 'سؤال' : 'Question'} {qIdx + 1}: <HtmlRenderer html={q.text} tag="span" className="font-normal text-slate-500" />
-                                  </span>
-                                  <span className={`px-2 py-1 rounded-lg font-black ${isCorrect ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                                    {isCorrect ? (language === 'ar' ? 'صحيحة ✓' : 'Correct ✓') : (language === 'ar' ? 'خاطئة ✗' : 'Wrong ✗')}
-                                  </span>
-                                </div>
-                              );
-                            })}
+                      {/* Detailed Breakdown for Assignments & Exercises */}
+                      <div className="space-y-6 pt-2 text-start">
+                        {/* 1. Assignments Breakdown */}
+                        {lesson.assignments && lesson.assignments.length > 0 && (
+                          <div className="space-y-3">
+                            <h4 className="text-sm font-black text-slate-800 flex items-center gap-2 justify-start">
+                              <FileDown className="w-4 h-4 text-indigo-500" />
+                              <span>{language === 'ar' ? 'تقرير إجابات الواجب والتقييم الذاتي' : 'Assignments Report & Self-Evaluation'}</span>
+                            </h4>
+                            <div className="space-y-2 max-h-[160px] overflow-y-auto custom-scrollbar pr-1">
+                              {lesson.assignments.map((as: any, asIdx: number) => {
+                                const isMulti = as.type === 'MULTI_SELECT' || as.label === 'MULTI_SELECT';
+                                const studentAns = assignmentAnswers[asIdx];
+                                const isSubmitted = assignmentSubmitted[asIdx];
+                                const isStandard = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(as.label || as.type || 'MCQ');
+                                
+                                const isCorrect = isSubmitted && (isStandard
+                                  ? (isMulti
+                                    ? Array.isArray(studentAns) && studentAns.length === (as.correctAnswers || []).length && studentAns.every((a: string) => (as.correctAnswers || []).includes(a))
+                                    : studentAns === as.correctAnswer)
+                                  : checkAdvancedCorrect(as, studentAns));
+
+                                const isSkipped = !studentAns || (Array.isArray(studentAns) && studentAns.length === 0) || studentAns === '' || studentAns === '[]';
+
+                                return (
+                                  <div key={asIdx} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs">
+                                    <span className="font-bold text-slate-700 truncate max-w-[70%] text-right">
+                                      {language === 'ar' ? 'واجب' : 'Assignment'} {asIdx + 1}: <HtmlRenderer html={as.text} tag="span" className="font-normal text-slate-500" />
+                                    </span>
+                                    <span className={`px-2.5 py-1 rounded-lg font-black shrink-0 ${
+                                      isCorrect 
+                                        ? 'bg-emerald-100 text-emerald-700' 
+                                        : isSkipped 
+                                          ? 'bg-amber-100 text-amber-700' 
+                                          : 'bg-red-100 text-red-700'
+                                    }`}>
+                                      {isCorrect 
+                                        ? (language === 'ar' ? 'صحيحة ✓' : 'Correct ✓') 
+                                        : isSkipped 
+                                          ? (language === 'ar' ? 'تم التخطي ↷' : 'Skipped ↷') 
+                                          : (language === 'ar' ? 'خاطئة ✗' : 'Wrong ✗')}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
+
+                        {/* 2. Exercises Breakdown */}
+                        {lesson.questions && lesson.questions.length > 0 && (
+                          <div className="space-y-3">
+                            <h4 className="text-sm font-black text-slate-800 flex items-center gap-2 justify-start">
+                              <HelpCircle className="w-4 h-4 text-indigo-500" />
+                              <span>{language === 'ar' ? 'تقرير إجابات التمارين والتقييم الذاتي' : 'Exercises Report & Self-Evaluation'}</span>
+                            </h4>
+                            <div className="space-y-2 max-h-[160px] overflow-y-auto custom-scrollbar pr-1">
+                              {lesson.questions.map((q: any, qIdx: number) => {
+                                const isMulti = q.type === 'MULTI_SELECT' || q.label === 'MULTI_SELECT';
+                                const studentAns = answers[qIdx];
+                                const isSubmitted = quizSubmitted[qIdx];
+                                const isStandard = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(q.label || q.type || 'MCQ');
+                                
+                                const isCorrect = isSubmitted && (isStandard
+                                  ? (isMulti
+                                    ? Array.isArray(studentAns) && studentAns.length === (q.correctAnswers || []).length && studentAns.every((a: string) => (q.correctAnswers || []).includes(a))
+                                    : studentAns === q.correctAnswer)
+                                  : checkAdvancedCorrect(q, studentAns));
+
+                                const isSkipped = !studentAns || (Array.isArray(studentAns) && studentAns.length === 0) || studentAns === '' || studentAns === '[]';
+
+                                return (
+                                  <div key={qIdx} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs">
+                                    <span className="font-bold text-slate-700 truncate max-w-[70%] text-right">
+                                      {language === 'ar' ? 'سؤال' : 'Question'} {qIdx + 1}: <HtmlRenderer html={q.text} tag="span" className="font-normal text-slate-500" />
+                                    </span>
+                                    <span className={`px-2.5 py-1 rounded-lg font-black shrink-0 ${
+                                      isCorrect 
+                                        ? 'bg-emerald-100 text-emerald-700' 
+                                        : isSkipped 
+                                          ? 'bg-amber-100 text-amber-700' 
+                                          : 'bg-red-100 text-red-700'
+                                    }`}>
+                                      {isCorrect 
+                                        ? (language === 'ar' ? 'صحيحة ✓' : 'Correct ✓') 
+                                        : isSkipped 
+                                          ? (language === 'ar' ? 'تم التخطي ↷' : 'Skipped ↷') 
+                                          : (language === 'ar' ? 'خاطئة ✗' : 'Wrong ✗')}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
 

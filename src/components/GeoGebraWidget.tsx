@@ -16,21 +16,30 @@ export default function GeoGebraWidget({ materialId = "", iframeUrl = "", w = 80
   const extractId = (urlOrId: string) => {
     if (!urlOrId) return "";
     const cleanUrl = urlOrId.trim();
+    // Strip query params and hash for cleaner matching
+    const urlWithoutQuery = cleanUrl.split('?')[0].split('#')[0];
     // Match ggbm.at/<id>
     const ggbmMatch = cleanUrl.match(/ggbm\.at\/([a-zA-Z0-9]+)/i);
     if (ggbmMatch) return ggbmMatch[1];
     
-    // Match geogebra.org/.../<id>
-    const geoMatch = cleanUrl.match(/geogebra\.org\/(?:[a-zA-Z0-9_\-\/]*\/)?(?:id\/)?([a-zA-Z0-9]+)/i);
-    if (geoMatch) {
-      const id = geoMatch[1];
-      const keywords = ["classic", "calculator", "geometry", "3d", "notes", "applet", "evaluator", "material", "show", "edit", "m"];
-      if (!keywords.includes(id.toLowerCase())) {
-        return id;
+    // Extract path after geogebra.org/ and walk segments from the end
+    const pathMatch = urlWithoutQuery.match(/geogebra\.org\/(.+)/i);
+    if (pathMatch) {
+      const keywords = ["classic", "calculator", "geometry", "3d", "notes", "applet", "evaluator", "material", "show", "edit", "m", "iframe", "id", "width", "height", "border", "sfsb", "smb", "stb", "stbh", "ai", "asb", "sri", "rc", "ld", "sdz", "ctl"];
+      const segments = pathMatch[1].split('/').filter(Boolean);
+      // Walk from the end to find the actual material ID (skip keywords and numeric-only values used for dimensions)
+      for (let i = segments.length - 1; i >= 0; i--) {
+        const seg = segments[i];
+        if (keywords.includes(seg.toLowerCase())) continue;
+        // Skip pure numbers (they are width/height values like 800, 500)
+        if (/^\d+$/.test(seg)) continue;
+        // Skip boolean-like values
+        if (['true', 'false'].includes(seg.toLowerCase())) continue;
+        if (/^[a-zA-Z0-9]+$/.test(seg) && seg.length >= 3) return seg;
       }
     }
     
-    if (/^[a-zA-Z0-9]+$/.test(cleanUrl)) {
+    if (/^[a-zA-Z0-9]+$/.test(cleanUrl) && cleanUrl.length >= 3) {
       return cleanUrl;
     }
     return "";

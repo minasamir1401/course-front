@@ -1684,22 +1684,24 @@ function SwipeSortEditor({ question, updateQuestionData, language }: { question:
   );
 }
 
-// Helper to generate word search grid (8x8)
+// Helper to generate word search grid with dynamic size and space-stripping
 function generateWordSearchGrid(words: string[]): string[][] {
-  const size = 8;
+  const cleanedWords = words.map(w => w.replace(/\s+/g, "").trim().toUpperCase()).filter(Boolean);
+  const maxLength = cleanedWords.reduce((max, w) => Math.max(max, w.length), 0);
+  const size = Math.max(8, maxLength); // Dynamic size based on longest word (minimum 8)
+
   const grid: string[][] = Array.from({ length: size }, () => Array(size).fill(""));
   const isArabic = words.some((w) => /[\u0600-\u06FF]/.test(w));
   const arLetters = ["ا", "ب", "ت", "ث", "ج", "ح", "خ", "د", "ذ", "ر", "ز", "س", "ش", "ص", "ض", "ط", "ظ", "ع", "غ", "ف", "ق", "ك", "ل", "م", "ن", "هـ", "و", "ي"];
   const enLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
   const getRandomLetter = () => isArabic ? arLetters[Math.floor(Math.random() * arLetters.length)] : enLetters[Math.floor(Math.random() * enLetters.length)];
-  const directions = [[0, 1], [1, 0], [1, 1]];
+  const directions = [[0, 1], [1, 0]]; // Only Horizontal (left-to-right) and Vertical (top-to-bottom)
 
-  for (const rawWord of words) {
-    const word = rawWord.trim().toUpperCase();
+  for (const word of cleanedWords) {
     if (!word) continue;
     let placed = false;
     let attempts = 0;
-    while (!placed && attempts < 100) {
+    while (!placed && attempts < 150) {
       attempts++;
       const dirIdx = Math.floor(Math.random() * directions.length);
       const [dr, dc] = directions[dirIdx];
@@ -1710,7 +1712,6 @@ function generateWordSearchGrid(words: string[]): string[][] {
       for (let i = 0; i < word.length; i++) {
         const currR = r + dr * i;
         const currC = c + dc * i;
-        if (currR >= size || currC >= size) { fits = false; break; }
         const letterAtCell = grid[currR][currC];
         if (letterAtCell !== "" && letterAtCell !== word[i]) { fits = false; break; }
       }
@@ -2071,19 +2072,24 @@ function GeoGebraEditor({ question, updateQuestionData, language }: { question: 
   const extractId = (urlOrId: string) => {
     if (!urlOrId) return "";
     const cleanUrl = urlOrId.trim();
+    const urlWithoutQuery = cleanUrl.split('?')[0].split('#')[0];
     const ggbmMatch = cleanUrl.match(/ggbm\.at\/([a-zA-Z0-9]+)/i);
     if (ggbmMatch) return ggbmMatch[1];
     
-    const geoMatch = cleanUrl.match(/geogebra\.org\/(?:[a-zA-Z0-9_\-\/]*\/)?(?:id\/)?([a-zA-Z0-9]+)/i);
-    if (geoMatch) {
-      const id = geoMatch[1];
-      const keywords = ["classic", "calculator", "geometry", "3d", "notes", "applet", "evaluator", "material", "show", "edit", "m"];
-      if (!keywords.includes(id.toLowerCase())) {
-        return id;
+    const pathMatch = urlWithoutQuery.match(/geogebra\.org\/(.+)/i);
+    if (pathMatch) {
+      const keywords = ["classic", "calculator", "geometry", "3d", "notes", "applet", "evaluator", "material", "show", "edit", "m", "iframe", "id", "width", "height", "border", "sfsb", "smb", "stb", "stbh", "ai", "asb", "sri", "rc", "ld", "sdz", "ctl"];
+      const segments = pathMatch[1].split('/').filter(Boolean);
+      for (let i = segments.length - 1; i >= 0; i--) {
+        const seg = segments[i];
+        if (keywords.includes(seg.toLowerCase())) continue;
+        if (/^\d+$/.test(seg)) continue;
+        if (['true', 'false'].includes(seg.toLowerCase())) continue;
+        if (/^[a-zA-Z0-9]+$/.test(seg) && seg.length >= 3) return seg;
       }
     }
     
-    if (/^[a-zA-Z0-9]+$/.test(cleanUrl)) {
+    if (/^[a-zA-Z0-9]+$/.test(cleanUrl) && cleanUrl.length >= 3) {
       return cleanUrl;
     }
     return "";
