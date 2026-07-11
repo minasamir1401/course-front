@@ -386,6 +386,59 @@ export default function LessonPlayerPage() {
   const [attemptedQuestionsCount, setAttemptedQuestionsCount] = useState(0);
   const [attemptedMaxScore, setAttemptedMaxScore] = useState(0);
   const [actualVideoDuration, setActualVideoDuration] = useState<number>(0);
+  const [xpData, setXpData] = useState<any>(null);
+  const [totalLessonXP, setTotalLessonXP] = useState(0);
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [showStreakMilestone, setShowStreakMilestone] = useState<{ count: number; xp: number } | null>(null);
+
+  const submitAnswerProgress = async (questionId: string, blockType: 'slides' | 'assignments' | 'questions', selectedAnswer: any) => {
+    if (searchParams.get('preview') === 'true') return;
+
+    try {
+      const token = localStorage.getItem("lms_token") || 
+                    localStorage.getItem("super_admin_token") || 
+                    localStorage.getItem("school_admin_token");
+      if (!token) return;
+
+      const res = await fetch(`${API_URL}/progress/lesson/${lessonId}/submit-answer`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          questionId,
+          blockType,
+          selectedAnswer: typeof selectedAnswer === 'object' ? JSON.stringify(selectedAnswer) : selectedAnswer
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setTotalLessonXP(data.totalLessonXP);
+        setCurrentStreak(data.currentStreak);
+        
+        if (data.bonusXP > 0) {
+          setShowStreakMilestone({ count: data.currentStreak, xp: data.bonusXP });
+        }
+
+        setXpData((prev: any) => {
+          const prevStreaks = prev?.streaks || {};
+          const setKey = blockType === 'questions' ? 'questions' : blockType;
+          return {
+            ...prev,
+            totalLessonXP: data.totalLessonXP,
+            streaks: {
+              ...prevStreaks,
+              [setKey]: data.currentStreak
+            }
+          };
+        });
+      }
+    } catch (error) {
+      console.error("Failed to submit answer progress:", error);
+    }
+  };
 
   const normalizeAnswer = (value: any) => normalizeAnswerGlobal(value);
 
@@ -520,6 +573,19 @@ export default function LessonPlayerPage() {
     fetchData();
   }, [lessonId]);
 
+  useEffect(() => {
+    if (!xpData) return;
+    if (currentStage === 'slides') {
+      setCurrentStreak(xpData.streaks?.slides || 0);
+    } else if (currentStage === 'assignments') {
+      setCurrentStreak(xpData.streaks?.assignments || 0);
+    } else if (currentStage === 'exercises') {
+      setCurrentStreak(xpData.streaks?.questions || 0);
+    } else {
+      setCurrentStreak(0);
+    }
+  }, [currentStage, xpData]);
+
   const fetchData = async () => {
     try {
       const token = localStorage.getItem("lms_token") || 
@@ -587,6 +653,11 @@ export default function LessonPlayerPage() {
           attachments: Array.isArray(attachments) ? attachments : []
         });
 
+        if (data.xpData) {
+          setXpData(data.xpData);
+          setTotalLessonXP(data.xpData.totalLessonXP || 0);
+        }
+
         const finalCourseId = data.courseId || courseId;
         if (finalCourseId) {
           const cRes = await fetch(`${API_URL}/courses/${finalCourseId}`, {
@@ -642,10 +713,15 @@ export default function LessonPlayerPage() {
   };
 
   const handleNextQuestion = () => {
+    if (isQuestionLike(lesson.questions[currentQuestionIndex]) && !quizSubmitted[currentQuestionIndex]) {
+      const q = lesson.questions[currentQuestionIndex];
+      const qId = q.id ? String(q.id) : String(currentQuestionIndex);
+      const ans = answers[currentQuestionIndex];
+      submitAnswerProgress(qId, 'questions', ans);
+      setQuizSubmitted({ ...quizSubmitted, [currentQuestionIndex]: true });
+    }
+
     if (currentQuestionIndex < lesson.questions.length - 1) {
-      if (isQuestionLike(lesson.questions[currentQuestionIndex]) && !quizSubmitted[currentQuestionIndex]) {
-        setQuizSubmitted({ ...quizSubmitted, [currentQuestionIndex]: true });
-      }
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
       // Check if there are unanswered questions in the quiz
@@ -796,15 +872,31 @@ export default function LessonPlayerPage() {
               )}
             </div>
 
-            <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end border-t border-white/10 md:border-none pt-4 md:pt-0 mt-2 md:mt-0">
+            <div className="flex flex-wrap items-center gap-4 w-full md:w-auto justify-between md:justify-end border-t border-white/10 md:border-none pt-4 md:pt-0 mt-2 md:mt-0">
               <div className="hidden lg:flex gap-1.5 p-2 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-md">
                 {['welcome', 'slides', 'assignments', 'exercises', 'summary'].map((s) => (
                   <div key={s} className={`h-2 rounded-full transition-all duration-500 ${currentStage === s ? 'w-12 bg-indigo-500 shadow-lg shadow-indigo-500/50' : 'w-4 bg-white/20'}`}></div>
                 ))}
               </div>
               <div className="hidden lg:block h-10 w-px bg-white/10 mx-2"></div>
-              <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-3 md:py-4 rounded-2xl text-sm md:text-base font-black flex items-center gap-3 shadow-xl shadow-amber-500/20 hover:scale-105 transition-transform cursor-default border border-amber-400/50">
-                <Star className="w-5 h-5 fill-current text-amber-100" />
+              
+              {/* Streak Widget */}
+              {currentStreak > 0 && (
+                <div className="flex items-center gap-1.5 bg-amber-500/20 border border-amber-400/30 text-amber-400 px-4 py-2.5 rounded-2xl font-black text-xs md:text-sm animate-pulse shadow-sm">
+                  <span className="text-sm">🔥</span>
+                  <span>{currentStreak} {language === 'ar' ? 'متتالي' : 'Streak'}</span>
+                </div>
+              )}
+
+              {/* XP Widget */}
+              <div className="flex items-center gap-1.5 bg-amber-500/20 border border-amber-400/30 text-amber-400 px-4 py-2.5 rounded-2xl font-black text-xs md:text-sm shadow-sm">
+                <span className="text-sm">⭐</span>
+                <span>{totalLessonXP} XP</span>
+              </div>
+
+              {/* Academic Score Widget */}
+              <div className="bg-gradient-to-r from-indigo-500 to-violet-600 text-white px-6 py-3 md:py-4 rounded-2xl text-sm md:text-base font-black flex items-center gap-3 shadow-xl shadow-indigo-500/20 hover:scale-105 transition-transform cursor-default border border-indigo-400/50">
+                <Star className="w-5 h-5 fill-current text-indigo-100" />
                 {score} {t('lesson.pointsEarned')}
               </div>
             </div>
@@ -869,6 +961,10 @@ export default function LessonPlayerPage() {
             <button
               onClick={() => {
                 if (isQuestionLike(lesson.slides[currentSlideIndex]) && !slideSubmitted[currentSlideIndex]) {
+                  const q = lesson.slides[currentSlideIndex];
+                  const qId = q.id ? String(q.id) : String(currentSlideIndex);
+                  const ans = slideAnswers[currentSlideIndex];
+                  submitAnswerProgress(qId, 'slides', ans);
                   setSlideSubmitted({ ...slideSubmitted, [currentSlideIndex]: true });
                 }
                 setCurrentStage('slides');
@@ -886,6 +982,10 @@ export default function LessonPlayerPage() {
             <button
               onClick={() => {
                 if (isQuestionLike(lesson.assignments[currentAssignmentIndex]) && !assignmentSubmitted[currentAssignmentIndex]) {
+                  const q = lesson.assignments[currentAssignmentIndex];
+                  const qId = q.id ? String(q.id) : String(currentAssignmentIndex);
+                  const ans = assignmentAnswers[currentAssignmentIndex];
+                  submitAnswerProgress(qId, 'assignments', ans);
                   setAssignmentSubmitted({ ...assignmentSubmitted, [currentAssignmentIndex]: true });
                 }
                 setCurrentStage('assignments');
@@ -903,6 +1003,10 @@ export default function LessonPlayerPage() {
             <button
               onClick={() => {
                 if (isQuestionLike(lesson.questions[currentQuestionIndex]) && !quizSubmitted[currentQuestionIndex]) {
+                  const q = lesson.questions[currentQuestionIndex];
+                  const qId = q.id ? String(q.id) : String(currentQuestionIndex);
+                  const ans = answers[currentQuestionIndex];
+                  submitAnswerProgress(qId, 'questions', ans);
                   setQuizSubmitted({ ...quizSubmitted, [currentQuestionIndex]: true });
                 }
                 setCurrentStage('exercises');
@@ -1072,7 +1176,13 @@ export default function LessonPlayerPage() {
                   )}
                   {isQuestionLike(lesson.slides[currentSlideIndex]) && slideAnswers[currentSlideIndex] && !slideSubmitted[currentSlideIndex] && (
                     <button
-                      onClick={() => setSlideSubmitted({ ...slideSubmitted, [currentSlideIndex]: true })}
+                      onClick={() => {
+                        const q = lesson.slides[currentSlideIndex];
+                        const qId = q.id ? String(q.id) : String(currentSlideIndex);
+                        const ans = slideAnswers[currentSlideIndex];
+                        submitAnswerProgress(qId, 'slides', ans);
+                        setSlideSubmitted({ ...slideSubmitted, [currentSlideIndex]: true });
+                      }}
                       className="mt-6 bg-emerald-600 text-white hover:bg-emerald-700 px-8 py-3 rounded-2xl font-black text-lg shadow-xl shadow-emerald-100 border border-emerald-500/20"
                     >
                       {language === 'ar' ? 'تأكيد الإجابة ✓' : 'Confirm Answer ✓'}
@@ -1134,6 +1244,10 @@ export default function LessonPlayerPage() {
                     <button
                       onClick={() => {
                         if (isQuestionLike(lesson.slides[currentSlideIndex]) && !slideSubmitted[currentSlideIndex]) {
+                          const q = lesson.slides[currentSlideIndex];
+                          const qId = q.id ? String(q.id) : String(currentSlideIndex);
+                          const ans = slideAnswers[currentSlideIndex];
+                          submitAnswerProgress(qId, 'slides', ans);
                           setSlideSubmitted({ ...slideSubmitted, [currentSlideIndex]: true });
                         }
                         setCurrentSlideIndex(prev => prev + 1);
@@ -1146,6 +1260,10 @@ export default function LessonPlayerPage() {
                     <button
                       onClick={() => {
                         if (isQuestionLike(lesson.slides[currentSlideIndex]) && !slideSubmitted[currentSlideIndex]) {
+                          const q = lesson.slides[currentSlideIndex];
+                          const qId = q.id ? String(q.id) : String(currentSlideIndex);
+                          const ans = slideAnswers[currentSlideIndex];
+                          submitAnswerProgress(qId, 'slides', ans);
                           setSlideSubmitted({ ...slideSubmitted, [currentSlideIndex]: true });
                         }
                         setCurrentStage('assignments');
@@ -1169,6 +1287,10 @@ export default function LessonPlayerPage() {
                         key={i}
                         onClick={() => {
                           if (isQuestionLike(lesson.assignments[currentAssignmentIndex]) && !assignmentSubmitted[currentAssignmentIndex]) {
+                            const q = lesson.assignments[currentAssignmentIndex];
+                            const qId = q.id ? String(q.id) : String(currentAssignmentIndex);
+                            const ans = assignmentAnswers[currentAssignmentIndex];
+                            submitAnswerProgress(qId, 'assignments', ans);
                             setAssignmentSubmitted({ ...assignmentSubmitted, [currentAssignmentIndex]: true });
                           }
                           setCurrentAssignmentIndex(i);
@@ -1312,7 +1434,13 @@ export default function LessonPlayerPage() {
 
                         {assignmentAnswers[currentAssignmentIndex] && !assignmentSubmitted[currentAssignmentIndex] && (
                           <button
-                            onClick={() => setAssignmentSubmitted({ ...assignmentSubmitted, [currentAssignmentIndex]: true })}
+                            onClick={() => {
+                              const q = lesson.assignments[currentAssignmentIndex];
+                              const qId = q.id ? String(q.id) : String(currentAssignmentIndex);
+                              const ans = assignmentAnswers[currentAssignmentIndex];
+                              submitAnswerProgress(qId, 'assignments', ans);
+                              setAssignmentSubmitted({ ...assignmentSubmitted, [currentAssignmentIndex]: true });
+                            }}
                             className="mt-2 mb-6 bg-emerald-600 text-white hover:bg-emerald-700 px-8 py-3 rounded-2xl font-black text-lg shadow-xl shadow-emerald-100 border border-emerald-500/20"
                           >
                             {language === 'ar' ? 'تأكيد الإجابة' : 'Confirm Answer'}
@@ -1360,6 +1488,10 @@ export default function LessonPlayerPage() {
                         <button
                           onClick={() => {
                             if (isQuestionLike(lesson.assignments[currentAssignmentIndex]) && !assignmentSubmitted[currentAssignmentIndex]) {
+                              const q = lesson.assignments[currentAssignmentIndex];
+                              const qId = q.id ? String(q.id) : String(currentAssignmentIndex);
+                              const ans = assignmentAnswers[currentAssignmentIndex];
+                              submitAnswerProgress(qId, 'assignments', ans);
                               setAssignmentSubmitted({ ...assignmentSubmitted, [currentAssignmentIndex]: true });
                             }
                             if (currentAssignmentIndex < lesson.assignments.length - 1) {
@@ -1424,6 +1556,10 @@ export default function LessonPlayerPage() {
                         key={i}
                         onClick={() => {
                           if (isQuestionLike(lesson.questions[currentQuestionIndex]) && !quizSubmitted[currentQuestionIndex]) {
+                            const q = lesson.questions[currentQuestionIndex];
+                            const qId = q.id ? String(q.id) : String(currentQuestionIndex);
+                            const ans = answers[currentQuestionIndex];
+                            submitAnswerProgress(qId, 'questions', ans);
                             setQuizSubmitted({ ...quizSubmitted, [currentQuestionIndex]: true });
                           }
                           setCurrentQuestionIndex(i);
@@ -1561,7 +1697,13 @@ export default function LessonPlayerPage() {
 
                         {answers[currentQuestionIndex] && !quizSubmitted[currentQuestionIndex] && (
                           <button
-                            onClick={() => setQuizSubmitted({ ...quizSubmitted, [currentQuestionIndex]: true })}
+                            onClick={() => {
+                              const q = lesson.questions[currentQuestionIndex];
+                              const qId = q.id ? String(q.id) : String(currentQuestionIndex);
+                              const ans = answers[currentQuestionIndex];
+                              submitAnswerProgress(qId, 'questions', ans);
+                              setQuizSubmitted({ ...quizSubmitted, [currentQuestionIndex]: true });
+                            }}
                             className="mt-2 mb-6 bg-emerald-600 text-white hover:bg-emerald-700 px-8 py-3 rounded-2xl font-black text-lg shadow-xl shadow-emerald-100 border border-emerald-500/20"
                           >
                             {language === 'ar' ? 'تأكيد الإجابة' : 'Confirm Answer'}
@@ -1709,6 +1851,10 @@ export default function LessonPlayerPage() {
                       <p className="text-slate-400 text-[10px] font-black mb-2 uppercase tracking-widest">{t('lesson.percentage') || (language === 'ar' ? 'النسبة' : 'Percentage')}</p>
                       <p className={`text-4xl md:text-6xl font-black ${pct >= 85 ? 'text-emerald-500' : pct >= 50 ? 'text-amber-500' : 'text-rose-500'}`}>{pct}%</p>
                     </div>
+                    <div className="premium-card p-8 rounded-[35px] min-w-[180px] border-b-8 border-amber-500 bg-amber-50/30">
+                      <p className="text-slate-400 text-[10px] font-black mb-2 uppercase tracking-widest">{language === 'ar' ? 'نقاط XP الكلية' : 'Total XP Earned'}</p>
+                      <p className="text-4xl md:text-6xl font-black text-amber-600">⭐ {totalLessonXP}</p>
+                    </div>
                   </div>
 
                   {/* ── STUDENT PROGRESS PORTFOLIO DASHBOARD ── */}
@@ -1728,7 +1874,7 @@ export default function LessonPlayerPage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
                         <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
                           <span className="text-xs font-bold text-slate-400 uppercase block mb-1">
                             {language === 'ar' ? 'الوقت المستغرق' : 'Time Spent'}
@@ -1762,6 +1908,15 @@ export default function LessonPlayerPage() {
                           </span>
                           <span className="text-lg font-black text-slate-800">
                             {Object.keys(quizSubmitted).length} / {lesson.questions?.length || 0}
+                          </span>
+                        </div>
+
+                        <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 text-center">
+                          <span className="text-xs font-bold text-amber-600 uppercase block mb-1">
+                            {language === 'ar' ? 'نقاط XP المكتسبة' : 'XP Points Earned'}
+                          </span>
+                          <span className="text-lg font-black text-amber-700">
+                            ⭐ {totalLessonXP} XP
                           </span>
                         </div>
                       </div>
@@ -1986,6 +2141,43 @@ export default function LessonPlayerPage() {
           )}
         </div>
       </div>
+
+      {/* Streak Milestone Celebration Modal */}
+      {showStreakMilestone && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="fixed inset-0 pointer-events-none z-[100]">
+            <Confetti recycle={false} numberOfPieces={300} gravity={0.2} />
+          </div>
+
+          <div className="relative bg-white border border-amber-200 p-8 md:p-12 rounded-[32px] max-w-md w-full mx-4 text-center shadow-2xl animate-in zoom-in-95 duration-500 flex flex-col items-center z-[101]">
+            {/* Fire icon in amber circular frame */}
+            <div className="w-24 h-24 rounded-full bg-amber-50 border border-amber-100 flex items-center justify-center text-4xl mb-6 animate-bounce">
+              🔥
+            </div>
+            
+            <h3 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">
+              {language === 'ar' ? 'سلسلة إجابات متتالية! 🎉' : 'Streak Milestone! 🎉'}
+            </h3>
+            
+            <p className="text-slate-500 font-bold text-base mb-6 leading-relaxed">
+              {language === 'ar' 
+                ? `لقد أجبت على ${showStreakMilestone.count} أسئلة متتالية بشكل صحيح! حصلت على مكافأة إضافية:`
+                : `You answered ${showStreakMilestone.count} questions correctly in a row! You earned a bonus of:`}
+            </p>
+
+            <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 px-6 py-3.5 rounded-2xl font-black text-xl text-amber-600 mb-8 shadow-inner animate-pulse">
+              ⭐ +{showStreakMilestone.xp} XP
+            </div>
+
+            <button
+              onClick={() => setShowStreakMilestone(null)}
+              className="w-full bg-amber-500 hover:bg-amber-600 text-white font-black py-4 rounded-2xl text-base shadow-lg shadow-amber-500/20 transition-all border border-amber-400"
+            >
+              {language === 'ar' ? 'رائع! استمر' : 'Awesome! Keep going'}
+            </button>
+          </div>
+        </div>
+      )}
 
       <style dangerouslySetInnerHTML={{
         __html: `

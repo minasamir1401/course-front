@@ -123,14 +123,23 @@ export default function ReportsPage() {
         {activeReportTab === 'OVERVIEW' && (
           <>
             {/* Summary Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
+              <div className={`premium-card p-6 md:p-8 rounded-[30px] flex items-center gap-4 border-b-4 border-b-amber-500 group hover:scale-[1.02] transition-all ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 group-hover:scale-110 transition-transform shadow-inner text-xl">
+                  ⭐
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{language === 'ar' ? 'نقاط الـ XP المحرزة' : 'Earned XP Points'}</p>
+                  <h3 className="text-xl md:text-2xl font-black text-slate-900 mt-0.5">{stats?.xp || 0} XP</h3>
+                </div>
+              </div>
               <div className={`premium-card p-6 md:p-8 rounded-[30px] flex items-center gap-4 border-b-4 border-b-blue-500 group hover:scale-[1.02] transition-all ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                 <div className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform shadow-inner">
                   <Star className="w-6 h-6 md:w-7 md:h-7" />
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{t('reports.avgScore')}</p>
-                  <h3 className="text-2xl md:text-3xl font-black text-slate-900 mt-0.5">{stats?.avgScore || 0}%</h3>
+                  <h3 className="text-xl md:text-2xl font-black text-slate-900 mt-0.5">{stats?.avgScore || 0}%</h3>
                 </div>
               </div>
               <div className={`premium-card p-6 md:p-8 rounded-[30px] flex items-center gap-4 border-b-4 border-b-emerald-500 group hover:scale-[1.02] transition-all ${language === 'ar' ? 'text-right' : 'text-left'}`}>
@@ -139,7 +148,7 @@ export default function ReportsPage() {
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{t('reports.completedLessons')}</p>
-                  <h3 className="text-2xl md:text-3xl font-black text-slate-900 mt-0.5">{stats?.lessonProgresses?.filter((p:any)=>p.isCompleted).length || 0}</h3>
+                  <h3 className="text-xl md:text-2xl font-black text-slate-900 mt-0.5">{stats?.lessonProgresses?.filter((p:any)=>p.isCompleted).length || 0}</h3>
                 </div>
               </div>
               <div className={`premium-card p-6 md:p-8 rounded-[30px] flex items-center gap-4 border-b-4 border-b-indigo-500 group hover:scale-[1.02] transition-all ${language === 'ar' ? 'text-right' : 'text-left'}`}>
@@ -148,7 +157,7 @@ export default function ReportsPage() {
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{t('reports.courseProgress')}</p>
-                  <h3 className="text-2xl md:text-3xl font-black text-slate-900 mt-0.5">{stats?.overallCourseProgress || 0}%</h3>
+                  <h3 className="text-xl md:text-2xl font-black text-slate-900 mt-0.5">{stats?.overallCourseProgress || 0}%</h3>
                 </div>
               </div>
               <div className={`premium-card p-6 md:p-8 rounded-[30px] flex items-center gap-4 border-b-4 border-b-amber-500 group hover:scale-[1.02] transition-all ${language === 'ar' ? 'text-right' : 'text-left'}`}>
@@ -157,7 +166,7 @@ export default function ReportsPage() {
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{t('reports.studyTime')}</p>
-                  <h3 className="text-2xl md:text-3xl font-black text-slate-900 mt-0.5">
+                  <h3 className="text-xl md:text-2xl font-black text-slate-900 mt-0.5">
                     {Math.round((stats?.lessonProgresses?.reduce((acc:any, p:any) => acc + p.watchedSeconds, 0) || 0) / 60)} <span className="text-xs text-slate-400">{language === 'ar' ? 'دقيقة' : 'm'}</span>
                   </h3>
                 </div>

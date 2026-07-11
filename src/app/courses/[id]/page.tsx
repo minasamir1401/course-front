@@ -192,7 +192,7 @@ export default function CourseDetailsPage() {
               </p>
 
               {/* Progress & Quick Stats */}
-              <div className="pt-6 flex items-center justify-center md:justify-start gap-6 border-t border-white/10 mt-auto">
+              <div className="pt-6 flex flex-wrap items-center justify-center md:justify-start gap-6 border-t border-white/10 mt-auto">
                 <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-[24px]">
                   <div className="relative w-14 h-14 shrink-0">
                     <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
@@ -213,6 +213,19 @@ export default function CourseDetailsPage() {
                     <p className="text-[10px] font-black uppercase tracking-[2px] text-indigo-200">{t('courseDetails.totalProgress')}</p>
                     <p className="text-sm font-bold text-white">
                       {progressPercent === 100 ? (language === 'ar' ? 'اكتمل الكورس بالكامل! 🎉' : 'Course fully completed! 🎉') : (language === 'ar' ? 'استمر في التعلم برافو' : 'Keep up the good work')}
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Course XP Stats */}
+                <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-[24px]">
+                  <div className="w-14 h-14 rounded-2xl bg-yellow-500/20 flex items-center justify-center text-yellow-400 text-2xl shrink-0">
+                    ⭐
+                  </div>
+                  <div className={language === 'ar' ? 'text-right' : 'text-left'}>
+                    <p className="text-[10px] font-black uppercase tracking-[2px] text-indigo-200">{language === 'ar' ? 'نقاط الخبرة الكلية' : 'Total Course XP'}</p>
+                    <p className="text-sm font-bold text-white">
+                      {course.xpData?.totalCourseXP || 0} XP
                     </p>
                   </div>
                 </div>
@@ -280,9 +293,16 @@ export default function CourseDetailsPage() {
                             </h3>
                           </div>
                         </div>
-                        <span className="px-4 py-2 bg-white rounded-full text-xs font-black text-indigo-700 border border-indigo-100 shadow-sm shrink-0">
-                          {group.lessons.length} {language === 'ar' ? 'دروس' : 'Lessons'}
-                        </span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {course.xpData?.domainXP?.[group.domainName] !== undefined && (
+                            <span className="px-4 py-2 bg-amber-500 text-white rounded-full text-xs font-black border border-amber-400 shadow-sm shrink-0">
+                              ⭐ {course.xpData.domainXP[group.domainName]} XP
+                            </span>
+                          )}
+                          <span className="px-4 py-2 bg-white rounded-full text-xs font-black text-indigo-700 border border-indigo-100 shadow-sm shrink-0">
+                            {group.lessons.length} {language === 'ar' ? 'دروس' : 'Lessons'}
+                          </span>
+                        </div>
                       </div>
                     )}
                     
@@ -343,6 +363,11 @@ export default function CourseDetailsPage() {
                                     <span className="flex items-center gap-1">
                                       <HelpCircle className="w-3.5 h-3.5" />
                                       {lessonQuestionsCount(lesson)} {t('courseDetails.questions')}
+                                    </span>
+                                  )}
+                                  {course.xpData?.lessonXP?.[lesson.id] !== undefined && (
+                                    <span className="flex items-center gap-1 text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-lg text-[10px] font-black border border-yellow-100">
+                                      ⭐ {course.xpData.lessonXP[lesson.id]} XP
                                     </span>
                                   )}
                                 </div>

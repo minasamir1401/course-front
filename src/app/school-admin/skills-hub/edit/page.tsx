@@ -390,6 +390,7 @@ export default function EditSchoolSkillClusterPage() {
       options: { choices: ["", "", "", ""] },
       correctAnswer: "",
       points: 10,
+      xpPoints: 10,
       difficulty: "Medium",
       dok: "2",
       estimatedTime: 60,
@@ -418,44 +419,49 @@ export default function EditSchoolSkillClusterPage() {
   };
 
   const handleSaveActivity = async () => {
-    if (!editingActivity.title || !editingActivity.title.trim()) {
+    // Safely parse options & correctAnswer (the editor may stringify them)
+    const options = parseField(editingActivity.options);
+    const correctAnswer = parseField(editingActivity.correctAnswer);
+    const activity = { ...editingActivity, options, correctAnswer };
+
+    if (!activity.title || !activity.title.trim()) {
       showToast(language === 'ar' ? "يرجى كتابة عنوان السؤال أولاً (Question title is necessary) ⚠️" : "Question title is necessary ⚠️", "error");
       return;
     }
-    if (!editingActivity.type) {
+    if (!activity.type) {
       showToast(language === 'ar' ? "يرجى تحديد نوع السؤال أولاً ⚠️" : "Please select question type ⚠️", "error");
       return;
     }
     
     // ✅ التحقق التوجيهي الذكي حسب نوع السؤال كما طلب المعلمون
-    if (editingActivity.type === "MCQ") {
-      const choices = editingActivity.options?.choices || [];
+    if (activity.type === "MCQ") {
+      const choices = activity.options?.choices || [];
       if (!Array.isArray(choices) || choices.filter((c: string) => c && c.trim()).length < 2) {
         showToast(language === 'ar' ? "يرجى إضافة خيارين على الأقل لسؤال الاختيار من متعدد ⚠️" : "Please add at least 2 choices for MCQ ⚠️", "error");
         return;
       }
-      if (editingActivity.correctAnswer === undefined || editingActivity.correctAnswer === null || editingActivity.correctAnswer === "") {
+      if (activity.correctAnswer === undefined || activity.correctAnswer === null || activity.correctAnswer === "") {
         showToast(language === 'ar' ? "يرجى تحديد الإجابة الصحيحة لسؤال الاختيار من متعدد (MCQ) ⚠️" : "Please select the correct answer for MCQ ⚠️", "error");
         return;
       }
-    } else if (editingActivity.type === "TRUE_FALSE") {
-      if (!editingActivity.correctAnswer && editingActivity.correctAnswer !== "TRUE" && editingActivity.correctAnswer !== "FALSE" && editingActivity.correctAnswer !== "صح" && editingActivity.correctAnswer !== "خطأ") {
+    } else if (activity.type === "TRUE_FALSE") {
+      if (!activity.correctAnswer && activity.correctAnswer !== "TRUE" && activity.correctAnswer !== "FALSE" && activity.correctAnswer !== "صح" && activity.correctAnswer !== "خطأ") {
         showToast(language === 'ar' ? "يرجى تحديد الإجابة الصحيحة (صح أم خطأ) ⚠️" : "Please select True or False ⚠️", "error");
         return;
       }
-    } else if (editingActivity.type === "MULTI_SELECT") {
-      const choices = Array.isArray(editingActivity.options) ? editingActivity.options : (editingActivity.options?.choices || []);
+    } else if (activity.type === "MULTI_SELECT") {
+      const choices = Array.isArray(activity.options) ? activity.options : (activity.options?.choices || []);
       if (!Array.isArray(choices) || choices.filter((c: string) => c && c.trim()).length < 2) {
         showToast(language === 'ar' ? "يرجى إضافة خيارين على الأقل للاختيارات المتعددة ⚠️" : "Please add at least 2 options ⚠️", "error");
         return;
       }
-      const correctArr = Array.isArray(editingActivity.correctAnswer) ? editingActivity.correctAnswer : [];
+      const correctArr = Array.isArray(activity.correctAnswer) ? activity.correctAnswer : [];
       if (correctArr.length === 0) {
         showToast(language === 'ar' ? "يرجى تحديد إجابة صحيحة واحدة على الأقل في الاختيارات المتعددة ⚠️" : "Please select at least one correct answer ⚠️", "error");
         return;
       }
-    } else if (["MATCHING", "DRAG_DROP_FILL", "GROUP_SORTING"].includes(editingActivity.type)) {
-      if (!editingActivity.correctAnswer || (Array.isArray(editingActivity.correctAnswer) && editingActivity.correctAnswer.length === 0)) {
+    } else if (["MATCHING", "DRAG_DROP_FILL", "GROUP_SORTING"].includes(activity.type)) {
+      if (!activity.correctAnswer || (Array.isArray(activity.correctAnswer) && activity.correctAnswer.length === 0)) {
         showToast(language === 'ar' ? "يرجى إكمال تحديد الإجابات النموذجية وعناصر الربط لهذا السؤال ⚠️" : "Please complete setting up correct answers/pairs ⚠️", "error");
         return;
       }
@@ -463,10 +469,10 @@ export default function EditSchoolSkillClusterPage() {
     
     try {
       const token = localStorage.getItem("school_admin_token");
-      const isEdit = !!editingActivity.id;
-      const url = isEdit ? `${API_URL}/skills-hub/activities/${editingActivity.id}` : `${API_URL}/skills-hub/activities`;
+      const isEdit = !!activity.id;
+      const url = isEdit ? `${API_URL}/skills-hub/activities/${activity.id}` : `${API_URL}/skills-hub/activities`;
       
-      const payload = { ...editingActivity };
+      const payload = { ...activity };
       if (typeof payload.options === 'object') payload.options = JSON.stringify(payload.options);
       if (typeof payload.correctAnswer === 'object') payload.correctAnswer = JSON.stringify(payload.correctAnswer);
 
@@ -479,7 +485,7 @@ export default function EditSchoolSkillClusterPage() {
       if (res.ok) {
         showToast(language === 'ar' ? "تم حفظ النشاط بنجاح ✅" : "Activity saved successfully ✅", "success");
         setIsActivityModalOpen(false);
-        fetchActivities(editingActivity.lessonId);
+        fetchActivities(activity.lessonId);
       } else {
         const errData = await res.json().catch(() => ({}));
         const errMsg = errData.error || errData.message || (language === 'ar' ? "فشل حفظ النشاط، يرجى التأكد من اكتمال جميع الحقول المطلوبة ⚠️" : "Failed to save activity, check required fields ⚠️");
@@ -619,6 +625,7 @@ export default function EditSchoolSkillClusterPage() {
             options: optionsStr,
             correctAnswer: correctStr,
             points,
+            xpPoints: 10,
             difficulty,
             dok,
             estimatedTime: 60,
@@ -1372,6 +1379,13 @@ export default function EditSchoolSkillClusterPage() {
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "النقاط (الدرجة)" : "Points"}</label>
                   <input 
                     type="number" value={editingActivity.points} onChange={(e) => setEditingActivity({...editingActivity, points: parseInt(e.target.value) || 0})}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "⭐ نقاط XP" : "⭐ XP Points"}</label>
+                  <input 
+                    type="number" value={editingActivity.xpPoints !== undefined ? editingActivity.xpPoints : 10} onChange={(e) => setEditingActivity({...editingActivity, xpPoints: parseInt(e.target.value) || 0})}
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none"
                   />
                 </div>

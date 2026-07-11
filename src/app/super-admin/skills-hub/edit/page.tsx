@@ -400,6 +400,7 @@ export default function EditSkillClusterPage() {
       options: { choices: ["", "", "", ""] },
       correctAnswer: "",
       points: 10,
+      xpPoints: 10,
       difficulty: "Medium",
       dok: "",
       estimatedTime: 60,
@@ -808,6 +809,7 @@ export default function EditSkillClusterPage() {
             options: optionsStr,
             correctAnswer: correctStr,
             points,
+            xpPoints: 10,
             difficulty,
             dok,
             estimatedTime: 60,
@@ -1308,6 +1310,13 @@ export default function EditSkillClusterPage() {
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "النقاط (الدرجة)" : "Points"}</label>
                   <input 
                     type="number" value={editingActivity.points} onChange={(e) => setEditingActivity({...editingActivity, points: parseInt(e.target.value) || 0})}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "⭐ نقاط XP" : "⭐ XP Points"}</label>
+                  <input 
+                    type="number" value={editingActivity.xpPoints !== undefined ? editingActivity.xpPoints : 10} onChange={(e) => setEditingActivity({...editingActivity, xpPoints: parseInt(e.target.value) || 0})}
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none"
                   />
                 </div>

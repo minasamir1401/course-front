@@ -255,7 +255,7 @@ export default function CreateCoursePage() {
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null);
   const [tempQuestion, setTempQuestion] = useState<any>({
     text: "", type: "MCQ", options: ["", "", "", ""],
-    correctAnswer: "", points: 1, skill: "General", level: "Medium", dok: "",
+    correctAnswer: "", points: 1, xpPoints: 10, skill: "General", level: "Medium", dok: "",
     learningOutcome: "", standard: "", indicator: "", 
     sections: [], correctAnswers: [], attempts: 1
   });
@@ -1270,6 +1270,16 @@ export default function CreateCoursePage() {
                           onChange={(e) => updateBlock(source, sIdx, 'points', parseInt(e.target.value) || 0)}
                         />
                       </div>
+
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? '⭐ نقاط XP' : '⭐ XP Points'}</label>
+                        <input 
+                          type="number"
+                          className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
+                          value={block.xpPoints !== undefined ? block.xpPoints : 10}
+                          onChange={(e) => updateBlock(source, sIdx, 'xpPoints', parseInt(e.target.value) || 0)}
+                        />
+                      </div>
                     </div>
                   )}
 
@@ -1450,6 +1460,7 @@ export default function CreateCoursePage() {
       correctAnswer: "",
       correctAnswers: [],
       points: 1,
+      xpPoints: 10,
       skill: "General",
       level: "Medium",
       dok: "",
@@ -2072,6 +2083,16 @@ export default function CreateCoursePage() {
                     className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px]"
                     value={tempQuestion.points !== undefined ? tempQuestion.points : 1}
                     onChange={(e) => updateCurrentQuestionField("points", parseInt(e.target.value) || 0)}
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? '⭐ نقاط XP' : '⭐ XP Points'}</label>
+                  <input 
+                    type="number"
+                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px]"
+                    value={tempQuestion.xpPoints !== undefined ? tempQuestion.xpPoints : 10}
+                    onChange={(e) => updateCurrentQuestionField("xpPoints", parseInt(e.target.value) || 0)}
                   />
                 </div>
 

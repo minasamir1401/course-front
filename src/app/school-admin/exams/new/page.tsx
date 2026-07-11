@@ -269,7 +269,7 @@ export function SchoolAdminNewExamPageContent({ presetType, presetCourseId }: { 
 
   const [currentQuestion, setCurrentQuestion] = useState<any>({
     text: "", type: "MCQ", options: ["", "", "", ""],
-    correctAnswer: "", points: 1, skill: "Math", level: "Medium", dok: "",
+    correctAnswer: "", points: 1, xpPoints: 10, skill: "Math", level: "Medium", dok: "",
     standard: "",
     indicator: "",
     learningOutcome: "",
@@ -505,7 +505,7 @@ export function SchoolAdminNewExamPageContent({ presetType, presetCourseId }: { 
   const handleAddQuestion = (type: string = 'MCQ') => {
     setCurrentQuestion({
       text: "", type, options: type === 'TRUE_FALSE' ? [t('schoolAdmin.examsNewPage.correct') || "صحيح", t('schoolAdmin.examsNewPage.incorrect') || "خطأ", "", ""] : ["", "", "", ""],
-      correctAnswer: "", points: type === 'TEXT' ? 0 : 1, skill: "Math", level: "Medium", dok: "",
+      correctAnswer: "", points: type === 'TEXT' ? 0 : 1, xpPoints: 10, skill: "Math", level: "Medium", dok: "",
       standard: "",
       indicator: "",
       learningOutcome: "",
@@ -1404,15 +1404,26 @@ export function SchoolAdminNewExamPageContent({ presetType, presetCourseId }: { 
                       </div>
 
                       {currentQuestion.type !== 'TEXT' && (
-                        <div className="flex flex-col gap-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('schoolAdmin.examsNewPage.points')}</label>
-                          <input 
-                            type="number"
-                            className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px]"
-                            value={currentQuestion.points}
-                            onChange={(e) => updateCurrentQuestion("points", parseInt(e.target.value) || 0)}
-                          />
-                        </div>
+                        <>
+                          <div className="flex flex-col gap-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('schoolAdmin.examsNewPage.points')}</label>
+                            <input 
+                              type="number"
+                              className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px]"
+                              value={currentQuestion.points}
+                              onChange={(e) => updateCurrentQuestion("points", parseInt(e.target.value) || 0)}
+                            />
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? '⭐ نقاط XP' : '⭐ XP Points'}</label>
+                            <input 
+                              type="number"
+                              className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px]"
+                              value={currentQuestion.xpPoints !== undefined ? currentQuestion.xpPoints : 10}
+                              onChange={(e) => updateCurrentQuestion("xpPoints", parseInt(e.target.value) || 0)}
+                            />
+                          </div>
+                        </>
                       )}
 
                       <div className="flex flex-col gap-2 md:col-span-2">

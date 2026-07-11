@@ -11,7 +11,7 @@ interface GeoGebraWidgetProps {
 
 export default function GeoGebraWidget({ materialId = "", iframeUrl = "", w = 800, h = 500 }: GeoGebraWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [useIframe, setUseIframe] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   const extractId = (urlOrId: string) => {
     if (!urlOrId) return "";
@@ -47,44 +47,66 @@ export default function GeoGebraWidget({ materialId = "", iframeUrl = "", w = 80
 
   const id = extractId(iframeUrl) || extractId(materialId) || materialId;
 
-  let finalUrl = "";
-  if (id) {
-    finalUrl = `https://www.geogebra.org/material/iframe/id/${id}/width/${w}/height/${h}/border/888888/sfsb/true/smb/false/stb/false/stbh/false/ai/false/asb/false/sri/true/rc/false/ld/false/sdz/false/ctl/false`;
-  } else if (iframeUrl && iframeUrl.startsWith("http")) {
-    finalUrl = iframeUrl;
-  }
-
   useEffect(() => {
-    if (finalUrl) return;
+    if (!id) {
+      setLoading(false);
+      return;
+    }
 
+    setLoading(true);
     const scriptId = "geogebra-deploy-script";
     let script = document.getElementById(scriptId) as HTMLScriptElement;
 
     const injectApplet = () => {
-      if (!containerRef.current || !(window as any).GGBApplet) return;
+      if (!containerRef.current || !(window as any).GGBApplet) {
+        setLoading(false);
+        return;
+      }
+      
+      // Clear container
       containerRef.current.innerHTML = "";
+      
+      // Create a wrapper div inside the container to hold the applet
+      const appletDiv = document.createElement("div");
+      appletDiv.style.width = "100%";
+      appletDiv.style.height = "100%";
+      containerRef.current.appendChild(appletDiv);
+
       const params = {
         "appName": "classic",
         "material_id": id,
-        "width": w || 800,
+        "width": "100%",
         "height": h || 500,
         "showMenuBar": false,
         "showToolBar": false,
         "showAlgebraInput": false,
+        "showAlgebraView": false, // Explicitly hide the sidebar panel
         "showResetIcon": true,
         "enableRightClick": false,
         "enableLabelDrags": false,
         "enableShiftDragZoom": true,
         "showZoomButtons": true,
         "errorDialogsActive": false,
-        "perspective": "G",
+        "scale": 1,
+        "autoHeight": true,
+        "allowScaleByDragDrop": true
+      };
+
+      const views = {
+        "AV": 0,    // Algebra View OFF
+        "SV": 0,    // Spreadsheet View OFF
+        "CV": 0,    // CAS View OFF
+        "EV2": 0,   // 2nd Graphics View OFF
+        "is3D": 0   // 3D View OFF
       };
 
       try {
-        const applet = new (window as any).GGBApplet(params, true);
-        applet.inject(containerRef.current);
+        const applet = new (window as any).GGBApplet(params, views);
+        applet.inject(appletDiv);
+        setLoading(false);
       } catch (err) {
         console.error("Error injecting GGBApplet:", err);
+        setLoading(false);
       }
     };
 
@@ -108,25 +130,20 @@ export default function GeoGebraWidget({ materialId = "", iframeUrl = "", w = 80
     return () => {
       if (containerRef.current) containerRef.current.innerHTML = "";
     };
-  }, [id, finalUrl, w, h]);
-
-  if (finalUrl) {
-    return (
-      <div className="w-full h-full min-h-[400px] bg-slate-50 rounded-2xl overflow-hidden relative border border-slate-200">
-        <iframe
-          src={finalUrl}
-          className="w-full h-full min-h-[400px] border-0"
-          allow="fullscreen; autoplay; camera; microphone"
-          title="GeoGebra Interactive Applet"
-        />
-      </div>
-    );
-  }
+  }, [id, h]);
 
   return (
-    <div 
-      ref={containerRef} 
-      className="w-full h-full min-h-[400px] flex items-center justify-center bg-slate-50 rounded-2xl overflow-hidden border border-slate-200" 
-    />
+    <div className="w-full h-full min-h-[450px] relative border border-slate-200 rounded-2xl overflow-hidden bg-slate-50">
+      {loading && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50/80 backdrop-blur-sm z-50">
+          <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+          <span className="text-xs font-black text-slate-500 mt-3">جاري تحميل اللوحة الهندسية...</span>
+        </div>
+      )}
+      <div 
+        ref={containerRef} 
+        className="w-full h-full min-h-[450px]" 
+      />
+    </div>
   );
 }

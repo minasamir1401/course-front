@@ -1667,31 +1667,44 @@ function GeoGebraRenderer({ question, value, onChange, language }: any) {
   const iframeUrl = opts.iframeUrl || "";
 
   return (
-    <div className="flex flex-col items-center gap-6 w-full max-w-full" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-      <h4 className={`text-lg font-black text-slate-800 w-full ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-        {translateText(question.title, language)}
-      </h4>
-      {iframeUrl && (
-        <div className="w-full aspect-[16/10] max-w-2xl rounded-2xl overflow-hidden border border-slate-200 bg-white">
+    <div className="flex flex-col gap-6 w-full max-w-full" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      {/* Graph On Top */}
+      <div className="w-full min-h-[350px] lg:min-h-[450px] rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm">
+        {iframeUrl && (
           <GeoGebraWidget materialId={materialId} iframeUrl={iframeUrl} w={w} h={h} />
-        </div>
-      )}
-      {!iframeUrl && materialId && (
-        <div className="w-full aspect-[16/10] max-w-2xl rounded-2xl overflow-hidden border border-slate-200 bg-white">
+        )}
+        {!iframeUrl && materialId && (
           <GeoGebraWidget materialId={materialId} iframeUrl={`https://www.geogebra.org/material/iframe/id/${materialId}`} w={w} h={h} />
+        )}
+        {!iframeUrl && !materialId && (
+          <div className="w-full h-full flex items-center justify-center text-slate-400 font-bold text-sm p-8">
+            {language === "ar" ? "لم يتم تحديد مادة GeoGebra" : "No GeoGebra material specified"}
+          </div>
+        )}
+      </div>
+
+      {/* Question & Answer Below (Centered layout) */}
+      <div className="w-full max-w-2xl mx-auto flex flex-col justify-center items-center text-center gap-6">
+        <h4 className="text-lg font-black text-slate-800">
+          {translateText(question.title, language)}
+        </h4>
+        {question.text && (
+          <div className="text-sm text-slate-600 leading-relaxed">
+            <HtmlRenderer html={question.text} />
+          </div>
+        )}
+        <div className="w-full max-w-md space-y-2">
+          <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block">
+            {language === "ar" ? "أدخل الحل النهائي هنا:" : "Enter the final solution here:"}
+          </label>
+          <input
+            type="text"
+            className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 font-bold text-sm text-center focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+            value={value || ""}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={language === "ar" ? "الحل..." : "Answer..."}
+          />
         </div>
-      )}
-      <div className="w-full max-w-md space-y-2">
-        <label className={`text-xs font-bold text-slate-500 uppercase tracking-widest block ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-          {language === "ar" ? "أدخل الحل النهائي هنا:" : "Enter the final solution here:"}
-        </label>
-        <input
-          type="text"
-          className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-center font-bold text-sm"
-          value={value || ""}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={language === "ar" ? "الحل..." : "Answer..."}
-        />
       </div>
     </div>
   );
