@@ -88,9 +88,9 @@ const InnerCourseEditor: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <div className="flex gap-3 items-center">
-                <div className="flex items-center gap-3 bg-slate-100 px-4 py-2 rounded-2xl border border-slate-200 ml-4">
-                  <span className="text-sm font-bold text-slate-600">{language === "ar" ? "الحفظ التلقائي" : "Auto-Save"}</span>
+              <div className="flex flex-wrap gap-3 items-center shrink-0">
+                <div className="flex items-center gap-3 bg-slate-100 px-4 py-2 rounded-2xl border border-slate-200 ml-4 shrink-0">
+                  <span className="text-sm font-bold text-slate-600 whitespace-nowrap">{language === "ar" ? "الحفظ التلقائي" : "Auto-Save"}</span>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
@@ -100,12 +100,12 @@ const InnerCourseEditor: React.FC = () => {
                         setIsAutoSaveEnabled(e.target.checked);
                       }}
                     />
-                    <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                    <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600 shrink-0"></div>
                   </label>
                 </div>
 
                 {lastAutoSave && (
-                  <span className="text-xs text-slate-400 font-bold hidden md:inline-block font-sans">
+                  <span className="text-xs text-slate-400 font-bold hidden xl:inline-block font-sans whitespace-nowrap">
                     {language === "ar" ? "آخر حفظ تلقائي:" : "Last auto-save:"} {lastAutoSave.toLocaleTimeString()}
                   </span>
                 )}
@@ -113,7 +113,7 @@ const InnerCourseEditor: React.FC = () => {
                 <button
                   onClick={(e) => handleSubmit(e)}
                   disabled={isSubmitting}
-                  className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-10 py-4 rounded-2xl font-black flex items-center gap-3 hover:scale-105 shadow-xl shadow-indigo-600/20 disabled:opacity-50 transition-all"
+                  className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-10 py-4 rounded-2xl font-black flex items-center gap-3 hover:scale-105 shadow-xl shadow-indigo-600/20 disabled:opacity-50 transition-all whitespace-nowrap shrink-0"
                 >
                   {isSubmitting ? (language === "ar" ? "جاري الحفظ..." : "Saving...") : language === "ar" ? "حفظ التعديلات" : "Save Changes"}
                   <Save className="w-6 h-6" />

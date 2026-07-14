@@ -219,13 +219,15 @@ export const CourseEditorProvider: React.FC<{
       router.push(role === "SUPER_ADMIN" ? "/super-admin/login" : "/school-admin/login");
       return;
     }
-    fetchSchools(token);
+    if (role === "SUPER_ADMIN") {
+      fetchSchools(token);
+    }
     if (courseId) {
       fetchCourseData(token, courseId);
     } else {
       setIsLoading(false);
     }
-  }, [courseId]);
+  }, [courseId, role]);
 
   useEffect(() => {
     if (!isLoading) {

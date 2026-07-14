@@ -24,6 +24,14 @@ export default function RichTextEditor({ value, onChange, placeholder, className
   const [editingImage, setEditingImage] = useState<HTMLImageElement | null>(null);
   const [imageRect, setImageRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
   const mathContainerRef = useRef<HTMLDivElement>(null);
+  const savedSelectionRef = useRef<Range | null>(null);
+
+  const saveSelection = () => {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0 && editorRef.current?.contains(selection.anchorNode)) {
+      savedSelectionRef.current = selection.getRangeAt(0).cloneRange();
+    }
+  };
 
   const COLORS = [
     { name: 'Default', color: '#000000' },
@@ -96,11 +104,45 @@ export default function RichTextEditor({ value, onChange, placeholder, className
     }
   }, [activeModal]);
 
-  const execCommand = (command: string, cmdValue?: string) => {
+  const execCommand = (command: string, cmdValue?: string, useSavedSelection = false) => {
     if (editorRef.current) {
       editorRef.current.focus();
     }
-    document.execCommand(command, false, cmdValue);
+    if (useSavedSelection && savedSelectionRef.current) {
+      const selection = window.getSelection();
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(savedSelectionRef.current);
+      }
+    }
+    
+    // Fallback: if insertHTML fails or selection is broken, try manual insert
+    if (command === 'insertHTML' && useSavedSelection && savedSelectionRef.current) {
+      try {
+        document.execCommand(command, false, cmdValue);
+      } catch(e) {
+        const range = savedSelectionRef.current;
+        range.deleteContents();
+        const el = document.createElement('div');
+        el.innerHTML = cmdValue || '';
+        const frag = document.createDocumentFragment();
+        let node, lastNode;
+        while ((node = el.firstChild)) {
+          lastNode = frag.appendChild(node);
+        }
+        range.insertNode(frag);
+        if (lastNode) {
+          range.setStartAfter(lastNode);
+          range.collapse(true);
+          const sel = window.getSelection();
+          sel?.removeAllRanges();
+          sel?.addRange(range);
+        }
+      }
+    } else {
+      document.execCommand(command, false, cmdValue);
+    }
+    
     handleInput(true);
   };
 
@@ -136,7 +178,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
       const displayStyle = imageSettings.align === 'center' ? 'block' : 'inline-block';
       
       const imgHtml = `<img src="${imageSettings.src}" style="width: ${imageSettings.width}%; max-width: 100%; height: auto; border-radius: 12px; margin: ${marginStyle}; display: ${displayStyle}; float: ${floatStyle};" />&nbsp;`;
-      execCommand('insertHTML', imgHtml);
+      execCommand('insertHTML', imgHtml, true);
     }
     setActiveModal(null);
     setEditingImage(null);
@@ -225,7 +267,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
       tableHtml += '</tr>';
     }
     tableHtml += '</table><p>&nbsp;</p>';
-    execCommand('insertHTML', tableHtml);
+    execCommand('insertHTML', tableHtml, true);
     setActiveModal(null);
   };
 
@@ -234,11 +276,11 @@ export default function RichTextEditor({ value, onChange, placeholder, className
       try {
         const renderedMath = katex.renderToString(mathFormula, { throwOnError: false });
         const mathHtml = `<span class="math-tex inline-block mx-1 align-middle" contenteditable="false" data-latex="${mathFormula.replace(/"/g, '&quot;')}">${renderedMath}</span>&nbsp;`;
-        execCommand('insertHTML', mathHtml);
+        execCommand('insertHTML', mathHtml, true);
       } catch (err) {
         console.error("KaTeX rendering error", err);
         const mathHtml = `<span class="math-tex" style="font-family: 'Times New Roman', serif; font-style: italic; background: #f8fafc; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">\\( ${mathFormula} \\)</span>&nbsp;`;
-        execCommand('insertHTML', mathHtml);
+        execCommand('insertHTML', mathHtml, true);
       }
     }
     setActiveModal(null);
@@ -467,7 +509,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
 
         <div className="w-px h-6 bg-slate-200 mx-1" />
 
-        <ToolButton onClick={insertImage} icon={ImageIcon} title="إدراج صورة" />
+        <ToolButton onClick={() => { saveSelection(); insertImage(); }} icon={ImageIcon} title="إدراج صورة" />
         {editingImage && (
           <ToolButton
             onClick={handleDeleteImage}
@@ -476,8 +518,8 @@ export default function RichTextEditor({ value, onChange, placeholder, className
             className="text-red-500 hover:bg-red-50 hover:text-red-600 animate-in fade-in duration-200"
           />
         )}
-        <ToolButton onClick={() => setActiveModal('table')} icon={Table} title="إدراج جدول" />
-        <ToolButton onClick={() => setActiveModal('math')} icon={Sigma} title="إدراج معادلة" />
+        <ToolButton onClick={() => { saveSelection(); setActiveModal('table'); }} icon={Table} title="إدراج جدول" />
+        <ToolButton onClick={() => { saveSelection(); setActiveModal('math'); }} icon={Sigma} title="إدراج معادلة" />
         <div className="w-px h-6 bg-slate-200 mx-1" />
 
         <div className="flex flex-wrap items-center justify-center gap-1.5 px-2 bg-slate-100/50 rounded-2xl py-1.5 min-w-[140px]">
@@ -648,7 +690,27 @@ export default function RichTextEditor({ value, onChange, placeholder, className
               <Sigma className="w-5 h-5 text-indigo-600" />
               إدراج معادلة رياضية
             </h4>
-            <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+            <div className="flex items-center gap-2">
+              <button 
+                title="تبديل لوحة المفاتيح المتقدمة"
+                onClick={() => {
+                  const vk = (window as any).mathVirtualKeyboard;
+                  if (vk) {
+                    if (vk.visible) {
+                      vk.hide();
+                    } else {
+                      vk.show();
+                    }
+                  }
+                }}
+                className="text-indigo-500 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 p-1.5 rounded-lg transition-all flex items-center gap-1"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" style={{ width: "21px", height: "21px" }} viewBox="0 0 576 512" fill="currentColor">
+                  <path d="M528 64H48C21.49 64 0 85.49 0 112v288c0 26.51 21.49 48 48 48h480c26.51 0 48-21.49 48-48V112c0-26.51-21.49-48-48-48zm16 336c0 8.823-7.177 16-16 16H48c-8.823 0-16-7.177-16-16V112c0-8.823 7.177-16 16-16h480c8.823 0 16 7.177 16 16v288zM168 268v-24c0-6.627-5.373-12-12-12h-24c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm96 0v-24c0-6.627-5.373-12-12-12h-24c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm96 0v-24c0-6.627-5.373-12-12-12h-24c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm96 0v-24c0-6.627-5.373-12-12-12h-24c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm-336 80v-24c0-6.627-5.373-12-12-12H84c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm384 0v-24c0-6.627-5.373-12-12-12h-24c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zM120 188v-24c0-6.627-5.373-12-12-12H84c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm96 0v-24c0-6.627-5.373-12-12-12h-24c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm96 0v-24c0-6.627-5.373-12-12-12h-24c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm96 0v-24c0-6.627-5.373-12-12-12h-24c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm96 0v-24c0-6.627-5.373-12-12-12h-24c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm-96 152v-8c0-6.627-5.373-12-12-12H180c-6.627 0-12 5.373-12 12v8c0 6.627 5.373 12 12 12h216c6.627 0 12-5.373 12-12z"></path>
+                </svg>
+              </button>
+              <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 p-1.5 rounded-lg transition-all"><X className="w-5 h-5" /></button>
+            </div>
           </div>
           <div className="flex flex-col gap-3 mb-6">
             {/* Custom Embedded Keypad */}

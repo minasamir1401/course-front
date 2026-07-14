@@ -147,6 +147,7 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId }: { p
     { id: "MCQ", label: "Multiple Choice (MCQ)", desc: "Select one correct answer" },
     { id: "TRUE_FALSE", label: "True / False", desc: "Select true or false statement" },
     { id: "MULTI_SELECT", label: "Multi-Select", desc: "Select one or more correct answers" },
+    { id: "MATH_EQUATION", label: language === 'ar' ? "معادلة رياضية" : "Math Equation", desc: language === 'ar' ? "أدخل المعادلة الرياضية والإجابة الصحيحة" : "Enter a math equation and its correct value" },
     { id: "TEXT", label: "Text Slide", desc: "A text block for explanation or summary (No answer required)" }
   ];
 
@@ -1622,29 +1623,57 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId }: { p
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-slate-100 pt-6">
                         {currentQuestion.type === "TRUE_FALSE" ? (
                           <>
-                            <div className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isCorrectAnswer(currentQuestion, "صحيح") ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
+                            <div className="flex items-center gap-4">
                               <div 
-                                onClick={() => updateCorrectAnswers(0)}
-                                className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isCorrectAnswer(currentQuestion, "صحيح") ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200'}`}
+                                onClick={() => setCurrentQuestion({ ...currentQuestion, correctAnswer: 0 })}
+                                className={`flex-1 p-6 rounded-2xl border-2 flex items-center justify-center gap-3 cursor-pointer transition-all ${currentQuestion.correctAnswer === 0 ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-slate-200 hover:border-emerald-300'}`}
                               >
-                                {isCorrectAnswer(currentQuestion, "صحيح") && <CheckCircle2 className="w-5 h-5 text-white" />}
+                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${currentQuestion.correctAnswer === 0 ? 'border-emerald-500 bg-emerald-500' : 'border-slate-300'}`}>
+                                  {currentQuestion.correctAnswer === 0 && <CheckCircle2 className="w-4 h-4 text-white" />}
+                                </div>
+                                <span className={`font-black text-lg ${currentQuestion.correctAnswer === 0 ? 'text-emerald-700' : 'text-slate-600'}`}>صحيح</span>
                               </div>
-                              <span className="bg-transparent flex-1 outline-none font-bold text-slate-700">True</span>
-                            </div>
-                            <div className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isCorrectAnswer(currentQuestion, "خطأ") ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
                               <div 
-                                onClick={() => updateCorrectAnswers(1)}
-                                className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isCorrectAnswer(currentQuestion, "خطأ") ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200'}`}
+                                onClick={() => setCurrentQuestion({ ...currentQuestion, correctAnswer: 1 })}
+                                className={`flex-1 p-6 rounded-2xl border-2 flex items-center justify-center gap-3 cursor-pointer transition-all ${currentQuestion.correctAnswer === 1 ? 'bg-rose-50 border-rose-500 shadow-md' : 'bg-slate-50 border-slate-200 hover:border-rose-300'}`}
                               >
-                                {isCorrectAnswer(currentQuestion, "خطأ") && <CheckCircle2 className="w-5 h-5 text-white" />}
+                                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${currentQuestion.correctAnswer === 1 ? 'border-rose-500 bg-rose-500' : 'border-slate-300'}`}>
+                                  {currentQuestion.correctAnswer === 1 && <X className="w-4 h-4 text-white" />}
+                                </div>
+                                <span className={`font-black text-lg ${currentQuestion.correctAnswer === 1 ? 'text-rose-700' : 'text-slate-600'}`}>خطأ</span>
                               </div>
-                              <span className="bg-transparent flex-1 outline-none font-bold text-slate-700">False</span>
                             </div>
                           </>
+                        ) : currentQuestion.type === "MATH_EQUATION" ? (
+                          <div className="flex flex-col gap-4 bg-slate-50 p-6 rounded-[24px]">
+                            <div className="flex flex-col gap-2">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'صيغة المعادلة الحسابية:' : 'Math Equation Formula:'}</label>
+                              <MathInput
+                                placeholder={language === 'ar' ? "مثال: 3x + 5 = 20" : "Example: 3x + 5 = 20"}
+                                className="bg-white"
+                                value={currentQuestion.options && currentQuestion.options[0] ? currentQuestion.options[0] : ""}
+                                onChange={(val) => {
+                                  const newOpts = [...currentQuestion.options];
+                                  newOpts[0] = val;
+                                  setCurrentQuestion({ ...currentQuestion, options: newOpts });
+                                }}
+                              />
+                            </div>
+                            <div className="flex flex-col gap-2 mt-2">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'القيمة الصحيحة لـ x:' : 'Correct Value for X:'}</label>
+                              <input
+                                type="text"
+                                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold"
+                                value={currentQuestion.correctAnswer || ""}
+                                onChange={(e) => setCurrentQuestion({ ...currentQuestion, correctAnswer: e.target.value })}
+                                placeholder={language === 'ar' ? "مثال: 5" : "Example: 5"}
+                              />
+                            </div>
+                          </div>
                         ) : (
                           <>
                             {currentQuestion.options.map((opt: string, oIndex: number) => (
-                              <div key={oIndex} className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isCorrectAnswer(currentQuestion, opt) && opt !== "" ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
+                              <div key={oIndex} className={`flex items-center gap-3 p-2 rounded-[22px] border-2 transition-all ${isCorrectAnswer(currentQuestion, opt) && opt !== "" ? 'border-emerald-400 bg-emerald-50/30' : 'border-slate-100 bg-slate-50'}`}>
                                 <div 
                                   onClick={() => updateCorrectAnswers(oIndex)}
                                   className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isCorrectAnswer(currentQuestion, opt) && opt !== "" ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200'}`}

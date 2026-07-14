@@ -14,6 +14,9 @@ export default function MathInput({ value, onChange, placeholder, className = ""
   const [isOpen, setIsOpen] = useState(false);
   const [mathFormula, setMathFormula] = useState("");
   const mathContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [selectionStart, setSelectionStart] = useState<number | null>(null);
+  const [selectionEnd, setSelectionEnd] = useState<number | null>(null);
 
   useEffect(() => {
     let mf: any = null;
@@ -66,8 +69,14 @@ export default function MathInput({ value, onChange, placeholder, className = ""
     e.preventDefault();
     e.stopPropagation();
     if (mathFormula) {
-      // Wrap in LaTeX inline delimiter so auto-render processes it
-      onChange(`\\(${mathFormula}\\)`);
+      const formulaText = `\\(${mathFormula}\\)`;
+      if (selectionStart !== null && selectionEnd !== null) {
+        const before = value.substring(0, selectionStart);
+        const after = value.substring(selectionEnd);
+        onChange(before + formulaText + after);
+      } else {
+        onChange(value + formulaText);
+      }
     }
     setIsOpen(false);
   };
@@ -75,6 +84,7 @@ export default function MathInput({ value, onChange, placeholder, className = ""
   return (
     <div className={`relative flex-1 flex items-center gap-2 ${className}`}>
       <input
+        ref={inputRef}
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -86,6 +96,13 @@ export default function MathInput({ value, onChange, placeholder, className = ""
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
+          if (inputRef.current) {
+            setSelectionStart(inputRef.current.selectionStart);
+            setSelectionEnd(inputRef.current.selectionEnd);
+          } else {
+            setSelectionStart(null);
+            setSelectionEnd(null);
+          }
           setIsOpen(true);
         }}
         className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-slate-100 transition-all cursor-pointer shrink-0"

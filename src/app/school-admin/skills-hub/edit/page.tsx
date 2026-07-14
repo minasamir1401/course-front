@@ -11,6 +11,7 @@ import * as XLSX from "xlsx";
 import { ArrowLeft, ArrowRight, Save, BookOpen, Layers, Monitor, Plus, Edit2, Trash2, ChevronDown, ChevronUp, Settings, ListOrdered, CheckCircle2, Sparkles, Upload, Download, Play, Clock, X, Info, BrainCircuit, Star, StarOff, RefreshCw } from 'lucide-react';
 import InteractiveQuestionEditor from "@/components/InteractiveQuestionEditor";
 import InteractiveQuestionRenderer from "@/components/InteractiveQuestionRenderer";
+import RichTextEditor from "@/components/RichTextEditor";
 
 export default function EditSchoolSkillClusterPage() {
   const { language } = useLanguage();
@@ -386,6 +387,7 @@ export default function EditSchoolSkillClusterPage() {
     setEditingActivity({
       lessonId,
       title: "",
+      questionText: "",
       type: "MCQ",
       options: { choices: ["", "", "", ""] },
       correctAnswer: "",
@@ -410,9 +412,15 @@ export default function EditSchoolSkillClusterPage() {
   };
 
   const openEditActivity = (activity: any) => {
+    let parsedOpts = parseField(activity.options);
+    if (Array.isArray(parsedOpts)) {
+       parsedOpts = { choices: parsedOpts };
+    }
+    const qText = parsedOpts?.questionText || "";
     setEditingActivity({ 
       ...activity,
-      options: parseField(activity.options),
+      options: parsedOpts,
+      questionText: qText,
       correctAnswer: parseField(activity.correctAnswer)
     });
     setIsActivityModalOpen(true);
@@ -473,7 +481,20 @@ export default function EditSchoolSkillClusterPage() {
       const url = isEdit ? `${API_URL}/skills-hub/activities/${activity.id}` : `${API_URL}/skills-hub/activities`;
       
       const payload = { ...activity };
-      if (typeof payload.options === 'object') payload.options = JSON.stringify(payload.options);
+      
+      let parsedOptions = payload.options;
+      if (typeof parsedOptions === 'string') {
+        try { parsedOptions = JSON.parse(parsedOptions); } catch(e) {}
+      }
+      if (Array.isArray(parsedOptions)) {
+        parsedOptions = { choices: parsedOptions };
+      }
+      if (typeof parsedOptions !== 'object' || parsedOptions === null) {
+        parsedOptions = {};
+      }
+      parsedOptions.questionText = editingActivity.questionText;
+      
+      payload.options = JSON.stringify(parsedOptions);
       if (typeof payload.correctAnswer === 'object') payload.correctAnswer = JSON.stringify(payload.correctAnswer);
 
       const res = await fetch(url, {
@@ -1296,10 +1317,10 @@ export default function EditSchoolSkillClusterPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-5 bg-white border border-slate-200 rounded-2xl shadow-sm">
                 
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "نص السؤال / العنوان الرئيسي" : "Question Text / Main Title"} <span className="text-red-500">*</span></label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "عنوان السؤال (Question Title)" : "Question Title"} <span className="text-red-500">*</span></label>
                   <input 
                     type="text" value={editingActivity.title} onChange={(e) => setEditingActivity({...editingActivity, title: e.target.value})}
-                    placeholder={language === 'ar' ? "اكتب نص السؤال هنا..." : "Write question text..."}
+                    placeholder={language === 'ar' ? "مثال: سؤال جمع، توصيل..." : "e.g. Addition Question..."}
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none"
                   />
                 </div>
@@ -1372,6 +1393,17 @@ export default function EditSchoolSkillClusterPage() {
                      <option value="IMAGE_LABEL">{language === 'ar' ? 'تسمية الصورة' : 'Image Labeling'}</option>
                      <option value="COLOR_MATCH">{language === 'ar' ? 'تطابق الألوان' : 'Color Match'}</option>
                   </select>
+                </div>
+
+                {/* Question Rich Text */}
+                <div className="space-y-2 md:col-span-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "نص السؤال (Question Text)" : "Question Text"}</label>
+                  <div className="bg-white border border-slate-200 rounded-[24px] overflow-hidden min-h-[200px] shadow-sm hover:border-indigo-300 transition-all duration-300">
+                    <RichTextEditor 
+                      value={editingActivity.questionText || ""} 
+                      onChange={(val) => setEditingActivity({...editingActivity, questionText: val})} 
+                    />
+                  </div>
                 </div>
 
                 {/* Additional Metadata */}
@@ -1696,7 +1728,7 @@ export default function EditSchoolSkillClusterPage() {
                 <div className="bg-white rounded-3xl border border-slate-100 p-5 shadow-sm space-y-3 text-xs font-bold text-slate-500">
                   {previewActivity.standard && <p>{language === 'ar' ? '🔍 المعيار: ' : '🔍 Standard: '}<span className="text-slate-800 font-black">{previewActivity.standard}</span></p>}
                   {previewActivity.indicator && <p>{language === 'ar' ? '🎯 المؤشر: ' : '🎯 Indicator: '}<span className="text-slate-800 font-black">{previewActivity.indicator}</span></p>}
-                  <p>{language === 'ar' ? '🏆 النقاط: ' : '🏆 Points: '}<span className="text-indigo-600 font-black">{previewActivity.points} {language === 'ar' ? 'نقطة' : 'XP'}</span></p>
+                  <p>{language === 'ar' ? '🏆 الدرجة: ' : '🏆 Score: '}<span className="text-indigo-600 font-black">{previewActivity.points} {language === 'ar' ? 'درجة' : 'Points'}</span></p>
                 </div>
               </div>
 

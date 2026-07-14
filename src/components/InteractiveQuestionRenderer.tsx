@@ -56,6 +56,29 @@ const translateText = (val: any, lang: string): string => {
   return String(val);
 };
 
+function QuestionHeader({ question, language, opts }: any) {
+  return (
+    <div className="flex flex-col mb-4 gap-3">
+      <div className="flex justify-between items-start gap-4">
+        {opts?.questionText ? (
+          <HtmlRenderer html={translateText(question.title, language)} tag="h4" className="text-sm font-black text-slate-400 uppercase tracking-widest leading-snug" />
+        ) : (
+          <HtmlRenderer html={translateText(question.title, language)} tag="h4" className="text-lg font-black text-slate-800 leading-snug" />
+        )}
+        <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 text-amber-700 px-3 py-1.5 rounded-2xl font-black text-xs shrink-0 select-none shadow-sm animate-pulse">
+          <Award className="w-4 h-4 text-amber-500" />
+          <span>+10 XP</span>
+        </div>
+      </div>
+      {opts?.questionText && (
+        <div className="prose prose-sm max-w-none text-slate-800 font-bold text-base bg-white/70 backdrop-blur-md border border-slate-200/80 rounded-[24px] p-5 sm:p-6 shadow-sm hover:shadow-md transition-all duration-300">
+          <HtmlRenderer html={translateText(opts.questionText, language)} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function InteractiveQuestionRenderer({ question, value, onChange, language }: QuestionProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -307,13 +330,7 @@ function McqRenderer({ question, value, onChange, language }: any) {
 
   return (
     <div className={`space-y-4 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
-      <div className="flex justify-between items-center mb-4 gap-4">
-        <HtmlRenderer html={translateText(question.title, language)} tag="h4" className="text-lg font-black text-slate-800 leading-snug" />
-        <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 text-amber-700 px-3 py-1.5 rounded-2xl font-black text-xs shrink-0 select-none shadow-sm animate-pulse">
-          <Award className="w-4 h-4 text-amber-500" />
-          <span>+10 XP</span>
-        </div>
-      </div>
+      <QuestionHeader question={question} language={language} opts={opts} />
       <div className="flex flex-col gap-3">
         {choices.map((choice: any, idx: number) => {
           const isSelected = value === choice;
@@ -353,6 +370,7 @@ function McqRenderer({ question, value, onChange, language }: any) {
 // 📝 2. TRUE_FALSE (صح أم خطأ)
 // -------------------------------------------------------------
 function TrueFalseRenderer({ question, value, onChange, language }: any) {
+  const opts = parseJson(question.options, {});
   const trueLabel = language === "ar" ? "صح" : "True";
   const falseLabel = language === "ar" ? "خطأ" : "False";
 
@@ -364,13 +382,7 @@ function TrueFalseRenderer({ question, value, onChange, language }: any) {
 
   return (
     <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
-      <div className="flex justify-between items-center mb-4 gap-4">
-        <HtmlRenderer html={translateText(question.title, language)} tag="h4" className="text-lg font-black text-slate-800 leading-snug" />
-        <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 text-amber-700 px-3 py-1.5 rounded-2xl font-black text-xs shrink-0 select-none shadow-sm animate-pulse">
-          <Award className="w-4 h-4 text-amber-500" />
-          <span>+10 XP</span>
-        </div>
-      </div>
+      <QuestionHeader question={question} language={language} opts={opts} />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         <button
           type="button"
@@ -426,13 +438,7 @@ function MultiSelectRenderer({ question, value, onChange, language }: any) {
 
   return (
     <div className={`space-y-4 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
-      <div className="flex justify-between items-center mb-4 gap-4">
-        <HtmlRenderer html={translateText(question.title, language)} tag="h4" className="text-lg font-black text-slate-800 leading-snug" />
-        <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 text-amber-700 px-3 py-1.5 rounded-2xl font-black text-xs shrink-0 select-none shadow-sm animate-pulse">
-          <Award className="w-4 h-4 text-amber-500" />
-          <span>+10 XP</span>
-        </div>
-      </div>
+      <QuestionHeader question={question} language={language} opts={opts} />
       <div className="flex flex-col gap-3">
         {choices.map((choice: any, idx: number) => {
           const isSelected = selectedList.includes(choice);
@@ -547,13 +553,7 @@ function MatchingRenderer({ question, value, onChange, language }: any) {
 
   return (
     <div ref={localRef} className="space-y-6 relative w-full overflow-hidden" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-      <div className="flex justify-between items-center mb-4 gap-4">
-        <h4 className="text-lg font-black text-slate-800 leading-snug">{translateText(question.title, language)}</h4>
-        <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 text-amber-700 px-3 py-1.5 rounded-2xl font-black text-xs shrink-0 select-none shadow-sm animate-pulse">
-          <Award className="w-4 h-4 text-amber-500" />
-          <span>+10 XP</span>
-        </div>
-      </div>
+      <QuestionHeader question={question} language={language} opts={opts} />
 
       <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">
         {coords.map((c, idx) => (
@@ -716,13 +716,7 @@ function DragDropFillRenderer({ question, value, onChange, language }: any) {
 
   return (
     <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
-      <div className="flex justify-between items-center mb-4 gap-4">
-        <h4 className="text-lg font-black text-slate-800 leading-snug">{translateText(question.title, language)}</h4>
-        <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 text-amber-700 px-3 py-1.5 rounded-2xl font-black text-xs shrink-0 select-none shadow-sm animate-pulse">
-          <Award className="w-4 h-4 text-amber-500" />
-          <span>+10 XP</span>
-        </div>
-      </div>
+      <QuestionHeader question={question} language={language} opts={opts} />
 
       <div className={`bg-white/60 backdrop-blur-sm p-6 rounded-3xl border border-slate-200 leading-loose text-base ${language === 'ar' ? 'text-right' : 'text-left'} shadow-sm`}>
         {renderSentence()}
@@ -812,13 +806,7 @@ function GroupSortingRenderer({ question, value, onChange, language }: any) {
 
   return (
     <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
-      <div className="flex justify-between items-center mb-4 gap-4">
-        <h4 className="text-lg font-black text-slate-800 leading-snug">{translateText(question.title, language)}</h4>
-        <div className="flex items-center gap-1.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-205 text-amber-700 px-3 py-1.5 rounded-2xl font-black text-xs shrink-0 select-none shadow-sm animate-pulse">
-          <Award className="w-4 h-4 text-amber-500" />
-          <span>+10 XP</span>
-        </div>
-      </div>
+      <QuestionHeader question={question} language={language} opts={opts} />
 
       <div className="space-y-3">
         <span className="text-[10px] font-black text-slate-400 block uppercase tracking-wider">

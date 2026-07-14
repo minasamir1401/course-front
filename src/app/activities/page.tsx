@@ -770,7 +770,7 @@ export default function ActivitiesPage() {
                     <div className="pt-1 space-y-3">
                       {activeActivity.standard && <p>{language === 'ar' ? '🔍 المعيار: ' : '🔍 Standard: '}<span className="text-slate-800 font-black">{activeActivity.standard}</span></p>}
                       {activeActivity.indicator && <p>{language === 'ar' ? '🎯 المؤشر: ' : '🎯 Indicator: '}<span className="text-slate-800 font-black">{activeActivity.indicator}</span></p>}
-                      <p>{language === 'ar' ? '🏆 النقاط: ' : '🏆 Points: '}<span className="text-indigo-600 font-black">{activeActivity.points} {language === 'ar' ? 'نقطة' : 'XP'}</span></p>
+                      <p>{language === 'ar' ? '🏆 الدرجة: ' : '🏆 Score: '}<span className="text-indigo-600 font-black">{activeActivity.points} {language === 'ar' ? 'درجة' : 'Points'}</span></p>
                       <p><span className={`px-2 py-0.5 rounded-lg text-[10px] font-black ${
                         activeActivity.difficulty === 'Easy' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
                         activeActivity.difficulty === 'Hard' ? 'bg-rose-50 text-rose-700 border border-rose-100' :

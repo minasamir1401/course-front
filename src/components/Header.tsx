@@ -22,6 +22,8 @@ interface HeaderProps {
   isStudent?: boolean;
   pathname?: string | null;
   navLinks?: NavLink[];
+  isFullscreen?: boolean;
+  onToggleFullscreen?: () => void;
 }
 
 export default function Header({
@@ -30,6 +32,8 @@ export default function Header({
   isStudent = false,
   pathname = "",
   navLinks = [],
+  isFullscreen = false,
+  onToggleFullscreen,
 }: HeaderProps) {
   const router = useRouter();
   const [userName, setUserName] = useState("المستخدم");
@@ -145,10 +149,12 @@ export default function Header({
   const handleLogout = () => logout(router, pathname ?? undefined);
 
   return (
-    <header className={`sticky top-0 z-50 w-full transition-all duration-700 ${scrolled ? 'pt-2 px-2 md:pt-4 md:px-4' : 'pt-0 px-0 md:pt-6 md:px-6'}`}>
+    <header className={`sticky top-0 z-50 w-full transition-all duration-700 ${isFullscreen ? 'pt-1 px-1' : scrolled ? 'pt-2 px-2 md:pt-4 md:px-4' : 'pt-0 px-0 md:pt-6 md:px-6'}`}>
       <div
         className={`mx-auto flex items-center justify-between transition-all duration-700 ${
-          scrolled
+          isFullscreen 
+            ? "h-12 md:h-14 bg-white/95 shadow-sm rounded-2xl px-2 md:px-4 w-fit ml-auto border border-slate-100"
+            : scrolled
             ? "h-16 md:h-20 bg-white/80 backdrop-blur-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-[32px] md:rounded-[40px] border border-white px-3 md:px-6 max-w-7xl"
             : "h-20 md:h-24 bg-white/40 backdrop-blur-xl border-b border-slate-200/50 md:border md:border-white/60 md:rounded-[40px] px-4 md:px-8 max-w-[1600px] shadow-sm hover:shadow-xl hover:bg-white/60"
         }`}
@@ -157,31 +163,33 @@ export default function Header({
         <div className="flex items-center gap-1.5 sm:gap-3 xl:gap-8 flex-1 min-w-0">
 
           {/* Brand / Title Section */}
-          <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
-            {!isStudent && (
-              <button
-                onClick={onMenuClick}
-                className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-white/50 hover:bg-white text-slate-600 transition-all border border-slate-200/40"
-              >
-                <Menu className="w-5 h-5" />
-              </button>
-            )}
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 shadow-xl shadow-indigo-200 flex items-center justify-center transform group-hover:rotate-12 transition-transform">
-                <svg className="w-4 h-4 sm:w-6 sm:h-6 text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor"/>
-                  <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <div className="hidden sm:block">
-                <h2 className="text-lg font-black text-slate-900 tracking-tight leading-none mb-1 flex items-center gap-0.5" dir="ltr">
-                  <span className="text-indigo-600">K</span>LEVRO
-                </h2>
-                <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest leading-none mt-1">LMS Platform</p>
+          {!isFullscreen && (
+            <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
+              {!isStudent && (
+                <button
+                  onClick={onMenuClick}
+                  className="p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-white/50 hover:bg-white text-slate-600 transition-all border border-slate-200/40"
+                >
+                  <Menu className="w-5 h-5" />
+                </button>
+              )}
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 shadow-xl shadow-indigo-200 flex items-center justify-center transform group-hover:rotate-12 transition-transform">
+                  <svg className="w-4 h-4 sm:w-6 sm:h-6 text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor"/>
+                    <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+                <div className="hidden sm:block">
+                  <h2 className="text-lg font-black text-slate-900 tracking-tight leading-none mb-1 flex items-center gap-0.5" dir="ltr">
+                    <span className="text-indigo-600">K</span>LEVRO
+                  </h2>
+                  <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest leading-none mt-1">LMS Platform</p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* School Switcher Dropdown for Superadmin */}
           {pathname?.startsWith("/super-admin") && schools.length > 0 && (
@@ -278,7 +286,7 @@ export default function Header({
           )}
 
           {/* Search Bar */}
-          {!isMobile && (
+          {!isMobile && !isFullscreen && (
             <div className="hidden xl:flex items-center gap-3 bg-white/50 border border-white/80 rounded-2xl px-5 py-3 w-80 focus-within:w-96 focus-within:bg-white focus-within:shadow-2xl focus-within:shadow-indigo-100 focus-within:border-indigo-200 transition-all duration-500 group">
               <Search className="w-4 h-4 text-slate-400 shrink-0 group-focus-within:text-indigo-600" />
               <input
@@ -301,6 +309,26 @@ export default function Header({
           >
             {language === 'ar' ? 'EN' : 'AR'}
           </button>
+
+          {/* Fullscreen Toggle */}
+          {onToggleFullscreen && (
+            <button
+              onClick={onToggleFullscreen}
+              className="flex w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl items-center justify-center text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-md transition-all border border-slate-100 bg-white/70"
+              title={isFullscreen ? (language === 'ar' ? 'تصغير مساحة العمل' : 'Exit Fullscreen') : (language === 'ar' ? 'تكبير مساحة العمل' : 'Fullscreen')}
+            >
+              {isFullscreen ? (
+                <svg className="w-4 h-4 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                </svg>
+              )}
+            </button>
+          )}
+
           {/* Connection Status Badge */}
           <div className={`hidden xs:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl border text-[10px] font-black transition-all duration-300 ${
             !isOnline
@@ -319,10 +347,12 @@ export default function Header({
             </span>
           </div>
 
-          <button className="relative w-8 h-8 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-xl hover:shadow-indigo-100/20 transition-all border border-transparent hover:border-slate-100">
-            <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className="absolute top-2 right-2 sm:top-3 sm:right-3 w-2 h-2 rounded-full bg-rose-500 ring-4 ring-white animate-pulse" />
-          </button>
+          {!isFullscreen && (
+            <button className="relative w-8 h-8 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-xl hover:shadow-indigo-100/20 transition-all border border-transparent hover:border-slate-100">
+              <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="absolute top-2 right-2 sm:top-3 sm:right-3 w-2 h-2 rounded-full bg-rose-500 ring-4 ring-white animate-pulse" />
+            </button>
+          )}
 
           <div className="h-10 w-px bg-slate-200/50 mx-2 hidden md:block" />
 
@@ -338,7 +368,8 @@ export default function Header({
           )}
 
           {/* Profile Card */}
-          <div className="relative">
+          {!isFullscreen && (
+            <div className="relative">
             <button
               onClick={() => setShowDropdown((v) => !v)}
               className="flex items-center gap-1.5 sm:gap-2 xl:gap-4 p-1 sm:p-1.5 md:p-2 sm:ps-4 xl:ps-6 rounded-xl sm:rounded-[24px] bg-white border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-indigo-100/30 hover:border-indigo-200 transition-all active:scale-95 group"
@@ -413,6 +444,7 @@ export default function Header({
               </>
             )}
           </div>
+          )}
         </div>
       </div>
     </header>

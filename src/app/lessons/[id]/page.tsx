@@ -15,341 +15,19 @@ const InteractiveQuestionRenderer = dynamic(() => import('@/components/Interacti
 import HtmlRenderer from '@/components/HtmlRenderer';
 import { getOptionLetter, cleanOptionText } from '@/lib/utils';
 
-const QuestionFeedback = ({ isCorrect, correctAnswer, language }: any) => {
-  if (!isCorrect) {
-    return (
-      <div className="p-6 rounded-[30px] border-2 flex flex-col items-center justify-center gap-3 animate-in zoom-in duration-500 mb-6 bg-red-50 border-red-200">
-        <div className="relative w-20 h-20 rounded-3xl bg-red-500/10 border-2 border-red-300 flex items-center justify-center animate-pulse">
-          <div className="absolute inset-0 rounded-3xl border-2 border-red-400/40 animate-ping" />
-          <AlertCircle className="w-10 h-10 text-red-600" />
-        </div>
-        <p className="text-red-700 font-black text-sm md:text-base">
-          {language === 'ar' ? 'إجابة غير صحيحة' : 'Incorrect answer'}
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className={`p-6 rounded-[30px] border-2 flex items-center gap-6 animate-in zoom-in duration-500 mb-6 ${isCorrect ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
-      <div className={`w-16 h-16 shrink-0 rounded-2xl flex items-center justify-center shadow-lg ${isCorrect ? 'bg-emerald-500 shadow-emerald-200 animate-bounce' : 'bg-red-500 shadow-red-200 animate-pulse'}`}>
-        <span className="text-4xl">{isCorrect ? '🎉' : '❌'}</span>
-      </div>
-      <div>
-        <h3 className={`text-xl md:text-2xl font-black mb-2 ${isCorrect ? 'text-emerald-700' : 'text-red-700'}`}>
-          {isCorrect
-            ? (language === 'ar' ? 'أحسنت! إجابة صحيحة' : 'Great Job! Correct')
-            : (language === 'ar' ? 'حاول مرة أخرى' : 'Try Again')}
-        </h3>
-        {isCorrect && (
-          <p className="text-emerald-600 font-bold text-sm md:text-base">
-            {language === 'ar' ? 'عمل ممتاز، استمر في هذا الأداء!' : 'Excellent work, keep it up!'}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const SectionsInlineTabs = ({
-  sections,
-  language,
-  isSubmitted = true
-}: {
-  sections: any[],
-  language: string,
-  isSubmitted?: boolean
-}) => {
-  const SECTION_STYLE_PRESETS: Record<string, any> = {
-    HINT: { icon: HelpCircle, bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", label: language === 'ar' ? "تلميح" : "Hint", chip: "bg-amber-100 text-amber-700 border-amber-200" },
-    TIP: { icon: Info, bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200", label: language === 'ar' ? "نصيحة" : "Tip", chip: "bg-blue-100 text-blue-700 border-blue-200" },
-    WARNING: { icon: AlertCircle, bg: "bg-red-50", text: "text-red-700", border: "border-red-200", label: language === 'ar' ? "تحذير" : "Warning", chip: "bg-red-100 text-red-700 border-red-200" },
-    KEY_INSIGHT: { icon: Sparkles, bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200", label: language === 'ar' ? "نقطة هامة" : "Key Insight", chip: "bg-purple-100 text-purple-700 border-purple-200" },
-    FEEDBACK: { icon: MessageSquare, bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", label: language === 'ar' ? "ملاحظات" : "Feedback", chip: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-    EXPLANATION: { icon: BookOpen, bg: "bg-indigo-50", text: "text-indigo-700", border: "border-indigo-200", label: language === 'ar' ? "شرح" : "Explanation", chip: "bg-indigo-100 text-indigo-700 border-indigo-200" }
-  };
-
-  const filteredSections = (sections || []).filter((sec) => sec?.type !== "FEEDBACK");
-  const [activeIndex, setActiveIndex] = useState(0);
-
-  // Default active index to the first unlocked section (usually HINT) if currently locked
-  useEffect(() => {
-    const defaultIdx = filteredSections.findIndex(
-      (sec) => sec.type === 'HINT' || isSubmitted
-    );
-    setActiveIndex(defaultIdx >= 0 ? defaultIdx : 0);
-  }, [filteredSections.length, isSubmitted]);
-
-  if (!filteredSections.length) return null;
-
-  const active = filteredSections[Math.min(activeIndex, filteredSections.length - 1)];
-  const preset = SECTION_STYLE_PRESETS[active.type] || SECTION_STYLE_PRESETS.HINT;
-  const ActiveIcon = preset.icon;
-  const isActiveLocked = active.type !== 'HINT' && !isSubmitted;
-
-  return (
-    <div className="mt-5 w-full space-y-4">
-      <div className={`flex flex-wrap gap-2 ${language === 'ar' ? 'justify-end' : 'justify-start'}`}>
-        {filteredSections.map((sec, idx) => {
-          const p = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.HINT;
-          const Icon = p.icon;
-          const isActive = idx === activeIndex;
-          const isLocked = sec.type !== 'HINT' && !isSubmitted;
-
-          return (
-            <button
-              key={sec.id || idx}
-              type="button"
-              onClick={() => {
-                if (!isLocked) {
-                  setActiveIndex(idx);
-                }
-              }}
-              disabled={isLocked}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border-2 font-black text-xs md:text-sm transition-all ${
-                isLocked 
-                  ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60' 
-                  : isActive 
-                    ? `${p.chip} shadow-sm scale-[1.02]` 
-                    : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
-              }`}
-            >
-              {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Icon className="w-4 h-4" />}
-              <span>{p.label}</span>
-              {isLocked && <span className="text-[10px]">🔒</span>}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className={`rounded-2xl border-2 p-5 md:p-6 transition-all duration-300 ${isActiveLocked ? 'bg-slate-50 border-slate-200 text-slate-400' : `${preset.bg} ${preset.border}`}`}>
-        <div className={`flex items-center gap-2 mb-3 font-black ${isActiveLocked ? 'text-slate-500' : preset.text}`}>
-          {isActiveLocked ? <Lock className="w-5 h-5 text-slate-400 animate-pulse" /> : <ActiveIcon className="w-5 h-5" />}
-          <span>{preset.label}</span>
-        </div>
-        {isActiveLocked ? (
-          <div className="flex flex-col items-center justify-center py-6 text-center gap-2">
-            <span className="text-3xl animate-bounce">🔒</span>
-            <p className="font-bold text-sm md:text-base text-slate-700">
-              {language === 'ar' 
-                ? 'هذا القسم مغلق حتى تقوم بتأكيد إجابتك' 
-                : 'This section is locked until you submit your answer'}
-            </p>
-            <p className="text-xs text-slate-400">
-              {language === 'ar'
-                ? 'قم بحل السؤال وتأكيد إجابتك أولاً لعرض هذا المحتوى'
-                : 'Solve the question and confirm your answer first to view this content'}
-            </p>
-          </div>
-        ) : (
-            <HtmlRenderer
-              html={active.content}
-              className={`prose prose-sm md:prose-base max-w-none leading-relaxed break-words ${preset.text}`}
-            />
-        )}
-      </div>
-    </div>
-  );
-};
-
-const normalizeAnswerGlobal = (value: any) => {
-  const norm = String(value ?? '').trim().toLowerCase();
-  if (norm === 'true') return 'صحيح';
-  if (norm === 'false') return 'خطأ';
-  return norm;
-};
-
-const checkAdvancedCorrect = (q: any, ans: any) => {
-  if (!ans) return false;
-  const cleanStr = (s: any) => String(s ?? '').trim().replace(/"/g, '');
-  try {
-    const isJsonString = (str: any) => {
-      if (typeof str !== 'string') return false;
-      const trimmed = str.trim();
-      return (trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'));
-    };
-    
-    const corrAns = q.correctAnswer;
-    const hasJson = isJsonString(corrAns) || isJsonString(ans) || typeof ans === 'object' || typeof corrAns === 'object';
-    if (hasJson) {
-      const correct = typeof corrAns === 'string' && (corrAns.startsWith('{') || corrAns.startsWith('[')) ? JSON.parse(corrAns) : corrAns;
-      const student = typeof ans === 'string' && (ans.startsWith('{') || ans.startsWith('[')) ? JSON.parse(ans) : ans;
-      if (Array.isArray(correct) && Array.isArray(student)) {
-        return correct.length === student.length && correct.every((val: any, i: number) => cleanStr(val) === cleanStr(student[i]));
-      }
-      if (typeof correct === 'object' && typeof student === 'object' && correct !== null && student !== null) {
-        const correctKeys = Object.keys(correct);
-        const studentKeys = Object.keys(student);
-        if (correctKeys.length !== studentKeys.length) return false;
-        return correctKeys.every((k: string) => cleanStr(correct[k]) === cleanStr(student[k]));
-      }
-    }
-  } catch (e) {}
-  return cleanStr(ans) === cleanStr(q.correctAnswer);
-};
-
-const isQuestionLike = (item: any) =>
-  item?.type === 'QUESTION' || item?.type === 'MCQ' || item?.type === 'TRUE_FALSE' || item?.type === 'MULTI_SELECT' || item?.label === 'MULTI_SELECT';
-
-const getQuestionOptions = (q: any, language: string) => {
-  if (!q) return [];
-  if (q.type === 'TRUE_FALSE') {
-    return [language === 'ar' ? 'صحيح' : 'True', language === 'ar' ? 'خطأ' : 'False'];
-  }
-  if (Array.isArray(q.options) && q.options.filter(Boolean).length > 0) {
-    return q.options.filter(Boolean);
-  }
-  return [];
-};
-
-const SectionAccordion = ({ sec, preset }: { sec: any; preset: any }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  return (
-    <div className="space-y-3">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={`w-full flex items-center gap-3 px-5 py-3 rounded-2xl ${preset.bg} border-2 ${preset.border} hover:opacity-80 transition-all font-black ${preset.text} text-sm`}
-      >
-        {React.createElement(preset.icon, { className: "w-5 h-5" })}
-        <span>{preset.label}</span>
-        <span className={`mr-auto text-lg transition-transform ${isOpen ? 'rotate-180' : ''}`}>▼</span>
-      </button>
-      {isOpen && (
-        <div className={`p-5 rounded-2xl ${preset.bg} border-2 ${preset.border} animate-in fade-in slide-in-from-top-2 duration-300`}>
-          <div className={`flex items-center gap-2 mb-3 font-black ${preset.text}`}>
-            {React.createElement(preset.icon, { className: "w-5 h-5" })}
-            <span>{preset.label}</span>
-          </div>
-          <HtmlRenderer html={sec.content} className={`prose prose-sm max-w-none ${preset.text}`} />
-        </div>
-      )}
-    </div>
-  );
-};
-
-const WelcomeGadgetCard = ({ item, t }: { item: any; t: any }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  return (
-    <div className="bg-slate-50/50 border border-slate-100 p-6 md:p-8 rounded-[35px] hover:bg-white hover:shadow-xl transition-all duration-500 group flex flex-col">
-      <div 
-        className="cursor-pointer flex flex-col items-start"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <div className="flex w-full items-center justify-between mb-4">
-          <div className={`w-14 h-14 ${item.bg} ${item.color} rounded-2xl flex items-center justify-center group-hover:rotate-12 transition-transform shadow-sm`}>
-            {React.createElement(item.icon, { className: "w-7 h-7" })}
-          </div>
-          <button className={`w-8 h-8 flex items-center justify-center rounded-xl bg-slate-100 text-slate-400 hover:text-slate-600 transition-transform ${isOpen ? 'rotate-180' : ''}`}>
-            ▼
-          </button>
-        </div>
-        <h3 className="text-xl font-black text-slate-900 tracking-tight">{item.title}</h3>
-      </div>
-      
-      {isOpen && (
-        <div className="mt-4 pt-4 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
-          <div className="text-sm md:text-base text-slate-600 leading-relaxed font-bold whitespace-pre-wrap">
-            {item.content || t('lesson.plannedGoals')}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const SlideSectionsToggle = ({ slide, slideIndex, slideSubmitted, slideAnswers, language }: { slide: any; slideIndex: number; slideSubmitted: Record<number, boolean>; slideAnswers: Record<number, any>; language: string }) => {
-  const SECTION_STYLE_PRESETS: Record<string, any> = {
-    HINT: { icon: HelpCircle, bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", label: language === 'ar' ? "تلميح" : "Hint" },
-    TIP: { icon: Info, bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200", label: language === 'ar' ? "نصيحة" : "Tip" },
-    WARNING: { icon: AlertCircle, bg: "bg-red-50", text: "text-red-700", border: "border-red-200", label: language === 'ar' ? "تحذير" : "Warning" },
-    KEY_INSIGHT: { icon: Sparkles, bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200", label: language === 'ar' ? "نقطة هامة" : "Key Insight" },
-    FEEDBACK: { icon: MessageSquare, bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", label: language === 'ar' ? "ملاحظات" : "Feedback" },
-    EXPLANATION: { icon: BookOpen, bg: "bg-indigo-50", text: "text-indigo-700", border: "border-indigo-200", label: language === 'ar' ? "شرح مفصل" : "Explanation" }
-  };
-
-  const [showSlideSections, setShowSlideSections] = useState(false);
-
-  if (!slide.sections || slide.sections.length === 0) return null;
-  
-  const filteredSections = slide.sections.filter((sec: any) => sec.type !== 'FEEDBACK');
-  if (filteredSections.length === 0) return null;
-  
-  const isSubmitted = !isQuestionLike(slide) || slideSubmitted[slideIndex];
-  const sectionsToShow = filteredSections.filter((sec: any) => sec.type === 'HINT' || isSubmitted);
-
-  if (sectionsToShow.length === 0) return null;
-  
-  return (
-    <div className="mt-6 w-full max-w-4xl space-y-4">
-      {sectionsToShow.map((sec: any, idx: number) => {
-        const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
-        return <SectionAccordion key={sec.id || idx} sec={sec} preset={preset} />;
-      })}
-    </div>
-  );
-};
-
-const AssignmentSectionsToggle = ({ assignment, assignmentIndex, assignmentSubmitted, assignmentAnswers, language }: { assignment: any; assignmentIndex: number; assignmentSubmitted: Record<number, boolean>; assignmentAnswers: Record<number, any>; language: string }) => {
-  const SECTION_STYLE_PRESETS: Record<string, any> = {
-    HINT: { icon: HelpCircle, bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", label: language === 'ar' ? "تلميح" : "Hint" },
-    TIP: { icon: Info, bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200", label: language === 'ar' ? "نصيحة" : "Tip" },
-    WARNING: { icon: AlertCircle, bg: "bg-red-50", text: "text-red-700", border: "border-red-200", label: language === 'ar' ? "تحذير" : "Warning" },
-    KEY_INSIGHT: { icon: Sparkles, bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200", label: language === 'ar' ? "نقطة هامة" : "Key Insight" },
-    FEEDBACK: { icon: MessageSquare, bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", label: language === 'ar' ? "ملاحظات" : "Feedback" },
-    EXPLANATION: { icon: BookOpen, bg: "bg-indigo-50", text: "text-indigo-700", border: "border-indigo-200", label: language === 'ar' ? "شرح مفصل" : "Explanation" }
-  };
-
-  const [showSections, setShowSections] = useState(false);
-
-  if (!assignment.sections || assignment.sections.length === 0) return null;
-  const filteredSections = assignment.sections.filter((sec: any) => sec.type !== 'FEEDBACK');
-  if (filteredSections.length === 0) return null;
-  const isSubmitted = assignmentSubmitted[assignmentIndex] || !isQuestionLike(assignment);
-  const sectionsToShow = filteredSections.filter((sec: any) => sec.type === 'HINT' || isSubmitted);
-
-  if (sectionsToShow.length === 0) return null;
-  
-  return (
-    <div className="mt-4 space-y-4">
-      {sectionsToShow.map((sec: any, idx: number) => {
-        const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
-        return <SectionAccordion key={sec.id || idx} sec={sec} preset={preset} />;
-      })}
-    </div>
-  );
-};
-
-const QuizSectionsToggle = ({ question, questionIndex, quizSubmitted, language }: { question: any; questionIndex: number; quizSubmitted: Record<number, boolean>; language: string }) => {
-  const SECTION_STYLE_PRESETS: Record<string, any> = {
-    HINT: { icon: HelpCircle, bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", label: language === 'ar' ? "تلميح" : "Hint" },
-    TIP: { icon: Info, bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200", label: language === 'ar' ? "نصيحة" : "Tip" },
-    WARNING: { icon: AlertCircle, bg: "bg-red-50", text: "text-red-700", border: "border-red-200", label: language === 'ar' ? "تحذير" : "Warning" },
-    KEY_INSIGHT: { icon: Sparkles, bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200", label: language === 'ar' ? "نقطة هامة" : "Key Insight" },
-    FEEDBACK: { icon: MessageSquare, bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", label: language === 'ar' ? "ملاحظات" : "Feedback" },
-    EXPLANATION: { icon: BookOpen, bg: "bg-indigo-50", text: "text-indigo-700", border: "border-indigo-200", label: language === 'ar' ? "شرح مفصل" : "Explanation" }
-  };
-
-  const [showQuizSections, setShowQuizSections] = useState(false);
-
-  if (!question.sections || question.sections.length === 0) return null;
-  
-  const filteredSections = question.sections.filter((sec: any) => sec.type !== 'FEEDBACK');
-  if (filteredSections.length === 0) return null;
-  
-  const isSubmitted = quizSubmitted[questionIndex];
-  const sectionsToShow = filteredSections.filter((sec: any) => sec.type === 'HINT' || isSubmitted);
-    
-  if (sectionsToShow.length === 0) return null;
-
-  return (
-    <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2">
-      {sectionsToShow.map((sec: any, idx: number) => {
-        const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
-        return <SectionAccordion key={sec.id || idx} sec={sec} preset={preset} />;
-      })}
-    </div>
-  );
-};
+import { 
+  normalizeAnswerGlobal, 
+  checkAdvancedCorrect, 
+  isQuestionLike, 
+  getQuestionOptions, 
+  QuestionFeedback, 
+  SectionAccordion, 
+  WelcomeGadgetCard, 
+  SlideSectionsToggle, 
+  AssignmentSectionsToggle, 
+  QuizSectionsToggle 
+} from "@/components/LessonSubComponents";
+import LessonSummaryView from "@/components/LessonSummaryView";
 
 export default function LessonPlayerPage() {
   const { t, language } = useLanguage();
@@ -390,6 +68,16 @@ export default function LessonPlayerPage() {
   const [totalLessonXP, setTotalLessonXP] = useState(0);
   const [currentStreak, setCurrentStreak] = useState(0);
   const [showStreakMilestone, setShowStreakMilestone] = useState<{ count: number; xp: number } | null>(null);
+  const [highestStreak, setHighestStreak] = useState(0);
+  const [sessionXP, setSessionXP] = useState(0);
+  const [sessionBonusXP, setSessionBonusXP] = useState(0);
+  const [toastFeedback, setToastFeedback] = useState<{
+    type: 'success' | 'streak' | 'perfect';
+    xp: number;
+    streakCount?: number;
+    bonusXP?: number;
+    level?: 'Easy' | 'Medium' | 'Hard';
+  } | null>(null);
 
   const submitAnswerProgress = async (questionId: string, blockType: 'slides' | 'assignments' | 'questions', selectedAnswer: any) => {
     if (searchParams.get('preview') === 'true') return;
@@ -418,7 +106,33 @@ export default function LessonPlayerPage() {
         setTotalLessonXP(data.totalLessonXP);
         setCurrentStreak(data.currentStreak);
         
+        if (data.isCorrect) {
+          let currentLevel = 'Medium';
+          if (blockType === 'questions') {
+            currentLevel = lesson?.questions?.[currentQuestionIndex]?.level || 'Medium';
+          } else if (blockType === 'slides') {
+            currentLevel = lesson?.slides?.[currentSlideIndex]?.level || 'Medium';
+          } else if (blockType === 'assignments') {
+            currentLevel = lesson?.assignments?.[currentAssignmentIndex]?.level || 'Medium';
+          }
+
+          setSessionXP(prev => prev + (data.earnedXP || 0));
+          setHighestStreak(prev => Math.max(prev, data.currentStreak || 0));
+
+          setToastFeedback({
+            type: 'success',
+            xp: data.earnedXP || 0,
+            level: currentLevel as any,
+            streakCount: data.currentStreak
+          });
+
+          setTimeout(() => {
+            setToastFeedback(null);
+          }, 2000);
+        }
+
         if (data.bonusXP > 0) {
+          setSessionBonusXP(prev => prev + data.bonusXP);
           setShowStreakMilestone({ count: data.currentStreak, xp: data.bonusXP });
         }
 
@@ -713,10 +427,10 @@ export default function LessonPlayerPage() {
   };
 
   const handleNextQuestion = () => {
-    if (isQuestionLike(lesson.questions[currentQuestionIndex]) && !quizSubmitted[currentQuestionIndex]) {
+    if (!quizSubmitted[currentQuestionIndex]) {
       const q = lesson.questions[currentQuestionIndex];
       const qId = q.id ? String(q.id) : String(currentQuestionIndex);
-      const ans = answers[currentQuestionIndex];
+      const ans = isQuestionLike(q) ? answers[currentQuestionIndex] : 'read';
       submitAnswerProgress(qId, 'questions', ans);
       setQuizSubmitted({ ...quizSubmitted, [currentQuestionIndex]: true });
     }
@@ -960,10 +674,10 @@ export default function LessonPlayerPage() {
           <div className="w-full bg-white/80 backdrop-blur-xl border border-slate-200/80 p-3 rounded-[24px] shadow-sm flex flex-wrap items-center justify-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
             <button
               onClick={() => {
-                if (isQuestionLike(lesson.slides[currentSlideIndex]) && !slideSubmitted[currentSlideIndex]) {
+                if (!slideSubmitted[currentSlideIndex]) {
                   const q = lesson.slides[currentSlideIndex];
                   const qId = q.id ? String(q.id) : String(currentSlideIndex);
-                  const ans = slideAnswers[currentSlideIndex];
+                  const ans = isQuestionLike(q) ? slideAnswers[currentSlideIndex] : 'read';
                   submitAnswerProgress(qId, 'slides', ans);
                   setSlideSubmitted({ ...slideSubmitted, [currentSlideIndex]: true });
                 }
@@ -981,10 +695,10 @@ export default function LessonPlayerPage() {
 
             <button
               onClick={() => {
-                if (isQuestionLike(lesson.assignments[currentAssignmentIndex]) && !assignmentSubmitted[currentAssignmentIndex]) {
+                if (!assignmentSubmitted[currentAssignmentIndex]) {
                   const q = lesson.assignments[currentAssignmentIndex];
                   const qId = q.id ? String(q.id) : String(currentAssignmentIndex);
-                  const ans = assignmentAnswers[currentAssignmentIndex];
+                  const ans = isQuestionLike(q) ? assignmentAnswers[currentAssignmentIndex] : 'read';
                   submitAnswerProgress(qId, 'assignments', ans);
                   setAssignmentSubmitted({ ...assignmentSubmitted, [currentAssignmentIndex]: true });
                 }
@@ -1002,10 +716,10 @@ export default function LessonPlayerPage() {
 
             <button
               onClick={() => {
-                if (isQuestionLike(lesson.questions[currentQuestionIndex]) && !quizSubmitted[currentQuestionIndex]) {
+                if (!quizSubmitted[currentQuestionIndex]) {
                   const q = lesson.questions[currentQuestionIndex];
                   const qId = q.id ? String(q.id) : String(currentQuestionIndex);
-                  const ans = answers[currentQuestionIndex];
+                  const ans = isQuestionLike(q) ? answers[currentQuestionIndex] : 'read';
                   submitAnswerProgress(qId, 'questions', ans);
                   setQuizSubmitted({ ...quizSubmitted, [currentQuestionIndex]: true });
                 }
@@ -1243,10 +957,10 @@ export default function LessonPlayerPage() {
                   {currentSlideIndex < lesson.slides.length - 1 ? (
                     <button
                       onClick={() => {
-                        if (isQuestionLike(lesson.slides[currentSlideIndex]) && !slideSubmitted[currentSlideIndex]) {
+                        if (!slideSubmitted[currentSlideIndex]) {
                           const q = lesson.slides[currentSlideIndex];
                           const qId = q.id ? String(q.id) : String(currentSlideIndex);
-                          const ans = slideAnswers[currentSlideIndex];
+                          const ans = isQuestionLike(q) ? slideAnswers[currentSlideIndex] : 'read';
                           submitAnswerProgress(qId, 'slides', ans);
                           setSlideSubmitted({ ...slideSubmitted, [currentSlideIndex]: true });
                         }
@@ -1259,10 +973,10 @@ export default function LessonPlayerPage() {
                   ) : (
                     <button
                       onClick={() => {
-                        if (isQuestionLike(lesson.slides[currentSlideIndex]) && !slideSubmitted[currentSlideIndex]) {
+                        if (!slideSubmitted[currentSlideIndex]) {
                           const q = lesson.slides[currentSlideIndex];
                           const qId = q.id ? String(q.id) : String(currentSlideIndex);
-                          const ans = slideAnswers[currentSlideIndex];
+                          const ans = isQuestionLike(q) ? slideAnswers[currentSlideIndex] : 'read';
                           submitAnswerProgress(qId, 'slides', ans);
                           setSlideSubmitted({ ...slideSubmitted, [currentSlideIndex]: true });
                         }
@@ -1286,10 +1000,10 @@ export default function LessonPlayerPage() {
                       <button
                         key={i}
                         onClick={() => {
-                          if (isQuestionLike(lesson.assignments[currentAssignmentIndex]) && !assignmentSubmitted[currentAssignmentIndex]) {
+                          if (!assignmentSubmitted[currentAssignmentIndex]) {
                             const q = lesson.assignments[currentAssignmentIndex];
                             const qId = q.id ? String(q.id) : String(currentAssignmentIndex);
-                            const ans = assignmentAnswers[currentAssignmentIndex];
+                            const ans = isQuestionLike(q) ? assignmentAnswers[currentAssignmentIndex] : 'read';
                             submitAnswerProgress(qId, 'assignments', ans);
                             setAssignmentSubmitted({ ...assignmentSubmitted, [currentAssignmentIndex]: true });
                           }
@@ -1487,10 +1201,10 @@ export default function LessonPlayerPage() {
                         </button>
                         <button
                           onClick={() => {
-                            if (isQuestionLike(lesson.assignments[currentAssignmentIndex]) && !assignmentSubmitted[currentAssignmentIndex]) {
+                            if (!assignmentSubmitted[currentAssignmentIndex]) {
                               const q = lesson.assignments[currentAssignmentIndex];
                               const qId = q.id ? String(q.id) : String(currentAssignmentIndex);
-                              const ans = assignmentAnswers[currentAssignmentIndex];
+                              const ans = isQuestionLike(q) ? assignmentAnswers[currentAssignmentIndex] : 'read';
                               submitAnswerProgress(qId, 'assignments', ans);
                               setAssignmentSubmitted({ ...assignmentSubmitted, [currentAssignmentIndex]: true });
                             }
@@ -1555,10 +1269,10 @@ export default function LessonPlayerPage() {
                       <button
                         key={i}
                         onClick={() => {
-                          if (isQuestionLike(lesson.questions[currentQuestionIndex]) && !quizSubmitted[currentQuestionIndex]) {
+                          if (!quizSubmitted[currentQuestionIndex]) {
                             const q = lesson.questions[currentQuestionIndex];
                             const qId = q.id ? String(q.id) : String(currentQuestionIndex);
-                            const ans = answers[currentQuestionIndex];
+                            const ans = isQuestionLike(q) ? answers[currentQuestionIndex] : 'read';
                             submitAnswerProgress(qId, 'questions', ans);
                             setQuizSubmitted({ ...quizSubmitted, [currentQuestionIndex]: true });
                           }
@@ -1773,318 +1487,47 @@ export default function LessonPlayerPage() {
               </div>
             )}
 
-            {currentStage === 'summary' && (() => {
-              const pct = Math.round((score / attemptedMaxScore) * 100);
-
-              let title = t('lesson.greatJob') || (language === 'ar' ? "عمل رائع!" : "Great Job!");
-              let message = t('lesson.completedMessage') || (language === 'ar' ? "لقد أكملت جميع متطلبات هذا الدرس بنجاح." : "You have successfully completed all the requirements of this lesson.");
-              let borderCol = "border-indigo-600";
-              let iconEl: React.ReactNode;
-
-              if (pct >= 85) {
-                title = language === 'ar' ? "أداء ممتاز! 🏆" : "Excellent Performance! 🏆";
-                message = language === 'ar' ? "رائع جداً! لقد تفوقت وأكملت الدرس بنسبة ممتازة تليق بذكائك." : "Awesome! You excelled and completed the lesson with an excellent score.";
-                borderCol = "border-emerald-500";
-                iconEl = (
-                  <div className="relative flex items-center justify-center" style={{ width: 120, height: 120 }}>
-                    {/* Outer glow ring */}
-                    <div className="absolute inset-0 rounded-full animate-ping-slow" style={{ background: 'radial-gradient(circle, rgba(16,185,129,0.35) 0%, transparent 70%)' }} />
-                    <div className="absolute inset-2 rounded-full animate-ping-slow" style={{ animationDelay: '0.4s', background: 'radial-gradient(circle, rgba(16,185,129,0.2) 0%, transparent 70%)' }} />
-                    <div className="w-24 h-24 rounded-[35px] flex items-center justify-center shadow-2xl animate-float-trophy" style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', boxShadow: '0 0 40px rgba(16,185,129,0.6), 0 20px 40px rgba(5,150,105,0.4)' }}>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21.801 10A10 10 0 1 1 17 3.335" />
-                        <path d="m9 11 3 3L22 4" />
-                      </svg>
-                    </div>
-                  </div>
-                );
-              } else if (pct >= 50) {
-                title = language === 'ar' ? "عمل جيد جداً! ⭐" : "Very Good Work! ⭐";
-                message = language === 'ar' ? "أحسنت! لقد نجحت واجتزت الدرس بنجاح. استمر في التقدم!" : "Well done! You successfully passed the lesson. Keep moving forward!";
-                borderCol = "border-amber-500";
-                iconEl = (
-                  <div className="relative flex items-center justify-center" style={{ width: 120, height: 120 }}>
-                    {/* Rotating sparkle ring */}
-                    <div className="absolute inset-0 animate-spin-slow" style={{ background: 'conic-gradient(from 0deg, rgba(245,158,11,0.8), rgba(251,191,36,0.4), rgba(245,158,11,0.8))', borderRadius: '50%', filter: 'blur(8px)' }} />
-                    <div className="absolute inset-3 rounded-full" style={{ background: 'white' }} />
-                    <div className="w-24 h-24 rounded-[35px] flex items-center justify-center shadow-2xl animate-float-star relative" style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', boxShadow: '0 0 50px rgba(245,158,11,0.7), 0 20px 40px rgba(217,119,6,0.5)' }}>
-                      <Star className="w-12 h-12 text-white fill-current animate-spin-slow" style={{ animationDuration: '4s' }} />
-                    </div>
-                  </div>
-                );
-              } else {
-                title = language === 'ar' ? "تحتاج للمحاولة مجدداً 🔄" : "Need to Try Again 🔄";
-                message = language === 'ar' ? "لم تحقق نسبة الاجتياز المطلوبة (50%). لا تقلق، التعلم يحتاج لبعض التدريب الإضافي!" : "You did not achieve the required passing score (50%). Don't worry, learning requires some extra practice!";
-                borderCol = "border-rose-500";
-                iconEl = (
-                  <div className="relative flex items-center justify-center" style={{ width: 120, height: 120 }}>
-                    <div className="absolute inset-0 rounded-full animate-pulse" style={{ background: 'radial-gradient(circle, rgba(244,63,94,0.3) 0%, transparent 70%)' }} />
-                    <div className="w-24 h-24 rounded-[35px] flex items-center justify-center shadow-2xl animate-shake" style={{ background: 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)', boxShadow: '0 0 40px rgba(244,63,94,0.6), 0 20px 40px rgba(225,29,72,0.4)' }}>
-                      <RotateCcw className="w-12 h-12 text-white animate-spin" style={{ animationDuration: '2s' }} />
-                    </div>
-                  </div>
-                );
-              }
-
-              return (
-                <div className="premium-card p-10 md:p-20 rounded-[50px] animate-in zoom-in duration-700 text-center relative">
-                  {pct >= 50 && (
-                    <div className="fixed inset-0 pointer-events-none z-[100]">
-                      <Confetti
-                        recycle={false}
-                        numberOfPieces={600}
-                        gravity={0.15}
-                      />
-                    </div>
-                  )}
-                  <div className="flex items-center justify-center mx-auto mb-8 relative z-10">
-                    {iconEl}
-                  </div>
-                  <h2 className="text-4xl md:text-6xl font-black text-slate-900 mb-4 tracking-tight">{title}</h2>
-                  <p className="text-slate-500 text-lg font-bold mb-12">{message}</p>
-                  <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 md:gap-10 mb-10 md:mb-16">
-                    <div className={`premium-card p-8 rounded-[35px] min-w-[180px] border-b-8 ${borderCol}`}>
-                      <p className="text-slate-400 text-[10px] font-black mb-2 uppercase tracking-widest">{t('lesson.score') || (language === 'ar' ? 'الدرجة' : 'Score')}</p>
-                      <p className="text-4xl md:text-6xl font-black text-slate-900">{correctCount} <span className="text-2xl text-slate-400">/ {attemptedQuestionsCount}</span></p>
-                    </div>
-                    <div className={`premium-card p-8 rounded-[35px] min-w-[180px] border-b-8 ${pct >= 50 ? 'border-amber-500' : 'border-rose-500'}`}>
-                      <p className="text-slate-400 text-[10px] font-black mb-2 uppercase tracking-widest">{t('lesson.percentage') || (language === 'ar' ? 'النسبة' : 'Percentage')}</p>
-                      <p className={`text-4xl md:text-6xl font-black ${pct >= 85 ? 'text-emerald-500' : pct >= 50 ? 'text-amber-500' : 'text-rose-500'}`}>{pct}%</p>
-                    </div>
-                    <div className="premium-card p-8 rounded-[35px] min-w-[180px] border-b-8 border-amber-500 bg-amber-50/30">
-                      <p className="text-slate-400 text-[10px] font-black mb-2 uppercase tracking-widest">{language === 'ar' ? 'نقاط XP الكلية' : 'Total XP Earned'}</p>
-                      <p className="text-4xl md:text-6xl font-black text-amber-600">⭐ {totalLessonXP}</p>
-                    </div>
-                  </div>
-
-                  {/* ── STUDENT PROGRESS PORTFOLIO DASHBOARD ── */}
-                  <div className="max-w-4xl mx-auto mb-12 text-right" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-                    <div className="premium-card p-6 md:p-8 rounded-[35px] border-t-4 border-indigo-600 bg-white shadow-sm space-y-6">
-                      <div className="flex items-center gap-3 border-b border-slate-100 pb-4 justify-start">
-                        <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
-                          <GraduationCap className="w-5 h-5" />
-                        </div>
-                        <div className="text-start">
-                          <h3 className="text-lg font-black text-slate-900">
-                            {language === 'ar' ? 'ملف إنجاز الطالب والتقدم الدراسي' : 'Student Progress Portfolio'}
-                          </h3>
-                          <p className="text-xs text-slate-400 font-bold">
-                            {language === 'ar' ? 'مؤشرات الأداء وتفاصيل التحصيل لهذا الدرس' : 'Performance indicators and achievement details for this lesson'}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-                        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
-                          <span className="text-xs font-bold text-slate-400 uppercase block mb-1">
-                            {language === 'ar' ? 'الوقت المستغرق' : 'Time Spent'}
-                          </span>
-                          <span className="text-lg font-black text-slate-800">
-                            {Math.floor((quizTimer + assignmentTimer) / 60)} {language === 'ar' ? 'دقيقة' : 'min'}
-                          </span>
-                        </div>
-
-                        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
-                          <span className="text-xs font-bold text-slate-400 uppercase block mb-1">
-                            {language === 'ar' ? 'الشرائح المقروءة' : 'Slides Read'}
-                          </span>
-                          <span className="text-lg font-black text-slate-800">
-                            {lesson.slides?.length || 0} / {lesson.slides?.length || 0}
-                          </span>
-                        </div>
-
-                        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
-                          <span className="text-xs font-bold text-slate-400 uppercase block mb-1">
-                            {language === 'ar' ? 'الواجبات المحلولة' : 'Solved Assignments'}
-                          </span>
-                          <span className="text-lg font-black text-slate-800">
-                            {Object.keys(assignmentSubmitted).length} / {lesson.assignments?.length || 0}
-                          </span>
-                        </div>
-
-                        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
-                          <span className="text-xs font-bold text-slate-400 uppercase block mb-1">
-                            {language === 'ar' ? 'التمارين المحلولة' : 'Solved Exercises'}
-                          </span>
-                          <span className="text-lg font-black text-slate-800">
-                            {Object.keys(quizSubmitted).length} / {lesson.questions?.length || 0}
-                          </span>
-                        </div>
-
-                        <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 text-center">
-                          <span className="text-xs font-bold text-amber-600 uppercase block mb-1">
-                            {language === 'ar' ? 'نقاط XP المكتسبة' : 'XP Points Earned'}
-                          </span>
-                          <span className="text-lg font-black text-amber-700">
-                            ⭐ {totalLessonXP} XP
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Detailed Breakdown for Assignments & Exercises */}
-                      <div className="space-y-6 pt-2 text-start">
-                        {/* 1. Assignments Breakdown */}
-                        {lesson.assignments && lesson.assignments.length > 0 && (
-                          <div className="space-y-3">
-                            <h4 className="text-sm font-black text-slate-800 flex items-center gap-2 justify-start">
-                              <FileDown className="w-4 h-4 text-indigo-500" />
-                              <span>{language === 'ar' ? 'تقرير إجابات الواجب والتقييم الذاتي' : 'Assignments Report & Self-Evaluation'}</span>
-                            </h4>
-                            <div className="space-y-2 max-h-[160px] overflow-y-auto custom-scrollbar pr-1">
-                              {lesson.assignments.map((as: any, asIdx: number) => {
-                                const isMulti = as.type === 'MULTI_SELECT' || as.label === 'MULTI_SELECT';
-                                const studentAns = assignmentAnswers[asIdx];
-                                const isSubmitted = assignmentSubmitted[asIdx];
-                                const isStandard = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(as.label || as.type || 'MCQ');
-                                
-                                const isCorrect = isSubmitted && (isStandard
-                                  ? (isMulti
-                                    ? Array.isArray(studentAns) && studentAns.length === (as.correctAnswers || []).length && studentAns.every((a: string) => (as.correctAnswers || []).includes(a))
-                                    : studentAns === as.correctAnswer)
-                                  : checkAdvancedCorrect(as, studentAns));
-
-                                const isSkipped = !studentAns || (Array.isArray(studentAns) && studentAns.length === 0) || studentAns === '' || studentAns === '[]';
-
-                                return (
-                                  <div key={asIdx} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs">
-                                    <span className="font-bold text-slate-700 truncate max-w-[70%] text-right">
-                                      {language === 'ar' ? 'واجب' : 'Assignment'} {asIdx + 1}: <HtmlRenderer html={as.text} tag="span" className="font-normal text-slate-500" />
-                                    </span>
-                                    <span className={`px-2.5 py-1 rounded-lg font-black shrink-0 ${
-                                      isCorrect 
-                                        ? 'bg-emerald-100 text-emerald-700' 
-                                        : isSkipped 
-                                          ? 'bg-amber-100 text-amber-700' 
-                                          : 'bg-red-100 text-red-700'
-                                    }`}>
-                                      {isCorrect 
-                                        ? (language === 'ar' ? 'صحيحة ✓' : 'Correct ✓') 
-                                        : isSkipped 
-                                          ? (language === 'ar' ? 'تم التخطي ↷' : 'Skipped ↷') 
-                                          : (language === 'ar' ? 'خاطئة ✗' : 'Wrong ✗')}
-                                    </span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* 2. Exercises Breakdown */}
-                        {lesson.questions && lesson.questions.length > 0 && (
-                          <div className="space-y-3">
-                            <h4 className="text-sm font-black text-slate-800 flex items-center gap-2 justify-start">
-                              <HelpCircle className="w-4 h-4 text-indigo-500" />
-                              <span>{language === 'ar' ? 'تقرير إجابات التمارين والتقييم الذاتي' : 'Exercises Report & Self-Evaluation'}</span>
-                            </h4>
-                            <div className="space-y-2 max-h-[160px] overflow-y-auto custom-scrollbar pr-1">
-                              {lesson.questions.map((q: any, qIdx: number) => {
-                                const isMulti = q.type === 'MULTI_SELECT' || q.label === 'MULTI_SELECT';
-                                const studentAns = answers[qIdx];
-                                const isSubmitted = quizSubmitted[qIdx];
-                                const isStandard = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(q.label || q.type || 'MCQ');
-                                
-                                const isCorrect = isSubmitted && (isStandard
-                                  ? (isMulti
-                                    ? Array.isArray(studentAns) && studentAns.length === (q.correctAnswers || []).length && studentAns.every((a: string) => (q.correctAnswers || []).includes(a))
-                                    : studentAns === q.correctAnswer)
-                                  : checkAdvancedCorrect(q, studentAns));
-
-                                const isSkipped = !studentAns || (Array.isArray(studentAns) && studentAns.length === 0) || studentAns === '' || studentAns === '[]';
-
-                                return (
-                                  <div key={qIdx} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs">
-                                    <span className="font-bold text-slate-700 truncate max-w-[70%] text-right">
-                                      {language === 'ar' ? 'سؤال' : 'Question'} {qIdx + 1}: <HtmlRenderer html={q.text} tag="span" className="font-normal text-slate-500" />
-                                    </span>
-                                    <span className={`px-2.5 py-1 rounded-lg font-black shrink-0 ${
-                                      isCorrect 
-                                        ? 'bg-emerald-100 text-emerald-700' 
-                                        : isSkipped 
-                                          ? 'bg-amber-100 text-amber-700' 
-                                          : 'bg-red-100 text-red-700'
-                                    }`}>
-                                      {isCorrect 
-                                        ? (language === 'ar' ? 'صحيحة ✓' : 'Correct ✓') 
-                                        : isSkipped 
-                                          ? (language === 'ar' ? 'تم التخطي ↷' : 'Skipped ↷') 
-                                          : (language === 'ar' ? 'خاطئة ✗' : 'Wrong ✗')}
-                                    </span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row justify-center gap-4">
-                    {pct < 50 && (
-                      <button
-                        onClick={() => {
-                          setAnswers({});
-                          setSlideAnswers({});
-                          setSlideSubmitted({});
-                          setAssignmentAnswers({});
-                          setAssignmentSubmitted({});
-                          setQuizSubmitted({});
-                          setScore(0);
-                          setCurrentStage('welcome');
-                          setCurrentSlideIndex(0);
-                          setCurrentQuestionIndex(0);
-                        }}
-                        className="bg-amber-500 text-white px-10 py-5 rounded-[25px] font-black text-xl hover:scale-105 transition-all shadow-xl shadow-amber-100 border border-amber-500/20 hover:bg-amber-600"
-                      >
-                        {language === 'ar' ? 'إعادة المحاولة 🔄' : 'Try Again 🔄'}
-                      </button>
-                    )}
-                    <button
-                      onClick={() => router.push(`/courses/${lesson.courseId}`)}
-                      className="bg-slate-50/80 border-2 border-slate-200/60 text-slate-900 px-16 py-5 rounded-[25px] font-black text-xl hover:bg-slate-100 transition-all shadow-lg"
-                    >
-                      {t('lesson.backToCourse')}
-                    </button>
-                  </div>
-
-                  {/* Prev / Next lesson navigation */}
-                  {(prevLesson || nextLesson) && (
-                    <div className="mt-10 pt-8 border-t border-slate-100 flex flex-col sm:flex-row gap-4 justify-center items-center">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest w-full sm:w-auto text-center">
-                        {language === 'ar' ? 'الدروس الأخرى في الكورس' : 'Other Lessons in Course'}
-                      </p>
-                      <div className="flex gap-4">
-                        {prevLesson && (
-                          <button
-                            onClick={() => goToLesson(prevLesson)}
-                            className="flex items-center gap-3 px-8 py-4 bg-slate-50/80 border-2 border-slate-200/60 text-slate-900 rounded-[22px] font-black hover:bg-slate-100 transition-all shadow-sm group"
-                          >
-                            <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                            <div className="text-right">
-                              <p className="text-[10px] text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'الدرس السابق' : 'Previous Lesson'}</p>
-                              <p className="text-sm font-black truncate max-w-[160px]">{prevLesson.title}</p>
-                            </div>
-                          </button>
-                        )}
-                        {nextLesson && (
-                          <button
-                            onClick={() => goToLesson(nextLesson)}
-                            className="flex items-center gap-3 px-8 py-4 bg-indigo-600 text-white rounded-[22px] font-black hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 group border border-indigo-500/20"
-                          >
-                            <div className="text-right">
-                              <p className="text-[10px] text-indigo-100 uppercase tracking-widest">{language === 'ar' ? 'الدرس التالي' : 'Next Lesson'}</p>
-                              <p className="text-sm font-black truncate max-w-[160px]">{nextLesson.title}</p>
-                            </div>
-                            <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform text-white" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
+            {currentStage === 'summary' && (
+              <LessonSummaryView
+                pct={attemptedMaxScore > 0 ? Math.round((score / attemptedMaxScore) * 100) : 0}
+                language={language}
+                correctCount={correctCount}
+                attemptedQuestionsCount={attemptedQuestionsCount}
+                totalLessonXP={totalLessonXP}
+                sessionXP={sessionXP}
+                sessionBonusXP={sessionBonusXP}
+                highestStreak={highestStreak}
+                quizTimer={quizTimer}
+                assignmentTimer={assignmentTimer}
+                lesson={lesson}
+                assignmentSubmitted={assignmentSubmitted}
+                quizSubmitted={quizSubmitted}
+                assignmentAnswers={assignmentAnswers}
+                answers={answers}
+                t={t}
+                nextLesson={nextLesson}
+                prevLesson={prevLesson}
+                goToLesson={goToLesson}
+                router={router}
+                onReset={() => {
+                  setAnswers({});
+                  setSlideAnswers({});
+                  setSlideSubmitted({});
+                  setAssignmentAnswers({});
+                  setAssignmentSubmitted({});
+                  setQuizSubmitted({});
+                  setScore(0);
+                  setCorrectCount(0);
+                  setAttemptedQuestionsCount(0);
+                  setSessionXP(0);
+                  setSessionBonusXP(0);
+                  setHighestStreak(0);
+                  setCurrentStage('welcome');
+                  setCurrentSlideIndex(0);
+                  setCurrentQuestionIndex(0);
+                }}
+              />
+            )}
           </div>
 
           {/* ── SIDEBAR AREA (VISIBLE ONLY IN WELCOME/SUMMARY) ── */}
@@ -2142,21 +1585,63 @@ export default function LessonPlayerPage() {
         </div>
       </div>
 
-      {/* Streak Milestone Celebration Modal */}
+      {/* ── XP Toast Overlay (appears on correct answers) ── */}
+      {toastFeedback && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[200] animate-in slide-in-from-bottom-4 fade-in duration-300 pointer-events-none">
+          <div className="relative flex items-center gap-3 px-6 py-3.5 rounded-2xl shadow-2xl border border-white/20 backdrop-blur-xl"
+            style={{
+              background: toastFeedback.level === 'Hard' || toastFeedback.level === 'Challenging' as any
+                ? 'linear-gradient(135deg, rgba(99,102,241,0.95) 0%, rgba(139,92,246,0.95) 100%)'
+                : toastFeedback.level === 'Medium'
+                  ? 'linear-gradient(135deg, rgba(245,158,11,0.95) 0%, rgba(217,119,6,0.95) 100%)'
+                  : 'linear-gradient(135deg, rgba(16,185,129,0.95) 0%, rgba(5,150,105,0.95) 100%)',
+            }}
+          >
+            <span className="text-2xl animate-bounce" style={{ animationDuration: '0.6s' }}>
+              {toastFeedback.level === 'Hard' || (toastFeedback.level as any) === 'Challenging' ? '⚡' : '⭐'}
+            </span>
+            <div className="flex flex-col">
+              <span className="text-white font-black text-base tracking-tight">
+                +{toastFeedback.xp} XP
+              </span>
+              {toastFeedback.streakCount && toastFeedback.streakCount >= 3 && (
+                <span className="text-white/80 text-[10px] font-bold">
+                  🔥 {language === 'ar' ? `سلسلة ${toastFeedback.streakCount}` : `Streak ${toastFeedback.streakCount}`}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Streak Milestone Celebration Modal ── */}
       {showStreakMilestone && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-md animate-in fade-in duration-300">
           <div className="fixed inset-0 pointer-events-none z-[100]">
-            <Confetti recycle={false} numberOfPieces={300} gravity={0.2} />
+            <Confetti recycle={false} numberOfPieces={showStreakMilestone.count >= 10 ? 600 : 300} gravity={0.15} />
           </div>
 
-          <div className="relative bg-white border border-amber-200 p-8 md:p-12 rounded-[32px] max-w-md w-full mx-4 text-center shadow-2xl animate-in zoom-in-95 duration-500 flex flex-col items-center z-[101]">
-            {/* Fire icon in amber circular frame */}
-            <div className="w-24 h-24 rounded-full bg-amber-50 border border-amber-100 flex items-center justify-center text-4xl mb-6 animate-bounce">
-              🔥
+          <div className={`relative p-8 md:p-12 rounded-[32px] max-w-md w-full mx-4 text-center shadow-2xl animate-in zoom-in-95 duration-500 flex flex-col items-center z-[101] border ${
+            showStreakMilestone.count >= 10
+              ? 'bg-gradient-to-b from-indigo-50 to-white border-indigo-200'
+              : 'bg-white border-amber-200'
+          }`}>
+            {/* Icon */}
+            <div className={`w-24 h-24 rounded-full flex items-center justify-center text-4xl mb-6 animate-bounce ${
+              showStreakMilestone.count >= 10
+                ? 'bg-indigo-100 border-2 border-indigo-200'
+                : 'bg-amber-50 border border-amber-100'
+            }`}>
+              {showStreakMilestone.count >= 10 ? '🏆' : '🔥'}
             </div>
             
             <h3 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">
-              {language === 'ar' ? 'سلسلة إجابات متتالية! 🎉' : 'Streak Milestone! 🎉'}
+              {showStreakMilestone.count >= 10
+                ? (language === 'ar' ? 'مجموعة مثالية! 🏆' : 'Perfect Set! 🏆')
+                : showStreakMilestone.count >= 5
+                  ? (language === 'ar' ? 'أداء ناري! 🔥' : 'On Fire! 🔥')
+                  : (language === 'ar' ? 'سلسلة إجابات! 🎉' : 'Streak! 🎉')
+              }
             </h3>
             
             <p className="text-slate-500 font-bold text-base mb-6 leading-relaxed">
@@ -2165,15 +1650,26 @@ export default function LessonPlayerPage() {
                 : `You answered ${showStreakMilestone.count} questions correctly in a row! You earned a bonus of:`}
             </p>
 
-            <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 px-6 py-3.5 rounded-2xl font-black text-xl text-amber-600 mb-8 shadow-inner animate-pulse">
-              ⭐ +{showStreakMilestone.xp} XP
+            <div className={`inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl font-black text-xl mb-8 shadow-inner animate-pulse ${
+              showStreakMilestone.count >= 10
+                ? 'bg-indigo-50 border border-indigo-200 text-indigo-600'
+                : 'bg-amber-50 border border-amber-200 text-amber-600'
+            }`}>
+              {showStreakMilestone.count >= 10 ? '⭐' : '🎁'} +{showStreakMilestone.xp} XP
             </div>
 
             <button
               onClick={() => setShowStreakMilestone(null)}
-              className="w-full bg-amber-500 hover:bg-amber-600 text-white font-black py-4 rounded-2xl text-base shadow-lg shadow-amber-500/20 transition-all border border-amber-400"
+              className={`w-full font-black py-4 rounded-2xl text-base shadow-lg transition-all border text-white ${
+                showStreakMilestone.count >= 10
+                  ? 'bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 border-indigo-500/20 shadow-indigo-500/20'
+                  : 'bg-amber-500 hover:bg-amber-600 border-amber-400 shadow-amber-500/20'
+              }`}
             >
-              {language === 'ar' ? 'رائع! استمر' : 'Awesome! Keep going'}
+              {showStreakMilestone.count >= 10
+                ? (language === 'ar' ? 'مذهل! ⭐' : 'Amazing! ⭐')
+                : (language === 'ar' ? 'رائع! استمر' : 'Awesome! Keep going')
+              }
             </button>
           </div>
         </div>

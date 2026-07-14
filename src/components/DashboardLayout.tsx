@@ -12,6 +12,7 @@ import AdminErrorBridge from "@/components/AdminErrorBridge";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [role, setRole] = useState("");
@@ -58,6 +59,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!mounted) return <div className="min-h-screen bg-slate-50" />;
 
+  const isSidebarVisible = hasSidebar && !isFullscreen;
+
   return (
     <div className={`flex min-h-screen font-sans overflow-x-hidden bg-transparent relative ${isStudent ? 'klevro-watermark' : ''}`} dir={language === 'ar' ? "rtl" : "ltr"}>
       <AdminErrorBridge />
@@ -74,18 +77,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         />
       )}
 
-      {renderSidebar()}
+      {isSidebarVisible && renderSidebar()}
 
-      <div className={`flex-1 min-w-0 w-full ${hasSidebar && isSidebarOpen && !isMobile ? (language === 'ar' ? 'lg:mr-72' : 'lg:ml-72') : ''} flex flex-col min-h-screen relative z-10 transition-all duration-300`}>
+      <div className={`flex-1 min-w-0 w-full ${isSidebarVisible && isSidebarOpen && !isMobile ? (language === 'ar' ? 'lg:mr-72' : 'lg:ml-72') : ''} flex flex-col min-h-screen relative z-10 transition-all duration-300`}>
         <Header
           onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)}
           isMobile={isMobile}
           isStudent={isStudent}
           pathname={pathname}
           navLinks={NAV_LINKS}
+          isFullscreen={isFullscreen}
+          onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
         />
 
-        <main className={`flex-1 p-1 sm:p-2 md:p-8 lg:p-10 transition-all duration-500 overflow-x-hidden ${isStudent && isMobile ? "pb-32" : "pb-10"}`}>
+        <main className={`flex-1 p-1 sm:p-2 md:p-8 lg:p-10 transition-all duration-500 overflow-x-hidden ${isStudent && isMobile ? "pb-32" : "pb-10"} ${isFullscreen ? '!p-2 sm:!p-4' : ''}`}>
           {children}
         </main>
 
