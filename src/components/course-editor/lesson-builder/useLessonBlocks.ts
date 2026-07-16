@@ -63,8 +63,8 @@ export function useLessonBlocks(currentLesson: any, setCurrentLesson: (lesson: a
     let defaultCorrect = "";
     
     if (newType === 'TRUE_FALSE') {
-      defaultOptions = ["صحيح", "خطأ"];
-      defaultCorrect = "صحيح";
+      defaultOptions = ["True", "False"];
+      defaultCorrect = "True";
     } else if (newType === 'MULTI_SELECT') {
       defaultOptions = ["", "", "", ""];
       defaultCorrect = "[]";

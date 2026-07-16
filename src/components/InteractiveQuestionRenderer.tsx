@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { CheckCircle2, AlertCircle, HelpCircle, Info, Sparkles, BookOpen, Clock as ClockIcon, Award, Play } from 'lucide-react';
 import HtmlRenderer from "./HtmlRenderer";
 import GeoGebraWidget from "./GeoGebraWidget";
+import MathInput from "./MathInput";
 import { getOptionLetter, cleanOptionText } from "@/lib/utils";
 
 interface QuestionProps {
@@ -345,7 +346,7 @@ function McqRenderer({ question, value, onChange, language }: any) {
                   : "bg-white border-slate-200 text-slate-700 hover:border-slate-350 hover:bg-slate-50/50"
               }`}
             >
-              <div className="flex items-center gap-3.5 flex-1 text-start">
+              <div className="flex items-center gap-3.5 flex-1 text-start min-w-0">
                 <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 transition-colors ${
                   isSelected
                     ? "bg-indigo-600 text-white shadow-sm"
@@ -353,7 +354,7 @@ function McqRenderer({ question, value, onChange, language }: any) {
                 }`}>
                   {getOptionLetter(idx, language)}
                 </span>
-                <HtmlRenderer html={translateText(cleanOptionText(choice), language)} tag="span" className={`font-black text-base transition-colors ${isSelected ? "text-indigo-950" : "text-slate-700"}`} />
+                <HtmlRenderer html={translateText(cleanOptionText(choice), language)} tag="span" className={`font-black text-base transition-colors flex-1 break-words whitespace-normal min-w-0 !leading-relaxed ${isSelected ? "text-indigo-950" : "text-slate-700"}`} />
               </div>
               <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ms-3 ${isSelected ? "border-indigo-650 bg-indigo-650 text-white" : "border-slate-300 bg-white"}`}>
                 {isSelected && <span className="w-2.5 h-2.5 rounded-full bg-white" />}
@@ -371,8 +372,8 @@ function McqRenderer({ question, value, onChange, language }: any) {
 // -------------------------------------------------------------
 function TrueFalseRenderer({ question, value, onChange, language }: any) {
   const opts = parseJson(question.options, {});
-  const trueLabel = language === "ar" ? "صح" : "True";
-  const falseLabel = language === "ar" ? "خطأ" : "False";
+  const trueLabel = "True";
+  const falseLabel = "False";
 
   const isTrueVal = (v: any) => ["صح", "صحيح", "صواب", "true", "1"].includes(String(v || "").trim().toLowerCase()) || String(v) === "True";
   const isFalseVal = (v: any) => ["خطأ", "false", "0", "غير صحيح"].includes(String(v || "").trim().toLowerCase()) || String(v) === "False";
@@ -386,7 +387,7 @@ function TrueFalseRenderer({ question, value, onChange, language }: any) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         <button
           type="button"
-          onClick={() => onChange("صح")}
+          onClick={() => onChange("True")}
           className={`p-6 rounded-3xl border-2 text-center font-black text-xl transition-all cursor-pointer select-none duration-200 ${
             isTrue 
               ? "bg-emerald-50/90 backdrop-blur-sm border-emerald-500 shadow-md shadow-emerald-500/10 text-emerald-950 scale-[1.01]" 
@@ -401,7 +402,7 @@ function TrueFalseRenderer({ question, value, onChange, language }: any) {
 
         <button
           type="button"
-          onClick={() => onChange("خطأ")}
+          onClick={() => onChange("False")}
           className={`p-6 rounded-3xl border-2 text-center font-black text-xl transition-all cursor-pointer select-none duration-200 ${
             isFalse 
               ? "bg-rose-50/90 backdrop-blur-sm border-rose-500 shadow-md shadow-rose-500/10 text-rose-950 scale-[1.01]" 
@@ -453,7 +454,7 @@ function MultiSelectRenderer({ question, value, onChange, language }: any) {
                   : "bg-white border-slate-200 text-slate-700 hover:border-slate-350 hover:bg-slate-50/50"
               }`}
             >
-              <div className="flex items-center gap-3.5 flex-1 text-start">
+              <div className="flex items-center gap-3.5 flex-1 text-start min-w-0">
                 <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 transition-colors ${
                   isSelected
                     ? "bg-indigo-600 text-white shadow-sm"
@@ -461,7 +462,7 @@ function MultiSelectRenderer({ question, value, onChange, language }: any) {
                 }`}>
                   {getOptionLetter(idx, language)}
                 </span>
-                <HtmlRenderer html={translateText(cleanOptionText(choice), language)} tag="span" className={`font-black text-base transition-colors ${isSelected ? "text-indigo-950" : "text-slate-700"}`} />
+                <HtmlRenderer html={translateText(cleanOptionText(choice), language)} tag="span" className={`font-black text-base transition-colors flex-1 break-words whitespace-normal min-w-0 !leading-relaxed ${isSelected ? "text-indigo-950" : "text-slate-700"}`} />
               </div>
               <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all shrink-0 ms-3 ${isSelected ? "border-indigo-650 bg-indigo-650 text-white" : "border-slate-300 bg-white"}`}>
                 {isSelected && <CheckCircle2 className="w-4 h-4 text-white" />}
@@ -1987,11 +1988,10 @@ function MathEquationRenderer({ question, value, onChange, language }: any) {
         <label className="text-xs font-bold text-slate-500 block text-center">
           {language === "ar" ? "الجواب (قيمة x):" : "Answer (x value):"}
         </label>
-        <input
-          type="text"
-          className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-center font-bold text-sm"
+        <MathInput
+          className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-center font-bold text-sm"
           value={value || ""}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(val) => onChange(val)}
           placeholder={language === "ar" ? "قيمة x = ..." : "x = ..."}
         />
       </div>

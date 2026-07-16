@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Plus, Trash2, HelpCircle, Sparkles, Info } from 'lucide-react';
 import GeoGebraWidget from "./GeoGebraWidget";
+import MathInput from "./MathInput";
 import { getOptionLetter } from "@/lib/utils";
 
 interface EditorProps {
@@ -376,12 +377,11 @@ function McqEditor({ question, updateQuestionData, language }: { question: any; 
               <span className="w-6 h-6 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-[11px] text-indigo-600 shrink-0 select-none">
                 {getOptionLetter(idx, language)}
               </span>
-              <input
-                type="text"
+              <MathInput
                 placeholder={language === 'ar' ? `اكتب الخيار ${idx + 1} (بدون أ، ب، ج)...` : `Option ${idx + 1} (without A, B, C)...`}
-                className="flex-1 min-w-0 bg-transparent border-none outline-none font-bold text-slate-800 text-xs py-1"
+                className="flex-1 min-w-0 font-bold text-slate-800 text-xs py-1"
                 value={c}
-                onChange={(e) => handleChoiceChange(idx, e.target.value)}
+                onChange={(val) => handleChoiceChange(idx, val)}
               />
               {choices.length > 2 && (
                 <button
@@ -413,7 +413,7 @@ function TrueFalseEditor({ question, updateQuestionData, language }: { question:
   const isFalseVal = (v: any) => ["خطأ", "false", "0", "غير صحيح"].includes(String(v || "").trim().toLowerCase()) || String(v) === "False";
 
   const setCorrect = (val: string) => {
-    updateQuestionData({ choices: ["صح", "خطأ"] }, val);
+    updateQuestionData({ choices: ["True", "False"] }, val);
   };
 
   const isTrue = isTrueVal(correctVal);
@@ -427,7 +427,7 @@ function TrueFalseEditor({ question, updateQuestionData, language }: { question:
       <div className="grid grid-cols-2 gap-4 py-2">
         <button
           type="button"
-          onClick={() => setCorrect("صح")}
+          onClick={() => setCorrect("True")}
           className={`flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all duration-200 cursor-pointer ${
             isTrue 
               ? "bg-emerald-50/70 border-emerald-500 shadow-md shadow-emerald-500/10 text-emerald-700" 
@@ -439,12 +439,12 @@ function TrueFalseEditor({ question, updateQuestionData, language }: { question:
               <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
             </svg>
           </div>
-          <span className="font-black text-sm">{language === 'ar' ? "صح (صواب)" : "True"}</span>
+          <span className="font-black text-sm">True</span>
         </button>
 
         <button
           type="button"
-          onClick={() => setCorrect("خطأ")}
+          onClick={() => setCorrect("False")}
           className={`flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all duration-200 cursor-pointer ${
             isFalse 
               ? "bg-rose-50/70 border-rose-500 shadow-md shadow-rose-500/10 text-rose-700" 
@@ -456,7 +456,7 @@ function TrueFalseEditor({ question, updateQuestionData, language }: { question:
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
-          <span className="font-black text-sm">{language === 'ar' ? "خطأ (خاطئ)" : "False"}</span>
+          <span className="font-black text-sm">False</span>
         </button>
       </div>
     </div>
@@ -538,12 +538,11 @@ function MultiSelectEditor({ question, updateQuestionData, language }: { questio
               <span className="w-6 h-6 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-[11px] text-indigo-600 shrink-0 select-none">
                 {getOptionLetter(idx, language)}
               </span>
-              <input
-                type="text"
+              <MathInput
                 placeholder={language === 'ar' ? `اكتب الخيار ${idx + 1} (بدون أ، ب، ج)...` : `Option ${idx + 1} (without A, B, C)...`}
-                className="flex-1 min-w-0 bg-transparent border-none outline-none font-bold text-slate-800 text-xs py-1"
+                className="flex-1 min-w-0 font-bold text-slate-800 text-xs py-1"
                 value={c}
-                onChange={(e) => handleChoiceChange(idx, e.target.value)}
+                onChange={(val) => handleChoiceChange(idx, val)}
               />
               {choices.length > 2 && (
                 <button
@@ -2322,22 +2321,20 @@ function MathEquationEditor({ question, updateQuestionData, language }: { questi
       <div className="space-y-3 w-full">
         <div className="flex flex-col gap-1 w-full">
           <span className="text-[10px] font-black text-slate-400">صيغة المعادلة الحسابية:</span>
-          <input
-            type="text"
-            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-center"
+          <MathInput
+            className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-center"
             value={opts.equation || ""}
-            onChange={(e) => updateQuestionData({ equation: e.target.value }, correctVal)}
-            placeholder="مثال: 3x + 5 = 20"
+            onChange={(val) => updateQuestionData({ equation: val }, correctVal)}
+            placeholder="مثال: \(3x + \frac{5}{2} = 20\)"
           />
         </div>
         <div className="flex flex-col gap-1 w-full">
           <span className="text-[10px] font-black text-slate-400 font-bold">القيمة الصحيحة لـ x:</span>
-          <input
-            type="text"
-            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-center"
+          <MathInput
+            className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-center"
             value={correctVal}
-            onChange={(e) => updateQuestionData(opts, e.target.value.trim())}
-            placeholder="مثال: 5"
+            onChange={(val) => updateQuestionData(opts, val.trim())}
+            placeholder="مثال: \(\frac{35}{6}\)"
           />
         </div>
       </div>

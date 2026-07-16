@@ -9,6 +9,7 @@ import { useNotification } from "@/context/NotificationContext";
 import HtmlRenderer from "@/components/HtmlRenderer";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getOptionLetter, cleanOptionText } from "@/lib/utils";
+import { normalizeAnswerGlobal } from "@/components/LessonSubComponents";
 
 const renderExplanation = (explanationString: string) => {
   if (!explanationString) return null;
@@ -84,13 +85,9 @@ export default function ExamResultPage() {
   const { language } = useLanguage();
 
   const translateTrueFalse = (opt: string) => {
-    const norm = String(opt || '').trim();
-    if (norm === 'صحيح' || norm.toLowerCase() === 'true') {
-      return language === 'ar' ? 'صحيح' : 'True';
-    }
-    if (norm === 'خطأ' || norm.toLowerCase() === 'false') {
-      return language === 'ar' ? 'خطأ' : 'False';
-    }
+    const norm = normalizeAnswerGlobal(opt);
+    if (norm === 'true') return 'True';
+    if (norm === 'false') return 'False';
     return opt;
   };
 
@@ -201,7 +198,7 @@ export default function ExamResultPage() {
               {submission.exam.skill || 'عام'}
             </span>
             <span className="bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-black border border-white/20">
-              {submission.exam.level === 'Easy' ? 'سهل' : submission.exam.level === 'Medium' ? 'متوسط' : 'صعب'}
+              {submission.exam.level === 'Easy' || submission.exam.level === 'Foundation' ? 'تأسيسي' : submission.exam.level === 'Medium' || submission.exam.level === 'On Level' ? 'في المستوى' : 'متقدم'}
             </span>
           </div>
         </div>
@@ -306,7 +303,7 @@ export default function ExamResultPage() {
                             {answer.question.skill || "Skill"}
                           </span>
                           <span className="text-[10px] font-bold text-slate-400 leading-none">
-                            | مستوى: {answer.question.level === 'Easy' ? 'سهل' : answer.question.level === 'Medium' ? 'متوسط' : 'صعب'}
+                            | مستوى: {answer.question.level === 'Easy' || answer.question.level === 'Foundation' ? 'تأسيسي' : answer.question.level === 'Medium' || answer.question.level === 'On Level' ? 'في المستوى' : 'متقدم'}
                           </span>
                           {answer.question.dok && (
                             <span className="text-[10px] font-bold text-slate-400 leading-none">
@@ -352,8 +349,12 @@ export default function ExamResultPage() {
                           ? (answer.selectedAnswer || "").split(",")
                           : [answer.selectedAnswer];
 
-                        const isCorrectOption = correctAnswers.includes(opt);
-                        const isSelectedOption = selectedAnswers.includes(opt);
+                        const isCorrectOption = answer.question.type === 'TRUE_FALSE'
+                          ? correctAnswers.some((c: any) => normalizeAnswerGlobal(c) === normalizeAnswerGlobal(opt))
+                          : correctAnswers.includes(opt);
+                        const isSelectedOption = answer.question.type === 'TRUE_FALSE'
+                          ? selectedAnswers.some((s: any) => normalizeAnswerGlobal(s) === normalizeAnswerGlobal(opt))
+                          : selectedAnswers.includes(opt);
                         
                         let bgClass = "bg-slate-50 border-transparent";
                         let textClass = "text-slate-600";

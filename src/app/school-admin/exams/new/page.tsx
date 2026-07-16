@@ -81,7 +81,7 @@ export function SchoolAdminNewExamPageContent({ presetType, presetCourseId }: { 
     status: "PUBLISHED",
     grade: "الصف الأول الثانوي",
     skill: "Math",
-    level: "Medium",
+    level: "On Level",
   });
 
   useEffect(() => {
@@ -147,15 +147,13 @@ export function SchoolAdminNewExamPageContent({ presetType, presetCourseId }: { 
   };
 
     const SKILLS = language === 'ar' ? [
-    "الرياضيات", "الفيزياء", "الكيمياء", "الأحياء", "الجيولوجيا", "الميكانيكا",
-    "التاريخ", "الجغرافيا", "الفلسفة", "علم النفس", "الاقتصاد", "الإحصاء",
-    "الحاسب الآلي", "اللغة العربية", "اللغة الإنجليزية", "اللغة الفرنسية", "اللغة الألمانية", "اللغة الإيطالية",
-    "التربية الدينية", "التربية الوطنية", "SAT Reading", "SAT Writing"
+    "حل المشكلات", "التفكير المنطقي", "حس الأعداد", "التفكير الجبري", "الهندسة", "تحليل البيانات",
+    "الملاحظة", "الاستقصاء", "التفكير العلمي", "تفسير البيانات", "تصميم التجارب",
+    "الفكرة الرئيسية", "الاستنتاج", "المفردات في السياق", "غرض الكاتب", "التفاصيل الداعمة"
   ] : [
-    "Math", "Physics", "Chemistry", "Biology", "Geology", "Mechanics",
-    "History", "Geography", "Philosophy", "Psychology", "Economics", "Statistics",
-    "Computer Science", "Arabic", "English", "French", "German", "Italian",
-    "Religious Education", "National Education", "SAT Reading", "SAT Writing"
+    "Problem Solving", "Reasoning", "Number Sense", "Algebraic Thinking", "Geometry", "Data Analysis",
+    "Observation", "Investigation", "Scientific Reasoning", "Data Interpretation", "Experiment Design",
+    "Main Idea", "Inference", "Vocabulary in Context", "Author's Purpose", "Supporting Details"
   ];
 
   const [questions, setQuestions] = useState<any[]>([]);
@@ -269,7 +267,7 @@ export function SchoolAdminNewExamPageContent({ presetType, presetCourseId }: { 
 
   const [currentQuestion, setCurrentQuestion] = useState<any>({
     text: "", type: "MCQ", options: ["", "", "", ""],
-    correctAnswer: "", points: 1, xpPoints: 10, skill: "Math", level: "Medium", dok: "",
+    correctAnswer: "", points: 1, xpPoints: 10, skill: "Problem Solving", level: "On Level", dok: "",
     standard: "",
     indicator: "",
     learningOutcome: "",
@@ -351,10 +349,10 @@ export function SchoolAdminNewExamPageContent({ presetType, presetCourseId }: { 
       const learningOutcome = loIdx >= 0 ? String(row[loIdx] ?? "").trim() : "";
       const videoUrl = videoIdx >= 0 ? String(row[videoIdx] ?? "").trim() : "";
       
-      let level = diffIdx >= 0 ? String(row[diffIdx] ?? "").trim() : "Medium";
-      if (level.toLowerCase().includes("easy") || level.includes("سهل")) level = "Easy";
-      else if (level.toLowerCase().includes("hard") || level.includes("صعب")) level = "Hard";
-      else level = "Medium";
+      let level = diffIdx >= 0 ? String(row[diffIdx] ?? "").trim() : "On Level";
+      if (level.toLowerCase().includes("easy") || level.toLowerCase().includes("foundation") || level.includes("سهل") || level.includes("تأسيسي")) level = "Foundation";
+      else if (level.toLowerCase().includes("hard") || level.toLowerCase().includes("advanced") || level.includes("صعب") || level.includes("متقدم")) level = "Advanced";
+      else level = "On Level";
 
       const dokRaw = dokIdx >= 0 ? String(row[dokIdx] ?? "").trim() : "";
       const dok = ["DOK 1", "DOK 2", "DOK 3", "DOK 4"].includes(dokRaw) ? dokRaw : "";
@@ -446,22 +444,22 @@ export function SchoolAdminNewExamPageContent({ presetType, presetCourseId }: { 
         "ما هو ناتج 5 + 5؟",
         "MCQ",
         "8", "9", "10", "11", "",
-        "10", "", "1", "Math",
+        "10", "", "1", "Problem Solving",
         "المعيار 1: العمليات الحسابية",
         "المؤشر 1.1: الجمع",
         "أن يجمع الطالب الأعداد بشكل صحيح",
-        "Easy", "DOK 1",
+        "Foundation", "DOK 1",
         "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
         "الجمع الصحيح هو 10 لأن 5 زائد 5 يساوي 10"
       ] : [
         "What is 5 + 5?",
         "MCQ",
         "8", "9", "10", "11", "",
-        "10", "", "1", "Math",
+        "10", "", "1", "Problem Solving",
         "Standard 1: Basic Math",
         "Indicator 1.1: Addition",
         "Student can add numbers correctly",
-        "Easy", "DOK 1",
+        "Foundation", "DOK 1",
         "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
         "Correct addition is 10 because 5 plus 5 equals 10"
       ],
@@ -469,20 +467,20 @@ export function SchoolAdminNewExamPageContent({ presetType, presetCourseId }: { 
         "الأرض كروية الشكل.",
         "TRUE_FALSE",
         "", "", "", "", "",
-        "صحيح", "", "1", "General",
+        "صحيح", "", "1", "Observation",
         "المعيار 2: الجغرافيا الطبيعية",
         "المؤشر 2.1: شكل الأرض",
         "أن يدرك شكل كوكب الأرض",
-        "Easy", "DOK 2", "", ""
+        "Foundation", "DOK 2", "", ""
       ] : [
         "The Earth is round.",
         "TRUE_FALSE",
         "", "", "", "", "",
-        "صحيح", "", "1", "General",
+        "صحيح", "", "1", "Observation",
         "Standard 2: Physical Geography",
         "Indicator 2.1: Shape of Earth",
         "Student knows the shape of Earth",
-        "Easy", "DOK 2", "", ""
+        "Foundation", "DOK 2", "", ""
       ]
     ];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
@@ -505,7 +503,7 @@ export function SchoolAdminNewExamPageContent({ presetType, presetCourseId }: { 
   const handleAddQuestion = (type: string = 'MCQ') => {
     setCurrentQuestion({
       text: "", type, options: type === 'TRUE_FALSE' ? [t('schoolAdmin.examsNewPage.correct') || "صحيح", t('schoolAdmin.examsNewPage.incorrect') || "خطأ", "", ""] : ["", "", "", ""],
-      correctAnswer: "", points: type === 'TEXT' ? 0 : 1, xpPoints: 10, skill: "Math", level: "Medium", dok: "",
+      correctAnswer: "", points: type === 'TEXT' ? 0 : 1, xpPoints: 10, skill: "Problem Solving", level: "On Level", dok: "",
       standard: "",
       indicator: "",
       learningOutcome: "",
@@ -1382,9 +1380,9 @@ export function SchoolAdminNewExamPageContent({ presetType, presetCourseId }: { 
                           value={currentQuestion.level}
                           onChange={(e) => updateCurrentQuestion("level", e.target.value)}
                         >
-                          <option value="Easy">{t('schoolAdmin.examsNewPage.easy')}</option>
-                          <option value="Medium">{t('schoolAdmin.examsNewPage.medium')}</option>
-                          <option value="Hard">{t('schoolAdmin.examsNewPage.hard')}</option>
+                          <option value="Foundation">{t('schoolAdmin.examsNewPage.easy')}</option>
+                          <option value="On Level">{t('schoolAdmin.examsNewPage.medium')}</option>
+                          <option value="Advanced">{t('schoolAdmin.examsNewPage.hard')}</option>
                         </select>
                       </div>
 
@@ -1618,7 +1616,7 @@ export function SchoolAdminNewExamPageContent({ presetType, presetCourseId }: { 
                         <div className={`flex flex-col flex-1 overflow-hidden ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded uppercase">{QUESTION_TYPES.find(t => t.id === q.type)?.label}</span>
-                            <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded uppercase">{q.level === "Easy" ? t('schoolAdmin.examsNewPage.easy') : q.level === "Medium" ? t('schoolAdmin.examsNewPage.medium') : t('schoolAdmin.examsNewPage.hard')} {q.dok ? `• ${q.dok}` : ''} • {q.points} {t('schoolAdmin.examsNewPage.points')}</span>
+                            <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded uppercase">{q.level === "Easy" || q.level === "Foundation" ? t('schoolAdmin.examsNewPage.easy') : q.level === "Medium" || q.level === "On Level" ? t('schoolAdmin.examsNewPage.medium') : t('schoolAdmin.examsNewPage.hard')} {q.dok ? `• ${q.dok}` : ''} • {q.points} {t('schoolAdmin.examsNewPage.points')}</span>
                           </div>
                           <div 
                             className="text-slate-700 font-bold truncate text-sm"
@@ -1736,7 +1734,7 @@ export function SchoolAdminNewExamPageContent({ presetType, presetCourseId }: { 
                       {previewQuestion.type === 'MCQ' ? t('schoolAdmin.examsNewPage.mcqLabel') : previewQuestion.type === 'MULTI_SELECT' ? t('schoolAdmin.examsNewPage.multiSelectLabel') : t('schoolAdmin.examsNewPage.trueFalseLabel')}
                     </span>
                     <span className="bg-slate-100 text-slate-600 px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider">
-                      {previewQuestion.skill} | {previewQuestion.level === 'Easy' ? t('schoolAdmin.examsNewPage.easy') : previewQuestion.level === 'Medium' ? t('schoolAdmin.examsNewPage.medium') : t('schoolAdmin.examsNewPage.hard')}{previewQuestion.dok ? ` | ${previewQuestion.dok}` : ''}
+                      {previewQuestion.skill} | {previewQuestion.level === 'Easy' || previewQuestion.level === 'Foundation' ? t('schoolAdmin.examsNewPage.easy') : previewQuestion.level === 'Medium' || previewQuestion.level === 'On Level' ? t('schoolAdmin.examsNewPage.medium') : t('schoolAdmin.examsNewPage.hard')}{previewQuestion.dok ? ` | ${previewQuestion.dok}` : ''}
                     </span>
                   </div>
 

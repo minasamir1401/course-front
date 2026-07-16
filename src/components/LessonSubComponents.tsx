@@ -6,13 +6,16 @@ import HtmlRenderer from "@/components/HtmlRenderer";
 
 export const normalizeAnswerGlobal = (value: any) => {
   const norm = String(value ?? '').trim().toLowerCase();
-  if (norm === 'true') return 'صحيح';
-  if (norm === 'false') return 'خطأ';
+  if (['true', 'صح', 'صحيح', 'صواب', '1'].includes(norm)) return 'true';
+  if (['false', 'خطأ', 'خاطئ', 'غير صحيح', '0'].includes(norm)) return 'false';
   return norm;
 };
 
 export const checkAdvancedCorrect = (q: any, ans: any) => {
   if (!ans) return false;
+  if (q?.type === 'TRUE_FALSE') {
+    return normalizeAnswerGlobal(ans) === normalizeAnswerGlobal(q.correctAnswer);
+  }
   const cleanStr = (s: any) => String(s ?? '').trim().replace(/"/g, '');
   try {
     const isJsonString = (str: any) => {
@@ -46,7 +49,7 @@ export const isQuestionLike = (item: any) =>
 export const getQuestionOptions = (q: any, language: string) => {
   if (!q) return [];
   if (q.type === 'TRUE_FALSE') {
-    return [language === 'ar' ? 'صحيح' : 'True', language === 'ar' ? 'خطأ' : 'False'];
+    return ['True', 'False'];
   }
   if (Array.isArray(q.options) && q.options.filter(Boolean).length > 0) {
     return q.options.filter(Boolean);

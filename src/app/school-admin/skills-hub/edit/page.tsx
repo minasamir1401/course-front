@@ -393,7 +393,7 @@ export default function EditSchoolSkillClusterPage() {
       correctAnswer: "",
       points: 10,
       xpPoints: 10,
-      difficulty: "Medium",
+      difficulty: "On Level",
       dok: "2",
       estimatedTime: 60,
       standard: "", indicator: "", learningOutcome: "",
@@ -553,7 +553,7 @@ export default function EditSchoolSkillClusterPage() {
         language === 'ar' ? "ما هو ناتج 5 + 5؟" : "What is 5 + 5?",
         "MCQ",
         "8", "9", "10", "11", "",
-        "10", "", "10", "Easy", "DOK 1",
+        "10", "", "10", "Foundation", "DOK 1",
         language === 'ar' ? "لأن 5 زائد 5 يساوي 10" : "Because 5 + 5 = 10"
       ]
     ];
@@ -630,9 +630,10 @@ export default function EditSchoolSkillClusterPage() {
           }
 
           const points = pointsIdx >= 0 ? (parseInt(String(row[pointsIdx])) || 10) : 10;
-          let difficulty = diffIdx >= 0 ? String(row[diffIdx] ?? "").trim() : "Medium";
-          if (difficulty.includes("سهل") || difficulty.toLowerCase().includes("easy")) difficulty = "Easy";
-          if (difficulty.includes("صعب") || difficulty.toLowerCase().includes("hard")) difficulty = "Hard";
+          let difficulty = diffIdx >= 0 ? String(row[diffIdx] ?? "").trim() : "On Level";
+          if (difficulty.includes("سهل") || difficulty.toLowerCase().includes("easy") || difficulty.includes("تأسيسي") || difficulty.toLowerCase().includes("foundation")) difficulty = "Foundation";
+          else if (difficulty.includes("صعب") || difficulty.toLowerCase().includes("hard") || difficulty.includes("متقدم") || difficulty.toLowerCase().includes("advanced")) difficulty = "Advanced";
+          else difficulty = "On Level";
           
           const dokRaw = dokIdx >= 0 ? String(row[dokIdx] ?? "").trim() : "";
           const dok = ["1", "2", "3"].includes(dokRaw.replace("DOK ", "")) ? dokRaw.replace("DOK ", "") : "2";
@@ -1424,9 +1425,9 @@ export default function EditSchoolSkillClusterPage() {
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "الصعوبة" : "Difficulty"}</label>
                   <select value={editingActivity.difficulty} onChange={(e) => setEditingActivity({...editingActivity, difficulty: e.target.value})} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none">
-                    <option value="Easy">{language === 'ar' ? 'سهل' : 'Easy'}</option>
-                    <option value="Medium">{language === 'ar' ? 'متوسط' : 'Medium'}</option>
-                    <option value="Hard">{language === 'ar' ? 'صعب' : 'Hard'}</option>
+                    <option value="Foundation">{language === 'ar' ? 'تأسيسي' : 'Foundation'}</option>
+                    <option value="On Level">{language === 'ar' ? 'في المستوى' : 'On Level'}</option>
+                    <option value="Advanced">{language === 'ar' ? 'متقدم' : 'Advanced'}</option>
                   </select>
                 </div>
                 <div className="space-y-2">

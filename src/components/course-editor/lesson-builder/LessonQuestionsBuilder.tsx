@@ -8,6 +8,9 @@ import {
 import RichTextEditor from "@/components/RichTextEditor";
 import { getOptionLetter, cleanOptionText } from "@/lib/utils";
 import { useNotification } from "@/context/NotificationContext";
+import MathInput from "@/components/MathInput";
+import { normalizeAnswerGlobal } from "@/components/LessonSubComponents";
+import HtmlRenderer from "@/components/HtmlRenderer";
 import { parseJson } from "./parseJson";
 import { getSectionStylePresets } from "./constants";
 
@@ -78,8 +81,8 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
       correctAnswers: [],
       points: 1,
       xpPoints: 10,
-      skill: "General",
-      level: "Medium",
+      skill: "Problem Solving",
+      level: "On Level",
       standard: "",
       indicator: "",
       learningOutcome: "",
@@ -212,6 +215,9 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
 
   const isQuestionCorrectAnswer = (opt: string) => {
     if (!opt) return false;
+    if (tempQuestion.type === 'TRUE_FALSE') {
+      return normalizeAnswerGlobal(tempQuestion.correctAnswer) === normalizeAnswerGlobal(opt);
+    }
     if (tempQuestion.type === 'MULTI_SELECT') {
       return (tempQuestion.correctAnswers || []).includes(opt);
     }
@@ -524,7 +530,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                                         <span className="w-5 h-5 rounded-md bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-[10px] text-indigo-600 shrink-0">
                                           {getOptionLetter(oIdx, language)}
                                         </span>
-                                        <span>{cleanOptionText(opt)}</span>
+                                        <HtmlRenderer html={cleanOptionText(opt)} tag="span" className="flex-1 break-words whitespace-normal min-w-0 !leading-relaxed" />
                                       </div>
                                     );
                                   })}
@@ -604,8 +610,8 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                       const newType = e.target.value;
                       const updated = { ...tempQuestion, type: newType };
                       if (newType === "TRUE_FALSE") {
-                        updated.options = ["صحيح", "خطأ", "", ""];
-                        updated.correctAnswer = "صحيح";
+                        updated.options = ["True", "False", "", ""];
+                        updated.correctAnswer = "True";
                       } else if (tempQuestion.type === "TRUE_FALSE") {
                         updated.options = ["", "", "", ""];
                         updated.correctAnswer = "";
@@ -656,7 +662,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                     value={tempQuestion.skill || "General"}
                     onChange={(e) => updateCurrentQuestionField("skill", e.target.value)}
                   >
-                    {["General", "Critical Thinking", "Problem Solving", "Analysis", "Application", "Math", "Physics", "Chemistry", "Biology", "Geology", "History", "Geography", "Philosophy", "Arabic", "English", "French"].map(sk => (
+                    {["Problem Solving", "Reasoning", "Number Sense", "Algebraic Thinking", "Geometry", "Data Analysis", "Observation", "Investigation", "Scientific Reasoning", "Data Interpretation", "Experiment Design", "Main Idea", "Inference", "Vocabulary in Context", "Author's Purpose", "Supporting Details"].map(sk => (
                       <option key={sk} value={sk}>{sk}</option>
                     ))}
                   </select>
@@ -669,9 +675,9 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                     value={tempQuestion.level || "Medium"}
                     onChange={(e) => updateCurrentQuestionField("level", e.target.value)}
                   >
-                    <option value="Easy">{language === 'ar' ? 'سهل' : 'Easy'}</option>
-                    <option value="Medium">{language === 'ar' ? 'متوسط' : 'Medium'}</option>
-                    <option value="Hard">{language === 'ar' ? 'صعب' : 'Hard'}</option>
+                    <option value="Foundation">{language === 'ar' ? 'تأسيسي' : 'Foundation'}</option>
+                    <option value="On Level">{language === 'ar' ? 'في المستوى' : 'On Level'}</option>
+                    <option value="Advanced">{language === 'ar' ? 'متقدم' : 'Advanced'}</option>
                   </select>
                 </div>
 
@@ -807,24 +813,17 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-slate-100 pt-6">
                   {tempQuestion.type === "TRUE_FALSE" ? (
                     <>
-                      <div className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isQuestionCorrectAnswer("صحيح") ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
-                        <div 
-                          onClick={() => toggleQuestionCorrectAnswer(0)}
-                          className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isQuestionCorrectAnswer("صحيح") ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200'}`}
-                        >
-                          {isQuestionCorrectAnswer("صحيح") && <CheckCircle2 className="w-5 h-5 text-white" />}
+                      {["True", "False"].map((opt) => (
+                        <div key={opt} className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isQuestionCorrectAnswer(opt) ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
+                          <div 
+                            onClick={() => setTempQuestion({ ...tempQuestion, options: ["True", "False", "", ""], correctAnswer: opt })}
+                            className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isQuestionCorrectAnswer(opt) ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200'}`}
+                          >
+                            {isQuestionCorrectAnswer(opt) && <CheckCircle2 className="w-5 h-5 text-white" />}
+                          </div>
+                          <span className="font-bold text-slate-700">{opt}</span>
                         </div>
-                        <span className="font-bold text-slate-700">{language === 'ar' ? 'صحيح' : 'True'}</span>
-                      </div>
-                      <div className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isQuestionCorrectAnswer("خطأ") ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
-                        <div 
-                          onClick={() => toggleQuestionCorrectAnswer(1)}
-                          className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isQuestionCorrectAnswer("خطأ") ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200'}`}
-                        >
-                          {isQuestionCorrectAnswer("خطأ") && <CheckCircle2 className="w-5 h-5 text-white" />}
-                        </div>
-                        <span className="font-bold text-slate-700">{language === 'ar' ? 'خطأ' : 'False'}</span>
-                      </div>
+                      ))}
                     </>
                   ) : (
                     <>
@@ -839,12 +838,11 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                           <span className="w-7 h-7 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-xs text-indigo-600 shrink-0 select-none">
                             {getOptionLetter(oIndex, language)}
                           </span>
-                          <input 
-                            type="text" 
-                            placeholder={language === 'ar' ? `الخيار ${oIndex + 1} (بدون أ، ب، ج)` : `Option ${oIndex + 1} (no A, B, C)`}
-                            className="bg-transparent flex-1 outline-none font-bold text-slate-700 placeholder:text-slate-300 text-sm"
+                          <MathInput 
                             value={opt}
-                            onChange={(e) => updateQuestionOption(oIndex, e.target.value)}
+                            onChange={(val) => updateQuestionOption(oIndex, val)}
+                            placeholder={language === 'ar' ? `الخيار ${oIndex + 1} (بدون أ، ب، ج)` : `Option ${oIndex + 1} (no A, B, C)`}
+                            className="bg-transparent flex-1 font-bold text-slate-700 placeholder:text-slate-300 text-sm"
                           />
                           {tempQuestion.options.length > 2 && (
                             <button 

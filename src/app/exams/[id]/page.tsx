@@ -267,7 +267,7 @@ export default function TakeExamPage() {
               <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 text-center">
                 <HelpCircle className="w-6 h-6 text-indigo-600 mx-auto mb-3" />
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">المستوى</p>
-                <p className="font-black text-slate-700">{exam.level === 'Easy' ? 'سهل' : exam.level === 'Medium' ? 'متوسط' : 'صعب'}</p>
+                <p className="font-black text-slate-700">{exam.level === 'Easy' || exam.level === 'Foundation' ? 'تأسيسي' : exam.level === 'Medium' || exam.level === 'On Level' ? 'في المستوى' : 'متقدم'}</p>
               </div>
               <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 text-center">
                 <Play className="w-6 h-6 text-indigo-600 mx-auto mb-3" />
@@ -378,7 +378,7 @@ export default function TakeExamPage() {
               <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">{exam.type}</span>
               <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">{exam.skill}</span>
               <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
-                {exam.level === 'Easy' ? 'سهل' : exam.level === 'Medium' ? 'متوسط' : 'صعب'}
+                {exam.level === 'Easy' || exam.level === 'Foundation' ? 'تأسيسي' : exam.level === 'Medium' || exam.level === 'On Level' ? 'في المستوى' : 'متقدم'}
               </span>
             </div>
           </div>
@@ -435,7 +435,7 @@ export default function TakeExamPage() {
               {question.type !== 'TEXT' && (
                 <>
                   <span className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider">
-                    {question.skill} | {question.level === 'Easy' ? 'سهل' : question.level === 'Medium' ? 'متوسط' : 'صعب'}
+                    {question.skill} | {question.level === 'Easy' || question.level === 'Foundation' ? 'تأسيسي' : question.level === 'Medium' || question.level === 'On Level' ? 'في المستوى' : 'متقدم'}
                   </span>
                   {question.dok && (
                     <span className="px-3 py-1.5 bg-yellow-50 text-yellow-700 border border-yellow-100 rounded-lg text-[10px] font-bold uppercase tracking-wider">
@@ -530,14 +530,14 @@ export default function TakeExamPage() {
                 ) : (
                   <div className="flex gap-4">
                     {[
-                      { value: "صحيح", label: language === 'ar' ? "صحيح" : "True" },
-                      { value: "خطأ", label: language === 'ar' ? "خطأ" : "False" }
+                      { value: "True", label: "True", matches: ["True", "true", "صحيح", "صح", "صواب", "1"] },
+                      { value: "False", label: "False", matches: ["False", "false", "خطأ", "خاطئ", "غير صحيح", "0"] }
                     ].map((option) => (
                       <button
                         key={option.value}
                         onClick={() => handleSelectAnswer(option.value)}
                         className={`flex-1 py-6 rounded-2xl border-2 font-bold text-xl transition-all ${
-                          selectedAnswer === option.value
+                          option.matches.includes(String(selectedAnswer || "").trim())
                             ? "bg-indigo-50 border-indigo-600 text-indigo-900"
                             : "bg-white border-slate-100 text-slate-500 hover:bg-slate-50"
                         }`}

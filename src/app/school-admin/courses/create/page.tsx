@@ -486,10 +486,10 @@ export default function CreateCoursePage() {
       const learningOutcome = loIdx >= 0 ? String(row[loIdx] ?? "").trim() : "";
       const videoUrl = videoIdx >= 0 ? String(row[videoIdx] ?? "").trim() : "";
 
-      let level = diffIdx >= 0 ? String(row[diffIdx] ?? "").trim() : "Medium";
-      if (level.toLowerCase().includes("easy") || level.includes("سهل")) level = "Easy";
-      else if (level.toLowerCase().includes("hard") || level.includes("صعب")) level = "Hard";
-      else level = "Medium";
+      let level = diffIdx >= 0 ? String(row[diffIdx] ?? "").trim() : "On Level";
+      if (level.toLowerCase().includes("easy") || level.toLowerCase().includes("foundation") || level.includes("سهل") || level.includes("تأسيسي")) level = "Foundation";
+      else if (level.toLowerCase().includes("hard") || level.toLowerCase().includes("advanced") || level.includes("صعب") || level.includes("متقدم")) level = "Advanced";
+      else level = "On Level";
 
       const dokRaw = dokIdx >= 0 ? String(row[dokIdx] ?? "").trim() : "";
       const dok = ["DOK 1", "DOK 2", "DOK 3", "DOK 4"].includes(dokRaw) ? dokRaw : "";
@@ -756,11 +756,11 @@ export default function CreateCoursePage() {
         language === 'ar' ? "ما هو ناتج 5 + 5؟" : "What is 5 + 5?",
         "MCQ",
         "8", "9", "10", "11", "",
-        "10", "", "1", "Math",
+        "10", "", "1", "Problem Solving",
         language === 'ar' ? "معيار 1: العمليات الحسابية" : "Standard 1: Operations",
         language === 'ar' ? "مؤشر 1.1: الجمع" : "Indicator 1.1: Addition",
         language === 'ar' ? "أن يجمع الطالب الأعداد بشكل صحيح" : "LO: Students can add numbers correctly",
-        "Easy", "DOK 1",
+        "Foundation", "DOK 1",
         "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
         language === 'ar' ? "الجمع الصحيح هو 10 لأن 5 زائد 5 يساوي 10" : "5 + 5 is 10"
       ],
@@ -768,11 +768,11 @@ export default function CreateCoursePage() {
         language === 'ar' ? "الأرض كروية الشكل." : "The earth is round.",
         "TRUE_FALSE",
         "", "", "", "", "",
-        language === 'ar' ? "صحيح" : "True", "", "1", "General",
+        language === 'ar' ? "صحيح" : "True", "", "1", "Observation",
         language === 'ar' ? "معيار 2: الجغرافيا الطبيعية" : "Standard 2: Physical Geography",
         language === 'ar' ? "مؤشر 2.1: شكل الأرض" : "Indicator 2.1: Earth Shape",
         language === 'ar' ? "أن يدرك شكل كوكب الأرض" : "LO: Understands planet earth's shape",
-        "Easy", "DOK 2", "", ""
+        "Foundation", "DOK 2", "", ""
       ],
       [
         language === 'ar' ? "حدد قارات العالم القديم:" : "Select the ancient world continents:",
@@ -1233,7 +1233,7 @@ export default function CreateCoursePage() {
                           onChange={(e) => updateBlock(source, sIdx, 'skill', e.target.value)}
                         >
                           <option value="General">{language === 'ar' ? 'عام' : 'General'}</option>
-                          {["Math", "Physics", "Chemistry", "Biology", "Geology", "History", "Geography", "Philosophy", "Arabic", "English", "French"].map(sk => (
+                          {["Problem Solving", "Reasoning", "Number Sense", "Algebraic Thinking", "Geometry", "Data Analysis", "Observation", "Investigation", "Scientific Reasoning", "Data Interpretation", "Experiment Design", "Main Idea", "Inference", "Vocabulary in Context", "Author's Purpose", "Supporting Details"].map(sk => (
                             <option key={sk} value={sk}>{sk}</option>
                           ))}
                         </select>
@@ -1246,9 +1246,9 @@ export default function CreateCoursePage() {
                           value={block.level || "Medium"}
                           onChange={(e) => updateBlock(source, sIdx, 'level', e.target.value)}
                         >
-                          <option value="Easy">{language === 'ar' ? 'سهل' : 'Easy'}</option>
-                          <option value="Medium">{language === 'ar' ? 'متوسط' : 'Medium'}</option>
-                          <option value="Hard">{language === 'ar' ? 'صعب' : 'Hard'}</option>
+                          <option value="Foundation">{language === 'ar' ? 'تأسيسي' : 'Foundation'}</option>
+                          <option value="On Level">{language === 'ar' ? 'في المستوى' : 'On Level'}</option>
+                          <option value="Advanced">{language === 'ar' ? 'متقدم' : 'Advanced'}</option>
                         </select>
                       </div>
 
@@ -2049,7 +2049,7 @@ export default function CreateCoursePage() {
                     value={tempQuestion.skill || "General"}
                     onChange={(e) => updateCurrentQuestionField("skill", e.target.value)}
                   >
-                    {["General", "Critical Thinking", "Problem Solving", "Analysis", "Application", "Math", "Physics", "Chemistry", "Biology", "Geology", "History", "Geography", "Philosophy", "Arabic", "English", "French"].map(sk => (
+                    {["Problem Solving", "Reasoning", "Number Sense", "Algebraic Thinking", "Geometry", "Data Analysis", "Observation", "Investigation", "Scientific Reasoning", "Data Interpretation", "Experiment Design", "Main Idea", "Inference", "Vocabulary in Context", "Author's Purpose", "Supporting Details"].map(sk => (
                       <option key={sk} value={sk}>{sk}</option>
                     ))}
                   </select>
@@ -2062,9 +2062,9 @@ export default function CreateCoursePage() {
                     value={tempQuestion.level || "Medium"}
                     onChange={(e) => updateCurrentQuestionField("level", e.target.value)}
                   >
-                    <option value="Easy">{language === 'ar' ? 'سهل' : 'Easy'}</option>
-                    <option value="Medium">{language === 'ar' ? 'متوسط' : 'Medium'}</option>
-                    <option value="Hard">{language === 'ar' ? 'صعب' : 'Hard'}</option>
+                    <option value="Foundation">{language === 'ar' ? 'تأسيسي' : 'Foundation'}</option>
+                    <option value="On Level">{language === 'ar' ? 'في المستوى' : 'On Level'}</option>
+                    <option value="Advanced">{language === 'ar' ? 'متقدم' : 'Advanced'}</option>
                   </select>
                 </div>
 

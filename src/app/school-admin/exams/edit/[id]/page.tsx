@@ -65,8 +65,8 @@ export function SchoolAdminEditExamPageContent({ presetType }: { presetType?: 'E
     attemptsAllowed: 1,
     status: "PUBLISHED",
     grade: "الصف الأول الثانوي",
-    skill: "Math",
-    level: "Medium",
+    skill: "Problem Solving",
+    level: "On Level",
   });
 
   const [questions, setQuestions] = useState<any[]>([]);
@@ -140,7 +140,7 @@ export function SchoolAdminEditExamPageContent({ presetType }: { presetType?: 'E
 
   const [currentQuestion, setCurrentQuestion] = useState<any>({
     text: "", type: "MCQ", options: ["", "", "", ""],
-    correctAnswer: "", points: 1, xpPoints: 10, skill: "Math", level: "Medium", dok: "",
+    correctAnswer: "", points: 1, xpPoints: 10, skill: "Problem Solving", level: "On Level", dok: "",
     standard: "",
     indicator: "",
     learningOutcome: "",
@@ -213,15 +213,13 @@ export function SchoolAdminEditExamPageContent({ presetType }: { presetType?: 'E
   };
 
     const SKILLS = language === 'ar' ? [
-    "الرياضيات", "الفيزياء", "الكيمياء", "الأحياء", "الجيولوجيا", "الميكانيكا",
-    "التاريخ", "الجغرافيا", "الفلسفة", "علم النفس", "الاقتصاد", "الإحصاء",
-    "الحاسب الآلي", "اللغة العربية", "اللغة الإنجليزية", "اللغة الفرنسية", "اللغة الألمانية", "اللغة الإيطالية",
-    "التربية الدينية", "التربية الوطنية", "SAT Reading", "SAT Writing"
+    "حل المشكلات", "التفكير المنطقي", "حس الأعداد", "التفكير الجبري", "الهندسة", "تحليل البيانات",
+    "الملاحظة", "الاستقصاء", "التفكير العلمي", "تفسير البيانات", "تصميم التجارب",
+    "الفكرة الرئيسية", "الاستنتاج", "المفردات في السياق", "غرض الكاتب", "التفاصيل الداعمة"
   ] : [
-    "Math", "Physics", "Chemistry", "Biology", "Geology", "Mechanics",
-    "History", "Geography", "Philosophy", "Psychology", "Economics", "Statistics",
-    "Computer Science", "Arabic", "English", "French", "German", "Italian",
-    "Religious Education", "National Education", "SAT Reading", "SAT Writing"
+    "Problem Solving", "Reasoning", "Number Sense", "Algebraic Thinking", "Geometry", "Data Analysis",
+    "Observation", "Investigation", "Scientific Reasoning", "Data Interpretation", "Experiment Design",
+    "Main Idea", "Inference", "Vocabulary in Context", "Author's Purpose", "Supporting Details"
   ];
 
   const VISIBILITY_OPTIONS = [
@@ -307,10 +305,10 @@ export function SchoolAdminEditExamPageContent({ presetType }: { presetType?: 'E
       const learningOutcome = loIdx >= 0 ? String(row[loIdx] ?? "").trim() : "";
       const videoUrl = videoIdx >= 0 ? String(row[videoIdx] ?? "").trim() : "";
       
-      let level = diffIdx >= 0 ? String(row[diffIdx] ?? "").trim() : "Medium";
-      if (level.toLowerCase().includes("easy") || level.includes("سهل")) level = "Easy";
-      else if (level.toLowerCase().includes("hard") || level.includes("صعب")) level = "Hard";
-      else level = "Medium";
+      let level = diffIdx >= 0 ? String(row[diffIdx] ?? "").trim() : "On Level";
+      if (level.toLowerCase().includes("easy") || level.toLowerCase().includes("foundation") || level.includes("سهل") || level.includes("تأسيسي")) level = "Foundation";
+      else if (level.toLowerCase().includes("hard") || level.toLowerCase().includes("advanced") || level.includes("صعب") || level.includes("متقدم")) level = "Advanced";
+      else level = "On Level";
 
       const dokRaw = dokIdx >= 0 ? String(row[dokIdx] ?? "").trim() : "";
       const dok = ["DOK 1", "DOK 2", "DOK 3", "DOK 4"].includes(dokRaw) ? dokRaw : "";
@@ -489,7 +487,7 @@ export function SchoolAdminEditExamPageContent({ presetType }: { presetType?: 'E
   const handleAddQuestion = (type: string = 'MCQ') => {
     setCurrentQuestion({
       text: "", type, options: type === 'TRUE_FALSE' ? ["صحيح", "خطأ", "", ""] : ["", "", "", ""],
-      correctAnswer: "", points: type === 'TEXT' ? 0 : 1, xpPoints: 10, skill: "Math", level: "Medium", dok: "",
+      correctAnswer: "", points: type === 'TEXT' ? 0 : 1, xpPoints: 10, skill: "Problem Solving", level: "On Level", dok: "",
       standard: "",
       indicator: "",
       learningOutcome: "",
@@ -1309,9 +1307,9 @@ export function SchoolAdminEditExamPageContent({ presetType }: { presetType?: 'E
                           value={currentQuestion.level}
                           onChange={(e) => updateCurrentQuestion("level", e.target.value)}
                         >
-                          <option value="Easy">سهل</option>
-                          <option value="Medium">متوسط</option>
-                          <option value="Hard">صعب</option>
+                          <option value="Foundation">تأسيسي</option>
+                          <option value="On Level">في المستوى</option>
+                          <option value="Advanced">متقدم</option>
                         </select>
                       </div>
 
@@ -1544,7 +1542,7 @@ export function SchoolAdminEditExamPageContent({ presetType }: { presetType?: 'E
                         <div className="flex flex-col flex-1 overflow-hidden">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded uppercase">{QUESTION_TYPES.find(t => t.id === q.type)?.label}</span>
-                            <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded uppercase">{q.level === "Easy" ? "سهل" : q.level === "Medium" ? "متوسط" : "صعب"} {q.dok ? `• ${q.dok}` : ''} • {q.points} نقطة</span>
+                            <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded uppercase">{q.level === "Easy" || q.level === "Foundation" ? "تأسيسي" : q.level === "Medium" || q.level === "On Level" ? "في المستوى" : "متقدم"} {q.dok ? `• ${q.dok}` : ''} • {q.points} نقطة</span>
                           </div>
                           <div 
                             className="text-slate-700 font-bold truncate text-sm"

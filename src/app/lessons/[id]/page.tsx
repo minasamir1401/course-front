@@ -1034,7 +1034,7 @@ export default function LessonPlayerPage() {
                             </span>
                             {lesson.assignments[currentAssignmentIndex].level && (
                               <span className="px-3 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs md:text-sm font-bold uppercase tracking-wider max-w-full break-words whitespace-normal text-right">
-                                {t('lesson.level')}: {lesson.assignments[currentAssignmentIndex].level === 'Easy' ? t('lesson.easy') : lesson.assignments[currentAssignmentIndex].level === 'Medium' ? t('lesson.medium') : t('lesson.hard')}
+                                {t('lesson.level')}: {lesson.assignments[currentAssignmentIndex].level === 'Easy' || lesson.assignments[currentAssignmentIndex].level === 'Foundation' ? t('lesson.easy') : lesson.assignments[currentAssignmentIndex].level === 'Medium' || lesson.assignments[currentAssignmentIndex].level === 'On Level' ? t('lesson.medium') : t('lesson.hard')}
                               </span>
                             )}
                             {lesson.assignments[currentAssignmentIndex].dok && (
@@ -1308,7 +1308,7 @@ export default function LessonPlayerPage() {
                             </span>
                             {lesson.questions[currentQuestionIndex].level && (
                               <span className="px-3 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs md:text-sm font-bold uppercase tracking-wider max-w-full break-words whitespace-normal text-right">
-                                {t('lesson.level')}: {lesson.questions[currentQuestionIndex].level === 'Easy' ? t('lesson.easy') : lesson.questions[currentQuestionIndex].level === 'Medium' ? t('lesson.medium') : t('lesson.hard')}
+                                {t('lesson.level')}: {lesson.questions[currentQuestionIndex].level === 'Easy' || lesson.questions[currentQuestionIndex].level === 'Foundation' ? t('lesson.easy') : lesson.questions[currentQuestionIndex].level === 'Medium' || lesson.questions[currentQuestionIndex].level === 'On Level' ? t('lesson.medium') : t('lesson.hard')}
                               </span>
                             )}
                             {lesson.questions[currentQuestionIndex].dok && (

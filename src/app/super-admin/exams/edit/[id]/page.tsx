@@ -117,15 +117,15 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
     attemptsAllowed: 1,
     status: "PUBLISHED",
     grades: ["Grade 1 High School"],
-    skill: "Math",
-    level: "Medium",
+    skill: "Problem Solving",
+    level: "On Level",
   });
 
   const [questions, setQuestions] = useState<any[]>([]);
 
   const [currentQuestion, setCurrentQuestion] = useState<any>({
     text: "", type: "MCQ", options: ["", "", "", ""],
-    correctAnswer: "", points: 1, skill: "Math", level: "Medium", dok: "",
+    correctAnswer: "", points: 1, skill: "Problem Solving", level: "On Level", dok: "",
     standard: "",
     indicator: "",
     learningOutcome: "",
@@ -165,15 +165,13 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
   ];
 
     const SKILLS = language === 'ar' ? [
-    "الرياضيات", "الفيزياء", "الكيمياء", "الأحياء", "الجيولوجيا", "الميكانيكا",
-    "التاريخ", "الجغرافيا", "الفلسفة", "علم النفس", "الاقتصاد", "الإحصاء",
-    "الحاسب الآلي", "اللغة العربية", "اللغة الإنجليزية", "اللغة الفرنسية", "اللغة الألمانية", "اللغة الإيطالية",
-    "التربية الدينية", "التربية الوطنية", "SAT Reading", "SAT Writing"
+    "حل المشكلات", "التفكير المنطقي", "حس الأعداد", "التفكير الجبري", "الهندسة", "تحليل البيانات",
+    "الملاحظة", "الاستقصاء", "التفكير العلمي", "تفسير البيانات", "تصميم التجارب",
+    "الفكرة الرئيسية", "الاستنتاج", "المفردات في السياق", "غرض الكاتب", "التفاصيل الداعمة"
   ] : [
-    "Math", "Physics", "Chemistry", "Biology", "Geology", "Mechanics",
-    "History", "Geography", "Philosophy", "Psychology", "Economics", "Statistics",
-    "Computer Science", "Arabic", "English", "French", "German", "Italian",
-    "Religious Education", "National Education", "SAT Reading", "SAT Writing"
+    "Problem Solving", "Reasoning", "Number Sense", "Algebraic Thinking", "Geometry", "Data Analysis",
+    "Observation", "Investigation", "Scientific Reasoning", "Data Interpretation", "Experiment Design",
+    "Main Idea", "Inference", "Vocabulary in Context", "Author's Purpose", "Supporting Details"
   ];
 
   const [customLearningOutcomes, setCustomLearningOutcomes] = useState<string[]>(() => {
@@ -323,10 +321,10 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
       const learningOutcome = loIdx >= 0 ? String(row[loIdx] ?? "").trim() : "";
       const videoUrl = videoIdx >= 0 ? String(row[videoIdx] ?? "").trim() : "";
       
-      let level = diffIdx >= 0 ? String(row[diffIdx] ?? "").trim() : "Medium";
-      if (level.toLowerCase().includes("easy") || level.includes("سهل")) level = "Easy";
-      else if (level.toLowerCase().includes("hard") || level.includes("صعب")) level = "Hard";
-      else level = "Medium";
+      let level = diffIdx >= 0 ? String(row[diffIdx] ?? "").trim() : "On Level";
+      if (level.toLowerCase().includes("easy") || level.toLowerCase().includes("foundation") || level.includes("سهل") || level.includes("تأسيسي")) level = "Foundation";
+      else if (level.toLowerCase().includes("hard") || level.toLowerCase().includes("advanced") || level.includes("صعب") || level.includes("متقدم")) level = "Advanced";
+      else level = "On Level";
 
       const dokRaw = dokIdx >= 0 ? String(row[dokIdx] ?? "").trim() : "";
       const dok = ["DOK 1", "DOK 2", "DOK 3", "DOK 4"].includes(dokRaw) ? dokRaw : "";
@@ -418,11 +416,11 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
         "What is 5 + 5?",
         "MCQ",
         "8", "9", "10", "11", "",
-        "10", "", "1", "Math",
+        "10", "", "1", "Problem Solving",
         "Standard 1: Operations",
         "Indicator 1.1: Addition",
         "Outcome 1: Solve additions",
-        "Easy",
+        "Foundation",
         "DOK 1",
         "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
         "5 + 5 equals 10"
@@ -435,7 +433,7 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
         "Standard 2: Earth Shape",
         "Indicator 2.1: Planets",
         "Outcome 2: Physical shape",
-        "Easy", "DOK 2", "", ""
+        "Foundation", "DOK 2", "", ""
       ]
     ];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
@@ -530,7 +528,7 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
   const handleAddQuestion = (type: string = 'MCQ') => {
     setCurrentQuestion({
       text: "", type, options: type === 'TRUE_FALSE' ? ["صحيح", "خطأ", "", ""] : ["", "", "", ""],
-      correctAnswer: "", points: type === 'TEXT' ? 0 : 1, skill: "Math", level: "Medium", dok: "",
+      correctAnswer: "", points: type === 'TEXT' ? 0 : 1, skill: "Problem Solving", level: "On Level", dok: "",
       standard: "",
       learningOutcome: "",
       sections: [{ type: "EXPLANATION", content: "" }], imageUrl: "", correctAnswers: [],
@@ -1568,9 +1566,9 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
                           value={currentQuestion.level}
                           onChange={(e) => updateCurrentQuestion("level", e.target.value)}
                         >
-                          <option value="Easy">Easy</option>
-                          <option value="Medium">Medium</option>
-                          <option value="Hard">Hard</option>
+                          <option value="Foundation">Foundation</option>
+                          <option value="On Level">On Level</option>
+                          <option value="Advanced">Advanced</option>
                         </select>
                       </div>
 

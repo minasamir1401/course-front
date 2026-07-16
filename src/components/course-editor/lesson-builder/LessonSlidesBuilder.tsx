@@ -9,6 +9,7 @@ import RichTextEditor from "@/components/RichTextEditor";
 import MathInput from "@/components/MathInput";
 import InteractiveQuestionEditor from "@/components/InteractiveQuestionEditor";
 import { getOptionLetter } from "@/lib/utils";
+import { normalizeAnswerGlobal } from "@/components/LessonSubComponents";
 import { useLessonBlocks } from "./useLessonBlocks";
 import { getSectionStylePresets } from "./constants";
 
@@ -368,7 +369,7 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
                           onChange={(e) => updateBlock(source, sIdx, 'skill', e.target.value)}
                         >
                           <option value="General">{language === 'ar' ? 'عام' : 'General'}</option>
-                          {["Math", "Physics", "Chemistry", "Biology", "Geology", "History", "Geography", "Philosophy", "Arabic", "English", "French"].map(sk => (
+                          {["Problem Solving", "Reasoning", "Number Sense", "Algebraic Thinking", "Geometry", "Data Analysis", "Observation", "Investigation", "Scientific Reasoning", "Data Interpretation", "Experiment Design", "Main Idea", "Inference", "Vocabulary in Context", "Author's Purpose", "Supporting Details"].map(sk => (
                             <option key={sk} value={sk}>{sk}</option>
                           ))}
                         </select>
@@ -381,9 +382,9 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
                           value={block.level || "Medium"}
                           onChange={(e) => updateBlock(source, sIdx, 'level', e.target.value)}
                         >
-                          <option value="Easy">{language === 'ar' ? 'سهل' : 'Easy'}</option>
-                          <option value="Medium">{language === 'ar' ? 'متوسط' : 'Medium'}</option>
-                          <option value="Hard">{language === 'ar' ? 'صعب' : 'Hard'}</option>
+                          <option value="Foundation">{language === 'ar' ? 'تأسيسي' : 'Foundation'}</option>
+                          <option value="On Level">{language === 'ar' ? 'في المستوى' : 'On Level'}</option>
+                          <option value="Advanced">{language === 'ar' ? 'متقدم' : 'Advanced'}</option>
                         </select>
                       </div>
 
@@ -431,14 +432,17 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
                           <label className="text-xs font-black text-slate-500 uppercase tracking-widest block">{language === 'ar' ? "خيارات الإجابة والإجابة الصحيحة" : "Answer Options & Correct Answer"}</label>
                           {block.label === 'TRUE_FALSE' ? (
                             <div className="grid grid-cols-2 gap-4">
-                              {['صحيح', 'خطأ'].map((opt) => (
-                                <div key={opt} className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${block.correctAnswer === opt ? 'bg-emerald-50 border-emerald-500' : 'bg-white border-transparent'}`} onClick={() => updateBlock(source, sIdx, 'correctAnswer', opt)}>
-                                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${block.correctAnswer === opt ? 'bg-emerald-500 border-emerald-200' : 'bg-slate-200 border-transparent'}`}>
-                                    {block.correctAnswer === opt && <CheckCircle2 className="w-4 h-4 text-white" />}
+                              {['True', 'False'].map((opt) => {
+                                const isSelected = normalizeAnswerGlobal(block.correctAnswer) === normalizeAnswerGlobal(opt);
+                                return (
+                                  <div key={opt} className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${isSelected ? 'bg-emerald-50 border-emerald-500' : 'bg-white border-transparent'}`} onClick={() => updateBlock(source, sIdx, 'correctAnswer', opt)}>
+                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${isSelected ? 'bg-emerald-500 border-emerald-200' : 'bg-slate-200 border-transparent'}`}>
+                                      {isSelected && <CheckCircle2 className="w-4 h-4 text-white" />}
+                                    </div>
+                                    <span className="font-bold text-slate-700">{opt}</span>
                                   </div>
-                                  <span className="font-bold text-slate-700">{opt === 'صحيح' ? (language === 'ar' ? 'صحيح' : 'True') : (language === 'ar' ? 'خطأ' : 'False')}</span>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
