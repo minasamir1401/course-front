@@ -6,7 +6,7 @@ import { CourseSettingsForm } from "./CourseSettingsForm";
 import { LessonList } from "./LessonList";
 import { LessonBuilderModal } from "./LessonBuilderModal";
 import DashboardLayout from "@/components/DashboardLayout";
-import { ArrowLeft, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, Save, Trash2, ShieldCheck, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -30,7 +30,11 @@ const InnerCourseEditor: React.FC = () => {
     lessons,
     currentLesson,
     isLessonModalOpen,
-    editingLessonIndex
+    editingLessonIndex,
+    hasDraft,
+    draftSavedAt,
+    restoreFromDraft,
+    clearDraft,
   } = useCourseEditor();
 
   // Periodic autosave listener
@@ -70,7 +74,43 @@ const InnerCourseEditor: React.FC = () => {
       <div className="min-h-screen bg-[#f8fafc] text-slate-900" dir={language === "ar" ? "rtl" : "ltr"}>
         <div className="p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8">
           <div className="animate-in fade-in duration-500">
-            {/* Header Block */}
+            {/* 🗡️ Draft Recovery Banner */}
+          {hasDraft && (
+            <div className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between gap-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+                  <ShieldCheck className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="font-black text-amber-800 text-sm">
+                    {language === "ar" ? "💾 تم اكتشاف مسودة غير محفوظة" : "💾 Unsaved draft detected"}
+                  </p>
+                  <p className="text-amber-600 text-xs mt-0.5">
+                    {language === "ar"
+                      ? `آخر حفظ محلي: ${draftSavedAt ? new Date(draftSavedAt).toLocaleString('ar') : '...'}`
+                      : `Last local save: ${draftSavedAt ? new Date(draftSavedAt).toLocaleString() : '...'}`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <button
+                  onClick={restoreFromDraft}
+                  className="bg-amber-500 text-white px-4 py-2 rounded-xl font-black text-sm hover:bg-amber-600 transition-all flex items-center gap-2"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  {language === "ar" ? "استرداد" : "Restore"}
+                </button>
+                <button
+                  onClick={clearDraft}
+                  className="bg-white text-amber-600 border border-amber-200 px-4 py-2 rounded-xl font-black text-sm hover:bg-amber-50 transition-all"
+                >
+                  {language === "ar" ? "تجاهل" : "Dismiss"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Header Block */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-12 gap-6 bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
               <div className="flex items-center gap-6">
                 <button

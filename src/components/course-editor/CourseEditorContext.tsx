@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { API_URL } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";
@@ -102,6 +102,11 @@ interface CourseEditorContextType {
   handleSubmit: (e?: React.FormEvent, isAutoSave?: boolean) => Promise<void>;
   handleDeleteCourse: () => Promise<void>;
   linkExamToCourse: (examId: string) => Promise<void>;
+  // Draft backup
+  hasDraft: boolean;
+  draftSavedAt: string | null;
+  restoreFromDraft: () => void;
+  clearDraft: () => void;
 }
 
 const CourseEditorContext = createContext<CourseEditorContextType | undefined>(undefined);
@@ -234,6 +239,70 @@ export const CourseEditorProvider: React.FC<{
       setHasUnsavedChanges(true);
     }
   }, [courseData, lessons, currentLesson]);
+
+  // =============================================
+  // 💾 EMERGENCY LOCAL DRAFT BACKUP
+  // Saves lesson data to localStorage every 30s as a safety net
+  // =============================================
+  const DRAFT_KEY = courseId ? `lms_draft_course_${courseId}` : null;
+
+  // Save draft on every lesson change
+  useEffect(() => {
+    if (!DRAFT_KEY || isLoading || lessons.length === 0) return;
+    const timer = setTimeout(() => {
+      try {
+        const draft = {
+          savedAt: new Date().toISOString(),
+          courseId,
+          lessons,
+          courseData
+        };
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+      } catch (e) {
+        // ignore storage quota errors
+      }
+    }, 30_000); // 30 seconds debounce
+    return () => clearTimeout(timer);
+  }, [lessons, courseData, DRAFT_KEY, isLoading]);
+
+  // Offer to restore draft if page was closed without saving
+  const [hasDraft, setHasDraft] = useState(false);
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+  useEffect(() => {
+    if (!DRAFT_KEY) return;
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const draft = JSON.parse(raw);
+        if (draft?.lessons?.length > 0) {
+          setHasDraft(true);
+          setDraftSavedAt(draft.savedAt);
+        }
+      }
+    } catch {}
+  }, [DRAFT_KEY]);
+
+  const restoreFromDraft = useCallback(() => {
+    if (!DRAFT_KEY) return;
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      if (draft?.lessons?.length > 0) {
+        setLessons(draft.lessons);
+        showToast(
+          language === 'ar' ? `تم استرداد المسودة المحفوظة بتاريخ ${new Date(draft.savedAt).toLocaleString('ar')}` : `Draft from ${new Date(draft.savedAt).toLocaleString()} restored`,
+          'success'
+        );
+        setHasDraft(false);
+      }
+    } catch {}
+  }, [DRAFT_KEY, language, showToast]);
+
+  const clearDraft = useCallback(() => {
+    if (DRAFT_KEY) localStorage.removeItem(DRAFT_KEY);
+    setHasDraft(false);
+  }, [DRAFT_KEY]);
 
   const fetchSchools = async (token: string) => {
     try {
@@ -544,10 +613,17 @@ export const CourseEditorProvider: React.FC<{
     const token = localStorage.getItem(tokenKey) || localStorage.getItem("token");
     if (!token || !courseId) return;
 
+    // 🛡️ SAFETY: Never send empty lessons to the server
+    if (newLessons.length === 0) {
+      console.warn('[saveLesson] BLOCKED: newLessons is empty — would have wiped all course lessons');
+      showToast(language === "ar" ? "حدث خطأ في تحميل الدروس - تم الحفظ محلياً فقط" : "Lessons list error - saved locally only", "error");
+      return;
+    }
+
     try {
       const targetSchoolIds = (courseData.schoolIds || []).filter(Boolean);
 
-      // 🛡️ SAFE SLIDES PATCH
+      // 🛡️ SAFE SLIDES PATCH — update slides separately to avoid overwrite
       if (currentLesson.id && currentLesson.slides && currentLesson.slides.length > 0) {
         fetch(`${API_URL}/lessons/${currentLesson.id}/slides`, {
           method: "PATCH",
@@ -589,9 +665,15 @@ export const CourseEditorProvider: React.FC<{
       });
 
       if (res.ok) {
+        clearDraft(); // clear emergency draft after successful save
         showToast(language === "ar" ? "تم حفظ الدرس ونشره تلقائياً ✅" : "Lesson saved and published automatically ✅", "success");
       } else {
-        showToast(language === "ar" ? "تم الحفظ محلياً لكن فشل النشر - تأكد من الاتصال" : "Saved locally but publication failed - check connection", "error");
+        const errBody = await res.json().catch(() => ({}));
+        if (errBody?.details?.includes('SAFETY_BLOCK')) {
+          showToast(language === "ar" ? "حدث خطأ في بيانات الدروس - تم الحفظ محلياً" : "Data integrity error - saved locally only", "error");
+        } else {
+          showToast(language === "ar" ? "تم الحفظ محلياً لكن فشل النشر - تأكد من الاتصال" : "Saved locally but publication failed - check connection", "error");
+        }
       }
     } catch (error: any) {
       console.error("Auto-save error:", error);
@@ -611,6 +693,24 @@ export const CourseEditorProvider: React.FC<{
     try {
       const targetSchoolIds = (courseData.schoolIds || []).filter(Boolean);
 
+      // 🛡️ SAFETY: If lesson modal is open, merge currentLesson into lessons before saving
+      let lessonsToSend = [...lessons];
+      if (isLessonModalOpen && currentLesson.title) {
+        if (editingLessonIndex !== null && editingLessonIndex < lessonsToSend.length) {
+          lessonsToSend[editingLessonIndex] = currentLesson;
+        } else if (editingLessonIndex === null) {
+          lessonsToSend.push(currentLesson);
+        }
+      }
+
+      // 🛡️ SAFETY: Never submit empty lessons when courseId exists (would wipe all lessons)
+      if (courseId && lessonsToSend.length === 0) {
+        console.warn('[handleSubmit] BLOCKED: lessons list is empty for existing course — skipping to prevent data loss');
+        if (!isAutoSave) showToast(language === "ar" ? "تحذير: قائمة الدروس فارغة - لم يتم الحفظ حمايةً للبيانات" : "Warning: Lessons list is empty - save blocked for data safety", "error");
+        setIsSubmitting(false);
+        return;
+      }
+
       const res = await fetch(`${API_URL}/school/courses/${courseId}`, {
         method: "PUT",
         headers: {
@@ -622,7 +722,7 @@ export const CourseEditorProvider: React.FC<{
           isCentral: role === "SUPER_ADMIN" ? targetSchoolIds.length === 0 : false,
           schoolId: role === "SUPER_ADMIN" ? (targetSchoolIds.length > 0 ? targetSchoolIds[0] : null) : schoolIdParam,
           schoolIds: role === "SUPER_ADMIN" ? targetSchoolIds : [schoolIdParam],
-          lessons: lessons.map((l) => ({
+          lessons: lessonsToSend.map((l) => ({
             id: l.id,
             title: l.title,
             domain: l.domain || null,
@@ -767,6 +867,7 @@ export const CourseEditorProvider: React.FC<{
           setLessons(parsedLessons);
         }
 
+        clearDraft(); // clear emergency draft after successful save
         setTimeout(() => setHasUnsavedChanges(false), 1000);
 
         if (!isAutoSave) {
@@ -909,6 +1010,10 @@ export const CourseEditorProvider: React.FC<{
         handleSubmit,
         handleDeleteCourse,
         linkExamToCourse,
+        hasDraft,
+        draftSavedAt,
+        restoreFromDraft,
+        clearDraft,
       }}
     >
       {children}
