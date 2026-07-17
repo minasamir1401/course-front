@@ -216,8 +216,8 @@ export default function BackupsPage() {
       if (res.ok) {
         showToast(
           language === 'ar' 
-            ? "تم استعادة قاعدة البيانات بالكامل بنجاح! جاري تحديث الصفحة..." 
-            : "Database fully restored successfully! Reloading page...", 
+            ? "تمت مزامنة البيانات من النسخة الاحتياطية بنجاح! جاري تحديث الصفحة..." 
+            : "Backup data merged successfully! Reloading page...", 
           "success"
         );
         setTimeout(() => {
@@ -407,8 +407,8 @@ export default function BackupsPage() {
               <ul className="space-y-4 text-slate-600 text-sm font-semibold leading-relaxed list-disc list-inside">
                 <li>
                   {language === 'ar' 
-                    ? "تؤثر عملية استعادة البيانات بالكامل على جميع المعايير، المدارس، الحسابات، الطلاب، ومحتويات الاختبارات." 
-                    : "Database restoration replaces the current state completely, impacting all schools, accounts, and courses."}
+                    ? "تقوم الاستعادة الآن بدمج البيانات من النسخة الاحتياطية مع البيانات الحالية بدل مسحها بالكامل." 
+                    : "Restore now merges backup data into the current database instead of wiping it completely."}
                 </li>
                 <li>
                   {language === 'ar' 
@@ -417,8 +417,8 @@ export default function BackupsPage() {
                 </li>
                 <li>
                   {language === 'ar' 
-                    ? "ننصح بإنشاء نسخة احتياطية جديدة للنظام بالكامل قبل محاولة استعادة أي نسخة قديمة لتفادي الفقد العشوائي للبيانات الحالية."
-                    : "We highly recommend capturing a fresh checkpoint before applying any restore operation to avoid accidental data loss."}
+                    ? "ننصح بإنشاء نسخة احتياطية جديدة قبل أي استعادة حتى يكون عندك نقطة رجوع واضحة لو احتجت." 
+                    : "We still recommend creating a fresh checkpoint before any restore so you always have a rollback point."}
                 </li>
               </ul>
               <div className="pt-4 border-t border-amber-200/50 flex items-center gap-3 text-amber-800 text-xs font-black">
@@ -451,8 +451,8 @@ export default function BackupsPage() {
                 </div>
                 <p className="text-slate-400 font-medium text-xs leading-relaxed">
                   {language === 'ar'
-                    ? "سيتوقف النظام لبضع ثوانٍ لإعادة تطبيق وتحديث الجداول وحقول البيانات وإعادة تشغيل العلاقات."
-                    : "The system tables, fields, and indices will be completely re-synced under the hood."}
+                    ? "سيتم دمج السجلات المطابقة وتحديثها بدون حذف الكورسات والدروس الحالية." 
+                    : "Matching records will be merged and updated without deleting current courses or lessons."}
                 </p>
               </div>
               <div className="flex gap-4 pt-2">
