@@ -333,6 +333,19 @@ export default function SuperAdminCoursesPage() {
                            <div className={`flex flex-wrap items-center justify-center ${language === 'ar' ? 'md:justify-start' : 'md:justify-end'} gap-2 mb-2`}>
                               <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md uppercase tracking-widest shrink-0">{course.subject || (language === 'ar' ? "عام" : "General")}</span>
                               <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md uppercase tracking-widest shrink-0">{getGradeName(course.grade) || (language === 'ar' ? "عام" : "General")}</span>
+                              {course._source === 'both' ? (
+                                <span className="text-[10px] font-black text-purple-700 bg-purple-100 border border-purple-200 px-2.5 py-1 rounded-md shrink-0 flex items-center gap-1 shadow-xs">
+                                  ⚡ {language === 'ar' ? 'الاثنين (محلي + سحابي Supabase)' : 'Both (Local + Supabase)'}
+                                </span>
+                              ) : course._source === 'cloud' ? (
+                                <span className="text-[10px] font-black text-sky-700 bg-sky-100 border border-sky-200 px-2.5 py-1 rounded-md shrink-0 flex items-center gap-1 shadow-xs">
+                                  ☁️ {language === 'ar' ? 'سحابي فقط (Supabase)' : 'Cloud Only (Supabase)'}
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-black text-slate-700 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md shrink-0 flex items-center gap-1">
+                                  🖥️ {language === 'ar' ? 'محلي فقط (PostgreSQL)' : 'Local Only (PostgreSQL)'}
+                                </span>
+                              )}
                            </div>
                            <h3 className="text-xl sm:text-2xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors leading-tight mb-1.5 truncate">{course.title}</h3>
                            <p className="text-slate-400 text-xs sm:text-sm font-bold line-clamp-1">{course.description || (language === 'ar' ? "منهج تعليمي مركزي." : "Central curriculum.")}</p>
