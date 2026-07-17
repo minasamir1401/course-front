@@ -48,6 +48,22 @@ export default function EditSkillClusterPage() {
   const [uploadingLessonId, setUploadingLessonId] = useState<string | null>(null);
   const excelInputRef = React.useRef<HTMLInputElement>(null);
 
+  // Custom skills state
+  const [customSkills, setCustomSkills] = useState<string[]>([]);
+
+  const DEFAULT_SKILLS = [
+    "Problem Solving", "Reasoning", "Number Sense", "Algebraic Thinking", "Geometry",
+    "Data Analysis", "Observation", "Investigation", "Scientific Reasoning",
+    "Data Interpretation", "Experiment Design", "Main Idea", "Inference",
+    "Vocabulary in Context", "Author's Purpose", "Supporting Details"
+  ];
+
+  const allExistingSkills = Array.from(new Set([
+    ...DEFAULT_SKILLS,
+    ...customSkills,
+    ...Object.values(activitiesData).flatMap((acts: any[]) => acts.map(a => a.skill).filter(Boolean))
+  ]));
+
   // Student Preview Play Modal States
   const [previewActivity, setPreviewActivity] = useState<any>(null);
   const [previewAnswer, setPreviewAnswer] = useState<string>("");
@@ -407,6 +423,7 @@ export default function EditSkillClusterPage() {
       dok: "",
       estimatedTime: 60,
       standard: "", indicator: "", learningOutcome: "",
+      skill: "General",
       explanation: "",
       hint: "", tip: "", keyInsight: ""
     });
@@ -707,6 +724,7 @@ export default function EditSkillClusterPage() {
         language === 'ar' ? "الدرجة" : "Points",
         language === 'ar' ? "مستوى الصعوبة" : "Difficulty Level",
         "DOK",
+        language === 'ar' ? "المهارة" : "Skill",
         language === 'ar' ? "التفسير" : "Explanation",
         language === 'ar' ? "المعيار التعليمي" : "Educational Standard",
         language === 'ar' ? "مؤشر الأداء" : "Performance Indicator",
@@ -719,7 +737,7 @@ export default function EditSkillClusterPage() {
         language === 'ar' ? "ما هو ناتج 5 + 5؟" : "What is 5 + 5?",
         "MCQ",
         "8", "9", "10", "11", "",
-        "10", "", "10", "Foundation", "DOK 1",
+        "10", "", "10", "Foundation", "DOK 1", "Problem Solving",
         language === 'ar' ? "لأن 5 زائد 5 يساوي 10" : "Because 5 + 5 = 10",
         language === 'ar' ? "معيار الرياضيات 1.1" : "Math Standard 1.1",
         language === 'ar' ? "مؤشر الرياضيات 1.1.a" : "Math Indicator 1.1.a",
@@ -816,6 +834,9 @@ export default function EditSkillClusterPage() {
           const dokRaw = dokIdx >= 0 ? String(row[dokIdx] ?? "").trim() : "";
           const dok = ["DOK 1", "DOK 2", "DOK 3", "DOK 4"].includes(dokRaw) ? dokRaw : "";
           
+          const skillIdx = headers.findIndex(h => h.includes("skill") || h.includes("المهارة") || h.includes("المهاره"));
+          const skill = skillIdx >= 0 ? String(row[skillIdx] ?? "").trim() : "General";
+
           const explanation = expIdx >= 0 ? String(row[expIdx] ?? "").trim() : "";
           const standard = stdIdx >= 0 ? String(row[stdIdx] ?? "").trim() : "";
           const indicator = indIdx >= 0 ? String(row[indIdx] ?? "").trim() : "";
@@ -834,6 +855,7 @@ export default function EditSkillClusterPage() {
             xpPoints: 10,
             difficulty,
             dok,
+            skill,
             estimatedTime: 60,
             explanation,
             standard,

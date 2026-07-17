@@ -262,6 +262,22 @@ export default function CreateCoursePage() {
 
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
+  const [customSkills, setCustomSkills] = useState<string[]>([]);
+
+  const DEFAULT_SKILLS = [
+    "Problem Solving", "Reasoning", "Number Sense", "Algebraic Thinking", "Geometry", "Data Analysis",
+    "Observation", "Investigation", "Scientific Reasoning", "Data Interpretation", "Experiment Design",
+    "Main Idea", "Inference", "Vocabulary in Context", "Author's Purpose", "Supporting Details"
+  ];
+
+  const allExistingSkills = Array.from(new Set([
+    ...DEFAULT_SKILLS,
+    ...customSkills,
+    ...(currentLesson?.slides || []).map((s: any) => s.skill),
+    ...(currentLesson?.assignments || []).map((a: any) => a.skill),
+    ...(currentLesson?.questions || []).map((q: any) => q.skill)
+  ].filter(Boolean)));
+
   useEffect(() => {
     const handleGlobalClick = (event: MouseEvent) => {
       const target = event.target as HTMLElement | null;
@@ -1224,12 +1240,27 @@ export default function CreateCoursePage() {
                         <select 
                           className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
                           value={block.skill || "General"}
-                          onChange={(e) => updateBlock(source, sIdx, 'skill', e.target.value)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === "add_custom") {
+                              const newVal = prompt(language === 'ar' ? "أدخل مهارة مخصصة جديدة:" : "Enter custom skill:");
+                              if (newVal && newVal.trim()) {
+                                const trimmed = newVal.trim();
+                                setCustomSkills(prev => Array.from(new Set([...prev, trimmed])));
+                                updateBlock(source, sIdx, 'skill', trimmed);
+                              }
+                            } else {
+                              updateBlock(source, sIdx, 'skill', val);
+                            }
+                          }}
                         >
                           <option value="General">{language === 'ar' ? 'عام' : 'General'}</option>
-                          {["Problem Solving", "Reasoning", "Number Sense", "Algebraic Thinking", "Geometry", "Data Analysis", "Observation", "Investigation", "Scientific Reasoning", "Data Interpretation", "Experiment Design", "Main Idea", "Inference", "Vocabulary in Context", "Author's Purpose", "Supporting Details"].map(sk => (
+                          {allExistingSkills.filter((sk: any) => sk !== "General").map((sk: any) => (
                             <option key={sk} value={sk}>{sk}</option>
                           ))}
+                          <option value="add_custom" className="text-indigo-600 font-bold">
+                            {language === 'ar' ? '+ إضافة مهارة مخصصة...' : '+ Add Custom Skill...'}
+                          </option>
                         </select>
                       </div>
 
@@ -2040,11 +2071,27 @@ export default function CreateCoursePage() {
                   <select 
                     className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
                     value={tempQuestion.skill || "General"}
-                    onChange={(e) => updateCurrentQuestionField("skill", e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === "add_custom") {
+                        const newVal = prompt(language === 'ar' ? "أدخل مهارة مخصصة جديدة:" : "Enter custom skill:");
+                        if (newVal && newVal.trim()) {
+                          const trimmed = newVal.trim();
+                          setCustomSkills(prev => Array.from(new Set([...prev, trimmed])));
+                          updateCurrentQuestionField("skill", trimmed);
+                        }
+                      } else {
+                        updateCurrentQuestionField("skill", val);
+                      }
+                    }}
                   >
-                    {["Problem Solving", "Reasoning", "Number Sense", "Algebraic Thinking", "Geometry", "Data Analysis", "Observation", "Investigation", "Scientific Reasoning", "Data Interpretation", "Experiment Design", "Main Idea", "Inference", "Vocabulary in Context", "Author's Purpose", "Supporting Details"].map(sk => (
+                    <option value="General">{language === 'ar' ? 'عام' : 'General'}</option>
+                    {allExistingSkills.filter((sk: any) => sk !== "General").map((sk: any) => (
                       <option key={sk} value={sk}>{sk}</option>
                     ))}
+                    <option value="add_custom" className="text-indigo-600 font-bold">
+                      {language === 'ar' ? '+ إضافة مهارة مخصصة...' : '+ Add Custom Skill...'}
+                    </option>
                   </select>
                 </div>
 

@@ -57,10 +57,26 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
 }) => {
   const { showToast } = useNotification();
   const [expandedQuestionIndex, setExpandedQuestionIndex] = useState<number | null>(null);
-    const [isQuestionStandardOpen, setIsQuestionStandardOpen] = useState(false);
+  const [isQuestionStandardOpen, setIsQuestionStandardOpen] = useState(false);
   const [isQuestionIndicatorOpen, setIsQuestionIndicatorOpen] = useState(false);
   const [isQuestionOutcomeOpen, setIsQuestionOutcomeOpen] = useState(false);
   const [questionSource, setQuestionSource] = useState<'assignments' | 'questions'>(source);
+
+  const [customSkills, setCustomSkills] = useState<string[]>([]);
+
+  const DEFAULT_SKILLS = [
+    "Problem Solving", "Reasoning", "Number Sense", "Algebraic Thinking", "Geometry", "Data Analysis",
+    "Observation", "Investigation", "Scientific Reasoning", "Data Interpretation", "Experiment Design",
+    "Main Idea", "Inference", "Vocabulary in Context", "Author's Purpose", "Supporting Details"
+  ];
+
+  const allExistingSkills = Array.from(new Set([
+    ...DEFAULT_SKILLS,
+    ...customSkills,
+    ...(currentLesson.slides || []).map((s: any) => s.skill),
+    ...(currentLesson.assignments || []).map((a: any) => a.skill),
+    ...(currentLesson.questions || []).map((q: any) => q.skill)
+  ].filter(Boolean)));
 
   const QUESTION_TYPES = [
     { id: "MCQ", label: language === 'ar' ? "اختيار من متعدد" : "Multiple Choice" },
@@ -660,11 +676,27 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                   <select 
                     className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
                     value={tempQuestion.skill || "General"}
-                    onChange={(e) => updateCurrentQuestionField("skill", e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === "add_custom") {
+                        const newVal = prompt(language === 'ar' ? "أدخل مهارة مخصصة جديدة:" : "Enter custom skill:");
+                        if (newVal && newVal.trim()) {
+                          const trimmed = newVal.trim();
+                          setCustomSkills(prev => Array.from(new Set([...prev, trimmed])));
+                          updateCurrentQuestionField("skill", trimmed);
+                        }
+                      } else {
+                        updateCurrentQuestionField("skill", val);
+                      }
+                    }}
                   >
-                    {["Problem Solving", "Reasoning", "Number Sense", "Algebraic Thinking", "Geometry", "Data Analysis", "Observation", "Investigation", "Scientific Reasoning", "Data Interpretation", "Experiment Design", "Main Idea", "Inference", "Vocabulary in Context", "Author's Purpose", "Supporting Details"].map(sk => (
+                    <option value="General">{language === 'ar' ? 'عام' : 'General'}</option>
+                    {allExistingSkills.filter((sk: any) => sk !== "General").map((sk: any) => (
                       <option key={sk} value={sk}>{sk}</option>
                     ))}
+                    <option value="add_custom" className="text-indigo-600 font-bold">
+                      {language === 'ar' ? '+ إضافة مهارة مخصصة...' : '+ Add Custom Skill...'}
+                    </option>
                   </select>
                 </div>
 

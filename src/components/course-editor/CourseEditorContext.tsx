@@ -411,6 +411,9 @@ export const CourseEditorProvider: React.FC<{
             };
           })
         );
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        showToast(errData.error || errData.message || (language === "ar" ? "فشل تحميل بيانات الكورس" : "Failed to load course details"), "error");
       }
     } catch (error) {
       showToast(language === "ar" ? "خطأ في الاتصال" : "Connection error", "error");

@@ -263,6 +263,14 @@ export function SchoolAdminNewExamPageContent({ presetType, presetCourseId }: { 
   const [isOutcomeOpen, setIsOutcomeOpen] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
+  const [customSkills, setCustomSkills] = useState<string[]>([]);
+
+  const allExistingSkills = Array.from(new Set([
+    ...SKILLS,
+    ...customSkills,
+    ...questions.map(q => q.skill).filter(Boolean)
+  ]));
+
   const questionsExcelRef = useRef<HTMLInputElement>(null);
 
   const [currentQuestion, setCurrentQuestion] = useState<any>({
@@ -882,11 +890,27 @@ export function SchoolAdminNewExamPageContent({ presetType, presetCourseId }: { 
                   <select 
                     className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5 font-bold text-slate-700 text-sm appearance-none"
                     value={examInfo.skill}
-                    onChange={(e) => setExamInfo({...examInfo, skill: e.target.value})}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === "add_custom") {
+                        const newVal = prompt(language === 'ar' ? "أدخل مهارة مخصصة جديدة:" : "Enter custom skill:");
+                        if (newVal && newVal.trim()) {
+                          const trimmed = newVal.trim();
+                          setCustomSkills(prev => Array.from(new Set([...prev, trimmed])));
+                          setExamInfo({...examInfo, skill: trimmed});
+                        }
+                      } else {
+                        setExamInfo({...examInfo, skill: val});
+                      }
+                    }}
                   >
-                    {SKILLS.map(skill => (
+                    <option value="General">{language === 'ar' ? 'عام' : 'General'}</option>
+                    {allExistingSkills.filter(sk => sk !== "General").map(skill => (
                       <option key={skill} value={skill}>{skill}</option>
                     ))}
+                    <option value="add_custom" className="text-indigo-600 font-bold">
+                      {language === 'ar' ? '+ إضافة مهارة مخصصة...' : '+ Add Custom Skill...'}
+                    </option>
                   </select>
                 </div>
               </div>
@@ -1365,11 +1389,27 @@ export function SchoolAdminNewExamPageContent({ presetType, presetCourseId }: { 
                         <select 
                           className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
                           value={currentQuestion.skill}
-                          onChange={(e) => updateCurrentQuestion("skill", e.target.value)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === "add_custom") {
+                              const newVal = prompt(language === 'ar' ? "أدخل مهارة مخصصة جديدة:" : "Enter custom skill:");
+                              if (newVal && newVal.trim()) {
+                                const trimmed = newVal.trim();
+                                setCustomSkills(prev => Array.from(new Set([...prev, trimmed])));
+                                updateCurrentQuestion("skill", trimmed);
+                              }
+                            } else {
+                              updateCurrentQuestion("skill", val);
+                            }
+                          }}
                         >
-                          {SKILLS.map(skill => (
+                          <option value="General">{language === 'ar' ? 'عام' : 'General'}</option>
+                          {allExistingSkills.filter(sk => sk !== "General").map(skill => (
                             <option key={skill} value={skill}>{skill}</option>
                           ))}
+                          <option value="add_custom" className="text-indigo-600 font-bold">
+                            {language === 'ar' ? '+ إضافة مهارة مخصصة...' : '+ Add Custom Skill...'}
+                          </option>
                         </select>
                       </div>
 

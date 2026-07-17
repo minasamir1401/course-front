@@ -257,6 +257,14 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
     localStorage.setItem("custom_learning_outcomes_exams", JSON.stringify(customLearningOutcomes));
   }, [customLearningOutcomes]);
 
+  const [customSkills, setCustomSkills] = useState<string[]>([]);
+
+  const allExistingSkills = Array.from(new Set([
+    ...SKILLS,
+    ...customSkills,
+    ...questions.map(q => q.skill).filter(Boolean)
+  ]));
+
   const questionsExcelRef = useRef<HTMLInputElement>(null);
 
   const parseQuestionsFromExcel = (rows: any[][]) => {
@@ -919,15 +927,31 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Skill</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "المهارة" : "Skill"}</label>
                   <select
                     className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5 font-bold text-slate-700 text-sm appearance-none outline-none focus:ring-2 focus:ring-indigo-500/20"
                     value={examInfo.skill}
-                    onChange={(e) => setExamInfo({...examInfo, skill: e.target.value})}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === "add_custom") {
+                        const newVal = prompt(language === 'ar' ? "أدخل مهارة مخصصة جديدة:" : "Enter custom skill:");
+                        if (newVal && newVal.trim()) {
+                          const trimmed = newVal.trim();
+                          setCustomSkills(prev => Array.from(new Set([...prev, trimmed])));
+                          setExamInfo({...examInfo, skill: trimmed});
+                        }
+                      } else {
+                        setExamInfo({...examInfo, skill: val});
+                      }
+                    }}
                   >
-                    {SKILLS.map(skill => (
+                    <option value="General">{language === 'ar' ? 'عام' : 'General'}</option>
+                    {allExistingSkills.filter(sk => sk !== "General").map(skill => (
                       <option key={skill} value={skill}>{skill}</option>
                     ))}
+                    <option value="add_custom" className="text-indigo-600 font-bold">
+                      {language === 'ar' ? '+ إضافة مهارة مخصصة...' : '+ Add Custom Skill...'}
+                    </option>
                   </select>
                 </div>
 
@@ -1547,15 +1571,31 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
                       </div>
 
                       <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Skill</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "المهارة" : "Skill"}</label>
                         <select 
                           className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
                           value={currentQuestion.skill}
-                          onChange={(e) => updateCurrentQuestion("skill", e.target.value)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === "add_custom") {
+                              const newVal = prompt(language === 'ar' ? "أدخل مهارة مخصصة جديدة:" : "Enter custom skill:");
+                              if (newVal && newVal.trim()) {
+                                const trimmed = newVal.trim();
+                                setCustomSkills(prev => Array.from(new Set([...prev, trimmed])));
+                                updateCurrentQuestion("skill", trimmed);
+                              }
+                            } else {
+                              updateCurrentQuestion("skill", val);
+                            }
+                          }}
                         >
-                          {SKILLS.map(skill => (
+                          <option value="General">{language === 'ar' ? 'عام' : 'General'}</option>
+                          {allExistingSkills.filter(sk => sk !== "General").map(skill => (
                             <option key={skill} value={skill}>{skill}</option>
                           ))}
+                          <option value="add_custom" className="text-indigo-600 font-bold">
+                            {language === 'ar' ? '+ إضافة مهارة مخصصة...' : '+ Add Custom Skill...'}
+                          </option>
                         </select>
                       </div>
 

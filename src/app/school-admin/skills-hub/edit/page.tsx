@@ -48,6 +48,22 @@ export default function EditSchoolSkillClusterPage() {
   const excelInputRef = React.useRef<HTMLInputElement>(null);
   const metadataExcelRef = React.useRef<HTMLInputElement>(null);
 
+  // Custom skills state
+  const [customSkills, setCustomSkills] = useState<string[]>([]);
+
+  const DEFAULT_SKILLS = [
+    "Problem Solving", "Reasoning", "Number Sense", "Algebraic Thinking", "Geometry",
+    "Data Analysis", "Observation", "Investigation", "Scientific Reasoning",
+    "Data Interpretation", "Experiment Design", "Main Idea", "Inference",
+    "Vocabulary in Context", "Author's Purpose", "Supporting Details"
+  ];
+
+  const allExistingSkills = Array.from(new Set([
+    ...DEFAULT_SKILLS,
+    ...customSkills,
+    ...Object.values(activitiesData).flatMap((acts: any[]) => acts.map(a => a.skill).filter(Boolean))
+  ]));
+
   // Student Preview Play Modal States
   const [previewActivity, setPreviewActivity] = useState<any>(null);
   const [previewAnswer, setPreviewAnswer] = useState<string>("");
@@ -351,6 +367,65 @@ export default function EditSchoolSkillClusterPage() {
     }
   };
 
+  const handleDeleteStandard = async (stdValue: string) => {
+    if (!editingActivity || !editingActivity.lessonId) return;
+    if (!window.confirm(language === 'ar' ? `هل أنت متأكد من حذف المعيار "${stdValue}"؟` : `Are you sure you want to delete standard "${stdValue}"?`)) return;
+    const lesson = lessons.find(l => l.id === editingActivity.lessonId);
+    if (!lesson) return;
+    const lessonMetadata = getLessonMetadata(lesson);
+    const updatedMetadata = {
+      ...lessonMetadata,
+      standards: lessonMetadata.standards.filter((s: string) => s !== stdValue)
+    };
+    const updated = await saveLessonMetadata(editingActivity.lessonId, updatedMetadata);
+    if (updated) {
+      setEditingActivity({ ...editingActivity, standard: "" });
+      showToast(language === 'ar' ? "تم حذف المعيار بنجاح" : "Standard deleted successfully", "success");
+    }
+  };
+
+  const handleDeleteIndicator = async (indValue: string) => {
+    if (!editingActivity || !editingActivity.lessonId) return;
+    if (!window.confirm(language === 'ar' ? `هل أنت متأكد من حذف المؤشر "${indValue}"؟` : `Are you sure you want to delete indicator "${indValue}"?`)) return;
+    const lesson = lessons.find(l => l.id === editingActivity.lessonId);
+    if (!lesson) return;
+    const lessonMetadata = getLessonMetadata(lesson);
+    const updatedMetadata = {
+      ...lessonMetadata,
+      indicators: lessonMetadata.indicators.filter((s: string) => s !== indValue)
+    };
+    const updated = await saveLessonMetadata(editingActivity.lessonId, updatedMetadata);
+    if (updated) {
+      setEditingActivity({ ...editingActivity, indicator: "" });
+      showToast(language === 'ar' ? "تم حذف المؤشر بنجاح" : "Indicator deleted successfully", "success");
+    }
+  };
+
+  const handleDeleteOutcome = async (outValue: string) => {
+    if (!editingActivity || !editingActivity.lessonId) return;
+    if (!window.confirm(language === 'ar' ? `هل أنت متأكد من حذف مخرج التعلم "${outValue}"؟` : `Are you sure you want to delete learning outcome "${outValue}"?`)) return;
+    const lesson = lessons.find(l => l.id === editingActivity.lessonId);
+    if (!lesson) return;
+    const lessonMetadata = getLessonMetadata(lesson);
+    const updatedMetadata = {
+      ...lessonMetadata,
+      outcomes: lessonMetadata.outcomes.filter((s: string) => s !== outValue)
+    };
+    const updated = await saveLessonMetadata(editingActivity.lessonId, updatedMetadata);
+    if (updated) {
+      setEditingActivity({ ...editingActivity, learningOutcome: "" });
+      showToast(language === 'ar' ? "تم حذف مخرج التعلم بنجاح" : "Learning outcome deleted successfully", "success");
+    }
+  };
+
+  const handleDeleteSkill = (skillValue: string) => {
+    if (skillValue === "General") return;
+    if (!window.confirm(language === 'ar' ? `هل أنت متأكد من حذف المهارة "${skillValue}"؟` : `Are you sure you want to delete skill "${skillValue}"?`)) return;
+    setCustomSkills(prev => prev.filter(s => s !== skillValue));
+    setEditingActivity({ ...editingActivity, skill: "General" });
+    showToast(language === 'ar' ? "تم حذف المهارة بنجاح" : "Skill deleted successfully", "success");
+  };
+
   const saveLessonMetadata = async (lessonId: string, updatedMetadata: any) => {
     const token = localStorage.getItem("school_admin_token");
     if (!token) return;
@@ -397,6 +472,7 @@ export default function EditSchoolSkillClusterPage() {
       dok: "2",
       estimatedTime: 60,
       standard: "", indicator: "", learningOutcome: "",
+      skill: "General",
       hint: "", tip: "", explanation: "", keyInsight: ""
     });
     setIsActivityModalOpen(true);
@@ -547,13 +623,14 @@ export default function EditSchoolSkillClusterPage() {
         language === 'ar' ? "الدرجة" : "Points",
         language === 'ar' ? "مستوى الصعوبة" : "Difficulty Level",
         "DOK",
+        language === 'ar' ? "المهارة" : "Skill",
         language === 'ar' ? "التفسير" : "Explanation"
       ],
       [
         language === 'ar' ? "ما هو ناتج 5 + 5؟" : "What is 5 + 5?",
         "MCQ",
         "8", "9", "10", "11", "",
-        "10", "", "10", "Foundation", "DOK 1",
+        "10", "", "10", "Foundation", "DOK 1", "Problem Solving",
         language === 'ar' ? "لأن 5 زائد 5 يساوي 10" : "Because 5 + 5 = 10"
       ]
     ];
@@ -638,6 +715,9 @@ export default function EditSchoolSkillClusterPage() {
           const dokRaw = dokIdx >= 0 ? String(row[dokIdx] ?? "").trim() : "";
           const dok = ["1", "2", "3"].includes(dokRaw.replace("DOK ", "")) ? dokRaw.replace("DOK ", "") : "2";
           
+          const skillIdx = headers.findIndex(h => h.includes("skill") || h.includes("المهارة") || h.includes("المهاره"));
+          const skill = skillIdx >= 0 ? String(row[skillIdx] ?? "").trim() : "General";
+
           const explanation = expIdx >= 0 ? String(row[expIdx] ?? "").trim() : "";
 
           const payload = {
@@ -650,6 +730,7 @@ export default function EditSchoolSkillClusterPage() {
             xpPoints: 10,
             difficulty,
             dok,
+            skill,
             estimatedTime: 60,
             explanation
           };
@@ -1438,6 +1519,46 @@ export default function EditSchoolSkillClusterPage() {
                     <option value="3">DOK 3</option>
                   </select>
                 </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "المهارة" : "Skill"}</label>
+                  <div className="flex gap-2">
+                    <select 
+                      value={editingActivity.skill || "General"}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "add_custom") {
+                          const newVal = prompt(language === 'ar' ? "أدخل مهارة مخصصة جديدة:" : "Enter custom skill:");
+                          if (newVal && newVal.trim()) {
+                            const trimmed = newVal.trim();
+                            setCustomSkills(prev => Array.from(new Set([...prev, trimmed])));
+                            setEditingActivity({ ...editingActivity, skill: trimmed });
+                          }
+                        } else {
+                          setEditingActivity({ ...editingActivity, skill: val });
+                        }
+                      }}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none"
+                    >
+                      <option value="General">{language === 'ar' ? 'عام' : 'General'}</option>
+                      {allExistingSkills.filter(sk => sk !== "General").map(sk => (
+                        <option key={sk} value={sk}>{sk}</option>
+                      ))}
+                      <option value="add_custom" className="text-indigo-600 font-bold">
+                        {language === 'ar' ? '+ إضافة مهارة مخصصة...' : '+ Add Custom Skill...'}
+                      </option>
+                    </select>
+                    {editingActivity.skill && editingActivity.skill !== "General" && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSkill(editingActivity.skill)}
+                        className="p-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl border border-rose-100 flex items-center justify-center transition-all shrink-0"
+                        title={language === 'ar' ? "حذف المهارة" : "Delete Skill"}
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Scope & Sequence Dropdowns */}
@@ -1446,121 +1567,157 @@ export default function EditSchoolSkillClusterPage() {
                 {/* Standard Select */}
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "المعيار (Standard)" : "Standard"}</label>
-                  <select
-                    value={editingActivity.standard || ""}
-                    onChange={async (e) => {
-                      const val = e.target.value;
-                      const lesson = lessons.find(l => l.id === editingActivity.lessonId);
-                      const lessonMetadata = getLessonMetadata(lesson);
-                      
-                      if (val === "add_custom") {
-                        const newVal = prompt(language === 'ar' ? "أدخل معيار مخصص جديد:" : "Enter custom standard:");
-                        if (newVal && newVal.trim()) {
-                          const trimmed = newVal.trim();
-                          const updatedMetadata = {
-                            ...lessonMetadata,
-                            standards: Array.from(new Set([...lessonMetadata.standards, trimmed]))
-                          };
-                          await saveLessonMetadata(editingActivity.lessonId, updatedMetadata);
-                          setEditingActivity({ ...editingActivity, standard: trimmed });
+                  <div className="flex gap-2">
+                    <select
+                      value={editingActivity.standard || ""}
+                      onChange={async (e) => {
+                        const val = e.target.value;
+                        const lesson = lessons.find(l => l.id === editingActivity.lessonId);
+                        const lessonMetadata = getLessonMetadata(lesson);
+                        
+                        if (val === "add_custom") {
+                          const newVal = prompt(language === 'ar' ? "أدخل معيار مخصص جديد:" : "Enter custom standard:");
+                          if (newVal && newVal.trim()) {
+                            const trimmed = newVal.trim();
+                            const updatedMetadata = {
+                              ...lessonMetadata,
+                              standards: Array.from(new Set([...lessonMetadata.standards, trimmed]))
+                            };
+                            await saveLessonMetadata(editingActivity.lessonId, updatedMetadata);
+                            setEditingActivity({ ...editingActivity, standard: trimmed });
+                          }
+                        } else {
+                          setEditingActivity({ ...editingActivity, standard: val });
                         }
-                      } else {
-                        setEditingActivity({ ...editingActivity, standard: val });
-                      }
-                    }}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none"
-                  >
-                    <option value="">{language === 'ar' ? '-- اختر المعيار --' : '-- Select Standard --'}</option>
-                    {getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).standards.map((std: string) => (
-                      <option key={std} value={std}>{std}</option>
-                    ))}
-                    {editingActivity.standard && !getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).standards.includes(editingActivity.standard) && (
-                      <option value={editingActivity.standard}>{editingActivity.standard}</option>
+                      }}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none"
+                    >
+                      <option value="">{language === 'ar' ? '-- اختر المعيار --' : '-- Select Standard --'}</option>
+                      {getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).standards.map((std: string) => (
+                        <option key={std} value={std}>{std}</option>
+                      ))}
+                      {editingActivity.standard && !getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).standards.includes(editingActivity.standard) && (
+                        <option value={editingActivity.standard}>{editingActivity.standard}</option>
+                      )}
+                      <option value="add_custom" className="text-indigo-600 font-bold">
+                        {language === 'ar' ? '+ إضافة معيار مخصص...' : '+ Add Custom Standard...'}
+                      </option>
+                    </select>
+                    {editingActivity.standard && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteStandard(editingActivity.standard)}
+                        className="p-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl border border-rose-100 flex items-center justify-center transition-all shrink-0"
+                        title={language === 'ar' ? "حذف المعيار" : "Delete Standard"}
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
                     )}
-                    <option value="add_custom" className="text-indigo-600 font-bold">
-                      {language === 'ar' ? '+ إضافة معيار مخصص...' : '+ Add Custom Standard...'}
-                    </option>
-                  </select>
+                  </div>
                 </div>
 
                 {/* Indicator Select */}
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "المؤشر (Indicator)" : "Indicator"}</label>
-                  <select
-                    value={editingActivity.indicator || ""}
-                    onChange={async (e) => {
-                      const val = e.target.value;
-                      const lesson = lessons.find(l => l.id === editingActivity.lessonId);
-                      const lessonMetadata = getLessonMetadata(lesson);
-                      
-                      if (val === "add_custom") {
-                        const newVal = prompt(language === 'ar' ? "أدخل مؤشر مخصص جديد:" : "Enter custom indicator:");
-                        if (newVal && newVal.trim()) {
-                          const trimmed = newVal.trim();
-                          const updatedMetadata = {
-                            ...lessonMetadata,
-                            indicators: Array.from(new Set([...lessonMetadata.indicators, trimmed]))
-                          };
-                          await saveLessonMetadata(editingActivity.lessonId, updatedMetadata);
-                          setEditingActivity({ ...editingActivity, indicator: trimmed });
+                  <div className="flex gap-2">
+                    <select
+                      value={editingActivity.indicator || ""}
+                      onChange={async (e) => {
+                        const val = e.target.value;
+                        const lesson = lessons.find(l => l.id === editingActivity.lessonId);
+                        const lessonMetadata = getLessonMetadata(lesson);
+                        
+                        if (val === "add_custom") {
+                          const newVal = prompt(language === 'ar' ? "أدخل مؤشر مخصص جديد:" : "Enter custom indicator:");
+                          if (newVal && newVal.trim()) {
+                            const trimmed = newVal.trim();
+                            const updatedMetadata = {
+                              ...lessonMetadata,
+                              indicators: Array.from(new Set([...lessonMetadata.indicators, trimmed]))
+                            };
+                            await saveLessonMetadata(editingActivity.lessonId, updatedMetadata);
+                            setEditingActivity({ ...editingActivity, indicator: trimmed });
+                          }
+                        } else {
+                          setEditingActivity({ ...editingActivity, indicator: val });
                         }
-                      } else {
-                        setEditingActivity({ ...editingActivity, indicator: val });
-                      }
-                    }}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none"
-                  >
-                    <option value="">{language === 'ar' ? '-- اختر المؤشر --' : '-- Select Indicator --'}</option>
-                    {getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).indicators.map((ind: string) => (
-                      <option key={ind} value={ind}>{ind}</option>
-                    ))}
-                    {editingActivity.indicator && !getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).indicators.includes(editingActivity.indicator) && (
-                      <option value={editingActivity.indicator}>{editingActivity.indicator}</option>
+                      }}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none"
+                    >
+                      <option value="">{language === 'ar' ? '-- اختر المؤشر --' : '-- Select Indicator --'}</option>
+                      {getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).indicators.map((ind: string) => (
+                        <option key={ind} value={ind}>{ind}</option>
+                      ))}
+                      {editingActivity.indicator && !getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).indicators.includes(editingActivity.indicator) && (
+                        <option value={editingActivity.indicator}>{editingActivity.indicator}</option>
+                      )}
+                      <option value="add_custom" className="text-indigo-600 font-bold">
+                        {language === 'ar' ? '+ إضافة مؤشر مخصص...' : '+ Add Custom Indicator...'}
+                      </option>
+                    </select>
+                    {editingActivity.indicator && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteIndicator(editingActivity.indicator)}
+                        className="p-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl border border-rose-100 flex items-center justify-center transition-all shrink-0"
+                        title={language === 'ar' ? "حذف المؤشر" : "Delete Indicator"}
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
                     )}
-                    <option value="add_custom" className="text-indigo-600 font-bold">
-                      {language === 'ar' ? '+ إضافة مؤشر مخصص...' : '+ Add Custom Indicator...'}
-                    </option>
-                  </select>
+                  </div>
                 </div>
 
                 {/* Learning Outcome Select */}
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "مخرجات التعلم (Learning Outcome)" : "Learning Outcome"}</label>
-                  <select
-                    value={editingActivity.learningOutcome || ""}
-                    onChange={async (e) => {
-                      const val = e.target.value;
-                      const lesson = lessons.find(l => l.id === editingActivity.lessonId);
-                      const lessonMetadata = getLessonMetadata(lesson);
-                      
-                      if (val === "add_custom") {
-                        const newVal = prompt(language === 'ar' ? "أدخل مخرج تعلم مخصص جديد:" : "Enter custom learning outcome:");
-                        if (newVal && newVal.trim()) {
-                          const trimmed = newVal.trim();
-                          const updatedMetadata = {
-                            ...lessonMetadata,
-                            outcomes: Array.from(new Set([...lessonMetadata.outcomes, trimmed]))
-                          };
-                          await saveLessonMetadata(editingActivity.lessonId, updatedMetadata);
-                          setEditingActivity({ ...editingActivity, learningOutcome: trimmed });
+                  <div className="flex gap-2">
+                    <select
+                      value={editingActivity.learningOutcome || ""}
+                      onChange={async (e) => {
+                        const val = e.target.value;
+                        const lesson = lessons.find(l => l.id === editingActivity.lessonId);
+                        const lessonMetadata = getLessonMetadata(lesson);
+                        
+                        if (val === "add_custom") {
+                          const newVal = prompt(language === 'ar' ? "أدخل مخرج تعلم مخصص جديد:" : "Enter custom learning outcome:");
+                          if (newVal && newVal.trim()) {
+                            const trimmed = newVal.trim();
+                            const updatedMetadata = {
+                              ...lessonMetadata,
+                              outcomes: Array.from(new Set([...lessonMetadata.outcomes, trimmed]))
+                            };
+                            await saveLessonMetadata(editingActivity.lessonId, updatedMetadata);
+                            setEditingActivity({ ...editingActivity, learningOutcome: trimmed });
+                          }
+                        } else {
+                          setEditingActivity({ ...editingActivity, learningOutcome: val });
                         }
-                      } else {
-                        setEditingActivity({ ...editingActivity, learningOutcome: val });
-                      }
-                    }}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none"
-                  >
-                    <option value="">{language === 'ar' ? '-- اختر مخرج التعلم --' : '-- Select Learning Outcome --'}</option>
-                    {getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).outcomes.map((out: string) => (
-                      <option key={out} value={out}>{out}</option>
-                    ))}
-                    {editingActivity.learningOutcome && !getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).outcomes.includes(editingActivity.learningOutcome) && (
-                      <option value={editingActivity.learningOutcome}>{editingActivity.learningOutcome}</option>
+                      }}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none"
+                    >
+                      <option value="">{language === 'ar' ? '-- اختر مخرج التعلم --' : '-- Select Learning Outcome --'}</option>
+                      {getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).outcomes.map((out: string) => (
+                        <option key={out} value={out}>{out}</option>
+                      ))}
+                      {editingActivity.learningOutcome && !getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).outcomes.includes(editingActivity.learningOutcome) && (
+                        <option value={editingActivity.learningOutcome}>{editingActivity.learningOutcome}</option>
+                      )}
+                      <option value="add_custom" className="text-indigo-600 font-bold">
+                        {language === 'ar' ? '+ إضافة مخرج مخصص...' : '+ Add Custom Outcome...'}
+                      </option>
+                    </select>
+                    {editingActivity.learningOutcome && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteOutcome(editingActivity.learningOutcome)}
+                        className="p-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl border border-rose-100 flex items-center justify-center transition-all shrink-0"
+                        title={language === 'ar' ? "حذف مخرج التعلم" : "Delete Learning Outcome"}
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
                     )}
-                    <option value="add_custom" className="text-indigo-600 font-bold">
-                      {language === 'ar' ? '+ إضافة مخرج مخصص...' : '+ Add Custom Outcome...'}
-                    </option>
-                  </select>
+                  </div>
                 </div>
               </div>
 
