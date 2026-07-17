@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { API_URL } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Activity, AlertTriangle, Bell, BookOpen, Building2, ChevronRight, Code2, Database, Layers, ShieldAlert, Server, Table2, Users, ClipboardList, FileText, Bug, RefreshCw } from 'lucide-react';
+import { Activity, AlertTriangle, Bell, BookOpen, Building2, ChevronRight, Code2, Database, Layers, ShieldAlert, Server, Table2, Users, ClipboardList, FileText, Bug, RefreshCw, Search, CheckCircle2, RotateCcw } from 'lucide-react';
 
 type DiagnosticsPayload = {
   ok?: boolean;
@@ -55,6 +55,55 @@ export default function SuperAdminMonitorPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeSample, setActiveSample] = useState("lessons");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [restoreMessage, setRestoreMessage] = useState("");
+
+  const handleSearch = async () => {
+    if (!searchQuery || searchQuery.length < 2) return;
+    setIsSearching(true);
+    setRestoreMessage("");
+    try {
+      const authToken = localStorage.getItem("super_admin_token");
+      const res = await fetch(`${API_URL}/admin/backup/search-lesson?query=${encodeURIComponent(searchQuery)}`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Search failed");
+      setSearchResults(json.results || []);
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleRestore = async (filename: string, lessonId: string) => {
+    if (!confirm(language === 'ar' ? "هل أنت متأكد من استعادة هذا الدرس؟ سيتم استبدال النسخة الحالية إن وجدت." : "Are you sure you want to restore this lesson?")) return;
+    setIsRestoring(true);
+    setRestoreMessage("");
+    try {
+      const authToken = localStorage.getItem("super_admin_token");
+      const res = await fetch(`${API_URL}/admin/backup/restore-lesson`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}` 
+        },
+        body: JSON.stringify({ filename, lessonId })
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Restore failed");
+      setRestoreMessage(language === 'ar' ? "تمت الاستعادة بنجاح!" : "Restored successfully!");
+      loadData(); // refresh data
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setIsRestoring(false);
+    }
+  };
 
   const loadData = async () => {
     if (typeof window === "undefined") return;
@@ -196,6 +245,66 @@ export default function SuperAdminMonitorPage() {
               <span>{language === 'ar' ? "المستخدمون" : "Users"}</span>
               <ChevronRight className="w-4 h-4" />
             </a>
+          </SectionCard>
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+          <SectionCard title={language === 'ar' ? "أداة استعادة الدروس المفقودة" : "Lesson Recovery Tool"} icon={Search}>
+            <div className="flex flex-col gap-4">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder={language === 'ar' ? "اكتب اسم الدرس للبحث في النسخ الاحتياطية..." : "Type lesson name to search in backups..."}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  className="flex-1 rounded-2xl border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                />
+                <button
+                  onClick={handleSearch}
+                  disabled={isSearching || searchQuery.length < 2}
+                  className="rounded-2xl bg-indigo-600 px-6 py-3 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {isSearching ? "..." : (language === 'ar' ? "بحث" : "Search")}
+                </button>
+              </div>
+
+              {restoreMessage && (
+                <div className="flex items-center gap-2 rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700">
+                  <CheckCircle2 className="h-4 w-4" />
+                  {restoreMessage}
+                </div>
+              )}
+
+              {searchResults.length > 0 && (
+                <div className="flex flex-col gap-2 max-h-[300px] overflow-auto pr-2">
+                  {searchResults.map((res, i) => (
+                    <div key={i} className="flex items-center justify-between gap-4 rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+                      <div className="flex-1 overflow-hidden">
+                        <div className="truncate font-bold text-slate-900">{res.lessonTitle}</div>
+                        <div className="truncate text-xs text-slate-500">{res.courseTitle}</div>
+                        <div className="mt-1 text-[10px] font-bold tracking-wider text-indigo-500 uppercase">
+                          {formatDate(res.backupDate)} - {res.backupFilename}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleRestore(res.backupFilename, res.lessonId)}
+                        disabled={isRestoring}
+                        className="flex items-center gap-2 rounded-xl bg-amber-50 px-4 py-2 text-xs font-black text-amber-700 hover:bg-amber-100 disabled:opacity-50"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                        {language === 'ar' ? "استعادة" : "Restore"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {searchResults.length === 0 && searchQuery && !isSearching && (
+                 <div className="text-center text-sm font-medium text-slate-400 py-4">
+                   {language === 'ar' ? "لم يتم العثور على أي دروس بهذا الاسم في آخر 10 نسخ احتياطية." : "No lessons found with this name in the last 10 backups."}
+                 </div>
+              )}
+            </div>
           </SectionCard>
         </div>
 

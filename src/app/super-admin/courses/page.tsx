@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Plus, Search, Book, ArrowUpRight, BookOpen, Layers, Edit2, Trash2, Monitor, GraduationCap, Sparkles, Filter } from 'lucide-react';
+import { Plus, Search, Book, ArrowUpRight, BookOpen, Layers, Edit2, Trash2, Monitor, GraduationCap, Sparkles, Filter, FileSpreadsheet, DownloadCloud, FileCode, Upload } from 'lucide-react';
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { API_URL, getFullImageUrl } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import ImportExcelModal from "@/components/modals/ImportExcelModal";
 
 export default function SuperAdminCoursesPage() {
   const router = useRouter();
@@ -16,12 +17,14 @@ export default function SuperAdminCoursesPage() {
   const [courses, setCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const jsonInputRef = useRef<HTMLInputElement | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [apiStats, setApiStats] = useState({ totalCourses: 0, totalLessons: 0, totalSubjects: 0 });
   const [loadingStats, setLoadingStats] = useState(true);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -160,6 +163,33 @@ export default function SuperAdminCoursesPage() {
     }
   };
 
+  const handleImportJson = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const token = localStorage.getItem("super_admin_token") || localStorage.getItem("school_admin_token");
+      const formData = new FormData();
+      formData.append("file", file);
+
+      showToast(language === "ar" ? "جاري استعادة الكورس من ملف JSON..." : "Restoring course from JSON...", "info");
+      const res = await fetch(`${API_URL}/school/import/json/course`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to import JSON");
+
+      showToast(data.message || (language === "ar" ? "تمت استعادة الكورس بنجاح" : "Course restored successfully"), "success");
+      fetchCourses(true);
+      fetchStats();
+    } catch (err: any) {
+      showToast(err.message || (language === "ar" ? "فشل استعادة الكورس من ملف JSON" : "Failed to restore course"), "error");
+    } finally {
+      if (e.target) e.target.value = "";
+    }
+  };
+
   const stats = React.useMemo(() => ({
     total: apiStats.totalCourses,
     lessons: apiStats.totalLessons,
@@ -187,13 +217,36 @@ export default function SuperAdminCoursesPage() {
                    </div>
                 </div>
 
-                <Link 
-                  href="/super-admin/courses/create"
-                  className="group bg-slate-900 text-white px-6 sm:px-12 py-3 sm:py-5 rounded-xl sm:rounded-[22px] font-black text-xs sm:text-xl shadow-xl shadow-slate-900/10 hover:scale-105 transition-all flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-center"
-                >
-                  <Plus className="w-4 h-4 sm:w-6 h-6 group-hover:rotate-90 transition-transform" />
-                  {t('coursesPage.createCurriculum')}
-                </Link>
+                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                  <input
+                    type="file"
+                    ref={jsonInputRef}
+                    onChange={handleImportJson}
+                    accept=".json,application/json"
+                    className="hidden"
+                  />
+                  <button 
+                    onClick={() => setIsImportModalOpen(true)}
+                    className="group bg-indigo-50 text-indigo-600 px-6 sm:px-8 py-3 sm:py-5 rounded-xl sm:rounded-[22px] font-black text-xs sm:text-xl shadow-sm hover:scale-105 transition-all flex items-center gap-2 sm:gap-4 justify-center"
+                  >
+                    <FileSpreadsheet className="w-4 h-4 sm:w-6 h-6" />
+                    {language === 'ar' ? "استيراد Excel" : "Import Excel"}
+                  </button>
+                  <button 
+                    onClick={() => jsonInputRef.current?.click()}
+                    className="group bg-emerald-50 text-emerald-600 px-6 sm:px-8 py-3 sm:py-5 rounded-xl sm:rounded-[22px] font-black text-xs sm:text-xl shadow-sm hover:scale-105 transition-all flex items-center gap-2 sm:gap-4 justify-center"
+                  >
+                    <Upload className="w-4 h-4 sm:w-6 h-6" />
+                    {language === 'ar' ? "استعادة JSON" : "Restore JSON"}
+                  </button>
+                  <Link 
+                    href="/super-admin/courses/create"
+                    className="group bg-slate-900 text-white px-6 sm:px-12 py-3 sm:py-5 rounded-xl sm:rounded-[22px] font-black text-xs sm:text-xl shadow-xl shadow-slate-900/10 hover:scale-105 transition-all flex items-center gap-2 sm:gap-4 justify-center"
+                  >
+                    <Plus className="w-4 h-4 sm:w-6 h-6 group-hover:rotate-90 transition-transform" />
+                    {t('coursesPage.createCurriculum')}
+                  </Link>
+                </div>
              </div>
              
              {/* Decorative elements */}
@@ -299,6 +352,61 @@ export default function SuperAdminCoursesPage() {
                            
                            <div className="flex items-center gap-2">
                               <button 
+                                onClick={async () => {
+                                  try {
+                                    const token = localStorage.getItem("super_admin_token") || localStorage.getItem("school_admin_token");
+                                    const res = await fetch(`${API_URL}/school/export/course/${course.id}`, {
+                                      headers: { Authorization: `Bearer ${token}` }
+                                    });
+                                    if (!res.ok) throw new Error("Failed to export course");
+                                    
+                                    const blob = await res.blob();
+                                    const url = window.URL.createObjectURL(blob);
+                                    const a = document.createElement("a");
+                                    a.href = url;
+                                    a.download = `course_${course.id}_export.xlsx`;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    window.URL.revokeObjectURL(url);
+                                    document.body.removeChild(a);
+                                  } catch (err) {
+                                    showToast("Failed to export course", "error");
+                                  }
+                                }}
+                                title={language === 'ar' ? 'تصدير الكورس كملف إكسيل' : 'Export Course to Excel'}
+                                className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
+                              >
+                                 <DownloadCloud className="w-5 h-5" />
+                              </button>
+                              <button 
+                                onClick={async () => {
+                                  try {
+                                    const token = localStorage.getItem("super_admin_token") || localStorage.getItem("school_admin_token");
+                                    const res = await fetch(`${API_URL}/school/export/json/course/${course.id}`, {
+                                      headers: { Authorization: `Bearer ${token}` }
+                                    });
+                                    if (!res.ok) throw new Error("Failed to export JSON");
+                                    
+                                    const blob = await res.blob();
+                                    const url = window.URL.createObjectURL(blob);
+                                    const a = document.createElement("a");
+                                    a.href = url;
+                                    a.download = `course_${course.id}_backup.json`;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    window.URL.revokeObjectURL(url);
+                                    document.body.removeChild(a);
+                                    showToast(language === 'ar' ? "تم تصدير نسخة JSON بنجاح" : "Exported JSON successfully", "success");
+                                  } catch (err) {
+                                    showToast(language === 'ar' ? "فشل تصدير نسخة JSON" : "Failed to export JSON backup", "error");
+                                  }
+                                }}
+                                title={language === 'ar' ? 'تصدير نسخة JSON احتياطية' : 'Export Course JSON Backup'}
+                                className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
+                              >
+                                 <FileCode className="w-5 h-5" />
+                              </button>
+                              <button 
                                 onClick={() => router.push(`/super-admin/courses/edit?id=${course.id}`)}
                                 className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm"
                               >
@@ -343,6 +451,14 @@ export default function SuperAdminCoursesPage() {
           )}
 
       </div>
+      <ImportExcelModal 
+        isOpen={isImportModalOpen} 
+        onClose={() => setIsImportModalOpen(false)} 
+        onSuccess={() => {
+          fetchCourses(true);
+          fetchStats();
+        }} 
+      />
     </DashboardLayout>
   );
 }

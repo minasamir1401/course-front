@@ -225,6 +225,7 @@ export default function CreateCoursePage() {
   const [currentLesson, setCurrentLesson] = useState<any>({
     title: "",
     domain: "",
+    content: "",
     videoUrl: "",
     summary: "",
     notes: "",
@@ -393,6 +394,7 @@ export default function CreateCoursePage() {
     setCurrentLesson({
       title: "",
       domain: "",
+      content: "",
       videoUrl: "",
       summary: "",
       notes: "",
@@ -414,6 +416,7 @@ export default function CreateCoursePage() {
   const openEditLessonModal = (index: number) => {
     setEditingLessonIndex(index);
     const lessonToEdit = { ...lessons[index] };
+    if (lessonToEdit.content === undefined || lessonToEdit.content === null) lessonToEdit.content = "";
     if (!lessonToEdit.slides || lessonToEdit.slides.length === 0) lessonToEdit.slides = [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? "المقدمة" : "Introduction", content: "", sections: [] }];
     if (!lessonToEdit.questions) lessonToEdit.questions = [];
     setCurrentLesson(lessonToEdit);
@@ -2363,6 +2366,7 @@ export default function CreateCoursePage() {
           id: l.id,
           title: l.title,
           domain: l.domain || null,
+          content: l.content ?? null,
           videoUrl: l.videoUrl || null,
           summary: l.summary || null,
           notes: l.notes || null,
@@ -2477,11 +2481,12 @@ export default function CreateCoursePage() {
                 // Keep current state edits so we don't overwrite user actively typing,
                 // but preserve backend-assigned IDs (UUIDs)
                 setCurrentLesson((prev: any) => ({
-                  ...prev,
-                  id: parsedLessons[idx].id,
-                  slides: prev.slides.map((s: any, sIdx: number) => {
-                    const serverSlide = parsedLessons[idx].slides?.[sIdx];
-                    return serverSlide ? { ...s, id: serverSlide.id } : s;
+                ...prev,
+                id: parsedLessons[idx].id,
+                content: prev.content,
+                slides: prev.slides.map((s: any, sIdx: number) => {
+                  const serverSlide = parsedLessons[idx].slides?.[sIdx];
+                  return serverSlide ? { ...s, id: serverSlide.id } : s;
                   }),
                   questions: prev.questions.map((q: any, qIdx: number) => {
                     const serverQ = parsedLessons[idx].questions?.[qIdx];
@@ -2500,6 +2505,7 @@ export default function CreateCoursePage() {
                     ...pl,
                     title: currentLesson.title,
                     domain: currentLesson.domain,
+                    content: currentLesson.content,
                     videoUrl: currentLesson.videoUrl,
                     summary: currentLesson.summary,
                     notes: currentLesson.notes,
@@ -2579,6 +2585,7 @@ export default function CreateCoursePage() {
         id: l.id,
         title: l.title,
         domain: l.domain || null,
+        content: l.content ?? null,
         videoUrl: l.videoUrl || null,
         summary: l.summary || null,
         notes: l.notes || null,
@@ -2707,6 +2714,18 @@ export default function CreateCoursePage() {
                           placeholder="https://youtube.com/watch?v=..."
                         />
                       </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <label className="block text-xs font-black text-slate-400 uppercase tracking-widest">
+                        {language === 'ar' ? "محتوى الدرس" : "Lesson Content"}
+                      </label>
+                      <textarea
+                        value={currentLesson.content || ""}
+                        onChange={(e) => setCurrentLesson({ ...currentLesson, content: e.target.value })}
+                        className="w-full min-h-[180px] bg-slate-50 border border-slate-200 rounded-[28px] py-5 px-6 text-slate-900 text-base font-medium outline-none focus:border-indigo-600 transition-all shadow-sm resize-y leading-8"
+                        placeholder={language === 'ar' ? "اكتب أو الصق المحتوى النصي للدرس هنا..." : "Write or paste the lesson content here..."}
+                      />
                     </div>
 
                     <div className="bg-white p-8 rounded-[35px] border border-slate-100 space-y-8">
