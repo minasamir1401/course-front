@@ -17,6 +17,7 @@ export default function SuperAdminCoursesPage() {
   const [courses, setCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [mergingCloud, setMergingCloud] = useState(false); // silent background cloud merge
   const jsonInputRef = useRef<HTMLInputElement | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -25,6 +26,22 @@ export default function SuperAdminCoursesPage() {
   const [apiStats, setApiStats] = useState({ totalCourses: 0, totalLessons: 0, totalSubjects: 0 });
   const [loadingStats, setLoadingStats] = useState(true);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+
+  // Fetch courses and stats immediately on mount (no debounce delay on first load)
+  useEffect(() => {
+    fetchCourses(true);
+    fetchStats();
+
+    // ⚡ Silent background refresh after 3s — by then the Supabase cache is warm
+    // and the second fetch will include cloud-only courses + update 'local' badges to 'both'
+    // This runs WITHOUT any loading spinner so the user sees local courses immediately
+    const cloudRefreshTimer = setTimeout(() => {
+      silentCloudMerge();
+    }, 3000);
+
+    return () => clearTimeout(cloudRefreshTimer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -35,10 +52,14 @@ export default function SuperAdminCoursesPage() {
   }, [searchQuery]);
 
   useEffect(() => {
+    // Skip the first render — already fetched via the mount effect above
+    if (debouncedSearch === '' && page === 1) return;
     fetchCourses(page === 1);
   }, [debouncedSearch, page]);
 
   useEffect(() => {
+    // Skip on initial mount (already called above)
+    if (debouncedSearch === '') return;
     fetchStats();
   }, [debouncedSearch]);
 
@@ -97,6 +118,56 @@ export default function SuperAdminCoursesPage() {
     } finally {
       setLoading(false);
       setLoadingMore(false);
+    }
+  };
+
+  // ⚡ Silent background cloud merge — runs 3s after initial load
+  // Fetches courses again (Supabase cache is now warm) and merges cloud data
+  // WITHOUT showing any loading spinner or removing existing courses
+  const silentCloudMerge = async () => {
+    try {
+      setMergingCloud(true);
+      const token = localStorage.getItem("super_admin_token");
+      const url = new URL(`${API_URL}/courses`);
+      url.searchParams.append("page", "1");
+      url.searchParams.append("limit", "12");
+
+      const res = await fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      const freshCourses: any[] = data.courses || [];
+
+      // Merge: update existing badges + add any cloud-only courses
+      setCourses(prev => {
+        const existingMap = new Map(prev.map((c: any) => [c.id, c]));
+        for (const fc of freshCourses) {
+          if (fc?.id) {
+            if (existingMap.has(fc.id)) {
+              // Update _source badge (e.g. 'local' → 'both')
+              const existing = existingMap.get(fc.id);
+              if (existing._source !== fc._source) {
+                existingMap.set(fc.id, { ...existing, _source: fc._source });
+              }
+            } else {
+              // New cloud-only course — add it
+              existingMap.set(fc.id, fc);
+            }
+          }
+        }
+        const mergedList = Array.from(existingMap.values());
+        // Sort: local and 'both' first, 'cloud' only at the end
+        return mergedList.sort((a: any, b: any) => {
+          if (a._source === 'cloud' && b._source !== 'cloud') return 1;
+          if (a._source !== 'cloud' && b._source === 'cloud') return -1;
+          return 0; // maintain original order otherwise
+        });
+      });
+    } catch (e) {
+      // Silent fail — don't show error toast for background refresh
+      console.warn('[Cloud Merge] Background refresh failed silently:', e);
+    } finally {
+      setMergingCloud(false);
     }
   };
 
@@ -297,6 +368,15 @@ export default function SuperAdminCoursesPage() {
           </div>
 
           {/* Main Grid */}
+
+          {/* ☁️ Subtle cloud sync indicator — shows only during background 3s refresh */}
+          {mergingCloud && (
+            <div className="flex items-center gap-2 text-xs text-sky-500 font-bold bg-sky-50 border border-sky-100 px-3 py-1.5 rounded-xl w-fit">
+              <div className="w-3 h-3 border-2 border-sky-400 border-t-transparent rounded-full animate-spin" />
+              {language === 'ar' ? 'جاري تحديث البيانات السحابية...' : 'Syncing cloud data...'}
+            </div>
+          )}
+
           {loading ? (
              <div className="flex flex-col gap-4 sm:gap-6">
                 {[1, 2, 3].map((n) => (

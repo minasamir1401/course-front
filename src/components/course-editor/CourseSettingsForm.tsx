@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useCourseEditor } from "./CourseEditorContext";
-import { Settings, Edit2, CheckCircle2, Trash2, Upload, Layers } from "lucide-react";
+import { Settings, Edit2, CheckCircle2, Trash2, Upload, Layers, EyeOff } from "lucide-react";
 import { getFullImageUrl } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNotification } from "@/context/NotificationContext";
@@ -17,6 +17,7 @@ export const CourseSettingsForm: React.FC = () => {
     schools,
     selectAllSchools,
     toggleCourseSchool,
+    setIsSettingsHidden,
   } = useCourseEditor();
 
   const [collapsed, setCollapsed] = React.useState(false);
@@ -97,29 +98,43 @@ export const CourseSettingsForm: React.FC = () => {
     return translations[grade] || grade;
   };
 
+  if (role !== "SUPER_ADMIN") {
+    return null;
+  }
+
   return (
     <div className="bg-white rounded-[28px] border border-slate-100 shadow-sm overflow-hidden">
       <div className="flex items-center justify-between px-6 py-4 border-b border-slate-50">
         <span className="font-black text-slate-800 flex items-center gap-2 text-sm">
           <Settings className="w-4 h-4 text-indigo-600" /> {language === "ar" ? "إعدادات الكورس" : "Course Settings"}
         </span>
-        <button
-          type="button"
-          onClick={() => setCollapsed((prev) => !prev)}
-          className="text-[10px] font-black px-3 py-1.5 rounded-lg bg-slate-50 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 transition-all flex items-center gap-1.5"
-        >
-          {collapsed ? (
-            <>
-              <Edit2 className="w-3 h-3" />
-              {language === "ar" ? "تعديل" : "Edit"}
-            </>
-          ) : (
-            <>
-              <CheckCircle2 className="w-3 h-3" />
-              {language === "ar" ? "حفظ" : "Save"}
-            </>
-          )}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setCollapsed((prev) => !prev)}
+            className="text-[10px] font-black px-3 py-1.5 rounded-lg bg-slate-50 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 transition-all flex items-center gap-1.5"
+          >
+            {collapsed ? (
+              <>
+                <Edit2 className="w-3 h-3" />
+                {language === "ar" ? "تعديل" : "Edit"}
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="w-3 h-3" />
+                {language === "ar" ? "حفظ" : "Save"}
+              </>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsSettingsHidden(true)}
+            className="text-[10px] font-black px-3 py-1.5 rounded-lg bg-slate-50 text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all flex items-center gap-1.5"
+          >
+            <EyeOff className="w-3 h-3" />
+            {language === "ar" ? "إخفاء" : "Hide"}
+          </button>
+        </div>
       </div>
 
       {collapsed ? (

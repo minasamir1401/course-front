@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { ClipboardList, Plus, Search, Filter, Clock, BookOpen, CheckCircle2, Globe, Building2, GraduationCap, ChevronLeft, MoreVertical, FileEdit, BarChart3, Tag, Calendar, Lock, Trash2, RefreshCw, Hash } from 'lucide-react';
+import { ClipboardList, Plus, Search, Filter, Clock, BookOpen, CheckCircle2, Globe, Building2, GraduationCap, ChevronLeft, MoreVertical, FileEdit, BarChart3, Tag, Calendar, Lock, Trash2, RefreshCw, Hash, Eye } from 'lucide-react';
 import Link from "next/link";
 import { useNotification } from "@/context/NotificationContext";
 import { API_URL } from "@/lib/api";
@@ -257,17 +257,20 @@ export default function ExamsListPage() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-2 shrink-0 w-full md:w-auto mt-4 md:mt-0 justify-end md:justify-start border-t border-slate-100 md:border-none pt-4 md:pt-0">
+                  <Link href={`/exams/${exam.id}?preview=true`} target="_blank" className="w-10 h-10 bg-slate-50 text-slate-500 rounded-xl flex items-center justify-center hover:bg-slate-600 hover:text-white transition-all shadow-sm" title={language === 'ar' ? 'معاينة الامتحان' : 'Preview Exam'}>
+                    <Eye className="w-5 h-5" />
+                  </Link>
                   <Link href={
                       exam.type === 'Quiz' ? `/school-admin/quizzes/edit/${exam.id}` :
                       exam.type === 'Assignment' ? `/school-admin/assignments/edit/${exam.id}` :
                       `/school-admin/exams/edit/${exam.id}`
-                    } className="p-3 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-100 hover:text-indigo-600 transition-colors border border-slate-100" title={t('schoolAdmin.examsPage.edit')}>
+                    } className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm" title={t('schoolAdmin.examsPage.edit')}>
                     <FileEdit className="w-5 h-5" />
                   </Link>
-                  <button onClick={() => handleDelete(exam.id)} className="p-3 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 transition-colors border border-rose-100" title={t('schoolAdmin.teachersPage.deleteTooltip')}>
+                  <button onClick={() => handleDelete(exam.id)} className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center hover:bg-red-600 hover:text-white transition-all shadow-sm" title={t('schoolAdmin.teachersPage.deleteTooltip')}>
                     <Trash2 className="w-5 h-5" />
                   </button>
-                  <Link href={`/school-admin/exams/results/${exam.id}`} className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors flex items-center gap-2 shadow-lg shadow-indigo-100">
+                  <Link href={`/school-admin/exams/results/${exam.id}`} className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors flex items-center gap-2 shadow-lg shadow-indigo-100 text-sm h-10">
                     <BarChart3 className="w-5 h-5" />
                     <span className="hidden sm:inline">{t('schoolAdmin.examsPage.analysis')}</span>
                   </Link>

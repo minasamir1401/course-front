@@ -129,11 +129,18 @@ export default function LessonSummaryView({
   };
 
   let assignmentCorrectCount = 0;
+  let assignmentAttemptedCount = 0;
   if (lesson?.assignments && lesson.assignments.length > 0) {
     lesson.assignments.forEach((as: any, asIdx: number) => {
       const isMulti = as.type === 'MULTI_SELECT' || as.label === 'MULTI_SELECT';
       const studentAns = assignmentAnswers[asIdx];
       const isSub = assignmentSubmitted[asIdx];
+      const isSkipped = !studentAns || (Array.isArray(studentAns) && studentAns.length === 0) || studentAns === '' || studentAns === '[]';
+      
+      if (!isSkipped) {
+        assignmentAttemptedCount++;
+      }
+
       const isStandard = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(as.label || as.type || 'MCQ');
       
       const isCorrect = isSub && (isStandard
@@ -142,16 +149,23 @@ export default function LessonSummaryView({
           : studentAns === as.correctAnswer)
         : checkAdvancedCorrectLocal(as, studentAns));
         
-      if (isCorrect) assignmentCorrectCount++;
+      if (isCorrect && !isSkipped) assignmentCorrectCount++;
     });
   }
 
   let quizCorrectCount = 0;
+  let quizAttemptedCount = 0;
   if (lesson?.questions && lesson.questions.length > 0) {
     lesson.questions.forEach((q: any, qIdx: number) => {
       const isMulti = q.type === 'MULTI_SELECT' || q.label === 'MULTI_SELECT';
       const studentAns = answers[qIdx];
       const isSub = quizSubmitted[qIdx];
+      const isSkipped = !studentAns || (Array.isArray(studentAns) && studentAns.length === 0) || studentAns === '' || studentAns === '[]';
+      
+      if (!isSkipped) {
+        quizAttemptedCount++;
+      }
+
       const isStandard = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(q.label || q.type || 'MCQ');
       
       const isCorrect = isSub && (isStandard
@@ -160,15 +174,12 @@ export default function LessonSummaryView({
           : studentAns === q.correctAnswer)
         : checkAdvancedCorrectLocal(q, studentAns));
         
-      if (isCorrect) quizCorrectCount++;
+      if (isCorrect && !isSkipped) quizCorrectCount++;
     });
   }
 
-  const totalAssignments = lesson?.assignments?.length || 0;
-  const totalQuizzes = lesson?.questions?.length || 0;
-
-  const assignmentScoreOf10 = totalAssignments > 0 ? parseFloat(((assignmentCorrectCount / totalAssignments) * 10).toFixed(1)) : 0;
-  const quizScoreOf10 = totalQuizzes > 0 ? parseFloat(((quizCorrectCount / totalQuizzes) * 10).toFixed(1)) : 0;
+  const assignmentScoreOf10 = assignmentAttemptedCount > 0 ? parseFloat(((assignmentCorrectCount / assignmentAttemptedCount) * 10).toFixed(1)) : 0;
+  const quizScoreOf10 = quizAttemptedCount > 0 ? parseFloat(((quizCorrectCount / quizAttemptedCount) * 10).toFixed(1)) : 0;
 
   return (
     <div className="premium-card p-6 md:p-12 rounded-[40px] animate-in zoom-in duration-700 text-center relative max-w-4xl mx-auto border-2 border-indigo-50/50">

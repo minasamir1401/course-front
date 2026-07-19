@@ -35,6 +35,7 @@ const InnerCourseEditor: React.FC = () => {
     draftSavedAt,
     restoreFromDraft,
     clearDraft,
+    isSettingsHidden,
   } = useCourseEditor();
 
   // Periodic autosave listener
@@ -70,45 +71,12 @@ const InnerCourseEditor: React.FC = () => {
   }
 
   return (
-    <DashboardLayout>
+    <DashboardLayout hideSidebar>
       <div className="min-h-screen bg-[#f8fafc] text-slate-900" dir={language === "ar" ? "rtl" : "ltr"}>
         <div className="p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8">
           <div className="animate-in fade-in duration-500">
             {/* 🗡️ Draft Recovery Banner */}
-          {hasDraft && (
-            <div className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between gap-4 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
-                  <ShieldCheck className="w-5 h-5 text-amber-600" />
-                </div>
-                <div>
-                  <p className="font-black text-amber-800 text-sm">
-                    {language === "ar" ? "💾 تم اكتشاف مسودة غير محفوظة" : "💾 Unsaved draft detected"}
-                  </p>
-                  <p className="text-amber-600 text-xs mt-0.5">
-                    {language === "ar"
-                      ? `آخر حفظ محلي: ${draftSavedAt ? new Date(draftSavedAt).toLocaleString('ar') : '...'}`
-                      : `Last local save: ${draftSavedAt ? new Date(draftSavedAt).toLocaleString() : '...'}`}
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-2 shrink-0">
-                <button
-                  onClick={restoreFromDraft}
-                  className="bg-amber-500 text-white px-4 py-2 rounded-xl font-black text-sm hover:bg-amber-600 transition-all flex items-center gap-2"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  {language === "ar" ? "استرداد" : "Restore"}
-                </button>
-                <button
-                  onClick={clearDraft}
-                  className="bg-white text-amber-600 border border-amber-200 px-4 py-2 rounded-xl font-black text-sm hover:bg-amber-50 transition-all"
-                >
-                  {language === "ar" ? "تجاهل" : "Dismiss"}
-                </button>
-              </div>
-            </div>
-          )}
+            {/* Draft recovery banner removed per user request */}
 
           {/* Header Block */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-12 gap-6 bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
@@ -161,27 +129,29 @@ const InnerCourseEditor: React.FC = () => {
               </div>
             </div>
 
-            {/* Layout Grid */}
+          {/* Layout Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
               {/* Left Column: Settings and Danger Zone */}
-              <div className="lg:col-span-4 space-y-8">
-                <CourseSettingsForm />
+              {!isSettingsHidden && (
+                <div className="lg:col-span-4 space-y-8 animate-in slide-in-from-right-4 duration-500">
+                  <CourseSettingsForm />
 
-                {/* Danger Zone */}
-                <div className="bg-red-50/50 rounded-[28px] border border-red-100 p-6 flex flex-col items-center justify-center gap-3">
-                  <p className="text-xs font-bold text-red-500 text-center">{language === "ar" ? "منطقة الخطر" : "Danger Zone"}</p>
-                  <button
-                    type="button"
-                    onClick={handleDeleteCourse}
-                    className="w-full bg-red-100 text-red-600 px-8 py-3.5 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-red-650 hover:text-white transition-all border border-red-200"
-                  >
-                    <Trash2 size={20} /> {language === "ar" ? "حذف الكورس بالكامل" : "Delete Course"}
-                  </button>
+                  {/* Danger Zone */}
+                  <div className="bg-red-50/50 rounded-[28px] border border-red-100 p-6 flex flex-col items-center justify-center gap-3">
+                    <p className="text-xs font-bold text-red-500 text-center">{language === "ar" ? "منطقة الخطر" : "Danger Zone"}</p>
+                    <button
+                      type="button"
+                      onClick={handleDeleteCourse}
+                      className="w-full bg-red-100 text-red-600 px-8 py-3.5 rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-red-650 hover:text-white transition-all border border-red-200"
+                    >
+                      <Trash2 size={20} /> {language === "ar" ? "حذف الكورس بالكامل" : "Delete Course"}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Right Column: Lessons Builder */}
-              <div className="lg:col-span-8 space-y-8">
+              <div className={`${isSettingsHidden ? 'lg:col-span-12' : 'lg:col-span-8'} space-y-8 transition-all duration-500`}>
                 <LessonList />
               </div>
             </div>

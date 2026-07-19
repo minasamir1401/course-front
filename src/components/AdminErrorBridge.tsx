@@ -45,12 +45,27 @@ const serialize = (value: any) => {
 
 const pushError = (entry: Omit<FrontendErrorEntry, "id" | "timestamp">) => {
   const current = readErrors();
-  current.push({
+  const newEntry = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
     timestamp: new Date().toISOString(),
     ...entry
-  });
+  };
+  current.push(newEntry);
   writeErrors(current);
+
+  // Send error to backend
+  try {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001";
+    fetch(`${apiUrl}/api/admin/log-error`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        level: "error",
+        message: newEntry.message,
+        details: JSON.stringify(newEntry)
+      })
+    }).catch(() => {}); // ignore network errors to avoid loops
+  } catch {}
 };
 
 export default function AdminErrorBridge() {

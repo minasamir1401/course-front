@@ -18,7 +18,7 @@ import HtmlRenderer from "@/components/HtmlRenderer";
 export default function SuperAdminEditExamPage({ presetType }: { presetType?: 'Exam' | 'Quiz' | 'Assignment' }) {
   return (
     <Suspense fallback={
-      <DashboardLayout>
+      <DashboardLayout hideSidebar>
         <div className="h-[70vh] flex flex-col items-center justify-center gap-6 text-slate-400">
            <div className="w-20 h-20 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
            <p className="font-black text-2xl animate-pulse">جاري التحميل...</p>
@@ -97,7 +97,8 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
   };
 
   // Unified settings collapsed state
-  const [settingsCollapsed, setSettingsCollapsed] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [previewSelectedAnswer, setPreviewSelectedAnswer] = useState<string | string[]>("");
 
   const [examInfo, setExamInfo] = useState<any>({
     title: "",
@@ -789,7 +790,7 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
   };
 
   if (loading) return (
-    <DashboardLayout>
+    <DashboardLayout hideSidebar>
       <div className="h-[70vh] flex flex-col items-center justify-center gap-6 text-slate-400">
         <div className="w-20 h-20 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
         <p className="font-black text-2xl animate-pulse">Loading exam details...</p>
@@ -798,7 +799,7 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
   );
 
   return (
-        <DashboardLayout>
+        <DashboardLayout hideSidebar>
       <div className={`max-w-7xl mx-auto flex flex-col gap-10 pb-20 ${language === 'ar' ? 'rtl' : 'ltr'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
         {/* Command Center Header */}
         <div className="bg-[#0f0f1d] p-8 md:p-12 rounded-[40px] shadow-2xl relative overflow-hidden border border-white/5">
@@ -811,9 +812,9 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
                 >
                   <ChevronLeft className="w-6 h-6" />
                 </button>
-                <div className="p-3 bg-indigo-500/20 rounded-2xl border border-indigo-500/30 shadow-lg shadow-indigo-500/10">
+                <button onClick={() => setShowSettingsModal(true)} className="p-3 bg-indigo-500/20 rounded-2xl border border-indigo-500/30 shadow-lg shadow-indigo-500/10 hover:bg-indigo-500/30 transition-all cursor-pointer">
                   <Settings className="w-8 h-8 text-indigo-400" />
-                </div>
+                </button>
                 <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight">
                   Edit Central Exam
                 </h2>
@@ -847,16 +848,22 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
           <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/10 blur-[120px] -ml-48 -mb-48"></div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Settings Sidebar */}
-          <div className="lg:col-span-4 flex flex-col gap-6">
-
-            {/* General Info Card */}
-            <div className="bg-white p-8 rounded-[35px] border border-slate-100 shadow-sm flex flex-col gap-8">
-                            <h3 className="font-black text-slate-800 flex items-center gap-3 text-lg border-b border-slate-50 pb-6">
-                <Settings className="w-6 h-6 text-indigo-600" />
-                {language === 'ar' ? "الإعدادات العامة" : "General Settings"}
-              </h3>
+        <div className="flex flex-col gap-8">
+          {/* Settings Modal */}
+          {showSettingsModal && (
+            <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-10" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+              <div className="absolute inset-0 bg-[#0f0f1d]/80 backdrop-blur-xl" onClick={() => setShowSettingsModal(false)}></div>
+              <div className="relative bg-white w-full max-w-2xl max-h-[90vh] rounded-[35px] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
+                <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
+                  <h3 className="font-black text-slate-800 flex items-center gap-3 text-lg">
+                    <Settings className="w-6 h-6 text-indigo-600" />
+                    {language === 'ar' ? "الإعدادات العامة" : "General Settings"}
+                  </h3>
+                  <button onClick={() => setShowSettingsModal(false)} className="w-10 h-10 bg-white text-slate-400 rounded-xl flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-all shadow-sm border border-slate-100">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="p-8 overflow-y-auto custom-scrollbar flex flex-col gap-8">
 
               <div className="space-y-6">
                 <div className="flex flex-col gap-2">
@@ -1068,14 +1075,14 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
                     </div>
                   </div>
                 </div>
-
+                </div>
+                </div>
               </div>
             </div>
-
-          </div>
+          )}
 
           {/* Questions Content Area */}
-          <div className="lg:col-span-8 flex flex-col gap-8">
+          <div className="w-full flex flex-col gap-8">
             {!showQuestionForm && (
               <>
                 <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-sm">
@@ -1203,7 +1210,10 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
                               {expandedIndex === index ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                             </button>
                             <button
-                              onClick={() => setPreviewQuestion(q)}
+                              onClick={() => {
+                                setPreviewSelectedAnswer(q.type === "MULTI_SELECT" ? [] : "");
+                                setPreviewQuestion(q);
+                              }}
                               className="w-10 h-10 bg-indigo-50 text-indigo-400 rounded-xl flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all"
                               title={language === 'ar' ? "معاينة الطالب" : "Student Preview"}
                             >
@@ -1874,17 +1884,34 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
 
                   {previewQuestion.type !== "TEXT" && (
                     <div className="flex flex-col gap-4">
-                      {(previewQuestion.type === "MCQ" || previewQuestion.type === "MULTI_SELECT" ? previewQuestion.options : ["True", "False"]).filter((o: string) => o).map((option: string, i: number) => (
+                      {(previewQuestion.type === "MCQ" || previewQuestion.type === "MULTI_SELECT" ? previewQuestion.options : ["True", "False"]).filter((o: string) => o).map((option: string, i: number) => {
+                        const isSelected = previewQuestion.type === "MULTI_SELECT"
+                          ? (previewSelectedAnswer as string[]).includes(option)
+                          : previewSelectedAnswer === option;
+
+                        return (
                         <button
                           key={i}
-                          className="w-full text-left p-6 rounded-3xl border-2 border-slate-100 bg-white hover:border-indigo-600 hover:bg-indigo-50/30 transition-all flex items-center gap-5 group"
+                          onClick={() => {
+                            if (previewQuestion.type === "MULTI_SELECT") {
+                              setPreviewSelectedAnswer(prev => 
+                                (prev as string[]).includes(option) 
+                                  ? (prev as string[]).filter(o => o !== option) 
+                                  : [...(prev as string[]), option]
+                              );
+                            } else {
+                              setPreviewSelectedAnswer(option);
+                            }
+                          }}
+                          className={`w-full text-left p-6 rounded-3xl border-2 transition-all flex items-center gap-5 group ${isSelected ? 'border-indigo-600 bg-indigo-50/50' : 'border-slate-100 bg-white hover:border-indigo-600 hover:bg-indigo-50/30'}`}
                         >
-                          <div className="w-7 h-7 rounded-full border-2 border-slate-200 group-hover:border-indigo-600 flex items-center justify-center transition-all">
-                            <div className="w-3 h-3 bg-indigo-600 rounded-full opacity-0 group-hover:opacity-100 transition-all"></div>
+                          <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'border-indigo-600 bg-indigo-600' : 'border-slate-200 group-hover:border-indigo-600'}`}>
+                            <div className={`w-3 h-3 bg-white rounded-full transition-all ${isSelected ? 'opacity-100 scale-100' : 'opacity-0 scale-0 group-hover:bg-indigo-600 group-hover:opacity-100'}`}></div>
                           </div>
-                          <span className="text-xl font-bold text-slate-700 group-hover:text-indigo-900"><HtmlRenderer html={option} tag="span" /></span>
+                          <span className={`text-xl font-bold transition-all ${isSelected ? 'text-indigo-900' : 'text-slate-700 group-hover:text-indigo-900'}`}><HtmlRenderer html={option} tag="span" /></span>
                         </button>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                </div>

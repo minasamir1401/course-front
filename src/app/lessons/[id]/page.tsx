@@ -171,22 +171,17 @@ export default function LessonPlayerPage() {
       if (isQuestionLike(slide)) {
         totalQ++;
         if (slideSubmitted[idx]) {
-          attemptedQ++;
-          attemptedScoreCap += (Number(slide.points) || 1);
-          const isMulti = slide.label === 'MULTI_SELECT' || slide.type === 'MULTI_SELECT';
-          const isStandard = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(slide.label || slide.type || 'MCQ');
-          const studentAnswers = slideAnswers[idx] || (isMulti ? [] : '');
+          const studentAnswers = slideAnswers[idx];
+          const isCorrect = checkAdvancedCorrect(slide, studentAnswers);
+          const isSkipped = !studentAnswers || (Array.isArray(studentAnswers) && studentAnswers.length === 0) || studentAnswers === '' || studentAnswers === '[]';
           
-          const isCorrect = isStandard
-            ? (isMulti
-              ? studentAnswers.length === (slide.correctAnswers || []).length &&
-                studentAnswers.every((a: string) => (slide.correctAnswers || []).map(normalizeAnswer).includes(normalizeAnswer(a)))
-              : (!slide.correctAnswer || normalizeAnswer(slideAnswers[idx]) === normalizeAnswer(slide.correctAnswer)))
-            : checkAdvancedCorrect(slide, slideAnswers[idx]);
-
-          if (isCorrect && (isMulti ? studentAnswers.length > 0 : !!slideAnswers[idx])) {
-            totalScore += (Number(slide.points) || 1);
-            correctQ++;
+          if (!isSkipped) {
+            attemptedQ++;
+            attemptedScoreCap += (Number(slide.points) || 1);
+            if (isCorrect) {
+              totalScore += (Number(slide.points) || 1);
+              correctQ++;
+            }
           }
         }
       }
@@ -197,22 +192,17 @@ export default function LessonPlayerPage() {
       if (isQuestionLike(as)) {
         totalQ++;
         if (assignmentSubmitted[idx]) {
-          attemptedQ++;
-          attemptedScoreCap += (Number(as.points) || 1);
-          const isMulti = as.type === 'MULTI_SELECT' || as.label === 'MULTI_SELECT';
-          const isStandard = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(as.label || as.type || 'MCQ');
-          const studentAnswers = assignmentAnswers[idx] || (isMulti ? [] : '');
+          const studentAnswers = assignmentAnswers[idx];
+          const isCorrect = checkAdvancedCorrect(as, studentAnswers);
+          const isSkipped = !studentAnswers || (Array.isArray(studentAnswers) && studentAnswers.length === 0) || studentAnswers === '' || studentAnswers === '[]';
           
-          const isCorrect = isStandard
-            ? (isMulti
-              ? studentAnswers.length === (as.correctAnswers || []).length &&
-                studentAnswers.every((a: string) => (as.correctAnswers || []).map(normalizeAnswer).includes(normalizeAnswer(a)))
-              : (!as.correctAnswer || normalizeAnswer(assignmentAnswers[idx]) === normalizeAnswer(as.correctAnswer)))
-            : checkAdvancedCorrect(as, assignmentAnswers[idx]);
-
-          if (isCorrect && (isMulti ? studentAnswers.length > 0 : !!assignmentAnswers[idx])) {
-            totalScore += (Number(as.points) || 1);
-            correctQ++;
+          if (!isSkipped) {
+            attemptedQ++;
+            attemptedScoreCap += (Number(as.points) || 1);
+            if (isCorrect) {
+              totalScore += (Number(as.points) || 1);
+              correctQ++;
+            }
           }
         }
       }
@@ -223,22 +213,17 @@ export default function LessonPlayerPage() {
       if (isQuestionLike(q) || !q.type) {
         totalQ++;
         if (quizSubmitted[idx]) {
-          attemptedQ++;
-          attemptedScoreCap += (Number(q.points) || 1);
-          const isMulti = q.type === 'MULTI_SELECT' || q.label === 'MULTI_SELECT';
-          const isStandard = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(q.label || q.type || 'MCQ');
-          const studentAnswers = answers[idx] || (isMulti ? [] : '');
+          const studentAnswers = answers[idx];
+          const isCorrect = checkAdvancedCorrect(q, studentAnswers);
+          const isSkipped = !studentAnswers || (Array.isArray(studentAnswers) && studentAnswers.length === 0) || studentAnswers === '' || studentAnswers === '[]';
           
-          const isCorrect = isStandard
-            ? (isMulti
-              ? studentAnswers.length === (q.correctAnswers || []).length &&
-                studentAnswers.every((a: string) => (q.correctAnswers || []).map(normalizeAnswer).includes(normalizeAnswer(a)))
-              : (!q.correctAnswer || normalizeAnswer(answers[idx]) === normalizeAnswer(q.correctAnswer)))
-            : checkAdvancedCorrect(q, answers[idx]);
-
-          if (isCorrect && (isMulti ? studentAnswers.length > 0 : !!answers[idx])) {
-            totalScore += (Number(q.points) || 1);
-            correctQ++;
+          if (!isSkipped) {
+            attemptedQ++;
+            attemptedScoreCap += (Number(q.points) || 1);
+            if (isCorrect) {
+              totalScore += (Number(q.points) || 1);
+              correctQ++;
+            }
           }
         }
       }
@@ -427,12 +412,16 @@ export default function LessonPlayerPage() {
   };
 
   const handleNextQuestion = () => {
+    const isPreviewMode = searchParams.get('preview') === 'true';
     if (!quizSubmitted[currentQuestionIndex]) {
       const q = lesson.questions[currentQuestionIndex];
       const qId = q.id ? String(q.id) : String(currentQuestionIndex);
-      const ans = isQuestionLike(q) ? answers[currentQuestionIndex] : 'read';
-      submitAnswerProgress(qId, 'questions', ans);
-      setQuizSubmitted({ ...quizSubmitted, [currentQuestionIndex]: true });
+      const ans = answers[currentQuestionIndex];
+      
+      if (!isQuestionLike(q) && !isPreviewMode) {
+        submitAnswerProgress(qId, 'questions', 'read');
+        setQuizSubmitted({ ...quizSubmitted, [currentQuestionIndex]: true });
+      }
     }
 
     if (currentQuestionIndex < lesson.questions.length - 1) {
@@ -674,7 +663,7 @@ export default function LessonPlayerPage() {
           <div className="w-full bg-white/80 backdrop-blur-xl border border-slate-200/80 p-3 rounded-[24px] shadow-sm flex flex-wrap items-center justify-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
             <button
               onClick={() => {
-                if (!slideSubmitted[currentSlideIndex]) {
+                if (!slideSubmitted[currentSlideIndex] && lesson.slides?.[currentSlideIndex]) {
                   const q = lesson.slides[currentSlideIndex];
                   const qId = q.id ? String(q.id) : String(currentSlideIndex);
                   const ans = isQuestionLike(q) ? slideAnswers[currentSlideIndex] : 'read';
@@ -695,7 +684,7 @@ export default function LessonPlayerPage() {
 
             <button
               onClick={() => {
-                if (!assignmentSubmitted[currentAssignmentIndex]) {
+                if (!assignmentSubmitted[currentAssignmentIndex] && lesson.assignments?.[currentAssignmentIndex]) {
                   const q = lesson.assignments[currentAssignmentIndex];
                   const qId = q.id ? String(q.id) : String(currentAssignmentIndex);
                   const ans = isQuestionLike(q) ? assignmentAnswers[currentAssignmentIndex] : 'read';
@@ -716,12 +705,14 @@ export default function LessonPlayerPage() {
 
             <button
               onClick={() => {
-                if (!quizSubmitted[currentQuestionIndex]) {
+                if (!quizSubmitted[currentQuestionIndex] && lesson.questions?.[currentQuestionIndex]) {
                   const q = lesson.questions[currentQuestionIndex];
                   const qId = q.id ? String(q.id) : String(currentQuestionIndex);
-                  const ans = isQuestionLike(q) ? answers[currentQuestionIndex] : 'read';
-                  submitAnswerProgress(qId, 'questions', ans);
-                  setQuizSubmitted({ ...quizSubmitted, [currentQuestionIndex]: true });
+                  const isPreviewMode = searchParams.get('preview') === 'true';
+                  if (!isQuestionLike(q) && !isPreviewMode) {
+                    submitAnswerProgress(qId, 'questions', 'read');
+                    setQuizSubmitted({ ...quizSubmitted, [currentQuestionIndex]: true });
+                  }
                 }
                 setCurrentStage('exercises');
               }}
@@ -903,27 +894,6 @@ export default function LessonPlayerPage() {
                     </button>
                   )}
 
-                  {slideSubmitted[currentSlideIndex] && isQuestionLike(lesson.slides[currentSlideIndex]) && (() => {
-                    const isMulti = lesson.slides[currentSlideIndex].label === 'MULTI_SELECT' || lesson.slides[currentSlideIndex].type === 'MULTI_SELECT';
-                    const isStandard = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(lesson.slides[currentSlideIndex].label || lesson.slides[currentSlideIndex].type || 'MCQ');
-                    const studentAnswers = slideAnswers[currentSlideIndex] || (isMulti ? [] : '');
-                    
-                    const isCorrect = isStandard
-                      ? (isMulti
-                        ? studentAnswers.length === (lesson.slides[currentSlideIndex].correctAnswers || []).length && studentAnswers.every((a: string) => (lesson.slides[currentSlideIndex].correctAnswers || []).includes(a))
-                        : (!lesson.slides[currentSlideIndex].correctAnswer || normalizeAnswerGlobal(slideAnswers[currentSlideIndex]) === normalizeAnswerGlobal(lesson.slides[currentSlideIndex].correctAnswer)))
-                      : checkAdvancedCorrect(lesson.slides[currentSlideIndex], slideAnswers[currentSlideIndex]);
-
-                    return (
-                      <div className="mt-8 w-full max-w-4xl">
-                        <QuestionFeedback
-                          isCorrect={isCorrect}
-                          correctAnswer={isMulti ? lesson.slides[currentSlideIndex].correctAnswers : lesson.slides[currentSlideIndex].correctAnswer}
-                          language={language}
-                        />
-                      </div>
-                    );
-                  })()}
 
                   <SlideSectionsToggle 
                     slide={lesson.slides[currentSlideIndex]} 
@@ -957,12 +927,17 @@ export default function LessonPlayerPage() {
                   {currentSlideIndex < lesson.slides.length - 1 ? (
                     <button
                       onClick={() => {
+                        const isPreviewMode = searchParams.get('preview') === 'true';
                         if (!slideSubmitted[currentSlideIndex]) {
                           const q = lesson.slides[currentSlideIndex];
                           const qId = q.id ? String(q.id) : String(currentSlideIndex);
-                          const ans = isQuestionLike(q) ? slideAnswers[currentSlideIndex] : 'read';
-                          submitAnswerProgress(qId, 'slides', ans);
-                          setSlideSubmitted({ ...slideSubmitted, [currentSlideIndex]: true });
+                          const ans = slideAnswers[currentSlideIndex];
+                          const hasAnswer = ans !== undefined && ans !== null && ans !== '' && !(Array.isArray(ans) && ans.length === 0);
+                          if (hasAnswer || !isPreviewMode) {
+                            const finalAns = isQuestionLike(q) ? (hasAnswer ? ans : '') : 'read';
+                            submitAnswerProgress(qId, 'slides', finalAns);
+                            setSlideSubmitted({ ...slideSubmitted, [currentSlideIndex]: true });
+                          }
                         }
                         setCurrentSlideIndex(prev => prev + 1);
                       }}
@@ -973,12 +948,17 @@ export default function LessonPlayerPage() {
                   ) : (
                     <button
                       onClick={() => {
+                        const isPreviewMode = searchParams.get('preview') === 'true';
                         if (!slideSubmitted[currentSlideIndex]) {
                           const q = lesson.slides[currentSlideIndex];
                           const qId = q.id ? String(q.id) : String(currentSlideIndex);
-                          const ans = isQuestionLike(q) ? slideAnswers[currentSlideIndex] : 'read';
-                          submitAnswerProgress(qId, 'slides', ans);
-                          setSlideSubmitted({ ...slideSubmitted, [currentSlideIndex]: true });
+                          const ans = slideAnswers[currentSlideIndex];
+                          const hasAnswer = ans !== undefined && ans !== null && ans !== '' && !(Array.isArray(ans) && ans.length === 0);
+                          if (hasAnswer || !isPreviewMode) {
+                            const finalAns = isQuestionLike(q) ? (hasAnswer ? ans : '') : 'read';
+                            submitAnswerProgress(qId, 'slides', finalAns);
+                            setSlideSubmitted({ ...slideSubmitted, [currentSlideIndex]: true });
+                          }
                         }
                         setCurrentStage('assignments');
                       }}
@@ -1000,12 +980,17 @@ export default function LessonPlayerPage() {
                       <button
                         key={i}
                         onClick={() => {
+                          const isPreviewMode = searchParams.get('preview') === 'true';
                           if (!assignmentSubmitted[currentAssignmentIndex]) {
                             const q = lesson.assignments[currentAssignmentIndex];
                             const qId = q.id ? String(q.id) : String(currentAssignmentIndex);
-                            const ans = isQuestionLike(q) ? assignmentAnswers[currentAssignmentIndex] : 'read';
-                            submitAnswerProgress(qId, 'assignments', ans);
-                            setAssignmentSubmitted({ ...assignmentSubmitted, [currentAssignmentIndex]: true });
+                            const ans = assignmentAnswers[currentAssignmentIndex];
+                            const hasAnswer = ans !== undefined && ans !== null && ans !== '' && !(Array.isArray(ans) && ans.length === 0);
+                            if (hasAnswer || !isPreviewMode) {
+                              const finalAns = isQuestionLike(q) ? (hasAnswer ? ans : '') : 'read';
+                              submitAnswerProgress(qId, 'assignments', finalAns);
+                              setAssignmentSubmitted({ ...assignmentSubmitted, [currentAssignmentIndex]: true });
+                            }
                           }
                           setCurrentAssignmentIndex(i);
                         }}
@@ -1170,10 +1155,16 @@ export default function LessonPlayerPage() {
                             ? (isMulti ? studentAnswers.length === (lesson.assignments[currentAssignmentIndex].correctAnswers || []).length && studentAnswers.every((a: string) => (lesson.assignments[currentAssignmentIndex].correctAnswers || []).includes(a)) : (!lesson.assignments[currentAssignmentIndex].correctAnswer || normalizeAnswerGlobal(assignmentAnswers[currentAssignmentIndex]) === normalizeAnswerGlobal(lesson.assignments[currentAssignmentIndex].correctAnswer)))
                             : checkAdvancedCorrect(lesson.assignments[currentAssignmentIndex], assignmentAnswers[currentAssignmentIndex]);
 
+                          const isSkipped = !studentAnswers || (Array.isArray(studentAnswers) && studentAnswers.length === 0) || studentAnswers === '' || studentAnswers === '[]';
+                          const isExplanation = lesson.assignments[currentAssignmentIndex].type === 'EXPLANATION' || lesson.assignments[currentAssignmentIndex].label === 'EXPLANATION';
+
+                          if (isExplanation) return null;
+
                           return (
                             <div className="mt-4 animate-in fade-in slide-in-from-top-2">
                               <QuestionFeedback
                                 isCorrect={isCorrect}
+                                isSkipped={isSkipped}
                                 correctAnswer={isMulti ? lesson.assignments[currentAssignmentIndex].correctAnswers : lesson.assignments[currentAssignmentIndex].correctAnswer}
                                 language={language}
                               />
@@ -1201,12 +1192,17 @@ export default function LessonPlayerPage() {
                         </button>
                         <button
                           onClick={() => {
+                            const isPreviewMode = searchParams.get('preview') === 'true';
                             if (!assignmentSubmitted[currentAssignmentIndex]) {
                               const q = lesson.assignments[currentAssignmentIndex];
                               const qId = q.id ? String(q.id) : String(currentAssignmentIndex);
-                              const ans = isQuestionLike(q) ? assignmentAnswers[currentAssignmentIndex] : 'read';
-                              submitAnswerProgress(qId, 'assignments', ans);
-                              setAssignmentSubmitted({ ...assignmentSubmitted, [currentAssignmentIndex]: true });
+                              const ans = assignmentAnswers[currentAssignmentIndex];
+                              const hasAnswer = ans !== undefined && ans !== null && ans !== '' && !(Array.isArray(ans) && ans.length === 0);
+                              if (hasAnswer || !isPreviewMode) {
+                                const finalAns = isQuestionLike(q) ? (hasAnswer ? ans : '') : 'read';
+                                submitAnswerProgress(qId, 'assignments', finalAns);
+                                setAssignmentSubmitted({ ...assignmentSubmitted, [currentAssignmentIndex]: true });
+                              }
                             }
                             if (currentAssignmentIndex < lesson.assignments.length - 1) {
                               setCurrentAssignmentIndex(prev => prev + 1);
@@ -1272,9 +1268,11 @@ export default function LessonPlayerPage() {
                           if (!quizSubmitted[currentQuestionIndex]) {
                             const q = lesson.questions[currentQuestionIndex];
                             const qId = q.id ? String(q.id) : String(currentQuestionIndex);
-                            const ans = isQuestionLike(q) ? answers[currentQuestionIndex] : 'read';
-                            submitAnswerProgress(qId, 'questions', ans);
-                            setQuizSubmitted({ ...quizSubmitted, [currentQuestionIndex]: true });
+                            const isPreviewMode = searchParams.get('preview') === 'true';
+                            if (!isQuestionLike(q) && !isPreviewMode) {
+                              submitAnswerProgress(qId, 'questions', 'read');
+                              setQuizSubmitted({ ...quizSubmitted, [currentQuestionIndex]: true });
+                            }
                           }
                           setCurrentQuestionIndex(i);
                         }}
@@ -1433,10 +1431,16 @@ export default function LessonPlayerPage() {
                             ? (isMulti ? studentAnswers.length === (lesson.questions[currentQuestionIndex].correctAnswers || []).length && studentAnswers.every((a: string) => (lesson.questions[currentQuestionIndex].correctAnswers || []).includes(a)) : (!lesson.questions[currentQuestionIndex].correctAnswer || normalizeAnswerGlobal(answers[currentQuestionIndex]) === normalizeAnswerGlobal(lesson.questions[currentQuestionIndex].correctAnswer)))
                             : checkAdvancedCorrect(lesson.questions[currentQuestionIndex], answers[currentQuestionIndex]);
 
+                          const isSkipped = !studentAnswers || (Array.isArray(studentAnswers) && studentAnswers.length === 0) || studentAnswers === '' || studentAnswers === '[]';
+                          const isExplanation = lesson.questions[currentQuestionIndex].type === 'EXPLANATION' || lesson.questions[currentQuestionIndex].label === 'EXPLANATION';
+
+                          if (isExplanation) return null;
+
                           return (
                             <div className="mt-4 animate-in fade-in slide-in-from-top-2">
                               <QuestionFeedback
                                 isCorrect={isCorrect}
+                                isSkipped={isSkipped}
                                 correctAnswer={isMulti ? lesson.questions[currentQuestionIndex].correctAnswers : lesson.questions[currentQuestionIndex].correctAnswer}
                                 language={language}
                               />

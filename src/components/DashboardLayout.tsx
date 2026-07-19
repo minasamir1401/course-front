@@ -10,7 +10,7 @@ import { LayoutDashboard, ClipboardList, BookOpen, Settings, BarChart3, Sparkles
 import { useLanguage } from "@/contexts/LanguageContext";
 import AdminErrorBridge from "@/components/AdminErrorBridge";
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default function DashboardLayout({ children, hideSidebar }: { children: React.ReactNode; hideSidebar?: boolean }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -59,7 +59,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!mounted) return <div className="min-h-screen bg-slate-50" />;
 
-  const isSidebarVisible = hasSidebar && !isFullscreen;
+  const isSidebarVisible = hasSidebar && !isFullscreen && !hideSidebar;
 
   return (
     <div className={`flex min-h-screen font-sans overflow-x-hidden bg-transparent relative ${isStudent ? 'klevro-watermark' : ''}`} dir={language === 'ar' ? "rtl" : "ltr"}>

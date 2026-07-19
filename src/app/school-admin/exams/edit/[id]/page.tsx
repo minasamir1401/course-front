@@ -19,7 +19,7 @@ import HtmlRenderer from "@/components/HtmlRenderer";
 export default function SchoolAdminEditExamPage({ presetType }: { presetType?: 'Exam' | 'Quiz' | 'Assignment' }) {
   return (
     <Suspense fallback={
-      <DashboardLayout>
+      <DashboardLayout hideSidebar>
         <div className="h-[70vh] flex flex-col items-center justify-center gap-6 text-slate-400">
            <div className="w-20 h-20 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
            <p className="font-black text-2xl animate-pulse">جاري التحميل...</p>
@@ -714,7 +714,7 @@ export function SchoolAdminEditExamPageContent({ presetType }: { presetType?: 'E
   };
 
   if (loading) return (
-    <DashboardLayout>
+    <DashboardLayout hideSidebar>
       <div className="h-[70vh] flex flex-col items-center justify-center gap-6 text-slate-400">
          <div className="w-20 h-20 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
          <p className="font-black text-2xl animate-pulse">جاري تحميل بيانات الامتحان...</p>
@@ -723,7 +723,7 @@ export function SchoolAdminEditExamPageContent({ presetType }: { presetType?: 'E
   );
 
   return (
-    <DashboardLayout>
+    <DashboardLayout hideSidebar>
       <div className="max-w-7xl mx-auto flex flex-col gap-10 pb-20 rtl" dir="rtl">
         {/* Command Center Header */}
         <div className="bg-[#1a1a2e] p-8 md:p-12 rounded-[40px] shadow-2xl relative overflow-hidden border border-white/5">
@@ -750,6 +750,14 @@ export function SchoolAdminEditExamPageContent({ presetType }: { presetType?: 'E
             
             <div className="flex flex-wrap gap-4 w-full lg:w-auto justify-center">
               <button 
+                onClick={() => window.open(`/exams/${id}?preview=true`, "_blank")}
+                className="px-8 py-5 rounded-2xl font-bold bg-white/5 text-white border border-white/10 hover:bg-white/10 transition-all flex items-center gap-3"
+              >
+                معاينة كطالب
+                <Eye className="w-5 h-5" />
+              </button>
+
+              <button 
                 onClick={() => handleSubmit("DRAFT")}
                 disabled={saving}
                 className="px-8 py-5 rounded-2xl font-bold bg-white/5 text-white border border-white/10 hover:bg-white/10 transition-all flex items-center gap-3 disabled:opacity-50"
@@ -771,169 +779,11 @@ export function SchoolAdminEditExamPageContent({ presetType }: { presetType?: 'E
           <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/10 blur-[150px] -mr-64 -mt-64"></div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Settings Sidebar */}
-          <div className="lg:col-span-4 flex flex-col gap-6">
-            <div className="bg-white p-8 rounded-[35px] border border-slate-100 shadow-sm flex flex-col gap-8">
-              <h3 className="font-black text-slate-800 flex items-center gap-3 text-lg border-b border-slate-50 pb-6">
-                <Settings className="w-6 h-6 text-indigo-600" />
-                إعدادات الاختبار
-              </h3>
+        {/* Full-width exam editor — Settings panel hidden per school admin UX */}
+        {/* Settings Panel — hidden (accessible via header save button) */}
 
-              <div className="space-y-6">
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest">المادة / الفئة</label>
-                  <select 
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 outline-none font-bold text-slate-700 text-sm focus:ring-2 focus:ring-indigo-500/20 appearance-none"
-                    value={examInfo.category}
-                    onChange={(e) => setExamInfo({...examInfo, category: e.target.value})}
-                  >
-                    {CATEGORIES.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">المرحلة</label>
-                    <select 
-                      className="w-full bg-[#0a0a14] border border-white/10 rounded-xl px-4 py-3 outline-none font-bold text-white text-sm focus:ring-2 focus:ring-indigo-500/20 appearance-none"
-                      value={examInfo.grade}
-                      onChange={(e) => setExamInfo({...examInfo, grade: e.target.value})}
-                    >
-                      {GRADES.map(g => <option key={g} value={g} className="bg-[#0a0a14] text-white">{g}</option>)}
-                    </select>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">المدة (دقيقة)</label>
-                    <div className="relative">
-                      <input 
-                        type="number"
-                        className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 outline-none font-bold text-slate-700 text-sm focus:ring-2 focus:ring-indigo-500/20"
-                        value={examInfo.duration}
-                        onChange={(e) => setExamInfo({...examInfo, duration: parseInt(e.target.value)})}
-                      />
-                      <Clock className="w-4 h-4 text-slate-300 absolute left-3 top-3.5" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest">كلمة السر (اختياري)</label>
-                  <div className="relative">
-                    <input 
-                      type="text"
-                      placeholder="كلمة سر فتح الامتحان"
-                      className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 outline-none font-bold text-slate-700 text-sm focus:ring-2 focus:ring-indigo-500/20"
-                      value={examInfo.password}
-                      onChange={(e) => setExamInfo({...examInfo, password: e.target.value})}
-                    />
-                    <Lock className="w-4 h-4 text-slate-300 absolute left-3 top-3.5" />
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المهارة' : 'Skill'}</label>
-                  <select 
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5 font-bold text-slate-700 text-sm appearance-none"
-                    value={examInfo.skill}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val === "add_custom") {
-                        const newVal = prompt(language === 'ar' ? "أدخل مهارة مخصصة جديدة:" : "Enter custom skill:");
-                        if (newVal && newVal.trim()) {
-                          const trimmed = newVal.trim();
-                          setCustomSkills(prev => Array.from(new Set([...prev, trimmed])));
-                          setExamInfo({...examInfo, skill: trimmed});
-                        }
-                      } else {
-                        setExamInfo({...examInfo, skill: val});
-                      }
-                    }}
-                  >
-                    <option value="General">{language === 'ar' ? 'عام' : 'General'}</option>
-                    {allExistingSkills.filter(sk => sk !== "General").map(skill => (
-                      <option key={skill} value={skill}>{skill}</option>
-                    ))}
-                    <option value="add_custom" className="text-indigo-600 font-bold">
-                      {language === 'ar' ? '+ إضافة مهارة مخصصة...' : '+ Add Custom Skill...'}
-                    </option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Scheduling Card */}
-            <div className="bg-white p-8 rounded-[35px] border border-slate-100 shadow-sm flex flex-col gap-8">
-              <h3 className="font-black text-slate-800 flex items-center gap-3 text-lg border-b border-slate-50 pb-6">
-                <Calendar className="w-6 h-6 text-indigo-600" />
-                الموعد والمحاولات
-              </h3>
-
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">تاريخ البدء</label>
-                    <input 
-                      type="datetime-local"
-                      className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 outline-none font-bold text-slate-700 text-xs focus:ring-2 focus:ring-indigo-500/20"
-                      value={examInfo.startDate}
-                      onChange={(e) => setExamInfo({...examInfo, startDate: e.target.value})}
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest">تاريخ الانتهاء</label>
-                    <input 
-                      type="datetime-local"
-                      className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 outline-none font-bold text-slate-700 text-xs focus:ring-2 focus:ring-indigo-500/20"
-                      value={examInfo.endDate}
-                      onChange={(e) => setExamInfo({...examInfo, endDate: e.target.value})}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest">عدد المحاولات</label>
-                  <select 
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 outline-none font-bold text-slate-700 text-sm focus:ring-2 focus:ring-indigo-500/20"
-                    value={examInfo.attemptsAllowed}
-                    onChange={(e) => setExamInfo({...examInfo, attemptsAllowed: parseInt(e.target.value)})}
-                  >
-                    <option value={1}>محاولة واحدة فقط</option>
-                    <option value={2}>محاولتين</option>
-                    <option value={3}>3 محاولات</option>
-                    <option value={999}>غير محدود</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-8 rounded-[35px] border border-slate-100 shadow-sm flex flex-col gap-8">
-              <h3 className="font-black text-slate-800 flex items-center gap-3 text-lg border-b border-slate-50 pb-6">
-                <Eye className="w-6 h-6 text-indigo-600" />
-                ظهور النتائج للطلاب
-              </h3>
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-black text-slate-400 uppercase tracking-widest">اختر سياسة النتائج</label>
-                <select 
-                  className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 outline-none font-bold text-slate-700 text-sm focus:ring-2 focus:ring-indigo-500/20 appearance-none"
-                  value={examInfo.resultVisibility}
-                  onChange={(e) => setExamInfo({...examInfo, resultVisibility: e.target.value})}
-                >
-                  {VISIBILITY_OPTIONS.map((opt) => (
-                    <option key={opt.id} value={opt.id} className="text-slate-700">{opt.label}</option>
-                  ))}
-                </select>
-                <p className="text-xs font-bold text-slate-400 mt-2">
-                  {VISIBILITY_OPTIONS.find(opt => opt.id === examInfo.resultVisibility)?.desc}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Questions Content Area */}
-          <div className="lg:col-span-8 flex flex-col gap-8">
+          {/* Questions Content Area - Full Width */}
+          <div className="flex flex-col gap-8">
             <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-sm">
                <label className="text-sm font-black text-slate-400 mb-3 block uppercase tracking-widest">عنوان الامتحان المدرسي</label>
                <input 
@@ -1668,7 +1518,6 @@ export function SchoolAdminEditExamPageContent({ presetType }: { presetType?: 'E
             </div>
           </div>
         </div>
-      </div>
 
       {/* Student Preview Modal */}
       {previewQuestion && (

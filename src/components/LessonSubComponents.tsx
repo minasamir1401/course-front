@@ -57,7 +57,20 @@ export const getQuestionOptions = (q: any, language: string) => {
   return [];
 };
 
-export const QuestionFeedback = ({ isCorrect, language }: any) => {
+export const QuestionFeedback = ({ isCorrect, isSkipped, language }: any) => {
+  if (isSkipped) {
+    return (
+      <div className="p-6 rounded-[30px] border-2 flex flex-col items-center justify-center gap-3 animate-in zoom-in duration-500 mb-6 bg-amber-50 border-amber-200">
+        <div className="relative w-20 h-20 rounded-3xl bg-amber-500/10 border-2 border-amber-300 flex items-center justify-center">
+          <HelpCircle className="w-10 h-10 text-amber-600" />
+        </div>
+        <p className="text-amber-700 font-black text-sm md:text-base">
+          {language === 'ar' ? 'تم تخطي السؤال' : 'Question Skipped'}
+        </p>
+      </div>
+    );
+  }
+
   if (!isCorrect) {
     return (
       <div className="p-6 rounded-[30px] border-2 flex flex-col items-center justify-center gap-3 animate-in zoom-in duration-500 mb-6 bg-red-50 border-red-200">

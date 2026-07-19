@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { useCourseEditor } from "./CourseEditorContext";
-import { Layers, Plus, BookOpen, Eye, Clock, Monitor, Edit2, Trash2, X, DownloadCloud, FileSpreadsheet, FileCode, Upload } from "lucide-react";
+import { Layers, Plus, BookOpen, Eye, Clock, Monitor, Edit2, Trash2, X, DownloadCloud, FileSpreadsheet, FileCode, Upload, ArrowUp, ArrowDown } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { API_URL } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";
@@ -14,6 +14,7 @@ export const LessonList: React.FC = () => {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const jsonInputRef = useRef<HTMLInputElement | null>(null);
   const {
+    role,
     courseId,
     lessons,
     activeContentTab,
@@ -21,8 +22,14 @@ export const LessonList: React.FC = () => {
     openEditLessonModal,
     handleRemoveLesson,
     fetchCourseData,
-    handleSubmit
+    handleSubmit,
+    isSettingsHidden,
+    setIsSettingsHidden,
+    setLessons
   } = useCourseEditor();
+
+  // Bulk operations visible to SUPER_ADMIN only
+  const isSuperAdmin = role === "SUPER_ADMIN";
 
   const handleExportCourse = async () => {
     if (!courseId) {
@@ -136,6 +143,34 @@ export const LessonList: React.FC = () => {
     }
   };
 
+  const moveLessonUp = (index: number) => {
+    if (index === 0) return;
+    const newLessons = [...lessons];
+    const temp = newLessons[index];
+    newLessons[index] = newLessons[index - 1];
+    newLessons[index - 1] = temp;
+    setLessons(newLessons);
+  };
+
+  const moveLessonDown = (index: number) => {
+    if (index === lessons.length - 1) return;
+    const newLessons = [...lessons];
+    const temp = newLessons[index];
+    newLessons[index] = newLessons[index + 1];
+    newLessons[index + 1] = temp;
+    setLessons(newLessons);
+  };
+
+  const sortLessonsByDate = () => {
+    const sorted = [...lessons].sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateA - dateB;
+    });
+    setLessons(sorted);
+    showToast(language === "ar" ? "تم ترتيب الدروس من الأقدم للأحدث" : "Lessons sorted from oldest to newest", "success");
+  };
+
   return (
     <div className="space-y-8">
       {/* Hidden file input for JSON restore */}
@@ -156,37 +191,59 @@ export const LessonList: React.FC = () => {
       </div>
 
       <div className="flex justify-between items-center bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
-        <h3 className="text-2xl font-black text-slate-900 flex items-center gap-4">
-          <Layers className="w-8 h-8 text-indigo-600" /> {language === "ar" ? "الدروس والمحاضرات" : "Lessons & Lectures"}
-        </h3>
+        <div className="flex flex-col gap-2">
+          <h3 className="text-2xl font-black text-slate-900 flex items-center gap-4">
+            <Layers className="w-8 h-8 text-indigo-600" /> {language === "ar" ? "الدروس والمحاضرات" : "Lessons & Lectures"}
+          </h3>
+          {isSettingsHidden && (
+            <button
+              onClick={() => setIsSettingsHidden(false)}
+              className="text-xs font-black text-indigo-600 hover:text-indigo-800 flex items-center gap-1 w-fit bg-indigo-50 px-3 py-1.5 rounded-lg transition-all"
+            >
+              <Eye className="w-3 h-3" />
+              {language === "ar" ? "إظهار إعدادات الكورس" : "Show Course Settings"}
+            </button>
+          )}
+        </div>
         <div className="flex flex-wrap items-center gap-3">
+          {isSuperAdmin && (
+            <>
+              <button
+                onClick={() => setIsImportModalOpen(true)}
+                className="px-4 sm:px-6 py-3 sm:py-4 rounded-2xl font-black flex items-center gap-2 sm:gap-3 transition-all border-2 border-indigo-100 text-indigo-600 hover:border-indigo-600 hover:bg-indigo-50 bg-white text-xs sm:text-base"
+              >
+                <FileSpreadsheet size={20} />
+                <span className="hidden sm:inline">{language === "ar" ? "استيراد Excel" : "Import Excel"}</span>
+              </button>
+              <button
+                onClick={handleExportCourse}
+                className="px-4 sm:px-6 py-3 sm:py-4 rounded-2xl font-black flex items-center gap-2 sm:gap-3 transition-all border-2 border-slate-200 text-slate-600 hover:border-slate-400 hover:bg-slate-50 bg-white text-xs sm:text-base"
+              >
+                <DownloadCloud size={20} />
+                <span className="hidden sm:inline">{language === "ar" ? "تصدير Excel" : "Export Excel"}</span>
+              </button>
+              <button
+                onClick={() => jsonInputRef.current?.click()}
+                className="px-4 sm:px-6 py-3 sm:py-4 rounded-2xl font-black flex items-center gap-2 sm:gap-3 transition-all border-2 border-emerald-100 text-emerald-600 hover:border-emerald-600 hover:bg-emerald-50 bg-white text-xs sm:text-base"
+              >
+                <Upload size={20} />
+                <span className="hidden sm:inline">{language === "ar" ? "استعادة JSON" : "Restore JSON"}</span>
+              </button>
+              <button
+                onClick={handleExportJson}
+                className="px-4 sm:px-6 py-3 sm:py-4 rounded-2xl font-black flex items-center gap-2 sm:gap-3 transition-all border-2 border-emerald-200 text-emerald-700 hover:border-emerald-400 hover:bg-emerald-50 bg-white text-xs sm:text-base"
+              >
+                <FileCode size={20} />
+                <span className="hidden sm:inline">{language === "ar" ? "تصدير JSON" : "Export JSON"}</span>
+              </button>
+            </>
+          )}
           <button
-            onClick={() => setIsImportModalOpen(true)}
-            className="px-4 sm:px-6 py-3 sm:py-4 rounded-2xl font-black flex items-center gap-2 sm:gap-3 transition-all border-2 border-indigo-100 text-indigo-600 hover:border-indigo-600 hover:bg-indigo-50 bg-white text-xs sm:text-base"
+            onClick={sortLessonsByDate}
+            className="px-4 sm:px-6 py-3 sm:py-4 rounded-2xl font-black flex items-center gap-2 sm:gap-3 transition-all border-2 border-orange-100 text-orange-600 hover:border-orange-600 hover:bg-orange-50 bg-white text-xs sm:text-base"
           >
-            <FileSpreadsheet size={20} />
-            <span className="hidden sm:inline">{language === "ar" ? "استيراد Excel" : "Import Excel"}</span>
-          </button>
-          <button
-            onClick={handleExportCourse}
-            className="px-4 sm:px-6 py-3 sm:py-4 rounded-2xl font-black flex items-center gap-2 sm:gap-3 transition-all border-2 border-slate-200 text-slate-600 hover:border-slate-400 hover:bg-slate-50 bg-white text-xs sm:text-base"
-          >
-            <DownloadCloud size={20} />
-            <span className="hidden sm:inline">{language === "ar" ? "تصدير Excel" : "Export Excel"}</span>
-          </button>
-          <button
-            onClick={() => jsonInputRef.current?.click()}
-            className="px-4 sm:px-6 py-3 sm:py-4 rounded-2xl font-black flex items-center gap-2 sm:gap-3 transition-all border-2 border-emerald-100 text-emerald-600 hover:border-emerald-600 hover:bg-emerald-50 bg-white text-xs sm:text-base"
-          >
-            <Upload size={20} />
-            <span className="hidden sm:inline">{language === "ar" ? "استعادة JSON" : "Restore JSON"}</span>
-          </button>
-          <button
-            onClick={handleExportJson}
-            className="px-4 sm:px-6 py-3 sm:py-4 rounded-2xl font-black flex items-center gap-2 sm:gap-3 transition-all border-2 border-emerald-200 text-emerald-700 hover:border-emerald-400 hover:bg-emerald-50 bg-white text-xs sm:text-base"
-          >
-            <FileCode size={20} />
-            <span className="hidden sm:inline">{language === "ar" ? "تصدير JSON" : "Export JSON"}</span>
+            <Clock size={20} />
+            <span className="hidden sm:inline">{language === "ar" ? "ترتيب بالتاريخ" : "Sort by Date"}</span>
           </button>
           <button
             onClick={openAddLessonModal}
@@ -223,22 +280,24 @@ export const LessonList: React.FC = () => {
                     {index + 1}
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <h3 className="font-black text-slate-900 text-xl truncate group-hover:text-indigo-600 transition-colors">{lesson.title}</h3>
+                    <h3 className="font-black text-slate-900 text-xl group-hover:text-indigo-600 transition-colors leading-snug break-words line-clamp-2">{lesson.title}</h3>
                     <div className="flex flex-wrap items-center gap-3 mt-2">
+                      {/* Visibility dot indicator - compact 🟢/🔴 */}
                       <div
-                        className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase ${
-                          lesson.isVisible ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-500"
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black ${
+                          lesson.isVisible ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-500"
                         }`}
+                        title={lesson.isVisible ? (language === "ar" ? "مرئي للطلاب" : "Visible to students") : (language === "ar" ? "مخفي عن الطلاب" : "Hidden")}
                       >
-                        {lesson.isVisible ? <Eye className="w-3 h-3" /> : <X className="w-3 h-3" />}
-                        {lesson.isVisible
-                          ? language === "ar"
-                            ? "مرئي للطلاب"
-                            : "Visible to students"
-                          : language === "ar"
-                          ? "مخفي عن الطلاب"
-                          : "Hidden from students"}
+                        <span className={`w-2 h-2 rounded-full ${lesson.isVisible ? "bg-emerald-500" : "bg-red-500"}`} />
+                        {lesson.isVisible ? "🟢" : "🔴"}
                       </div>
+                      {lesson.createdAt && (
+                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-50 text-purple-600 text-[10px] font-black uppercase">
+                          <Clock className="w-3 h-3" />
+                          {new Date(lesson.createdAt).toLocaleDateString(language === "ar" ? "ar-EG" : "en-US", { year: "numeric", month: "short", day: "numeric" })}
+                        </div>
+                      )}
                       {lesson.publishDate && (
                         <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black uppercase">
                           <Clock className="w-3 h-3" />
@@ -255,39 +314,57 @@ export const LessonList: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 w-full md:w-auto justify-end shrink-0">
+                <div className="flex items-center gap-2 w-full md:w-auto justify-end shrink-0">
                   <div className="h-8 w-[1px] bg-slate-100 mx-2 hidden md:block"></div>
+                  <div className="flex flex-col gap-1 items-center justify-center me-2">
+                    <button
+                      onClick={() => moveLessonUp(index)}
+                      disabled={index === 0}
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition-all"
+                      title={language === "ar" ? "تحريك لأعلى" : "Move Up"}
+                    >
+                      <ArrowUp className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => moveLessonDown(index)}
+                      disabled={index === lessons.length - 1}
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition-all"
+                      title={language === "ar" ? "تحريك لأسفل" : "Move Down"}
+                    >
+                      <ArrowDown className="w-4 h-4" />
+                    </button>
+                  </div>
                   {lesson.id && (
                     <>
                       <button
                         onClick={() => handleExportLesson(lesson.id as string)}
-                        className="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-5 py-3 rounded-2xl font-black text-sm hover:bg-indigo-600 hover:text-white transition-all border border-indigo-100"
+                        className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
                         title={language === "ar" ? "تصدير الدرس" : "Export Lesson"}
                       >
-                        <DownloadCloud size={18} />
+                        <DownloadCloud className="w-5 h-5" />
                       </button>
                       <button
                         onClick={() => window.open(`/lessons/${lesson.id}?preview=true`, "_blank")}
-                        className="flex items-center gap-2 bg-slate-50 text-slate-400 px-5 py-3 rounded-2xl font-black text-sm hover:bg-indigo-600 hover:text-white transition-all border border-slate-100"
+                        className="w-10 h-10 bg-slate-50 text-slate-500 rounded-xl flex items-center justify-center hover:bg-slate-600 hover:text-white transition-all shadow-sm"
                         title={language === "ar" ? "معاينة الدرس" : "Preview Lesson"}
                       >
-                        <Eye size={18} />
-                        {language === "ar" ? "معاينة" : "Preview"}
+                        <Eye className="w-5 h-5" />
                       </button>
                     </>
                   )}
                   <button
                     onClick={() => openEditLessonModal(index)}
-                    className="flex items-center gap-2 bg-blue-50 text-blue-600 px-5 py-3 rounded-2xl font-black text-sm hover:bg-blue-600 hover:text-white transition-all border border-blue-100"
+                    className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                    title={language === "ar" ? "تعديل" : "Edit"}
                   >
-                    <Edit2 size={18} />
-                    {language === "ar" ? "تعديل" : "Edit"}
+                    <Edit2 className="w-5 h-5" />
                   </button>
                   <button
                     onClick={() => handleRemoveLesson(index)}
-                    className="p-3 bg-red-50 text-red-400 hover:bg-red-500 hover:text-white rounded-2xl transition-all border border-red-50"
+                    className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center hover:bg-red-600 hover:text-white transition-all shadow-sm"
+                    title={language === "ar" ? "حذف" : "Delete"}
                   >
-                    <Trash2 size={20} />
+                    <Trash2 className="w-5 h-5" />
                   </button>
                 </div>
               </div>

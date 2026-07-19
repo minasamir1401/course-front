@@ -35,6 +35,7 @@ export interface Lesson {
   questions: any[];
   assignments: any[];
   attachments: any[];
+  createdAt?: string | Date;
 }
 
 interface CourseEditorContextType {
@@ -107,6 +108,8 @@ interface CourseEditorContextType {
   draftSavedAt: string | null;
   restoreFromDraft: () => void;
   clearDraft: () => void;
+  isSettingsHidden: boolean;
+  setIsSettingsHidden: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const CourseEditorContext = createContext<CourseEditorContextType | undefined>(undefined);
@@ -128,6 +131,7 @@ export const CourseEditorProvider: React.FC<{
   const [isAutoSaveEnabled, setIsAutoSaveEnabled] = useState(true);
   const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isSettingsHidden, setIsSettingsHidden] = useState(true);
 
   const [courseData, setCourseData] = useState<CourseData>({
     title: "",
@@ -207,6 +211,8 @@ export const CourseEditorProvider: React.FC<{
   const assignmentsExcelRef = useRef<HTMLInputElement>(null);
 
   const tokenKey = role === "SUPER_ADMIN" ? "super_admin_token" : "school_admin_token";
+  // Ref to prevent draft auto-save from firing immediately after restore
+  const justRestoredRef = useRef(false);
 
   useEffect(() => {
     const handleGlobalClick = (event: MouseEvent) => {
@@ -249,6 +255,11 @@ export const CourseEditorProvider: React.FC<{
   // Save draft on every lesson change
   useEffect(() => {
     if (!DRAFT_KEY || isLoading || lessons.length === 0) return;
+    // Don't save draft immediately after restore (prevents reappearing banner)
+    if (justRestoredRef.current) {
+      justRestoredRef.current = false;
+      return;
+    }
     const timer = setTimeout(() => {
       try {
         const draft = {
@@ -289,7 +300,10 @@ export const CourseEditorProvider: React.FC<{
       if (!raw) return;
       const draft = JSON.parse(raw);
       if (draft?.lessons?.length > 0) {
+        justRestoredRef.current = true;
         setLessons(draft.lessons);
+        // Remove draft immediately so it won't reappear after navigation
+        localStorage.removeItem(DRAFT_KEY);
         showToast(
           language === 'ar' ? `تم استرداد المسودة المحفوظة بتاريخ ${new Date(draft.savedAt).toLocaleString('ar')}` : `Draft from ${new Date(draft.savedAt).toLocaleString()} restored`,
           'success'
@@ -601,11 +615,18 @@ export const CourseEditorProvider: React.FC<{
       showToast(language === "ar" ? "يجب إدخال عنوان الدرس" : "Lesson title is required", "error");
       return;
     }
+    // Optimistic local update (will be replaced by server response)
     const newLessons = [...lessons];
     if (editingLessonIndex !== null) {
       newLessons[editingLessonIndex] = currentLesson;
     } else {
-      newLessons.push(currentLesson);
+      // Check if lesson already exists by title to prevent duplication
+      const alreadyExists = newLessons.some(
+        (l, idx) => l.title === currentLesson.title && idx !== editingLessonIndex
+      );
+      if (!alreadyExists) {
+        newLessons.push(currentLesson);
+      }
     }
     setLessons(newLessons);
     setIsLessonModalOpen(false);
@@ -1014,6 +1035,8 @@ export const CourseEditorProvider: React.FC<{
         draftSavedAt,
         restoreFromDraft,
         clearDraft,
+        isSettingsHidden,
+        setIsSettingsHidden,
       }}
     >
       {children}
