@@ -198,7 +198,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
       if (prev.type === 'MULTI_SELECT') {
         const answers = prev.correctAnswers || [];
         if (answers.includes(oldVal)) {
-          updated.correctAnswers = answers.map((a: string) => a === oldVal ? value : a);
+          updated.correctAnswers = Array.isArray(answers) ? answers.map((a: string) => a === oldVal ? value : a) : [];
         }
       } else {
         if (prev.correctAnswer === oldVal) {
@@ -569,7 +569,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                             <div className="space-y-3 pt-2">
                               <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'تفسيرات وملاحظات إضافية:' : 'Explanations & Notes:'}</h5>
                               <div className="space-y-2">
-                                {q.sections.map((sec: any, secIdx: number) => {
+                                {(Array.isArray(q.sections) ? q.sections : []).map((sec: any, secIdx: number) => {
                                   const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
                                   const SectionIcon = preset.icon;
                                   return (

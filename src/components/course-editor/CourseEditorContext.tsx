@@ -474,7 +474,25 @@ export const CourseEditorProvider: React.FC<{
                     } catch (e) {
                       parsedExps = [q.explanation || ""];
                     }
-                    return { ...q, explanations: parsedExps };
+                    let parsedSections = q.sections;
+                    if (typeof parsedSections === "string") {
+                      try { parsedSections = JSON.parse(parsedSections); } catch(e) { parsedSections = []; }
+                    }
+                    if (!Array.isArray(parsedSections)) parsedSections = [];
+
+                    let parsedOptions = q.options;
+                    if (typeof parsedOptions === "string") {
+                      try { parsedOptions = JSON.parse(parsedOptions); } catch(e) { parsedOptions = []; }
+                    }
+                    if (!Array.isArray(parsedOptions)) parsedOptions = [];
+
+                    let parsedCorrectAnswers = q.correctAnswers;
+                    if (typeof parsedCorrectAnswers === "string") {
+                      try { parsedCorrectAnswers = JSON.parse(parsedCorrectAnswers); } catch(e) { parsedCorrectAnswers = []; }
+                    }
+                    if (!Array.isArray(parsedCorrectAnswers)) parsedCorrectAnswers = [];
+
+                    return { ...q, explanations: parsedExps, sections: parsedSections, options: parsedOptions, correctAnswers: parsedCorrectAnswers };
                   })
                 : [],
               assignments: Array.isArray(parsedAssignments)
@@ -486,11 +504,36 @@ export const CourseEditorProvider: React.FC<{
                     } catch (e) {
                       parsedExps = [q.explanation || ""];
                     }
-                    return { ...q, explanations: parsedExps };
+                    let parsedSections = q.sections;
+                    if (typeof parsedSections === "string") {
+                      try { parsedSections = JSON.parse(parsedSections); } catch(e) { parsedSections = []; }
+                    }
+                    if (!Array.isArray(parsedSections)) parsedSections = [];
+
+                    let parsedOptions = q.options;
+                    if (typeof parsedOptions === "string") {
+                      try { parsedOptions = JSON.parse(parsedOptions); } catch(e) { parsedOptions = []; }
+                    }
+                    if (!Array.isArray(parsedOptions)) parsedOptions = [];
+
+                    let parsedCorrectAnswers = q.correctAnswers;
+                    if (typeof parsedCorrectAnswers === "string") {
+                      try { parsedCorrectAnswers = JSON.parse(parsedCorrectAnswers); } catch(e) { parsedCorrectAnswers = []; }
+                    }
+                    if (!Array.isArray(parsedCorrectAnswers)) parsedCorrectAnswers = [];
+
+                    return { ...q, explanations: parsedExps, sections: parsedSections, options: parsedOptions, correctAnswers: parsedCorrectAnswers };
                   })
                 : [],
               attachments: Array.isArray(parsedAttachments) ? parsedAttachments : [],
-              slides: Array.isArray(parsedSlides) && parsedSlides.length ? parsedSlides : [{ id: Date.now(), type: "TEXT", label: "CONTENT", title: language === "ar" ? "المقدمة" : "Introduction", content: "", sections: [] }],
+              slides: (Array.isArray(parsedSlides) && parsedSlides.length ? parsedSlides : [{ id: Date.now(), type: "TEXT", label: "CONTENT", title: language === "ar" ? "المقدمة" : "Introduction", content: "", sections: [] }]).map((slide: any) => {
+                let parsedSections = slide.sections;
+                if (typeof parsedSections === "string") {
+                  try { parsedSections = JSON.parse(parsedSections); } catch(e) { parsedSections = []; }
+                }
+                if (!Array.isArray(parsedSections)) parsedSections = [];
+                return { ...slide, sections: parsedSections };
+              }),
             };
           })
         );

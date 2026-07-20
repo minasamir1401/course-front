@@ -34,7 +34,7 @@ const formatDate = (value?: string | Date) => {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
-  return date.toLocaleString();
+  return date.toLocaleString('ar-EG', { timeZone: 'Africa/Cairo', dateStyle: 'short', timeStyle: 'medium' });
 };
 
 const readFrontendErrors = () => {
@@ -60,6 +60,8 @@ export default function SuperAdminMonitorPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const [restoreMessage, setRestoreMessage] = useState("");
+  const [isAutoRefresh, setIsAutoRefresh] = useState(true);
+  const [daysFilter, setDaysFilter] = useState<number | null>(null);
 
   const handleSearch = async () => {
     if (!searchQuery || searchQuery.length < 2) return;
@@ -97,7 +99,7 @@ export default function SuperAdminMonitorPage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Restore failed");
       setRestoreMessage(language === 'ar' ? "تمت الاستعادة بنجاح!" : "Restored successfully!");
-      loadData(); // refresh data
+      loadData(false); // refresh data
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -105,19 +107,20 @@ export default function SuperAdminMonitorPage() {
     }
   };
 
-  const loadData = async () => {
+  const loadData = async (silent = false) => {
     if (typeof window === "undefined") return;
     const authToken = localStorage.getItem("super_admin_token");
     if (!authToken) {
       setError(language === 'ar' ? "يلزم تسجيل دخول الأدمن" : "Super admin login required");
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
       return;
     }
 
-    setIsLoading(true);
-    setError("");
+    if (!silent) setIsLoading(true);
+    if (!silent) setError("");
     try {
-      const res = await fetch(`${API_URL}/admin/diagnostics?limit=12`, {
+      // increase limit to get more logs to filter by days
+      const res = await fetch(`${API_URL}/admin/diagnostics?limit=50`, {
         headers: { Authorization: `Bearer ${authToken}` },
       });
       const json = await res.json();
@@ -125,19 +128,27 @@ export default function SuperAdminMonitorPage() {
       setData(json);
       setFrontendErrors(readFrontendErrors());
     } catch (err: any) {
-      setError(err.message || "Failed to load monitor data");
+      if (!silent) setError(err.message || "Failed to load monitor data");
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   };
 
   useEffect(() => {
     loadData();
-    const interval = window.setInterval(() => {
+    const feInterval = window.setInterval(() => {
       setFrontendErrors(readFrontendErrors());
     }, 2000);
-    return () => window.clearInterval(interval);
+    return () => window.clearInterval(feInterval);
   }, []);
+
+  useEffect(() => {
+    if (!isAutoRefresh) return;
+    const refreshInterval = window.setInterval(() => {
+      loadData(true);
+    }, 10000);
+    return () => window.clearInterval(refreshInterval);
+  }, [isAutoRefresh]);
 
   const counts = data?.counts || {};
   const samples = data?.samples || {};
@@ -174,12 +185,21 @@ export default function SuperAdminMonitorPage() {
               </p>
             </div>
 
-            <div className="flex gap-3 flex-wrap">
+            <div className="flex gap-3 flex-wrap items-center">
+              <label className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white border border-slate-200 cursor-pointer shadow-sm hover:bg-slate-50 transition-all">
+                <input 
+                  type="checkbox" 
+                  checked={isAutoRefresh} 
+                  onChange={(e) => setIsAutoRefresh(e.target.checked)} 
+                  className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500" 
+                />
+                <span className="text-sm font-bold text-slate-700">{language === 'ar' ? "تحديث تلقائي" : "Auto Refresh"}</span>
+              </label>
               <button
-                onClick={loadData}
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-900 text-white font-black hover:scale-[1.02] transition-all"
+                onClick={() => loadData()}
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-900 text-white font-black hover:scale-[1.02] transition-all shadow-md"
               >
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                 {language === 'ar' ? "تحديث" : "Refresh"}
               </button>
               <div className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-emerald-50 text-emerald-700 font-black">
@@ -206,7 +226,7 @@ export default function SuperAdminMonitorPage() {
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
                     <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">{card.label}</p>
-                    <div className="text-3xl font-black text-slate-900">{isLoading ? "..." : card.value}</div>
+                    <div className="text-3xl font-black text-slate-900">{isLoading && !data ? "..." : card.value}</div>
                   </div>
                   <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${toneClasses[card.color].bg} ${toneClasses[card.color].text}`}>
                     <Icon className="w-5 h-5" />
@@ -309,8 +329,29 @@ export default function SuperAdminMonitorPage() {
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          <SectionCard title={language === 'ar' ? "لوجات الباكند" : "Backend Logs"} icon={Code2}>
-            <LogList entries={data?.logs || []} />
+          <SectionCard 
+            title={language === 'ar' ? "لوجات الباكند" : "Backend Logs"} 
+            icon={Code2}
+            action={
+              <select 
+                className="text-xs font-bold bg-slate-50 border-slate-200 rounded-xl px-3 py-2 text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
+                value={daysFilter || ""}
+                onChange={(e) => setDaysFilter(e.target.value ? Number(e.target.value) : null)}
+              >
+                <option value="">{language === 'ar' ? "كل الأيام" : "All Time"}</option>
+                <option value="1">{language === 'ar' ? "آخر 24 ساعة" : "Last 24 Hours"}</option>
+                <option value="3">{language === 'ar' ? "آخر 3 أيام" : "Last 3 Days"}</option>
+                <option value="7">{language === 'ar' ? "آخر 7 أيام" : "Last 7 Days"}</option>
+              </select>
+            }
+          >
+            <LogList entries={(data?.logs || []).filter(log => {
+              if (daysFilter === null) return true;
+              const logDate = new Date(log.timestamp);
+              const cutoff = new Date();
+              cutoff.setDate(cutoff.getDate() - daysFilter);
+              return logDate >= cutoff;
+            })} />
           </SectionCard>
 
           <SectionCard title={language === 'ar' ? "أخطاء الفرونت" : "Frontend Errors"} icon={Bug}>
@@ -402,7 +443,7 @@ const toneClasses: Record<string, { bg: string; text: string }> = {
   rose: { bg: "bg-rose-50", text: "text-rose-600" },
 };
 
-function SectionCard({ title, icon: Icon, children }: { title: string; icon: any; children: React.ReactNode }) {
+function SectionCard({ title, icon: Icon, children, action }: { title: string; icon: any; children: React.ReactNode; action?: React.ReactNode }) {
   return (
     <div className="bg-white border border-slate-100 rounded-[30px] p-5 shadow-sm">
       <div className="flex items-center justify-between mb-5">
@@ -412,6 +453,7 @@ function SectionCard({ title, icon: Icon, children }: { title: string; icon: any
           </div>
           <h2 className="text-lg font-black text-slate-900">{title}</h2>
         </div>
+        {action && <div>{action}</div>}
       </div>
       <div className="space-y-3">{children}</div>
     </div>
