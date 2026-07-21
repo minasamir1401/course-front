@@ -39,7 +39,7 @@ export default function DashboardLayout({ children, hideSidebar }: { children: R
       setIsMobile(mobile);
     };
     onResize();
-    setIsSidebarOpen(window.innerWidth >= 1024);
+    setIsSidebarOpen(hideSidebar ? false : window.innerWidth >= 1024);
     window.addEventListener("resize", onResize);
 
     const pathKey = isSuperAdmin ? "super_admin_user" : isSchoolAdmin ? "school_admin_user" : "lms_user";
@@ -49,7 +49,7 @@ export default function DashboardLayout({ children, hideSidebar }: { children: R
     }
 
     return () => window.removeEventListener("resize", onResize);
-  }, [isSuperAdmin, isSchoolAdmin]);
+  }, [isSuperAdmin, isSchoolAdmin, hideSidebar]);
 
   const renderSidebar = () => {
     if (isSuperAdmin) return <SuperAdminSidebar isOpen={isSidebarOpen} onToggle={setIsSidebarOpen} onClose={() => setIsSidebarOpen(false)} />;
@@ -59,7 +59,7 @@ export default function DashboardLayout({ children, hideSidebar }: { children: R
 
   if (!mounted) return <div className="min-h-screen bg-slate-50" />;
 
-  const isSidebarVisible = hasSidebar && !isFullscreen && !hideSidebar;
+  const isSidebarVisible = hasSidebar && !isFullscreen && (!hideSidebar || isSidebarOpen);
 
   return (
     <div className={`flex min-h-screen font-sans overflow-x-hidden bg-transparent relative ${isStudent ? 'klevro-watermark' : ''}`} dir={language === 'ar' ? "rtl" : "ltr"}>

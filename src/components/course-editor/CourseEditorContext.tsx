@@ -420,8 +420,9 @@ export const CourseEditorProvider: React.FC<{
 
         setExams(data.exams || []);
 
+        const rawLessons = (data.lessons || []).slice().sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
         setLessons(
-          data.lessons.map((l: any) => {
+          rawLessons.map((l: any) => {
             let parsedQuestions = [];
             let parsedAssignments = [];
             let parsedAttachments = [];
@@ -868,7 +869,7 @@ export const CourseEditorProvider: React.FC<{
             attachments: Array.isArray(parsedAttachments) ? parsedAttachments : [],
             slides: Array.isArray(parsedSlides) && parsedSlides.length ? parsedSlides : [{ id: Date.now(), type: "TEXT", label: "CONTENT", title: language === "ar" ? "المقدمة" : "Introduction", content: "", sections: [] }],
           };
-        });
+        }).sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
 
         if (isLessonModalOpen) {
           let idx = editingLessonIndex;
