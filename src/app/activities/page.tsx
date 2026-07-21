@@ -2,11 +2,12 @@
 
 import React, { useEffect, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Sparkles, Award, Trophy, Play, CheckCircle2, AlertCircle, HelpCircle, Info, ChevronDown, ChevronUp, BookOpen, Clock, Target, X, Lock, RefreshCw, Star, StarOff, BrainCircuit, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Sparkles, Award, Trophy, Play, CheckCircle2, AlertCircle, HelpCircle, Info, ChevronDown, ChevronUp, BookOpen, Clock, Target, X, XCircle, Lock, RefreshCw, Star, StarOff, BrainCircuit, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useRouter } from "next/navigation";
 import { API_URL } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import InteractiveQuestionRenderer from "@/components/InteractiveQuestionRenderer";
+import AnimatedFeedback from "@/components/AnimatedFeedback";
 
 export default function ActivitiesPage() {
   const router = useRouter();
@@ -875,124 +876,83 @@ export default function ActivitiesPage() {
 
               {/* ── ATTEMPT RESULT POPUP MODAL (Inside Player) ── */}
               {attemptResult && (
-                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center p-4 z-[110] overflow-y-auto">
-                  <div className="bg-white w-full max-w-lg rounded-[36px] shadow-2xl p-8 border border-slate-100 text-center space-y-6 animate-in zoom-in-95 duration-200">
-                    
-                    {/* Stars animation */}
-                    <div className="space-y-4">
-                      <div className="flex justify-center gap-3 star-pop">
-                        {[1, 2, 3].map(index => {
-                          const isFilled = index <= attemptResult.stars;
-                          return isFilled ? (
-                            <Star key={index} className="w-16 h-16 fill-amber-400 text-amber-400 drop-shadow-md scale-[1.1] animate-pulse" />
-                          ) : (
-                            <StarOff key={index} className="w-16 h-16 text-slate-200" />
-                          );
-                        })}
-                      </div>
-                      
-                      <h4 className={`text-2xl font-black ${
-                        attemptResult.isCorrect ? "text-emerald-600" : "text-rose-600"
-                      }`}>
-                        {attemptResult.timeExpired ? (
-                          language === 'ar' ? "انتهى الوقت المحدد للسؤال! ⏰" : "Time's Up! ⏰"
-                        ) : attemptResult.isCorrect ? (
-                          attemptResult.stars === 3 
-                            ? (language === 'ar' ? "ممتاز! حل مثالي ورائع 🏆" : "Excellent! Perfect solution 🏆") 
-                            : (language === 'ar' ? "أحسنت! إجابة صحيحة 🌟" : "Good job! Correct answer 🌟")
-                        ) : (
-                          language === 'ar' ? "حاول مجدداً للوصول للحل الصحيح!" : "Try again to find the correct solution!"
-                        )}
-                      </h4>
-                    </div>
-
-                    {!attemptResult.isCorrect && attemptCount < 2 && !attemptResult.timeExpired && (
-                      <div className="bg-blue-50 border border-blue-100 p-4 rounded-2xl text-blue-900 font-bold text-sm">
-                        {language === 'ar' ? '💡 لديك محاولة أخيرة أخرى! فكر جيداً واستخدم التلميحات قبل الإجابة مجدداً.' : '💡 You have 1 final attempt remaining! Think carefully and check hints.'}
-                      </div>
-                    )}
-
-                    {/* Show Correct Answer & Explanation when failed after 2nd attempt or time expired */}
-                    {(!attemptResult.isCorrect && (attemptCount >= 2 || attemptResult.timeExpired)) && (
-                      <div className={`space-y-3 bg-amber-50/70 p-5 rounded-2xl border border-amber-200 text-sm ${language === 'ar' ? 'text-right' : 'text-left'} animate-in fade-in duration-300`}>
-                        <h5 className="font-black text-amber-900 flex items-center gap-1.5 text-base">
-                          <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                          {language === 'ar' ? 'الإجابة الصحيحة النموذجية:' : 'Correct Answer:'}
-                        </h5>
-                        <div className="bg-white p-3.5 rounded-xl border border-amber-100 font-black text-slate-800 text-base">
-                          {translateText(activeActivity?.correctAnswer)}
-                        </div>
-                        {(attemptResult.explanation || activeActivity?.explanation) && (
-                          <div className="pt-2 border-t border-amber-200/50">
-                            <span className="font-black text-amber-950 block mb-1">
-                              {language === 'ar' ? '💡 التفسير العلمي والخطوات:' : '💡 Scientific Explanation:'}
-                            </span>
-                            <p className="text-amber-900 leading-relaxed font-bold">
-                              {translateText(attemptResult.explanation || activeActivity?.explanation)}
-                            </p>
+                <>
+                  {/* Always show the FIFA-style animation */}
+                  <AnimatedFeedback 
+                    isCorrect={attemptResult.isCorrect} 
+                    xp={attemptResult.score} 
+                    onComplete={() => {
+                      // Auto-close if correct OR if wrong but still have attempts left
+                      if (attemptResult.isCorrect || (!attemptResult.isCorrect && attemptCount < 2 && !attemptResult.timeExpired)) {
+                         setAttemptResult(null);
+                      }
+                    }} 
+                  />
+                  
+                  {/* Only show the blocking text modal for final wrong attempt (to show explanation) */}
+                  {(!attemptResult.isCorrect && (attemptCount >= 2 || attemptResult.timeExpired)) && (
+                    <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center p-4 z-[110] overflow-y-auto">
+                      <div className="bg-white w-full max-w-lg rounded-[36px] shadow-2xl p-8 border border-slate-100 text-center space-y-6 animate-in zoom-in-95 duration-200">
+                        
+                        <div className="space-y-4">
+                          <div className="flex justify-center gap-3 star-pop">
+                            <XCircle className="w-16 h-16 text-rose-500 drop-shadow-md scale-[1.1] animate-pulse" />
                           </div>
-                        )}
-                      </div>
-                    )}
+                          
+                          <h4 className="text-2xl font-black text-rose-600">
+                            {attemptResult.timeExpired ? (
+                              language === 'ar' ? "انتهى الوقت المحدد للسؤال! ⏰" : "Time's Up! ⏰"
+                            ) : (
+                              language === 'ar' ? "لم توفق في المحاولات!" : "Out of attempts!"
+                            )}
+                          </h4>
+                        </div>
 
-                    {/* Stats */}
-                    <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100 text-slate-500 font-bold text-sm">
-                      <div>
-                        <span>{language === 'ar' ? 'النقاط المكتسبة:' : 'Points Earned:'}</span>
-                        <p className="text-slate-800 text-xl font-black mt-1">+{attemptResult.score} XP</p>
-                      </div>
-                      <div>
-                        <span>{language === 'ar' ? 'النتيجة:' : 'Result:'}</span>
-                        <p className="text-slate-800 text-xl font-black mt-1">
-                          {attemptResult.isCorrect 
-                            ? (language === 'ar' ? "إجابة صحيحة" : "Correct") 
-                            : (language === 'ar' ? "غير مكتمل" : "Incomplete")}
-                        </p>
+                        <div className={`space-y-3 bg-amber-50/70 p-5 rounded-2xl border border-amber-200 text-sm ${language === 'ar' ? 'text-right' : 'text-left'} animate-in fade-in duration-300`}>
+                          <h5 className="font-black text-amber-900 flex items-center gap-1.5 text-base">
+                            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                            {language === 'ar' ? 'الإجابة الصحيحة النموذجية:' : 'Correct Answer:'}
+                          </h5>
+                          <div className="bg-white p-3.5 rounded-xl border border-amber-100 font-black text-slate-800 text-base">
+                            {translateText(activeActivity?.correctAnswer)}
+                          </div>
+                          {(attemptResult.explanation || activeActivity?.explanation) && (
+                            <div className="pt-2 border-t border-amber-200/50">
+                              <span className="font-black text-amber-950 block mb-1">
+                                {language === 'ar' ? '💡 التفسير العلمي والخطوات:' : '💡 Scientific Explanation:'}
+                              </span>
+                              <p className="text-amber-900 leading-relaxed font-bold">
+                                {translateText(attemptResult.explanation || activeActivity?.explanation)}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Footer Actions */}
+                        <div className="flex flex-wrap gap-3 pt-2">
+                          {hasNext && (
+                            <button
+                              onClick={() => {
+                                setAttemptResult(null);
+                                handleNextActivity();
+                              }}
+                              className="flex-1 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm shadow-lg shadow-emerald-100 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                            >
+                              <span>{language === 'ar' ? 'السؤال التالي' : 'Next Question'}</span>
+                              {language === 'ar' ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+                            </button>
+                          )}
+                          <button
+                            onClick={closePlayer}
+                            className="flex-1 py-4 rounded-2xl bg-indigo-600 hover:bg-slate-900 text-white font-black text-sm shadow-lg shadow-indigo-100 transition-all active:scale-95 cursor-pointer"
+                          >
+                            {hasNext ? (language === 'ar' ? 'إغلاق ومتابعة' : 'Close') : (language === 'ar' ? 'إنهاء التمارين' : 'Finish Exercises')}
+                          </button>
+                        </div>
                       </div>
                     </div>
-
-                    {/* Explanation when correct */}
-                    {attemptResult.isCorrect && (attemptResult.explanation || activeActivity?.explanation) && (
-                      <div className={`space-y-2 bg-indigo-50/40 p-5 rounded-2xl border border-indigo-50 text-sm ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                        <h5 className="font-black text-indigo-950 flex items-center gap-1.5">
-                          <Info className="w-4 h-4 text-indigo-650" />
-                          {language === 'ar' ? 'شرح الحل والخطوات العلمية:' : 'Solution Explanation:'}
-                        </h5>
-                        <p className="text-indigo-900 leading-relaxed font-medium">{translateText(attemptResult.explanation || activeActivity?.explanation)}</p>
-                      </div>
-                    )}
-
-                    {/* Footer Actions */}
-                    <div className="flex flex-wrap gap-3 pt-2">
-                      {!attemptResult.isCorrect && attemptCount < 2 && !attemptResult.timeExpired && (
-                        <button
-                          onClick={handleRetry}
-                          className="flex-1 py-4 rounded-2xl border-2 border-slate-200 hover:bg-slate-50 text-slate-700 font-black text-sm transition-all active:scale-95 cursor-pointer"
-                        >
-                          {language === 'ar' ? 'أعد المحاولة 🔄' : 'Try Again 🔄'}
-                        </button>
-                      )}
-                      {hasNext && (
-                        <button
-                          onClick={() => {
-                            setAttemptResult(null);
-                            handleNextActivity();
-                          }}
-                          className="flex-1 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm shadow-lg shadow-emerald-100 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
-                        >
-                          <span>{language === 'ar' ? 'السؤال التالي' : 'Next Question'}</span>
-                          {language === 'ar' ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
-                        </button>
-                      )}
-                      <button
-                        onClick={closePlayer}
-                        className="flex-1 py-4 rounded-2xl bg-indigo-600 hover:bg-slate-900 text-white font-black text-sm shadow-lg shadow-indigo-100 transition-all active:scale-95 cursor-pointer"
-                      >
-                        {hasNext ? (language === 'ar' ? 'إغلاق ومتابعة' : 'Close') : (language === 'ar' ? 'إنهاء التمارين' : 'Finish Exercises')}
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                  )}
+                </>
               )}
 
               {/* ── helper MODALS (Hint, Tip, Key Insight) ── */}

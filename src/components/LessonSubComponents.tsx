@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { AlertCircle, Lock, HelpCircle, Info, BookOpen, MessageSquare, Sparkles, ChevronDown, ChevronRight, ChevronLeft, FileDown, Target } from "lucide-react";
 import HtmlRenderer from "@/components/HtmlRenderer";
+import AnimatedFeedback from "@/components/AnimatedFeedback";
 
 export const normalizeAnswerGlobal = (value: any) => {
   const norm = String(value ?? '').trim().toLowerCase();
@@ -59,46 +60,14 @@ export const getQuestionOptions = (q: any, language: string) => {
 
 export const QuestionFeedback = ({ isCorrect, isSkipped, language }: any) => {
   if (isSkipped) {
-    return (
-      <div className="p-6 rounded-[30px] border-2 flex flex-col items-center justify-center gap-3 animate-in zoom-in duration-500 mb-6 bg-amber-50 border-amber-200">
-        <div className="relative w-20 h-20 rounded-3xl bg-amber-500/10 border-2 border-amber-300 flex items-center justify-center">
-          <HelpCircle className="w-10 h-10 text-amber-600" />
-        </div>
-        <p className="text-amber-700 font-black text-sm md:text-base">
-          {language === 'ar' ? 'تم تخطي السؤال' : 'Question Skipped'}
-        </p>
-      </div>
-    );
-  }
-
-  if (!isCorrect) {
-    return (
-      <div className="p-6 rounded-[30px] border-2 flex flex-col items-center justify-center gap-3 animate-in zoom-in duration-500 mb-6 bg-red-50 border-red-200">
-        <div className="relative w-20 h-20 rounded-3xl bg-red-500/10 border-2 border-red-300 flex items-center justify-center animate-pulse">
-          <div className="absolute inset-0 rounded-3xl border-2 border-red-400/40 animate-ping" />
-          <AlertCircle className="w-10 h-10 text-red-600" />
-        </div>
-        <p className="text-red-700 font-black text-sm md:text-base">
-          {language === 'ar' ? 'إجابة غير صحيحة' : 'Incorrect answer'}
-        </p>
-      </div>
-    );
+    return null;
   }
 
   return (
-    <div className={`p-6 rounded-[30px] border-2 flex items-center gap-6 animate-in zoom-in duration-500 mb-6 bg-emerald-50 border-emerald-200`}>
-      <div className="w-16 h-16 shrink-0 rounded-2xl flex items-center justify-center shadow-lg bg-emerald-500 shadow-emerald-200 animate-bounce">
-        <span className="text-4xl">🎉</span>
-      </div>
-      <div>
-        <h3 className="text-xl md:text-2xl font-black mb-2 text-emerald-700">
-          {language === 'ar' ? 'أحسنت! إجابة صحيحة' : 'Great Job! Correct'}
-        </h3>
-        <p className="text-emerald-600 font-bold text-sm md:text-base">
-          {language === 'ar' ? 'عمل ممتاز، استمر في هذا الأداء!' : 'Excellent work, keep it up!'}
-        </p>
-      </div>
-    </div>
+    <AnimatedFeedback 
+      isCorrect={isCorrect} 
+      xp={isCorrect ? 10 : undefined} 
+    />
   );
 };
 

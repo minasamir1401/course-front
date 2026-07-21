@@ -62,6 +62,9 @@ export default function SuperAdminMonitorPage() {
   const [restoreMessage, setRestoreMessage] = useState("");
   const [isAutoRefresh, setIsAutoRefresh] = useState(true);
   const [daysFilter, setDaysFilter] = useState<number | null>(null);
+  const [frontendDaysFilter, setFrontendDaysFilter] = useState<number | null>(null);
+  const [showBackendErrorsOnly, setShowBackendErrorsOnly] = useState(false);
+  const [showFrontendErrorsOnly, setShowFrontendErrorsOnly] = useState(false);
 
   const handleSearch = async () => {
     if (!searchQuery || searchQuery.length < 2) return;
@@ -333,19 +336,26 @@ export default function SuperAdminMonitorPage() {
             title={language === 'ar' ? "لوجات الباكند" : "Backend Logs"} 
             icon={Code2}
             action={
-              <select 
-                className="text-xs font-bold bg-slate-50 border-slate-200 rounded-xl px-3 py-2 text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
-                value={daysFilter || ""}
-                onChange={(e) => setDaysFilter(e.target.value ? Number(e.target.value) : null)}
-              >
-                <option value="">{language === 'ar' ? "كل الأيام" : "All Time"}</option>
-                <option value="1">{language === 'ar' ? "آخر 24 ساعة" : "Last 24 Hours"}</option>
-                <option value="3">{language === 'ar' ? "آخر 3 أيام" : "Last 3 Days"}</option>
-                <option value="7">{language === 'ar' ? "آخر 7 أيام" : "Last 7 Days"}</option>
-              </select>
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-1 cursor-pointer">
+                  <input type="checkbox" checked={showBackendErrorsOnly} onChange={(e) => setShowBackendErrorsOnly(e.target.checked)} className="w-3 h-3 rounded text-rose-600 focus:ring-rose-500" />
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">{language === 'ar' ? "أخطاء فقط" : "Errors"}</span>
+                </label>
+                <select 
+                  className="text-[11px] font-bold bg-slate-50 border-slate-200 rounded-lg px-2 py-1 text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
+                  value={daysFilter || ""}
+                  onChange={(e) => setDaysFilter(e.target.value ? Number(e.target.value) : null)}
+                >
+                  <option value="">{language === 'ar' ? "كل الأيام" : "All Time"}</option>
+                  <option value="1">{language === 'ar' ? "آخر 24 ساعة" : "24h"}</option>
+                  <option value="3">{language === 'ar' ? "آخر 3 أيام" : "3 Days"}</option>
+                  <option value="7">{language === 'ar' ? "آخر 7 أيام" : "7 Days"}</option>
+                </select>
+              </div>
             }
           >
             <LogList entries={(data?.logs || []).filter(log => {
+              if (showBackendErrorsOnly && log.level !== 'error') return false;
               if (daysFilter === null) return true;
               const logDate = new Date(log.timestamp);
               const cutoff = new Date();
@@ -354,8 +364,40 @@ export default function SuperAdminMonitorPage() {
             })} />
           </SectionCard>
 
-          <SectionCard title={language === 'ar' ? "أخطاء الفرونت" : "Frontend Errors"} icon={Bug}>
-            <LogList entries={frontendErrors} emptyText={language === 'ar' ? "لا توجد أخطاء مسجلة محليًا" : "No local frontend errors captured"} />
+          <SectionCard 
+            title={language === 'ar' ? "أخطاء الفرونت" : "Frontend Errors"} 
+            icon={Bug}
+            action={
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-1 cursor-pointer">
+                  <input type="checkbox" checked={showFrontendErrorsOnly} onChange={(e) => setShowFrontendErrorsOnly(e.target.checked)} className="w-3 h-3 rounded text-rose-600 focus:ring-rose-500" />
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">{language === 'ar' ? "أخطاء فقط" : "Errors"}</span>
+                </label>
+                <select 
+                  className="text-[11px] font-bold bg-slate-50 border-slate-200 rounded-lg px-2 py-1 text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
+                  value={frontendDaysFilter || ""}
+                  onChange={(e) => setFrontendDaysFilter(e.target.value ? Number(e.target.value) : null)}
+                >
+                  <option value="">{language === 'ar' ? "كل الأيام" : "All Time"}</option>
+                  <option value="1">{language === 'ar' ? "آخر 24 ساعة" : "24h"}</option>
+                  <option value="3">{language === 'ar' ? "آخر 3 أيام" : "3 Days"}</option>
+                  <option value="7">{language === 'ar' ? "آخر 7 أيام" : "7 Days"}</option>
+                </select>
+              </div>
+            }
+          >
+            <LogList entries={frontendErrors.filter(log => {
+              if (showFrontendErrorsOnly) {
+                const msg = String(log.message || log).toLowerCase();
+                const isError = log.level === 'error' || msg.includes('error') || msg.includes('failed') || msg.includes('typeerror');
+                if (!isError) return false;
+              }
+              if (frontendDaysFilter === null) return true;
+              const logDate = new Date(log.timestamp);
+              const cutoff = new Date();
+              cutoff.setDate(cutoff.getDate() - frontendDaysFilter);
+              return logDate >= cutoff;
+            })} emptyText={language === 'ar' ? "لا توجد أخطاء مسجلة محليًا" : "No local frontend errors captured"} />
           </SectionCard>
         </div>
 
