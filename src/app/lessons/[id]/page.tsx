@@ -80,9 +80,20 @@ export default function LessonPlayerPage() {
     level?: 'Easy' | 'Medium' | 'Hard';
     isCorrect?: boolean;
   } | null>(null);
+  const [feedbackKey, setFeedbackKey] = useState(0);
 
-  const submitAnswerProgress = async (questionId: string, blockType: 'slides' | 'assignments' | 'questions', selectedAnswer: any) => {
-    if (searchParams.get('preview') === 'true') return;
+  const submitAnswerProgress = async (questionId: string, blockType: 'slides' | 'assignments' | 'questions', selectedAnswer: any, questionBlock?: any) => {
+    const isPreviewMode = searchParams.get('preview') === 'true';
+    if (isPreviewMode) {
+      // In preview mode: evaluate answer locally and show correct/incorrect feedback
+      let isCorrect = true; // default for non-question blocks (read)
+      if (questionBlock && selectedAnswer !== 'read') {
+        isCorrect = checkAdvancedCorrect(questionBlock, selectedAnswer);
+      }
+      setFeedbackKey(k => k + 1);
+      setToastFeedback({ type: isCorrect ? 'success' : 'incorrect', xp: 0, isCorrect, streakCount: 0 });
+      return;
+    }
 
     try {
       const token = localStorage.getItem("lms_token") || 
@@ -122,6 +133,7 @@ export default function LessonPlayerPage() {
           setHighestStreak(prev => Math.max(prev, data.currentStreak || 0));
         }
 
+        setFeedbackKey(k => k + 1);
         setToastFeedback({
           type: data.isCorrect ? 'success' : 'incorrect',
           xp: data.earnedXP || 0,
@@ -884,7 +896,7 @@ export default function LessonPlayerPage() {
                         const q = lesson.slides[currentSlideIndex];
                         const qId = q.id ? String(q.id) : String(currentSlideIndex);
                         const ans = slideAnswers[currentSlideIndex];
-                        submitAnswerProgress(qId, 'slides', ans);
+                        submitAnswerProgress(qId, 'slides', ans, q);
                         setSlideSubmitted({ ...slideSubmitted, [currentSlideIndex]: true });
                       }}
                       className="mt-6 bg-emerald-600 text-white hover:bg-emerald-700 px-8 py-3 rounded-2xl font-black text-lg shadow-xl shadow-emerald-100 border border-emerald-500/20"
@@ -1136,7 +1148,7 @@ export default function LessonPlayerPage() {
                               const q = lesson.assignments[currentAssignmentIndex];
                               const qId = q.id ? String(q.id) : String(currentAssignmentIndex);
                               const ans = assignmentAnswers[currentAssignmentIndex];
-                              submitAnswerProgress(qId, 'assignments', ans);
+                              submitAnswerProgress(qId, 'assignments', ans, q);
                               setAssignmentSubmitted({ ...assignmentSubmitted, [currentAssignmentIndex]: true });
                             }}
                             className="mt-2 mb-6 bg-emerald-600 text-white hover:bg-emerald-700 px-8 py-3 rounded-2xl font-black text-lg shadow-xl shadow-emerald-100 border border-emerald-500/20"
@@ -1274,8 +1286,8 @@ export default function LessonPlayerPage() {
                   </div>
                   <button
                     onClick={() => {
-                      if (confirm(t('lesson.quizModePrompt'))) {
-                        showToast(t('lesson.quizModeEnabled'), "info");
+                      if (confirm(t('lesson.quizModePrompt') || 'Enable Quiz Mode?')) {
+                        showToast(t('lesson.quizModeEnabled') || 'Quiz Mode Enabled', "info");
                       }
                     }}
                     className="px-5 py-2.5 bg-orange-500 text-white rounded-2xl font-black text-xs flex items-center gap-2 hover:bg-orange-600 transition-all shadow-lg"
@@ -1370,7 +1382,7 @@ export default function LessonPlayerPage() {
                                       </span>
                                     </div>
                                     <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${isSelected && !isSubmitted ? 'border-white bg-white/20' : isCorrect ? 'border-emerald-500 bg-emerald-500 text-white' : isWrong ? 'border-red-500 bg-red-500 text-white' : 'border-slate-200'}`}>
-                                      {isSelected && !isSubmitted && <CheckCircle2 className="w-4 h-4" />}
+                                      {isSelected && !isSubmitted && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
                                       {isCorrect && <CheckCircle2 className="w-4 h-4" />}
                                       {isWrong && <X className="w-4 h-4" />}
                                     </div>
@@ -1403,7 +1415,7 @@ export default function LessonPlayerPage() {
                               const q = lesson.questions[currentQuestionIndex];
                               const qId = q.id ? String(q.id) : String(currentQuestionIndex);
                               const ans = answers[currentQuestionIndex];
-                              submitAnswerProgress(qId, 'questions', ans);
+                              submitAnswerProgress(qId, 'questions', ans, q);
                               setQuizSubmitted({ ...quizSubmitted, [currentQuestionIndex]: true });
                             }}
                             className="mt-2 mb-6 bg-emerald-600 text-white hover:bg-emerald-700 px-8 py-3 rounded-2xl font-black text-lg shadow-xl shadow-emerald-100 border border-emerald-500/20"
@@ -1573,7 +1585,8 @@ export default function LessonPlayerPage() {
       {/* ── Animated Feedback Overlay ── */}
       {toastFeedback && (
         <AnimatedFeedback 
-          isCorrect={toastFeedback.isCorrect !== false} 
+          key={feedbackKey}
+          isCorrect={toastFeedback.isCorrect === true} 
           xp={toastFeedback.xp} 
           streak={toastFeedback.streakCount} 
           onComplete={() => setToastFeedback(null)} 
@@ -1603,17 +1616,15 @@ export default function LessonPlayerPage() {
             
             <h3 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">
               {showStreakMilestone.count >= 10
-                ? (language === 'ar' ? 'مجموعة مثالية! 🏆' : 'Perfect Set! 🏆')
+                ? 'Perfect Set! 🏆'
                 : showStreakMilestone.count >= 5
-                  ? (language === 'ar' ? 'أداء ناري! 🔥' : 'On Fire! 🔥')
-                  : (language === 'ar' ? 'سلسلة إجابات! 🎉' : 'Streak! 🎉')
+                  ? 'On Fire! 🔥'
+                  : 'Streak! 🎉'
               }
             </h3>
             
             <p className="text-slate-500 font-bold text-base mb-6 leading-relaxed">
-              {language === 'ar' 
-                ? `لقد أجبت على ${showStreakMilestone.count} أسئلة متتالية بشكل صحيح! حصلت على مكافأة إضافية:`
-                : `You answered ${showStreakMilestone.count} questions correctly in a row! You earned a bonus of:`}
+              You answered {showStreakMilestone.count} questions correctly in a row! You earned a bonus of:
             </p>
 
             <div className={`inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl font-black text-xl mb-8 shadow-inner animate-pulse ${
@@ -1633,8 +1644,8 @@ export default function LessonPlayerPage() {
               }`}
             >
               {showStreakMilestone.count >= 10
-                ? (language === 'ar' ? 'مذهل! ⭐' : 'Amazing! ⭐')
-                : (language === 'ar' ? 'رائع! استمر' : 'Awesome! Keep going')
+                ? 'Amazing! ⭐'
+                : 'Awesome! Keep going'
               }
             </button>
           </div>
@@ -1720,7 +1731,6 @@ export default function LessonPlayerPage() {
       to {opacity: 1; transform: translateY(0); }
         }
       ` }} />
-
     </DashboardLayout>
   );
 }
