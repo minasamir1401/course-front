@@ -81,6 +81,7 @@ export default function LessonPlayerPage() {
     isCorrect?: boolean;
   } | null>(null);
   const [feedbackKey, setFeedbackKey] = useState(0);
+  const [unansweredWarning, setUnansweredWarning] = useState<number[] | null>(null);
 
   const submitAnswerProgress = async (questionId: string, blockType: 'slides' | 'assignments' | 'questions', selectedAnswer: any, questionBlock?: any) => {
     const isPreviewMode = searchParams.get('preview') === 'true';
@@ -1648,6 +1649,43 @@ export default function LessonPlayerPage() {
                 : 'Awesome! Keep going'
               }
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Unanswered Questions Warning Modal ── */}
+      {unansweredWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="relative p-8 rounded-[32px] max-w-md w-full mx-4 text-center shadow-2xl bg-white border border-slate-200 flex flex-col items-center z-[101]">
+            <div className="w-20 h-20 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-500 mb-6">
+              <AlertCircle className="w-10 h-10" />
+            </div>
+            
+            <h3 className="text-2xl font-black text-slate-900 mb-2">
+              {language === 'ar' ? 'أسئلة غير مجابة!' : 'Unanswered Questions!'}
+            </h3>
+            
+            <p className="text-slate-500 font-bold text-sm mb-6 leading-relaxed">
+              {language === 'ar' 
+                ? `لقد تركت الأسئلة التالية بدون إجابة: (${unansweredWarning.join(', ')}). هل أنت تأكد من إنهاء الاختبار؟`
+                : `You left the following question(s) unanswered: (${unansweredWarning.join(', ')}). Are you sure you want to finish the quiz?`
+              }
+            </p>
+
+            <div className="flex items-center gap-3 w-full">
+              <button
+                onClick={() => setUnansweredWarning(null)}
+                className="flex-1 font-black py-3.5 rounded-2xl text-sm border border-slate-200 text-slate-700 bg-slate-50 hover:bg-slate-100 transition-all"
+              >
+                {language === 'ar' ? 'العودة للاختبار' : 'Back to Quiz'}
+              </button>
+              <button
+                onClick={() => confirmFinishQuiz()}
+                className="flex-1 font-black py-3.5 rounded-2xl text-sm bg-amber-500 hover:bg-amber-600 text-white transition-all shadow-lg shadow-amber-500/20"
+              >
+                {language === 'ar' ? 'إنهاء على أي حال' : 'Finish Anyway'}
+              </button>
+            </div>
           </div>
         </div>
       )}
