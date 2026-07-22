@@ -1382,7 +1382,7 @@ export default function LessonPlayerPage() {
                                       </span>
                                     </div>
                                     <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${isSelected && !isSubmitted ? 'border-white bg-white/20' : isCorrect ? 'border-emerald-500 bg-emerald-500 text-white' : isWrong ? 'border-red-500 bg-red-500 text-white' : 'border-slate-200'}`}>
-                                      {isSelected && !isSubmitted && <CheckCircle2 className="w-4 h-4" />}
+                                      {isSelected && !isSubmitted && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
                                       {isCorrect && <CheckCircle2 className="w-4 h-4" />}
                                       {isWrong && <X className="w-4 h-4" />}
                                     </div>

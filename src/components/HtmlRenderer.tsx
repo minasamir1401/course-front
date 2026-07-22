@@ -35,7 +35,7 @@ function HtmlRenderer({ html, className = "", tag: Tag = "div" }: HtmlRendererPr
   let processedHtml = html || "";
   if (typeof processedHtml === 'string') {
     processedHtml = processedHtml.replace(/(?<!\$)\$([^$]+)\$(?!\$)/g, (match, inner) => {
-      return '$' + inner.replace(/ /g, '\\ ') + '$';
+      return '$' + inner.replace(/ /g, '\\text{ }') + '$';
     });
   }
 
