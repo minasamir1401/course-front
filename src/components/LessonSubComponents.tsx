@@ -58,7 +58,7 @@ export const getQuestionOptions = (q: any, language: string) => {
   return [];
 };
 
-export const QuestionFeedback = ({ isCorrect, isSkipped, language }: any) => {
+export const QuestionFeedback = ({ isCorrect, isSkipped, xp, streak, language }: any) => {
   if (isSkipped) {
     return null;
   }
@@ -66,7 +66,8 @@ export const QuestionFeedback = ({ isCorrect, isSkipped, language }: any) => {
   return (
     <AnimatedFeedback 
       isCorrect={isCorrect} 
-      xp={isCorrect ? 10 : undefined} 
+      xp={xp} 
+      streak={streak}
     />
   );
 };
