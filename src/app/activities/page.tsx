@@ -879,7 +879,7 @@ export default function ActivitiesPage() {
                 <>
                   {/* Always show the FIFA-style animation */}
                   <AnimatedFeedback 
-                    isCorrect={attemptResult.isCorrect !== false} 
+                    isCorrect={attemptResult.isCorrect === true} 
                     xp={attemptResult.earnedXP || 0} 
                     streak={attemptResult.currentStreak || 0}
                     onComplete={() => {

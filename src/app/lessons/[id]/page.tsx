@@ -1586,7 +1586,7 @@ export default function LessonPlayerPage() {
       {toastFeedback && (
         <AnimatedFeedback 
           key={feedbackKey}
-          isCorrect={toastFeedback.isCorrect !== false} 
+          isCorrect={toastFeedback.isCorrect === true} 
           xp={toastFeedback.xp} 
           streak={toastFeedback.streakCount} 
           onComplete={() => setToastFeedback(null)} 

@@ -15,30 +15,10 @@ export default function AnimatedFeedback({ isCorrect, xp, streak, onComplete }: 
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    if (isCorrect) {
-      // Fire a single burst of confetti instead of a heavy requestAnimationFrame loop
-      confetti({
-        particleCount: 60,
-        angle: 60,
-        spread: 55,
-        origin: { x: 0, y: 0.6 },
-        colors: ['#34d399', '#10b981', '#059669', '#f59e0b', '#fbbf24'],
-        zIndex: 150
-      });
-      confetti({
-        particleCount: 60,
-        angle: 120,
-        spread: 55,
-        origin: { x: 1, y: 0.6 },
-        colors: ['#34d399', '#10b981', '#059669', '#f59e0b', '#fbbf24'],
-        zIndex: 150
-      });
-    }
-
     const timer = setTimeout(() => {
       setVisible(false);
       if (onComplete) onComplete();
-    }, 1000); 
+    }, 700); 
 
     return () => clearTimeout(timer);
   }, [isCorrect, onComplete]);
@@ -76,8 +56,8 @@ export default function AnimatedFeedback({ isCorrect, xp, streak, onComplete }: 
           )}
           
           {!isCorrect && (
-            <div className="mt-8 text-3xl font-black text-rose-600 uppercase tracking-widest bg-gradient-to-b from-white to-rose-100 px-10 py-4 rounded-3xl border-4 border-rose-200 shadow-[0_20px_40px_rgba(244,63,94,0.3),inset_0_-4px_10px_rgba(0,0,0,0.1)] animate-[pop3d_0.4s_0.1s_both]" style={{ transformStyle: 'preserve-3d' }}>
-              <span style={{ display: 'inline-block', transform: 'translateZ(20px)' }}>Incorrect</span>
+            <div className="mt-8 text-2xl font-black text-rose-600 uppercase tracking-widest bg-gradient-to-b from-white to-rose-100 px-10 py-4 rounded-3xl border-4 border-rose-200 shadow-[0_20px_40px_rgba(244,63,94,0.3),inset_0_-4px_10px_rgba(0,0,0,0.1)] animate-[pop3d_0.4s_0.1s_both]" style={{ transformStyle: 'preserve-3d' }}>
+              <span style={{ display: 'inline-block', transform: 'translateZ(20px)' }}>خطأ</span>
             </div>
           )}
         </div>
