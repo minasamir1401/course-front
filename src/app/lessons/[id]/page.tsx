@@ -1274,8 +1274,8 @@ export default function LessonPlayerPage() {
                   </div>
                   <button
                     onClick={() => {
-                      if (confirm(t('lesson.quizModePrompt'))) {
-                        showToast(t('lesson.quizModeEnabled'), "info");
+                      if (confirm(t('lesson.quizModePrompt') || 'Enable Quiz Mode?')) {
+                        showToast(t('lesson.quizModeEnabled') || 'Quiz Mode Enabled', "info");
                       }
                     }}
                     className="px-5 py-2.5 bg-orange-500 text-white rounded-2xl font-black text-xs flex items-center gap-2 hover:bg-orange-600 transition-all shadow-lg"
@@ -1720,7 +1720,7 @@ export default function LessonPlayerPage() {
       to {opacity: 1; transform: translateY(0); }
         }
       ` }} />
-
+      <AnimatedFeedback feedback={toastFeedback} onClose={() => setToastFeedback(null)} />
     </DashboardLayout>
   );
 }

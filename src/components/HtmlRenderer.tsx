@@ -32,13 +32,28 @@ function HtmlRenderer({ html, className = "", tag: Tag = "div" }: HtmlRendererPr
 
   const combinedClassName = className.includes("prose") ? className : `prose ${className}`.trim();
 
+  let processedHtml = html || "";
+  if (typeof processedHtml === 'string') {
+    processedHtml = processedHtml.replace(/(?<!\$)\$([^$]+)\$(?!\$)/g, (match, inner) => {
+      return '$' + inner.replace(/ /g, '\\ ') + '$';
+    });
+  }
+
   return (
-    <Tag 
-      ref={containerRef as any} 
-      className={combinedClassName} 
-      dangerouslySetInnerHTML={{ __html: html || "" }} 
-      dir="auto" 
-    />
+    <>
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        .katex { white-space: normal !important; word-break: break-word; }
+        .katex-html { flex-wrap: wrap !important; }
+        .katex-display { overflow-x: auto; overflow-y: hidden; }
+      `}} />
+      <Tag 
+        ref={containerRef as any} 
+        className={combinedClassName} 
+        dangerouslySetInnerHTML={{ __html: processedHtml }} 
+        dir="auto" 
+      />
+    </>
   );
 }
 
