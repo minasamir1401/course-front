@@ -1733,14 +1733,6 @@ export default function LessonPlayerPage() {
       to {opacity: 1; transform: translateY(0); }
         }
       ` }} />
-      {toastFeedback && (
-        <AnimatedFeedback 
-          isCorrect={toastFeedback.type !== 'incorrect'} 
-          xp={toastFeedback.xp} 
-          streak={toastFeedback.streakCount} 
-          onComplete={() => setToastFeedback(null)} 
-        />
-      )}
     </DashboardLayout>
   );
 }
