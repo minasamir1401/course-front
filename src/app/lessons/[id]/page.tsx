@@ -81,6 +81,7 @@ export default function LessonPlayerPage() {
     isCorrect?: boolean;
   } | null>(null);
   const [feedbackKey, setFeedbackKey] = useState(0);
+  const [unansweredWarning, setUnansweredWarning] = useState<number[] | null>(null);
 
   const submitAnswerProgress = async (questionId: string, blockType: 'slides' | 'assignments' | 'questions', selectedAnswer: any, questionBlock?: any) => {
     const isPreviewMode = searchParams.get('preview') === 'true';
@@ -422,6 +423,18 @@ export default function LessonPlayerPage() {
     }
   };
 
+  const confirmFinishQuiz = () => {
+    const nextSubmitted = { ...quizSubmitted };
+    lesson.questions.forEach((q: any, idx: number) => {
+      if (isQuestionLike(q)) {
+        nextSubmitted[idx] = true;
+      }
+    });
+    setQuizSubmitted(nextSubmitted);
+    setCurrentStage('summary');
+    setUnansweredWarning(null);
+  };
+
   const handleNextQuestion = () => {
     const isPreviewMode = searchParams.get('preview') === 'true';
     if (!quizSubmitted[currentQuestionIndex]) {
@@ -447,23 +460,11 @@ export default function LessonPlayerPage() {
       }
 
       if (unanswered.length > 0) {
-        const confirmMsg = language === 'ar'
-          ? `⚠️ لديك أسئلة لم تقم بالإجابة عليها (أرقام: ${unanswered.join(', ')}). هل أنت متأكد من رغبتك في الإنهاء؟`
-          : `⚠️ You have unanswered questions (numbers: ${unanswered.join(', ')}). Are you sure you want to finish?`;
-        if (!window.confirm(confirmMsg)) {
-          return; // Stop submission
-        }
+        setUnansweredWarning(unanswered);
+        return; // Stop submission, show modal
       }
 
-      // Mark all as submitted
-      const nextSubmitted = { ...quizSubmitted };
-      lesson.questions.forEach((q: any, idx: number) => {
-        if (isQuestionLike(q)) {
-          nextSubmitted[idx] = true;
-        }
-      });
-      setQuizSubmitted(nextSubmitted);
-      setCurrentStage('summary');
+      confirmFinishQuiz();
     }
   };
 
@@ -1616,17 +1617,15 @@ export default function LessonPlayerPage() {
             
             <h3 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">
               {showStreakMilestone.count >= 10
-                ? (language === 'ar' ? 'مجموعة مثالية! 🏆' : 'Perfect Set! 🏆')
+                ? 'Perfect Set! 🏆'
                 : showStreakMilestone.count >= 5
-                  ? (language === 'ar' ? 'أداء ناري! 🔥' : 'On Fire! 🔥')
-                  : (language === 'ar' ? 'سلسلة إجابات! 🎉' : 'Streak! 🎉')
+                  ? 'On Fire! 🔥'
+                  : 'Streak! 🎉'
               }
             </h3>
             
             <p className="text-slate-500 font-bold text-base mb-6 leading-relaxed">
-              {language === 'ar' 
-                ? `لقد أجبت على ${showStreakMilestone.count} أسئلة متتالية بشكل صحيح! حصلت على مكافأة إضافية:`
-                : `You answered ${showStreakMilestone.count} questions correctly in a row! You earned a bonus of:`}
+              You answered {showStreakMilestone.count} questions correctly in a row! You earned a bonus of:
             </p>
 
             <div className={`inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl font-black text-xl mb-8 shadow-inner animate-pulse ${
@@ -1646,8 +1645,8 @@ export default function LessonPlayerPage() {
               }`}
             >
               {showStreakMilestone.count >= 10
-                ? (language === 'ar' ? 'مذهل! ⭐' : 'Amazing! ⭐')
-                : (language === 'ar' ? 'رائع! استمر' : 'Awesome! Keep going')
+                ? 'Amazing! ⭐'
+                : 'Awesome! Keep going'
               }
             </button>
           </div>
@@ -1733,6 +1732,40 @@ export default function LessonPlayerPage() {
       to {opacity: 1; transform: translateY(0); }
         }
       ` }} />
+      
+      {unansweredWarning !== null && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setUnansweredWarning(null)}></div>
+          <div className="relative bg-white rounded-[2rem] max-w-sm w-full p-8 shadow-2xl animate-in zoom-in-95 duration-200 border-4 border-slate-50">
+            <div className="w-20 h-20 bg-amber-100 rounded-[1.5rem] flex items-center justify-center mx-auto mb-6 shadow-inner">
+              <span className="text-4xl drop-shadow-md">⚠️</span>
+            </div>
+            <h3 className="text-2xl font-black text-slate-800 text-center mb-3">
+              {language === 'ar' ? 'أسئلة غير مجابة!' : 'Unanswered Questions!'}
+            </h3>
+            <p className="text-slate-500 text-center mb-8 font-semibold leading-relaxed">
+              {language === 'ar' 
+                ? `هناك أسئلة لم تقم بالإجابة عليها (أرقام: ${unansweredWarning.join('، ')}). هل تريد الإنهاء؟`
+                : `You have unanswered questions (numbers: ${unansweredWarning.join(', ')}). Are you sure you want to finish?`
+              }
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setUnansweredWarning(null)}
+                className="flex-1 py-4 px-2 rounded-2xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition-colors"
+              >
+                {language === 'ar' ? 'تراجع' : 'Cancel'}
+              </button>
+              <button
+                onClick={confirmFinishQuiz}
+                className="flex-1 py-4 px-2 rounded-2xl bg-amber-500 text-white font-bold hover:bg-amber-600 shadow-lg shadow-amber-500/30 transition-all hover:-translate-y-1"
+              >
+                {language === 'ar' ? 'إنهاء الاختبار' : 'Finish Anyway'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

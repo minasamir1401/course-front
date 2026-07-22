@@ -190,10 +190,227 @@
   border-inline-start: 4px solid #6366F1;
   padding: 1.5rem;
   border-radius: 2rem;
+@import "tailwindcss";
+
+/* ========================
+   PREMIUM DESIGN SYSTEM (V4)
+======================== */
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, 'Noto Sans Arabic', 'Noto Sans', sans-serif;
+  
+  --radius-xl: 1.5rem;
+  --radius-2xl: 2rem;
+  
+  --color-premium-indigo: #6366F1;
+  --color-premium-purple: #8B5CF6;
+  --color-premium-blue: #3B82F6;
+  
+  --shadow-premium: 0 10px 40px -10px rgba(0, 0, 0, 0.08);
+  --shadow-premium-hover: 0 20px 50px -12px rgba(0, 0, 0, 0.12);
+}
+
+@utility glass {
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.1));
+}
+
+@utility glass-dark {
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 0.3));
+}
+
+@utility premium-card {
+  background-color: white;
+  border: 1px solid #f1f5f9;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-premium);
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-premium-hover);
+  }
+}
+
+@utility premium-gradient-primary {
+  background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+}
+
+@utility premium-gradient-secondary {
+  background: linear-gradient(135deg, #3B82F6 0%, #2DD4BF 100%);
+}
+
+@utility floating {
+  animation: floating 3s ease-in-out infinite;
+}
+
+@utility text-glow {
+  text-shadow: 0 0 20px rgba(99, 102, 241, 0.5);
+}
+
+@utility bg-mesh {
+  background-color: #f8fafc;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.1) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.1) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(45, 212, 191, 0.1) 0px, transparent 50%);
+}
+
+@keyframes floating {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+@layer base {
+  html, body {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+  body {
+    @apply bg-mesh min-h-screen text-slate-900;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+}
+
+/* RTL Specific Overrides */
+[dir="rtl"] {
+  font-family: var(--font-sans);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Styling for lists in RichTextEditor and student slides */
+.prose ul, .editor-content ul {
+  list-style: disc inside !important;
+  margin-left: 2rem !important;
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+  padding-left: 1rem !important;
+}
+
+.prose ol, .editor-content ol {
+  list-style: decimal inside !important;
+  margin-left: 2rem !important;
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+  padding-left: 1rem !important;
+}
+
+[dir="rtl"] .prose ul, [dir="rtl"] .editor-content ul {
+  list-style: disc inside !important;
+  margin-left: 0 !important;
+  margin-right: 2rem !important;
+  padding-left: 0 !important;
+  padding-right: 1rem !important;
+}
+
+[dir="rtl"] .prose ol, [dir="rtl"] .editor-content ol {
+  list-style: decimal inside !important;
+  margin-left: 0 !important;
+  margin-right: 2rem !important;
+  padding-left: 0 !important;
+  padding-right: 1rem !important;
+}
+
+.prose li, .editor-content li {
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.25rem !important;
+  display: list-item !important;
+}
+
+@utility klevro-watermark {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Ctext x='50%25' y='50%25' font-size='20' font-weight='900' font-family='sans-serif' fill='%236366F1' text-anchor='middle' dominant-baseline='middle' transform='rotate(-30, 90, 90)'%3EKLEVRO%3C/text%3E%3C/svg%3E");
+    background-repeat: repeat;
+  }
+}
+
+@utility text-frame {
+  position: relative;
+  overflow: hidden;
+  background-color: rgba(248, 250, 252, 0.4);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-inline-start: 4px solid #6366F1;
+  padding: 1.5rem;
+  border-radius: 1.5rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+@utility question-frame {
+  position: relative;
+  overflow: hidden;
+  background-color: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-inline-start: 4px solid #8B5CF6;
+  padding: 1.5rem;
+  border-radius: 1.5rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+@utility activity-frame {
+  position: relative;
+  overflow: hidden;
+  background-color: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-inline-start: 4px solid #6366F1;
+  padding: 1.5rem;
+  border-radius: 2rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
 }
 
 /* Hide MathLive virtual keyboard toggle since we use a custom keypad */
 math-field::part(virtual-keyboard-toggle) {
   display: none !important;
+}
+
+@keyframes pop3d {
+  0% { transform: scale(0.5) translateZ(-100px); opacity: 0; }
+  70% { transform: scale(1.1) translateZ(50px); opacity: 1; }
+  100% { transform: scale(1) translateZ(0); opacity: 1; }
+}
+
+@keyframes float3d {
+  0% { transform: translateY(0) translateZ(0); }
+  50% { transform: translateY(-10px) translateZ(20px); }
+  100% { transform: translateY(0) translateZ(0); }
+}
+
+@keyframes shake3d {
+  0%, 100% { transform: translateX(0) translateZ(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px) translateZ(10px) rotateY(-5deg); }
+  20%, 40%, 60%, 80% { transform: translateX(5px) translateZ(-10px) rotateY(5deg); }
+}
+
+@keyframes popAndFloat {
+  0% { transform: scale(0) translateZ(-50px); opacity: 0; }
+  40% { transform: scale(1.1) translateZ(30px); opacity: 1; }
+  60% { transform: scale(1) translateZ(0); }
+  100% { transform: scale(1) translateY(-10px) translateZ(10px); opacity: 1; }
 }

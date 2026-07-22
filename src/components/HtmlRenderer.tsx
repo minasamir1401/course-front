@@ -34,9 +34,18 @@ function HtmlRenderer({ html, className = "", tag: Tag = "div" }: HtmlRendererPr
 
   let processedHtml = html || "";
   if (typeof processedHtml === 'string') {
-    processedHtml = processedHtml.replace(/(?<!\$)\$([^$]+)\$(?!\$)/g, (match, inner) => {
-      return '$' + inner.replace(/ /g, '\\text{ }') + '$';
-    });
+    // Helper to preserve spaces in math mode so KaTeX doesn't squish text together and allows word wrapping
+    const preserveSpaces = (inner: string) => inner.replace(/( |&nbsp;)/g, '\\space ');
+
+    processedHtml = processedHtml
+      // Replace in $$...$$
+      .replace(/\$\$([\s\S]*?)\$\$/g, (match, inner) => '$$' + preserveSpaces(inner) + '$$')
+      // Replace in \[...\]
+      .replace(/\\\[([\s\S]*?)\\\]/g, (match, inner) => '\\[' + preserveSpaces(inner) + '\\]')
+      // Replace in \(...\)
+      .replace(/\\\(([\s\S]*?)\\\)/g, (match, inner) => '\\(' + preserveSpaces(inner) + '\\)')
+      // Replace in $...$ (ensure we don't match $$)
+      .replace(/(?<!\$)\$([^$]+)\$(?!\$)/g, (match, inner) => '$' + preserveSpaces(inner) + '$');
   }
 
   return (
