@@ -879,8 +879,9 @@ export default function ActivitiesPage() {
                 <>
                   {/* Always show the FIFA-style animation */}
                   <AnimatedFeedback 
-                    isCorrect={attemptResult.isCorrect} 
-                    xp={attemptResult.score} 
+                    isCorrect={attemptResult.isCorrect !== false} 
+                    xp={attemptResult.earnedXP || 0} 
+                    streak={attemptResult.currentStreak || 0}
                     onComplete={() => {
                       // Auto-close if correct OR if wrong but still have attempts left
                       if (attemptResult.isCorrect || (!attemptResult.isCorrect && attemptCount < 2 && !attemptResult.timeExpired)) {

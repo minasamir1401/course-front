@@ -14,6 +14,7 @@ const Confetti = dynamic(() => import('react-confetti'), { ssr: false });
 const InteractiveQuestionRenderer = dynamic(() => import('@/components/InteractiveQuestionRenderer'), { ssr: false });
 import HtmlRenderer from '@/components/HtmlRenderer';
 import { getOptionLetter, cleanOptionText } from '@/lib/utils';
+import AnimatedFeedback from "@/components/AnimatedFeedback";
 
 import { 
   normalizeAnswerGlobal, 
@@ -72,11 +73,12 @@ export default function LessonPlayerPage() {
   const [sessionXP, setSessionXP] = useState(0);
   const [sessionBonusXP, setSessionBonusXP] = useState(0);
   const [toastFeedback, setToastFeedback] = useState<{
-    type: 'success' | 'streak' | 'perfect';
+    type: 'success' | 'streak' | 'perfect' | 'incorrect';
     xp: number;
     streakCount?: number;
     bonusXP?: number;
     level?: 'Easy' | 'Medium' | 'Hard';
+    isCorrect?: boolean;
   } | null>(null);
 
   const submitAnswerProgress = async (questionId: string, blockType: 'slides' | 'assignments' | 'questions', selectedAnswer: any) => {
@@ -106,30 +108,27 @@ export default function LessonPlayerPage() {
         setTotalLessonXP(data.totalLessonXP);
         setCurrentStreak(data.currentStreak);
         
-        if (data.isCorrect) {
-          let currentLevel = 'Medium';
-          if (blockType === 'questions') {
-            currentLevel = lesson?.questions?.[currentQuestionIndex]?.level || 'Medium';
-          } else if (blockType === 'slides') {
-            currentLevel = lesson?.slides?.[currentSlideIndex]?.level || 'Medium';
-          } else if (blockType === 'assignments') {
-            currentLevel = lesson?.assignments?.[currentAssignmentIndex]?.level || 'Medium';
-          }
+        let currentLevel = 'Medium';
+        if (blockType === 'questions') {
+          currentLevel = lesson?.questions?.[currentQuestionIndex]?.level || 'Medium';
+        } else if (blockType === 'slides') {
+          currentLevel = lesson?.slides?.[currentSlideIndex]?.level || 'Medium';
+        } else if (blockType === 'assignments') {
+          currentLevel = lesson?.assignments?.[currentAssignmentIndex]?.level || 'Medium';
+        }
 
+        if (data.isCorrect) {
           setSessionXP(prev => prev + (data.earnedXP || 0));
           setHighestStreak(prev => Math.max(prev, data.currentStreak || 0));
-
-          setToastFeedback({
-            type: 'success',
-            xp: data.earnedXP || 0,
-            level: currentLevel as any,
-            streakCount: data.currentStreak
-          });
-
-          setTimeout(() => {
-            setToastFeedback(null);
-          }, 2000);
         }
+
+        setToastFeedback({
+          type: data.isCorrect ? 'success' : 'incorrect',
+          xp: data.earnedXP || 0,
+          level: currentLevel as any,
+          streakCount: data.currentStreak,
+          isCorrect: data.isCorrect
+        });
 
         if (data.bonusXP > 0) {
           setSessionBonusXP(prev => prev + data.bonusXP);
@@ -1160,16 +1159,7 @@ export default function LessonPlayerPage() {
 
                           if (isExplanation) return null;
 
-                          return (
-                            <div className="mt-4 animate-in fade-in slide-in-from-top-2">
-                              <QuestionFeedback
-                                isCorrect={isCorrect}
-                                isSkipped={isSkipped}
-                                correctAnswer={isMulti ? lesson.assignments[currentAssignmentIndex].correctAnswers : lesson.assignments[currentAssignmentIndex].correctAnswer}
-                                language={language}
-                              />
-                            </div>
-                          );
+                          return null;
                         })()}
 
                         <AssignmentSectionsToggle 
@@ -1436,16 +1426,7 @@ export default function LessonPlayerPage() {
 
                           if (isExplanation) return null;
 
-                          return (
-                            <div className="mt-4 animate-in fade-in slide-in-from-top-2">
-                              <QuestionFeedback
-                                isCorrect={isCorrect}
-                                isSkipped={isSkipped}
-                                correctAnswer={isMulti ? lesson.questions[currentQuestionIndex].correctAnswers : lesson.questions[currentQuestionIndex].correctAnswer}
-                                language={language}
-                              />
-                            </div>
-                          );
+                          return null;
                         })()}
 
                         <QuizSectionsToggle 
@@ -1589,33 +1570,14 @@ export default function LessonPlayerPage() {
         </div>
       </div>
 
-      {/* ── XP Toast Overlay (appears on correct answers) ── */}
+      {/* ── Animated Feedback Overlay ── */}
       {toastFeedback && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[200] animate-in slide-in-from-bottom-4 fade-in duration-300 pointer-events-none">
-          <div className="relative flex items-center gap-3 px-6 py-3.5 rounded-2xl shadow-2xl border border-white/20 backdrop-blur-xl"
-            style={{
-              background: toastFeedback.level === 'Hard' || toastFeedback.level === 'Challenging' as any
-                ? 'linear-gradient(135deg, rgba(99,102,241,0.95) 0%, rgba(139,92,246,0.95) 100%)'
-                : toastFeedback.level === 'Medium'
-                  ? 'linear-gradient(135deg, rgba(245,158,11,0.95) 0%, rgba(217,119,6,0.95) 100%)'
-                  : 'linear-gradient(135deg, rgba(16,185,129,0.95) 0%, rgba(5,150,105,0.95) 100%)',
-            }}
-          >
-            <span className="text-2xl animate-bounce" style={{ animationDuration: '0.6s' }}>
-              {toastFeedback.level === 'Hard' || (toastFeedback.level as any) === 'Challenging' ? '⚡' : '⭐'}
-            </span>
-            <div className="flex flex-col">
-              <span className="text-white font-black text-base tracking-tight">
-                +{toastFeedback.xp} XP
-              </span>
-              {toastFeedback.streakCount && toastFeedback.streakCount >= 3 && (
-                <span className="text-white/80 text-[10px] font-bold">
-                  🔥 {language === 'ar' ? `سلسلة ${toastFeedback.streakCount}` : `Streak ${toastFeedback.streakCount}`}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
+        <AnimatedFeedback 
+          isCorrect={toastFeedback.isCorrect !== false} 
+          xp={toastFeedback.xp} 
+          streak={toastFeedback.streakCount} 
+          onComplete={() => setToastFeedback(null)} 
+        />
       )}
 
       {/* ── Streak Milestone Celebration Modal ── */}

@@ -32,7 +32,7 @@ export default function SuperAdminCoursesPage() {
     fetchCourses(true);
     fetchStats();
 
-    // ⚡ Silent background refresh after 3s — by then the Supabase cache is warm
+    // ⚡ Silent background refresh after 3s — by then the Backup DB cache is warm
     // and the second fetch will include cloud-only courses + update 'local' badges to 'both'
     // This runs WITHOUT any loading spinner so the user sees local courses immediately
     const cloudRefreshTimer = setTimeout(() => {
@@ -122,7 +122,7 @@ export default function SuperAdminCoursesPage() {
   };
 
   // ⚡ Silent background cloud merge — runs 3s after initial load
-  // Fetches courses again (Supabase cache is now warm) and merges cloud data
+  // Fetches courses again (Backup DB cache is now warm) and merges cloud data
   // WITHOUT showing any loading spinner or removing existing courses
   const silentCloudMerge = async () => {
     try {
@@ -415,15 +415,15 @@ export default function SuperAdminCoursesPage() {
                               <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md uppercase tracking-widest shrink-0">{getGradeName(course.grade) || (language === 'ar' ? "عام" : "General")}</span>
                               {course._source === 'both' ? (
                                 <span className="text-[10px] font-black text-purple-700 bg-purple-100 border border-purple-200 px-2.5 py-1 rounded-md shrink-0 flex items-center gap-1 shadow-xs">
-                                  ⚡ {language === 'ar' ? 'الاثنين (محلي + سحابي Supabase)' : 'Both (Local + Supabase)'}
+                                  ⚡ {language === 'ar' ? 'الاثنين (الأساسية + الاحتياطية)' : 'Both (Primary + Backup DB)'}
                                 </span>
                               ) : course._source === 'cloud' ? (
                                 <span className="text-[10px] font-black text-sky-700 bg-sky-100 border border-sky-200 px-2.5 py-1 rounded-md shrink-0 flex items-center gap-1 shadow-xs">
-                                  ☁️ {language === 'ar' ? 'سحابي فقط (Supabase)' : 'Cloud Only (Supabase)'}
+                                  ☁️ {language === 'ar' ? 'الاحتياطية فقط' : 'Backup DB Only'}
                                 </span>
                               ) : (
                                 <span className="text-[10px] font-black text-slate-700 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md shrink-0 flex items-center gap-1">
-                                  🖥️ {language === 'ar' ? 'محلي فقط (PostgreSQL)' : 'Local Only (PostgreSQL)'}
+                                  🖥️ {language === 'ar' ? 'الأساسية فقط (PostgreSQL)' : 'Primary DB Only'}
                                 </span>
                               )}
                            </div>
