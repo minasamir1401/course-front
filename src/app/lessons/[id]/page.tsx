@@ -80,9 +80,20 @@ export default function LessonPlayerPage() {
     level?: 'Easy' | 'Medium' | 'Hard';
     isCorrect?: boolean;
   } | null>(null);
+  const [feedbackKey, setFeedbackKey] = useState(0);
 
-  const submitAnswerProgress = async (questionId: string, blockType: 'slides' | 'assignments' | 'questions', selectedAnswer: any) => {
-    if (searchParams.get('preview') === 'true') return;
+  const submitAnswerProgress = async (questionId: string, blockType: 'slides' | 'assignments' | 'questions', selectedAnswer: any, questionBlock?: any) => {
+    const isPreviewMode = searchParams.get('preview') === 'true';
+    if (isPreviewMode) {
+      // In preview mode: evaluate answer locally and show correct/incorrect feedback
+      let isCorrect = true; // default for non-question blocks (read)
+      if (questionBlock && selectedAnswer !== 'read') {
+        isCorrect = checkAdvancedCorrect(questionBlock, selectedAnswer);
+      }
+      setFeedbackKey(k => k + 1);
+      setToastFeedback({ type: isCorrect ? 'success' : 'incorrect', xp: 0, isCorrect, streakCount: 0 });
+      return;
+    }
 
     try {
       const token = localStorage.getItem("lms_token") || 
@@ -122,6 +133,7 @@ export default function LessonPlayerPage() {
           setHighestStreak(prev => Math.max(prev, data.currentStreak || 0));
         }
 
+        setFeedbackKey(k => k + 1);
         setToastFeedback({
           type: data.isCorrect ? 'success' : 'incorrect',
           xp: data.earnedXP || 0,
@@ -884,7 +896,7 @@ export default function LessonPlayerPage() {
                         const q = lesson.slides[currentSlideIndex];
                         const qId = q.id ? String(q.id) : String(currentSlideIndex);
                         const ans = slideAnswers[currentSlideIndex];
-                        submitAnswerProgress(qId, 'slides', ans);
+                        submitAnswerProgress(qId, 'slides', ans, q);
                         setSlideSubmitted({ ...slideSubmitted, [currentSlideIndex]: true });
                       }}
                       className="mt-6 bg-emerald-600 text-white hover:bg-emerald-700 px-8 py-3 rounded-2xl font-black text-lg shadow-xl shadow-emerald-100 border border-emerald-500/20"
@@ -1136,7 +1148,7 @@ export default function LessonPlayerPage() {
                               const q = lesson.assignments[currentAssignmentIndex];
                               const qId = q.id ? String(q.id) : String(currentAssignmentIndex);
                               const ans = assignmentAnswers[currentAssignmentIndex];
-                              submitAnswerProgress(qId, 'assignments', ans);
+                              submitAnswerProgress(qId, 'assignments', ans, q);
                               setAssignmentSubmitted({ ...assignmentSubmitted, [currentAssignmentIndex]: true });
                             }}
                             className="mt-2 mb-6 bg-emerald-600 text-white hover:bg-emerald-700 px-8 py-3 rounded-2xl font-black text-lg shadow-xl shadow-emerald-100 border border-emerald-500/20"
@@ -1403,7 +1415,7 @@ export default function LessonPlayerPage() {
                               const q = lesson.questions[currentQuestionIndex];
                               const qId = q.id ? String(q.id) : String(currentQuestionIndex);
                               const ans = answers[currentQuestionIndex];
-                              submitAnswerProgress(qId, 'questions', ans);
+                              submitAnswerProgress(qId, 'questions', ans, q);
                               setQuizSubmitted({ ...quizSubmitted, [currentQuestionIndex]: true });
                             }}
                             className="mt-2 mb-6 bg-emerald-600 text-white hover:bg-emerald-700 px-8 py-3 rounded-2xl font-black text-lg shadow-xl shadow-emerald-100 border border-emerald-500/20"
@@ -1573,6 +1585,7 @@ export default function LessonPlayerPage() {
       {/* ── Animated Feedback Overlay ── */}
       {toastFeedback && (
         <AnimatedFeedback 
+          key={feedbackKey}
           isCorrect={toastFeedback.isCorrect !== false} 
           xp={toastFeedback.xp} 
           streak={toastFeedback.streakCount} 
