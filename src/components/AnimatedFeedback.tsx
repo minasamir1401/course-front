@@ -15,13 +15,14 @@ export default function AnimatedFeedback({ isCorrect, xp, streak, onComplete }: 
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
+    const duration = isCorrect ? 2500 : 1500;
     const timer = setTimeout(() => {
       setVisible(false);
       if (onComplete) onComplete();
-    }, 700); 
+    }, duration); 
 
     return () => clearTimeout(timer);
-  }, [isCorrect, onComplete]);
+  }, [isCorrect]);
 
   if (!visible) return null;
 
@@ -30,7 +31,7 @@ export default function AnimatedFeedback({ isCorrect, xp, streak, onComplete }: 
       <div className="relative flex flex-col items-center justify-center" style={{ perspective: '1200px' }}>
         
         <div 
-          className="flex flex-col items-center justify-center animate-[pop3d_0.4s_cubic-bezier(0.34,1.56,0.64,1)_forwards]"
+          className="flex flex-col items-center justify-center animate-[pop3d_0.5s_ease-out_forwards]"
           style={{ transformStyle: 'preserve-3d' }}
         >
           {isCorrect ? (
