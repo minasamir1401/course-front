@@ -35,7 +35,18 @@ function HtmlRenderer({ html, className = "", tag: Tag = "div" }: HtmlRendererPr
   let processedHtml = html || "";
   if (typeof processedHtml === 'string') {
     processedHtml = processedHtml.replace(/(?<!\$)\$([^$]+)\$(?!\$)/g, (match, inner) => {
-      return '$' + inner.replace(/ /g, '\\text{ }') + '$';
+      // Wrap English words in \text{} to preserve normal font, skip LaTeX commands
+      let newInner = inner.replace(/\\?[A-Za-z]+/g, (word: string) => {
+        if (word.startsWith('\\')) return word; // Skip LaTeX commands like \frac, \text
+        // Wrap words (2+ letters) or specific 1-letter words (a, A, I) in \text{}
+        if (word.length >= 2 || word === 'a' || word === 'A' || word === 'I') {
+          return `\\text{${word}}`;
+        }
+        return word; // Keep single letters (x, y, z) as math italic
+      });
+      // Replace spaces with ~ to preserve them in KaTeX
+      newInner = newInner.replace(/ /g, '~');
+      return '$' + newInner + '$';
     });
   }
 
