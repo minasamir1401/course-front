@@ -35,6 +35,9 @@ export default function BackupsPage() {
   const [secretInputValue, setSecretInputValue] = useState("");
   const showDeleteButton = secretInputValue.trim().toLowerCase() === "backups";
 
+  // Bulk delete states
+  const [selectedBackups, setSelectedBackups] = useState<string[]>([]);
+
   // Restore confirmation states
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showDoubleConfirmModal, setShowDoubleConfirmModal] = useState(false);
@@ -249,6 +252,39 @@ export default function BackupsPage() {
     }
   };
 
+  const handleSelectAll = () => {
+    if (selectedBackups.length === backups.length) {
+      setSelectedBackups([]);
+    } else {
+      setSelectedBackups(backups.map(b => b.name));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedBackups.length === 0) return;
+    if (!window.confirm(language === 'ar' ? `هل أنت متأكد من حذف ${selectedBackups.length} نسخة نهائياً؟` : `Are you sure you want to permanently delete ${selectedBackups.length} backups?`)) return;
+
+    const token = localStorage.getItem("super_admin_token") || localStorage.getItem("token");
+    let successCount = 0;
+    
+    try {
+      await Promise.all(selectedBackups.map(async (filename) => {
+        const res = await fetch(`${API_URL}/admin/backup/${encodeURIComponent(filename)}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) successCount++;
+      }));
+      
+      showToast(language === 'ar' ? `تم حذف ${successCount} نسخة بنجاح` : `Successfully deleted ${successCount} backups`, "success");
+      setSelectedBackups([]);
+      await fetchBackups();
+    } catch (e) {
+      console.error(e);
+      showToast(language === 'ar' ? "خطأ أثناء الحذف المتعدد" : "Error during bulk delete", "error");
+    }
+  };
+
   const handleDeleteBackup = async (filename: string) => {
     if (!window.confirm(language === 'ar' ? "هل أنت متأكد من الحذف النهائي؟ لا يمكن التراجع عن هذه الخطوة." : "Are you sure you want to permanently delete this backup?")) return;
     
@@ -435,13 +471,32 @@ export default function BackupsPage() {
                 <HardDrive className="w-6 h-6 text-indigo-600" />
                 <span>{language === 'ar' ? "ملفات النسخ المتوفرة" : "Available System Backups"} ({backups.length})</span>
               </h3>
-              <button 
-                onClick={fetchBackups} 
-                className="p-3 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer border border-slate-100 bg-white"
-                title={language === 'ar' ? "تحديث القائمة" : "Refresh List"}
-              >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              </button>
+              <div className="flex items-center gap-2">
+                {showDeleteButton && selectedBackups.length > 0 && (
+                  <button
+                    onClick={handleBulkDelete}
+                    className="bg-red-50 hover:bg-red-600 hover:text-white text-red-500 font-bold px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all cursor-pointer border border-red-100 text-xs shadow-sm animate-in fade-in zoom-in"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>{language === 'ar' ? `حذف (${selectedBackups.length})` : `Delete (${selectedBackups.length})`}</span>
+                  </button>
+                )}
+                {showDeleteButton && (
+                  <button
+                    onClick={handleSelectAll}
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer border border-slate-200 text-xs shadow-sm"
+                  >
+                    <span>{language === 'ar' ? "تحديد الكل" : "Select All"}</span>
+                  </button>
+                )}
+                <button 
+                  onClick={fetchBackups} 
+                  className="p-3 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer border border-slate-100 bg-white"
+                  title={language === 'ar' ? "تحديث القائمة" : "Refresh List"}
+                >
+                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
             </div>
 
             {loading ? (
@@ -475,11 +530,27 @@ export default function BackupsPage() {
                 {backups.map((backup) => {
                   const isArchive = backup.type === 'ARCHIVE' || backup.name.includes('.zip') || backup.name.includes('مجمع');
                   return (
-                  <div 
+                    <div 
                     key={backup.name} 
-                    className="bg-white hover:bg-slate-50/50 border border-slate-100 rounded-[28px] p-6 flex flex-col gap-4 shadow-sm hover:shadow-md transition-all duration-300"
+                    className={`bg-white hover:bg-slate-50/50 border ${selectedBackups.includes(backup.name) ? 'border-red-400 ring-2 ring-red-100' : 'border-slate-100'} rounded-[28px] p-6 flex flex-col gap-4 shadow-sm hover:shadow-md transition-all duration-300 relative`}
                   >
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 w-full">
+                      {showDeleteButton && (
+                        <div className="absolute top-4 right-4 sm:relative sm:top-auto sm:right-auto sm:ml-2">
+                          <input 
+                            type="checkbox" 
+                            className="w-5 h-5 rounded-md border-slate-300 text-red-500 focus:ring-red-500 cursor-pointer accent-red-500"
+                            checked={selectedBackups.includes(backup.name)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedBackups(prev => [...prev, backup.name]);
+                              } else {
+                                setSelectedBackups(prev => prev.filter(name => name !== backup.name));
+                              }
+                            }}
+                          />
+                        </div>
+                      )}
                       <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-[20px] flex items-center justify-center shrink-0">
                         {isArchive ? <Archive className="w-7 h-7" /> : <FileJson className="w-7 h-7" />}
                       </div>
@@ -554,9 +625,25 @@ export default function BackupsPage() {
                   {archiveBackups.map((backup) => (
                     <div 
                       key={backup.name} 
-                      className="bg-white hover:bg-purple-50/50 border border-purple-100 rounded-[24px] p-5 flex flex-col gap-3 shadow-sm transition-all"
+                      className={`bg-white hover:bg-purple-50/50 border ${selectedBackups.includes(backup.name) ? 'border-red-400 ring-2 ring-red-100' : 'border-purple-100'} rounded-[24px] p-5 flex flex-col gap-3 shadow-sm transition-all relative`}
                     >
                       <div className="flex items-center gap-3">
+                        {showDeleteButton && (
+                          <div className="absolute top-4 right-4 sm:relative sm:top-auto sm:right-auto sm:ml-1">
+                            <input 
+                              type="checkbox" 
+                              className="w-5 h-5 rounded-md border-slate-300 text-red-500 focus:ring-red-500 cursor-pointer accent-red-500"
+                              checked={selectedBackups.includes(backup.name)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedBackups(prev => [...prev, backup.name]);
+                                } else {
+                                  setSelectedBackups(prev => prev.filter(name => name !== backup.name));
+                                }
+                              }}
+                            />
+                          </div>
+                        )}
                         <div className="w-10 h-10 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center shrink-0">
                           <Archive className="w-5 h-5" />
                         </div>
