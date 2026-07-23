@@ -58,6 +58,9 @@ export default function SchoolAdminCoursesPage() {
       if (res.ok) {
         showToast(t('schoolAdmin.teachersPage.deleteSuccess'), "success");
         setCourses(prev => prev.filter(c => c.id !== id));
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        showToast(errorData.error || t('schoolAdmin.teachersPage.connError'), "error");
       }
     } catch (error) {
       showToast(t('schoolAdmin.teachersPage.connError'), "error");
