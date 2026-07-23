@@ -41,21 +41,21 @@ export default function AnimatedFeedback({ isCorrect, xp, streak, onComplete }: 
 
   return (
     <div
-      className="pointer-events-none fixed inset-0 z-[100] flex items-center justify-center"
+      className="pointer-events-none fixed inset-0 z-[100] overflow-hidden"
       style={{
         opacity: isEnter ? 0 : isExit ? 0 : 1,
         transition: isEnter ? 'opacity 0.08s' : 'opacity 0.25s ease-out',
       }}
     >
-      <div
-        style={{
-          transform: isEnter ? 'scale(0.5) translateY(30px)' : isExit ? 'scale(0.8) translateY(-20px)' : 'scale(1) translateY(0)',
-          transition: isEnter ? 'transform 0.08s' : isExit ? 'transform 0.25s ease-in' : 'transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-        }}
-        className="relative flex flex-col items-center justify-center"
-      >
-        {/* Main feedback circle */}
-        <div className="relative">
+      {/* --- Main Center Icon (✅ / ❌) --- */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div
+          style={{
+            transform: isEnter ? 'scale(0.5) translateY(30px)' : isExit ? 'scale(0.8) translateY(-20px)' : 'scale(1) translateY(0)',
+            transition: isEnter ? 'transform 0.08s' : isExit ? 'transform 0.25s ease-in' : 'transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+          }}
+          className="relative"
+        >
           {isCorrect ? (
             <div
               className="relative rounded-[40px] w-44 h-44 flex items-center justify-center shadow-2xl"
@@ -65,7 +65,6 @@ export default function AnimatedFeedback({ isCorrect, xp, streak, onComplete }: 
                 boxShadow: '0 0 60px rgba(16,185,129,0.6), 0 20px 40px rgba(0,0,0,0.2)',
               }}
             >
-              {/* Pulse rings */}
               {!isExit && (
                 <>
                   <div className="absolute inset-0 rounded-[40px] animate-ping" style={{ background: 'rgba(16,185,129,0.2)', animationDuration: '0.8s' }} />
@@ -73,7 +72,6 @@ export default function AnimatedFeedback({ isCorrect, xp, streak, onComplete }: 
                 </>
               )}
               <CheckCircle className="w-24 h-24 text-white drop-shadow-lg" strokeWidth={2.5} />
-
             </div>
           ) : (
             <div
@@ -91,48 +89,54 @@ export default function AnimatedFeedback({ isCorrect, xp, streak, onComplete }: 
             </div>
           )}
         </div>
-
-        {/* Separated Badges: XP & Streak */}
-        {isCorrect && (
-          <div className="mt-6 flex items-center gap-4">
-            {(xp !== undefined && xp > 0) && (
-              <div
-                className="px-5 py-2.5 rounded-2xl font-black text-xl shadow-xl border-2 border-white flex items-center gap-2"
-                style={{
-                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                  color: '#1a1a1a',
-                  boxShadow: '0 4px 20px rgba(245,158,11,0.4)',
-                  animation: 'xp-pop 0.4s cubic-bezier(0.175,0.885,0.32,1.275) 0.15s both',
-                }}
-              >
-                <span className="text-2xl">⭐</span>
-                <span>+{xp} XP</span>
-              </div>
-            )}
-
-            {(streak !== undefined && streak > 1) && (
-              <div
-                className="px-5 py-2.5 rounded-2xl font-black text-xl shadow-xl border-2 border-white flex items-center gap-2"
-                style={{
-                  background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-                  color: '#fff',
-                  boxShadow: '0 4px 20px rgba(249,115,22,0.4)',
-                  animation: 'xp-pop 0.4s cubic-bezier(0.175,0.885,0.32,1.275) 0.25s both',
-                }}
-              >
-                <span className="text-2xl">🔥</span>
-                <span>{streak}× Streak</span>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
+      {/* --- Separate XP Icon (Floats up on the right) --- */}
+      {isCorrect && xp !== undefined && xp > 0 && (
+        <div 
+          className="absolute right-4 md:right-20 bottom-1/4 flex flex-col items-center justify-center"
+          style={{ animation: 'float-up-icon 1s cubic-bezier(0.175,0.885,0.32,1.275) forwards' }}
+        >
+          <div
+            className="w-24 h-24 md:w-32 md:h-32 rounded-full shadow-2xl flex flex-col items-center justify-center border-4 border-white"
+            style={{
+              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+              color: '#fff',
+              boxShadow: '0 10px 40px rgba(245,158,11,0.5)',
+            }}
+          >
+            <span className="text-4xl md:text-5xl drop-shadow-md">⭐</span>
+            <span className="font-black text-lg md:text-xl mt-1">+{xp} XP</span>
+          </div>
+        </div>
+      )}
+
+      {/* --- Separate Streak Icon (Floats up on the left) --- */}
+      {isCorrect && streak !== undefined && streak > 1 && (
+        <div 
+          className="absolute left-4 md:left-20 bottom-1/4 flex flex-col items-center justify-center"
+          style={{ animation: 'float-up-icon 1s cubic-bezier(0.175,0.885,0.32,1.275) 0.15s forwards' }}
+        >
+          <div
+            className="w-24 h-24 md:w-32 md:h-32 rounded-full shadow-2xl flex flex-col items-center justify-center border-4 border-white"
+            style={{
+              background: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
+              color: '#fff',
+              boxShadow: '0 10px 40px rgba(239,68,68,0.5)',
+            }}
+          >
+            <span className="text-4xl md:text-5xl drop-shadow-md">🔥</span>
+            <span className="font-black text-lg md:text-xl mt-1">{streak} Streak</span>
+          </div>
+        </div>
+      )}
+
       <style>{`
-        @keyframes xp-pop {
-          0% { transform: scale(0) rotate(-10deg); opacity: 0; }
-          70% { transform: scale(1.15) rotate(3deg); }
-          100% { transform: scale(1) rotate(0); opacity: 1; }
+        @keyframes float-up-icon {
+          0% { transform: translateY(100px) scale(0.5) rotate(-15deg); opacity: 0; }
+          60% { transform: translateY(-20px) scale(1.1) rotate(5deg); opacity: 1; }
+          80% { transform: translateY(0px) scale(1) rotate(0deg); opacity: 1; }
+          100% { transform: translateY(-50px) scale(1.05); opacity: 0; }
         }
       `}</style>
     </div>
