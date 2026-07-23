@@ -221,7 +221,7 @@ export default function TakeExamPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-6">
         <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-        <p className="font-black text-xl text-slate-400 animate-pulse">جاري تحضير الامتحان...</p>
+        <p className="font-black text-xl text-slate-400 animate-pulse">{language === 'ar' ? 'جاري تحضير الامتحان...' : 'Preparing Exam...'}</p>
       </div>
     );
   }
@@ -240,7 +240,7 @@ export default function TakeExamPage() {
                 <ShieldCheck className="w-10 h-10 text-amber-300" />
               </div>
               <h1 className="text-3xl md:text-4xl font-black text-white mb-3">{exam.title}</h1>
-              <p className="text-indigo-100 font-medium">يرجى قراءة التعليمات بعناية قبل البدء.</p>
+              <p className="text-indigo-100 font-medium">{language === 'ar' ? 'يرجى قراءة التعليمات بعناية قبل البدء.' : 'Please read the instructions carefully before starting.'}</p>
             </div>
             <div className="absolute top-0 right-0 w-64 h-64 bg-violet-400/20 blur-[100px] -mr-32 -mt-32"></div>
           </div>
@@ -251,28 +251,28 @@ export default function TakeExamPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
               <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 text-center">
                 <Clock className="w-6 h-6 text-indigo-600 mx-auto mb-3" />
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">المدة</p>
-                <p className="font-black text-slate-700">{exam.duration} دقيقة</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{language === 'ar' ? 'المدة' : 'Duration'}</p>
+                <p className="font-black text-slate-700">{exam.duration} {language === 'ar' ? 'دقيقة' : 'Minutes'}</p>
               </div>
               <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 text-center">
                 <Play className="w-6 h-6 text-indigo-600 mx-auto mb-3" />
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">الأسئلة</p>
-                <p className="font-black text-slate-700">{exam.questions?.length || 0} سؤال</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{language === 'ar' ? 'الأسئلة' : 'Questions'}</p>
+                <p className="font-black text-slate-700">{exam.questions?.length || 0} {language === 'ar' ? 'سؤال' : 'Questions'}</p>
               </div>
               <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 text-center col-span-2 md:col-span-1">
                 <Calendar className="w-6 h-6 text-indigo-600 mx-auto mb-3" />
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">النوع</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{language === 'ar' ? 'النوع' : 'Type'}</p>
                 <p className="font-black text-slate-700">{exam.type || "Exam"}</p>
               </div>
               <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 text-center">
                 <HelpCircle className="w-6 h-6 text-indigo-600 mx-auto mb-3" />
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">المستوى</p>
-                <p className="font-black text-slate-700">{exam.level === 'Easy' || exam.level === 'Foundation' ? 'تأسيسي' : exam.level === 'Medium' || exam.level === 'On Level' ? 'في المستوى' : 'متقدم'}</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{language === 'ar' ? 'المستوى' : 'Level'}</p>
+                <p className="font-black text-slate-700">{exam.level === 'Easy' || exam.level === 'Foundation' ? (language === 'ar' ? 'تأسيسي' : 'Foundation') : exam.level === 'Medium' || exam.level === 'On Level' ? (language === 'ar' ? 'في المستوى' : 'On Level') : (language === 'ar' ? 'متقدم' : 'Advanced')}</p>
               </div>
               <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 text-center">
                 <Play className="w-6 h-6 text-indigo-600 mx-auto mb-3" />
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">المهارة</p>
-                <p className="font-black text-slate-700">{exam.skill || 'عام'}</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{language === 'ar' ? 'المهارة' : 'Skill'}</p>
+                <p className="font-black text-slate-700">{exam.skill || (language === 'ar' ? 'عام' : 'General')}</p>
               </div>
             </div>
 
@@ -281,11 +281,11 @@ export default function TakeExamPage() {
               <div className="space-y-4">
                 <label className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                   <Lock className="w-4 h-4" />
-                  كلمة سر فتح الامتحان
+                  {language === 'ar' ? 'كلمة سر فتح الامتحان' : 'Exam Password'}
                 </label>
                 <input
                   type="password"
-                  placeholder="أدخل كلمة السر هنا..."
+                  placeholder={language === 'ar' ? "أدخل كلمة السر هنا..." : "Enter password here..."}
                   className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-xl font-black outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
@@ -300,14 +300,14 @@ export default function TakeExamPage() {
                 onClick={() => router.back()}
                 className="flex-1 py-5 rounded-2xl bg-slate-50 text-slate-500 font-black hover:bg-slate-100 transition-all"
               >
-                رجوع
+                {language === 'ar' ? 'رجوع' : 'Back'}
               </button>
               <button
                 onClick={handleStartExam}
                 disabled={isVerifying}
                 className="flex-[2] py-5 rounded-2xl bg-indigo-600 text-white font-black text-xl shadow-xl shadow-indigo-100 hover:scale-[1.02] transition-all flex items-center justify-center gap-3 disabled:opacity-60"
               >
-                {isVerifying ? "جاري التحقق..." : "ابدأ الامتحان الآن"}
+                {isVerifying ? (language === 'ar' ? "جاري التحقق..." : "Verifying...") : (language === 'ar' ? "ابدأ الامتحان الآن" : "Start Exam Now")}
                 <ChevronLeft className="w-6 h-6" />
               </button>
             </div>

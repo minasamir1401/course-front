@@ -385,14 +385,14 @@ export default function BackupsPage() {
                 {backups.map((backup) => (
                   <div 
                     key={backup.name} 
-                    className="bg-white hover:bg-slate-50/50 border border-slate-100 rounded-[28px] p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 shadow-sm hover:shadow-md transition-all duration-300"
+                    className="bg-white hover:bg-slate-50/50 border border-slate-100 rounded-[28px] p-6 flex flex-col gap-4 shadow-sm hover:shadow-md transition-all duration-300"
                   >
-                    <div className="flex items-center gap-5 w-full sm:w-auto">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 w-full">
                       <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-[20px] flex items-center justify-center shrink-0">
                         <FileJson className="w-7 h-7" />
                       </div>
-                      <div className="space-y-1.5 min-w-0">
-                        <h4 className="text-lg font-black text-slate-800 truncate" title={backup.name}>{backup.name}</h4>
+                      <div className="space-y-1.5 min-w-0 flex-1">
+                        <h4 className="text-lg font-black text-slate-800 break-words whitespace-normal" title={backup.name}>{backup.name}</h4>
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-slate-400 font-bold text-xs">
                           <span className="flex items-center gap-1.5">
                             <Calendar className="w-3.5 h-3.5" />
@@ -405,20 +405,20 @@ export default function BackupsPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 w-full sm:w-auto justify-end border-t sm:border-t-0 pt-4 sm:pt-0">
-                      <button
-                        onClick={() => handleDownloadBackup(backup.name)}
-                        className="bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 p-3.5 rounded-xl transition-all cursor-pointer border border-transparent"
-                        title={language === 'ar' ? "تحميل ملف النسخة" : "Download File"}
-                      >
-                        <Download className="w-5 h-5" />
-                      </button>
+                    <div className="flex items-center gap-3 w-full pt-2">
                       <button
                         onClick={() => startRestoreFlow(backup)}
                         disabled={restoring}
-                        className="bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-600 font-black px-5 py-3 rounded-xl transition-all cursor-pointer border border-indigo-100 text-sm active:scale-95 disabled:opacity-50"
+                        className="flex-1 bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-600 font-black px-5 py-3 rounded-xl transition-all cursor-pointer border border-indigo-100 text-sm active:scale-95 disabled:opacity-50"
                       >
                         {language === 'ar' ? "استعادة البيانات" : "Restore Database"}
+                      </button>
+                      <button
+                        onClick={() => handleDownloadBackup(backup.name)}
+                        className="bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 p-3.5 rounded-xl transition-all cursor-pointer border border-transparent shrink-0"
+                        title={language === 'ar' ? "تحميل ملف النسخة" : "Download File"}
+                      >
+                        <Download className="w-5 h-5" />
                       </button>
                     </div>
                   </div>
