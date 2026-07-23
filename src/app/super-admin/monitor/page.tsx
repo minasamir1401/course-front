@@ -85,8 +85,8 @@ export default function SuperAdminMonitorPage() {
     }
   };
 
-  const handleRestore = async (filename: string, lessonId: string) => {
-    if (!confirm(language === 'ar' ? "هل أنت متأكد من استعادة هذا الدرس؟ سيتم استبدال النسخة الحالية إن وجدت." : "Are you sure you want to restore this lesson?")) return;
+  const handleRestore = async (filename: string, lessonId: string, source?: string) => {
+    if (!confirm(language === 'ar' ? "هل أنت متأكد من استعادة هذا الدرس؟ سيتم استرجاعه واسترجاع الكورس التابع له في قاعدة البيانات." : "Are you sure you want to restore this lesson?")) return;
     setIsRestoring(true);
     setRestoreMessage("");
     try {
@@ -97,11 +97,11 @@ export default function SuperAdminMonitorPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${authToken}` 
         },
-        body: JSON.stringify({ filename, lessonId })
+        body: JSON.stringify({ filename, lessonId, source })
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Restore failed");
-      setRestoreMessage(language === 'ar' ? "تمت الاستعادة بنجاح!" : "Restored successfully!");
+      setRestoreMessage(json.message || (language === 'ar' ? "تمت الاستعادة بنجاح!" : "Restored successfully!"));
       loadData(false); // refresh data
     } catch (err: any) {
       alert(err.message);
@@ -311,7 +311,7 @@ export default function SuperAdminMonitorPage() {
                         </div>
                       </div>
                       <button
-                        onClick={() => handleRestore(res.backupFilename, res.lessonId)}
+                        onClick={() => handleRestore(res.backupFilename, res.lessonId, res.source)}
                         disabled={isRestoring}
                         className="flex items-center gap-2 rounded-xl bg-amber-50 px-4 py-2 text-xs font-black text-amber-700 hover:bg-amber-100 disabled:opacity-50"
                       >
@@ -324,7 +324,7 @@ export default function SuperAdminMonitorPage() {
               )}
               {searchResults.length === 0 && searchQuery && !isSearching && (
                  <div className="text-center text-sm font-medium text-slate-400 py-4">
-                   {language === 'ar' ? "لم يتم العثور على أي دروس بهذا الاسم في آخر 10 نسخ احتياطية." : "No lessons found with this name in the last 10 backups."}
+                   {language === 'ar' ? "لم يتم العثور على أي دروس بهذا الاسم في قاعدة البيانات أو النسخ الاحتياطية (المحلية والسحابية)." : "No lessons found with this name in database or backups (local & cloud)."}
                  </div>
               )}
             </div>
