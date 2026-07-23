@@ -43,6 +43,12 @@ export default function SuperAdminExamResultsPage() {
       setLoading(false);
     }
   };
+  const formatTime = (seconds?: number | null) => {
+    if (seconds === undefined || seconds === null) return "—";
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s < 10 ? "0" : ""}${s}`;
+  };
 
   return (
     <DashboardLayout>
@@ -106,6 +112,7 @@ export default function SuperAdminExamResultsPage() {
                        <th className="p-6 text-sm font-black text-slate-400">المدرسة</th>
                        <th className="p-6 text-sm font-black text-slate-400">النتيجة</th>
                        <th className="p-6 text-sm font-black text-slate-400">التوقيت</th>
+                       <th className="p-6 text-sm font-black text-slate-400">الوقت المستغرق</th>
                        <th className="p-6 text-sm font-black text-slate-400">الحالة</th>
                     </tr>
                  </thead>
@@ -128,6 +135,7 @@ export default function SuperAdminExamResultsPage() {
                           </td>
                           <td className="p-6 font-black text-slate-800">{s.percentage}%</td>
                           <td className="p-6 text-slate-500 text-sm">{new Date(s.createdAt).toLocaleDateString("ar-EG")}</td>
+                          <td className="p-6 text-slate-500 text-sm">{formatTime(s.totalTime)}</td>
                           <td className="p-6">
                              {s.percentage >= 50 ? (
                                 <span className="flex items-center gap-1.5 text-emerald-600 font-bold">
@@ -143,11 +151,11 @@ export default function SuperAdminExamResultsPage() {
                           </td>
                        </tr>
                     ))}
-                    {submissions.length === 0 && !loading && (
-                       <tr>
-                          <td colSpan={5} className="p-20 text-center text-slate-400 font-bold">لا توجد محاولات لهذا الامتحان حتى الآن.</td>
-                       </tr>
-                    )}
+                     {submissions.length === 0 && !loading && (
+                        <tr>
+                           <td colSpan={6} className="p-20 text-center text-slate-400 font-bold">لا توجد محاولات لهذا الامتحان حتى الآن.</td>
+                        </tr>
+                     )}
                  </tbody>
               </table>
            </div>
