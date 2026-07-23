@@ -230,6 +230,28 @@ export default function BackupsPage() {
     }
   };
 
+  const handleDeleteBackup = async (filename: string) => {
+    if (!window.confirm(language === 'ar' ? "هل أنت متأكد من الحذف النهائي؟ لا يمكن التراجع عن هذه الخطوة." : "Are you sure you want to permanently delete this backup?")) return;
+    
+    try {
+      const token = localStorage.getItem("super_admin_token") || localStorage.getItem("token");
+      const res = await fetch(`${API_URL}/admin/backup/${encodeURIComponent(filename)}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        showToast(language === 'ar' ? "تم حذف النسخة بنجاح" : "Backup deleted successfully", "success");
+        await fetchBackups();
+      } else {
+        const data = await res.json();
+        showToast(data.error || "فشل الحذف", "error");
+      }
+    } catch (e) {
+      console.error(e);
+      showToast("خطأ في الاتصال", "error");
+    }
+  };
+
   const startRestoreFlow = (backup: BackupFile) => {
     setSelectedBackup(backup);
     setShowConfirmModal(true);
@@ -456,8 +478,16 @@ export default function BackupsPage() {
                       >
                         <Download className="w-5 h-5" />
                       </button>
+                      <button
+                        onClick={() => handleDeleteBackup(backup.name)}
+                        className="bg-red-50 hover:bg-red-600 hover:text-white text-red-500 p-3.5 rounded-xl transition-all cursor-pointer border border-red-100 shrink-0"
+                        title={language === 'ar' ? "حذف نهائي" : "Delete Permanently"}
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
                     </div>
                   </div>
+
                 )})}
               </div>
             )}
@@ -502,13 +532,22 @@ export default function BackupsPage() {
                           {formatSize(backup.size)}
                         </span>
                       </div>
-                      <button
-                        onClick={() => handleDownloadBackup(backup.name)}
-                        className="w-full bg-purple-100 hover:bg-purple-600 hover:text-white text-purple-600 font-black px-4 py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 text-xs"
-                      >
-                        <Download className="w-4 h-4" />
-                        {language === 'ar' ? "تحميل الأرشيف" : "Download Archive"}
-                      </button>
+                      <div className="flex items-center gap-3 w-full">
+                        <button
+                          onClick={() => handleDownloadBackup(backup.name)}
+                          className="flex-1 bg-purple-100 hover:bg-purple-600 hover:text-white text-purple-600 font-black px-4 py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 text-xs border border-transparent"
+                        >
+                          <Download className="w-4 h-4" />
+                          {language === 'ar' ? "تحميل الأرشيف" : "Download Archive"}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteBackup(backup.name)}
+                          className="bg-red-50 hover:bg-red-600 hover:text-white text-red-500 p-2.5 rounded-xl transition-all cursor-pointer border border-red-100 shrink-0"
+                          title={language === 'ar' ? "حذف نهائي" : "Delete Permanently"}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
