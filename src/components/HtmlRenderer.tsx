@@ -34,19 +34,29 @@ function HtmlRenderer({ html, className = "", tag: Tag = "div" }: HtmlRendererPr
 
   let processedHtml = html || "";
   if (typeof processedHtml === 'string') {
-    processedHtml = processedHtml.replace(/(?<!\$)\$([^$]+)\$(?!\$)/g, (match, inner) => {
-      // Wrap English words in \text{} to preserve normal font, skip LaTeX commands
-      let newInner = inner.replace(/\\?[A-Za-z]+/g, (word: string) => {
+    const mathRegex = /(\$\$)([\s\S]+?)\1|(?<!\$)\$([^$]+)\$(?!\$)|\\\(([\s\S]+?)\\\)|\\\[([\s\S]+?)\\\]/g;
+    
+    processedHtml = processedHtml.replace(mathRegex, (match, d1, i1, i2, i3, i4) => {
+      const inner = i1 || i2 || i3 || i4;
+      if (!inner) return match;
+      
+      // Wrap English/Arabic words in \text{} to preserve normal font, skip LaTeX commands
+      let newInner = inner.replace(/\\?[\p{L}\p{M}]+/gu, (word: string) => {
         if (word.startsWith('\\')) return word; // Skip LaTeX commands like \frac, \text
-        // Wrap words (2+ letters) or specific 1-letter words (a, A, I) in \text{}
-        if (word.length >= 2 || word === 'a' || word === 'A' || word === 'I') {
+        // Wrap words (2+ letters), specific 1-letter words (a, A, I), or any Arabic letter in \text{}
+        if (word.length >= 2 || /^[aAI]$/.test(word) || /[\u0600-\u06FF]/.test(word)) {
           return `\\text{${word}}`;
         }
         return word; // Keep single letters (x, y, z) as math italic
       });
       // Replace spaces with ~ to preserve them in KaTeX
       newInner = newInner.replace(/ /g, '~');
-      return '$' + newInner + '$';
+      
+      if (i1) return `$$${newInner}$$`;
+      if (i2) return `$${newInner}$`;
+      if (i3) return `\\(${newInner}\\)`;
+      if (i4) return `\\[${newInner}\\]`;
+      return match;
     });
   }
 
@@ -57,6 +67,7 @@ function HtmlRenderer({ html, className = "", tag: Tag = "div" }: HtmlRendererPr
         .katex { white-space: normal !important; word-break: break-word; }
         .katex-html { flex-wrap: wrap !important; }
         .katex-display { overflow-x: auto; overflow-y: hidden; }
+        .katex .text { font-family: inherit !important; }
       `}} />
       <Tag 
         ref={containerRef as any} 
