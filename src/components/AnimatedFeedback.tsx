@@ -74,37 +74,6 @@ export default function AnimatedFeedback({ isCorrect, xp, streak, onComplete }: 
               )}
               <CheckCircle className="w-24 h-24 text-white drop-shadow-lg" strokeWidth={2.5} />
 
-              {/* XP badge */}
-              {(xp !== undefined && xp > 0) && (
-                <div
-                  className="absolute -top-5 -right-5 px-4 py-2 rounded-2xl font-black text-lg shadow-xl border-2 border-white flex items-center gap-1 z-20"
-                  style={{
-                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                    color: '#1a1a1a',
-                    boxShadow: '0 4px 20px rgba(245,158,11,0.5)',
-                    animation: 'xp-pop 0.4s cubic-bezier(0.175,0.885,0.32,1.275) 0.15s both',
-                  }}
-                >
-                  <span>⭐</span>
-                  <span>+{xp} XP</span>
-                </div>
-              )}
-
-              {/* Streak badge */}
-              {(streak !== undefined && streak > 1) && (
-                <div
-                  className="absolute -bottom-5 -left-5 px-4 py-2 rounded-2xl font-black text-lg shadow-xl border-2 border-white flex items-center gap-1 z-20"
-                  style={{
-                    background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-                    color: '#fff',
-                    boxShadow: '0 4px 20px rgba(249,115,22,0.5)',
-                    animation: 'xp-pop 0.4s cubic-bezier(0.175,0.885,0.32,1.275) 0.25s both',
-                  }}
-                >
-                  <span>🔥</span>
-                  <span>{streak}×</span>
-                </div>
-              )}
             </div>
           ) : (
             <div
@@ -123,18 +92,42 @@ export default function AnimatedFeedback({ isCorrect, xp, streak, onComplete }: 
           )}
         </div>
 
-        {/* Label */}
-        <div
-          className="mt-5 px-6 py-2.5 rounded-2xl font-black text-base shadow-lg backdrop-blur-sm"
-          style={{
-            background: isCorrect ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.12)',
-            color: isCorrect ? '#065f46' : '#991b1b',
-            border: `2px solid ${isCorrect ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.25)'}`,
-            animation: 'xp-pop 0.35s cubic-bezier(0.175,0.885,0.32,1.275) 0.05s both',
-          }}
-        >
-          {isCorrect ? '✅ إجابة صحيحة!' : '❌ إجابة خاطئة'}
         </div>
+
+        {/* Separated Badges: XP & Streak */}
+        {isCorrect && (
+          <div className="mt-6 flex items-center gap-4">
+            {(xp !== undefined && xp > 0) && (
+              <div
+                className="px-5 py-2.5 rounded-2xl font-black text-xl shadow-xl border-2 border-white flex items-center gap-2"
+                style={{
+                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                  color: '#1a1a1a',
+                  boxShadow: '0 4px 20px rgba(245,158,11,0.4)',
+                  animation: 'xp-pop 0.4s cubic-bezier(0.175,0.885,0.32,1.275) 0.15s both',
+                }}
+              >
+                <span className="text-2xl">⭐</span>
+                <span>+{xp} XP</span>
+              </div>
+            )}
+
+            {(streak !== undefined && streak > 1) && (
+              <div
+                className="px-5 py-2.5 rounded-2xl font-black text-xl shadow-xl border-2 border-white flex items-center gap-2"
+                style={{
+                  background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                  color: '#fff',
+                  boxShadow: '0 4px 20px rgba(249,115,22,0.4)',
+                  animation: 'xp-pop 0.4s cubic-bezier(0.175,0.885,0.32,1.275) 0.25s both',
+                }}
+              >
+                <span className="text-2xl">🔥</span>
+                <span>{streak}× Streak</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <style>{`
