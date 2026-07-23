@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Database, Plus, Trash2, Download, Upload, RefreshCw, Calendar, HardDrive, ShieldAlert, CheckCircle2, AlertTriangle, FileJson, Loader2, ArrowLeft, ShieldCheck, HelpCircle } from 'lucide-react';
+import { Database, Plus, Trash2, Download, Upload, RefreshCw, Calendar, HardDrive, ShieldAlert, CheckCircle2, AlertTriangle, FileJson, Loader2, ArrowLeft, ShieldCheck, HelpCircle, Archive } from 'lucide-react';
 import { useRouter } from "next/navigation";
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -13,6 +13,8 @@ interface BackupFile {
   size: number;
   createdAt: string;
   version?: string;
+  isCloud?: boolean;
+  type?: string;
 }
 
 export default function BackupsPage() {
@@ -382,14 +384,16 @@ export default function BackupsPage() {
               </div>
             ) : (
               <div className="flex flex-col gap-4 max-h-[600px] overflow-y-auto custom-scrollbar pr-2">
-                {backups.map((backup) => (
+                {backups.map((backup) => {
+                  const isArchive = backup.type === 'ARCHIVE' || backup.name.includes('.zip') || backup.name.includes('مجمع');
+                  return (
                   <div 
                     key={backup.name} 
                     className="bg-white hover:bg-slate-50/50 border border-slate-100 rounded-[28px] p-6 flex flex-col gap-4 shadow-sm hover:shadow-md transition-all duration-300"
                   >
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 w-full">
                       <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-[20px] flex items-center justify-center shrink-0">
-                        <FileJson className="w-7 h-7" />
+                        {isArchive ? <Archive className="w-7 h-7" /> : <FileJson className="w-7 h-7" />}
                       </div>
                       <div className="space-y-1.5 min-w-0 flex-1">
                         <h4 className="text-lg font-black text-slate-800 break-words whitespace-normal" title={backup.name}>{backup.name}</h4>
@@ -406,13 +410,19 @@ export default function BackupsPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3 w-full pt-2">
-                      <button
-                        onClick={() => startRestoreFlow(backup)}
-                        disabled={restoring}
-                        className="flex-1 bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-600 font-black px-5 py-3 rounded-xl transition-all cursor-pointer border border-indigo-100 text-sm active:scale-95 disabled:opacity-50"
-                      >
-                        {language === 'ar' ? "استعادة البيانات" : "Restore Database"}
-                      </button>
+                      {!isArchive ? (
+                        <button
+                          onClick={() => startRestoreFlow(backup)}
+                          disabled={restoring}
+                          className="flex-1 bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-600 font-black px-5 py-3 rounded-xl transition-all cursor-pointer border border-indigo-100 text-sm active:scale-95 disabled:opacity-50"
+                        >
+                          {language === 'ar' ? "استعادة البيانات" : "Restore Database"}
+                        </button>
+                      ) : (
+                        <div className="flex-1 bg-slate-50 text-slate-400 font-bold px-5 py-3 rounded-xl border border-slate-100 text-sm flex items-center justify-center text-center">
+                          {language === 'ar' ? "أرشيف مجمع (حمل لفك الضغط)" : "Bundled Archive (Download to extract)"}
+                        </div>
+                      )}
                       <button
                         onClick={() => handleDownloadBackup(backup.name)}
                         className="bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 p-3.5 rounded-xl transition-all cursor-pointer border border-transparent shrink-0"
@@ -422,7 +432,7 @@ export default function BackupsPage() {
                       </button>
                     </div>
                   </div>
-                ))}
+                )})}
               </div>
             )}
           </div>
