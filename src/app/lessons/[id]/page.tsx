@@ -72,6 +72,8 @@ export default function LessonPlayerPage() {
   const [highestStreak, setHighestStreak] = useState(0);
   const [sessionXP, setSessionXP] = useState(0);
   const [sessionBonusXP, setSessionBonusXP] = useState(0);
+  // Preview mode local counters (not persisted)
+  const previewStreakRef = React.useRef(0);
   const [toastFeedback, setToastFeedback] = useState<{
     type: 'success' | 'streak' | 'perfect' | 'incorrect';
     xp: number;
@@ -88,11 +90,56 @@ export default function LessonPlayerPage() {
     if (isPreviewMode) {
       // In preview mode: evaluate answer locally and show correct/incorrect feedback
       let isCorrect = true; // default for non-question blocks (read)
-      if (questionBlock && selectedAnswer !== 'read') {
+      const isRealQuestion = questionBlock && selectedAnswer !== 'read';
+      if (isRealQuestion) {
         isCorrect = checkAdvancedCorrect(questionBlock, selectedAnswer);
       }
+
+      // Calculate simulated XP based on question level
+      let simulatedXP = 0;
+      if (isRealQuestion && isCorrect) {
+        const lvl = String(questionBlock?.level || '').toLowerCase();
+        if (lvl === 'easy' || lvl === 'foundation') simulatedXP = 2;
+        else if (lvl === 'medium' || lvl === 'on level') simulatedXP = 4;
+        else simulatedXP = 10;
+        if (questionBlock?.xpPoints !== undefined) simulatedXP = Number(questionBlock.xpPoints) || simulatedXP;
+      }
+
+      // Update local streak in preview
+      if (isRealQuestion) {
+        if (isCorrect) {
+          previewStreakRef.current += 1;
+        } else {
+          previewStreakRef.current = 0;
+        }
+      }
+      const localStreak = previewStreakRef.current;
+
+      // Update local XP display
+      if (simulatedXP > 0) {
+        setTotalLessonXP(prev => prev + simulatedXP);
+        setSessionXP(prev => prev + simulatedXP);
+        setHighestStreak(prev => Math.max(prev, localStreak));
+      }
+      setCurrentStreak(localStreak);
+
+      // Preview streak milestone
+      let bonusXP = 0;
+      if (isRealQuestion && isCorrect && (localStreak === 5 || localStreak === 10)) {
+        bonusXP = localStreak === 5 ? 10 : 30;
+        setTotalLessonXP(prev => prev + bonusXP);
+        setSessionBonusXP(prev => prev + bonusXP);
+        setShowStreakMilestone({ count: localStreak, xp: bonusXP });
+      }
+
       setFeedbackKey(k => k + 1);
-      setToastFeedback({ type: isCorrect ? 'success' : 'incorrect', xp: 0, isCorrect, streakCount: 0 });
+      setToastFeedback({ 
+        type: isCorrect ? 'success' : 'incorrect', 
+        xp: simulatedXP, 
+        isCorrect, 
+        streakCount: localStreak,
+        bonusXP: bonusXP > 0 ? bonusXP : undefined
+      });
       return;
     }
 
@@ -825,7 +872,11 @@ export default function LessonPlayerPage() {
                   {/* Question Options for Slide */}
                   {isQuestionLike(lesson.slides[currentSlideIndex]) && (
                     <>
-                      {['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(lesson.slides[currentSlideIndex].label || lesson.slides[currentSlideIndex].type || 'MCQ') ? (
+                      {['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(
+                        (lesson.slides[currentSlideIndex].type === 'QUESTION'
+                          ? lesson.slides[currentSlideIndex].label
+                          : lesson.slides[currentSlideIndex].type) || 'MCQ'
+                      ) ? (
                         getQuestionOptions(lesson.slides[currentSlideIndex], language).length > 0 && (
                           <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-4xl">
                             {getQuestionOptions(lesson.slides[currentSlideIndex], language).map((opt: string, oIdx: number) => {
@@ -1071,7 +1122,11 @@ export default function LessonPlayerPage() {
                         {/* Question Input */}
                         {isQuestionLike(lesson.assignments[currentAssignmentIndex]) && (
                           <>
-                            {['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(lesson.assignments[currentAssignmentIndex].type || lesson.assignments[currentAssignmentIndex].label || 'MCQ') ? (
+                            {['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(
+                              (lesson.assignments[currentAssignmentIndex].type === 'QUESTION'
+                                ? lesson.assignments[currentAssignmentIndex].label
+                                : lesson.assignments[currentAssignmentIndex].type) || 'MCQ'
+                            ) ? (
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-4 mb-6">
                                 {getQuestionOptions(lesson.assignments[currentAssignmentIndex], language).map((opt: string, oIdx: number) => {
                                   const isMulti = lesson.assignments[currentAssignmentIndex].type === 'MULTI_SELECT' || lesson.assignments[currentAssignmentIndex].label === 'MULTI_SELECT';
@@ -1128,7 +1183,9 @@ export default function LessonPlayerPage() {
                                 <InteractiveQuestionRenderer
                                   question={{
                                     ...lesson.assignments[currentAssignmentIndex],
-                                    type: lesson.assignments[currentAssignmentIndex].type || lesson.assignments[currentAssignmentIndex].label || 'MCQ'
+                                    type: lesson.assignments[currentAssignmentIndex].type === 'QUESTION'
+                                      ? (lesson.assignments[currentAssignmentIndex].label || lesson.assignments[currentAssignmentIndex].type)
+                                      : (lesson.assignments[currentAssignmentIndex].type || lesson.assignments[currentAssignmentIndex].label || 'MCQ')
                                   }}
                                   value={assignmentAnswers[currentAssignmentIndex] || ''}
                                   onChange={(val: any) => {
@@ -1160,7 +1217,10 @@ export default function LessonPlayerPage() {
 
                         {assignmentSubmitted[currentAssignmentIndex] && isQuestionLike(lesson.assignments[currentAssignmentIndex]) && (() => {
                           const isMulti = lesson.assignments[currentAssignmentIndex].type === 'MULTI_SELECT' || lesson.assignments[currentAssignmentIndex].label === 'MULTI_SELECT';
-                          const isStandard = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(lesson.assignments[currentAssignmentIndex].type || lesson.assignments[currentAssignmentIndex].label || 'MCQ');
+                          const effectiveAType = lesson.assignments[currentAssignmentIndex].type === 'QUESTION'
+                            ? lesson.assignments[currentAssignmentIndex].label
+                            : lesson.assignments[currentAssignmentIndex].type;
+                          const isStandard = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(effectiveAType || 'MCQ');
                           const studentAnswers = assignmentAnswers[currentAssignmentIndex] || (isMulti ? [] : '');
                           
                           const isCorrect = isStandard
@@ -1349,7 +1409,12 @@ export default function LessonPlayerPage() {
                           <HtmlRenderer html={lesson.questions[currentQuestionIndex].text} tag="h3" className="text-lg md:text-2xl font-black text-slate-900 leading-relaxed tracking-tight break-words w-full text-start" />
                         </div>
 
-                        {['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(lesson.questions[currentQuestionIndex].type || lesson.questions[currentQuestionIndex].label || 'MCQ') ? (
+                        {/* Resolve effective type: if type='QUESTION', use label; otherwise use type */}
+                        {['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(
+                          (lesson.questions[currentQuestionIndex].type === 'QUESTION'
+                            ? lesson.questions[currentQuestionIndex].label
+                            : lesson.questions[currentQuestionIndex].type) || 'MCQ'
+                        ) ? (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-4 mb-6">
                             {getQuestionOptions(lesson.questions[currentQuestionIndex], language).map((opt: string, oIdx: number) => {
                               const isMulti = lesson.questions[currentQuestionIndex].type === 'MULTI_SELECT';
@@ -1397,7 +1462,9 @@ export default function LessonPlayerPage() {
                             <InteractiveQuestionRenderer
                               question={{
                                 ...lesson.questions[currentQuestionIndex],
-                                type: lesson.questions[currentQuestionIndex].type || lesson.questions[currentQuestionIndex].label || 'MCQ'
+                                type: lesson.questions[currentQuestionIndex].type === 'QUESTION'
+                                  ? (lesson.questions[currentQuestionIndex].label || lesson.questions[currentQuestionIndex].type)
+                                  : (lesson.questions[currentQuestionIndex].type || lesson.questions[currentQuestionIndex].label || 'MCQ')
                               }}
                               value={answers[currentQuestionIndex] || ''}
                               onChange={(val: any) => {
@@ -1427,7 +1494,10 @@ export default function LessonPlayerPage() {
 
                         {quizSubmitted[currentQuestionIndex] && (() => {
                           const isMulti = lesson.questions[currentQuestionIndex].type === 'MULTI_SELECT' || lesson.questions[currentQuestionIndex].label === 'MULTI_SELECT';
-                          const isStandard = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(lesson.questions[currentQuestionIndex].type || lesson.questions[currentQuestionIndex].label || 'MCQ');
+                          const effectiveQType = lesson.questions[currentQuestionIndex].type === 'QUESTION'
+                            ? lesson.questions[currentQuestionIndex].label
+                            : lesson.questions[currentQuestionIndex].type;
+                          const isStandard = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(effectiveQType || 'MCQ');
                           const studentAnswers = answers[currentQuestionIndex] || (isMulti ? [] : '');
                           
                           const isCorrect = isStandard

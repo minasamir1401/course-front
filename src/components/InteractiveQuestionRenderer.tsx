@@ -85,7 +85,10 @@ export default function InteractiveQuestionRenderer({ question, value, onChange,
 
   // Render individual component based on type
   const renderWidget = () => {
-    switch (question.type) {
+    // 💡 Fix: Support newer format where type="QUESTION" and label="MCQ"
+    const qType = question.type === "QUESTION" && question.label ? question.label : question.type;
+
+    switch (qType) {
       case "MCQ":
         return <McqRenderer question={question} value={value} onChange={onChange} language={language} />;
       case "TRUE_FALSE":

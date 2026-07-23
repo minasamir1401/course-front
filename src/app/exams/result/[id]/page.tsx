@@ -252,12 +252,24 @@ export default function ExamResultPage() {
                 </span>
               </h4>
             </div>
-            <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
+            <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex flex-col justify-center">
               <p className="text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">نتيجة التقييم</p>
               <h4 className={`text-2xl font-black ${isPassed ? "text-emerald-600" : "text-rose-600"}`}>
                 {isPassed ? "ناجح" : "راسب"}
               </h4>
             </div>
+            
+            {submission.earnedXP !== undefined && submission.earnedXP > 0 && (
+              <div className="col-span-full bg-indigo-50/50 p-6 rounded-3xl border border-indigo-100 flex flex-col items-center justify-center">
+                <p className="text-[10px] font-black text-indigo-400 mb-2 uppercase tracking-widest">نقاط الـ XP المكتسبة</p>
+                <h4 className="text-3xl font-black text-amber-500 flex items-center gap-2">
+                  <span>⭐</span>
+                  <span>+{submission.earnedXP}</span>
+                  <span className="text-xl">XP</span>
+                </h4>
+              </div>
+            )}
+            
             <Link
               href="/exams"
               className="col-span-full bg-slate-900 text-white py-5 rounded-2xl font-black text-lg flex items-center justify-center gap-3 hover:bg-black transition-all shadow-xl shadow-slate-200"

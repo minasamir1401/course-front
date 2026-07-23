@@ -15,9 +15,10 @@ export default function ReportsPage() {
   const router = useRouter();
   const { t, language } = useLanguage();
   const [stats, setStats] = useState<any>(null);
+  const [xpSummary, setXpSummary] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
-  const [activeReportTab, setActiveReportTab] = useState<'OVERVIEW' | 'EXAMS' | 'COURSES'>('OVERVIEW');
+  const [activeReportTab, setActiveReportTab] = useState<'OVERVIEW' | 'EXAMS' | 'COURSES' | 'GAMIFICATION'>('OVERVIEW');
 
   const fetchStats = async () => {
     setIsLoading(true);
@@ -30,12 +31,23 @@ export default function ReportsPage() {
         return;
       }
 
-      const res = await fetch(API_URL + "/student/stats", {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
+      // Fetch both stats and XP summary in parallel
+      const [res, xpRes] = await Promise.all([
+        fetch(API_URL + "/student/stats", {
+          headers: { "Authorization": `Bearer ${token}` }
+        }),
+        fetch(API_URL + "/student/xp-summary", {
+          headers: { "Authorization": `Bearer ${token}` }
+        })
+      ]);
+
       if (res.ok) {
         const data = await res.json();
         setStats(data);
+      }
+      if (xpRes.ok) {
+        const xpData = await xpRes.json();
+        setXpSummary(xpData);
       }
     } catch (error) {
       console.error("Failed to fetch reports data:", error);
@@ -117,6 +129,12 @@ export default function ReportsPage() {
             className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all whitespace-nowrap cursor-pointer ${activeReportTab === 'COURSES' ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100' : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'}`}
           >
             {t('reports.tabs.courses')}
+          </button>
+          <button 
+            onClick={() => setActiveReportTab('GAMIFICATION')}
+            className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all whitespace-nowrap cursor-pointer ${activeReportTab === 'GAMIFICATION' ? 'bg-amber-500 text-white shadow-md shadow-amber-100' : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'}`}
+          >
+            ⭐ {language === 'ar' ? 'XP والإنجازات' : 'XP & Achievements'}
           </button>
         </div>
 
@@ -368,6 +386,107 @@ export default function ReportsPage() {
                     })}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeReportTab === 'GAMIFICATION' && (
+          <div className="space-y-6" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+            {/* XP Summary Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+              {/* Total XP */}
+              <div className="relative overflow-hidden premium-card p-6 md:p-8 rounded-[30px] flex flex-col items-start gap-3 border-b-4 border-amber-400 group hover:scale-[1.02] transition-all col-span-2 md:col-span-1">
+                <div className="absolute top-0 right-0 w-40 h-40 bg-amber-50 rounded-full blur-3xl opacity-50" />
+                <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform shadow-inner">⭐</div>
+                <div>
+                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1">{language === 'ar' ? 'إجمالي نقاط XP' : 'Total XP Points'}</p>
+                  <p className="text-3xl md:text-4xl font-black text-amber-600">{xpSummary?.totalXP || stats?.xp || 0}</p>
+                  <p className="text-[10px] text-slate-400 font-bold mt-1">XP</p>
+                </div>
+              </div>
+
+              {/* Skills Hub XP */}
+              <div className="premium-card p-6 rounded-[30px] flex flex-col items-start gap-3 border-b-4 border-violet-400 group hover:scale-[1.02] transition-all">
+                <div className="w-12 h-12 rounded-2xl bg-violet-50 flex items-center justify-center text-xl group-hover:scale-110 transition-transform shadow-inner">🧠</div>
+                <div>
+                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1">{language === 'ar' ? 'مهارات Skills Hub' : 'Skills Hub XP'}</p>
+                  <p className="text-2xl font-black text-violet-600">{xpSummary?.skillsXP?.xp || 0}</p>
+                  <p className="text-[10px] text-slate-400 font-bold mt-0.5">XP</p>
+                </div>
+              </div>
+
+              {/* Completed Lessons */}
+              <div className="premium-card p-6 rounded-[30px] flex flex-col items-start gap-3 border-b-4 border-emerald-400 group hover:scale-[1.02] transition-all">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-xl group-hover:scale-110 transition-transform shadow-inner">📚</div>
+                <div>
+                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1">{language === 'ar' ? 'الدروس المكتملة' : 'Completed Lessons'}</p>
+                  <p className="text-2xl font-black text-emerald-600">{stats?.lessonProgresses?.filter((p: any) => p.isCompleted).length || 0}</p>
+                  <p className="text-[10px] text-slate-400 font-bold mt-0.5">{language === 'ar' ? 'درس' : 'lessons'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* XP by Course */}
+            {xpSummary?.courseXP && xpSummary.courseXP.length > 0 && (
+              <div className="premium-card p-6 md:p-8 rounded-[35px]">
+                <h3 className="font-black text-slate-900 mb-6 flex items-center gap-2 text-lg">
+                  <span className="text-amber-500">⭐</span>
+                  {language === 'ar' ? 'توزيع نقاط XP على الكورسات' : 'XP Distribution by Course'}
+                </h3>
+                <div className="space-y-4">
+                  {xpSummary.courseXP.sort((a: any, b: any) => b.xp - a.xp).map((course: any, idx: number) => {
+                    const maxXP = Math.max(...xpSummary.courseXP.map((c: any) => c.xp), 1);
+                    const pct = Math.round((course.xp / maxXP) * 100);
+                    const colors = ['bg-indigo-500', 'bg-violet-500', 'bg-blue-500', 'bg-emerald-500', 'bg-amber-500'];
+                    return (
+                      <div key={course.courseId || idx} className="space-y-1.5">
+                        <div className="flex justify-between items-center text-xs font-black">
+                          <span className="text-slate-700 truncate max-w-[70%]">{course.title}</span>
+                          <span className="text-amber-600 shrink-0">⭐ {course.xp} XP</span>
+                        </div>
+                        <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full ${colors[idx % colors.length]} rounded-full transition-all duration-1000`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Achievement Badges */}
+            <div className="premium-card p-6 md:p-8 rounded-[35px]">
+              <h3 className="font-black text-slate-900 mb-6 flex items-center gap-2 text-lg">
+                <span>🏆</span>
+                {language === 'ar' ? 'شارات الإنجاز' : 'Achievement Badges'}
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                  { emoji: '🎓', label: language === 'ar' ? 'متعلم نشط' : 'Active Learner', desc: language === 'ar' ? 'أكمل أول درس' : 'Complete 1st lesson', earned: (stats?.lessonProgresses?.filter((p: any) => p.isCompleted).length || 0) >= 1 },
+                  { emoji: '🔥', label: language === 'ar' ? 'تسلسل رائع' : 'Hot Streak', desc: language === 'ar' ? '5 إجابات صح متتالية' : '5 correct in a row', earned: (xpSummary?.totalXP || 0) >= 20 },
+                  { emoji: '⭐', label: language === 'ar' ? 'جامع XP' : 'XP Collector', desc: language === 'ar' ? '100 نقطة XP' : '100 XP earned', earned: (xpSummary?.totalXP || stats?.xp || 0) >= 100 },
+                  { emoji: '🏆', label: language === 'ar' ? 'بطل المسابقات' : 'Exam Champion', desc: language === 'ar' ? 'اجتاز 3 اختبارات' : 'Pass 3 exams', earned: (stats?.submissions?.filter((s: any) => s.percentage >= 50).length || 0) >= 3 },
+                ].map((badge, idx) => (
+                  <div
+                    key={idx}
+                    className={`relative p-5 rounded-3xl text-center border-2 transition-all ${
+                      badge.earned
+                        ? 'border-amber-200 bg-amber-50 shadow-lg shadow-amber-100'
+                        : 'border-slate-100 bg-slate-50 opacity-40 grayscale'
+                    }`}
+                  >
+                    <div className="text-4xl mb-2">{badge.emoji}</div>
+                    <p className="font-black text-sm text-slate-800">{badge.label}</p>
+                    <p className="text-[10px] text-slate-400 font-bold mt-1">{badge.desc}</p>
+                    {badge.earned && (
+                      <div className="absolute -top-2 -right-2 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center text-white text-xs font-black shadow">✓</div>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           </div>

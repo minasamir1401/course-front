@@ -44,16 +44,37 @@ export const checkAdvancedCorrect = (q: any, ans: any) => {
   return cleanStr(ans) === cleanStr(q.correctAnswer);
 };
 
-export const isQuestionLike = (item: any) =>
-  item?.type === 'QUESTION' || item?.type === 'MCQ' || item?.type === 'TRUE_FALSE' || item?.type === 'MULTI_SELECT' || item?.label === 'MULTI_SELECT';
+export const isQuestionLike = (item: any) => {
+  if (!item) return false;
+  const type = item.type || '';
+  const label = item.label || '';
+  // Any block with type='QUESTION' is question-like (regardless of label)
+  if (type === 'QUESTION') return true;
+  // Legacy direct types
+  const questionTypes = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT', 'MATCHING', 'DRAG_DROP_FILL',
+    'GROUP_SORTING', 'CLOCK', 'MIND_MAP', 'VIDEO_CHECKPOINT', 'NUMBER_LINE', 'SWIPE_SORT',
+    'MAZE', 'WORD_SEARCH', 'GEOGEBRA', 'FLASH_CARD', 'MEMORY_GAME', 'WORD_SCRAMBLE',
+    'SENTENCE_REORDER', 'MATH_EQUATION', 'SEQUENCE_ORDER', 'CROSSWORD', 'COUNT_OBJECTS',
+    'IMAGE_LABEL', 'COLOR_MATCH'];
+  if (questionTypes.includes(type)) return true;
+  if (questionTypes.includes(label)) return true;
+  return false;
+};
 
 export const getQuestionOptions = (q: any, language: string) => {
   if (!q) return [];
-  if (q.type === 'TRUE_FALSE') {
+  if (q.type === 'TRUE_FALSE' || q.label === 'TRUE_FALSE') {
     return ['True', 'False'];
   }
-  if (Array.isArray(q.options) && q.options.filter(Boolean).length > 0) {
-    return q.options.filter(Boolean);
+  let options = q.options;
+  if (typeof options === 'string') {
+    try {
+      const parsed = JSON.parse(options);
+      options = parsed.choices || parsed;
+    } catch (e) {}
+  }
+  if (Array.isArray(options) && options.filter(Boolean).length > 0) {
+    return options.filter(Boolean);
   }
   return [];
 };
