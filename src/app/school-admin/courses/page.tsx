@@ -47,25 +47,7 @@ export default function SchoolAdminCoursesPage() {
     }
   };
 
-  const handleDeleteCourse = async (id: string) => {
-    if (!window.confirm(t('schoolAdmin.classesPage.deleteConfirmMsg'))) return;
-    const token = localStorage.getItem("school_admin_token");
-    try {
-      const res = await fetch(`${API_URL}/school/courses/${id}`, {
-        method: 'DELETE',
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if (res.ok) {
-        showToast(t('schoolAdmin.teachersPage.deleteSuccess'), "success");
-        setCourses(prev => prev.filter(c => c.id !== id));
-      } else {
-        const errorData = await res.json().catch(() => ({}));
-        showToast(errorData.error || t('schoolAdmin.teachersPage.connError'), "error");
-      }
-    } catch (error) {
-      showToast(t('schoolAdmin.teachersPage.connError'), "error");
-    }
-  };
+
 
   const filteredCourses = courses.filter(c => 
     c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -185,12 +167,6 @@ export default function SchoolAdminCoursesPage() {
                            className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-all border border-slate-100"
                          >
                            <Edit2 className="w-5 h-5" />
-                         </button>
-                         <button 
-                           onClick={() => handleDeleteCourse(course.id)}
-                           className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:bg-red-600 hover:text-white flex items-center justify-center transition-all border border-slate-100"
-                         >
-                           <Trash2 className="w-5 h-5" />
                          </button>
                        </div>
                     </div>
