@@ -288,7 +288,7 @@ export default function LessonSummaryView({
                 {language === 'ar' ? 'الوقت المستغرق' : 'Time Spent'}
               </span>
               <span className="text-base font-black text-slate-800">
-                {Math.floor((quizTimer + assignmentTimer) / 60)} {language === 'ar' ? 'دقيقة' : 'min'}
+                {String(Math.floor((quizTimer + assignmentTimer) / 60)).padStart(2, '0')}:{String((quizTimer + assignmentTimer) % 60).padStart(2, '0')}
               </span>
             </div>
 
