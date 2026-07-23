@@ -357,7 +357,7 @@ function McqRenderer({ question, value, onChange, language }: any) {
                 }`}>
                   {getOptionLetter(idx, language)}
                 </span>
-                <HtmlRenderer html={translateText(cleanOptionText(choice), language)} tag="span" className={`font-black text-base transition-colors flex-1 break-words whitespace-normal min-w-0 !leading-relaxed ${isSelected ? "text-indigo-950" : "text-slate-700"}`} />
+                <HtmlRenderer html={translateText(cleanOptionText(choice), language)} tag="span" className={`font-bold font-sans text-base transition-colors flex-1 break-words whitespace-normal min-w-0 !leading-relaxed ${isSelected ? "text-indigo-950" : "text-slate-700"}`} />
               </div>
               <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ms-3 ${isSelected ? "border-indigo-650 bg-indigo-650 text-white" : "border-slate-300 bg-white"}`}>
                 {isSelected && <span className="w-2.5 h-2.5 rounded-full bg-white" />}
@@ -465,7 +465,7 @@ function MultiSelectRenderer({ question, value, onChange, language }: any) {
                 }`}>
                   {getOptionLetter(idx, language)}
                 </span>
-                <HtmlRenderer html={translateText(cleanOptionText(choice), language)} tag="span" className={`font-black text-base transition-colors flex-1 break-words whitespace-normal min-w-0 !leading-relaxed ${isSelected ? "text-indigo-950" : "text-slate-700"}`} />
+                <HtmlRenderer html={translateText(cleanOptionText(choice), language)} tag="span" className={`font-bold font-sans text-base transition-colors flex-1 break-words whitespace-normal min-w-0 !leading-relaxed ${isSelected ? "text-indigo-950" : "text-slate-700"}`} />
               </div>
               <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all shrink-0 ms-3 ${isSelected ? "border-indigo-650 bg-indigo-650 text-white" : "border-slate-300 bg-white"}`}>
                 {isSelected && <CheckCircle2 className="w-4 h-4 text-white" />}
@@ -593,7 +593,7 @@ function MatchingRenderer({ question, value, onChange, language }: any) {
                       : "bg-white border-slate-200 text-slate-700 hover:border-slate-350"
                 }`}
               >
-                <span className="font-bold text-sm truncate">{translateText(item, language)}</span>
+                <span className="font-bold font-sans text-sm break-words whitespace-normal leading-relaxed">{translateText(item, language)}</span>
                 
                 {/* Visual anchor dot */}
                 <div className={`absolute w-3.5 h-3.5 rounded-full border-2 border-indigo-400 bg-white top-1/2 -translate-y-1/2 transition-transform ${
@@ -636,7 +636,7 @@ function MatchingRenderer({ question, value, onChange, language }: any) {
                   language === 'ar' ? '-right-1.75' : '-left-1.75'
                 } ${isMatched ? 'scale-125 bg-emerald-600 border-white shadow' : ''}`} />
 
-                <span className="font-bold text-sm truncate">{translateText(item, language)}</span>
+                <span className="font-bold font-sans text-sm break-words whitespace-normal leading-relaxed">{translateText(item, language)}</span>
               </div>
             );
           })}

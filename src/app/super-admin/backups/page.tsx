@@ -381,7 +381,7 @@ export default function BackupsPage() {
                 </button>
               </div>
             ) : (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 max-h-[600px] overflow-y-auto custom-scrollbar pr-2">
                 {backups.map((backup) => (
                   <div 
                     key={backup.name} 
