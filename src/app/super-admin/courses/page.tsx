@@ -92,7 +92,7 @@ export default function SuperAdminCoursesPage() {
       const token = localStorage.getItem("super_admin_token");
       const url = new URL(`${API_URL}/courses`);
       url.searchParams.append("page", page.toString());
-      url.searchParams.append("limit", "12");
+      url.searchParams.append("limit", "100");
       if (debouncedSearch) {
         url.searchParams.append("search", debouncedSearch);
       }
@@ -130,7 +130,7 @@ export default function SuperAdminCoursesPage() {
       const token = localStorage.getItem("super_admin_token");
       const url = new URL(`${API_URL}/courses`);
       url.searchParams.append("page", "1");
-      url.searchParams.append("limit", "12");
+      url.searchParams.append("limit", "100");
 
       const res = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${token}` }
@@ -261,6 +261,25 @@ export default function SuperAdminCoursesPage() {
     }
   };
 
+  const handleRestoreFromCloud = async () => {
+    try {
+      const token = localStorage.getItem("super_admin_token");
+      showToast(language === "ar" ? "جاري استرجاع الكورسات والدروس من السحابة..." : "Restoring courses & lessons from cloud...", "info");
+      const res = await fetch(`${API_URL}/admin/backup/restore-from-cloud`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to restore from cloud");
+
+      showToast(data.message || (language === "ar" ? "تمت استعادة البيانات بنجاح" : "Cloud data restored successfully"), "success");
+      fetchCourses(true);
+      fetchStats();
+    } catch (err: any) {
+      showToast(err.message || (language === "ar" ? "فشل الاسترجاع السحابي" : "Failed to restore cloud backup"), "error");
+    }
+  };
+
   const stats = React.useMemo(() => ({
     total: apiStats.totalCourses,
     lessons: apiStats.totalLessons,
@@ -296,6 +315,14 @@ export default function SuperAdminCoursesPage() {
                     accept=".json,application/json"
                     className="hidden"
                   />
+                  <button 
+                    onClick={handleRestoreFromCloud}
+                    className="group bg-sky-50 text-sky-600 border border-sky-100 px-6 sm:px-8 py-3 sm:py-5 rounded-xl sm:rounded-[22px] font-black text-xs sm:text-xl shadow-sm hover:scale-105 transition-all flex items-center gap-2 sm:gap-4 justify-center"
+                    title={language === 'ar' ? "استرجاع كافة الكورسات والدروس من السحابة" : "Restore all courses & lessons from cloud"}
+                  >
+                    <DownloadCloud className="w-4 h-4 sm:w-6 h-6" />
+                    {language === 'ar' ? "استرجاع السحابة" : "Restore Cloud"}
+                  </button>
                   <button 
                     onClick={() => setIsImportModalOpen(true)}
                     className="group bg-indigo-50 text-indigo-600 px-6 sm:px-8 py-3 sm:py-5 rounded-xl sm:rounded-[22px] font-black text-xs sm:text-xl shadow-sm hover:scale-105 transition-all flex items-center gap-2 sm:gap-4 justify-center"
