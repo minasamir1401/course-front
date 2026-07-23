@@ -22,6 +22,8 @@ export default function BackupsPage() {
   const { showToast } = useNotification();
   const { t, language } = useLanguage();
   const [backups, setBackups] = useState<BackupFile[]>([]);
+  const individualBackups = backups.filter(b => !(b.type === 'ARCHIVE' || b.name.includes('.zip') || b.name.includes('مجمع')));
+  const archiveBackups = backups.filter(b => (b.type === 'ARCHIVE' || b.name.includes('.zip') || b.name.includes('مجمع')));
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [restoring, setRestoring] = useState(false);
@@ -204,6 +206,30 @@ export default function BackupsPage() {
     }
   };
 
+  const handleCreateManualArchive = async () => {
+    if (creating) return;
+    setCreating(true);
+    try {
+      const token = localStorage.getItem("super_admin_token") || localStorage.getItem("token");
+      const res = await fetch(`${API_URL}/admin/backup/bundle-manual`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        showToast(language === 'ar' ? "تم إنشاء الأرشيف المجمع وحفظه بنجاح" : "Bundled archive created and saved successfully", "success");
+        await fetchBackups();
+      } else {
+        const error = await res.json();
+        showToast(error.error || "خطأ في إنشاء الأرشيف", "error");
+      }
+    } catch (e) {
+      console.error(e);
+      showToast("خطأ في الاتصال بالخادم", "error");
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const startRestoreFlow = (backup: BackupFile) => {
     setSelectedBackup(backup);
     setShowConfirmModal(true);
@@ -319,12 +345,12 @@ export default function BackupsPage() {
               <span>{language === 'ar' ? "رفع نسخة احتياطية" : "Upload JSON Backup"}</span>
             </button>
             <button 
-              onClick={handleDownloadAllBackups}
+              onClick={handleCreateManualArchive}
               disabled={creating || uploading || restoring || backups.length === 0}
               className="bg-purple-600/20 hover:bg-purple-600 border border-purple-500/50 hover:border-purple-500 text-white font-bold px-6 py-4 rounded-2xl flex items-center gap-3 transition-all cursor-pointer backdrop-blur-md shadow-md text-sm active:scale-95 disabled:opacity-50"
             >
-              <FileJson className="w-5 h-5 text-purple-300" />
-              <span>{language === 'ar' ? "تحميل الكل كـ ZIP" : "Download All (ZIP)"}</span>
+              <Archive className="w-5 h-5 text-purple-300" />
+              <span>{language === 'ar' ? "تجميع وحفظ كـ ZIP" : "Bundle & Save as ZIP"}</span>
             </button>
             <button 
               onClick={handleCreateBackup}
@@ -437,35 +463,56 @@ export default function BackupsPage() {
             )}
           </div>
 
-          {/* Security Advisory Panel */}
+          {/* Bundled Archives Area */}
           <div className="space-y-6">
-            <h3 className="text-xl font-black text-slate-800 px-2">{language === 'ar' ? "إرشادات الأمان" : "Security & Safety Guide"}</h3>
-            <div className="bg-gradient-to-b from-amber-50 to-orange-50 border border-amber-200 rounded-[35px] p-8 space-y-6 shadow-sm">
-              <div className="flex items-center gap-4 text-amber-700">
-                <ShieldAlert className="w-8 h-8 shrink-0" />
-                <h4 className="text-lg font-black">{language === 'ar' ? "تنبيه أمان هام" : "Critical Safety Alert"}</h4>
-              </div>
-              <ul className="space-y-4 text-slate-600 text-sm font-semibold leading-relaxed list-disc list-inside">
-                <li>
-                  {language === 'ar' 
-                    ? "تقوم الاستعادة الآن بدمج البيانات من النسخة الاحتياطية مع البيانات الحالية بدل مسحها بالكامل." 
-                    : "Restore now merges backup data into the current database instead of wiping it completely."}
-                </li>
-                <li>
-                  {language === 'ar' 
-                    ? "يتم تدوين وحفظ النسخ الاحتياطية المرفوعة يدوياً بصيغة JSON آمنة ومستقلة." 
-                    : "Manually uploaded JSON backup checkpoints are parsed and validated strictly before execution."}
-                </li>
-                <li>
-                  {language === 'ar' 
-                    ? "ننصح بإنشاء نسخة احتياطية جديدة قبل أي استعادة حتى يكون عندك نقطة رجوع واضحة لو احتجت." 
-                    : "We still recommend creating a fresh checkpoint before any restore so you always have a rollback point."}
-                </li>
-              </ul>
-              <div className="pt-4 border-t border-amber-200/50 flex items-center gap-3 text-amber-800 text-xs font-black">
-                <ShieldCheck className="w-5 h-5 shrink-0" />
-                <span>{language === 'ar' ? "محمي بنظام تأكيد الهوية المزدوج" : "Multi-factor modal security active"}</span>
-              </div>
+            <h3 className="text-xl font-black text-slate-800 px-2 flex items-center gap-3">
+              <Archive className="w-6 h-6 text-purple-600" />
+              <span>{language === 'ar' ? "النسخ المجمعة" : "Bundled Archives"} ({archiveBackups.length})</span>
+            </h3>
+            <div className="bg-gradient-to-b from-purple-50 to-indigo-50 border border-purple-100 rounded-[35px] p-6 shadow-sm min-h-[400px]">
+              {archiveBackups.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center gap-4 text-purple-300 opacity-80 pt-10">
+                  <Archive className="w-16 h-16" />
+                  <p className="font-bold text-sm text-purple-400">
+                    {language === 'ar' ? "لا يوجد أرشيف مجمع حالياً" : "No bundled archives available"}
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4 max-h-[600px] overflow-y-auto custom-scrollbar pr-2">
+                  {archiveBackups.map((backup) => (
+                    <div 
+                      key={backup.name} 
+                      className="bg-white hover:bg-purple-50/50 border border-purple-100 rounded-[24px] p-5 flex flex-col gap-3 shadow-sm transition-all"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-purple-100 text-purple-600 rounded-xl flex items-center justify-center shrink-0">
+                          <Archive className="w-5 h-5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-sm font-black text-slate-800 break-words whitespace-normal" title={backup.name}>{backup.name}</h4>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-slate-400 font-bold text-[10px]">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {formatDate(backup.createdAt)}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <HardDrive className="w-3 h-3" />
+                          {formatSize(backup.size)}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => handleDownloadBackup(backup.name)}
+                        className="w-full bg-purple-100 hover:bg-purple-600 hover:text-white text-purple-600 font-black px-4 py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 text-xs"
+                      >
+                        <Download className="w-4 h-4" />
+                        {language === 'ar' ? "تحميل الأرشيف" : "Download Archive"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
