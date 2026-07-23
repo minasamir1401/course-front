@@ -1884,7 +1884,7 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
 
                   {previewQuestion.type !== "TEXT" && (
                     <div className="flex flex-col gap-4">
-                      {(previewQuestion.type === "MCQ" || previewQuestion.type === "MULTI_SELECT" ? previewQuestion.options : ["True", "False"]).filter((o: string) => o).map((option: string, i: number) => {
+                      {(previewQuestion.type === "MCQ" || previewQuestion.type === "MULTI_SELECT" ? previewQuestion.options : (language === 'ar' ? ["صحيح", "خطأ"] : ["True", "False"])).filter((o: string) => o).map((option: string, i: number) => {
                         const isSelected = previewQuestion.type === "MULTI_SELECT"
                           ? (previewSelectedAnswer as string[]).includes(option)
                           : previewSelectedAnswer === option;

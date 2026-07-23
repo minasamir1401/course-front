@@ -1934,7 +1934,7 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId }: { p
 
                   {previewQuestion.type !== "TEXT" && (
                     <div className="flex flex-col gap-4">
-                      {(previewQuestion.type === "MCQ" || previewQuestion.type === "MULTI_SELECT" ? previewQuestion.options : ["True", "False"]).filter((o: string) => o).map((option: string, i: number) => (
+                      {(previewQuestion.type === "MCQ" || previewQuestion.type === "MULTI_SELECT" ? previewQuestion.options : (language === 'ar' ? ["صحيح", "خطأ"] : ["True", "False"])).filter((o: string) => o).map((option: string, i: number) => (
                         <button
                           key={i}
                           className="w-full text-left p-6 rounded-3xl border-2 border-slate-100 bg-white hover:border-indigo-600 hover:bg-indigo-50/30 transition-all flex items-center gap-5 group"

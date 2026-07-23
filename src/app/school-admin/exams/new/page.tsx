@@ -1806,7 +1806,7 @@ export function SchoolAdminNewExamPageContent({ presetType, presetCourseId }: { 
                   )}
 
                   <div className="flex flex-col gap-4">
-                    {(previewQuestion.type === "MCQ" || previewQuestion.type === "MULTI_SELECT" ? previewQuestion.options : [t('schoolAdmin.examsNewPage.correct') || "صحيح", t('schoolAdmin.examsNewPage.incorrect') || "خطأ"]).filter((o: string) => o).map((option: string, i: number) => (
+                    {(previewQuestion.type === "MCQ" || previewQuestion.type === "MULTI_SELECT" ? previewQuestion.options : (language === 'ar' ? [t('schoolAdmin.examsNewPage.correct') || "صحيح", t('schoolAdmin.examsNewPage.incorrect') || "خطأ"] : ["True", "False"])).filter((o: string) => o).map((option: string, i: number) => (
                       <button
                         key={i}
                         className={`w-full p-6 rounded-3xl border-2 border-slate-100 bg-white hover:border-indigo-600 hover:bg-indigo-50/30 transition-all flex items-center gap-5 group cursor-pointer ${language === 'ar' ? 'text-right' : 'text-left'}`}
