@@ -92,8 +92,6 @@ export default function AnimatedFeedback({ isCorrect, xp, streak, onComplete }: 
           )}
         </div>
 
-        </div>
-
         {/* Separated Badges: XP & Streak */}
         {isCorrect && (
           <div className="mt-6 flex items-center gap-4">
