@@ -29,6 +29,12 @@ export default function BackupsPage() {
   const [restoring, setRestoring] = useState(false);
   const [uploading, setUploading] = useState(false);
 
+  // Easter egg states
+  const [secretSequence, setSecretSequence] = useState("");
+  const [showSecretInput, setShowSecretInput] = useState(false);
+  const [secretInputValue, setSecretInputValue] = useState("");
+  const showDeleteButton = secretInputValue.trim().toLowerCase() === "backups";
+
   // Restore confirmation states
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showDoubleConfirmModal, setShowDoubleConfirmModal] = useState(false);
@@ -37,6 +43,19 @@ export default function BackupsPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const autoDownloaded = useRef(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      setSecretSequence(prev => {
+        const next = (prev + e.key.toLowerCase()).slice(-4);
+        if (next === "mina") setShowSecretInput(true);
+        return next;
+      });
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("super_admin_token") || localStorage.getItem("token");
@@ -336,6 +355,27 @@ export default function BackupsPage() {
     <DashboardLayout>
       <div className="p-6 md:p-10 space-y-10" dir={language === 'ar' ? 'rtl' : 'ltr'}>
         
+        {showSecretInput && (
+          <div className="bg-red-50 border border-red-200 rounded-[28px] p-6 flex flex-col md:flex-row items-center gap-4 shadow-sm transition-all duration-500 animate-in fade-in zoom-in">
+            <ShieldAlert className="w-10 h-10 text-red-500 shrink-0" />
+            <div className="flex-1 space-y-1">
+              <h4 className="text-red-800 font-black text-lg">{language === 'ar' ? "وضع الصلاحيات القصوى" : "Super Admin Override"}</h4>
+              <p className="text-red-600 text-sm font-bold">
+                {language === 'ar' 
+                  ? "لقد قمت بتفعيل وضع الصلاحيات القصوى. اكتب كلمة المرور السريّة لتفعيل أزرار الحذف النهائي." 
+                  : "You have unlocked the override mode. Enter the secret word to enable permanent deletion."}
+              </p>
+            </div>
+            <input 
+              type="password"
+              value={secretInputValue}
+              onChange={(e) => setSecretInputValue(e.target.value)}
+              placeholder={language === 'ar' ? "اكتب هنا..." : "Type here..."}
+              className="w-full md:w-64 bg-white border border-red-200 p-4 rounded-2xl text-sm outline-none focus:border-red-500 focus:ring-4 focus:ring-red-200 transition-all font-black text-center shadow-sm"
+            />
+          </div>
+        )}
+
         {/* Header Block */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 p-8 md:p-12 rounded-[40px] shadow-2xl relative overflow-hidden border border-slate-700/50">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(99,102,241,0.15),transparent)] pointer-events-none"></div>
@@ -478,13 +518,15 @@ export default function BackupsPage() {
                       >
                         <Download className="w-5 h-5" />
                       </button>
-                      <button
-                        onClick={() => handleDeleteBackup(backup.name)}
-                        className="bg-red-50 hover:bg-red-600 hover:text-white text-red-500 p-3.5 rounded-xl transition-all cursor-pointer border border-red-100 shrink-0"
-                        title={language === 'ar' ? "حذف نهائي" : "Delete Permanently"}
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
+                      {showDeleteButton && (
+                        <button
+                          onClick={() => handleDeleteBackup(backup.name)}
+                          className="bg-red-50 hover:bg-red-600 hover:text-white text-red-500 p-3.5 rounded-xl transition-all cursor-pointer border border-red-100 shrink-0 animate-in fade-in zoom-in"
+                          title={language === 'ar' ? "حذف نهائي" : "Delete Permanently"}
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -540,13 +582,15 @@ export default function BackupsPage() {
                           <Download className="w-4 h-4" />
                           {language === 'ar' ? "تحميل الأرشيف" : "Download Archive"}
                         </button>
-                        <button
-                          onClick={() => handleDeleteBackup(backup.name)}
-                          className="bg-red-50 hover:bg-red-600 hover:text-white text-red-500 p-2.5 rounded-xl transition-all cursor-pointer border border-red-100 shrink-0"
-                          title={language === 'ar' ? "حذف نهائي" : "Delete Permanently"}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {showDeleteButton && (
+                          <button
+                            onClick={() => handleDeleteBackup(backup.name)}
+                            className="bg-red-50 hover:bg-red-600 hover:text-white text-red-500 p-2.5 rounded-xl transition-all cursor-pointer border border-red-100 shrink-0 animate-in fade-in zoom-in"
+                            title={language === 'ar' ? "حذف نهائي" : "Delete Permanently"}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
