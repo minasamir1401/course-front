@@ -140,6 +140,29 @@ export default function BackupsPage() {
     }
   };
 
+  const handleDownloadAllBackups = async () => {
+    try {
+      const token = localStorage.getItem("super_admin_token") || localStorage.getItem("token");
+      const url = `${API_URL}/admin/backup/download-all?token=${token}`;
+      
+      const link = document.createElement("a");
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      showToast(
+        language === 'ar' 
+          ? "جاري تجهيز وتحميل جميع النسخ في ملف ZIP واحد..." 
+          : "Preparing and downloading all backups as a single ZIP file...", 
+        "success"
+      );
+    } catch (e) {
+      console.error(e);
+      showToast(language === 'ar' ? "فشل تحميل الملفات" : "Failed to download backups", "error");
+    }
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -292,6 +315,14 @@ export default function BackupsPage() {
             >
               {uploading ? <Loader2 className="w-5 h-5 animate-spin text-slate-300" /> : <Upload className="w-5 h-5 text-indigo-400" />}
               <span>{language === 'ar' ? "رفع نسخة احتياطية" : "Upload JSON Backup"}</span>
+            </button>
+            <button 
+              onClick={handleDownloadAllBackups}
+              disabled={creating || uploading || restoring || backups.length === 0}
+              className="bg-purple-600/20 hover:bg-purple-600 border border-purple-500/50 hover:border-purple-500 text-white font-bold px-6 py-4 rounded-2xl flex items-center gap-3 transition-all cursor-pointer backdrop-blur-md shadow-md text-sm active:scale-95 disabled:opacity-50"
+            >
+              <FileJson className="w-5 h-5 text-purple-300" />
+              <span>{language === 'ar' ? "تحميل الكل كـ ZIP" : "Download All (ZIP)"}</span>
             </button>
             <button 
               onClick={handleCreateBackup}
