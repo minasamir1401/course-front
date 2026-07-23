@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { LayoutDashboard, Building2, Users, GraduationCap, Settings, LogOut, Menu, X, ClipboardList, BookOpen, UserCheck, Shield, Plus, PieChart, Layers, Database, Activity } from 'lucide-react';
+import { LayoutDashboard, Building2, Users, GraduationCap, Settings, LogOut, Menu, X, ClipboardList, BookOpen, UserCheck, Shield, Plus, PieChart, Layers, Database, Activity, Trash2 } from 'lucide-react';
 import { logout } from "@/lib/auth";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -91,6 +91,7 @@ export default function SuperAdminSidebar({
             <SidebarLink href="/super-admin/schools" icon={Building2} label={t('superAdmin.sidebar.manageSchools')} active={isActive('/super-admin/schools')} />
             <SidebarLink href="/super-admin/users" icon={Users} label={t('superAdmin.sidebar.manageUsers')} active={isActive('/super-admin/users')} />
             <SidebarLink href="/super-admin/backups" icon={Database} label={language === 'ar' ? "النسخ الاحتياطي" : "System Backups"} active={isActive('/super-admin/backups')} />
+            <SidebarLink href="/super-admin/trash" icon={Trash2} label={language === 'ar' ? "سلة المهملات" : "Trash Bin"} active={isActive('/super-admin/trash')} />
           </div>
 
           {/* EXAMS */}
