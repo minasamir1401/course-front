@@ -44,13 +44,33 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
   });
 
   try {
-    const requestInit: RequestInit & { duplex: 'half' } = {
+    let bodyData: any = undefined;
+    let isStream = false;
+
+    if (req.method !== 'GET' && req.method !== 'HEAD' && req.body) {
+      const contentType = req.headers.get('content-type') || '';
+      if (contentType.includes('multipart/form-data')) {
+        bodyData = req.body;
+        isStream = true;
+      } else {
+        const arrayBuffer = await req.arrayBuffer();
+        if (arrayBuffer.byteLength > 0) {
+          bodyData = arrayBuffer;
+        }
+      }
+    }
+
+    const requestInit: RequestInit & { duplex?: 'half' } = {
       method: req.method,
       headers,
-      body: req.method !== 'GET' && req.method !== 'HEAD' ? req.body : undefined,
-      duplex: 'half',
+      body: bodyData,
       redirect: 'follow',
+      cache: 'no-store',
     };
+
+    if (isStream) {
+      requestInit.duplex = 'half';
+    }
 
     const backendResponse = await fetch(targetUrl, requestInit);
 
