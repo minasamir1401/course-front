@@ -1984,11 +1984,7 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
                           </div>
                         )}
                       
-                    {showQuestionForm && editingIndex === index && (
-                      <div className="border-t-2 border-dashed border-indigo-100 p-6 bg-slate-50/80 mt-4 rounded-b-[30px]">
-                        {renderQuestionForm()}
-                      </div>
-                    )}
+
                   </div>
                     ))}
                   </div>
@@ -1997,10 +1993,18 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
             )}
 
             {/* Question Form (Add/Edit) */}
-            {showQuestionForm && editingIndex === null && renderQuestionForm()}
           </div>
         </div>
       </div>
+
+      {/* Question Form Modal */}
+      {showQuestionForm && (
+        <div className="fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-md flex justify-center items-start pt-10 pb-10 px-4 overflow-y-auto" onClick={() => setShowQuestionForm(false)}>
+          <div className="w-full max-w-5xl relative" onClick={e => e.stopPropagation()}>
+            {renderQuestionForm()}
+          </div>
+        </div>
+      )}
 
       {/* Student Preview Modal */}
       {previewQuestion && (
