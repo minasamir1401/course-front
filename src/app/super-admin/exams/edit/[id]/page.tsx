@@ -15,6 +15,7 @@ import VideoPlayer from "@/components/VideoPlayer";
 import MathInput from "@/components/MathInput";
 import { ItemSectionsBubbles, MetadataModalButton } from '@/components/LessonSubComponents';
 import HtmlRenderer from "@/components/HtmlRenderer";
+import { isOptionMatch } from "@/lib/answerEvaluation";
 
 export default function SuperAdminEditExamPage({ presetType }: { presetType?: 'Exam' | 'Quiz' | 'Assignment' }) {
   return (
@@ -609,12 +610,19 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
       return;
     }
 
+    const validSections = (currentQuestion.sections || []).filter((s: any) => s && String(s.content || s.text || '').trim() !== '');
+    const updatedQ = {
+      ...currentQuestion,
+      sections: currentQuestion.sections && currentQuestion.sections.length > 0 ? currentQuestion.sections : [{ type: "EXPLANATION", content: "" }],
+      explanation: validSections.length > 0 ? JSON.stringify(validSections) : (currentQuestion.explanation || null)
+    };
+
     if (editingIndex !== null) {
       const newQuestions = [...questions];
-      newQuestions[editingIndex] = currentQuestion;
+      newQuestions[editingIndex] = updatedQ;
       setQuestions(newQuestions);
     } else {
-      setQuestions([...questions, currentQuestion]);
+      setQuestions([...questions, updatedQ]);
     }
 
     setShowQuestionForm(false);
@@ -699,29 +707,12 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
 
   const isCorrectAnswer = (question: any, option: string, index?: number) => {
     if (question.type === "MULTI_SELECT") {
-      return question.correctAnswers?.includes(option);
+      if (Array.isArray(question.correctAnswers) && question.correctAnswers.length > 0) {
+        return question.correctAnswers.some((c: any) => isOptionMatch(c, option, index ?? -1));
+      }
+      return isOptionMatch(question.correctAnswer, option, index ?? -1);
     }
-    if (question.type === "TRUE_FALSE") {
-      let tFn = typeof t !== 'undefined' ? t : (key: string) => key;
-      const trueValues = ["True", "true", "صحيح", "صح", "صواب", "1", "Correct", "correct", tFn('schoolAdmin.examsNewPage.correct')];
-      const falseValues = ["False", "false", "خطأ", "خاطئ", "غير صحيح", "0", "Incorrect", "incorrect", tFn('schoolAdmin.examsNewPage.incorrect')];
-
-      const optionNorm = String(option || "").trim();
-      const correctNorm = String(question.correctAnswer || "").trim();
-
-      const isOptionTrue = trueValues.includes(optionNorm);
-      const isOptionFalse = falseValues.includes(optionNorm);
-      const isCorrectTrue = trueValues.includes(correctNorm);
-      const isCorrectFalse = falseValues.includes(correctNorm);
-
-      if (isOptionTrue && isCorrectTrue) return true;
-      if (isOptionFalse && isCorrectFalse) return true;
-      return false;
-    }
-    if (question.correctAnswerIndex !== undefined && index !== undefined && question.correctAnswerIndex === index) {
-      return true;
-    }
-    return question.correctAnswer === option;
+    return isOptionMatch(question.correctAnswer, option, index ?? -1);
   };
 
   const handleSelectAll = () => {
@@ -852,10 +843,14 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
 
       const questionsPayload = questionsForSave.map(q => {
         let finalExplanation = "[]";
-        if (q.sections && q.sections.length > 0) {
-          finalExplanation = JSON.stringify(q.sections);
+        const validSections = (q.sections || []).filter((s: any) => s && (String(s.content || s.text || '').trim() !== ''));
+        if (validSections.length > 0) {
+          finalExplanation = JSON.stringify(validSections);
         } else if (q.explanation) {
-          finalExplanation = typeof q.explanation === 'string' ? q.explanation : JSON.stringify(q.explanation);
+          const rawExp = typeof q.explanation === 'string' ? q.explanation.trim() : JSON.stringify(q.explanation);
+          if (rawExp && rawExp !== '[]' && rawExp !== '""' && rawExp !== '[{"type":"EXPLANATION","content":""}]') {
+            finalExplanation = rawExp;
+          }
         }
         return {
           ...q,
@@ -2091,7 +2086,7 @@ export function SuperAdminEditExamPageContent({ presetType }: { presetType?: 'Ex
               )}
 
               {previewQuestion.type !== "TEXT" && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {(previewQuestion.type === "MCQ" || previewQuestion.type === "MULTI_SELECT"
                     ? previewQuestion.options.filter((o: string) => o.trim() !== "")
                     : ["True", "False"]

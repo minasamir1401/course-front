@@ -213,6 +213,7 @@ export const CourseEditorProvider: React.FC<{
   const tokenKey = role === "SUPER_ADMIN" ? "super_admin_token" : "school_admin_token";
   // Ref to prevent draft auto-save from firing immediately after restore
   const justRestoredRef = useRef(false);
+  const isSavingRef = useRef(false);
 
   useEffect(() => {
     const handleGlobalClick = (event: MouseEvent) => {
@@ -447,18 +448,9 @@ export const CourseEditorProvider: React.FC<{
             }
 
             try {
-              parsedSlides = typeof l.slides === "string" ? JSON.parse(l.slides) : l.slides || [];
+              parsedSlides = typeof l.slides === "string" ? JSON.parse(l.slides) : (l.slides || []);
             } catch (e) {
-              parsedSlides = [
-                {
-                  id: Date.now(),
-                  type: "TEXT",
-                  label: "CONTENT",
-                  title: language === "ar" ? "المقدمة" : "Introduction",
-                  content: "",
-                  sections: [],
-                },
-              ];
+              parsedSlides = [];
             }
 
             return {
@@ -716,6 +708,9 @@ export const CourseEditorProvider: React.FC<{
       showToast(language === "ar" ? "يجب إدخال عنوان الدرس" : "Lesson title is required", "error");
       return;
     }
+    if (isSavingRef.current) return;
+    isSavingRef.current = true;
+    
     // Optimistic local update (will be replaced by server response)
     const newLessons = [...lessons];
     if (editingLessonIndex !== null) {
@@ -727,21 +722,23 @@ export const CourseEditorProvider: React.FC<{
     setIsLessonModalOpen(false);
 
     const token = localStorage.getItem(tokenKey) || localStorage.getItem("token");
-    if (!token || !courseId) return;
-
-    // 🛡️ SAFETY: Backend disabled deletion during course update, so empty lessons array is safe.
+    if (!token || !courseId) {
+      isSavingRef.current = false;
+      return;
+    }
 
     try {
       const targetSchoolIds = (courseData.schoolIds || []).filter(Boolean);
 
-      // 🛡️ SAFE SLIDES PATCH — update slides separately to avoid overwrite
-      if (currentLesson.id && currentLesson.slides && currentLesson.slides.length > 0) {
-        fetch(`${API_URL}/lessons/${currentLesson.id}/slides`, {
-          method: "PATCH",
-          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ slides: JSON.stringify(currentLesson.slides) }),
-        }).catch(() => {});
-      }
+      // ✅ ROOT CAUSE FIX: Removed fire-and-forget slides PATCH.
+      // Slides are already sent in the PUT body (line ~767), so a separate PATCH was redundant
+      // AND caused race conditions: PUT returned old slides from DB before PATCH completed.
+
+      // Deduplicate lessons by ID: if currentLesson is already in newLessons (by ID), don't add again
+      const deduplicatedLessons = newLessons.filter((l, idx, arr) => {
+        if (!l.id) return true; // keep new (no-ID) lessons
+        return arr.findIndex(other => other.id === l.id) === idx;
+      });
 
       const res = await fetch(`${API_URL}/school/courses/${courseId}`, {
         method: "PUT",
@@ -754,7 +751,7 @@ export const CourseEditorProvider: React.FC<{
           isCentral: role === "SUPER_ADMIN" ? targetSchoolIds.length === 0 : false,
           schoolId: role === "SUPER_ADMIN" ? (targetSchoolIds.length > 0 ? targetSchoolIds[0] : null) : schoolIdParam,
           schoolIds: role === "SUPER_ADMIN" ? targetSchoolIds : [schoolIdParam],
-          lessons: newLessons.map((l) => ({
+          lessons: deduplicatedLessons.map((l) => ({
             id: l.id,
             title: l.title,
             domain: l.domain || null,
@@ -777,6 +774,51 @@ export const CourseEditorProvider: React.FC<{
 
       if (res.ok) {
         clearDraft(); // clear emergency draft after successful save
+        const data = await res.json().catch(() => ({}));
+        if (data && data.lessons && Array.isArray(data.lessons)) {
+          const parsed = data.lessons.map((pl: any) => {
+            let parsedSlides = [];
+            let parsedQuestions = [];
+            let parsedAssignments = [];
+            let parsedAttachments = [];
+            try { parsedSlides = typeof pl.slides === 'string' ? JSON.parse(pl.slides) : (pl.slides || []); } catch (e) { parsedSlides = []; }
+            try { parsedQuestions = typeof pl.questions === 'string' ? JSON.parse(pl.questions) : (pl.questions || []); } catch (e) { parsedQuestions = []; }
+            try { parsedAssignments = typeof pl.assignments === 'string' ? JSON.parse(pl.assignments) : (pl.assignments || []); } catch (e) { parsedAssignments = []; }
+            try { parsedAttachments = typeof pl.attachments === 'string' ? JSON.parse(pl.attachments) : (pl.attachments || []); } catch (e) { parsedAttachments = []; }
+            return {
+              ...pl,
+              slides: Array.isArray(parsedSlides) ? parsedSlides : [],
+              questions: Array.isArray(parsedQuestions) ? parsedQuestions : [],
+              assignments: Array.isArray(parsedAssignments) ? parsedAssignments : [],
+              attachments: Array.isArray(parsedAttachments) ? parsedAttachments : [],
+            };
+          });
+
+          // ✅ ROOT CAUSE FIX: When setting lessons from server response,
+          // preserve currentLesson's slides/questions/assignments for the lesson being edited.
+          // The server response may have stale data if it was processed before our slides were fully written.
+          setLessons(parsed.map((pl: any) => {
+            // Match by ID: if this is the lesson we just saved, use our local slides/questions/assignments
+            // (they are fresher than server response and were included in the PUT payload)
+            if (editingLessonIndex !== null && pl.id && deduplicatedLessons[editingLessonIndex]?.id === pl.id) {
+              return {
+                ...pl, // server metadata (isVisible, publishDate, etc.)
+                slides: currentLesson.slides || pl.slides,
+                questions: currentLesson.questions || pl.questions,
+                assignments: currentLesson.assignments || pl.assignments,
+                attachments: currentLesson.attachments || pl.attachments,
+              };
+            }
+            return pl;
+          }));
+          // If we were editing, update currentLesson ID with server-assigned ID
+          if (editingLessonIndex !== null && parsed[editingLessonIndex]) {
+            setCurrentLesson((prev: any) => ({ ...prev, id: parsed[editingLessonIndex].id }));
+          } else if (parsed.length > 0) {
+            const lastLesson = parsed[parsed.length - 1];
+            setCurrentLesson((prev: any) => ({ ...prev, id: lastLesson.id }));
+          }
+        }
         showToast(language === "ar" ? "تم حفظ الدرس ونشره تلقائياً ✅" : "Lesson saved and published automatically ✅", "success");
       } else {
         const errBody = await res.json().catch(() => ({}));
@@ -789,6 +831,8 @@ export const CourseEditorProvider: React.FC<{
     } catch (error: any) {
       console.error("Auto-save error:", error);
       showToast(language === "ar" ? "تم الحفظ محلياً لكن فشل النشر" : "Saved locally but publication failed", "error");
+    } finally {
+      isSavingRef.current = false;
     }
   };
 
@@ -798,6 +842,8 @@ export const CourseEditorProvider: React.FC<{
       if (!isAutoSave) showToast(language === "ar" ? "عنوان الكورس مطلوب" : "Course title is required", "error");
       return;
     }
+    if (isSavingRef.current) return;
+    isSavingRef.current = true;
     setIsSubmitting(true);
     const token = localStorage.getItem(tokenKey) || localStorage.getItem("token");
 
@@ -814,6 +860,14 @@ export const CourseEditorProvider: React.FC<{
         }
       }
 
+      // ✅ ROOT CAUSE FIX: Deduplicate lessons by ID to prevent sending the same lesson twice.
+      // If a lesson was just saved via autosave and is in the `lessons` array, but the modal
+      // is still open, the above logic might push it again. Deduplication prevents this.
+      const deduplicatedLessonsToSend = lessonsToSend.filter((l, idx, arr) => {
+        if (!l.id) return true; // keep new (no-ID) lessons
+        return arr.findIndex(other => other.id === l.id) === idx;
+      });
+
       // 🛡️ SAFETY: Backend disabled deletion during course update, so empty lessons array is safe.
 
       const res = await fetch(`${API_URL}/school/courses/${courseId}`, {
@@ -827,7 +881,7 @@ export const CourseEditorProvider: React.FC<{
           isCentral: role === "SUPER_ADMIN" ? targetSchoolIds.length === 0 : false,
           schoolId: role === "SUPER_ADMIN" ? (targetSchoolIds.length > 0 ? targetSchoolIds[0] : null) : schoolIdParam,
           schoolIds: role === "SUPER_ADMIN" ? targetSchoolIds : [schoolIdParam],
-          lessons: lessonsToSend.map((l) => ({
+          lessons: deduplicatedLessonsToSend.map((l) => ({
             id: l.id,
             title: l.title,
             domain: l.domain || null,
@@ -907,7 +961,7 @@ export const CourseEditorProvider: React.FC<{
                 })
               : [],
             attachments: Array.isArray(parsedAttachments) ? parsedAttachments : [],
-            slides: Array.isArray(parsedSlides) && parsedSlides.length ? parsedSlides : [{ id: Date.now(), type: "TEXT", label: "CONTENT", title: language === "ar" ? "المقدمة" : "Introduction", content: "", sections: [] }],
+            slides: Array.isArray(parsedSlides) ? parsedSlides : [],
           };
         }).sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
 
@@ -1008,6 +1062,7 @@ export const CourseEditorProvider: React.FC<{
         );
       }
     } finally {
+      isSavingRef.current = false;
       setIsSubmitting(false);
     }
   };

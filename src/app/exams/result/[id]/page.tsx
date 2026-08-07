@@ -498,7 +498,7 @@ export default function ExamResultPage() {
                         />
                       </div>
                     ) : (
-                    <div className="grid grid-cols-2 gap-4 mb-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                       {(answer.question.type === 'TRUE_FALSE' ? ["True", "False"] : (typeof answer.question.options === 'string' ? JSON.parse(answer.question.options) : (Array.isArray(answer.question.options) ? answer.question.options : [])))
                         .filter((opt: string) => opt && opt.trim() !== "")
                         .map((opt: string, oIdx: number) => {

@@ -177,8 +177,26 @@ function TakeExamPageContent() {
         } catch (e) {
           parsedSections = [{ type: 'EXPLANATION', content: q.explanation || "" }];
         }
+
+        // ✅ ROOT CAUSE FIX: Parse correctAnswers for MULTI_SELECT questions.
+        // Server stores correctAnswer as JSON string e.g. '["opt1","opt2"]' for MULTI_SELECT.
+        // Without parsing, preview mode cannot correctly highlight correct answers.
+        let correctAnswers: string[] = [];
+        if (q.type === 'MULTI_SELECT') {
+          try {
+            const parsed = typeof q.correctAnswer === 'string' ? JSON.parse(q.correctAnswer) : q.correctAnswer;
+            correctAnswers = Array.isArray(parsed) ? parsed : (q.correctAnswer ? [String(q.correctAnswer)] : []);
+          } catch {
+            correctAnswers = typeof q.correctAnswer === 'string' 
+              ? q.correctAnswer.split(',').map((s: string) => s.trim()).filter(Boolean)
+              : [];
+          }
+        }
+
         return {
           ...q,
+          options: parseQuestionChoices(q.options),
+          correctAnswers: q.type === 'MULTI_SELECT' ? correctAnswers : [],
           sections: parsedSections
         };
       }) || [];
@@ -601,7 +619,7 @@ function TakeExamPageContent() {
             {question.type !== "TEXT" ? (
               <>
                 {question.type === "MCQ" || question.type === "MULTI_SELECT" ? (
-                  <div className="grid grid-cols-2 gap-4" dir="ltr">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {parseQuestionChoices(question.options).filter((opt: string) => opt && opt.trim() !== "").map((option: string, i: number) => {
                     const isSelected = question.type === "MULTI_SELECT" 
                       ? selectedAnswers.includes(option)

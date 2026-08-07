@@ -340,12 +340,26 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
                       <select 
                         className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
                         value={block.standard || ""}
-                        onChange={(e) => updateBlock(source, sIdx, 'standard', e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "__CUSTOM__") {
+                            const customVal = prompt(language === 'ar' ? "أدخل المعيار لهذه الشريحة:" : "Enter standard for this slide:");
+                            if (customVal && customVal.trim()) {
+                              updateBlock(source, sIdx, 'standard', customVal.trim());
+                            }
+                          } else {
+                            updateBlock(source, sIdx, 'standard', val);
+                          }
+                        }}
                       >
-                        <option value="">{language === 'ar' ? 'اختر المعيار...' : 'Select Standard...'}</option>
+                        <option value="">{language === 'ar' ? 'بلا معيار (None)' : 'None'}</option>
+                        {block.standard && !((currentLesson.standards || "").split("\n").includes(block.standard)) && (
+                          <option value={block.standard}>{block.standard}</option>
+                        )}
                         {(currentLesson.standards || "").split("\n").filter(Boolean).map((s: string) => (
                           <option key={s} value={s}>{s}</option>
                         ))}
+                        <option value="__CUSTOM__" className="text-indigo-600 font-bold">{language === 'ar' ? '+ إضافة معيار مخصص للشريحة...' : '+ Add Custom Standard...'}</option>
                       </select>
                     </div>
 
@@ -354,12 +368,26 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
                       <select 
                         className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
                         value={block.indicator || ""}
-                        onChange={(e) => updateBlock(source, sIdx, 'indicator', e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "__CUSTOM__") {
+                            const customVal = prompt(language === 'ar' ? "أدخل المؤشر لهذه الشريحة:" : "Enter indicator for this slide:");
+                            if (customVal && customVal.trim()) {
+                              updateBlock(source, sIdx, 'indicator', customVal.trim());
+                            }
+                          } else {
+                            updateBlock(source, sIdx, 'indicator', val);
+                          }
+                        }}
                       >
-                        <option value="">{language === 'ar' ? 'اختر المؤشر...' : 'Select Indicator...'}</option>
+                        <option value="">{language === 'ar' ? 'بلا مؤشر (None)' : 'None'}</option>
+                        {block.indicator && !((currentLesson.indicators || "").split("\n").includes(block.indicator)) && (
+                          <option value={block.indicator}>{block.indicator}</option>
+                        )}
                         {(currentLesson.indicators || "").split("\n").filter(Boolean).map((ind: string) => (
                           <option key={ind} value={ind}>{ind}</option>
                         ))}
+                        <option value="__CUSTOM__" className="text-indigo-600 font-bold">{language === 'ar' ? '+ إضافة مؤشر مخصص للشريحة...' : '+ Add Custom Indicator...'}</option>
                       </select>
                     </div>
 
@@ -368,12 +396,26 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
                       <select 
                         className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
                         value={block.learningOutcome || ""}
-                        onChange={(e) => updateBlock(source, sIdx, 'learningOutcome', e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "__CUSTOM__") {
+                            const customVal = prompt(language === 'ar' ? "أدخل ناتج التعلم لهذه الشريحة:" : "Enter learning outcome for this slide:");
+                            if (customVal && customVal.trim()) {
+                              updateBlock(source, sIdx, 'learningOutcome', customVal.trim());
+                            }
+                          } else {
+                            updateBlock(source, sIdx, 'learningOutcome', val);
+                          }
+                        }}
                       >
-                        <option value="">{language === 'ar' ? 'اختر مخرج التعلم...' : 'Select Learning Outcome...'}</option>
+                        <option value="">{language === 'ar' ? 'بلا ناتج تعلم (None)' : 'None'}</option>
+                        {block.learningOutcome && !((currentLesson.learningOutcomes || "").split("\n").includes(block.learningOutcome)) && (
+                          <option value={block.learningOutcome}>{block.learningOutcome}</option>
+                        )}
                         {(currentLesson.learningOutcomes || "").split("\n").filter(Boolean).map((lo: string) => (
                           <option key={lo} value={lo}>{lo}</option>
                         ))}
+                        <option value="__CUSTOM__" className="text-indigo-600 font-bold">{language === 'ar' ? '+ إضافة ناتج تعلم مخصص...' : '+ Add Custom Outcome...'}</option>
                       </select>
                     </div>
 

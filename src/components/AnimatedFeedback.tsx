@@ -13,8 +13,11 @@ interface AnimatedFeedbackProps {
 export default function AnimatedFeedback({ isCorrect, xp, streak, onComplete }: AnimatedFeedbackProps) {
   const [visible, setVisible] = useState(true);
   const [animPhase, setAnimPhase] = useState<'enter' | 'show' | 'exit'>('enter');
+  // Use a counter to force re-trigger when component is re-mounted with same props
+  const mountCountRef = React.useRef(0);
 
   useEffect(() => {
+    mountCountRef.current += 1;
     setVisible(true);
     setAnimPhase('enter');
 
@@ -32,7 +35,8 @@ export default function AnimatedFeedback({ isCorrect, xp, streak, onComplete }: 
       clearTimeout(exitTimer);
       clearTimeout(doneTimer);
     };
-  }, [isCorrect]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // ✅ FIX: Run once on mount — parent uses key={feedbackKey} to force remount on each new answer
 
   if (!visible) return null;
 

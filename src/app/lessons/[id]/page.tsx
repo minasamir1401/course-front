@@ -83,12 +83,12 @@ export default function LessonPlayerPage() {
   const [feedbackKey, setFeedbackKey] = useState(0);
   const [unansweredWarning, setUnansweredWarning] = useState<number[] | null>(null);
 
-  const submitAnswerProgress = async (questionId: string, blockType: 'slides' | 'assignments' | 'questions', selectedAnswer: any, questionBlock?: any) => {
+  const submitAnswerProgress = async (questionId: string, blockType: 'slides' | 'assignments' | 'questions', selectedAnswer: any, questionBlock?: any, isExplicitConfirmation = true) => {
     const isPreviewMode = searchParams.get('preview') === 'true';
     if (isPreviewMode) {
-      // In preview mode: evaluate answer locally and show correct/incorrect feedback
-      let isCorrect = true; // default for non-question blocks (read)
-      const isRealQuestion = questionBlock && selectedAnswer !== 'read';
+      // In preview mode: evaluate answer locally and show correct/incorrect feedback ONLY on explicit confirmation
+      let isCorrect = true;
+      const isRealQuestion = questionBlock && isQuestionLike(questionBlock) && selectedAnswer !== 'read';
       if (isRealQuestion) {
         isCorrect = checkAdvancedCorrect(questionBlock, selectedAnswer);
       }
@@ -104,7 +104,7 @@ export default function LessonPlayerPage() {
       }
 
       // Update local streak in preview
-      if (isRealQuestion) {
+      if (isRealQuestion && isExplicitConfirmation) {
         if (isCorrect) {
           previewStreakRef.current += 1;
         } else {
@@ -114,7 +114,7 @@ export default function LessonPlayerPage() {
       const localStreak = previewStreakRef.current;
 
       // Update local XP display
-      if (simulatedXP > 0) {
+      if (simulatedXP > 0 && isExplicitConfirmation) {
         setTotalLessonXP(prev => prev + simulatedXP);
         setSessionXP(prev => prev + simulatedXP);
         setHighestStreak(prev => Math.max(prev, localStreak));
@@ -123,21 +123,25 @@ export default function LessonPlayerPage() {
 
       // Preview streak milestone
       let bonusXP = 0;
-      if (isRealQuestion && isCorrect && (localStreak === 5 || localStreak === 10)) {
+      if (isRealQuestion && isCorrect && isExplicitConfirmation && (localStreak === 5 || localStreak === 10)) {
         bonusXP = localStreak === 5 ? 10 : 30;
         setTotalLessonXP(prev => prev + bonusXP);
         setSessionBonusXP(prev => prev + bonusXP);
         setShowStreakMilestone({ count: localStreak, xp: bonusXP });
       }
 
-      setFeedbackKey(k => k + 1);
-      setToastFeedback({ 
-        type: isCorrect ? 'success' : 'incorrect', 
-        xp: simulatedXP, 
-        isCorrect, 
-        streakCount: localStreak,
-        bonusXP: bonusXP > 0 ? bonusXP : undefined
-      });
+      if (isRealQuestion && isExplicitConfirmation) {
+        setFeedbackKey(k => k + 1);
+        setToastFeedback({ 
+          type: isCorrect ? 'success' : 'incorrect', 
+          xp: simulatedXP, 
+          isCorrect, 
+          streakCount: localStreak,
+          bonusXP: bonusXP > 0 ? bonusXP : undefined
+        });
+      } else {
+        setToastFeedback(null);
+      }
       return;
     }
 
@@ -156,14 +160,13 @@ export default function LessonPlayerPage() {
         body: JSON.stringify({
           questionId,
           blockType,
-          selectedAnswer: typeof selectedAnswer === 'object' ? JSON.stringify(selectedAnswer) : selectedAnswer
+          selectedAnswer,
+          isCompleted: true
         })
       });
 
       if (res.ok) {
         const data = await res.json();
-        setTotalLessonXP(data.totalLessonXP);
-        setCurrentStreak(data.currentStreak);
         
         let currentLevel = 'Medium';
         if (blockType === 'questions') {
@@ -174,21 +177,31 @@ export default function LessonPlayerPage() {
           currentLevel = lesson?.assignments?.[currentAssignmentIndex]?.level || 'Medium';
         }
 
-        if (data.isCorrect) {
+        const isRealQuestion = selectedAnswer !== 'read' && selectedAnswer !== undefined && selectedAnswer !== null && selectedAnswer !== '' && (
+          (blockType === 'questions' && isQuestionLike(lesson?.questions?.[currentQuestionIndex])) ||
+          (blockType === 'slides' && isQuestionLike(lesson?.slides?.[currentSlideIndex])) ||
+          (blockType === 'assignments' && isQuestionLike(lesson?.assignments?.[currentAssignmentIndex]))
+        );
+
+        if (data.isCorrect && isRealQuestion && isExplicitConfirmation) {
           setSessionXP(prev => prev + (data.earnedXP || 0));
           setHighestStreak(prev => Math.max(prev, data.currentStreak || 0));
         }
 
-        setFeedbackKey(k => k + 1);
-        setToastFeedback({
-          type: data.isCorrect ? 'success' : 'incorrect',
-          xp: data.earnedXP || 0,
-          level: currentLevel as any,
-          streakCount: data.currentStreak,
-          isCorrect: data.isCorrect
-        });
+        if (isRealQuestion && isExplicitConfirmation) {
+          setFeedbackKey(k => k + 1);
+          setToastFeedback({
+            type: data.isCorrect ? 'success' : 'incorrect',
+            xp: data.earnedXP || 0,
+            level: currentLevel as any,
+            streakCount: data.currentStreak,
+            isCorrect: data.isCorrect
+          });
+        } else {
+          setToastFeedback(null);
+        }
 
-        if (data.bonusXP > 0) {
+        if (data.bonusXP > 0 && isRealQuestion && isExplicitConfirmation) {
           setSessionBonusXP(prev => prev + data.bonusXP);
           setShowStreakMilestone({ count: data.currentStreak, xp: data.bonusXP });
         }
@@ -854,19 +867,24 @@ export default function LessonPlayerPage() {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
-                  {[
-                    { title: t('lesson.standards'), icon: Target, content: lesson.standards, color: "text-blue-600", bg: "bg-blue-50" },
-                    { title: t('lesson.indicators'), icon: TrendingUp, content: lesson.indicators, color: "text-purple-600", bg: "bg-purple-50" },
-                    { title: t('lesson.outcomes'), icon: Award, content: lesson.learningOutcomes, color: "text-emerald-600", bg: "bg-emerald-50" },
-                  ].map((item, i) => (
-                    <WelcomeGadgetCard key={i} item={item} t={t} />
-                  ))}
-                </div>
+                {(lesson.standards || lesson.indicators || lesson.learningOutcomes) && (
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
+                    {[
+                      { title: t('lesson.standards'), icon: Target, content: lesson.standards, color: "text-blue-600", bg: "bg-blue-50" },
+                      { title: t('lesson.indicators'), icon: TrendingUp, content: lesson.indicators, color: "text-purple-600", bg: "bg-purple-50" },
+                      { title: t('lesson.outcomes'), icon: Award, content: lesson.learningOutcomes, color: "text-emerald-600", bg: "bg-emerald-50" },
+                    ].filter(item => item.content && String(item.content).trim() !== '').map((item, i) => (
+                      <WelcomeGadgetCard key={i} item={item} t={t} />
+                    ))}
+                  </div>
+                )}
 
                 <div className="mt-12 text-center space-y-6">
                   <button
-                    onClick={() => setCurrentStage('slides')}
+                    onClick={() => {
+                      setToastFeedback(null);
+                      setCurrentStage('slides');
+                    }}
                     className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:from-indigo-700 hover:to-violet-700 px-12 py-5 rounded-[25px] font-black text-lg hover:scale-105 transition-all shadow-xl shadow-indigo-100 flex items-center gap-4 mx-auto border border-indigo-500/20"
                   >
                     {t('lesson.showExplanation')}
@@ -1110,6 +1128,7 @@ export default function LessonPlayerPage() {
                 <div className="p-6 border-t border-slate-100 bg-slate-50/30 flex justify-between items-center gap-6 shrink-0" dir="rtl">
                   <button
                     onClick={() => {
+                      setToastFeedback(null);
                       if (currentSlideIndex > 0) {
                         setCurrentSlideIndex(prev => prev - 1);
                       } else {
@@ -1130,15 +1149,15 @@ export default function LessonPlayerPage() {
                   {currentSlideIndex < lesson.slides.length - 1 ? (
                     <button
                       onClick={() => {
+                        setToastFeedback(null);
                         const isPreviewMode = searchParams.get('preview') === 'true';
                         if (!slideSubmitted[currentSlideIndex]) {
                           const q = lesson.slides[currentSlideIndex];
                           const qId = q.id ? String(q.id) : String(currentSlideIndex);
                           const ans = slideAnswers[currentSlideIndex];
                           const hasAnswer = ans !== undefined && ans !== null && ans !== '' && !(Array.isArray(ans) && ans.length === 0);
-                          if (hasAnswer || (!isPreviewMode && !isQuestionLike(q))) {
-                            const finalAns = isQuestionLike(q) ? (hasAnswer ? ans : '') : 'read';
-                            submitAnswerProgress(qId, 'slides', finalAns);
+                          if (hasAnswer && isQuestionLike(q)) {
+                            submitAnswerProgress(qId, 'slides', ans, q, false);
                             setSlideSubmitted(prev => ({ ...prev, [currentSlideIndex]: true }));
                           }
                         }
@@ -1151,16 +1170,16 @@ export default function LessonPlayerPage() {
                   ) : (
                     <button
                       onClick={() => {
+                        setToastFeedback(null);
                         const isPreviewMode = searchParams.get('preview') === 'true';
                         if (!slideSubmitted[currentSlideIndex]) {
                           const q = lesson.slides[currentSlideIndex];
                           const qId = q.id ? String(q.id) : String(currentSlideIndex);
                           const ans = slideAnswers[currentSlideIndex];
                           const hasAnswer = ans !== undefined && ans !== null && ans !== '' && !(Array.isArray(ans) && ans.length === 0);
-                          if (hasAnswer || (!isPreviewMode && !isQuestionLike(q))) {
-                            const finalAns = isQuestionLike(q) ? (hasAnswer ? ans : '') : 'read';
-                            submitAnswerProgress(qId, 'slides', finalAns);
-                            setSlideSubmitted({ ...slideSubmitted, [currentSlideIndex]: true });
+                          if (hasAnswer && isQuestionLike(q)) {
+                            submitAnswerProgress(qId, 'slides', ans, q, false);
+                            setSlideSubmitted(prev => ({ ...prev, [currentSlideIndex]: true }));
                           }
                         }
                         setCurrentStage('assignments');

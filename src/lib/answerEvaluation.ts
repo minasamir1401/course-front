@@ -37,7 +37,52 @@ const normalizeTrueFalse = (v: string) => {
   return t;
 };
 
-export const isAnswerCorrect = (question: any, selectedAnswer: any) => {
+export const normalizeAnswerGlobal = (value: any) => {
+  const norm = String(value ?? '').trim().toLowerCase();
+  if (['true', 'صح', 'صحيح', 'صواب', '1'].includes(norm)) return 'true';
+  if (['false', 'خطأ', 'خاطئ', 'غير صحيح', '0'].includes(norm)) return 'false';
+  return norm;
+};
+
+export const isOptionMatch = (targetVal: any, optText: string, optIndex: number = -1): boolean => {
+  if (targetVal === null || targetVal === undefined || optText === null || optText === undefined) return false;
+  const rawTarget = String(targetVal).trim();
+  const cleanTarget = rawTarget.toLowerCase().replace(/<[^>]*>/g, '').replace(/[\s\u00A0]+/g, ' ').trim();
+  const cleanOpt = String(optText).toLowerCase().replace(/<[^>]*>/g, '').replace(/[\s\u00A0]+/g, ' ').trim();
+
+  if (!cleanTarget || !cleanOpt) return false;
+
+  // 1. Direct exact normalized string match
+  if (cleanTarget === cleanOpt) return true;
+
+  // 2. True / False normalization
+  const tfTarget = normalizeAnswerGlobal(rawTarget);
+  const tfOpt = normalizeAnswerGlobal(optText);
+  const isTfKeywords = ['true', 'false', 'صح', 'خطأ', 'correct', 'incorrect'];
+  if (isTfKeywords.includes(cleanTarget) || isTfKeywords.includes(cleanOpt)) {
+    return tfTarget === tfOpt;
+  }
+
+  // 3. Option letter/index check (e.g. target is "A", "B", "C", "D" or "0", "1", "2", "3")
+  if (optIndex >= 0) {
+    const letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+    const targetCleanAlpha = rawTarget.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (targetCleanAlpha === letters[optIndex] || targetCleanAlpha === String(optIndex)) return true;
+  }
+
+  // 4. Multi-word string containment
+  if (cleanTarget.length > 6 && cleanOpt.length > 6) {
+    const targetWords = cleanTarget.split(/\s+/).filter(Boolean);
+    const optWords = cleanOpt.split(/\s+/).filter(Boolean);
+    if (targetWords.length >= 3 && optWords.length >= 3) {
+      if (cleanTarget.includes(cleanOpt) || cleanOpt.includes(cleanTarget)) return true;
+    }
+  }
+
+  return false;
+};
+
+export const isAnswerCorrect = (question: any, selectedAnswer: any): boolean => {
   if (!selectedAnswer && selectedAnswer !== 0) return false;
 
   if (['TEXT', 'EXPLANATION', 'VIDEO', 'IMAGE', 'CONTENT'].includes(question.type) || ['TEXT', 'EXPLANATION', 'VIDEO', 'IMAGE', 'CONTENT'].includes(question.label)) {
@@ -106,6 +151,23 @@ export const isAnswerCorrect = (question: any, selectedAnswer: any) => {
 
   if (question.type === 'WORD_SEARCH') {
     return arraysMatch(parseStringArray(question.correctAnswer), parseStringArray(selectedAnswer));
+  }
+
+  // Handle MCQ or options-based questions
+  let optionsArr: any[] = [];
+  try {
+    optionsArr = typeof question.options === 'string'
+      ? JSON.parse(question.options || '[]')
+      : (Array.isArray(question.options) ? question.options : []);
+  } catch { optionsArr = []; }
+
+  if (Array.isArray(optionsArr) && optionsArr.length > 0) {
+    for (let i = 0; i < optionsArr.length; i++) {
+      const opt = optionsArr[i];
+      const matchesStudent = isOptionMatch(selectedAnswer, opt, i);
+      const matchesCorrect = isOptionMatch(question.correctAnswer, opt, i);
+      if (matchesStudent && matchesCorrect) return true;
+    }
   }
 
   if (Array.isArray(correctParsed) && Array.isArray(studentParsed)) {

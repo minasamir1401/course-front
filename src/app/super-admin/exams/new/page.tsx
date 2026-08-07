@@ -16,6 +16,7 @@ import { useNotification } from "@/context/NotificationContext";
 import MathInput from "@/components/MathInput";
 import { ItemSectionsBubbles, MetadataModalButton } from '@/components/LessonSubComponents';
 import HtmlRenderer from "@/components/HtmlRenderer";
+import { isOptionMatch } from "@/lib/answerEvaluation";
 
 export default function SuperAdminNewExamPage({ presetType, presetCourseId }: { presetType?: 'Exam' | 'Quiz' | 'Assignment', presetCourseId?: string }) {
   return (
@@ -576,12 +577,19 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId }: { p
       return;
     }
     
+    const validSections = (currentQuestion.sections || []).filter((s: any) => s && String(s.content || s.text || '').trim() !== '');
+    const updatedQ = {
+      ...currentQuestion,
+      sections: currentQuestion.sections && currentQuestion.sections.length > 0 ? currentQuestion.sections : [{ type: "EXPLANATION", content: "" }],
+      explanation: validSections.length > 0 ? JSON.stringify(validSections) : (currentQuestion.explanation || null)
+    };
+
     if (editingIndex !== null) {
       const newQuestions = [...questions];
-      newQuestions[editingIndex] = currentQuestion;
+      newQuestions[editingIndex] = updatedQ;
       setQuestions(newQuestions);
     } else {
-      setQuestions([...questions, currentQuestion]);
+      setQuestions([...questions, updatedQ]);
     }
     
     setShowQuestionForm(false);
@@ -664,28 +672,14 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId }: { p
     setCurrentQuestion(question);
   };
 
-    const isCorrectAnswer = (question: any, option: string) => {
+  const isCorrectAnswer = (question: any, option: string, index?: number) => {
     if (question.type === "MULTI_SELECT") {
-      return question.correctAnswers?.includes(option);
+      if (Array.isArray(question.correctAnswers) && question.correctAnswers.length > 0) {
+        return question.correctAnswers.some((c: any) => isOptionMatch(c, option, index ?? -1));
+      }
+      return isOptionMatch(question.correctAnswer, option, index ?? -1);
     }
-    if (question.type === "TRUE_FALSE") {
-      let tFn = typeof t !== 'undefined' ? t : (key: string) => key;
-      const trueValues = ["True", "true", "صحيح", "صح", "صواب", "1", "Correct", "correct", tFn('schoolAdmin.examsNewPage.correct')];
-      const falseValues = ["False", "false", "خطأ", "خاطئ", "غير صحيح", "0", "Incorrect", "incorrect", tFn('schoolAdmin.examsNewPage.incorrect')];
-      
-      const optionNorm = String(option || "").trim();
-      const correctNorm = String(question.correctAnswer || "").trim();
-
-      const isOptionTrue = trueValues.includes(optionNorm);
-      const isOptionFalse = falseValues.includes(optionNorm);
-      const isCorrectTrue = trueValues.includes(correctNorm);
-      const isCorrectFalse = falseValues.includes(correctNorm);
-      
-      if (isOptionTrue && isCorrectTrue) return true;
-      if (isOptionFalse && isCorrectFalse) return true;
-      return false;
-    }
-    return question.correctAnswer === option;
+    return isOptionMatch(question.correctAnswer, option, index ?? -1);
   };
 
   const handleSelectAll = () => {
@@ -718,10 +712,23 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId }: { p
         const token = localStorage.getItem("super_admin_token");
         if (!token) return;
 
-        const questionsPayload = questions.map(q => ({
-          ...q,
-          explanation: JSON.stringify(q.sections || [])
-        }));
+        const questionsPayload = questions.map(q => {
+          let finalExplanation = "[]";
+          const validSections = (q.sections || []).filter((s: any) => s && (String(s.content || s.text || '').trim() !== ''));
+          if (validSections.length > 0) {
+            finalExplanation = JSON.stringify(validSections);
+          } else if (q.explanation) {
+            const rawExp = typeof q.explanation === 'string' ? q.explanation.trim() : JSON.stringify(q.explanation);
+            if (rawExp && rawExp !== '[]' && rawExp !== '""' && rawExp !== '[{"type":"EXPLANATION","content":""}]') {
+              finalExplanation = rawExp;
+            }
+          }
+          return {
+            ...q,
+            explanation: finalExplanation,
+            correctAnswer: q.type === 'MULTI_SELECT' && Array.isArray(q.correctAnswers) ? JSON.stringify(q.correctAnswers) : q.correctAnswer
+          };
+        });
         
         const payload = {
           ...examInfo,
@@ -796,10 +803,23 @@ export function SuperAdminNewExamPageContent({ presetType, presetCourseId }: { p
     setSaving(true);
     try {
       const token = localStorage.getItem("super_admin_token");
-      const questionsPayload = questions.map(q => ({
-        ...q,
-        explanation: JSON.stringify(q.sections || [])
-      }));
+        const questionsPayload = questions.map(q => {
+          let finalExplanation = "[]";
+          const validSections = (q.sections || []).filter((s: any) => s && (String(s.content || s.text || '').trim() !== ''));
+          if (validSections.length > 0) {
+            finalExplanation = JSON.stringify(validSections);
+          } else if (q.explanation) {
+            const rawExp = typeof q.explanation === 'string' ? q.explanation.trim() : JSON.stringify(q.explanation);
+            if (rawExp && rawExp !== '[]' && rawExp !== '""' && rawExp !== '[{"type":"EXPLANATION","content":""}]') {
+              finalExplanation = rawExp;
+            }
+          }
+          return {
+            ...q,
+            explanation: finalExplanation,
+            correctAnswer: q.type === 'MULTI_SELECT' && Array.isArray(q.correctAnswers) ? JSON.stringify(q.correctAnswers) : q.correctAnswer
+          };
+        });
 
             const method = createdId ? "PUT" : "POST";
       const url = createdId ? `${API_URL}/exams/${createdId}` : `${API_URL}/exams`;
@@ -2054,7 +2074,7 @@ return (
                   )}
 
                   {previewQuestion.type !== "TEXT" && (
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {(previewQuestion.type === "MCQ" || previewQuestion.type === "MULTI_SELECT" ? previewQuestion.options : (language === 'ar' ? ["صحيح", "خطأ"] : ["True", "False"])).filter((o: string) => o).map((option: string, i: number) => {
                         const isSelected = previewSelectedOptions.includes(option);
                         const isCorrect = isCorrectAnswer(previewQuestion, option);

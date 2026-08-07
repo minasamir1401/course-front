@@ -15,6 +15,7 @@ import * as XLSX from 'xlsx';
 import VideoPlayer from "@/components/VideoPlayer";
 import MathInput from "@/components/MathInput";
 import { MetadataModalButton } from '@/components/LessonSubComponents';
+import { isOptionMatch } from "@/lib/answerEvaluation";
 
 // Helper: extract choices array from options (handles both array and JSON object formats)
 const parseQuestionChoices = (options: any): string[] => {
@@ -562,21 +563,33 @@ export function SchoolAdminEditExamPageContent({ presetType }: { presetType?: 'E
       });
       if (!res.ok) return;
       const data = await res.json();
-      setQuestions(data.questions?.map((q: any) => {
-        let parsedCorrectAnswers = [];
-        if (q.type === 'MULTI_SELECT' && q.correctAnswer) {
-          try {
-            parsedCorrectAnswers = typeof q.correctAnswer === 'string' ? JSON.parse(q.correctAnswer) : q.correctAnswer;
-          } catch (e) {
-            parsedCorrectAnswers = typeof q.correctAnswer === 'string' ? q.correctAnswer.split(',').map((s: string) => s.trim()) : [];
+      // ✅ ROOT CAUSE FIX: Only sync IDs from DB — never overwrite the full questions state.
+      // This prevents syncQuestionsFromDB from wiping sections/explanation that the user is actively editing.
+      setQuestions(prev => {
+        if (!data.questions || !Array.isArray(data.questions)) return prev;
+        // Build a map of server questions by index or ID
+        const serverById = new Map(data.questions.map((q: any) => [q.id, q]));
+        return prev.map((localQ, i) => {
+          // If this question has an ID, sync only the DB-assigned fields (id, order)
+          // but preserve all local editing state (sections, explanation, options, etc.)
+          const serverQ = localQ.id ? serverById.get(localQ.id) : data.questions[i];
+          if (serverQ) {
+            let parsedCorrectAnswers = localQ.correctAnswers || [];
+            if (serverQ.type === 'MULTI_SELECT' && serverQ.correctAnswer && !localQ.id) {
+              try {
+                parsedCorrectAnswers = typeof serverQ.correctAnswer === 'string' ? JSON.parse(serverQ.correctAnswer) : serverQ.correctAnswer;
+              } catch (e) {
+                parsedCorrectAnswers = typeof serverQ.correctAnswer === 'string' ? serverQ.correctAnswer.split(',').map((s: string) => s.trim()) : [];
+              }
+            }
+            return {
+              ...localQ, // preserve ALL local state including sections, explanation being edited
+              id: serverQ.id || localQ.id, // only update ID if not set
+            };
           }
-        }
-        return {
-          ...q,
-          options: parseQuestionChoices(q.options),
-          correctAnswers: q.type === 'MULTI_SELECT' ? (Array.isArray(parsedCorrectAnswers) && parsedCorrectAnswers.length > 0 ? parsedCorrectAnswers : q.correctAnswers || []) : []
-        };
-      }) || []);
+          return localQ;
+        });
+      });
     } catch (e) {
       // نتجاهل الأخطاء - الـ auto-save التالي سيعيد المحاولة
       console.warn('Silent sync failed:', e);
@@ -641,12 +654,19 @@ export function SchoolAdminEditExamPageContent({ presetType }: { presetType?: 'E
       return;
     }
     
+    const validSections = (currentQuestion.sections || []).filter((s: any) => s && String(s.content || s.text || '').trim() !== '');
+    const updatedQ = {
+      ...currentQuestion,
+      sections: currentQuestion.sections && currentQuestion.sections.length > 0 ? currentQuestion.sections : [{ type: "EXPLANATION", content: "" }],
+      explanation: validSections.length > 0 ? JSON.stringify(validSections) : (currentQuestion.explanation || null)
+    };
+
     if (editingIndex !== null) {
       const newQuestions = [...questions];
-      newQuestions[editingIndex] = currentQuestion;
+      newQuestions[editingIndex] = updatedQ;
       setQuestions(newQuestions);
     } else {
-      setQuestions([...questions, currentQuestion]);
+      setQuestions([...questions, updatedQ]);
     }
     
     setShowQuestionForm(false);
@@ -732,29 +752,12 @@ export function SchoolAdminEditExamPageContent({ presetType }: { presetType?: 'E
 
   const isCorrectAnswer = (question: any, option: string, index?: number) => {
     if (question.type === "MULTI_SELECT") {
-      return question.correctAnswers?.includes(option);
+      if (Array.isArray(question.correctAnswers) && question.correctAnswers.length > 0) {
+        return question.correctAnswers.some((c: any) => isOptionMatch(c, option, index ?? -1));
+      }
+      return isOptionMatch(question.correctAnswer, option, index ?? -1);
     }
-    if (question.type === "TRUE_FALSE") {
-      let tFn = typeof t !== 'undefined' ? t : (key: string) => key;
-      const trueValues = ["True", "true", "صحيح", "صح", "صواب", "1", "Correct", "correct", tFn('schoolAdmin.examsNewPage.correct')];
-      const falseValues = ["False", "false", "خطأ", "خاطئ", "غير صحيح", "0", "Incorrect", "incorrect", tFn('schoolAdmin.examsNewPage.incorrect')];
-
-      const optionNorm = String(option || "").trim();
-      const correctNorm = String(question.correctAnswer || "").trim();
-
-      const isOptionTrue = trueValues.includes(optionNorm);
-      const isOptionFalse = falseValues.includes(optionNorm);
-      const isCorrectTrue = trueValues.includes(correctNorm);
-      const isCorrectFalse = falseValues.includes(correctNorm);
-
-      if (isOptionTrue && isCorrectTrue) return true;
-      if (isOptionFalse && isCorrectFalse) return true;
-      return false;
-    }
-    if (question.correctAnswerIndex !== undefined && index !== undefined && question.correctAnswerIndex === index) {
-      return true;
-    }
-    return question.correctAnswer === option;
+    return isOptionMatch(question.correctAnswer, option, index ?? -1);
   };
 
   const isSavingRef = useRef(false);
@@ -823,12 +826,23 @@ export function SchoolAdminEditExamPageContent({ presetType }: { presetType?: 'E
       }
 
       const questionsPayload = questionsForSave.map(q => {
-        let finalExplanation = "[]";
-        if (q.sections && q.sections.length > 0) {
-          finalExplanation = JSON.stringify(q.sections);
-        } else if (q.explanation) {
-          finalExplanation = typeof q.explanation === 'string' ? q.explanation : JSON.stringify(q.explanation);
+        const validSections = (q.sections || []).filter((s: any) => s && (String(s.content || s.text || '').trim() !== ''));
+        
+        let finalExplanation: string | undefined;
+        if (validSections.length > 0) {
+          // Has real content → send as JSON
+          finalExplanation = JSON.stringify(validSections);
+        } else if (q.explanation && typeof q.explanation === 'string') {
+          const trimmed = q.explanation.trim();
+          // Only send if it's not an empty/placeholder value
+          if (trimmed && trimmed !== '[]' && trimmed !== '""' && trimmed !== '[{"type":"EXPLANATION","content":""}]') {
+            finalExplanation = trimmed;
+          }
+          // Otherwise: undefined → backend will preserve existing DB explanation
         }
+        // If finalExplanation is undefined, the field is omitted from payload
+        // Backend sees explanation=undefined → preserves existing DB explanation
+
         return {
           ...q,
           explanation: finalExplanation,
