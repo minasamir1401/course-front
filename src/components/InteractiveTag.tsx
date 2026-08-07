@@ -1,0 +1,76 @@
+"use client";
+
+import React, { useState, useRef, useEffect } from 'react';
+import { LucideIcon, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
+
+interface InteractiveTagProps {
+  label: string;
+  value: string | React.ReactNode;
+  icon?: LucideIcon;
+  colorClass: string; 
+  bubbleTheme?: string; 
+}
+
+export function InteractiveTag({ label, value, icon: Icon, colorClass, bubbleTheme = "border-slate-200 text-slate-700" }: InteractiveTagProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!value) return null;
+
+  // Filter out placeholder/empty strings that might come from DB or Excel imports
+  const stringValue = String(value).trim().toLowerCase();
+  const placeholders = [
+    'level', 'dok', 'skill', 'standard', 'indicator', 'outcome', 'undefined', 'null', 'nan', '-', 'n/a', 'na',
+    'المستوى', 'مستوى', 'عمق المعرفة', 'المهارة', 'مهارة', 'المعيار', 'معيار', 'المؤشر', 'مؤشر', 'الناتج', 'ناتج التعلم'
+  ];
+  if (placeholders.includes(stringValue)) return null;
+
+  return (
+    <div className="relative inline-block">
+      <button
+        onClick={() => setIsOpen(true)}
+        className={`px-3 py-2 rounded-lg text-xs md:text-sm font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all hover:brightness-95 cursor-pointer shadow-sm active:scale-95 ${colorClass}`}
+        title={label}
+      >
+        {Icon && <Icon className="w-4 h-4 shrink-0" />}
+        <span>{label}</span>
+      </button>
+
+      {mounted && isOpen && createPortal(
+        <div className="fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className={`bg-white w-full max-w-lg rounded-[32px] shadow-2xl p-6 md:p-8 border-2 space-y-4 animate-in zoom-in-95 duration-200 ${bubbleTheme}`}>
+            <div className="flex items-center justify-between border-b pb-4 mb-4">
+              <h4 className="text-lg font-black flex items-center gap-2 uppercase tracking-widest">
+                {Icon && <Icon className="w-6 h-6" />}
+                {label}
+              </h4>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="text-slate-800 text-base md:text-lg font-bold leading-relaxed max-h-[60vh] overflow-y-auto">
+              {value}
+            </div>
+            <div className="flex justify-end pt-4">
+              <button
+                onClick={() => setIsOpen(false)}
+                className="px-8 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-black text-sm transition-all"
+              >
+                إغلاق / Close
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}

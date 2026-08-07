@@ -1,0 +1,310 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { API_URL } from "@/lib/api";
+import DashboardLayout from "@/components/DashboardLayout";
+import { CheckCircle2, XCircle, ChevronRight, LayoutDashboard, RefreshCw, Award, Target, Clock, User, Mail, ArrowRight, FileText, BarChart3 } from 'lucide-react';
+import Link from "next/link";
+import { useNotification } from "@/context/NotificationContext";
+import HtmlRenderer from "@/components/HtmlRenderer";
+import { useLanguage } from "@/contexts/LanguageContext";
+
+import { normalizeAnswerGlobal } from "@/components/LessonSubComponents";
+
+const stripHtmlAndNormalize = (str: any) => {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/[\s\u00A0]+/g, ' ')
+    .trim()
+    .toLowerCase();
+};
+
+const isOptionMatch = (targetVal: any, optText: string, optIndex: number = -1) => {
+  if (targetVal === null || targetVal === undefined || optText === null || optText === undefined) return false;
+  const rawTarget = String(targetVal).trim();
+  const normTarget = stripHtmlAndNormalize(rawTarget);
+  const normOpt = stripHtmlAndNormalize(optText);
+
+  if (!normTarget || !normOpt) return false;
+
+  if (normTarget === normOpt) return true;
+
+  const tfTarget = normalizeAnswerGlobal(rawTarget);
+  const tfOpt = normalizeAnswerGlobal(optText);
+  const isTfKeywords = ['true', 'false', 'صح', 'خطأ', 'correct', 'incorrect'];
+  
+  if (isTfKeywords.includes(normTarget) || isTfKeywords.includes(normOpt)) {
+    return tfTarget === tfOpt;
+  }
+
+  if (optIndex >= 0) {
+    const letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+    const targetClean = rawTarget.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (targetClean === letters[optIndex] || targetClean === String(optIndex)) return true;
+  }
+
+  if (normTarget.length > 6 && normOpt.length > 6) {
+    const targetWords = normTarget.split(/\s+/).filter(Boolean);
+    const optWords = normOpt.split(/\s+/).filter(Boolean);
+    if (targetWords.length >= 3 && optWords.length >= 3) {
+      if (normTarget.includes(normOpt) || normOpt.includes(normTarget)) return true;
+    }
+  }
+
+  return false;
+};
+
+const renderExplanation = (explanationString: string, isAr: boolean) => {
+  if (!explanationString || typeof explanationString !== 'string' || !explanationString.trim()) return null;
+
+  let sections: any[] = [];
+  let isJson = false;
+  try {
+    const parsed = JSON.parse(explanationString);
+    if (Array.isArray(parsed)) {
+      sections = parsed.filter((item: any) => {
+        if (typeof item === 'string') return item.trim() !== '';
+        return item && item.content && item.content.trim() !== '';
+      }).map((item: any) => {
+        if (typeof item === 'string') return { type: 'EXPLANATION', content: item };
+        return item;
+      });
+      isJson = true;
+    }
+  } catch (e) {}
+
+  if (isJson && sections.length === 0) return null;
+
+  if (!isJson) {
+    if (!explanationString.trim()) return null;
+    return (
+      <div className="p-6 rounded-2xl bg-indigo-50/50 border border-indigo-100 mt-4">
+        <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">{isAr ? "تفسير الإجابة" : "Answer Explanation"}</p>
+        <HtmlRenderer html={explanationString} className="text-indigo-900 font-medium text-sm leading-relaxed" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3 mt-4">
+      {sections.map((sec: any, i: number) => (
+        <div key={i} className="p-5 rounded-2xl bg-indigo-50/70 border border-indigo-200 text-indigo-800 space-y-1">
+          <span className="text-xs font-black uppercase tracking-wider block">{isAr ? 'الشرح والتوضيح' : 'Explanation'}</span>
+          <HtmlRenderer html={sec.content} className="prose prose-sm max-w-none text-indigo-900" />
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export default function SchoolAdminSubmissionDetailsPage() {
+  const { id } = useParams();
+  const router = useRouter();
+  const { showToast } = useNotification();
+  const { language } = useLanguage();
+  const isAr = language === 'ar';
+  const [submission, setSubmission] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchResult();
+  }, [id]);
+
+  const fetchResult = async () => {
+    try {
+      const token = localStorage.getItem("school_admin_token");
+      const res = await fetch(`${API_URL}/exams/submissions/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSubmission(data);
+      } else {
+        showToast(data.error || (isAr ? "خطأ في تحميل النتيجة" : "Error loading result"), "error");
+        router.push("/school-admin/reports");
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="min-h-[60vh] flex flex-col items-center justify-center gap-6">
+          <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <p className={`font-black text-xl text-slate-400 animate-pulse ${isAr ? 'text-right rtl' : 'text-left ltr'}`} dir={isAr ? 'rtl' : 'ltr'}>
+            {isAr ? "جاري جلب تفاصيل إجابة الطالب..." : "Loading student submission details..."}
+          </p>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  const isPassed = submission.percentage >= (submission.exam?.passingScore || 50);
+
+  return (
+    <DashboardLayout>
+      <div className={`flex flex-col gap-8 pb-20 ${isAr ? 'rtl' : 'ltr'}`} dir={isAr ? 'rtl' : 'ltr'}>
+        
+        {/* Header with Navigation */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => router.back()} 
+              className="p-3 bg-white border border-slate-100 rounded-2xl text-slate-400 hover:text-indigo-600 transition-all shadow-sm group"
+            >
+              <ArrowRight className={`w-6 h-6 transition-transform ${isAr ? 'group-hover:-translate-x-1' : 'rotate-180 group-hover:translate-x-1'}`} />
+            </button>
+            <div>
+              <h1 className="text-3xl font-black text-slate-800">{isAr ? "تقرير إجابة الطالب" : "Student Answer Report"}</h1>
+              <p className="text-slate-500 font-medium">{isAr ? "مراجعة تفصيلية لأداء الطالب في الامتحان." : "Detailed review of student performance in the exam."}</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3">
+             <div className={`px-6 py-3 rounded-2xl font-black text-sm flex items-center gap-2 shadow-sm ${isPassed ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-rose-50 text-rose-600 border border-rose-100'}`}>
+                {isPassed ? <CheckCircle2 className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
+                {isPassed ? (isAr ? "حالة الطالب: ناجح" : "Status: Passed") : (isAr ? "حالة الطالب: راسب" : "Status: Failed")}
+             </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column: Student Info & Summary */}
+          <div className="lg:col-span-1 space-y-8">
+            {/* Student Card */}
+            <div className="bg-white p-8 rounded-[35px] border border-slate-100 shadow-sm relative overflow-hidden group">
+              <div className={`absolute top-0 w-32 h-32 bg-indigo-50/50 -mt-10 group-hover:scale-110 transition-transform ${isAr ? 'right-0 rounded-bl-[100px] -mr-10' : 'left-0 rounded-br-[100px] -ml-10'}`}></div>
+              <div className="relative z-10 flex flex-col items-center text-center">
+                <div className="w-24 h-24 bg-indigo-600 text-white rounded-3xl flex items-center justify-center text-3xl font-black mb-6 shadow-xl shadow-indigo-100">
+                  {submission.user?.name?.charAt(0) || "S"}
+                </div>
+                <h3 className="text-2xl font-black text-slate-800 mb-2">{submission.user?.name}</h3>
+                <p className="text-slate-400 font-bold mb-6 flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  {submission.user?.username}
+                </p>
+                
+                <div className="w-full grid grid-cols-2 gap-4 pt-6 border-t border-slate-50">
+                   <div className={isAr ? "text-right" : "text-left"}>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{isAr ? "النتيجة" : "Percentage"}</p>
+                      <p className="text-xl font-black text-slate-800">{Math.round(submission.percentage)}%</p>
+                   </div>
+                   <div className={`${isAr ? 'text-right border-r pr-4' : 'text-left border-l pl-4'} border-slate-50`}>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{isAr ? "الدرجة" : "Score"}</p>
+                      <p className="text-xl font-black text-slate-800">{submission.totalScore} / {submission.exam?.questions?.reduce((acc: number, q: any) => acc + (q.points || 1), 0) || 0}</p>
+                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Exam Summary Card */}
+            <div className="bg-slate-900 text-white p-8 rounded-[35px] shadow-2xl shadow-indigo-900/20 relative overflow-hidden">
+               <div className={`absolute bottom-0 w-40 h-40 bg-white/5 -mb-10 ${isAr ? 'left-0 rounded-tr-[100px] -ml-10' : 'right-0 rounded-tl-[100px] -mr-10'}`}></div>
+               <h4 className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-4">{isAr ? "تفاصيل الامتحان" : "Exam Details"}</h4>
+               <h3 className="text-2xl font-black mb-6 leading-tight">{submission.exam?.title}</h3>
+               
+               <div className="space-y-4">
+                  <div className="flex items-center gap-3 text-white/60">
+                     <FileText className="w-5 h-5" />
+                     <span className="font-bold text-sm">{submission.exam?.type}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-white/60">
+                     <BarChart3 className="w-5 h-5" />
+                     <span className="font-bold text-sm">{isAr ? `عدد الأسئلة: ${submission.exam?.questions?.length || 0}` : `Questions Count: ${submission.exam?.questions?.length || 0}`}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-white/60">
+                     <Clock className="w-5 h-5" />
+                     <span className="font-bold text-sm">{isAr ? `وقت التسليم: ${new Date(submission.createdAt).toLocaleString('ar-EG')}` : `Submitted At: ${new Date(submission.createdAt).toLocaleString('en-US')}`}</span>
+                  </div>
+               </div>
+            </div>
+          </div>
+
+          {/* Right Column: Detailed Answers */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="flex items-center justify-between px-2 mb-2">
+               <h3 className="text-2xl font-black text-slate-800 flex items-center gap-3">
+                 <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
+                   <RefreshCw className="w-5 h-5" />
+                 </div>
+                 {isAr ? "مراجعة الإجابات" : "Answers Review"}
+               </h3>
+            </div>
+
+            {submission.answers?.map((answer: any, index: number) => (
+              <div 
+                key={index}
+                className="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden group hover:border-indigo-200 transition-all"
+              >
+                <div className="p-8 md:p-10">
+                  <div className="flex justify-between items-start mb-8">
+                    <div className="flex items-center gap-4">
+                      <span className="w-10 h-10 bg-slate-800 text-white rounded-2xl flex items-center justify-center font-black text-lg">
+                        {index + 1}
+                      </span>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">
+                          {answer.question?.skill || "Skill"}
+                        </span>
+                        <span className="text-xs font-bold text-indigo-600 leading-none">
+                          {isAr ? `مستوى: ${answer.question?.level || "Medium"}` : `Level: ${answer.question?.level || "Medium"}`}
+                        </span>
+                      </div>
+                    </div>
+                    <div className={`px-4 py-2 rounded-xl font-black text-sm flex items-center gap-2 ${answer.isCorrect ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                      {answer.isCorrect ? <CheckCircle2 className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
+                      {answer.isCorrect ? (isAr ? `+${answer.question?.points || 1} درجة` : `+${answer.question?.points || 1} Pts`) : (isAr ? "خطأ" : "Incorrect")}
+                    </div>
+                  </div>
+
+                  <HtmlRenderer html={answer.question?.text || ''} tag="h4" className="text-xl font-bold text-slate-800 mb-8 leading-relaxed" />
+
+                  <div className="grid grid-cols-2 gap-4 mb-8">
+                    {(typeof answer.question?.options === 'string' ? JSON.parse(answer.question.options) : (answer.question?.options || [])).map((opt: string, oIdx: number) => {
+                      const isCorrectOption = isOptionMatch(answer.question?.correctAnswer, opt, oIdx);
+                      const isSelectedOption = isOptionMatch(answer.selectedAnswer, opt, oIdx);
+                      
+                      let bgClass = "bg-slate-50 border-transparent";
+                      let textClass = "text-slate-600";
+                      let icon = null;
+
+                      if (isCorrectOption) {
+                        bgClass = "bg-emerald-50 border-emerald-500 shadow-sm";
+                        textClass = "text-emerald-700";
+                        icon = <CheckCircle2 className="w-5 h-5 text-emerald-500" />;
+                      } else if (isSelectedOption && !isCorrectOption) {
+                        bgClass = "bg-rose-50 border-rose-500 shadow-sm";
+                        textClass = "text-rose-700";
+                        icon = <XCircle className="w-5 h-5 text-rose-500" />;
+                      }
+
+                      return (
+                        <div key={oIdx} className={`p-5 rounded-2xl border-2 transition-all flex items-center justify-between ${bgClass}`}>
+                          <span className={`font-bold ${textClass}`}><HtmlRenderer html={opt} tag="span" /></span>
+                          {icon}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {answer.question?.explanation && renderExplanation(answer.question.explanation, isAr)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </DashboardLayout>
+  );
+}
+
