@@ -225,7 +225,7 @@ export default function SchoolAdminEditExamPage() {
   const manualSubmitRef = useRef(false);
   const [schools, setSchools] = useState<any[]>([]);
   
-  const [examData, setExamData] = useState({
+  const [examData, setExamData] = useState<any>({
     title: "",
     description: "",
     coverImage: "",
