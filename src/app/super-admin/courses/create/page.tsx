@@ -342,14 +342,14 @@ export default function CreateCoursePage() {
   const toggleCourseSubject = (subject: string) => {
     const current = courseData.subjects || [];
     const next = current.includes(subject)
-      ? current.filter((s) => s !== subject)
+      ? current.filter((s: any) => s !== subject)
       : [...current, subject];
     setCourseData({ ...courseData, subjects: next });
   };
 
   const toggleCourseSchool = (id: string) => {
     const current = courseData.schoolIds || [];
-    const next = current.includes(id) ? current.filter((sid) => sid !== id) : [...current, id];
+    const next = current.includes(id) ? current.filter((sid: any) => sid !== id) : [...current, id];
     setCourseData({ ...courseData, schoolIds: next, isCentral: next.length === 0 });
   };
 

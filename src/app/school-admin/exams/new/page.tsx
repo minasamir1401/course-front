@@ -212,7 +212,7 @@ export default function SchoolAdminNewExamPage() {
   const manualSubmitRef = useRef(false);
   const [schools, setSchools] = useState<any[]>([]);
   
-  const [examData, setExamData] = useState<any>({
+  const [examData, setExamData] = useState({
     title: "",
     description: "",
     coverImage: "",
@@ -231,9 +231,9 @@ export default function SchoolAdminNewExamPage() {
     courseName: "",
     section: "",
     domain: "",
-    learningOutcomes: [] as string[],
-    indicators: [] as string[],
-    skills: [] as string[],
+    learningOutcomes: "",
+    indicators: "",
+    skills: "",
     gradeTarget: ""
   });
 
@@ -361,14 +361,14 @@ export default function SchoolAdminNewExamPage() {
   const toggleCourseSubject = (subject: string) => {
     const current = examData.subjects || [];
     const next = current.includes(subject)
-      ? current.filter((s) => s !== subject)
+      ? current.filter((s: any) => s !== subject)
       : [...current, subject];
     setExamData({ ...examData, subjects: next });
   };
 
   const toggleCourseSchool = (id: string) => {
     const current = examData.schoolIds || [];
-    const next = current.includes(id) ? current.filter((sid) => sid !== id) : [...current, id];
+    const next = current.includes(id) ? current.filter((sid: any) => sid !== id) : [...current, id];
     setExamData({ ...examData, schoolIds: next, isCentral: next.length === 0 });
   };
 
