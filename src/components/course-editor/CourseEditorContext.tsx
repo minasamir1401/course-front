@@ -61,6 +61,8 @@ interface CourseEditorContextType {
   setExams: React.Dispatch<React.SetStateAction<any[]>>;
   activeContentTab: "lessons";
   isLessonModalOpen: boolean;
+  availableMetadata: { domains: string[]; standards: string[]; indicators: string[]; outcomes: string[] };
+  setAvailableMetadata: React.Dispatch<React.SetStateAction<{ domains: string[]; standards: string[]; indicators: string[]; outcomes: string[] }>>;
   setIsLessonModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   isBankModalOpen: boolean;
   setIsBankModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -151,6 +153,7 @@ export const CourseEditorProvider: React.FC<{
   const [exams, setExams] = useState<any[]>([]);
   const [activeContentTab] = useState<"lessons">("lessons");
   const [isLessonModalOpen, setIsLessonModalOpen] = useState(false);
+  const [availableMetadata, setAvailableMetadata] = useState({ domains: [] as string[], standards: [] as string[], indicators: [] as string[], outcomes: [] as string[] });
   const [isBankModalOpen, setIsBankModalOpen] = useState(false);
   const [isQuestionBankModalOpen, setIsQuestionBankModalOpen] = useState(false);
   const [bankItems, setBankItems] = useState<any[]>([]);
@@ -1447,6 +1450,8 @@ export const CourseEditorProvider: React.FC<{
         draftSavedAt,
         restoreFromDraft,
         clearDraft,
+        availableMetadata,
+        setAvailableMetadata,
         isSettingsHidden,
         setIsSettingsHidden,
       }}

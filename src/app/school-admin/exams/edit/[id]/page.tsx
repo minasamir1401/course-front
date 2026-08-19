@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
 import { API_URL } from '@/lib/api';
 import { useNotification } from "@/context/NotificationContext";
@@ -331,6 +332,13 @@ export default function SchoolAdminEditExamPage() {
     questions: [],
     assignments: [],
     attachments: []
+  });
+
+  const [availableMetadata, setAvailableMetadata] = useState({
+    domains: [] as string[],
+    standards: [] as string[],
+    indicators: [] as string[],
+    outcomes: [] as string[]
   });
 
   // UI States for Lesson Modal
@@ -832,7 +840,7 @@ useEffect(() => {
         const stdIdx = headers.findIndex(h => h.includes("standard") || h.includes("معيار") || h.includes("المعايير"));
         const indIdx = headers.findIndex(h => h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشرات"));
         const loIdx = headers.findIndex(h => h.includes("outcome") || h.includes("ناتج") || h.includes("مخرج") || h.includes("النواتج") || h.includes("المخرجات"));
-        const domainIdx = headers.findIndex(h => h.includes("domain") || h.includes("مجال") || h.includes("المجال"));
+        const domainIdx = headers.findIndex(h => h.includes("domain") || h.includes("مجال") || h.includes("الماجال"));
         const lessonIdx = headers.findIndex(h => h.includes("lesson") || h.includes("درس") || h.includes("الدرس"));
 
         if (stdIdx === -1 && indIdx === -1 && loIdx === -1 && domainIdx === -1) {
@@ -865,19 +873,21 @@ useEffect(() => {
           const outcomesList = filteredRows.map(r => loIdx >= 0 ? String(r[loIdx] ?? "").trim() : "").filter(Boolean);
           const domainList = filteredRows.map(r => domainIdx >= 0 ? String(r[domainIdx] ?? "").trim() : "").filter(Boolean);
 
-          standardVal = standardsList.join("\n");
-          indicatorVal = indicatorsList.join("\n");
-          outcomeVal = outcomesList.join("\n");
-          domainVal = domainList[0] || "";
-        }
+          setAvailableMetadata({
+            domains: Array.from(new Set(domainList)),
+            standards: Array.from(new Set(standardsList)),
+            indicators: Array.from(new Set(indicatorsList)),
+            outcomes: Array.from(new Set(outcomesList))
+          });
 
-        setCurrentModule((prev: any) => ({
-          ...prev,
-          standards: standardVal || prev.standards,
-          indicators: indicatorVal || prev.indicators,
-          learningOutcomes: outcomeVal || prev.learningOutcomes,
-          domain: domainVal || prev.domain
-        }));
+          setCurrentModule((prev: any) => ({
+            ...prev,
+            domain: prev.domain || domainList[0] || "",
+            standards: prev.standards || standardsList[0] || "",
+            indicators: prev.indicators || indicatorsList[0] || "",
+            learningOutcomes: prev.learningOutcomes || outcomesList[0] || ""
+          }));
+        }
 
         showToast(t('courseCreate.excelMetadataSuccess') || "Standards, indicator and domain successfully imported from Excel", "success");
       } catch (err) {
@@ -1492,19 +1502,16 @@ useEffect(() => {
 
                   <div className="grid grid-cols-2 md:grid-cols-7 gap-4 p-6 bg-white border border-slate-200 rounded-[30px] shadow-sm">
                       <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المستوى المعرفي' : 'Cognitive Level'}</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المعيار' : 'Standard'}</label>
                         <select 
                           className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
-                          value={block.cognitive || ""}
-                          onChange={(e) => updateBlock(source, sIdx, 'cognitive', e.target.value)}
+                          value={block.standard || ""}
+                          onChange={(e) => updateBlock(source, sIdx, 'standard', e.target.value)}
                         >
-                          <option value="">{language === 'ar' ? 'اختر المستوى...' : 'Select Level...'}</option>
-                          <option value="Remembering">{language === 'ar' ? 'تذكر (Remembering)' : 'Remembering'}</option>
-                          <option value="Understanding">{language === 'ar' ? 'فهم (Understanding)' : 'Understanding'}</option>
-                          <option value="Applying">{language === 'ar' ? 'تطبيق (Applying)' : 'Applying'}</option>
-                          <option value="Analyzing">{language === 'ar' ? 'تحليل (Analyzing)' : 'Analyzing'}</option>
-                          <option value="Evaluating">{language === 'ar' ? 'تقييم (Evaluating)' : 'Evaluating'}</option>
-                          <option value="Creating">{language === 'ar' ? 'إبداع (Creating)' : 'Creating'}</option>
+                          <option value="">{language === 'ar' ? 'اختر المعيار...' : 'Select Standard...'}</option>
+                          {(currentModule.standards || "").split("\n").filter(Boolean).map((s: string) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
                         </select>
                       </div>
 
@@ -1695,7 +1702,8 @@ useEffect(() => {
                               if (resolvedIndex < 0) return prev;
                               newSlides[resolvedIndex] = {
                                 ...newSlides[resolvedIndex],
-                                ...updatedQ,
+                                options: updatedQ.options,
+                                correctAnswer: updatedQ.correctAnswer,
                                 ...(updatedQ.type === 'MULTI_SELECT' ? (() => {
                                   try {
                                     return { correctAnswers: JSON.parse(updatedQ.correctAnswer) };
@@ -1818,7 +1826,20 @@ useEffect(() => {
     setQuestionSource('questions');
     setCurrentModule({ ...currentModule, _isStandalone: true });
     setShowQuestionForm(true);
+    // If the module modal is not open, open it in standalone mode so the question form is visible
+    if (!isModuleModalOpen) {
+      setEditingModuleIndex(null);
+      setIsModuleModalOpen(true);
+      setActiveTab('exercises');
+      // Scroll to the editor panel after it renders
+      setTimeout(() => {
+        const panel = document.getElementById('module-editor-panel');
+        if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        else window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 100);
+    }
   };
+
 
   
   const handleMoveToModule = (moduleIndex: number) => {
@@ -1840,7 +1861,7 @@ useEffect(() => {
     if (showBulkMoveModal && allExams.length === 0) {
       const fetchExams = async () => {
         try {
-          const token = localStorage.getItem("super_admin_token") || localStorage.getItem("lms_token") || localStorage.getItem("token");
+          const token = localStorage.getItem("school_admin_token") || localStorage.getItem("lms_token") || localStorage.getItem("token");
           const res = await fetch(`${API_URL}/exams`, {
             headers: { Authorization: `Bearer ${token}` }
           });
@@ -1864,7 +1885,7 @@ useEffect(() => {
     }
     setIsLoading(true);
     try {
-      const token = localStorage.getItem("super_admin_token") || localStorage.getItem("lms_token") || localStorage.getItem("token");
+      const token = localStorage.getItem("school_admin_token") || localStorage.getItem("lms_token") || localStorage.getItem("token");
       const res = await fetch(`${API_URL}/exams/${examId}/move-standalone-questions`, {
         method: "POST",
         headers: {
@@ -2502,43 +2523,61 @@ useEffect(() => {
                   </select>
                 </div>
 
-                {/* Cognitive Level */}
-                <div className="flex flex-col gap-2 relative">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المستوى المعرفي' : 'Cognitive Level'}</label>
+                                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المجال' : 'Domain'}</label>
                   <select 
-                    className="w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 font-bold text-slate-700 text-sm outline-none focus:border-indigo-600 focus:bg-white"
-                    value={tempQuestion.cognitive || ""}
-                    onChange={(e) => setTempQuestion({ ...tempQuestion, cognitive: e.target.value })}
+                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px]"
+                    value={tempQuestion.domain || ""}
+                    onChange={(e) => updateCurrentQuestionField("domain", e.target.value)}
                   >
-                    <option value="">{language === 'ar' ? 'اختر المستوى...' : 'Select Level...'}</option>
-                    <option value="Remembering">{language === 'ar' ? 'تذكر (Remembering)' : 'Remembering'}</option>
-                    <option value="Understanding">{language === 'ar' ? 'فهم (Understanding)' : 'Understanding'}</option>
-                    <option value="Applying">{language === 'ar' ? 'تطبيق (Applying)' : 'Applying'}</option>
-                    <option value="Analyzing">{language === 'ar' ? 'تحليل (Analyzing)' : 'Analyzing'}</option>
-                    <option value="Evaluating">{language === 'ar' ? 'تقييم (Evaluating)' : 'Evaluating'}</option>
-                    <option value="Creating">{language === 'ar' ? 'إبداع (Creating)' : 'Creating'}</option>
+                    <option value="">{language === 'ar' ? 'اختر المجال...' : 'Select Domain...'}</option>
+                    {availableMetadata.domains.map((d: string) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
                   </select>
                 </div>
 
-                {/* Custom Indicator with CRUD */}
-                {renderMetadataDropdown(
-                  language === 'ar' ? 'المؤشر' : 'Indicator',
-                  tempQuestion.indicator || "",
-                  'indicator',
-                  isQuestionIndicatorOpen,
-                  setIsQuestionIndicatorOpen,
-                  'indicators'
-                )}
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المعيار' : 'Standard'}</label>
+                  <select 
+                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px] truncate"
+                    value={tempQuestion.standard || ""}
+                    onChange={(e) => updateCurrentQuestionField("standard", e.target.value)}
+                  >
+                    <option value="">{language === 'ar' ? 'اختر المعيار...' : 'Select Standard...'}</option>
+                    {availableMetadata.standards.map((s: string) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
 
-                {/* Custom Learning Outcome with CRUD */}
-                {renderMetadataDropdown(
-                  language === 'ar' ? 'المخرج التعليمي' : 'Learning Outcome',
-                  tempQuestion.learningOutcome || "",
-                  'learningOutcome',
-                  isQuestionOutcomeOpen,
-                  setIsQuestionOutcomeOpen,
-                  'learningOutcomes'
-                )}
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المؤشر' : 'Indicator'}</label>
+                  <select 
+                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px] truncate"
+                    value={tempQuestion.indicator || ""}
+                    onChange={(e) => updateCurrentQuestionField("indicator", e.target.value)}
+                  >
+                    <option value="">{language === 'ar' ? 'اختر المؤشر...' : 'Select Indicator...'}</option>
+                    {availableMetadata.indicators.map((ind: string) => (
+                      <option key={ind} value={ind}>{ind}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'ناتج التعلم (LO)' : 'Learning Outcome (LO)'}</label>
+                  <select 
+                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px] truncate"
+                    value={tempQuestion.learningOutcome || ""}
+                    onChange={(e) => updateCurrentQuestionField("learningOutcome", e.target.value)}
+                  >
+                    <option value="">{language === 'ar' ? 'اختر ناتج التعلم...' : 'Select Outcome...'}</option>
+                    {availableMetadata.outcomes.map((lo: string) => (
+                      <option key={lo} value={lo}>{lo}</option>
+                    ))}
+                  </select>
+                </div>
 
                 <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المهارة' : 'Skill'}</label>
@@ -3019,7 +3058,9 @@ useEffect(() => {
             if (data.questions) {
               // Only assign server-assigned IDs to new questions (those without IDs).
               // IMPORTANT: Do NOT restore the full list from the server — that would
-              // bring back questions we just deleted.
+              // bring back questions we just deleted (they are soft-deleted on the
+              // server in this very same request and won't appear in the next GET,
+              // but the PUT response can still include them depending on timing).
               const deletedIdSet = new Set<string>(deletedQuestionIdsRef.current);
               const unassigned = data.questions.filter((q: any) => !q.moduleId && !deletedIdSet.has(q.id));
               const processedUnassigned = unassigned.map((q: any) => {
@@ -3034,6 +3075,7 @@ useEffect(() => {
               });
               
               setStandaloneQuestions((prev: any[]) => {
+                // Remove any locally-deleted questions, then assign IDs to new ones
                 const filtered = prev.filter((q: any) => !q.id || !deletedIdSet.has(q.id));
                 return filtered.map((q: any, qIdx: number) => {
                   const serverQ = processedUnassigned[qIdx];
@@ -3184,9 +3226,9 @@ useEffect(() => {
     <DashboardLayout>
       <div dir={language === 'ar' ? 'rtl' : 'ltr'}>
         <div className="max-w-7xl mx-auto space-y-6">
-        {isModuleModalOpen && (
-          <div className="max-w-7xl mx-auto w-full animate-in fade-in slide-in-from-top-4 duration-500 mb-8">
-            <div className="bg-white border border-slate-200 w-full rounded-[40px] shadow-2xl overflow-hidden flex flex-col">
+        {isModuleModalOpen && typeof document !== 'undefined' && createPortal(
+          <div id="module-editor-panel" dir={language === 'ar' ? 'rtl' : 'ltr'} className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4 sm:p-6 md:p-8 animate-in fade-in duration-300">
+            <div className="bg-white border border-slate-200 w-full max-w-7xl h-[100dvh] sm:h-auto sm:max-h-[95vh] rounded-[24px] sm:rounded-[40px] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
               {/* Modal Header */}
               <div className="bg-slate-900 p-3 sm:p-8 flex justify-between items-center gap-3">
                 <div className="min-w-0">
@@ -3267,517 +3309,58 @@ useEffect(() => {
                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <div className="space-y-3">
                           <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "المجال" : "Domain"}</label>
-                          <div className="flex gap-2">
-                            <select 
-                              value={currentModule.domain || ""}
-                              onChange={(e) => {
-                                if (e.target.value === "__NEW__") {
-                                  const newDomain = prompt(language === 'ar' ? "أدخل اسم المجال الجديد:" : "Enter new domain name:");
-                                  if (newDomain && newDomain.trim()) {
-                                    setCurrentModule({...currentModule, domain: newDomain.trim()});
-                                  }
-                                } else {
-                                    setCurrentModule({...currentModule, domain: e.target.value});
-                                }
-                              }}
-                              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none shadow-sm"
-                            >
-                              <option value="">{t('courseCreate.selectDomain') || "Select Domain..."}</option>
-                              {Array.from(new Set(modules.map(l => l.domain).filter(Boolean))).map((domainName: any) => (
-                                <option key={domainName} value={domainName}>{domainName}</option>
-                              ))}
-                              <option value="__NEW__" className="text-indigo-600 font-bold">{language === 'ar' ? "+ إضافة مجال جديد..." : "+ Add New Domain..."}</option>
-                            </select>
-                            {currentModule.domain && (
-                              <div className="flex gap-1 shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const newVal = prompt(language === 'ar' ? "تعديل المجال:" : "Edit Domain:", currentModule.domain);
-                                    if (newVal !== null && newVal.trim()) {
-                                      setCurrentModule({...currentModule, domain: newVal.trim()});
-                                      showToast(language === 'ar' ? "تم تعديل المجال بنجاح" : "Domain updated successfully", "success");
-                                    }
-                                  }}
-                                  className="p-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl border border-indigo-100 flex items-center justify-center transition-all"
-                                  title={language === 'ar' ? "تعديل المجال" : "Edit Domain"}
-                                >
-                                  <Edit2 className="w-4 h-4" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setCurrentModule({...currentModule, domain: ""});
-                                    showToast(language === 'ar' ? "تم إزالة المجال" : "Domain cleared", "info");
-                                  }}
-                                  className="p-3 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl border border-rose-100 flex items-center justify-center transition-all"
-                                  title={language === 'ar' ? "حذف المجال" : "Clear Domain"}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </div>
-                            )}
-                          </div>
+                          <select 
+                            value={currentModule.domain || ""}
+                            onChange={(e) => setCurrentModule({...currentModule, domain: e.target.value})}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none shadow-sm font-bold"
+                          >
+                            <option value="">{t('courseCreate.selectDomain') || "Select Domain..."}</option>
+                            {availableMetadata.domains.map((domainName: string) => (
+                              <option key={domainName} value={domainName}>{domainName}</option>
+                            ))}
+                          </select>
                         </div>
 
-                        <div className="space-y-3 relative">
+                        <div className="space-y-3">
                           <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "المعايير" : "Standards"}</label>
-                          <div className="relative">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setIsStandardDropdownOpen(!isStandardDropdownOpen);
-                                setIsIndicatorDropdownOpen(false);
-                                setIsOutcomeDropdownOpen(false);
-                              }}
-                              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 font-bold text-sm outline-none focus:border-indigo-600 flex justify-between items-center shadow-sm text-right cursor-pointer"
-                            >
-                              <span className="truncate">
-                                {(() => {
-                                  const selected = (currentModule.standards || "").split("\n").filter(Boolean);
-                                  if (selected.length === 0) return t('courseCreate.selectStandard') || "Select Standard...";
-                                  return language === 'ar' 
-                                    ? `تم تحديد (${selected.length}) معايير` 
-                                    : `Selected (${selected.length}) standards`;
-                                })()}
-                              </span>
-                              <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${isStandardDropdownOpen ? 'rotate-180' : ''}`} />
-                            </button>
-                            
-                            {isStandardDropdownOpen && (
-                              <>
-                                <div className="fixed inset-0 z-40" onClick={() => setIsStandardDropdownOpen(false)}></div>
-                                <div className="absolute z-50 w-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-xl max-h-72 overflow-y-auto p-3 space-y-1 animate-in fade-in slide-in-from-top-2 duration-200">
-                                  {[
-                                    language === 'ar' ? "Standard 1: Understanding & Comprehension" : "Standard 1: Understanding & Comprehension",
-                                    language === 'ar' ? "Standard 2: Application & Analysis" : "Standard 2: Application & Analysis",
-                                    language === 'ar' ? "Standard 3: Critical Thinking" : "Standard 3: Critical Thinking"
-                                  ].map((option) => {
-                                    const selected = (currentModule.standards || "").split("\n").filter(Boolean);
-                                    const isSelected = selected.includes(option);
-                                    return (
-                                      <label key={option} className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors text-slate-700 font-bold text-xs">
-                                        <input
-                                          type="checkbox"
-                                          checked={isSelected}
-                                          onChange={() => {
-                                            let nextList = [...selected];
-                                            if (isSelected) {
-                                              nextList = nextList.filter((x: string) => x !== option);
-                                            } else {
-                                              nextList.push(option);
-                                            }
-                                            setCurrentModule({...currentModule, standards: nextList.join("\n")});
-                                          }}
-                                          className="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer shrink-0"
-                                        />
-                                        <span className="flex-1 text-right">{option}</span>
-                                      </label>
-                                    );
-                                  })}
-
-                                  {(() => {
-                                    const selected = (currentModule.standards || "").split("\n").filter(Boolean);
-                                    const defaultOptions = [
-                                      language === 'ar' ? "Standard 1: Understanding & Comprehension" : "Standard 1: Understanding & Comprehension",
-                                      language === 'ar' ? "Standard 2: Application & Analysis" : "Standard 2: Application & Analysis",
-                                      language === 'ar' ? "Standard 3: Critical Thinking" : "Standard 3: Critical Thinking",
-                                      "Standard 1: Understanding & Comprehension",
-                                      "Standard 2: Application & Analysis",
-                                      "Standard 3: Critical Thinking"
-                                    ];
-                                    const customOpts = selected.filter((x: string) => !defaultOptions.includes(x));
-                                    return customOpts.map((option: string) => (
-                                      <div key={option} className="flex items-center justify-between gap-2 px-3 py-1 hover:bg-slate-50 rounded-xl text-slate-700 font-bold text-xs">
-                                        <label className="flex items-center gap-3 flex-1 cursor-pointer py-1.5">
-                                          <input
-                                            type="checkbox"
-                                            checked={true}
-                                            onChange={() => {
-                                              const nextList = selected.filter((x: string) => x !== option);
-                                              setCurrentModule({...currentModule, standards: nextList.join("\n")});
-                                            }}
-                                            className="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer shrink-0"
-                                          />
-                                          <span className="flex-1 text-right truncate" title={option}>{option}</span>
-                                        </label>
-                                        <div className="flex gap-1 shrink-0">
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              const newVal = prompt(language === 'ar' ? "تعديل المعيار المخصص:" : "Edit Custom Standard:", option);
-                                              if (newVal !== null && newVal.trim()) {
-                                                const nextList = selected.map((x: string) => x === option ? newVal.trim() : x);
-                                                setCurrentModule({...currentModule, standards: nextList.join("\n")});
-                                                showToast(language === 'ar' ? "تم التعديل بنجاح" : "Updated successfully", "success");
-                                              }
-                                            }}
-                                            className="p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg transition-all"
-                                            title={language === 'ar' ? "تعديل" : "Edit"}
-                                          >
-                                            <Edit2 className="w-3.5 h-3.5" />
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              const nextList = selected.filter((x: string) => x !== option);
-                                              setCurrentModule({...currentModule, standards: nextList.join("\n")});
-                                              showToast(language === 'ar' ? "تم إزالة المعيار" : "Standard removed", "info");
-                                            }}
-                                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-all"
-                                            title={language === 'ar' ? "حذف" : "Delete"}
-                                          >
-                                            <Trash2 className="w-3.5 h-3.5" />
-                                          </button>
-                                        </div>
-                                      </div>
-                                    ));
-                                  })()}
-
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const newVal = prompt(language === 'ar' ? "أدخل المعيار المخصص الجديد:" : "Enter new custom standard:");
-                                      if (newVal && newVal.trim()) {
-                                        const selected = (currentModule.standards || "").split("\n").filter(Boolean);
-                                        if (!selected.includes(newVal.trim())) {
-                                          const nextList = [...selected, newVal.trim()];
-                                          setCurrentModule({...currentModule, standards: nextList.join("\n")});
-                                          showToast(language === 'ar' ? "تم الإضافة بنجاح" : "Added successfully", "success");
-                                        }
-                                      }
-                                    }}
-                                    className="w-full text-right px-3 py-2 hover:bg-indigo-50/50 hover:text-indigo-600 rounded-xl cursor-pointer transition-all text-indigo-600 font-black text-xs border border-dashed border-indigo-100 mt-2 flex items-center justify-center gap-1.5"
-                                  >
-                                    <Plus className="w-3.5 h-3.5" />
-                                    <span>{t('courseCreate.addCustomStandard') || "+ Add Custom Standard..."}</span>
-                                  </button>
-                                </div>
-                              </>
-                            )}
-                          </div>
-
-                          {(() => {
-                            const selected = (currentModule.standards || "").split("\n").filter(Boolean);
-                            if (selected.length === 0) return null;
-                            return (
-                              <div className="flex flex-wrap gap-1.5 mt-2">
-                                {selected.map((option: string) => (
-                                  <span key={option} className="inline-flex items-center gap-1.5 bg-indigo-50/80 text-indigo-700 px-3 py-1 rounded-xl border border-indigo-100/50 text-[10px] md:text-xs font-black shadow-sm shrink-0">
-                                    <span className="max-w-[120px] md:max-w-[200px] truncate" title={option}>{option}</span>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        const nextList = selected.filter((x: string) => x !== option);
-                                        setCurrentModule({...currentModule, standards: nextList.join("\n")});
-                                      }}
-                                      className="w-4 h-4 rounded-full bg-indigo-100 text-indigo-600 hover:bg-indigo-600 hover:text-white flex items-center justify-center transition-all cursor-pointer font-bold text-[8px]"
-                                    >
-                                      ✕
-                                    </button>
-                                  </span>
-                                ))}
-                              </div>
-                            );
-                          })()}
+                          <select 
+                            value={currentModule.standards || ""}
+                            onChange={(e) => setCurrentModule({...currentModule, standards: e.target.value})}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none shadow-sm font-bold truncate"
+                          >
+                            <option value="">{t('courseCreate.selectStandard') || "Select Standard..."}</option>
+                            {availableMetadata.standards.map((standardName: string) => (
+                              <option key={standardName} value={standardName}>{standardName}</option>
+                            ))}
+                          </select>
                         </div>
 
-                        <div className="space-y-3 relative">
-                          <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "المؤشرات" : "Indicators"}</label>
-                          <div className="relative">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setIsIndicatorDropdownOpen(!isIndicatorDropdownOpen);
-                                setIsOutcomeDropdownOpen(false);
-                              }}
-                              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 font-bold text-sm outline-none focus:border-indigo-600 flex justify-between items-center shadow-sm text-right cursor-pointer"
-                            >
-                              <span className="truncate">
-                                {(() => {
-                                  const selected = (currentModule.indicators || "").split("\n").filter(Boolean);
-                                  if (selected.length === 0) return t('courseCreate.selectIndicator') || "Select Indicator...";
-                                  return language === 'ar' 
-                                    ? `تم تحديد (${selected.length}) مؤشرات` 
-                                    : `Selected (${selected.length}) indicators`;
-                                })()}
-                              </span>
-                              <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${isIndicatorDropdownOpen ? 'rotate-180' : ''}`} />
-                            </button>
-                            
-                            {isIndicatorDropdownOpen && (
-                              <>
-                                <div className="fixed inset-0 z-40" onClick={() => setIsIndicatorDropdownOpen(false)}></div>
-                                <div className="absolute z-50 w-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-xl max-h-72 overflow-y-auto p-3 space-y-1 animate-in fade-in slide-in-from-top-2 duration-200">
-                                  {["Indicator 1: Identifies Basic Concepts", "Indicator 2: Applies Mathematical Laws", "Indicator 3: Infers Relationships"].map((option) => {
-                                    const selected = (currentModule.indicators || "").split("\n").filter(Boolean);
-                                    const isSelected = selected.includes(option);
-                                    return (
-                                      <label key={option} className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors text-slate-700 font-bold text-xs">
-                                        <input
-                                          type="checkbox"
-                                          checked={isSelected}
-                                          onChange={() => {
-                                            let nextList = [...selected];
-                                            if (isSelected) {
-                                              nextList = nextList.filter((x: string) => x !== option);
-                                            } else {
-                                              nextList.push(option);
-                                            }
-                                            setCurrentModule({...currentModule, indicators: nextList.join("\n")});
-                                          }}
-                                          className="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer shrink-0"
-                                        />
-                                        <span className="flex-1 text-right">{option}</span>
-                                      </label>
-                                    );
-                                  })}
-
-                                  {(() => {
-                                    const selected = (currentModule.indicators || "").split("\n").filter(Boolean);
-                                    const customOpts = selected.filter((x: string) => !["Indicator 1: Identifies Basic Concepts", "Indicator 2: Applies Mathematical Laws", "Indicator 3: Infers Relationships"].includes(x));
-                                    return customOpts.map((option: string) => (
-                                      <div key={option} className="flex items-center justify-between gap-2 px-3 py-1 hover:bg-slate-50 rounded-xl text-slate-700 font-bold text-xs">
-                                        <label className="flex items-center gap-3 flex-1 cursor-pointer py-1.5">
-                                          <input
-                                            type="checkbox"
-                                            checked={true}
-                                            onChange={() => {
-                                              const nextList = selected.filter((x: string) => x !== option);
-                                              setCurrentModule({...currentModule, indicators: nextList.join("\n")});
-                                            }}
-                                            className="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer shrink-0"
-                                          />
-                                          <span className="flex-1 text-right truncate" title={option}>{option}</span>
-                                        </label>
-                                        <div className="flex gap-1 shrink-0">
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              const newVal = prompt(language === 'ar' ? "تعديل المؤشر المخصص:" : "Edit Custom Indicator:", option);
-                                              if (newVal !== null && newVal.trim()) {
-                                                const nextList = selected.map((x: string) => x === option ? newVal.trim() : x);
-                                                setCurrentModule({...currentModule, indicators: nextList.join("\n")});
-                                                showToast(language === 'ar' ? "تم التعديل بنجاح" : "Updated successfully", "success");
-                                              }
-                                            }}
-                                            className="p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg transition-all"
-                                            title={language === 'ar' ? "تعديل" : "Edit"}
-                                          >
-                                            <Edit2 className="w-3.5 h-3.5" />
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              const nextList = selected.filter((x: string) => x !== option);
-                                              setCurrentModule({...currentModule, indicators: nextList.join("\n")});
-                                              showToast(language === 'ar' ? "تم إزالة المؤشر" : "Indicator removed", "info");
-                                            }}
-                                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-all"
-                                            title={language === 'ar' ? "حذف" : "Delete"}
-                                          >
-                                            <Trash2 className="w-3.5 h-3.5" />
-                                          </button>
-                                        </div>
-                                      </div>
-                                    ));
-                                  })()}
-
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const newVal = prompt(language === 'ar' ? "أدخل المؤشر المخصص الجديد:" : "Enter new custom indicator:");
-                                      if (newVal && newVal.trim()) {
-                                        const selected = (currentModule.indicators || "").split("\n").filter(Boolean);
-                                        if (!selected.includes(newVal.trim())) {
-                                          const nextList = [...selected, newVal.trim()];
-                                          setCurrentModule({...currentModule, indicators: nextList.join("\n")});
-                                          showToast(language === 'ar' ? "تم الإضافة بنجاح" : "Added successfully", "success");
-                                        }
-                                      }
-                                    }}
-                                    className="w-full text-right px-3 py-2 hover:bg-indigo-50/50 hover:text-indigo-600 rounded-xl cursor-pointer transition-all text-indigo-600 font-black text-xs border border-dashed border-indigo-100 mt-2 flex items-center justify-center gap-1.5"
-                                  >
-                                    <Plus className="w-3.5 h-3.5" />
-                                    <span>{language === 'ar' ? "+ إضافة مؤشر مخصص..." : "+ Add Custom Indicator..."}</span>
-                                  </button>
-                                </div>
-                              </>
-                            )}
-                          </div>
-
-                          {(() => {
-                            const selected = (currentModule.indicators || "").split("\n").filter(Boolean);
-                            if (selected.length === 0) return null;
-                            return (
-                              <div className="flex flex-wrap gap-1.5 mt-2">
-                                {selected.map((option: string) => (
-                                  <span key={option} className="inline-flex items-center gap-1.5 bg-indigo-50/80 text-indigo-700 px-3 py-1 rounded-xl border border-indigo-100/50 text-[10px] md:text-xs font-black shadow-sm shrink-0">
-                                    <span className="max-w-[120px] md:max-w-[200px] truncate" title={option}>{option}</span>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        const nextList = selected.filter((x: string) => x !== option);
-                                        setCurrentModule({...currentModule, indicators: nextList.join("\n")});
-                                      }}
-                                      className="w-4 h-4 rounded-full bg-indigo-100 text-indigo-600 hover:bg-indigo-600 hover:text-white flex items-center justify-center transition-all cursor-pointer font-bold text-[8px]"
-                                    >
-                                      ✕
-                                    </button>
-                                  </span>
-                                ))}
-                              </div>
-                            );
-                          })()}
+                        <div className="space-y-3">
+                          <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "المؤشرات" : "Indicators"}</label>
+                          <select 
+                            value={currentModule.indicators || ""}
+                            onChange={(e) => setCurrentModule({...currentModule, indicators: e.target.value})}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none shadow-sm font-bold truncate"
+                          >
+                            <option value="">{t('courseCreate.selectIndicator') || "Select Indicator..."}</option>
+                            {availableMetadata.indicators.map((indicatorName: string) => (
+                              <option key={indicatorName} value={indicatorName}>{indicatorName}</option>
+                            ))}
+                          </select>
                         </div>
 
-                        <div className="space-y-3 relative">
-                          <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "نواتج التعلم (LOs)" : "Learning Outcomes (LOs)"}</label>
-                          <div className="relative">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setIsOutcomeDropdownOpen(!isOutcomeDropdownOpen);
-                                setIsIndicatorDropdownOpen(false);
-                              }}
-                              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 font-bold text-sm outline-none focus:border-indigo-600 flex justify-between items-center shadow-sm text-right cursor-pointer"
-                            >
-                              <span className="truncate">
-                                {(() => {
-                                  const selected = (currentModule.learningOutcomes || "").split("\n").filter(Boolean);
-                                  if (selected.length === 0) return t('courseCreate.selectOutcome') || "Select Learning Outcome...";
-                                  return language === 'ar' 
-                                    ? `تم تحديد (${selected.length}) نواتج تعلم` 
-                                    : `Selected (${selected.length}) outcomes`;
-                                })()}
-                              </span>
-                              <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${isOutcomeDropdownOpen ? 'rotate-180' : ''}`} />
-                            </button>
-                            
-                            {isOutcomeDropdownOpen && (
-                              <>
-                                <div className="fixed inset-0 z-40" onClick={() => setIsOutcomeDropdownOpen(false)}></div>
-                                <div className="absolute z-50 w-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-xl max-h-72 overflow-y-auto p-3 space-y-1 animate-in fade-in slide-in-from-top-2 duration-200">
-                                  {["Outcome 1: Student will be able to...", "Outcome 2: Student will distinguish between...", "Outcome 3: Student will analyze..."].map((option) => {
-                                    const selected = (currentModule.learningOutcomes || "").split("\n").filter(Boolean);
-                                    const isSelected = selected.includes(option);
-                                    return (
-                                      <label key={option} className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors text-slate-700 font-bold text-xs">
-                                        <input
-                                          type="checkbox"
-                                          checked={isSelected}
-                                          onChange={() => {
-                                            let nextList = [...selected];
-                                            if (isSelected) {
-                                              nextList = nextList.filter((x: string) => x !== option);
-                                            } else {
-                                              nextList.push(option);
-                                            }
-                                            setCurrentModule({...currentModule, learningOutcomes: nextList.join("\n")});
-                                          }}
-                                          className="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer shrink-0"
-                                        />
-                                        <span className="flex-1 text-right">{option}</span>
-                                      </label>
-                                    );
-                                  })}
-
-                                  {(() => {
-                                    const selected = (currentModule.learningOutcomes || "").split("\n").filter(Boolean);
-                                    const customOpts = selected.filter((x: string) => !["Outcome 1: Student will be able to...", "Outcome 2: Student will distinguish between...", "Outcome 3: Student will analyze..."].includes(x));
-                                    return customOpts.map((option: string) => (
-                                      <div key={option} className="flex items-center justify-between gap-2 px-3 py-1 hover:bg-slate-50 rounded-xl text-slate-700 font-bold text-xs">
-                                        <label className="flex items-center gap-3 flex-1 cursor-pointer py-1.5">
-                                          <input
-                                            type="checkbox"
-                                            checked={true}
-                                            onChange={() => {
-                                              const nextList = selected.filter((x: string) => x !== option);
-                                              setCurrentModule({...currentModule, learningOutcomes: nextList.join("\n")});
-                                            }}
-                                            className="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500 cursor-pointer shrink-0"
-                                          />
-                                          <span className="flex-1 text-right truncate" title={option}>{option}</span>
-                                        </label>
-                                        <div className="flex gap-1 shrink-0">
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              const newVal = prompt(language === 'ar' ? "تعديل ناتج التعلم المخصص:" : "Edit Custom Outcome:", option);
-                                              if (newVal !== null && newVal.trim()) {
-                                                const nextList = selected.map((x: string) => x === option ? newVal.trim() : x);
-                                                setCurrentModule({...currentModule, learningOutcomes: nextList.join("\n")});
-                                                showToast(language === 'ar' ? "تم التعديل بنجاح" : "Updated successfully", "success");
-                                              }
-                                            }}
-                                            className="p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg transition-all"
-                                            title={language === 'ar' ? "تعديل" : "Edit"}
-                                          >
-                                            <Edit2 className="w-3.5 h-3.5" />
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              const nextList = selected.filter((x: string) => x !== option);
-                                              setCurrentModule({...currentModule, learningOutcomes: nextList.join("\n")});
-                                              showToast(language === 'ar' ? "تم إزالة ناتج التعلم" : "Learning outcome removed", "info");
-                                            }}
-                                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-all"
-                                            title={language === 'ar' ? "حذف" : "Delete"}
-                                          >
-                                            <Trash2 className="w-3.5 h-3.5" />
-                                          </button>
-                                        </div>
-                                      </div>
-                                    ));
-                                  })()}
-
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const newVal = prompt(language === 'ar' ? "أدخل ناتج التعلم المخصص الجديد:" : "Enter new custom learning outcome:");
-                                      if (newVal && newVal.trim()) {
-                                        const selected = (currentModule.learningOutcomes || "").split("\n").filter(Boolean);
-                                        if (!selected.includes(newVal.trim())) {
-                                          const nextList = [...selected, newVal.trim()];
-                                          setCurrentModule({...currentModule, learningOutcomes: nextList.join("\n")});
-                                          showToast(language === 'ar' ? "تم الإضافة بنجاح" : "Added successfully", "success");
-                                        }
-                                      }
-                                    }}
-                                    className="w-full text-right px-3 py-2 hover:bg-indigo-50/50 hover:text-indigo-600 rounded-xl cursor-pointer transition-all text-indigo-600 font-black text-xs border border-dashed border-indigo-100 mt-2 flex items-center justify-center gap-1.5"
-                                  >
-                                    <Plus className="w-3.5 h-3.5" />
-                                    <span>{language === 'ar' ? "+ إضافة ناتج مخصص..." : "+ Add Custom Outcome..."}</span>
-                                  </button>
-                                </div>
-                              </>
-                            )}
-                          </div>
-
-                          {(() => {
-                            const selected = (currentModule.learningOutcomes || "").split("\n").filter(Boolean);
-                            if (selected.length === 0) return null;
-                            return (
-                              <div className="flex flex-wrap gap-1.5 mt-2">
-                                {selected.map((option: string) => (
-                                  <span key={option} className="inline-flex items-center gap-1.5 bg-indigo-50/80 text-indigo-700 px-3 py-1 rounded-xl border border-indigo-100/50 text-[10px] md:text-xs font-black shadow-sm shrink-0">
-                                    <span className="max-w-[120px] md:max-w-[200px] truncate" title={option}>{option}</span>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        const nextList = selected.filter((x: string) => x !== option);
-                                        setCurrentModule({...currentModule, learningOutcomes: nextList.join("\n")});
-                                      }}
-                                      className="w-4 h-4 rounded-full bg-indigo-100 text-indigo-600 hover:bg-indigo-600 hover:text-white flex items-center justify-center transition-all cursor-pointer font-bold text-[8px]"
-                                    >
-                                      ✕
-                                    </button>
-                                  </span>
-                                ))}
-                              </div>
-                            );
-                          })()}
+                        <div className="space-y-3">
+                          <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "نواتج التعلم (LOs)" : "Learning Outcomes (LOs)"}</label>
+                          <select 
+                            value={currentModule.learningOutcomes || ""}
+                            onChange={(e) => setCurrentModule({...currentModule, learningOutcomes: e.target.value})}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none shadow-sm font-bold truncate"
+                          >
+                            <option value="">{t('courseCreate.selectOutcome') || "Select Learning Outcome..."}</option>
+                            {availableMetadata.outcomes.map((outcomeName: string) => (
+                              <option key={outcomeName} value={outcomeName}>{outcomeName}</option>
+                            ))}
+                          </select>
                         </div>
                        </div>
  
@@ -3973,37 +3556,8 @@ useEffect(() => {
                   </div>
                 )}
 
-              {/* Standalone Questions */}
+              {/* Standalone Questions Restored Grid */}
               <div className="mt-12 standalone-questions-section">
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center border border-slate-200">
-                      <HelpCircle className="w-6 h-6 text-slate-600" />
-                    </div>
-                    <div>
-                      <h4 className="text-2xl font-black text-slate-800">{language === 'ar' ? 'أسئلة إضافية' : 'Additional Questions'}</h4>
-                      <p className="text-slate-400 font-bold text-sm mt-1">{language === 'ar' ? 'أسئلة حرة بدون موديول' : 'Questions without a module'}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <button onClick={() => exportQuestionsToExcel(standaloneQuestions, 'standalone_questions.xlsx')} className="flex items-center gap-2 px-4 py-2 bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white rounded-xl font-bold text-sm transition-all shadow-sm">
-                        <Download className="w-4 h-4" />
-                        {language === 'ar' ? 'تصدير الأسئلة Excel' : 'Export Questions Excel'}
-                      </button>
-
-{standaloneQuestions.length > 0 && (
-                      <button 
-                        onClick={() => setShowBulkMoveModal(true)} 
-                        className="flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white rounded-xl font-bold text-sm transition-all shadow-sm"
-                      >
-                        <FolderOutput className="w-4 h-4" />
-                        {language === 'ar' ? 'نقل جميع الأسئلة' : 'Move All Questions'}
-                      </button>
-                    )}
-                  </div>
-                </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {standaloneQuestions.slice(0, visibleStandaloneCount).map((q: any, index: number) => (
                     <div key={index} className="bg-white border border-slate-100 rounded-[24px] p-5 shadow-sm hover:shadow-md transition-all flex flex-col gap-4">
@@ -4017,6 +3571,7 @@ useEffect(() => {
                            </div>
                          </div>
                          <div className="flex gap-2">
+                           <button onClick={(e) => { e.preventDefault(); setMovingQuestionIndex(index); }} className="p-2.5 bg-emerald-50 text-emerald-400 rounded-xl hover:bg-emerald-100 hover:text-emerald-600 transition-all border border-emerald-100" title={language === 'ar' ? "نقل إلى الموديولات" : "Move to module"}><FolderOutput className="w-4 h-4" /></button>
                            <button onClick={(e) => { e.preventDefault(); setMovingQuestionIndex(index); }} className="p-2.5 bg-emerald-50 text-emerald-400 rounded-xl hover:bg-emerald-100 hover:text-emerald-600 transition-all border border-emerald-100" title={language === 'ar' ? "نقل إلى الموديولات" : "Move to module"}><FolderOutput className="w-4 h-4" /></button>
                            <button onClick={(e) => { e.preventDefault(); handleEditStandaloneQuestion(index); }} className="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-all"><Edit2 className="w-4 h-4" /></button>
                            <button onClick={(e) => { e.preventDefault(); removeStandaloneQuestion(index); }} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button>
@@ -4038,11 +3593,6 @@ useEffect(() => {
                       </button>
                     </div>
                   )}
-                  {standaloneQuestions.length === 0 && (
-                    <div className="col-span-1 md:col-span-2 text-center py-12 bg-slate-50 border-2 border-dashed border-slate-200 rounded-[30px]">
-                      <p className="text-slate-400 font-bold">{language === 'ar' ? 'لا توجد أسئلة مستقلة حالياً' : 'No standalone questions yet'}</p>
-                    </div>
-                  )}
                 </div>
               </div>
             
@@ -4060,12 +3610,13 @@ useEffect(() => {
                   onClick={saveModule}
                   className="px-12 py-4 rounded-2xl bg-indigo-600 text-white font-black hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-900/20 flex items-center gap-3"
                 >
-                    {language === 'ar' ? "تأكيد وحفظ الموديول" : "Confirm & Save Module"}
+                  {language === 'ar' ? "تأكيد وحفظ" : "Confirm & Save"}
                   <CheckCircle2 className="w-5 h-5" />
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
           <div className="animate-in fade-in duration-500">
@@ -4093,14 +3644,14 @@ useEffect(() => {
                   <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/5 blur-3xl -mr-16 -mt-16 group-hover:bg-indigo-600/10 transition-all"></div>
                   <h2 className="text-xl font-black text-slate-900 mb-8 flex items-center gap-3 relative z-10">
                     <Settings className="w-6 h-6 text-indigo-600" />
-                    {language === 'ar' ? 'إعدادات التقييم' : 'Exam Settings'}
+                    {language === 'ar' ? 'إعدادات التقييم' : 'Assessment Settings'}
                   </h2>
                   
                   <div className="space-y-6 relative z-10">
                     {/* Cover Image Upload */}
                     <div className="space-y-3">
                       <FileUpload
-                        label={language === 'ar' ? 'صورة غلاف التقييم' : 'Exam Cover Image'}
+                        label={language === 'ar' ? 'صورة غلاف التقييم' : 'Assessment Cover Image'}
                         accept="image/*"
                         value={examData.coverImage}
                         onUploadSuccess={(url) => setExamData({ ...examData, coverImage: url })}
@@ -4109,7 +3660,7 @@ useEffect(() => {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'عنوان التقييم' : 'Exam Title'}</label>
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'عنوان التقييم' : 'Assessment Title'}</label>
                       <input 
                         type="text" 
                         value={examData.title}
@@ -4120,7 +3671,7 @@ useEffect(() => {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'وصف التقييم' : 'Exam Description'}</label>
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'وصف التقييم' : 'Assessment Description'}</label>
                       <textarea 
                         value={examData.description}
                         onChange={(e) => setExamData({...examData, description: e.target.value})}
@@ -4261,12 +3812,12 @@ useEffect(() => {
                             </label>
                           ))}
                         </div>
-                        <p className="text-[10px] text-slate-400 font-bold">{t('courseCreate.subjectHelper')}</p>
+                        <p className="text-[10px] text-slate-400 font-bold">{language === 'ar' ? 'يمكن اختيار أكثر من مادة وسيتم حفظها كوسوم داخل نفس التقييم.' : 'Multiple subjects can be selected and will be saved as tags within the same assessment.'}</p>
                       </div>
                     </div>
 
-                    <div className="space-y-2 hidden">
-                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{t('courseCreate.assignSchool')}</label>
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'إسناد التقييم للمدرسة' : 'Assign Assessment to School'}</label>
                       {schools.length === 0 ? (
                         <div className="bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-6 text-center text-slate-500 font-bold text-sm">
                           {t('courseCreate.noSchools')}
@@ -4313,7 +3864,7 @@ useEffect(() => {
                             ))}
                           </div>
                           <p className="text-[10px] text-slate-400 font-bold">
-                            {t('courseCreate.schoolAssignmentHelper')}
+                            {language === 'ar' ? 'لو ما اخترتش مدارس: التقييم يبقى مركزي. لو اخترت أكثر من مدرسة: النظام هيعمل نسخة من نفس التقييم لكل مدرسة.' : 'If no schools are selected, the assessment remains central. If multiple schools are selected, a copy will be created for each school.'}
                           </p>
                         </>
                       )}
@@ -4536,28 +4087,8 @@ useEffect(() => {
                   </div>
                 )}
 
-              {/* Standalone Questions */}
+              {/* Standalone Questions Restored Grid */}
               <div className="mt-12 standalone-questions-section">
-                <div className="flex items-center justify-end mb-8">
-
-                  <div className="flex items-center gap-4">
-                    <button onClick={() => exportQuestionsToExcel(standaloneQuestions, 'standalone_questions.xlsx')} className="flex items-center gap-2 px-4 py-2 bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white rounded-xl font-bold text-sm transition-all shadow-sm">
-                        <Download className="w-4 h-4" />
-                        {language === 'ar' ? 'تصدير الأسئلة Excel' : 'Export Questions Excel'}
-                      </button>
-
-{standaloneQuestions.length > 0 && (
-                      <button 
-                        onClick={() => setShowBulkMoveModal(true)} 
-                        className="flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white rounded-xl font-bold text-sm transition-all shadow-sm"
-                      >
-                        <FolderOutput className="w-4 h-4" />
-                        {language === 'ar' ? 'نقل جميع الأسئلة' : 'Move All Questions'}
-                      </button>
-                    )}
-                  </div>
-                </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {standaloneQuestions.slice(0, visibleStandaloneCount).map((q: any, index: number) => (
                     <div key={index} className="bg-white border border-slate-100 rounded-[24px] p-5 shadow-sm hover:shadow-md transition-all flex flex-col gap-4">
@@ -4590,11 +4121,6 @@ useEffect(() => {
                       >
                         {language === 'ar' ? 'عرض المزيد من الأسئلة' : 'Load More Questions'} ({standaloneQuestions.length - visibleStandaloneCount} {language === 'ar' ? 'متبقي' : 'Remaining'})
                       </button>
-                    </div>
-                  )}
-                  {standaloneQuestions.length === 0 && (
-                    <div className="col-span-1 md:col-span-2 text-center py-12 bg-slate-50 border-2 border-dashed border-slate-200 rounded-[30px]">
-                      <p className="text-slate-400 font-bold">{language === 'ar' ? 'لا توجد أسئلة مستقلة حالياً' : 'No standalone questions yet'}</p>
                     </div>
                   )}
                 </div>
@@ -4664,7 +4190,7 @@ useEffect(() => {
         </div>
       )}
     
-                  
+            
       {/* Bulk Move Standalone Questions Modal */}
       {showBulkMoveModal && (
         <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 ${language === 'ar' ? 'lg:pr-72' : 'lg:pl-72'}`}>

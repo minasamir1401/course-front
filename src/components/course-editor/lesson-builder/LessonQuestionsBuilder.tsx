@@ -14,6 +14,7 @@ import HtmlRenderer from "@/components/HtmlRenderer";
 import { parseJson } from "./parseJson";
 import { getSectionStylePresets } from "./constants";
 import CopySlidesModal from "@/components/modals/CopySlidesModal";
+import { useCourseEditor } from "../CourseEditorContext";
 
 interface LessonQuestionsBuilderProps {
   source: 'assignments' | 'questions';
@@ -57,6 +58,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
   setOpenDropdownId
 }) => {
   const { showToast } = useNotification();
+  const { availableMetadata } = useCourseEditor() as any;
   const [expandedQuestionIndex, setExpandedQuestionIndex] = useState<number | null>(null);
   const [isQuestionStandardOpen, setIsQuestionStandardOpen] = useState(false);
   const [isQuestionIndicatorOpen, setIsQuestionIndicatorOpen] = useState(false);
@@ -703,35 +705,61 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                     </select>
                   </div>
 
-                  {/* Custom Standard with CRUD */}
-                  {renderMetadataDropdown(
-                    language === 'ar' ? 'المعيار' : 'Standard',
-                    tempQuestion.standard || "",
-                    'standard',
-                    isQuestionStandardOpen,
-                    setIsQuestionStandardOpen,
-                    'standards'
-                  )}
+                                  <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المجال' : 'Domain'}</label>
+                  <select 
+                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px]"
+                    value={tempQuestion.domain || ""}
+                    onChange={(e) => updateCurrentQuestionField("domain", e.target.value)}
+                  >
+                    <option value="">{language === 'ar' ? 'اختر المجال...' : 'Select Domain...'}</option>
+                    {availableMetadata.domains?.map((d: string) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
 
-                  {/* Custom Indicator with CRUD */}
-                  {renderMetadataDropdown(
-                    language === 'ar' ? 'المؤشر' : 'Indicator',
-                    tempQuestion.indicator || "",
-                    'indicator',
-                    isQuestionIndicatorOpen,
-                    setIsQuestionIndicatorOpen,
-                    'indicators'
-                  )}
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المعيار' : 'Standard'}</label>
+                  <select 
+                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px] truncate"
+                    value={tempQuestion.standard || ""}
+                    onChange={(e) => updateCurrentQuestionField("standard", e.target.value)}
+                  >
+                    <option value="">{language === 'ar' ? 'اختر المعيار...' : 'Select Standard...'}</option>
+                    {availableMetadata.standards?.map((s: string) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
 
-                  {/* Custom Learning Outcome with CRUD */}
-                  {renderMetadataDropdown(
-                    language === 'ar' ? 'المخرج التعليمي' : 'Learning Outcome',
-                    tempQuestion.learningOutcome || "",
-                    'learningOutcome',
-                    isQuestionOutcomeOpen,
-                    setIsQuestionOutcomeOpen,
-                    'learningOutcomes'
-                  )}
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المؤشر' : 'Indicator'}</label>
+                  <select 
+                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px] truncate"
+                    value={tempQuestion.indicator || ""}
+                    onChange={(e) => updateCurrentQuestionField("indicator", e.target.value)}
+                  >
+                    <option value="">{language === 'ar' ? 'اختر المؤشر...' : 'Select Indicator...'}</option>
+                    {availableMetadata.indicators?.map((ind: string) => (
+                      <option key={ind} value={ind}>{ind}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'ناتج التعلم (LO)' : 'Learning Outcome (LO)'}</label>
+                  <select 
+                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px] truncate"
+                    value={tempQuestion.learningOutcome || ""}
+                    onChange={(e) => updateCurrentQuestionField("learningOutcome", e.target.value)}
+                  >
+                    <option value="">{language === 'ar' ? 'اختر ناتج التعلم...' : 'Select Outcome...'}</option>
+                    {availableMetadata.outcomes?.map((lo: string) => (
+                      <option key={lo} value={lo}>{lo}</option>
+                    ))}
+                  </select>
+                </div>
 
                   <div className="flex flex-col gap-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المهارة' : 'Skill'}</label>
