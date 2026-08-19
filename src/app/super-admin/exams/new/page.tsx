@@ -3693,7 +3693,7 @@ export default function SuperAdminNewExamPage() {
                       <HelpCircle className="w-6 h-6 text-slate-600" />
                     </div>
                     <div>
-                      <h4 className="text-2xl font-black text-slate-800">{language === 'ar' ? 'الأسئلة المستقلة' : 'Standalone Questions'}</h4>
+                      
                       <p className="text-slate-400 font-bold text-sm mt-1">{language === 'ar' ? 'أسئلة حرة بدون موديول' : 'Questions without a module'}</p>
                     </div>
                   </div>
@@ -3763,165 +3763,7 @@ export default function SuperAdminNewExamPage() {
           </div>
         )}
 
-          <div className="animate-in fade-in duration-500">
-            <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between mb-12 gap-6 bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-              <div className="flex items-center gap-6">
-                <button onClick={() => router.back()} className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all border border-slate-100">
-                  <ArrowLeft className="w-7 h-7" />
-                </button>
-                <div>
-                  <h1 className="text-3xl md:text-4xl font-black text-slate-900">{t('courseCreate.title')}</h1>
-                  <p className="text-slate-400 text-lg mt-1 font-bold">{t('courseCreate.subtitle')}</p>
-                </div>
-              </div>
-              <button 
-                onClick={handleSubmit}
-                disabled={isLoading}
-                className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-12 py-5 rounded-[22px] font-black flex items-center gap-3 hover:scale-105 hover:shadow-2xl hover:shadow-indigo-500/20 transition-all disabled:opacity-50"
-              >
-                {isLoading ? (language === 'ar' ? 'جارٍ الحفظ...' : 'Saving...') : (language === 'ar' ? 'حفظ ونشر التقييم' : 'Save & Publish Exam')}
-                <Save className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-              {/* Left Side: Exam Settings */}
-              {showSettings && (
-              <div className="lg:col-span-4 space-y-8">
-                <div className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/5 blur-3xl -mr-16 -mt-16 group-hover:bg-indigo-600/10 transition-all"></div>
-                  <h2 className="text-xl font-black text-slate-900 mb-8 flex items-center gap-3 relative z-10">
-                    <Settings className="w-6 h-6 text-indigo-600" />
-                    {language === 'ar' ? 'إعدادات التقييم' : 'Assessment Settings'}
-                  </h2>
-                  
-                  <div className="space-y-6 relative z-10">
-                    {/* Cover Image Upload */}
-                    <div className="space-y-3">
-                      <FileUpload
-                        label={language === 'ar' ? 'صورة غلاف التقييم' : 'Assessment Cover Image'}
-                        accept="image/*"
-                        value={examData.coverImage}
-                        onUploadSuccess={(url) => setExamData({ ...examData, coverImage: url })}
-                        tokenKey="super_admin_token"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'عنوان التقييم' : 'Assessment Title'}</label>
-                      <input 
-                        type="text" 
-                        value={examData.title}
-                        onChange={(e) => setExamData({...examData, title: e.target.value})}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all"
-                        placeholder={t('courseCreate.titlePlaceholder')}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'وصف التقييم' : 'Assessment Description'}</label>
-                      <textarea 
-                        value={examData.description}
-                        onChange={(e) => setExamData({...examData, description: e.target.value})}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all min-h-[120px] resize-none"
-                        placeholder={t('courseCreate.descPlaceholder')}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{t('courseCreate.country')}</label>
-                        <select 
-                          value={examData.country}
-                          onChange={(e) => setExamData({...examData, country: e.target.value})}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all appearance-none"
-                        >
-                          <option value="مصر">{language === 'ar' ? 'مصر' : 'Egypt'}</option>
-                          <option value="السعودية">{language === 'ar' ? 'السعودية' : 'Saudi Arabia'}</option>
-                          <option value="الإمارات">{language === 'ar' ? 'الإمارات' : 'UAE'}</option>
-                          <option value="الكويت">{language === 'ar' ? 'الكويت' : 'Kuwait'}</option>
-                          <option value="قطر">{language === 'ar' ? 'قطر' : 'Qatar'}</option>
-                          <option value="عمان">{language === 'ar' ? 'عمان' : 'Oman'}</option>
-                          <option value="البحرين">{language === 'ar' ? 'البحرين' : 'Bahrain'}</option>
-                          <option value="الأردن">{language === 'ar' ? 'الأردن' : 'Jordan'}</option>
-                        </select>
-                      </div>
-
-                      <div className="space-y-4">
-                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">{t('courseCreate.grades')}</label>
-                        <div className="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-1 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                          {[
-                            {
-                              stage: "Elementary",
-                              title: language === 'ar' ? "المرحلة الابتدائية (Primary)" : "Elementary School (Primary)",
-                              grades: [
-                                "الصف الأول الابتدائي", "الصف الثاني الابتدائي", "الصف الثالث الابتدائي",
-                                "الصف الرابع الابتدائي", "الصف الخامس الابتدائي", "الصف السادس الابتدائي"
-                              ]
-                            },
-                            {
-                              stage: "Middle School",
-                              title: language === 'ar' ? "المرحلة الإعدادية (Prep)" : "Middle School (Prep)",
-                              grades: [
-                                "الصف الأول الإعدادي", "الصف الثاني الإعدادي", "الصف الثالث الإعدادي"
-                              ]
-                            },
-                            {
-                              stage: "High School",
-                              title: language === 'ar' ? "المرحلة الثانوية (Secondary)" : "High School (Secondary)",
-                              grades: [
-                                "الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"
-                              ]
-                            }
-                          ].map((group) => {
-                            const allSelected = group.grades.every(g => examData.grades.includes(g));
-                            
-                            return (
-                              <div key={group.stage} className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm space-y-3">
-                                <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                                  <h4 className="font-black text-sm text-slate-800 flex items-center gap-2">
-                                    <Layers className="w-4 h-4 text-indigo-600" />
-                                    {group.title}
-                                  </h4>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      if (allSelected) {
-                                        setExamData({
-                                          ...examData,
-                                          grades: examData.grades.filter(g => !group.grades.includes(g))
-                                        });
-                                      } else {
-                                        const newGrades = [...examData.grades];
-                                        group.grades.forEach(g => {
-                                          if (!newGrades.includes(g)) newGrades.push(g);
-                                        });
-                                        setExamData({
-                                          ...examData,
-                                          grades: newGrades
-                                        });
-                                      }
-                                    }}
-                                    className="text-xs font-black text-indigo-600 hover:text-indigo-700 hover:underline cursor-pointer"
-                                  >
-                                    {allSelected ? (language === 'ar' ? "إلغاء تحديد الكل" : "تحديد الكل") : (language === 'ar' ? "تحديد الكل" : "Select All")}
-                                  </button>
-                                </div>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                  {group.grades.map(g => (
-                                    <label key={g} className={`flex items-center gap-2.5 p-2.5 rounded-lg border-2 cursor-pointer transition-all ${examData.grades.includes(g) ? 'bg-indigo-50/50 border-indigo-400' : 'bg-white border-slate-100 hover:border-slate-200'}`}>
-                                      <div className={`w-5 h-5 rounded flex items-center justify-center transition-all ${examData.grades.includes(g) ? 'bg-indigo-600 text-white' : 'bg-slate-100 border border-slate-200'}`}>
-                                        {examData.grades.includes(g) && <CheckCircle2 className="w-3.5 h-3.5" />}
-                                      </div>
-                                      <span className={`text-[11px] sm:text-xs font-bold ${examData.grades.includes(g) ? 'text-indigo-900' : 'text-slate-600'}`}>{getGradeName(g)}</span>
-                                      <input type="checkbox" className="hidden" checked={examData.grades.includes(g)} onChange={(e) => {
-                                        if(e.target.checked) setExamData({...examData, grades: [...examData.grades, g]});
-                                        else setExamData({...examData, grades: examData.grades.filter(gr => gr !== g)});
-                                      }} />
-                                    </label>
-                                  ))}
-                                </div>
-                              </div>
+          
                             );
                           })}
                         </div>
@@ -4142,32 +3984,9 @@ export default function SuperAdminNewExamPage() {
 
               {/* Right Side: Modules Management */}
               <div className={`space-y-8 ${showSettings ? 'lg:col-span-8' : 'lg:col-span-12'}`}>
-                <div className="flex justify-between items-center bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
-                  <h3 className="text-2xl font-black text-slate-900 flex items-center gap-4">
-                    <Layers className="w-8 h-8 text-indigo-600" />
-                    {language === 'ar' ? 'هيكل الموديولات' : 'Modules Structure'}
-                  </h3>
-                  <button 
-                    onClick={openAddModuleModal}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-2xl font-black flex items-center gap-3 transition-all shadow-xl shadow-indigo-600/20"
-                  >
-                    <Plus className="w-6 h-6" />
-                    {language === 'ar' ? 'إضافة موديول جديد' : 'Add New Module'}
-                  </button>
-                </div>
+                
 
-                {modules.length === 0 ? (
-                  <div className="bg-white border-4 border-dashed border-slate-100 rounded-[50px] p-24 text-center group cursor-pointer hover:border-indigo-500/20 transition-all" onClick={openAddModuleModal}>
-                    <div className="w-24 h-24 bg-slate-50 rounded-[40px] flex items-center justify-center mx-auto mb-8 group-hover:scale-110 transition-all">
-                      <Monitor className="w-12 h-12 text-slate-300 group-hover:text-indigo-600" />
-                    </div>
-                    <h3 className="text-2xl font-black text-slate-900 mb-3">{language === 'ar' ? 'ابدأ ببناء امتحانك!' : 'Start Building Your Exam!'}</h3>
-                    <p className="text-slate-400 font-bold max-w-sm mx-auto mb-10 leading-relaxed text-lg">{language === 'ar' ? 'لم يتم إضافة أي موديولات بعد' : 'No modules added yet'}</p>
-                    <button className="bg-indigo-600 text-white px-10 py-4 rounded-2xl font-black transition-all shadow-xl shadow-indigo-600/20">
-                      {language === 'ar' ? 'إنشاء موديول' : 'Create Module'}
-                    </button>
-                  </div>
-                ) : (
+                {modules.length === 0 ? null : (
                   <div className="flex flex-col gap-4">
                     {modules.map((lesson, index) => (
                       <div key={index} className="bg-white border border-slate-100 rounded-[24px] p-4 hover:border-indigo-500/30 transition-all group relative overflow-hidden shadow-sm hover:shadow-md cursor-pointer flex items-center gap-4"
@@ -4218,7 +4037,7 @@ export default function SuperAdminNewExamPage() {
                       <HelpCircle className="w-6 h-6 text-slate-600" />
                     </div>
                     <div>
-                      <h4 className="text-2xl font-black text-slate-800">{language === 'ar' ? 'الأسئلة المستقلة' : 'Standalone Questions'}</h4>
+                      
                       <p className="text-slate-400 font-bold text-sm mt-1">{language === 'ar' ? 'أسئلة حرة بدون موديول' : 'Questions without a module'}</p>
                     </div>
                   </div>
