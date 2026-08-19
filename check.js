@@ -1,0 +1,1 @@
+const fs = require('fs'); const content = fs.readFileSync('src/app/super-admin/exams/new/page.tsx', 'utf8'); const p = content.indexOf('activeTab === \\'exercises\\''); console.log(content.slice(p, p + 2500));  
