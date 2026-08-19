@@ -227,7 +227,14 @@ export default function SchoolAdminNewExamPage() {
     attemptsAllowed: 1,
     startDate: "",
     endDate: "",
-    passingScore: 50
+    passingScore: 50,
+    courseName: "",
+    section: "",
+    domain: "",
+    learningOutcomes: [] as string[],
+    indicators: [] as string[],
+    skills: [] as string[],
+    gradeTarget: ""
   });
 
   const [modules, setModules] = useState<any[]>([]);
