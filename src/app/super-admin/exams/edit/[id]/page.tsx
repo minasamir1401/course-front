@@ -3987,7 +3987,7 @@ useEffect(() => {
                       <HelpCircle className="w-6 h-6 text-slate-600" />
                     </div>
                     <div>
-                      <h4 className="text-2xl font-black text-slate-800">{language === 'ar' ? 'الأسئلة المستقلة' : 'Standalone Questions'}</h4>
+                      <h4 className="text-2xl font-black text-slate-800">{language === 'ar' ? 'أسئلة إضافية' : 'Additional Questions'}</h4>
                       <p className="text-slate-400 font-bold text-sm mt-1">{language === 'ar' ? 'أسئلة حرة بدون موديول' : 'Questions without a module'}</p>
                     </div>
                   </div>
@@ -4122,7 +4122,7 @@ useEffect(() => {
                         value={examData.title}
                         onChange={(e) => setExamData({...examData, title: e.target.value})}
                         className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all"
-                        placeholder={t('courseCreate.titlePlaceholder')}
+                        placeholder={language === 'ar' ? 'مثال: الرياضيات المتقدمة' : 'e.g. Advanced Mathematics'}
                       />
                     </div>
 
@@ -4132,7 +4132,7 @@ useEffect(() => {
                         value={examData.description}
                         onChange={(e) => setExamData({...examData, description: e.target.value})}
                         className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all min-h-[120px] resize-none"
-                        placeholder={t('courseCreate.descPlaceholder')}
+                        placeholder={language === 'ar' ? 'نبذة مختصرة عن التقييم...' : 'Brief description of the exam...'}
                       />
                     </div>
 
@@ -4538,7 +4538,7 @@ useEffect(() => {
                       <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center">
                         <Plus className="w-8 h-8 text-slate-400" />
                       </div>
-                      <span className="font-black text-slate-500 text-lg">{language === 'ar' ? 'إضافة موديول جديد' : 'Add New Module'}</span>
+                      <span className="font-black text-slate-500 text-lg">{language === 'ar' ? 'إضافة قسم جديد' : 'Add New Section'}</span>
                     </div>
                   </div>
                 )}

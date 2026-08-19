@@ -3693,7 +3693,7 @@ export default function SuperAdminNewExamPage() {
                       <HelpCircle className="w-6 h-6 text-slate-600" />
                     </div>
                     <div>
-                      <h4 className="text-2xl font-black text-slate-800">{language === 'ar' ? 'الأسئلة المستقلة' : 'Standalone Questions'}</h4>
+                      <h4 className="text-2xl font-black text-slate-800">{language === 'ar' ? 'أسئلة إضافية' : 'Additional Questions'}</h4>
                       <p className="text-slate-400 font-bold text-sm mt-1">{language === 'ar' ? 'أسئلة حرة بدون موديول' : 'Questions without a module'}</p>
                     </div>
                   </div>
@@ -3770,8 +3770,8 @@ export default function SuperAdminNewExamPage() {
                   <ArrowLeft className="w-7 h-7" />
                 </button>
                 <div>
-                  <h1 className="text-3xl md:text-4xl font-black text-slate-900">{t('courseCreate.title')}</h1>
-                  <p className="text-slate-400 text-lg mt-1 font-bold">{t('courseCreate.subtitle')}</p>
+                  <h1 className="text-3xl md:text-4xl font-black text-slate-900">{language === 'ar' ? 'إنشاء تقييم جديد' : 'Create New Exam'}</h1>
+                  <p className="text-slate-400 text-lg mt-1 font-bold">{language === 'ar' ? 'صمم تجربة تقييم متكاملة لطلابك' : 'Design a complete assessment experience for your students'}</p>
                 </div>
               </div>
               <button 
@@ -3814,7 +3814,7 @@ export default function SuperAdminNewExamPage() {
                         value={examData.title}
                         onChange={(e) => setExamData({...examData, title: e.target.value})}
                         className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all"
-                        placeholder={t('courseCreate.titlePlaceholder')}
+                        placeholder={language === 'ar' ? 'مثال: الرياضيات المتقدمة' : 'e.g. Advanced Mathematics'}
                       />
                     </div>
 
@@ -3824,7 +3824,7 @@ export default function SuperAdminNewExamPage() {
                         value={examData.description}
                         onChange={(e) => setExamData({...examData, description: e.target.value})}
                         className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all min-h-[120px] resize-none"
-                        placeholder={t('courseCreate.descPlaceholder')}
+                        placeholder={language === 'ar' ? 'نبذة مختصرة عن التقييم...' : 'Brief description of the exam...'}
                       />
                     </div>
 
@@ -3965,18 +3965,18 @@ export default function SuperAdminNewExamPage() {
                       <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'إسناد التقييم للمدرسة' : 'Assign Assessment to School'}</label>
                       {schools.length === 0 ? (
                         <div className="bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-6 text-center text-slate-500 font-bold text-sm">
-                          {t('courseCreate.noSchools')}
+                          {language === 'ar' ? 'لا توجد مدارس متاحة' : 'No schools available'}
                         </div>
                       ) : (
                         <>
                           <div className="flex justify-between items-center px-2 mb-3">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('courseCreate.selectSchoolsOptional')}</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'اختر المدارس (اختياري)' : 'Select Schools (Optional)'}</span>
                             <button
                               type="button"
                               onClick={selectAllSchools}
                               className="text-[10px] font-black text-indigo-600 hover:underline"
                             >
-                              {(examData.schoolIds || []).length === schools.length ? t('courseCreate.deselectAll') : t('courseCreate.selectAll')}
+                              {(examData.schoolIds || []).length === schools.length ? (language === 'ar' ? 'إلغاء الكل' : 'Deselect All') : (language === 'ar' ? 'تحديد الكل' : 'Select All')}
                             </button>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-50 border border-slate-200 rounded-2xl p-4 max-h-[250px] overflow-y-auto custom-scrollbar">
@@ -4145,14 +4145,14 @@ export default function SuperAdminNewExamPage() {
                 <div className="flex justify-between items-center bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
                   <h3 className="text-2xl font-black text-slate-900 flex items-center gap-4">
                     <Layers className="w-8 h-8 text-indigo-600" />
-                    {language === 'ar' ? 'هيكل الموديولات' : 'Modules Structure'}
+                    {language === 'ar' ? 'هيكل الأقسام' : 'Sections Structure'}
                   </h3>
                   <button 
                     onClick={openAddModuleModal}
                     className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-2xl font-black flex items-center gap-3 transition-all shadow-xl shadow-indigo-600/20"
                   >
                     <Plus className="w-6 h-6" />
-                    {language === 'ar' ? 'إضافة موديول جديد' : 'Add New Module'}
+                    {language === 'ar' ? 'إضافة قسم جديد' : 'Add New Section'}
                   </button>
                 </div>
 
@@ -4218,7 +4218,7 @@ export default function SuperAdminNewExamPage() {
                       <HelpCircle className="w-6 h-6 text-slate-600" />
                     </div>
                     <div>
-                      <h4 className="text-2xl font-black text-slate-800">{language === 'ar' ? 'الأسئلة المستقلة' : 'Standalone Questions'}</h4>
+                      <h4 className="text-2xl font-black text-slate-800">{language === 'ar' ? 'أسئلة إضافية' : 'Additional Questions'}</h4>
                       <p className="text-slate-400 font-bold text-sm mt-1">{language === 'ar' ? 'أسئلة حرة بدون موديول' : 'Questions without a module'}</p>
                     </div>
                   </div>
