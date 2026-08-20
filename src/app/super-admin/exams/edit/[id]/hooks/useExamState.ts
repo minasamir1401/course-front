@@ -128,7 +128,7 @@ export const useExamState = (schoolIdParam: string | null, examId: string) => {
       });
       if (res.ok) {
         const data = await res.json();
-        setSchools(Array.isArray(data) ? data : (data.data || []));
+        setSchools(Array.isArray(data) ? data : (data.schools || data.data || []));
       }
     } catch (error) {
       console.error("Failed to fetch schools:", error);
