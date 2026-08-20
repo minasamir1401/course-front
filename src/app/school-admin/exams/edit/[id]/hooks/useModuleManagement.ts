@@ -308,9 +308,9 @@ const openAddModuleModal = () => {
     e.target.value = "";
   };
 
-  const handleQuestionsExcelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleQuestionsExcelChange = (e: React.ChangeEvent<HTMLInputElement>, activeSubExamIndex: number | null) => {
     const file = e.target.files?.[0];
-    if (!file) { resolve([]); return; }
+    if (!file) { return; }
 
     const reader = new FileReader();
     reader.onload = (evt) => {
@@ -338,13 +338,20 @@ const openAddModuleModal = () => {
         const updatedInds = Array.from(new Set([...currentInds, ...newInds])).join("\n");
         const updatedLos = Array.from(new Set([...currentLos, ...newLos])).join("\n");
 
-        setCurrentModule((prev: any) => ({
-          ...prev,
-          questions: [...(prev.questions || []), ...parsed],
-          standards: updatedStds,
-          indicators: updatedInds,
-          learningOutcomes: updatedLos
-        }));
+        setCurrentModule((prev: any) => {
+          const isSubExam = activeSubExamIndex !== null;
+          const targetList = isSubExam ? (prev.subExams[activeSubExamIndex].questions || []) : (prev.questions || []);
+          const newState = { ...prev };
+          if (isSubExam) {
+            newState.subExams[activeSubExamIndex].questions = [...targetList, ...parsed];
+          } else {
+            newState.questions = [...targetList, ...parsed];
+          }
+          newState.standards = updatedStds;
+          newState.indicators = updatedInds;
+          newState.learningOutcomes = updatedLos;
+          return newState;
+        });
 
         showToast(
           language === 'ar' 
@@ -361,9 +368,9 @@ const openAddModuleModal = () => {
     e.target.value = "";
   };
 
-  const handleAssignmentsExcelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAssignmentsExcelChange = (e: React.ChangeEvent<HTMLInputElement>, activeSubExamIndex: number | null) => {
     const file = e.target.files?.[0];
-    if (!file) { resolve([]); return; }
+    if (!file) { return; }
 
     const reader = new FileReader();
     reader.onload = (evt) => {
@@ -391,13 +398,20 @@ const openAddModuleModal = () => {
         const updatedInds = Array.from(new Set([...currentInds, ...newInds])).join("\n");
         const updatedLos = Array.from(new Set([...currentLos, ...newLos])).join("\n");
 
-        setCurrentModule((prev: any) => ({
-          ...prev,
-          assignments: [...(prev.assignments || []), ...parsed],
-          standards: updatedStds,
-          indicators: updatedInds,
-          learningOutcomes: updatedLos
-        }));
+        setCurrentModule((prev: any) => {
+          const isSubExam = activeSubExamIndex !== null;
+          const targetList = isSubExam ? (prev.subExams[activeSubExamIndex].assignments || []) : (prev.assignments || []);
+          const newState = { ...prev };
+          if (isSubExam) {
+            newState.subExams[activeSubExamIndex].assignments = [...targetList, ...parsed];
+          } else {
+            newState.assignments = [...targetList, ...parsed];
+          }
+          newState.standards = updatedStds;
+          newState.indicators = updatedInds;
+          newState.learningOutcomes = updatedLos;
+          return newState;
+        });
 
         showToast(
           language === 'ar' 

@@ -96,6 +96,8 @@ export default function SchoolAdminEditExamPage() {
       language={language}
       assignmentsExcelRef={moduleManagement.assignmentsExcelRef}
       questionsExcelRef={moduleManagement.questionsExcelRef}
+      handleQuestionsExcelChange={(e) => moduleManagement.handleQuestionsExcelChange(e, state.activeSubExamIndex)}
+      handleAssignmentsExcelChange={(e) => moduleManagement.handleAssignmentsExcelChange(e, state.activeSubExamIndex)}
       advancedMetadataExcelRef={moduleManagement.advancedMetadataExcelRef}
       handleAdvancedMetadataExcelChange={async (e) => {
         const updatedList = await moduleManagement.handleAdvancedMetadataExcelChange(e, state.activeSubExamIndex, source);
