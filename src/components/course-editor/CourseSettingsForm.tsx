@@ -253,19 +253,7 @@ export const CourseSettingsForm: React.FC = () => {
               className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 min-h-[100px] max-h-[250px] overflow-y-auto resize-none transition-all text-sm"
             />
           </div>
-          <div className="space-y-2">
-            <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">{language === "ar" ? "الدولة" : "Country"}</label>
-            <select
-              value={courseData.country}
-              onChange={(e) => setCourseData({ ...courseData, country: e.target.value })}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all text-sm appearance-none"
-            >
-              <option value="مصر">{language === "ar" ? "مصر" : "Egypt"}</option>
-              <option value="السعودية">{language === "ar" ? "السعودية" : "Saudi Arabia"}</option>
-              <option value="الإمارات">{language === "ar" ? "الإمارات" : "UAE"}</option>
-              <option value="الكويت">{language === "ar" ? "الكويت" : "Kuwait"}</option>
-            </select>
-          </div>
+
           <div className="space-y-4">
             <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">{language === "ar" ? "المراحل والصفوف الدراسية" : "Stages & Grade Levels"}</label>
             <div className="space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-1 bg-slate-50 p-4 rounded-2xl border border-slate-200">

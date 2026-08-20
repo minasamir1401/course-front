@@ -57,7 +57,7 @@ export const ModuleModal = (props: any) => {
                   <div className="space-y-10">
                     <div className="grid grid-cols-1 gap-8">
                       <div>
-                        <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">{language === 'ar' ? "عنوان الموديول" : "Module Title"}</label>
+                        <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">{language === 'ar' ? "عنوان الاختبار" : "Exam Title"}</label>
                         <input
                           type="text"
                           value={currentModule.title}
@@ -74,90 +74,52 @@ export const ModuleModal = (props: any) => {
                           <Target className="w-6 h-6 text-indigo-600" />
                           {language === 'ar' ? "الأهداف والمعايير الأكاديمية" : "Academic Objectives & Standards"}
                        </h4>
-                       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <div className="space-y-3">
-                          <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "المجال" : "Domain"}</label>
-                          <select 
-                            value={currentModule.domain || ""}
-                            onChange={(e) => setCurrentModule({...currentModule, domain: e.target.value})}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none shadow-sm font-bold"
-                          >
-                            <option value="">{t('courseCreate.selectDomain') || "Select Domain..."}</option>
-                            {availableMetadata.domains.map((domainName: string) => (
-                              <option key={domainName} value={domainName}>{domainName}</option>
-                            ))}
-                          </select>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                          <div className="space-y-3">
+                            <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "الكورس" : "Course"}</label>
+                            <input 
+                              type="text"
+                              value={currentModule.course || ""}
+                              onChange={(e) => setCurrentModule({...currentModule, course: e.target.value})}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 shadow-sm font-bold"
+                              placeholder={language === 'ar' ? "الكورس" : "Course"}
+                            />
+                          </div>
+  
+                          <div className="space-y-3">
+                            <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "القسم" : "Section"}</label>
+                            <input 
+                              type="text"
+                              value={currentModule.section || ""}
+                              onChange={(e) => setCurrentModule({...currentModule, section: e.target.value})}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 shadow-sm font-bold"
+                              placeholder={language === 'ar' ? "القسم" : "Section"}
+                            />
+                          </div>
+  
+                          <div className="space-y-3">
+                            <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "المجال" : "Domain"}</label>
+                            <input 
+                              type="text"
+                              value={currentModule.domain || ""}
+                              onChange={(e) => setCurrentModule({...currentModule, domain: e.target.value})}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 shadow-sm font-bold"
+                              placeholder={language === 'ar' ? "المجال" : "Domain"}
+                            />
+                          </div>
+  
+                          <div className="space-y-3">
+                            <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "الصف المستهدف" : "Grade Target"}</label>
+                            <input 
+                              type="text"
+                              value={currentModule.gradeTarget || ""}
+                              onChange={(e) => setCurrentModule({...currentModule, gradeTarget: e.target.value})}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 shadow-sm font-bold"
+                              placeholder={language === 'ar' ? "الصف المستهدف" : "Grade Target"}
+                            />
+                          </div>
                         </div>
-
-                        <div className="space-y-3">
-                          <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "المعايير" : "Standards"}</label>
-                          <select 
-                            value={currentModule.standards || ""}
-                            onChange={(e) => setCurrentModule({...currentModule, standards: e.target.value})}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none shadow-sm font-bold truncate"
-                          >
-                            <option value="">{t('courseCreate.selectStandard') || "Select Standard..."}</option>
-                            {availableMetadata.standards.map((standardName: string) => (
-                              <option key={standardName} value={standardName}>{standardName}</option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="space-y-3">
-                          <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "المؤشرات" : "Indicators"}</label>
-                          <select 
-                            value={currentModule.indicators || ""}
-                            onChange={(e) => setCurrentModule({...currentModule, indicators: e.target.value})}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none shadow-sm font-bold truncate"
-                          >
-                            <option value="">{t('courseCreate.selectIndicator') || "Select Indicator..."}</option>
-                            {availableMetadata.indicators.map((indicatorName: string) => (
-                              <option key={indicatorName} value={indicatorName}>{indicatorName}</option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="space-y-3">
-                          <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "نواتج التعلم (LOs)" : "Learning Outcomes (LOs)"}</label>
-                          <select 
-                            value={currentModule.learningOutcomes || ""}
-                            onChange={(e) => setCurrentModule({...currentModule, learningOutcomes: e.target.value})}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none shadow-sm font-bold truncate"
-                          >
-                            <option value="">{t('courseCreate.selectOutcome') || "Select Learning Outcome..."}</option>
-                            {availableMetadata.outcomes.map((outcomeName: string) => (
-                              <option key={outcomeName} value={outcomeName}>{outcomeName}</option>
-                            ))}
-                          </select>
-                        </div>
-                       </div>
- 
-                       <div className="flex justify-center items-center gap-4 mt-6">
-                        <input 
-                          type="file" 
-                          ref={metadataExcelRef} 
-                          style={{ display: 'none' }} 
-                          accept=".xlsx,.xls" 
-                          onChange={handleMetadataExcelChange} 
-                        />
-                        <button 
-                          type="button"
-                          onClick={() => handleExcelUpload('metadata')}
-                          className="flex items-center gap-2 bg-emerald-50 text-emerald-600 px-6 py-3 rounded-2xl border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all font-black text-xs cursor-pointer shadow-sm"
-                        >
-                          <Upload className="w-4 h-4" />
-                          {t('courseCreate.uploadStandardsExcel') || "Upload Standards from Excel"}
-                        </button>
-                        <button 
-                          type="button"
-                          onClick={downloadMetadataTemplate}
-                          className="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-6 py-3 rounded-2xl border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all font-black text-xs cursor-pointer shadow-sm"
-                        >
-                          <Download className="w-4 h-4" />
-                          {language === 'ar' ? "تحميل نموذج Excel الاسترشادي" : "Download Excel Template"}
-                        </button>
-                       </div>
-                    </div>
+                     </div>
                   </div>
                 )}
 

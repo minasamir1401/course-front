@@ -170,16 +170,7 @@ export const QuestionsBuilder = (props: any) => {
                             {q.course && <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-lg">Course: {q.course}</span>}
                             {q.section && <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-lg">Section: {q.section}</span>}
                             {q.domain && <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded-lg">Domain: {q.domain}</span>}
-                            {q.standard && <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg">Standard: {q.standard}</span>}
-                            {q.indicators && <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-1 rounded-lg">Indicators: {q.indicators}</span>}
-                            {q.skill && <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-1 rounded-lg">Skill: {q.skill}</span>}
-                            {q.subskill && <span className="text-[10px] font-bold text-pink-700 bg-pink-50 px-2 py-1 rounded-lg">Subskill: {q.subskill}</span>}
-                            {q.microSkill && <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-1 rounded-lg">Micro Skill: {q.microSkill}</span>}
-                            {q.difficulty && <span className="text-[10px] font-bold text-orange-700 bg-orange-50 px-2 py-1 rounded-lg">Difficulty: {q.difficulty}</span>}
-                            {q.dok && <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-1 rounded-lg">DOK: {q.dok}</span>}
-                            {q.cognitive && <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-1 rounded-lg">Cognitive: {q.cognitive}</span>}
-                            {q.errorPattern && <span className="text-[10px] font-bold text-red-700 bg-red-50 px-2 py-1 rounded-lg">Error Pattern: {q.errorPattern}</span>}
-                            {q.estimatedTime && <span className="text-[10px] font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded-lg">Time: {q.estimatedTime}min</span>}
+                            {q.gradeTarget && <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg">Grade: {q.gradeTarget}</span>}
                           </div>
                         </div>
 
@@ -340,10 +331,10 @@ export const QuestionsBuilder = (props: any) => {
                   { key: 'domain', labelAr: 'المجال', labelEn: 'Domain' },
                   { key: 'standard', labelAr: 'المعيار', labelEn: 'Standard' },
                   { key: 'indicator', labelAr: 'المؤشرات', labelEn: 'Indicators' },
-                  { key: 'skill', labelAr: 'المهارة', labelEn: 'Skill' },
+                  { key: 'skill', labelAr: 'المهارة', labelEn: 'Skill', defaultValue: 'General' },
                   { key: 'subskill', labelAr: 'المهارة الفرعية', labelEn: 'Subskill' },
                   { key: 'microSkill', labelAr: 'المهارة الدقيقة', labelEn: 'Micro Skill' },
-                  { key: 'level', labelAr: 'الصعوبة', labelEn: 'Difficulty' },
+                  { key: 'level', labelAr: 'الصعوبة', labelEn: 'Difficulty', defaultValue: 'Medium' },
                   { key: 'dok', labelAr: 'عمق المعرفة (DOK)', labelEn: 'DOK' },
                   { key: 'cognitive', labelAr: 'المستوى المعرفي', labelEn: 'Cognitive' },
                   { key: 'errorPattern', labelAr: 'نمط الخطأ', labelEn: 'Error Pattern' },
@@ -351,13 +342,38 @@ export const QuestionsBuilder = (props: any) => {
                 ].map((field) => (
                   <div key={field.key} className="flex flex-col gap-2">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? field.labelAr : field.labelEn}</label>
-                    <input
-                      type="text"
-                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold"
-                      placeholder={language === 'ar' ? field.labelAr : field.labelEn}
-                      value={tempQuestion[field.key] || ''}
-                      onChange={(e) => updateCurrentQuestionField(field.key, e.target.value)}
-                    />
+                    {field.key === 'dok' ? (
+                      <select
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold appearance-none"
+                        value={tempQuestion.dok || ""}
+                        onChange={(e) => updateCurrentQuestionField('dok', e.target.value)}
+                      >
+                        <option value="">{language === 'ar' ? 'اختر...' : 'Select...'}</option>
+                        <option value="DOK 1">DOK 1</option>
+                        <option value="DOK 2">DOK 2</option>
+                        <option value="DOK 3">DOK 3</option>
+                        <option value="DOK 4">DOK 4</option>
+                      </select>
+                    ) : field.key === 'cognitive' ? (
+                      <select
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold appearance-none"
+                        value={tempQuestion.cognitive || ""}
+                        onChange={(e) => updateCurrentQuestionField('cognitive', e.target.value)}
+                      >
+                        <option value="">{language === 'ar' ? 'اختر...' : 'Select...'}</option>
+                        <option value="Knowledge">Knowledge</option>
+                        <option value="Application">Application</option>
+                        <option value="Reasoning">Reasoning</option>
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold"
+                        placeholder={language === 'ar' ? field.labelAr : field.labelEn}
+                        value={tempQuestion[field.key] || field.defaultValue || ''}
+                        onChange={(e) => updateCurrentQuestionField(field.key, e.target.value)}
+                      />
+                    )}
                   </div>
                 ))}
               </div>

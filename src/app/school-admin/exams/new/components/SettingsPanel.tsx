@@ -16,14 +16,14 @@ export const SettingsPanel = (props: any) => {
                   <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/5 blur-3xl -mr-16 -mt-16 group-hover:bg-indigo-600/10 transition-all"></div>
                   <h2 className="text-xl font-black text-slate-900 mb-8 flex items-center gap-3 relative z-10">
                     <Settings className="w-6 h-6 text-indigo-600" />
-                    {language === 'ar' ? 'إعدادات التقييم' : 'Assessment Settings'}
+                    {language === 'ar' ? 'إعدادات الموديول' : 'Module Settings'}
                   </h2>
                   
                   <div className="space-y-6 relative z-10">
                     {/* Cover Image Upload */}
                     <div className="space-y-3">
                       <FileUpload
-                        label={language === 'ar' ? 'صورة غلاف التقييم' : 'Assessment Cover Image'}
+                        label={language === 'ar' ? 'صورة غلاف الموديول' : 'Module Cover Image'}
                         accept="image/*"
                         value={examData.coverImage}
                         onUploadSuccess={(url) => setExamData({ ...examData, coverImage: url })}
@@ -32,7 +32,7 @@ export const SettingsPanel = (props: any) => {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'عنوان التقييم' : 'Assessment Title'}</label>
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'عنوان الموديول' : 'Module Title'}</label>
                       <input 
                         type="text" 
                         value={examData.title}
@@ -43,33 +43,17 @@ export const SettingsPanel = (props: any) => {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'وصف التقييم' : 'Assessment Description'}</label>
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'وصف الموديول' : 'Module Description'}</label>
                       <textarea 
                         value={examData.description}
                         onChange={(e) => setExamData({...examData, description: e.target.value})}
                         className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all min-h-[120px] resize-none"
-                        placeholder={language === 'ar' ? 'نبذة مختصرة عن التقييم...' : 'Brief description of the exam...'}
+                        placeholder={language === 'ar' ? 'نبذة مختصرة عن الموديول...' : 'Brief description of the module...'}
                       />
                     </div>
 
                     <div className="grid grid-cols-1 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{t('courseCreate.country')}</label>
-                        <select 
-                          value={examData.country}
-                          onChange={(e) => setExamData({...examData, country: e.target.value})}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all appearance-none"
-                        >
-                          <option value="مصر">{language === 'ar' ? 'مصر' : 'Egypt'}</option>
-                          <option value="السعودية">{language === 'ar' ? 'السعودية' : 'Saudi Arabia'}</option>
-                          <option value="الإمارات">{language === 'ar' ? 'الإمارات' : 'UAE'}</option>
-                          <option value="الكويت">{language === 'ar' ? 'الكويت' : 'Kuwait'}</option>
-                          <option value="قطر">{language === 'ar' ? 'قطر' : 'Qatar'}</option>
-                          <option value="عمان">{language === 'ar' ? 'عمان' : 'Oman'}</option>
-                          <option value="البحرين">{language === 'ar' ? 'البحرين' : 'Bahrain'}</option>
-                          <option value="الأردن">{language === 'ar' ? 'الأردن' : 'Jordan'}</option>
-                        </select>
-                      </div>
+
 
                       <div className="space-y-4">
                         <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">{t('courseCreate.grades')}</label>
@@ -181,11 +165,10 @@ export const SettingsPanel = (props: any) => {
                             </label>
                           ))}
                         </div>
-                        <p className="text-[10px] text-slate-400 font-bold">{language === 'ar' ? 'يمكن اختيار أكثر من مادة وسيتم حفظها كوسوم داخل نفس التقييم.' : 'Multiple subjects can be selected and will be saved as tags within the same assessment.'}</p>
+                        <p className="text-[10px] text-slate-400 font-bold">{language === 'ar' ? 'يمكن اختيار أكثر من مجال وسيتم حفظها داخل نفس الموديول.' : 'Multiple domains can be selected and will be saved within the same module.'}</p>
                       </div>
                     </div>
 
-                    </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
@@ -246,43 +229,7 @@ export const SettingsPanel = (props: any) => {
                         />
                       </div>
                     </div>
-                                        {/* Advanced Module Metadata */}
-                    <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-3xl space-y-4">
-                      <h4 className="font-black text-indigo-900 flex items-center gap-2">
-                        <Settings className="w-5 h-5 text-indigo-600" />
-                        {language === 'ar' ? 'البيانات الوصفية المتقدمة' : 'Advanced Metadata'}
-                      </h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <label className="text-xs font-black text-indigo-700 uppercase tracking-widest">{language === 'ar' ? 'الكورس' : 'Course'}</label>
-                          <input type="text" value={examData.courseName || ""} onChange={(e) => setExamData({...examData, courseName: e.target.value})} className="w-full bg-white border border-indigo-200 rounded-xl py-3 px-4 text-sm font-bold outline-none focus:border-indigo-600 transition-all" />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-xs font-black text-indigo-700 uppercase tracking-widest">{language === 'ar' ? 'القسم' : 'Section'}</label>
-                          <input type="text" value={examData.section || ""} onChange={(e) => setExamData({...examData, section: e.target.value})} className="w-full bg-white border border-indigo-200 rounded-xl py-3 px-4 text-sm font-bold outline-none focus:border-indigo-600 transition-all" />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-xs font-black text-indigo-700 uppercase tracking-widest">{language === 'ar' ? 'المجال' : 'Domain'}</label>
-                          <input type="text" value={examData.domain || ""} onChange={(e) => setExamData({...examData, domain: e.target.value})} className="w-full bg-white border border-indigo-200 rounded-xl py-3 px-4 text-sm font-bold outline-none focus:border-indigo-600 transition-all" />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-xs font-black text-indigo-700 uppercase tracking-widest">{language === 'ar' ? 'مخرجات التعلم' : 'Learning Outcomes'}</label>
-                          <input type="text" value={examData.learningOutcomes || ""} onChange={(e) => setExamData({...examData, learningOutcomes: e.target.value})} className="w-full bg-white border border-indigo-200 rounded-xl py-3 px-4 text-sm font-bold outline-none focus:border-indigo-600 transition-all" />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-xs font-black text-indigo-700 uppercase tracking-widest">{language === 'ar' ? 'المؤشرات' : 'Indicators'}</label>
-                          <input type="text" value={examData.indicators || ""} onChange={(e) => setExamData({...examData, indicators: e.target.value})} className="w-full bg-white border border-indigo-200 rounded-xl py-3 px-4 text-sm font-bold outline-none focus:border-indigo-600 transition-all" />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-xs font-black text-indigo-700 uppercase tracking-widest">{language === 'ar' ? 'المهارات' : 'Skills'}</label>
-                          <input type="text" value={examData.skills || ""} onChange={(e) => setExamData({...examData, skills: e.target.value})} className="w-full bg-white border border-indigo-200 rounded-xl py-3 px-4 text-sm font-bold outline-none focus:border-indigo-600 transition-all" />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-xs font-black text-indigo-700 uppercase tracking-widest">{language === 'ar' ? 'المرحلة المستهدفة' : 'Grade Target'}</label>
-                          <input type="text" value={examData.gradeTarget || ""} onChange={(e) => setExamData({...examData, gradeTarget: e.target.value})} className="w-full bg-white border border-indigo-200 rounded-xl py-3 px-4 text-sm font-bold outline-none focus:border-indigo-600 transition-all" />
-                        </div>
-                      </div>
-                    </div>
+
 
 <div className="space-y-2">
                       <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "سياسة النتيجة" : "Result Policy"}</label>
@@ -304,8 +251,8 @@ export const SettingsPanel = (props: any) => {
                       <ListOrdered className="w-8 h-8" />
                    </div>
                    <div>
-                      <h4 className="text-xl font-black text-slate-900">{language === 'ar' ? 'محتوى الامتحان' : 'Exam Content'}</h4>
-                      <p className="text-indigo-600 font-bold">{language === 'ar' ? `تم إضافة ${modules.length} موديولات` : `${modules.length} Modules Added`}</p>
+                      <h4 className="text-xl font-black text-slate-900">{language === 'ar' ? 'محتوى الموديول' : 'Module Content'}</h4>
+                      <p className="text-indigo-600 font-bold">{language === 'ar' ? `تم إضافة ${modules.length} تقييمات/اختبارات` : `${modules.length} Assessments Added`}</p>
                    </div>
                 </div>
               </div>

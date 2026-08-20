@@ -34,7 +34,7 @@ export const getSectionStylePresets = (language: string) => ({
   EXPLANATION: {
     icon: BookOpen,
     label: language === 'ar' ? "شرح مفصل" : "Explanation",
-    container: "bg-indigo-50/70 border-indigo-200",
-    badge: "bg-indigo-100 text-indigo-700",
+    container: "bg-orange-100 border-orange-300 text-black",
+    badge: "bg-purple-600 text-white",
   }
 });

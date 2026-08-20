@@ -16,14 +16,14 @@ export const SettingsPanel = (props: any) => {
           <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/5 blur-3xl -mr-16 -mt-16 group-hover:bg-indigo-600/10 transition-all"></div>
           <h2 className="text-xl font-black text-slate-900 mb-8 flex items-center gap-3 relative z-10">
             <Settings className="w-6 h-6 text-indigo-600" />
-            {language === 'ar' ? 'إعدادات التقييم' : 'Assessment Settings'}
+            {language === 'ar' ? 'إعدادات الموديول' : 'Module Settings'}
           </h2>
 
           <div className="space-y-6 relative z-10">
             {/* Cover Image Upload */}
             <div className="space-y-3">
               <FileUpload
-                label={language === 'ar' ? 'صورة غلاف التقييم' : 'Assessment Cover Image'}
+                label={language === 'ar' ? 'صورة غلاف الموديول' : 'Module Cover Image'}
                 accept="image/*"
                 value={examData.coverImage}
                 onUploadSuccess={(url) => setExamData({ ...examData, coverImage: url })}
@@ -32,7 +32,7 @@ export const SettingsPanel = (props: any) => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'عنوان التقييم' : 'Assessment Title'}</label>
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'عنوان الموديول' : 'Module Title'}</label>
               <input
                 type="text"
                 value={examData.title}
@@ -152,7 +152,7 @@ export const SettingsPanel = (props: any) => {
                     </label>
                   ))}
                 </div>
-                <p className="text-[10px] text-slate-400 font-bold">{language === 'ar' ? 'يمكن اختيار أكثر من مادة وسيتم حفظها كوسوم داخل نفس التقييم.' : 'Multiple subjects can be selected and will be saved as tags within the same assessment.'}</p>
+                <p className="text-[10px] text-slate-400 font-bold">{language === 'ar' ? 'يمكن اختيار أكثر من مجال وسيتم حفظها داخل نفس الموديول.' : 'Multiple domains can be selected and will be saved within the same module.'}</p>
               </div>
             </div>
 
@@ -305,8 +305,8 @@ export const SettingsPanel = (props: any) => {
             <ListOrdered className="w-8 h-8" />
           </div>
           <div>
-            <h4 className="text-xl font-black text-slate-900">{language === 'ar' ? 'محتوى الامتحان' : 'Exam Content'}</h4>
-            <p className="text-indigo-600 font-bold">{language === 'ar' ? `تم إضافة ${modules.length} موديولات` : `${modules.length} Modules Added`}</p>
+            <h4 className="text-xl font-black text-slate-900">{language === 'ar' ? 'محتوى الموديول' : 'Module Content'}</h4>
+            <p className="text-indigo-600 font-bold">{language === 'ar' ? `تم إضافة ${modules.length} تقييمات/اختبارات` : `${modules.length} Assessments Added`}</p>
           </div>
         </div>
       </div>

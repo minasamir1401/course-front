@@ -23,9 +23,9 @@ export const ModuleModal = (props: any) => {
                 <div className="min-w-0">
                   <h3 className="text-base sm:text-2xl font-black text-white flex items-center gap-2 sm:gap-3 truncate">
                     <Monitor className="w-8 h-8" />
-                    {editingModuleIndex !== null ? (language === 'ar' ? `تعديل الموديول: ${currentModule.title}` : `Edit Module: ${currentModule.title}`) : (language === 'ar' ? "إضافة موديول جديد" : "Design New Module")}
+                    {editingModuleIndex !== null ? (language === 'ar' ? `تعديل الاختبار: ${currentModule.title}` : `Edit Assessment: ${currentModule.title}`) : (language === 'ar' ? "إضافة اختبار جديد" : "Design New Assessment")}
                   </h3>
-                  <p className="hidden sm:block text-slate-400 mt-1 font-bold">{language === 'ar' ? "بناء محتوى الموديول والأسئلة" : "Build module content and questions"}</p>
+                  <p className="hidden sm:block text-slate-400 mt-1 font-bold">{language === 'ar' ? "بناء محتوى الاختبار والأسئلة" : "Build assessment content and questions"}</p>
                 </div>
                 <button onClick={() => setIsModuleModalOpen(false)} className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-all">
                   <X className="w-6 h-6" />
@@ -57,7 +57,7 @@ export const ModuleModal = (props: any) => {
                   <div className="space-y-10">
                     <div className="grid grid-cols-1 gap-8">
                       <div>
-                        <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">{language === 'ar' ? "عنوان الموديول" : "Module Title"}</label>
+                        <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">{language === 'ar' ? "عنوان الاختبار" : "Exam Title"}</label>
                         <input
                           type="text"
                           value={currentModule.title}
@@ -69,95 +69,6 @@ export const ModuleModal = (props: any) => {
                     </div>
 
 
-                    <div className="bg-white p-8 rounded-[35px] border border-slate-100 space-y-8">
-                       <h4 className="text-xl font-black text-slate-900 flex items-center gap-3">
-                          <Target className="w-6 h-6 text-indigo-600" />
-                          {language === 'ar' ? "الأهداف والمعايير الأكاديمية" : "Academic Objectives & Standards"}
-                       </h4>
-                       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <div className="space-y-3">
-                          <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "المجال" : "Domain"}</label>
-                          <select 
-                            value={currentModule.domain || ""}
-                            onChange={(e) => setCurrentModule({...currentModule, domain: e.target.value})}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none shadow-sm font-bold"
-                          >
-                            <option value="">{t('courseCreate.selectDomain') || "Select Domain..."}</option>
-                            {availableMetadata.domains.map((domainName: string) => (
-                              <option key={domainName} value={domainName}>{domainName}</option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="space-y-3">
-                          <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "المعايير" : "Standards"}</label>
-                          <select 
-                            value={currentModule.standards || ""}
-                            onChange={(e) => setCurrentModule({...currentModule, standards: e.target.value})}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none shadow-sm font-bold truncate"
-                          >
-                            <option value="">{t('courseCreate.selectStandard') || "Select Standard..."}</option>
-                            {availableMetadata.standards.map((standardName: string) => (
-                              <option key={standardName} value={standardName}>{standardName}</option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="space-y-3">
-                          <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "المؤشرات" : "Indicators"}</label>
-                          <select 
-                            value={currentModule.indicators || ""}
-                            onChange={(e) => setCurrentModule({...currentModule, indicators: e.target.value})}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none shadow-sm font-bold truncate"
-                          >
-                            <option value="">{t('courseCreate.selectIndicator') || "Select Indicator..."}</option>
-                            {availableMetadata.indicators.map((indicatorName: string) => (
-                              <option key={indicatorName} value={indicatorName}>{indicatorName}</option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="space-y-3">
-                          <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "نواتج التعلم (LOs)" : "Learning Outcomes (LOs)"}</label>
-                          <select 
-                            value={currentModule.learningOutcomes || ""}
-                            onChange={(e) => setCurrentModule({...currentModule, learningOutcomes: e.target.value})}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none shadow-sm font-bold truncate"
-                          >
-                            <option value="">{t('courseCreate.selectOutcome') || "Select Learning Outcome..."}</option>
-                            {availableMetadata.outcomes.map((outcomeName: string) => (
-                              <option key={outcomeName} value={outcomeName}>{outcomeName}</option>
-                            ))}
-                          </select>
-                        </div>
-                       </div>
- 
-                       <div className="flex justify-center items-center gap-4 mt-6">
-                        <input 
-                          type="file" 
-                          ref={metadataExcelRef} 
-                          style={{ display: 'none' }} 
-                          accept=".xlsx,.xls" 
-                          onChange={handleMetadataExcelChange} 
-                        />
-                        <button 
-                          type="button"
-                          onClick={() => handleExcelUpload('metadata')}
-                          className="flex items-center gap-2 bg-emerald-50 text-emerald-600 px-6 py-3 rounded-2xl border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all font-black text-xs cursor-pointer shadow-sm"
-                        >
-                          <Upload className="w-4 h-4" />
-                          {t('courseCreate.uploadStandardsExcel') || "Upload Standards from Excel"}
-                        </button>
-                        <button 
-                          type="button"
-                          onClick={downloadMetadataTemplate}
-                          className="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-6 py-3 rounded-2xl border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all font-black text-xs cursor-pointer shadow-sm"
-                        >
-                          <Download className="w-4 h-4" />
-                          {language === 'ar' ? "تحميل نموذج Excel الاسترشادي" : "Download Excel Template"}
-                        </button>
-                       </div>
-                    </div>
                   </div>
                 )}
 
@@ -165,8 +76,8 @@ export const ModuleModal = (props: any) => {
                   <div className="space-y-8 animate-in fade-in duration-300">
                     <div className="bg-indigo-50/50 border border-indigo-100 p-8 rounded-[35px] flex items-center justify-between">
                        <div className="space-y-1">
-                          <h4 className="text-xl font-black text-indigo-900">{language === 'ar' ? "ظهور الموديول" : "Module Visibility"}</h4>
-                          <p className="text-indigo-600/60 font-bold text-sm">{language === 'ar' ? "التحكم في إمكانية رؤية الطلاب لهذا الموديول حالياً" : "Control whether students can see this module currently"}</p>
+                          <h4 className="text-xl font-black text-indigo-900">{language === 'ar' ? "ظهور الاختبار" : "Assessment Visibility"}</h4>
+                          <p className="text-indigo-600/60 font-bold text-sm">{language === 'ar' ? "التحكم في إمكانية رؤية الطلاب لهذا الاختبار حالياً" : "Control whether students can see this assessment currently"}</p>
                        </div>
                        <button 
                         type="button"
@@ -183,7 +94,7 @@ export const ModuleModal = (props: any) => {
                              <CheckCircle2 className="w-6 h-6" />
                              <label className="text-sm font-black uppercase tracking-widest">{language === 'ar' ? "تاريخ النشر" : "Publish Date"}</label>
                           </div>
-                          <p className="text-slate-400 text-xs font-bold">{language === 'ar' ? "لن يظهر الموديول للطلاب قبل هذا التاريخ حتى لو تم تمكين الظهور" : "The module will not appear to students before this date even if Visibility is enabled"}</p>
+                          <p className="text-slate-400 text-xs font-bold">{language === 'ar' ? "لن يظهر الاختبار للطلاب قبل هذا التاريخ حتى لو تم تمكين الظهور" : "The assessment will not appear to students before this date even if Visibility is enabled"}</p>
                           <input 
                             type="datetime-local"
                             value={currentModule.publishDate || ""}

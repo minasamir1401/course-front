@@ -57,7 +57,7 @@ export const ModuleModal = (props: any) => {
               <div className="space-y-10">
                 <div className="grid grid-cols-1 gap-8">
                   <div>
-                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">{language === 'ar' ? "عنوان الموديول" : "Module Title"}</label>
+                        <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">{language === 'ar' ? "عنوان الاختبار" : "Exam Title"}</label>
                     <input
                       type="text"
                       value={currentModule.title}
@@ -85,16 +85,7 @@ export const ModuleModal = (props: any) => {
                           { key: 'course', labelAr: 'الاختبار', labelEn: 'Exam' },
                           { key: 'section', labelAr: 'القسم', labelEn: 'Section' },
                           { key: 'domain', labelAr: 'المجال', labelEn: 'Domain' },
-                          { key: 'standard', labelAr: 'المعيار', labelEn: 'Standard' },
-                          { key: 'indicator', labelAr: 'المؤشرات', labelEn: 'Indicators' },
-                          { key: 'skill', labelAr: 'المهارة', labelEn: 'Skill' },
-                          { key: 'subskill', labelAr: 'المهارة الفرعية', labelEn: 'Subskill' },
-                          { key: 'microSkill', labelAr: 'المهارة الدقيقة', labelEn: 'Micro Skill' },
-                          { key: 'level', labelAr: 'الصعوبة', labelEn: 'Difficulty' },
-                          { key: 'dok', labelAr: 'عمق المعرفة (DOK)', labelEn: 'DOK' },
-                          { key: 'cognitive', labelAr: 'المستوى المعرفي', labelEn: 'Cognitive' },
-                          { key: 'errorPattern', labelAr: 'نمط الخطأ', labelEn: 'Error Pattern' },
-                          { key: 'estimatedTime', labelAr: 'الوقت المقدر', labelEn: 'Estimated Time' },
+                          { key: 'gradeTarget', labelAr: 'الصف المستهدف', labelEn: 'Grade Target' },
                         ];
                         const data: any = {};
                         metadataMap.forEach(field => {
@@ -116,16 +107,7 @@ export const ModuleModal = (props: any) => {
                       { key: 'course', labelAr: 'الاختبار', labelEn: 'Exam' },
                       { key: 'section', labelAr: 'القسم', labelEn: 'Section' },
                       { key: 'domain', labelAr: 'المجال', labelEn: 'Domain' },
-                      { key: 'standard', labelAr: 'المعيار', labelEn: 'Standard' },
-                      { key: 'indicator', labelAr: 'المؤشرات', labelEn: 'Indicators' },
-                      { key: 'skill', labelAr: 'المهارة', labelEn: 'Skill', defaultValue: 'General' },
-                      { key: 'subskill', labelAr: 'المهارة الفرعية', labelEn: 'Subskill' },
-                      { key: 'microSkill', labelAr: 'المهارة الدقيقة', labelEn: 'Micro Skill' },
-                      { key: 'level', labelAr: 'الصعوبة', labelEn: 'Difficulty', defaultValue: 'Medium' },
-                      { key: 'dok', labelAr: 'عمق المعرفة (DOK)', labelEn: 'DOK' },
-                      { key: 'cognitive', labelAr: 'المستوى المعرفي', labelEn: 'Cognitive' },
-                      { key: 'errorPattern', labelAr: 'نمط الخطأ', labelEn: 'Error Pattern' },
-                      { key: 'estimatedTime', labelAr: 'الوقت المقدر', labelEn: 'Estimated Time' },
+                      { key: 'gradeTarget', labelAr: 'الصف المستهدف', labelEn: 'Grade Target' },
                     ].map((field) => (
                       <div key={field.key} className="flex flex-col gap-2">
                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? field.labelAr : field.labelEn}</label>

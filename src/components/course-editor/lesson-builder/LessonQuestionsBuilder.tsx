@@ -760,13 +760,38 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                 ].map((field) => (
                   <div key={field.key} className="flex flex-col gap-2">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? field.labelAr : field.labelEn}</label>
-                    <input
-                      type="text"
-                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold"
-                      placeholder={language === 'ar' ? field.labelAr : field.labelEn}
-                      value={tempQuestion[field.key] || field.defaultValue || ''}
-                      onChange={(e) => updateCurrentQuestionField(field.key, e.target.value)}
-                    />
+                    {field.key === 'dok' ? (
+                      <select
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold appearance-none"
+                        value={tempQuestion.dok || ""}
+                        onChange={(e) => updateCurrentQuestionField('dok', e.target.value)}
+                      >
+                        <option value="">{language === 'ar' ? 'اختر...' : 'Select...'}</option>
+                        <option value="DOK 1">DOK 1</option>
+                        <option value="DOK 2">DOK 2</option>
+                        <option value="DOK 3">DOK 3</option>
+                        <option value="DOK 4">DOK 4</option>
+                      </select>
+                    ) : field.key === 'cognitive' ? (
+                      <select
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold appearance-none"
+                        value={tempQuestion.cognitive || ""}
+                        onChange={(e) => updateCurrentQuestionField('cognitive', e.target.value)}
+                      >
+                        <option value="">{language === 'ar' ? 'اختر...' : 'Select...'}</option>
+                        <option value="Knowledge">Knowledge</option>
+                        <option value="Application">Application</option>
+                        <option value="Reasoning">Reasoning</option>
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold"
+                        placeholder={language === 'ar' ? field.labelAr : field.labelEn}
+                        value={tempQuestion[field.key] || field.defaultValue || ''}
+                        onChange={(e) => updateCurrentQuestionField(field.key, e.target.value)}
+                      />
+                    )}
                   </div>
                 ))}
               </div>
@@ -842,7 +867,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                         <Plus className="w-4 h-4" /> {language === 'ar' ? 'إضافة شريحة مساعدة' : 'Add Block'}
                       </button>
                       <div className={`absolute right-0 mt-2 w-56 bg-white border border-slate-100 rounded-xl shadow-xl p-2 z-50 ${openDropdownId === 'question-sections' ? "block" : "hidden"}`}>
-                        {['EXPLANATION', 'HINT', 'TIP', 'WARNING', 'KEY_INSIGHT'].map(secType => (
+                        {['EXPLANATION'].map(secType => (
                           <button
                             key={secType}
                             type="button"

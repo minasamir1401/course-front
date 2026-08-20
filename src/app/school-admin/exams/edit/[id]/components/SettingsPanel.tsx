@@ -53,23 +53,7 @@ export const SettingsPanel = (props: any) => {
                     </div>
 
                     <div className="grid grid-cols-1 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{t('courseCreate.country')}</label>
-                        <select 
-                          value={examData.country}
-                          onChange={(e) => setExamData({...examData, country: e.target.value})}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all appearance-none"
-                        >
-                          <option value="مصر">{language === 'ar' ? 'مصر' : 'Egypt'}</option>
-                          <option value="السعودية">{language === 'ar' ? 'السعودية' : 'Saudi Arabia'}</option>
-                          <option value="الإمارات">{language === 'ar' ? 'الإمارات' : 'UAE'}</option>
-                          <option value="الكويت">{language === 'ar' ? 'الكويت' : 'Kuwait'}</option>
-                          <option value="قطر">{language === 'ar' ? 'قطر' : 'Qatar'}</option>
-                          <option value="عمان">{language === 'ar' ? 'عمان' : 'Oman'}</option>
-                          <option value="البحرين">{language === 'ar' ? 'البحرين' : 'Bahrain'}</option>
-                          <option value="الأردن">{language === 'ar' ? 'الأردن' : 'Jordan'}</option>
-                        </select>
-                      </div>
+
 
                       <div className="space-y-4">
                         <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">{t('courseCreate.grades')}</label>
@@ -185,7 +169,6 @@ export const SettingsPanel = (props: any) => {
                       </div>
                     </div>
 
-                    </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
