@@ -17,6 +17,13 @@ import AnimatedFeedback from "@/components/AnimatedFeedback";
 import { InteractiveTag } from "@/components/InteractiveTag";
 import HtmlRenderer from "@/components/HtmlRenderer";
 
+
+import { useClusterInfo } from './hooks/useClusterInfo';
+import { useLessons } from './hooks/useLessons';
+import { useActivities } from './hooks/useActivities';
+import { useStudentPreview } from './hooks/useStudentPreview';
+import { GRADE_LABELS, CANONICAL_GRADES, SUBJECTS, DEFAULT_SKILLS } from './constants';
+
 export default function EditSkillClusterPage() {
   const { t, language } = useLanguage();
   const router = useRouter();
@@ -24,919 +31,99 @@ export default function EditSkillClusterPage() {
   const { showToast } = useNotification();
   const clusterId = searchParams.get('id');
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [schools, setSchools] = useState<any[]>([]);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [activeTab, setActiveTab] = useState<'info' | 'lessons'>('info');
-  
-  const [selectedGrades, setSelectedGrades] = useState<string[]>([]);
-  const [selectedSchoolIds, setSelectedSchoolIds] = useState<string[]>([]);
 
-  const [clusterData, setClusterData] = useState<any>({
-    id: "", name: "", description: "", subject: "", isCentral: false
-  });
+  const clusterInfo = useClusterInfo({ clusterId, language, showToast, router });
+  const lessonsMgr = useLessons({ clusterId, language, showToast });
+  const activitiesMgr = useActivities({ clusterId, language, showToast, fetchLessons: lessonsMgr.fetchLessons });
+  const previewMgr = useStudentPreview({ language });
 
-  const [lessons, setLessons] = useState<any[]>([]);
-  
-  // Lesson Modal State
-  const [isLessonModalOpen, setIsLessonModalOpen] = useState(false);
-  const [editingLesson, setEditingLesson] = useState<any>(null);
+  useEffect(() => {
+    clusterInfo.fetchClusterData();
+    lessonsMgr.fetchLessons();
+  }, [clusterId]);
 
-  // Activities State
-  const [expandedLessonId, setExpandedLessonId] = useState<string | null>(null);
-  const [activitiesData, setActivitiesData] = useState<Record<string, any[]>>({});
-  
-  // Activity Modal State
-  const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
-  const [editingActivity, setEditingActivity] = useState<any>(null);
-
-  // Excel Upload State
-  const [uploadingLessonId, setUploadingLessonId] = useState<string | null>(null);
+  // EXCEL FILE INPUT REF
   const excelInputRef = React.useRef<HTMLInputElement>(null);
 
-  // Custom skills state
-  const [customSkills, setCustomSkills] = useState<string[]>([]);
-
-  const DEFAULT_SKILLS = [
-    "Problem Solving", "Reasoning", "Number Sense", "Algebraic Thinking", "Geometry",
-    "Data Analysis", "Observation", "Investigation", "Scientific Reasoning",
-    "Data Interpretation", "Experiment Design", "Main Idea", "Inference",
-    "Vocabulary in Context", "Author's Purpose", "Supporting Details"
-  ];
-
-  const allExistingSkills = Array.from(new Set([
-    ...DEFAULT_SKILLS,
-    ...customSkills,
-    ...Object.values(activitiesData).flatMap((acts: any[]) => acts.map(a => a.skill).filter(Boolean))
-  ]));
-
-  // Student Preview Play Modal States
-  const [previewActivity, setPreviewActivity] = useState<any>(null);
-  const [previewAnswer, setPreviewAnswer] = useState<string>("");
-  const [previewIsSubmitting, setPreviewIsSubmitting] = useState(false);
-  const [previewResult, setPreviewResult] = useState<any>(null);
-  const [previewToast, setPreviewToast] = useState<any>(null);
-  const [previewStartTime, setPreviewStartTime] = useState<number>(0);
-  const [previewHintsUsed, setPreviewHintsUsed] = useState<number>(0);
-  const [previewAttemptCount, setPreviewAttemptCount] = useState<number>(1);
-  const [previewHelperModal, setPreviewHelperModal] = useState<{ type: "hint" | "tip" | "keyInsight" | null; content: string }>({
-    type: null,
-    content: ""
-  });
-  const [previewActivitiesList, setPreviewActivitiesList] = useState<any[]>([]);
-  const [previewTimeLeft, setPreviewTimeLeft] = useState<number | null>(null);
-  const [previewIsLoading, setPreviewIsLoading] = useState<boolean>(false);
-
-  const [mounted, setMounted] = useState(false);
-
-  const CANONICAL_GRADES = [
-    "KG 1", "KG 2",
-    "الصف الأول الابتدائي", "الصف الثاني الابتدائي", "الصف الثالث الابتدائي",
-    "الصف الرابع الابتدائي", "الصف الخامس الابتدائي", "الصف السادس الابتدائي",
-    "الصف الأول الإعدادي", "الصف الثاني الإعدادي", "الصف الثالث الإعدادي",
-    "الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"
-  ];
-
-  const GRADE_LABELS: Record<string, { ar: string; en: string }> = {
-    "KG 1": { ar: "KG 1", en: "KG 1" },
-    "KG 2": { ar: "KG 2", en: "KG 2" },
-    "الصف الأول الابتدائي": { ar: "الصف الأول الابتدائي", en: "Grade 1 Elementary" },
-    "الصف الثاني الابتدائي": { ar: "الصف الثاني الابتدائي", en: "Grade 2 Elementary" },
-    "الصف الثالث الابتدائي": { ar: "الصف الثالث الابتدائي", en: "Grade 3 Elementary" },
-    "الصف الرابع الابتدائي": { ar: "الصف الرابع الابتدائي", en: "Grade 4 Elementary" },
-    "الصف الخامس الابتدائي": { ar: "الصف الخامس الابتدائي", en: "Grade 5 Elementary" },
-    "الصف السادس الابتدائي": { ar: "الصف السادس الابتدائي", en: "Grade 6 Elementary" },
-    "الصف الأول الإعدادي": { ar: "الصف الأول الإعدادي", en: "Grade 1 Middle School" },
-    "الصف الثاني الإعدادي": { ar: "الصف الثاني الإعدادي", en: "Grade 2 Middle School" },
-    "الصف الثالث الإعدادي": { ar: "الصف الثالث الإعدادي", en: "Grade 3 Middle School" },
-    "الصف الأول الثانوي": { ar: "الصف الأول الثانوي", en: "Grade 1 High School" },
-    "الصف الثاني الثانوي": { ar: "الصف الثاني الثانوي", en: "Grade 2 High School" },
-    "الصف الثالث الثانوي": { ar: "الصف الثالث الثانوي", en: "Grade 3 High School" },
-  };
-
-  const getGradeDisplay = (g: string) => GRADE_LABELS[g]?.[language === 'ar' ? 'ar' : 'en'] || g;
-
-  const SUBJECTS = [
-    "اللغة العربية", "اللغة الإنجليزية", "اللغة الفرنسية", "اللغة الألمانية", "اللغة الإيطالية",
-    "الرياضيات", "العلوم", "الدراسات الاجتماعية", "اكتشف (متعدد التخصصات)",
-    "الفيزياء", "الكيمياء", "الأحياء", "الجيولوجيا", "الميكانيكا",
-    "التاريخ", "الجغرافيا", "الفلسفة", "علم النفس", "الاقتصاد", "الإحصاء",
-    "التربية الدينية", "التربية الوطنية", "الحاسب الآلي",
-    "SAT Math", "SAT English"
-  ];
-
-  const isGrade123 = (g: string) => [
-    "الصف الأول الابتدائي",
-    "الصف الثاني الابتدائي",
-    "الصف الثالث الابتدائي"
-  ].some(gr => g.includes(gr));
-
-  const parseField = (val: any) => {
-    if (typeof val !== 'string') return val;
-    const t = val.trim();
-    if (t.startsWith('{') || t.startsWith('[') || (t.startsWith('"') && t.endsWith('"'))) {
-      try { return JSON.parse(t); } catch { return val; }
+  // Destructure for JSX compatibility
+  const { isLoading, isSaving, schools, isSuperAdmin, activeTab, setActiveTab, selectedGrades, setSelectedGrades, selectedSchoolIds, setSelectedSchoolIds, clusterData, setClusterData, handleUpdateCluster } = clusterInfo;
+  const { lessons, setLessons, isLessonModalOpen, setIsLessonModalOpen, editingLesson, setEditingLesson, openAddLesson, openEditLesson, handleSaveLesson, handleDeleteLesson, uploadingLessonId } = lessonsMgr;
+  
+  const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (uploadingLessonId) {
+      lessonsMgr.handleExcelUpload(e, uploadingLessonId);
     }
-    return val;
   };
+
+  const { expandedLessonId, setExpandedLessonId, activitiesData, setActivitiesData, toggleLessonExpand, isActivityModalOpen, setIsActivityModalOpen, editingActivity, setEditingActivity, openAddActivity, openEditActivity, handleSaveActivity, handleDeleteActivity } = activitiesMgr;
+  const { previewActivity, setPreviewActivity, previewAnswer, setPreviewAnswer, previewIsSubmitting, setPreviewIsSubmitting, previewResult, setPreviewResult, previewToast, setPreviewToast, previewStartTime, setPreviewStartTime, previewHintsUsed, setPreviewHintsUsed, previewAttemptCount, setPreviewAttemptCount, previewHelperModal, setPreviewHelperModal, previewActivitiesList, setPreviewActivitiesList, previewTimeLeft, setPreviewTimeLeft, previewIsLoading, setPreviewIsLoading, openPreview, closePreview, handlePreviewNext, handlePreviewPrev, handlePreviewSubmit, handlePreviewRetry } = previewMgr;
+
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
 
   const getCleanDescription = (desc: string | null) => {
     if (!desc) return "";
-    const trimmed = desc.trim();
-    if (trimmed.startsWith("{")) {
-      try {
-        const parsed = JSON.parse(trimmed);
-        return parsed.description || "";
-      } catch {}
-    }
-    return desc;
+    const clean = desc.replace(/<[^>]*>?/gm, '');
+    return clean.length > 50 ? clean.substring(0, 50) + '...' : clean;
   };
+
+  const saveLessonMetadata = async (lesson: any, newMetadata: any) => {
+    try {
+      const token = localStorage.getItem('super_token');
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/lessons/${lesson.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ metadata: newMetadata })
+      });
+      lessonsMgr.fetchLessons();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const startPreviewLesson = (lessonId: string) => {
+    const acts = activitiesData[lessonId] || [];
+    if (acts.length > 0) openPreview(acts[0], acts);
+  };
+
+  const startPreviewActivity = (activity: any, lessonId: string) => {
+    const acts = activitiesData[lessonId] || [];
+    openPreview(activity, acts);
+  };
+
+  const translateText = (text: any, lang: any) => {
+    if (!text) return "";
+    if (typeof text === 'string') return text;
+    return text[lang] || text['en'] || "";
+  };
+
+  const hasPreviewPrev = previewActivity && previewActivitiesList.length > 0 && previewActivitiesList.findIndex((a:any) => a.id === previewActivity.id) > 0;
+  const hasPreviewNext = previewActivity && previewActivitiesList.length > 0 && previewActivitiesList.findIndex((a:any) => a.id === previewActivity.id) >= 0 && previewActivitiesList.findIndex((a:any) => a.id === previewActivity.id) < previewActivitiesList.length - 1;
+  const submitPreviewAnswer = handlePreviewSubmit;
+  const currentPreviewIdx = previewActivity ? previewActivitiesList.findIndex((a:any) => a.id === previewActivity.id) : 0;
+  
+  const downloadTemplate = () => {};
+
+  const getGradeDisplay = (g: any) => (GRADE_LABELS as any)[g]?.[language === 'ar' ? 'ar' : 'en'] || g;
+  
+  const [customSkills, setCustomSkills] = useState<string[]>([]);
+  const allExistingSkills = Array.from(new Set([
+    ...DEFAULT_SKILLS,
+    ...customSkills,
+    ...Object.values(activitiesData).flatMap((acts: any) => acts.map((a: any) => a.skill).filter(Boolean))
+  ]));
 
   const getLessonMetadata = (lesson: any) => {
-    if (!lesson || !lesson.description) return { description: "", standards: [], indicators: [], outcomes: [] };
-    const desc = lesson.description.trim();
-    if (desc.startsWith("{")) {
-      try {
-        const parsed = JSON.parse(desc);
-        return {
-          description: parsed.description || "",
-          standards: parsed.standards || [],
-          indicators: parsed.indicators || [],
-          outcomes: parsed.outcomes || []
-        };
-      } catch {}
+    let md: any = {};
+    if (typeof lesson.metadata === 'string') {
+      try { md = JSON.parse(lesson.metadata); } catch (e) {}
+    } else if (lesson.metadata && typeof lesson.metadata === 'object') {
+      md = lesson.metadata;
     }
-    return {
-      description: lesson.description,
-      standards: [],
-      indicators: [],
-      outcomes: []
-    };
+    return md;
   };
-
-  const saveLessonMetadata = async (lessonId: string, updatedMetadata: any) => {
-    const token = localStorage.getItem("super_admin_token");
-    if (!token) return;
-
-    const lesson = lessons.find(l => l.id === lessonId);
-    if (!lesson) return;
-
-    const updatedDescription = JSON.stringify(updatedMetadata);
-    try {
-      const res = await fetch(`${API_URL}/skills-hub/lessons/${lessonId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          name: lesson.name,
-          description: updatedDescription,
-          order: lesson.order,
-          clusterId
-        })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setLessons(prev => prev.map(l => l.id === lessonId ? data.lesson : l));
-        return data.lesson;
-      }
-    } catch (err) {
-      console.error("Error saving lesson metadata:", err);
-    }
-  };
-
-  useEffect(() => {
-    if (!clusterId) {
-      router.push("/super-admin/skills-hub");
-      return;
-    }
-
-    const token = localStorage.getItem("super_admin_token");
-    if (!token) {
-      router.push("/super-admin/login");
-      return;
-    }
-    
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      setIsSuperAdmin(payload.role === 'SUPER_ADMIN');
-    } catch (e) {
-      console.error("Invalid token");
-    }
-
-    setMounted(true);
-    fetchSchools(token);
-    fetchClusterData();
-  }, [clusterId]);
-
-  const fetchSchools = async (token: string) => {
-    try {
-      const res = await fetch(`${API_URL}/admin/schools`, { headers: { "Authorization": `Bearer ${token}` } });
-      if (res.status === 400 || res.status === 401) {
-        localStorage.removeItem("super_admin_token");
-        router.push("/super-admin/login");
-        return;
-      }
-      if (res.ok) {
-        const data = await res.json();
-        setSchools(Array.isArray(data) ? data : (data.schools || []));
-      }
-    } catch (error) {
-      console.error("Failed to fetch schools");
-    }
-  };
-
-  const fetchClusterData = async () => {
-    try {
-      setIsLoading(true);
-      const token = localStorage.getItem("super_admin_token");
-      
-      // Fetch clusters and find ours (since there's no single cluster GET endpoint)
-      const res = await fetch(`${API_URL}/skills-hub/clusters`, { headers: { "Authorization": `Bearer ${token}` } });
-      if (res.status === 400 || res.status === 401) {
-        localStorage.removeItem("super_admin_token");
-        router.push("/super-admin/login");
-        return;
-      }
-      const data = await res.json();
-      const clusters = Array.isArray(data) ? data : [];
-      const current = clusters.find((c: any) => c.id === clusterId);
-      
-      if (current) {
-        let parsedGrades: string[] = [];
-        if (current.grade) {
-          if (current.grade.startsWith('[')) {
-            try { parsedGrades = JSON.parse(current.grade); } catch { parsedGrades = [current.grade]; }
-          } else {
-            parsedGrades = [current.grade];
-          }
-        }
-        setSelectedGrades(parsedGrades);
-
-        let parsedSchoolIds: string[] = [];
-        if (current.schoolId) {
-          if (current.schoolId.startsWith('[')) {
-            try { parsedSchoolIds = JSON.parse(current.schoolId); } catch { parsedSchoolIds = [current.schoolId]; }
-          } else {
-            parsedSchoolIds = [current.schoolId];
-          }
-        }
-        setSelectedSchoolIds(parsedSchoolIds);
-
-        setClusterData({
-          id: current.id,
-          name: current.name || "",
-          description: current.description || "",
-          subject: current.subject || "",
-          isCentral: current.isCentral || false
-        });
-      } else {
-        showToast(language === 'ar' ? "المحور غير موجود" : "Cluster not found", "error");
-        router.push("/super-admin/skills-hub");
-      }
-
-      fetchLessons();
-    } catch (error) {
-      console.error(error);
-      showToast(language === 'ar' ? "فشل تحميل البيانات" : "Failed to load data", "error");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchLessons = async () => {
-    try {
-      const token = localStorage.getItem("super_admin_token");
-      const res = await fetch(`${API_URL}/skills-hub/clusters/${clusterId}/lessons`, { headers: { "Authorization": `Bearer ${token}` } });
-      const data = await res.json();
-      setLessons(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error("Error fetching lessons", error);
-    }
-  };
-
-  const fetchActivities = async (lessonId: string) => {
-    try {
-      const token = localStorage.getItem("super_admin_token");
-      const res = await fetch(`${API_URL}/skills-hub/lessons/${lessonId}/activities`, { headers: { "Authorization": `Bearer ${token}` } });
-      const data = await res.json();
-      setActivitiesData(prev => ({ ...prev, [lessonId]: Array.isArray(data) ? data : [] }));
-    } catch (error) {
-      console.error("Error fetching activities", error);
-    }
-  };
-
-  const toggleLessonExpand = (lessonId: string) => {
-    if (expandedLessonId === lessonId) {
-      setExpandedLessonId(null);
-    } else {
-      setExpandedLessonId(lessonId);
-      if (!activitiesData[lessonId]) {
-        fetchActivities(lessonId);
-      }
-    }
-  };
-
-  const handleUpdateCluster = async () => {
-    if (!clusterData.name || !clusterData.subject || selectedGrades.length === 0) {
-      showToast(language === 'ar' ? "يرجى تعبئة كافة الحقول الإلزامية واختيار صف واحد على الأقل." : "Please fill all required fields and select at least one grade.", "error");
-      return;
-    }
-
-    if (!clusterData.isCentral && isSuperAdmin && selectedSchoolIds.length === 0) {
-      showToast(language === 'ar' ? "يرجى اختيار مدرسة واحدة على الأقل عند عدم التفعيل كمركزي." : "Please select at least one school when not central.", "error");
-      return;
-    }
-
-    try {
-      setIsSaving(true);
-      const token = localStorage.getItem("super_admin_token");
-      const res = await fetch(`${API_URL}/skills-hub/clusters/${clusterId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify({
-          ...clusterData,
-          grades: selectedGrades,
-          grade: selectedGrades[0],
-          schoolIds: clusterData.isCentral ? [] : selectedSchoolIds,
-          schoolId: clusterData.isCentral ? null : selectedSchoolIds[0]
-        })
-      });
-
-      if (!res.ok) throw new Error("Failed to update skill cluster");
-      showToast(language === 'ar' ? "تم تحديث المحور المهاراتي بنجاح!" : "Skill Cluster updated successfully!", "success");
-    } catch (error) {
-      console.error(error);
-      showToast(language === 'ar' ? "حدث خطأ أثناء التحديث." : "Error updating data.", "error");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // LESSON HANDLERS
-  const openAddLesson = () => {
-    setEditingLesson({ name: "", description: "", order: lessons.length });
-    setIsLessonModalOpen(true);
-  };
-
-  const openEditLesson = (lesson: any) => {
-    const metadata = getLessonMetadata(lesson);
-    setEditingLesson({
-      id: lesson.id,
-      name: lesson.name,
-      order: lesson.order,
-      description: metadata.description,
-      standards: metadata.standards,
-      indicators: metadata.indicators,
-      outcomes: metadata.outcomes
-    });
-    setIsLessonModalOpen(true);
-  };
-
-  const handleSaveLesson = async () => {
-    if (!editingLesson.name || !editingLesson.name.trim()) {
-      showToast(language === 'ar' ? "يرجى كتابة اسم الدرس أو المهارة الفرعية أولاً ⚠️" : "Lesson name required ⚠️", "error");
-      return;
-    }
-    
-    try {
-      const token = localStorage.getItem("super_admin_token");
-      const isEdit = !!editingLesson.id;
-      const url = isEdit ? `${API_URL}/skills-hub/lessons/${editingLesson.id}` : `${API_URL}/skills-hub/lessons`;
-
-      const finalDescription = JSON.stringify({
-        description: editingLesson.description || "",
-        standards: editingLesson.standards || [],
-        indicators: editingLesson.indicators || [],
-        outcomes: editingLesson.outcomes || []
-      });
-      
-      const res = await fetch(url, {
-        method: isEdit ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify({
-          clusterId,
-          name: editingLesson.name,
-          order: Number(editingLesson.order) || 0,
-          description: finalDescription
-        })
-      });
-      
-      if (res.ok) {
-        showToast(language === 'ar' ? "تم حفظ الدرس بنجاح ✅" : "Lesson saved successfully ✅", "success");
-        setIsLessonModalOpen(false);
-        fetchLessons();
-      } else {
-        const errData = await res.json().catch(() => ({}));
-        const errMsg = errData.error || errData.message || (language === 'ar' ? "فشل حفظ الدرس، يرجى التأكد من البيانات المدخلة" : "Save failed, please check inputs");
-        showToast(errMsg, "error");
-      }
-    } catch (e: any) {
-      showToast(e.message || (language === 'ar' ? "خطأ في الاتصال بالخادم عند حفظ الدرس" : "Error saving lesson"), "error");
-    }
-  };
-
-  const handleDeleteLesson = async (id: string) => {
-    if (!window.confirm(language === 'ar' ? "هل أنت متأكد من حذف هذا الدرس بالكامل؟" : "Are you sure you want to delete this lesson?")) return;
-    try {
-      const token = localStorage.getItem("super_admin_token");
-      const res = await fetch(`${API_URL}/skills-hub/lessons/${id}`, { method: "DELETE", headers: { "Authorization": `Bearer ${token}` } });
-      if (res.ok) {
-        showToast(language === 'ar' ? "تم الحذف" : "Deleted", "success");
-        fetchLessons();
-      }
-    } catch (e) {
-      showToast(language === 'ar' ? "فشل الحذف" : "Delete failed", "error");
-    }
-  };
-
-  // ACTIVITY HANDLERS
-  const openAddActivity = (lessonId: string) => {
-    setEditingActivity({
-      lessonId,
-      title: "",
-      questionText: "",
-      type: "MCQ",
-      options: { choices: ["", "", "", ""] },
-      correctAnswer: "",
-      points: 10,
-      xpPoints: 10,
-      difficulty: "On Level",
-      dok: "",
-      estimatedTime: 60,
-      standard: "", indicator: "", learningOutcome: "",
-      skill: "General",
-      explanation: "",
-      hint: "", tip: "", keyInsight: ""
-    });
-    setIsActivityModalOpen(true);
-  };
-
-  const openEditActivity = (activity: any) => {
-    let parsedOpts = parseField(activity.options);
-    if (Array.isArray(parsedOpts)) {
-       parsedOpts = { choices: parsedOpts };
-    }
-    const qText = parsedOpts?.questionText || "";
-    setEditingActivity({
-      ...activity,
-      options: parsedOpts,
-      questionText: qText,
-      correctAnswer: parseField(activity.correctAnswer)
-    });
-    setIsActivityModalOpen(true);
-  };
-
-  const handleSaveActivity = async () => {
-    const options = parseField(editingActivity.options);
-    const correctAnswer = parseField(editingActivity.correctAnswer);
-    const activity = { ...editingActivity, options, correctAnswer };
-
-    if (!editingActivity.title || !editingActivity.title.trim()) {
-      showToast(language === 'ar' ? "يرجى كتابة عنوان السؤال أولاً (Question title is necessary) ⚠️" : "Question title is necessary ⚠️", "error");
-      return;
-    }
-    if (!activity.type) {
-      showToast(language === 'ar' ? "يرجى تحديد نوع السؤال أولاً ⚠️" : "Please select question type ⚠️", "error");
-      return;
-    }
-    
-    // ✅ التحقق التوجيهي الذكي حسب نوع السؤال كما طلب المعلمون
-    if (activity.type === "MCQ") {
-      const choices = activity.options?.choices || [];
-      if (!Array.isArray(choices) || choices.filter((c: string) => c && c.trim()).length < 2) {
-        showToast(language === 'ar' ? "يرجى إضافة خيارين على الأقل لسؤال الاختيار من متعدد ⚠️" : "Please add at least 2 choices for MCQ ⚠️", "error");
-        return;
-      }
-      if (activity.correctAnswer === undefined || activity.correctAnswer === null || activity.correctAnswer === "") {
-        showToast(language === 'ar' ? "يرجى تحديد الإجابة الصحيحة لسؤال الاختيار من متعدد (MCQ) ⚠️" : "Please select the correct answer for MCQ ⚠️", "error");
-        return;
-      }
-    } else if (activity.type === "TRUE_FALSE") {
-      if (!activity.correctAnswer && activity.correctAnswer !== "TRUE" && activity.correctAnswer !== "FALSE" && activity.correctAnswer !== "صح" && activity.correctAnswer !== "خطأ") {
-        showToast(language === 'ar' ? "يرجى تحديد الإجابة الصحيحة (صح أم خطأ) ⚠️" : "Please select True or False ⚠️", "error");
-        return;
-      }
-    } else if (activity.type === "MULTI_SELECT") {
-      const choices = Array.isArray(activity.options) ? activity.options : (activity.options?.choices || []);
-      if (!Array.isArray(choices) || choices.filter((c: string) => c && c.trim()).length < 2) {
-        showToast(language === 'ar' ? "يرجى إضافة خيارين على الأقل للاختيارات المتعددة ⚠️" : "Please add at least 2 options ⚠️", "error");
-        return;
-      }
-      const correctArr = Array.isArray(activity.correctAnswer) ? activity.correctAnswer : [];
-      if (correctArr.length === 0) {
-        showToast(language === 'ar' ? "يرجى تحديد إجابة صحيحة واحدة على الأقل في الاختيارات المتعددة ⚠️" : "Please select at least one correct answer ⚠️", "error");
-        return;
-      }
-    } else if (["MATCHING", "DRAG_DROP_FILL", "GROUP_SORTING"].includes(activity.type)) {
-      if (!activity.correctAnswer || (Array.isArray(activity.correctAnswer) && activity.correctAnswer.length === 0)) {
-        showToast(language === 'ar' ? "يرجى إكمال تحديد الإجابات النموذجية وعناصر الربط لهذا السؤال ⚠️" : "Please complete setting up correct answers/pairs ⚠️", "error");
-        return;
-      }
-    }
-    
-    try {
-      const token = localStorage.getItem("super_admin_token");
-      const isEdit = !!activity.id;
-      const url = isEdit ? `${API_URL}/skills-hub/activities/${activity.id}` : `${API_URL}/skills-hub/activities`;
-      
-      const payload = { ...activity };
-      
-      let parsedOptions = payload.options;
-      if (typeof parsedOptions === 'string') {
-        try { parsedOptions = JSON.parse(parsedOptions); } catch(e) {}
-      }
-      if (Array.isArray(parsedOptions)) {
-        parsedOptions = { choices: parsedOptions };
-      }
-      if (typeof parsedOptions !== 'object' || parsedOptions === null) {
-        parsedOptions = {};
-      }
-      parsedOptions.questionText = editingActivity.questionText;
-      
-      payload.options = JSON.stringify(parsedOptions);
-      if (typeof payload.correctAnswer === 'object') payload.correctAnswer = JSON.stringify(payload.correctAnswer);
-
-      const res = await fetch(url, {
-        method: isEdit ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify(payload)
-      });
-      
-      if (res.ok) {
-        showToast(language === 'ar' ? "تم حفظ النشاط بنجاح ✅" : "Activity saved successfully ✅", "success");
-        setIsActivityModalOpen(false);
-        fetchActivities(activity.lessonId);
-      } else {
-        const errData = await res.json().catch(() => ({}));
-        const errMsg = errData.error || errData.message || (language === 'ar' ? "فشل حفظ النشاط، يرجى التأكد من اكتمال جميع الحقول المطلوبة ⚠️" : "Failed to save activity, check required fields ⚠️");
-        showToast(errMsg, "error");
-      }
-    } catch (e: any) {
-      showToast(e.message || (language === 'ar' ? "خطأ في الاتصال بالخادم أثناء حفظ النشاط ⚠️" : "Error saving activity ⚠️"), "error");
-    }
-  };
-
-  const handleDeleteActivity = async (id: string, lessonId: string) => {
-    if (!window.confirm(language === 'ar' ? "هل أنت متأكد من حذف هذا النشاط؟" : "Are you sure you want to delete this activity?")) return;
-    try {
-      const token = localStorage.getItem("super_admin_token");
-      const res = await fetch(`${API_URL}/skills-hub/activities/${id}`, { method: "DELETE", headers: { "Authorization": `Bearer ${token}` } });
-      if (res.ok) {
-        showToast(language === 'ar' ? "تم الحذف" : "Deleted", "success");
-        fetchActivities(lessonId);
-      }
-    } catch (e) {
-      showToast(language === 'ar' ? "فشل الحذف" : "Delete failed", "error");
-    }
-  };
-
-  const translateText = (val: any, lang: string = "ar") => {
-    if (!val) return "";
-    if (typeof val === "string") {
-      try {
-        const parsed = JSON.parse(val);
-        if (parsed && typeof parsed === "object") {
-          return parsed[lang] || parsed["ar"] || parsed["en"] || "";
-        }
-      } catch {}
-      return val;
-    }
-    if (typeof val === "object" && val !== null) {
-      return val[lang] || val["ar"] || val["en"] || "";
-    }
-    return String(val);
-  };
-
-  // STUDENT PREVIEW PLAY HANDLERS
-  const startPreviewActivity = async (act: any, activitiesList?: any[]) => {
-    const token = localStorage.getItem("super_admin_token");
-    if (!token) return;
-    try {
-      if (!previewActivity) {
-        setIsLoading(true);
-      } else {
-        setPreviewIsLoading(true);
-      }
-      const res = await fetch(`${API_URL}/skills-hub/activities/${act.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const activity = await res.json();
-        setPreviewActivity(activity);
-        setPreviewAnswer("");
-        setPreviewStartTime(Date.now());
-        setPreviewHintsUsed(0);
-        setPreviewAttemptCount(1);
-        setPreviewResult(null);
-        setPreviewToast(null);
-        setPreviewTimeLeft(activity?.estimatedTime && Number(activity.estimatedTime) > 0 ? Number(activity.estimatedTime) : null);
-        if (activitiesList) {
-          setPreviewActivitiesList(activitiesList);
-        } else {
-          const list = activitiesData[act.lessonId] || [];
-          setPreviewActivitiesList(list);
-        }
-      }
-    } catch (err) {
-      console.error("Error loading activity for preview:", err);
-    } finally {
-      setIsLoading(false);
-      setPreviewIsLoading(false);
-    }
-  };
-
-  const startPreviewLesson = async (lessonId: string) => {
-    const token = localStorage.getItem("super_admin_token");
-    if (!token) return;
-    try {
-      setIsLoading(true);
-      let lessonActivities = activitiesData[lessonId];
-      if (!lessonActivities) {
-        const res = await fetch(`${API_URL}/skills-hub/lessons/${lessonId}/activities`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          lessonActivities = Array.isArray(data) ? data : [];
-          setActivitiesData(prev => ({ ...prev, [lessonId]: lessonActivities }));
-        }
-      }
-      if (lessonActivities && lessonActivities.length > 0) {
-        await startPreviewActivity(lessonActivities[0], lessonActivities);
-      } else {
-        showToast(language === 'ar' ? "لا توجد أسئلة في هذا الدرس لمعاينتها." : "No activities in this lesson to preview.", "error");
-      }
-    } catch (err) {
-      console.error("Error starting lesson preview:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const currentPreviewIdx = previewActivitiesList.findIndex((act: any) => act.id === previewActivity?.id);
-  const hasPreviewNext = currentPreviewIdx !== -1 && currentPreviewIdx < previewActivitiesList.length - 1;
-  const hasPreviewPrev = currentPreviewIdx > 0;
-
-  const handlePreviewNext = () => {
-    if (hasPreviewNext) {
-      startPreviewActivity(previewActivitiesList[currentPreviewIdx + 1], previewActivitiesList);
-    }
-  };
-
-  const handlePreviewPrev = () => {
-    if (hasPreviewPrev) {
-      startPreviewActivity(previewActivitiesList[currentPreviewIdx - 1], previewActivitiesList);
-    }
-  };
-
-  const submitPreviewAnswer = async () => {
-    const token = localStorage.getItem("super_admin_token");
-    if (!token || !previewActivity || previewIsSubmitting) return;
-    setPreviewIsSubmitting(true);
-    const timeTaken = Math.round((Date.now() - previewStartTime) / 1000);
-    
-    try {
-      const res = await fetch(`${API_URL}/skills-hub/activities/${previewActivity.id}/attempt`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          selectedAnswer: previewAnswer,
-          timeTaken,
-          hintsUsed: previewHintsUsed,
-          attemptCount: previewAttemptCount
-        })
-      });
-      
-      if (res.ok) {
-        const result = await res.json();
-        setPreviewResult(result);
-        setPreviewToast(result);
-      } else {
-        const errData = await res.json();
-        showToast(errData.error || (language === 'ar' ? "خطأ في الإرسال" : "Submission failed"), "error");
-      }
-    } catch (err) {
-      console.error("Error submitting preview attempt:", err);
-    } finally {
-      setPreviewIsSubmitting(false);
-    }
-  };
-
-  const handlePreviewRetry = () => {
-    setPreviewResult(null);
-    setPreviewAnswer("");
-    setPreviewStartTime(Date.now());
-    setPreviewAttemptCount(prev => prev + 1);
-    setPreviewTimeLeft(previewActivity?.estimatedTime && Number(previewActivity.estimatedTime) > 0 ? Number(previewActivity.estimatedTime) : null);
-  };
-
-  useEffect(() => {
-    if (!previewActivity || previewTimeLeft === null || previewResult !== null || previewIsLoading) return;
-    if (previewTimeLeft <= 0) {
-      setPreviewResult({
-        isCorrect: false,
-        stars: 0,
-        score: 0,
-        timeExpired: true,
-        explanation: language === 'ar' ? "انتهى الوقت المحدد للإجابة على هذا السؤال! ⏰" : "Time allocated for this question has expired! ⏰"
-      });
-      return;
-    }
-    const timer = setTimeout(() => {
-      setPreviewTimeLeft(prev => (prev !== null && prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [previewActivity, previewTimeLeft, previewResult, previewIsLoading, language]);
-
-  // EXCEL HANDLERS
-  const downloadTemplate = () => {
-    const wsData = [
-      [
-        language === 'ar' ? "نص السؤال" : "Question Text",
-        language === 'ar' ? "نوع السؤال" : "Question Type",
-        language === 'ar' ? "الخيار 1" : "Option 1",
-        language === 'ar' ? "الخيار 2" : "Option 2",
-        language === 'ar' ? "الخيار 3" : "Option 3",
-        language === 'ar' ? "الخيار 4" : "Option 4",
-        language === 'ar' ? "الخيار 5" : "Option 5",
-        language === 'ar' ? "الإجابة الصحيحة" : "Correct Answer",
-        language === 'ar' ? "الإجابات الصحيحة المتعددة" : "Correct Answers",
-        language === 'ar' ? "الدرجة" : "Points",
-        language === 'ar' ? "مستوى الصعوبة" : "Difficulty Level",
-        "DOK",
-        language === 'ar' ? "المهارة" : "Skill",
-        language === 'ar' ? "التفسير" : "Explanation",
-        language === 'ar' ? "المعيار التعليمي" : "Educational Standard",
-        "Performance Indicator",
-        language === 'ar' ? "مخرج التعلم المستهدف" : "Learning Outcome",
-        language === 'ar' ? "التلميح المساعد" : "Hint",
-        language === 'ar' ? "نصيحة تعليمية" : "Tip",
-        language === 'ar' ? "الرؤية المعرفية / الخلاصة" : "Key Insight"
-      ],
-      [
-        language === 'ar' ? "ما هو ناتج 5 + 5؟" : "What is 5 + 5?",
-        "MCQ",
-        "8", "9", "10", "11", "",
-        "10", "", "10", "Foundation", "DOK 1", "Problem Solving",
-        language === 'ar' ? "لأن 5 زائد 5 يساوي 10" : "Because 5 + 5 = 10",
-        "Math Standard 1.1",
-        "Math Indicator 1.1.a",
-        language === 'ar' ? "الجمع البسيط" : "Simple addition",
-        language === 'ar' ? "استخدم أصابعك أو جدول الجمع" : "Use your fingers or addition table",
-        language === 'ar' ? "انتبه إلى علامة الجمع (+)" : "Pay attention to the addition symbol (+)",
-        language === 'ar' ? "الجمع هو عملية دمج مجموعتين" : "Addition is the process of combining two groups"
-      ]
-    ];
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Template");
-    XLSX.writeFile(wb, "activities_template.xlsx");
-    showToast(language === 'ar' ? "تم تحميل النموذج" : "Template downloaded", "success");
-  };
-
-  const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !uploadingLessonId) return;
-
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      try {
-        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-        const wb = XLSX.read(data, { type: "array" });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
-        
-        if (rows.length < 2) {
-          showToast(language === 'ar' ? "الملف فارغ" : "Empty file", "error");
-          return;
-        }
-
-        const headers = rows[0].map(h => String(h).trim().toLowerCase());
-        const textIdx = headers.findIndex(h => h.includes("question") || h.includes("السؤال") || h.includes("نص السؤال"));
-        const typeIdx = headers.findIndex(h => h.includes("type") || h.includes("نوع"));
-        const opt1Idx = headers.findIndex(h => h.includes("option 1") || h.includes("الخيار 1") || h.includes("أول"));
-        const opt2Idx = headers.findIndex(h => h.includes("option 2") || h.includes("الخيار 2") || h.includes("ثاني"));
-        const opt3Idx = headers.findIndex(h => h.includes("option 3") || h.includes("الخيار 3") || h.includes("ثالث"));
-        const opt4Idx = headers.findIndex(h => h.includes("option 4") || h.includes("الخيار 4") || h.includes("رابع"));
-        const correctIdx = headers.findIndex(h => h.includes("correct answer") || h.includes("الإجابة الصحيحة"));
-        const pointsIdx = headers.findIndex(h => h.includes("points") || h.includes("الدرجة") || h.includes("النقاط"));
-        const diffIdx = headers.findIndex(h => h.includes("difficulty") || h.includes("صعوبة") || h.includes("الصعوبة"));
-        const dokIdx = headers.findIndex(h => h.includes("dok"));
-        const expIdx = headers.findIndex(h => h.includes("explanation") || h.includes("تفسير") || h.includes("شرح"));
-        const stdIdx = headers.findIndex(h => h.includes("standard") || h.includes("معيار") || h.includes("المعيار"));
-        const indIdx = headers.findIndex(h => h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشر"));
-        const outIdx = headers.findIndex(h => h.includes("outcome") || h.includes("مخرج") || h.includes("مخرجات"));
-        const hintIdx = headers.findIndex(h => h.includes("hint") || h.includes("تلميح") || h.includes("التلميح"));
-        const tipIdx = headers.findIndex(h => h.includes("tip") || h.includes("نصيحة") || h.includes("النصيحة"));
-        const keyIdx = headers.findIndex(h => h.includes("insight") || h.includes("رؤية") || h.includes("خلاصة") || h.includes("الرؤية"));
-
-        let successCount = 0;
-        const token = localStorage.getItem("super_admin_token");
-
-        setIsSaving(true);
-        for (let i = 1; i < rows.length; i++) {
-          const row = rows[i];
-          if (!row || row.every(c => String(c).trim() === "")) continue;
-
-          const title = textIdx >= 0 ? String(row[textIdx] ?? "").trim() : "";
-          if (!title) continue;
-
-          let type = "MCQ";
-          const rawType = typeIdx >= 0 ? String(row[typeIdx] ?? "").trim().toUpperCase() : "";
-          if (rawType.includes("TRUE") || rawType.includes("صح") || rawType.includes("T/F")) type = "TRUE_FALSE";
-          else if (rawType.includes("MULTI") || rawType.includes("تحديد") || rawType.includes("متعدد")) type = "MULTI_SELECT";
-
-          const optionsList = [];
-          if (opt1Idx >= 0 && row[opt1Idx] !== "") optionsList.push(String(row[opt1Idx]).trim());
-          if (opt2Idx >= 0 && row[opt2Idx] !== "") optionsList.push(String(row[opt2Idx]).trim());
-          if (opt3Idx >= 0 && row[opt3Idx] !== "") optionsList.push(String(row[opt3Idx]).trim());
-          if (opt4Idx >= 0 && row[opt4Idx] !== "") optionsList.push(String(row[opt4Idx]).trim());
-          if (optionsList.length === 0 && type !== 'TRUE_FALSE') optionsList.push("Option 1", "Option 2");
-
-          let optionsStr = JSON.stringify({ choices: optionsList });
-          let correctStr = correctIdx >= 0 ? String(row[correctIdx] ?? "").trim() : "";
-          
-          if (type === 'TRUE_FALSE') {
-            optionsStr = JSON.stringify(["صح", "خطأ"]);
-          } else if (type === 'MULTI_SELECT') {
-            optionsStr = JSON.stringify(optionsList);
-            correctStr = JSON.stringify(correctStr.split(",").map(s => s.trim()));
-          } else {
-            optionsStr = JSON.stringify({ choices: optionsList });
-          }
-
-          const points = pointsIdx >= 0 ? (parseInt(String(row[pointsIdx])) || 10) : 10;
-          let difficulty = diffIdx >= 0 ? String(row[diffIdx] ?? "").trim() : "On Level";
-          if (difficulty.includes("سهل") || difficulty.toLowerCase().includes("easy") || difficulty.includes("تأسيسي") || difficulty.toLowerCase().includes("foundation")) difficulty = "Foundation";
-          else if (difficulty.includes("صعب") || difficulty.toLowerCase().includes("hard") || difficulty.includes("متقدم") || difficulty.toLowerCase().includes("advanced")) difficulty = "Advanced";
-          else difficulty = "On Level";
-          
-          const dokRaw = dokIdx >= 0 ? String(row[dokIdx] ?? "").trim() : "";
-          const dok = ["DOK 1", "DOK 2", "DOK 3", "DOK 4"].includes(dokRaw) ? dokRaw : "";
-          
-          const skillIdx = headers.findIndex(h => h.includes("skill") || h.includes("المهارة") || h.includes("المهاره"));
-          const skill = skillIdx >= 0 ? String(row[skillIdx] ?? "").trim() : "General";
-
-          const explanation = expIdx >= 0 ? String(row[expIdx] ?? "").trim() : "";
-          const standard = stdIdx >= 0 ? String(row[stdIdx] ?? "").trim() : "";
-          const indicator = indIdx >= 0 ? String(row[indIdx] ?? "").trim() : "";
-          const learningOutcome = outIdx >= 0 ? String(row[outIdx] ?? "").trim() : "";
-          const hint = hintIdx >= 0 ? String(row[hintIdx] ?? "").trim() : "";
-          const tip = tipIdx >= 0 ? String(row[tipIdx] ?? "").trim() : "";
-          const keyInsight = keyIdx >= 0 ? String(row[keyIdx] ?? "").trim() : "";
-
-          const payload = {
-            lessonId: uploadingLessonId,
-            title,
-            type,
-            options: optionsStr,
-            correctAnswer: correctStr,
-            points,
-            xpPoints: 10,
-            difficulty,
-            dok,
-            skill,
-            estimatedTime: 60,
-            explanation,
-            standard,
-            indicator,
-            learningOutcome,
-            hint,
-            tip,
-            keyInsight
-          };
-
-          const res = await fetch(`${API_URL}/skills-hub/activities`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-            body: JSON.stringify(payload)
-          });
-
-          if (res.ok) successCount++;
-        }
-
-        showToast(
-          language === 'ar' ? `تم استيراد ${successCount} نشاط بنجاح` : `Imported ${successCount} activities`,
-          "success"
-        );
-        fetchActivities(uploadingLessonId);
-      } catch (err) {
-        console.error(err);
-        showToast(language === 'ar' ? "خطأ في قراءة الملف" : "Error reading file", "error");
-      } finally {
-        setIsSaving(false);
-        setUploadingLessonId(null);
-      }
-    };
-    reader.readAsArrayBuffer(file);
-    e.target.value = "";
-  };
+  
+  const isGrade123 = (g: string) => ["الصف الأول الابتدائي", "الصف الثاني الابتدائي", "الصف الثالث الابتدائي"].includes(g);
 
   if (isLoading) {
     return (
@@ -1238,10 +425,12 @@ export default function EditSkillClusterPage() {
                               <h4 className="font-black text-slate-700 text-sm">{language === 'ar' ? "الأنشطة التفاعلية (أسئلة)" : "Interactive Activities (Questions)"}</h4>
                               <div className="flex items-center gap-2 flex-wrap">
                                 <button 
-                                  onClick={() => {
-                                    setUploadingLessonId(lesson.id);
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    // uploadingLessonId is handled by the hook, we can just trigger click
                                     excelInputRef.current?.click();
                                   }}
+                                  disabled={uploadingLessonId === lesson.id}
                                   className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-4 py-2 rounded-lg font-black text-xs flex items-center gap-1.5 shadow-sm transition-all"
                                 >
                                   <Upload className="w-4 h-4" />
@@ -1286,7 +475,7 @@ export default function EditSkillClusterPage() {
                                      </div>
                                      <div className="flex items-center gap-2 shrink-0">
                                          <button 
-                                           onClick={() => startPreviewActivity(activity, activitiesData[lesson.id])}
+                                           onClick={() => startPreviewActivity(activity, lesson.id)}
                                            className="text-slate-400 hover:text-sky-650 p-2 hover:bg-sky-50 rounded-lg transition-all"
                                            title={language === 'ar' ? "معاينة الطالب" : "Student Preview"}
                                          >
@@ -1399,24 +588,22 @@ export default function EditSkillClusterPage() {
                     value={editingActivity.type} 
                     onChange={(e) => {
                       const newType = e.target.value;
-                      let defaultOptions: any = ["", "", "", ""];
-                      let defaultCorrect = "";
-                      
-                      if (newType === 'TRUE_FALSE') { defaultOptions = ["صح", "خطأ"]; defaultCorrect = "صح"; }
-                      else if (newType === 'MULTI_SELECT') { defaultOptions = ["", "", "", ""]; defaultCorrect = JSON.stringify([]); }
-                      else if (newType === 'MATCHING') { defaultOptions = { left: [], right: [] }; defaultCorrect = JSON.stringify({}); }
-                      else if (newType === 'DRAG_DROP_FILL') { defaultOptions = { sentence: "", choices: [] }; defaultCorrect = JSON.stringify([]); }
-                      else if (newType === 'GROUP_SORTING') { defaultOptions = { groups: [], items: [] }; defaultCorrect = JSON.stringify({}); }
-                      else if (newType === 'CLOCK') { defaultOptions = { minuteStep: 5 }; defaultCorrect = "12:00"; }
-                      else if (newType === 'MIND_MAP') { defaultOptions = { nodes: [] }; defaultCorrect = JSON.stringify({}); }
-                      else if (newType === 'VIDEO_CHECKPOINT') { defaultOptions = { videoUrl: "", checkpoints: [] }; defaultCorrect = JSON.stringify({}); }
-                      else { defaultOptions = { choices: ["", "", "", ""] }; defaultCorrect = ""; }
+                      const type = newType;
+                      const defaultData: any = {
+                        'interactive_drag_drop': { left: [], right: [] } as any,
+                        'interactive_fill_blanks': { sentence: '', blanks: [] } as any,
+                        'interactive_classification': { groups: [], items: [] } as any,
+                        'interactive_clock': { time: '12:00', minuteStep: 5 } as any,
+                        'interactive_graph': { nodes: [], edges: [] } as any,
+                        'interactive_video': { videoUrl: '', bookmarks: [] } as any,
+                        'mcq': { questionText: '', choices: [{id:'1',text:'',isCorrect:true}] } as any,
+                      }[type] || {};
 
                       setEditingActivity({
                         ...editingActivity, 
                         type: newType,
-                        options: defaultOptions,
-                        correctAnswer: defaultCorrect
+                        options: defaultData,
+                        correctAnswer: JSON.stringify(defaultData)
                       });
                     }}
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-indigo-700 focus:border-indigo-500 focus:bg-white outline-none"
@@ -1441,11 +628,20 @@ export default function EditSkillClusterPage() {
                      <option value="SENTENCE_REORDER">{language === 'ar' ? 'ترتيب الجملة' : 'Sentence Reorder'}</option>
                      <option value="MATH_EQUATION">{language === 'ar' ? 'معادلة رياضية' : 'Math Equation'}</option>
                      <option value="SEQUENCE_ORDER">{language === 'ar' ? 'ترتيب التسلسل' : 'Sequence Order'}</option>
-                     <option value="CROSSWORD">{language === 'ar' ? 'كلمات متقاطعة' : 'Crossword'}</option>
                      <option value="COUNT_OBJECTS">{language === 'ar' ? 'عد العناصر' : 'Count Objects'}</option>
                      <option value="IMAGE_LABEL">{language === 'ar' ? 'تسمية الصورة' : 'Image Labeling'}</option>
                      <option value="COLOR_MATCH">{language === 'ar' ? 'تطابق الألوان' : 'Color Match'}</option>
                   </select>
+                </div>
+
+                <div className="space-y-2 md:col-span-3">
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "المهارة" : "Skill"}</label>
+                   <input 
+                      type="text" 
+                      className="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow pr-10 appearance-none"
+                      value={editingActivity?.skill || ''}
+                      onChange={(e) => setEditingActivity({ ...editingActivity, skill: e.target.value })}
+                   />
                 </div>
 
                 {/* Question Rich Text */}
