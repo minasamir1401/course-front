@@ -345,6 +345,36 @@ export const QuestionsBuilder = (props: any) => {
 
 
               </div>
+              
+              {/* ── Question Metadata ── */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6 bg-slate-50 border border-slate-100 rounded-[24px]">
+                {[
+                  { key: 'course', labelAr: 'الكورس', labelEn: 'Course' },
+                  { key: 'section', labelAr: 'القسم', labelEn: 'Section' },
+                  { key: 'domain', labelAr: 'المجال', labelEn: 'Domain' },
+                  { key: 'standard', labelAr: 'المعيار', labelEn: 'Standard' },
+                  { key: 'indicator', labelAr: 'المؤشرات', labelEn: 'Indicators' },
+                  { key: 'skill', labelAr: 'المهارة', labelEn: 'Skill' },
+                  { key: 'subskill', labelAr: 'المهارة الفرعية', labelEn: 'Subskill' },
+                  { key: 'microSkill', labelAr: 'المهارة الدقيقة', labelEn: 'Micro Skill' },
+                  { key: 'level', labelAr: 'الصعوبة', labelEn: 'Difficulty' },
+                  { key: 'dok', labelAr: 'عمق المعرفة (DOK)', labelEn: 'DOK' },
+                  { key: 'cognitive', labelAr: 'المستوى المعرفي', labelEn: 'Cognitive' },
+                  { key: 'errorPattern', labelAr: 'نمط الخطأ', labelEn: 'Error Pattern' },
+                  { key: 'estimatedTime', labelAr: 'الوقت المقدر', labelEn: 'Estimated Time' },
+                ].map((field) => (
+                  <div key={field.key} className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? field.labelAr : field.labelEn}</label>
+                    <input
+                      type="text"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold"
+                      placeholder={language === 'ar' ? field.labelAr : field.labelEn}
+                      value={tempQuestion[field.key] || ''}
+                      onChange={(e) => updateCurrentQuestionField(field.key, e.target.value)}
+                    />
+                  </div>
+                ))}
+              </div>
 
               {/* Rich Text Editor for Question Text */}
               <div className="flex flex-col gap-3">
