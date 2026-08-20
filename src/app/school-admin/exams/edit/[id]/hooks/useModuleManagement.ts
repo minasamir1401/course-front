@@ -506,25 +506,49 @@ const openAddModuleModal = () => {
             
             // Map row i to question i-1
             const qIndex = i - 1;
+            let q: any;
             if (qIndex < targetList.length) {
-              const q = { ...targetList[qIndex] };
-              if (courseIdx >= 0) q.course = String(row[courseIdx]).trim();
-              if (sectionIdx >= 0) q.section = String(row[sectionIdx]).trim();
-              if (domainIdx >= 0) q.domain = String(row[domainIdx]).trim();
-              if (loIdx >= 0) q.standard = String(row[loIdx]).trim(); // standard in UI maps to Learning Outcomes
-              if (indIdx >= 0) q.indicator = String(row[indIdx]).trim();
-              if (skillIdx >= 0) q.skill = String(row[skillIdx]).trim();
-              if (subskillIdx >= 0) q.subskill = String(row[subskillIdx]).trim();
-              if (microSkillIdx >= 0) q.microSkill = String(row[microSkillIdx]).trim();
-              if (levelIdx >= 0) q.level = String(row[levelIdx]).trim();
-              if (dokIdx >= 0) q.dok = String(row[dokIdx]).trim();
-              if (cognitiveIdx >= 0) q.cognitive = String(row[cognitiveIdx]).trim();
-              if (errorPatternIdx >= 0) q.errorPattern = String(row[errorPatternIdx]).trim();
-              if (timeIdx >= 0) q.estimatedTime = String(row[timeIdx]).trim();
-              
-              targetList[qIndex] = q;
-              mappedCount++;
+              q = { ...targetList[qIndex] };
+            } else {
+              q = {
+                id: Date.now() + Math.random(),
+                text: "",
+                type: "MCQ",
+                label: "MCQ",
+                options: ["", "", "", ""],
+                correctAnswer: "",
+                correctAnswers: [],
+                points: 1,
+                xpPoints: 10,
+                skill: "General",
+                level: "Medium",
+                dok: "",
+                standard: "",
+                indicator: "",
+                learningOutcome: "",
+                videoUrl: "",
+                sections: [],
+                attempts: 1
+              };
+              targetList.push(q);
             }
+
+            if (courseIdx >= 0) q.course = String(row[courseIdx]).trim();
+            if (sectionIdx >= 0) q.section = String(row[sectionIdx]).trim();
+            if (domainIdx >= 0) q.domain = String(row[domainIdx]).trim();
+            if (loIdx >= 0) q.standard = String(row[loIdx]).trim(); // standard in UI maps to Learning Outcomes
+            if (indIdx >= 0) q.indicator = String(row[indIdx]).trim();
+            if (skillIdx >= 0) q.skill = String(row[skillIdx]).trim();
+            if (subskillIdx >= 0) q.subskill = String(row[subskillIdx]).trim();
+            if (microSkillIdx >= 0) q.microSkill = String(row[microSkillIdx]).trim();
+            if (levelIdx >= 0) q.level = String(row[levelIdx]).trim();
+            if (dokIdx >= 0) q.dok = String(row[dokIdx]).trim();
+            if (cognitiveIdx >= 0) q.cognitive = String(row[cognitiveIdx]).trim();
+            if (errorPatternIdx >= 0) q.errorPattern = String(row[errorPatternIdx]).trim();
+            if (timeIdx >= 0) q.estimatedTime = String(row[timeIdx]).trim();
+            
+            targetList[qIndex] = q;
+            mappedCount++;
           }
 
           if (isSubExam) {
