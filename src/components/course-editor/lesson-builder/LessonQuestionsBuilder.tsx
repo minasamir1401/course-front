@@ -15,7 +15,7 @@ import { parseJson } from "./parseJson";
 import { getSectionStylePresets } from "./constants";
 import CopySlidesModal from "@/components/modals/CopySlidesModal";
 import { useCourseEditor } from "../CourseEditorContext";
-
+import * as XLSX from "xlsx";
 interface LessonQuestionsBuilderProps {
   source: 'assignments' | 'questions';
   currentLesson: any;
