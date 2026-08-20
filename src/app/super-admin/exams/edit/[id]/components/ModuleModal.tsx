@@ -203,7 +203,7 @@ export const ModuleModal = (props: any) => {
                           </button>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                           <div>
                             <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">{language === 'ar' ? 'عنوان الاختبار' : 'Exam Title'}</label>
                             <input 
@@ -216,6 +216,61 @@ export const ModuleModal = (props: any) => {
                               }}
                               className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all shadow-sm"
                             />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">{language === 'ar' ? 'اسم الكورس' : 'Course Name'}</label>
+                            <input 
+                              type="text"
+                              value={currentModule.subExams?.[activeSubExamIndex]?.courseName || ''}
+                              onChange={(e) => {
+                                const newSubExams = [...(currentModule.subExams || [])];
+                                newSubExams[activeSubExamIndex].courseName = e.target.value;
+                                setCurrentModule({ ...currentModule, subExams: newSubExams });
+                              }}
+                              className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all shadow-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">{language === 'ar' ? 'الدومين' : 'Domain'}</label>
+                            <input 
+                              type="text"
+                              value={currentModule.subExams?.[activeSubExamIndex]?.domainName || ''}
+                              onChange={(e) => {
+                                const newSubExams = [...(currentModule.subExams || [])];
+                                newSubExams[activeSubExamIndex].domainName = e.target.value;
+                                setCurrentModule({ ...currentModule, subExams: newSubExams });
+                              }}
+                              className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all shadow-sm"
+                            />
+                          </div>
+                          <div className="relative group">
+                            <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">{language === 'ar' ? 'الصفوف المستهدفة' : 'Target Grades'}</label>
+                            <div className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all shadow-sm cursor-pointer min-h-[46px] flex items-center">
+                              {currentModule.subExams?.[activeSubExamIndex]?.targetGrades?.length > 0 
+                                ? currentModule.subExams[activeSubExamIndex].targetGrades.join(', ')
+                                : (language === 'ar' ? 'اختر الصفوف' : 'Select Grades')}
+                            </div>
+                            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-50 hidden group-hover:block max-h-48 overflow-y-auto p-2">
+                              {['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'].map(grade => (
+                                <label key={grade} className="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer rounded-lg">
+                                  <input 
+                                    type="checkbox" 
+                                    checked={currentModule.subExams?.[activeSubExamIndex]?.targetGrades?.includes(grade) || false}
+                                    onChange={(e) => {
+                                      const newSubExams = [...(currentModule.subExams || [])];
+                                      const currentGrades = newSubExams[activeSubExamIndex].targetGrades || [];
+                                      if (e.target.checked) {
+                                        newSubExams[activeSubExamIndex].targetGrades = [...currentGrades, grade];
+                                      } else {
+                                        newSubExams[activeSubExamIndex].targetGrades = currentGrades.filter((g: string) => g !== grade);
+                                      }
+                                      setCurrentModule({ ...currentModule, subExams: newSubExams });
+                                    }}
+                                  />
+                                  <span className="text-sm font-bold text-slate-700">{grade}</span>
+                                </label>
+                              ))}
+                            </div>
                           </div>
                           <div>
                             <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">{language === 'ar' ? 'مدة الاختبار (بالدقائق)' : 'Duration (mins)'}</label>

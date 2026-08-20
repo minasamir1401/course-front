@@ -5,7 +5,7 @@ import "katex/dist/katex.min.css";
 export const metadata: Metadata = {
   metadataBase: new URL('https://platform.tech'),
   title: {
-    default: "Platform - The Smartest Educational Platform Worldwide",
+    default: "Platform",
     template: "%s | Platform"
   },
   description: "Platform is the best smart educational platform for managing schools, centers, private tutoring, and exams all over the world. Enjoy a comprehensive and innovative Learning Management System (LMS).",

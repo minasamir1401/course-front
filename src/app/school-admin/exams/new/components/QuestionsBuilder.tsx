@@ -109,9 +109,8 @@ export const QuestionsBuilder = (props: any) => {
                             {QUESTION_TYPES.find(t => t.id === q.type)?.labelEn || q.type}
                           </span>
                           <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded uppercase">
-                            {q.level || "Medium"} {q.dok ? `• ${q.dok}` : ''} • {q.points || 1} {language === 'ar' ? 'درجة' : 'pts'}
+                            {q.points || 1} {language === 'ar' ? 'درجة' : 'pts'} • {q.xpPoints || 10} XP
                           </span>
-                          {q.standard && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">{q.standard}</span>}
                         </div>
                         <div
                           className="text-slate-700 font-bold truncate text-sm"
@@ -155,13 +154,6 @@ export const QuestionsBuilder = (props: any) => {
                         <div className="space-y-4">
                           <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'نص السؤال / المحتوى:' : 'Question Content:'}</h5>
                           <HtmlRenderer html={q.text} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm text-sm font-bold" />
-
-                          {q.learningOutcome && (
-                            <div className="flex items-center gap-2 text-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-150 w-fit text-xs font-bold">
-                              <Target className="w-4 h-4" />
-                              <span>{q.learningOutcome}</span>
-                            </div>
-                          )}
                         </div>
 
                         <div className="space-y-4">
@@ -337,10 +329,10 @@ export const QuestionsBuilder = (props: any) => {
                 {[
                   { key: 'course', labelAr: 'الاختبار', labelEn: 'Exam' },
                   { key: 'section', labelAr: 'القسم', labelEn: 'Section' },
-                  { key: 'domain', labelAr: 'المجال', labelEn: 'Domain' },
-                  { key: 'standard', labelAr: 'نواتج التعلم', labelEn: 'Learning Outcomes' },
-                  { key: 'indicator', labelAr: 'المؤشرات', labelEn: 'Indicators' },
-                  { key: 'skill', labelAr: 'المهارة', labelEn: 'Skill', defaultValue: 'General' },
+                  { key: 'domain', labelAr: 'المجال', labelEn: 'Domain', optionsKey: 'domains' },
+                  { key: 'standard', labelAr: 'نواتج التعلم', labelEn: 'Learning Outcomes', optionsKey: 'standards' },
+                  { key: 'indicator', labelAr: 'المؤشرات', labelEn: 'Indicators', optionsKey: 'indicators' },
+                  { key: 'skill', labelAr: 'المهارة', labelEn: 'Skill', optionsKey: 'outcomes', defaultValue: 'General' },
                   { key: 'subskill', labelAr: 'المهارة الفرعية', labelEn: 'Subskill' },
                   { key: 'microSkill', labelAr: 'المهارة الدقيقة', labelEn: 'Micro Skill' },
                   { key: 'level', labelAr: 'الصعوبة', labelEn: 'Difficulty', defaultValue: 'Medium' },
@@ -348,7 +340,7 @@ export const QuestionsBuilder = (props: any) => {
                   { key: 'cognitive', labelAr: 'المستوى المعرفي', labelEn: 'Cognitive' },
                   { key: 'errorPattern', labelAr: 'نمط الخطأ', labelEn: 'Error Pattern' },
                   { key: 'estimatedTime', labelAr: 'الوقت المقدر', labelEn: 'Estimated Time' },
-                ].map((field) => (
+                ].map((field: any) => (
                   <div key={field.key} className="flex flex-col gap-2">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? field.labelAr : field.labelEn}</label>
                     {field.key === 'dok' ? (
@@ -373,6 +365,17 @@ export const QuestionsBuilder = (props: any) => {
                         <option value="Knowledge">Knowledge</option>
                         <option value="Application">Application</option>
                         <option value="Reasoning">Reasoning</option>
+                      </select>
+                    ) : (field.optionsKey && availableMetadata && (availableMetadata as any)[field.optionsKey]?.length > 0) ? (
+                      <select
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold appearance-none"
+                        value={tempQuestion[field.key] || field.defaultValue || ''}
+                        onChange={(e) => updateCurrentQuestionField(field.key, e.target.value)}
+                      >
+                        <option value="">{language === 'ar' ? 'اختر...' : 'Select...'}</option>
+                        {(availableMetadata as any)[field.optionsKey].map((opt: string, i: number) => (
+                          <option key={i} value={opt}>{opt}</option>
+                        ))}
                       </select>
                     ) : (
                       <input

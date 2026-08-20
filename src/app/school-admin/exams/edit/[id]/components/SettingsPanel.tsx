@@ -272,16 +272,16 @@ export const SettingsPanel = (props: any) => {
                   </div>
                 </div>
 
-                <div className="bg-indigo-50 border border-indigo-100 p-8 rounded-[40px] flex items-center gap-6">
-                   <div className="w-16 h-16 bg-indigo-600 rounded-3xl flex items-center justify-center text-white shadow-xl shadow-indigo-600/20">
-                      <ListOrdered className="w-8 h-8" />
+                <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
+                   <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
+                      <ListOrdered className="w-6 h-6" />
                    </div>
                    <div>
-                      <h4 className="text-xl font-black text-slate-900">{language === 'ar' ? 'محتوى الامتحان' : 'Exam Content'}</h4>
-                      <p className="text-indigo-600 font-bold">{language === 'ar' ? `تم إضافة ${modules.length} موديولات` : `${modules.length} Modules Added`}</p>
+                      <h4 className="text-lg font-black text-slate-900">{language === 'ar' ? 'محتوى الامتحان' : 'Exam Content'}</h4>
+                      <p className="text-sm text-slate-500 font-bold">{language === 'ar' ? `تم إضافة ${modules.length} موديولات` : `${modules.length} Modules Added`}</p>
                    </div>
                 </div>
-
+</div>
     </>
   );
 };
