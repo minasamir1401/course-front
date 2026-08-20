@@ -725,6 +725,6 @@ return { ...prev, [source]: newSlides };
   };
 
   return {
-    openAddModuleModal, openEditModuleModal, handleRemoveModule, saveModule, exportQuestionsToExcel, parseQuestionsFromExcel, handleMetadataExcelChange, handleQuestionsExcelChange, handleAssignmentsExcelChange, handleExcelUpload, downloadMetadataTemplate, advancedMetadataExcelRef, handleAdvancedMetadataExcelChange, downloadAdvancedMetadataTemplate
+    openAddModuleModal, openEditModuleModal, handleRemoveModule, saveModule, exportQuestionsToExcel, parseQuestionsFromExcel, handleMetadataExcelChange, handleQuestionsExcelChange, handleAssignmentsExcelChange, handleExcelUpload, downloadMetadataTemplate, metadataExcelRef, advancedMetadataExcelRef, questionsExcelRef, assignmentsExcelRef, handleAdvancedMetadataExcelChange, downloadAdvancedMetadataTemplate, downloadQuestionsTemplate
   };
 };

@@ -77,9 +77,7 @@ export default function SchoolAdminEditExamPage() {
   
   const { handleSubmit } = useExamSubmit({ ...state, showToast, language, router, t });
 
-  const metadataExcelRef = useRef<HTMLInputElement>(null);
-  const questionsExcelRef = useRef<HTMLInputElement>(null);
-  const assignmentsExcelRef = useRef<HTMLInputElement>(null);
+  
 
   const renderSlidesBuilderProps = () => (
     <SlidesBuilder  
@@ -96,8 +94,8 @@ export default function SchoolAdminEditExamPage() {
       {...questionLogic}
       {...moduleManagement}
       language={language}
-      assignmentsExcelRef={assignmentsExcelRef}
-      questionsExcelRef={questionsExcelRef}
+      assignmentsExcelRef={moduleManagement.assignmentsExcelRef}
+      questionsExcelRef={moduleManagement.questionsExcelRef}
       advancedMetadataExcelRef={moduleManagement.advancedMetadataExcelRef}
       handleAdvancedMetadataExcelChange={async (e) => {
         const updatedList = await moduleManagement.handleAdvancedMetadataExcelChange(e, state.activeSubExamIndex, source);
@@ -118,7 +116,7 @@ export default function SchoolAdminEditExamPage() {
           {...moduleManagement}
           language={language}
           t={t}
-          metadataExcelRef={metadataExcelRef}
+          metadataExcelRef={moduleManagement.metadataExcelRef}
           renderSlidesBuilder={renderSlidesBuilderProps}
           renderQuestionsBuilder={renderQuestionsBuilderProps}
         />
@@ -149,7 +147,7 @@ export default function SchoolAdminEditExamPage() {
               <SettingsPanel 
                 {...state}
                 {...moduleManagement}
-                metadataExcelRef={metadataExcelRef}
+                metadataExcelRef={moduleManagement.metadataExcelRef}
                 language={language}
                 t={t}
                 toggleCourseSubject={toggleCourseSubject}
