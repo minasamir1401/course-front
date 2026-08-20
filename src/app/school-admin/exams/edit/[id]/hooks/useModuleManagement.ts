@@ -591,17 +591,20 @@ const openAddModuleModal = () => {
             newState[source] = targetList;
           }
 
-          return newState;
-        });
-
-        showToast(language === 'ar' ? "تم تعيين الميتا داتا بنجاح" : "Metadata successfully mapped to questions", "success");
-      } catch (err) {
+          finalTargetList = targetList;
+            return newState;
+          });
+          showToast(language === 'ar' ? "تم استيراد الميتا داتا المتقدمة بنجاح" : "Advanced Metadata imported successfully", "success");
+          resolve(finalTargetList);
+        } catch (err) {
         console.error(err);
         showToast(language === 'ar' ? "حدث خطأ أثناء قراءة ملف Excel" : "Error reading Excel file", "error");
-      }
+          resolve([]);
+        }
     };
     reader.readAsArrayBuffer(file);
     e.target.value = "";
+    });
   };
 
   let downloadQuestionsTemplate = (type: 'questions' | 'assignments') => {
