@@ -705,123 +705,71 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                     </select>
                   </div>
 
-                                  <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المجال' : 'Domain'}</label>
-                  <select 
-                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px]"
-                    value={tempQuestion.domain || ""}
-                    onChange={(e) => updateCurrentQuestionField("domain", e.target.value)}
-                  >
-                    <option value="">{language === 'ar' ? 'اختر المجال...' : 'Select Domain...'}</option>
-                    {availableMetadata.domains?.map((d: string) => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المعيار' : 'Standard'}</label>
-                  <select 
-                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px] truncate"
-                    value={tempQuestion.standard || ""}
-                    onChange={(e) => updateCurrentQuestionField("standard", e.target.value)}
-                  >
-                    <option value="">{language === 'ar' ? 'اختر المعيار...' : 'Select Standard...'}</option>
-                    {availableMetadata.standards?.map((s: string) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المؤشر' : 'Indicator'}</label>
-                  <select 
-                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px] truncate"
-                    value={tempQuestion.indicator || ""}
-                    onChange={(e) => updateCurrentQuestionField("indicator", e.target.value)}
-                  >
-                    <option value="">{language === 'ar' ? 'اختر المؤشر...' : 'Select Indicator...'}</option>
-                    {availableMetadata.indicators?.map((ind: string) => (
-                      <option key={ind} value={ind}>{ind}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'ناتج التعلم (LO)' : 'Learning Outcome (LO)'}</label>
-                  <select 
-                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px] truncate"
-                    value={tempQuestion.learningOutcome || ""}
-                    onChange={(e) => updateCurrentQuestionField("learningOutcome", e.target.value)}
-                  >
-                    <option value="">{language === 'ar' ? 'اختر ناتج التعلم...' : 'Select Outcome...'}</option>
-                    {availableMetadata.outcomes?.map((lo: string) => (
-                      <option key={lo} value={lo}>{lo}</option>
-                    ))}
-                  </select>
-                </div>
-
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المهارة' : 'Skill'}</label>
-                    <select 
-                      className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
-                      value={tempQuestion.skill || "General"}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === "add_custom") {
-                          const newVal = prompt(language === 'ar' ? "أدخل مهارة مخصصة جديدة:" : "Enter custom skill:");
-                          if (newVal && newVal.trim()) {
-                            const trimmed = newVal.trim();
-                            setCustomSkills(prev => Array.from(new Set([...prev, trimmed])));
-                            updateCurrentQuestionField("skill", trimmed);
-                          }
-                        } else {
-                          updateCurrentQuestionField("skill", val);
-                        }
-                      }}
-                    >
-                      <option value="General">{language === 'ar' ? 'عام' : 'General'}</option>
-                      {allExistingSkills.filter((sk: any) => sk !== "General").map((sk: any) => (
-                        <option key={sk} value={sk}>{sk}</option>
-                      ))}
-                      <option value="add_custom" className="text-indigo-600 font-bold">
-                        {language === 'ar' ? '+ إضافة مهارة مخصصة...' : '+ Add Custom Skill...'}
-                      </option>
-                    </select>
-                  </div>
-
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'مستوى الصعوبة' : 'Difficulty'}</label>
-                    <input 
-                      list="difficulty-options"
-                      className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
-                      value={tempQuestion.level || ""}
-                      onChange={(e) => updateCurrentQuestionField("level", e.target.value)}
-                      placeholder={language === 'ar' ? 'أدخل المستوى...' : 'Enter difficulty...'}
+              {/* ── Question Metadata ── */}
+              <div className="flex justify-between items-center mb-4 mt-6">
+                <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest">
+                  {language === 'ar' ? 'بيانات الميتا داتا' : 'Metadata Fields'}
+                </h4>
+                <button 
+                  onClick={() => {
+                    const metadataMap = [
+                      { key: 'course', labelAr: 'الدرس', labelEn: 'Lesson' },
+                      { key: 'section', labelAr: 'القسم', labelEn: 'Section' },
+                      { key: 'domain', labelAr: 'المجال', labelEn: 'Domain' },
+                      { key: 'standard', labelAr: 'المعيار', labelEn: 'Standard' },
+                      { key: 'indicator', labelAr: 'المؤشرات', labelEn: 'Indicators' },
+                      { key: 'skill', labelAr: 'المهارة', labelEn: 'Skill' },
+                      { key: 'subskill', labelAr: 'المهارة الفرعية', labelEn: 'Subskill' },
+                      { key: 'microSkill', labelAr: 'المهارة الدقيقة', labelEn: 'Micro Skill' },
+                      { key: 'level', labelAr: 'الصعوبة', labelEn: 'Difficulty' },
+                      { key: 'dok', labelAr: 'عمق المعرفة (DOK)', labelEn: 'DOK' },
+                      { key: 'cognitive', labelAr: 'المستوى المعرفي', labelEn: 'Cognitive' },
+                      { key: 'errorPattern', labelAr: 'نمط الخطأ', labelEn: 'Error Pattern' },
+                      { key: 'estimatedTime', labelAr: 'الوقت المقدر', labelEn: 'Estimated Time' },
+                    ];
+                    const data: any = {};
+                    metadataMap.forEach(field => {
+                      data[language === 'ar' ? field.labelAr : field.labelEn] = tempQuestion[field.key] || "";
+                    });
+                    const worksheet = XLSX.utils.json_to_sheet([data]);
+                    const workbook = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(workbook, worksheet, "Metadata Template");
+                    XLSX.writeFile(workbook, "Metadata_Template.xlsx");
+                  }}
+                  className="flex items-center gap-2 bg-green-50 text-green-600 hover:bg-green-100 px-4 py-2 rounded-xl text-xs font-bold transition-colors border border-green-200"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                  {language === 'ar' ? 'تحميل قالب الميتا داتا' : 'Download Metadata Template'}
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6 bg-slate-50 border border-slate-100 rounded-[24px]">
+                {[
+                  { key: 'course', labelAr: 'الدرس', labelEn: 'Lesson' },
+                  { key: 'section', labelAr: 'القسم', labelEn: 'Section' },
+                  { key: 'domain', labelAr: 'المجال', labelEn: 'Domain' },
+                  { key: 'standard', labelAr: 'المعيار', labelEn: 'Standard' },
+                  { key: 'indicator', labelAr: 'المؤشرات', labelEn: 'Indicators' },
+                  { key: 'skill', labelAr: 'المهارة', labelEn: 'Skill', defaultValue: 'General' },
+                  { key: 'subskill', labelAr: 'المهارة الفرعية', labelEn: 'Subskill' },
+                  { key: 'microSkill', labelAr: 'المهارة الدقيقة', labelEn: 'Micro Skill' },
+                  { key: 'level', labelAr: 'الصعوبة', labelEn: 'Difficulty', defaultValue: 'Medium' },
+                  { key: 'dok', labelAr: 'عمق المعرفة (DOK)', labelEn: 'DOK' },
+                  { key: 'cognitive', labelAr: 'المستوى المعرفي', labelEn: 'Cognitive' },
+                  { key: 'errorPattern', labelAr: 'نمط الخطأ', labelEn: 'Error Pattern' },
+                  { key: 'estimatedTime', labelAr: 'الوقت المقدر', labelEn: 'Estimated Time' },
+                ].map((field) => (
+                  <div key={field.key} className="flex flex-col gap-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? field.labelAr : field.labelEn}</label>
+                    <input
+                      type="text"
+                      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold"
+                      placeholder={language === 'ar' ? field.labelAr : field.labelEn}
+                      value={tempQuestion[field.key] || field.defaultValue || ''}
+                      onChange={(e) => updateCurrentQuestionField(field.key, e.target.value)}
                     />
-                    <datalist id="difficulty-options">
-                      <option value="Foundation" />
-                      <option value="On Level" />
-                      <option value="Advanced" />
-                    </datalist>
                   </div>
-
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'عمق المعرفة (DOK)' : 'Depth of Knowledge (DOK)'}</label>
-                    <input 
-                      list="dok-options"
-                      className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
-                      value={tempQuestion.dok || ""}
-                      onChange={(e) => updateCurrentQuestionField("dok", e.target.value)}
-                      placeholder={language === 'ar' ? 'أدخل DOK...' : 'Enter DOK...'}
-                    />
-                    <datalist id="dok-options">
-                      <option value="DOK 1" />
-                      <option value="DOK 2" />
-                      <option value="DOK 3" />
-                      <option value="DOK 4" />
-                    </datalist>
-                  </div>
+                ))}
+              </div>
 
                   <div className="flex flex-col gap-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'النقاط / الدرجة' : 'Points'}</label>

@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { Monitor, X, Target, Clock, HelpCircle, Upload, Download, FileText, Trash2, Plus, CheckCircle2, AlertCircle, Edit2, Settings, ListOrdered } from 'lucide-react';
 import { CustomSelect } from '@/components/ui/CustomSelect';
 import FileUpload from '@/components/FileUpload';
+import * as XLSX from "xlsx";
 
 export const ModuleModal = (props: any) => {
   const { showToast } = useNotification();
@@ -73,61 +74,70 @@ export const ModuleModal = (props: any) => {
                     <Target className="w-6 h-6 text-indigo-600" />
                     {language === 'ar' ? "بيانات الموديول" : "Module Metadata"}
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                      <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "الكورس" : "Course"}</label>
-                      <input
-                        type="text"
-                        value={currentModule.courseName || ""}
-                        onChange={(e) => setCurrentModule({ ...currentModule, courseName: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none shadow-sm font-bold"
-                        placeholder={language === 'ar' ? "اسم الكورس (اختياري)" : "Course name (optional)"}
-                      />
-                    </div>
-
-                    <div className="space-y-3">
-                      <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "القسم" : "Section"}</label>
-                      <input
-                        type="text"
-                        value={currentModule.section || ""}
-                        onChange={(e) => setCurrentModule({ ...currentModule, section: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none shadow-sm font-bold"
-                        placeholder={language === 'ar' ? "القسم (اختياري)" : "Section (optional)"}
-                      />
-                    </div>
-
-                    <div className="space-y-3">
-                      <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "المجال" : "Domain"}</label>
-                      <input
-                        type="text"
-                        value={currentModule.domain || ""}
-                        onChange={(e) => setCurrentModule({ ...currentModule, domain: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none shadow-sm font-bold"
-                        placeholder={language === 'ar' ? "المجال (اختياري)" : "Domain (optional)"}
-                      />
-                    </div>
-
-                    <div className="space-y-3">
-                      <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "المرحلة المستهدفة" : "Grade Target"}</label>
-                      <input
-                        type="text"
-                        value={currentModule.gradeTarget || ""}
-                        onChange={(e) => setCurrentModule({ ...currentModule, gradeTarget: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none shadow-sm font-bold"
-                        placeholder={language === 'ar' ? "المرحلة المستهدفة (اختياري)" : "Grade Target (optional)"}
-                      />
-                    </div>
-
-                    <div className="space-y-3">
-                      <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "المدارس المستهدفة" : "Target Schools"}</label>
-                      <input
-                        type="text"
-                        value={currentModule.targetSchools || ""}
-                        onChange={(e) => setCurrentModule({ ...currentModule, targetSchools: e.target.value })}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none shadow-sm font-bold"
-                        placeholder={language === 'ar' ? "المدارس المستهدفة (اختياري)" : "Target Schools (optional)"}
-                      />
-                    </div>
+                  {/* ── Exam/Module Metadata ── */}
+                  <div className="flex justify-between items-center mb-4 mt-6">
+                    <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest">
+                      {language === 'ar' ? 'بيانات الميتا داتا' : 'Metadata Fields'}
+                    </h4>
+                    <button 
+                      onClick={() => {
+                        const metadataMap = [
+                          { key: 'course', labelAr: 'الاختبار', labelEn: 'Exam' },
+                          { key: 'section', labelAr: 'القسم', labelEn: 'Section' },
+                          { key: 'domain', labelAr: 'المجال', labelEn: 'Domain' },
+                          { key: 'standard', labelAr: 'المعيار', labelEn: 'Standard' },
+                          { key: 'indicator', labelAr: 'المؤشرات', labelEn: 'Indicators' },
+                          { key: 'skill', labelAr: 'المهارة', labelEn: 'Skill' },
+                          { key: 'subskill', labelAr: 'المهارة الفرعية', labelEn: 'Subskill' },
+                          { key: 'microSkill', labelAr: 'المهارة الدقيقة', labelEn: 'Micro Skill' },
+                          { key: 'level', labelAr: 'الصعوبة', labelEn: 'Difficulty' },
+                          { key: 'dok', labelAr: 'عمق المعرفة (DOK)', labelEn: 'DOK' },
+                          { key: 'cognitive', labelAr: 'المستوى المعرفي', labelEn: 'Cognitive' },
+                          { key: 'errorPattern', labelAr: 'نمط الخطأ', labelEn: 'Error Pattern' },
+                          { key: 'estimatedTime', labelAr: 'الوقت المقدر', labelEn: 'Estimated Time' },
+                        ];
+                        const data: any = {};
+                        metadataMap.forEach(field => {
+                          data[language === 'ar' ? field.labelAr : field.labelEn] = currentModule[field.key] || field.defaultValue || "";
+                        });
+                        const worksheet = XLSX.utils.json_to_sheet([data]);
+                        const workbook = XLSX.utils.book_new();
+                        XLSX.utils.book_append_sheet(workbook, worksheet, "Metadata Template");
+                        XLSX.writeFile(workbook, "Metadata_Template.xlsx");
+                      }}
+                      className="flex items-center gap-2 bg-green-50 text-green-600 hover:bg-green-100 px-4 py-2 rounded-xl text-xs font-bold transition-colors border border-green-200"
+                    >
+                      <Download className="w-4 h-4" />
+                      {language === 'ar' ? 'تحميل قالب الميتا داتا' : 'Download Metadata Template'}
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6 bg-slate-50 border border-slate-100 rounded-[24px]">
+                    {[
+                      { key: 'course', labelAr: 'الاختبار', labelEn: 'Exam' },
+                      { key: 'section', labelAr: 'القسم', labelEn: 'Section' },
+                      { key: 'domain', labelAr: 'المجال', labelEn: 'Domain' },
+                      { key: 'standard', labelAr: 'المعيار', labelEn: 'Standard' },
+                      { key: 'indicator', labelAr: 'المؤشرات', labelEn: 'Indicators' },
+                      { key: 'skill', labelAr: 'المهارة', labelEn: 'Skill', defaultValue: 'General' },
+                      { key: 'subskill', labelAr: 'المهارة الفرعية', labelEn: 'Subskill' },
+                      { key: 'microSkill', labelAr: 'المهارة الدقيقة', labelEn: 'Micro Skill' },
+                      { key: 'level', labelAr: 'الصعوبة', labelEn: 'Difficulty', defaultValue: 'Medium' },
+                      { key: 'dok', labelAr: 'عمق المعرفة (DOK)', labelEn: 'DOK' },
+                      { key: 'cognitive', labelAr: 'المستوى المعرفي', labelEn: 'Cognitive' },
+                      { key: 'errorPattern', labelAr: 'نمط الخطأ', labelEn: 'Error Pattern' },
+                      { key: 'estimatedTime', labelAr: 'الوقت المقدر', labelEn: 'Estimated Time' },
+                    ].map((field) => (
+                      <div key={field.key} className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? field.labelAr : field.labelEn}</label>
+                        <input
+                          type="text"
+                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold"
+                          placeholder={language === 'ar' ? field.labelAr : field.labelEn}
+                          value={currentModule[field.key] || field.defaultValue || ''}
+                          onChange={(e) => setCurrentModule({ ...currentModule, [field.key]: e.target.value })}
+                        />
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>

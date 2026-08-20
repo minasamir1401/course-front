@@ -11,6 +11,7 @@ import { CustomSelect } from '@/components/ui/CustomSelect';
 
 
 import InteractiveQuestionEditor from '@/components/InteractiveQuestionEditor';
+import * as XLSX from "xlsx";
 
 
 export const QuestionsBuilder = (props: any) => {
@@ -347,9 +348,45 @@ export const QuestionsBuilder = (props: any) => {
               </div>
               
               {/* ── Question Metadata ── */}
+              <div className="flex justify-between items-center mb-4 mt-6">
+                <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest">
+                  {language === 'ar' ? 'بيانات الميتا داتا' : 'Metadata Fields'}
+                </h4>
+                <button 
+                  onClick={() => {
+                    const metadataMap = [
+                      { key: 'course', labelAr: 'الاختبار', labelEn: 'Exam' },
+                      { key: 'section', labelAr: 'القسم', labelEn: 'Section' },
+                      { key: 'domain', labelAr: 'المجال', labelEn: 'Domain' },
+                      { key: 'standard', labelAr: 'المعيار', labelEn: 'Standard' },
+                      { key: 'indicator', labelAr: 'المؤشرات', labelEn: 'Indicators' },
+                      { key: 'skill', labelAr: 'المهارة', labelEn: 'Skill' },
+                      { key: 'subskill', labelAr: 'المهارة الفرعية', labelEn: 'Subskill' },
+                      { key: 'microSkill', labelAr: 'المهارة الدقيقة', labelEn: 'Micro Skill' },
+                      { key: 'level', labelAr: 'الصعوبة', labelEn: 'Difficulty' },
+                      { key: 'dok', labelAr: 'عمق المعرفة (DOK)', labelEn: 'DOK' },
+                      { key: 'cognitive', labelAr: 'المستوى المعرفي', labelEn: 'Cognitive' },
+                      { key: 'errorPattern', labelAr: 'نمط الخطأ', labelEn: 'Error Pattern' },
+                      { key: 'estimatedTime', labelAr: 'الوقت المقدر', labelEn: 'Estimated Time' },
+                    ];
+                    const data: any = {};
+                    metadataMap.forEach(field => {
+                      data[language === 'ar' ? field.labelAr : field.labelEn] = tempQuestion[field.key] || "";
+                    });
+                    const worksheet = XLSX.utils.json_to_sheet([data]);
+                    const workbook = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(workbook, worksheet, "Metadata Template");
+                    XLSX.writeFile(workbook, "Metadata_Template.xlsx");
+                  }}
+                  className="flex items-center gap-2 bg-green-50 text-green-600 hover:bg-green-100 px-4 py-2 rounded-xl text-xs font-bold transition-colors border border-green-200"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                  {language === 'ar' ? 'تحميل قالب الميتا داتا' : 'Download Metadata Template'}
+                </button>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6 bg-slate-50 border border-slate-100 rounded-[24px]">
                 {[
-                  { key: 'course', labelAr: 'الكورس', labelEn: 'Course' },
+                  { key: 'course', labelAr: 'الاختبار', labelEn: 'Exam' },
                   { key: 'section', labelAr: 'القسم', labelEn: 'Section' },
                   { key: 'domain', labelAr: 'المجال', labelEn: 'Domain' },
                   { key: 'standard', labelAr: 'المعيار', labelEn: 'Standard' },
