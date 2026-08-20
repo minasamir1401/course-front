@@ -99,8 +99,13 @@ export default function SuperAdminEditExamPage() {
       assignmentsExcelRef={assignmentsExcelRef}
       questionsExcelRef={questionsExcelRef}
       advancedMetadataExcelRef={moduleManagement.advancedMetadataExcelRef}
-      handleAdvancedMetadataExcelChange={(e) => moduleManagement.handleAdvancedMetadataExcelChange(e, state.activeSubExamIndex, source)}
-      downloadAdvancedMetadataTemplate={moduleManagement.downloadAdvancedMetadataTemplate}
+      handleAdvancedMetadataExcelChange={async (e) => {
+        const updatedList = await moduleManagement.handleAdvancedMetadataExcelChange(e, state.activeSubExamIndex, source);
+        if (updatedList && updatedList.length > 0 && state.editingQuestionIndex !== null && state.showQuestionForm) {
+          state.setTempQuestion(updatedList[state.editingQuestionIndex]);
+        }
+      }}
+      downloadAdvancedMetadataTemplate={() => moduleManagement.downloadAdvancedMetadataTemplate(state.activeSubExamIndex, source)}
     />
   );
 

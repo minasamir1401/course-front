@@ -231,7 +231,7 @@ const openAddModuleModal = () => {
 
   const handleMetadataExcelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) { resolve([]); return; }
 
     const reader = new FileReader();
     reader.onload = (evt) => {
@@ -241,12 +241,10 @@ const openAddModuleModal = () => {
         const ws = wb.Sheets[wb.SheetNames[0]];
         const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
         
-        if (rows.length < 2) {
-          showToast(t('courseCreate.excelNoDataError') || "Excel file is empty or does not contain data rows", "error");
-          return;
-        }
+        if (rows.length < 2) { showToast(language === 'ar' ? "ملف Excel فارغ أو لا يحتوي على بيانات" : "Excel file is empty or does not contain data rows", "error"); resolve([]); return; }
 
         const headers = (rows[0] as string[]).map((h) => String(h).trim().toLowerCase());
+          const idIdx = headers.findIndex(h => h.includes("id") || h.includes("معرف"));
         
         const stdIdx = headers.findIndex(h => h.includes("standard") || h.includes("معيار") || h.includes("المعايير"));
         const indIdx = headers.findIndex(h => h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشرات"));
@@ -312,7 +310,7 @@ const openAddModuleModal = () => {
 
   const handleQuestionsExcelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) { resolve([]); return; }
 
     const reader = new FileReader();
     reader.onload = (evt) => {
@@ -365,7 +363,7 @@ const openAddModuleModal = () => {
 
   const handleAssignmentsExcelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) { resolve([]); return; }
 
     const reader = new FileReader();
     reader.onload = (evt) => {
@@ -442,21 +440,51 @@ const openAddModuleModal = () => {
     showToast(language === 'ar' ? "تم تحميل نموذج المعايير بنجاح" : "Metadata template downloaded successfully", "success");
   };
 
-  let downloadAdvancedMetadataTemplate = () => {
-    const wsData = [
-      ["Exam", "Section", "Domain", "Learning Outcomes", "Indicators", "Skill", "Subskill", "Micro Skill", "Difficulty", "DOK", "Cognitive", "Error Pattern", "Estimated Time"],
-      ["مقدمة في الفيزياء", "القسم الاول", "الفيزياء", "Student will be able to...", "Identifies Basic Concepts", "General", "Specific", "Micro", "Medium", "DOK 2", "Application", "", "5 mins"]
-    ];
+  let downloadAdvancedMetadataTemplate = (activeSubExamIndex: number | null, source: 'questions' | 'assignments' = 'questions') => {
+    let list = [];
+    if (source === 'questions' && activeSubExamIndex !== null && currentModule.subExams && currentModule.subExams[activeSubExamIndex]) {
+      list = currentModule.subExams[activeSubExamIndex].questions || [];
+    } else {
+      list = currentModule[source] || [];
+    }
+    const wsData = [];
+    wsData.push(['Question ID', 'Question Text', 'Exam', 'Section', 'Domain', 'Learning Outcomes', 'Indicators', 'Skill', 'Subskill', 'Micro Skill', 'Difficulty', 'DOK', 'Cognitive', 'Error Pattern', 'Estimated Time']);
+    
+    if (list.length === 0) {
+      wsData.push(['', 'Sample Question...', 'مقدمة في الفيزياء', 'القسم الاول', 'الفيزياء', 'Student will be able to...', 'Identifies Basic Concepts', 'General', 'Specific', 'Micro', 'Medium', 'DOK 2', 'Application', '', '5 mins']);
+    } else {
+      list.forEach((q: any) => {
+        const cleanText = q.text ? q.text.replace(/<[^>]*>?/gm, '').substring(0, 100) : '';
+        wsData.push([
+          q.id || '',
+          cleanText,
+          q.course || '',
+          q.section || '',
+          q.domain || '',
+          q.standard || '',
+          q.indicator || '',
+          q.skill || '',
+          q.subskill || '',
+          q.microSkill || '',
+          q.level || '',
+          q.dok || '',
+          q.cognitive || '',
+          q.errorPattern || '',
+          q.estimatedTime || ''
+        ]);
+      });
+    }
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Advanced Metadata Template");
-    XLSX.writeFile(wb, "advanced_metadata_template.xlsx");
-    showToast(language === 'ar' ? "تم تحميل قالب الميتا داتا بنجاح" : "Advanced Metadata template downloaded successfully", "success");
+    XLSX.utils.book_append_sheet(wb, ws, 'Advanced Metadata Template');
+    XLSX.writeFile(wb, 'advanced_metadata_template.xlsx');
+    showToast(language === 'ar' ? 'تم تحميل قالب الميتا داتا المتقدمة بنجاح' : 'Advanced Metadata template downloaded successfully', 'success');
   };
 
-  const handleAdvancedMetadataExcelChange = (e: React.ChangeEvent<HTMLInputElement>, activeSubExamIndex: number | null, source: 'questions' | 'assignments') => {
+  const handleAdvancedMetadataExcelChange = (e: React.ChangeEvent<HTMLInputElement>, activeSubExamIndex: number | null, source: 'questions' | 'assignments'): Promise<any[]> => {
+    return new Promise((resolve) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) { resolve([]); return; }
 
     const reader = new FileReader();
     reader.onload = (evt) => {
@@ -466,12 +494,10 @@ const openAddModuleModal = () => {
         const ws = wb.Sheets[wb.SheetNames[0]];
         const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
         
-        if (rows.length < 2) {
-          showToast(language === 'ar' ? "ملف Excel فارغ أو لا يحتوي على بيانات" : "Excel file is empty or does not contain data rows", "error");
-          return;
-        }
+        if (rows.length < 2) { showToast(language === 'ar' ? "ملف Excel فارغ أو لا يحتوي على بيانات" : "Excel file is empty or does not contain data rows", "error"); resolve([]); return; }
 
         const headers = (rows[0] as string[]).map((h) => String(h).trim().toLowerCase());
+          const idIdx = headers.findIndex(h => h.includes("id") || h.includes("معرف"));
         
         const courseIdx = headers.findIndex(h => h.includes("exam") || h.includes("course") || h.includes("اختبار") || h.includes("الاختبار"));
         const sectionIdx = headers.findIndex(h => h.includes("section") || h.includes("قسم") || h.includes("القسم"));
@@ -491,6 +517,7 @@ const openAddModuleModal = () => {
           const newState = { ...prev };
           let targetList = [];
           let isSubExam = false;
+            let finalTargetList: any[] = [];
 
           if (source === 'questions' && activeSubExamIndex !== null && newState.subExams && newState.subExams[activeSubExamIndex]) {
             targetList = [...(newState.subExams[activeSubExamIndex].questions || [])];
@@ -504,10 +531,16 @@ const openAddModuleModal = () => {
             const row = rows[i];
             if (!row || row.every(c => String(c).trim() === "")) continue;
             
-            // Map row i to question i-1
-            const qIndex = i - 1;
-            let q: any;
-            if (qIndex < targetList.length) {
+            let qIndex = -1;
+              if (idIdx >= 0 && row[idIdx]) {
+                const rowId = String(row[idIdx]).trim();
+                qIndex = targetList.findIndex((q: any) => q.id === rowId || String(q.id) === rowId);
+              }
+              if (qIndex === -1) {
+                qIndex = mappedCount;
+              }
+              let q: any;
+              if (qIndex < targetList.length) {
               q = { ...targetList[qIndex] };
             } else {
               q = {
@@ -531,7 +564,8 @@ const openAddModuleModal = () => {
                 attempts: 1
               };
               targetList.push(q);
-            }
+                qIndex = targetList.length - 1;
+              }
 
             if (courseIdx >= 0) q.course = String(row[courseIdx]).trim();
             if (sectionIdx >= 0) q.section = String(row[sectionIdx]).trim();
