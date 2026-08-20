@@ -15,7 +15,7 @@ import * as XLSX from "xlsx";
 
 
 export const QuestionsBuilder = (props: any) => {
-  const { currentModule, setCurrentModule, activeSubExamIndex, source, language, assignmentsExcelRef, questionsExcelRef, handleAssignmentsExcelChange, handleQuestionsExcelChange, handleExcelUpload, downloadQuestionsTemplate, handleAddQuestionForSource, showQuestionForm, setShowQuestionForm, list, moveQuestionForSource, expandedQuestionIndex, setExpandedQuestionIndex, handleEditQuestionForSource, removeQuestionForSource, tempQuestion, setTempQuestion, updateCurrentQuestionField, customSkills, setCustomSkills, allExistingSkills, availableMetadata, openDropdownId, setOpenDropdownId, addQuestionSection, updateQuestionSectionContent, removeQuestionSection, isQuestionCorrectAnswer, toggleQuestionCorrectAnswer, updateQuestionOption, handleSaveQuestionForSource, editingQuestionIndex } = props;
+  const { currentModule, setCurrentModule, activeSubExamIndex, source, language, assignmentsExcelRef, questionsExcelRef, advancedMetadataExcelRef, handleAssignmentsExcelChange, handleQuestionsExcelChange, handleAdvancedMetadataExcelChange, handleExcelUpload, downloadQuestionsTemplate, downloadAdvancedMetadataTemplate, handleAddQuestionForSource, showQuestionForm, setShowQuestionForm, list, moveQuestionForSource, expandedQuestionIndex, setExpandedQuestionIndex, handleEditQuestionForSource, removeQuestionForSource, tempQuestion, setTempQuestion, updateCurrentQuestionField, customSkills, setCustomSkills, allExistingSkills, availableMetadata, openDropdownId, setOpenDropdownId, addQuestionSection, updateQuestionSectionContent, removeQuestionSection, isQuestionCorrectAnswer, toggleQuestionCorrectAnswer, updateQuestionOption, handleSaveQuestionForSource, editingQuestionIndex } = props;
 
   const renderQuestionsBuilderFunc = () => {
     const list = (source === 'questions' && activeSubExamIndex !== null && currentModule.subExams && currentModule.subExams[activeSubExamIndex]) ? (currentModule.subExams[activeSubExamIndex].questions || []) : (currentModule[source] || []);
@@ -36,6 +36,13 @@ export const QuestionsBuilder = (props: any) => {
           accept=".xlsx,.xls"
           onChange={source === 'assignments' ? handleAssignmentsExcelChange : handleQuestionsExcelChange}
         />
+        <input
+          type="file"
+          ref={advancedMetadataExcelRef}
+          style={{ display: 'none' }}
+          accept=".xlsx,.xls"
+          onChange={(e) => handleAdvancedMetadataExcelChange(e)}
+        />
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
           <div>
@@ -52,7 +59,7 @@ export const QuestionsBuilder = (props: any) => {
               className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
             >
               <Upload className="w-4 h-4" />
-              {language === 'ar' ? 'استيراد Excel' : 'Import Excel'}
+              {language === 'ar' ? 'استيراد الأسئلة' : 'Import Questions'}
             </button>
             <button
               type="button"
@@ -60,7 +67,23 @@ export const QuestionsBuilder = (props: any) => {
               className="bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
             >
               <Download className="w-4 h-4" />
-              {language === 'ar' ? 'تحميل نموذج' : 'Template'}
+              {language === 'ar' ? 'نموذج الأسئلة' : 'Questions Template'}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleExcelUpload('advancedMetadata')}
+              className="bg-fuchsia-50 hover:bg-fuchsia-100 text-fuchsia-700 border border-fuchsia-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
+            >
+              <Upload className="w-4 h-4" />
+              {language === 'ar' ? 'استيراد ميتا داتا متقدمة' : 'Import Advanced Meta Data'}
+            </button>
+            <button
+              type="button"
+              onClick={() => downloadAdvancedMetadataTemplate()}
+              className="bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
+            >
+              <Download className="w-4 h-4" />
+              {language === 'ar' ? 'نموذج الميتا داتا' : 'Metadata Template'}
             </button>
             <button
               type="button"

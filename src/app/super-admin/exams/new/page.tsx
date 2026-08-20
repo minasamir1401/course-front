@@ -96,6 +96,9 @@ export default function SuperAdminNewExamPage() {
       language={language}
       assignmentsExcelRef={assignmentsExcelRef}
       questionsExcelRef={questionsExcelRef}
+      advancedMetadataExcelRef={moduleManagement.advancedMetadataExcelRef}
+      handleAdvancedMetadataExcelChange={(e) => moduleManagement.handleAdvancedMetadataExcelChange(e, state.activeSubExamIndex, source)}
+      downloadAdvancedMetadataTemplate={moduleManagement.downloadAdvancedMetadataTemplate}
     />
   );
 

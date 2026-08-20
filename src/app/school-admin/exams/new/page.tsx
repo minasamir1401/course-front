@@ -87,7 +87,7 @@ export default function SchoolAdminNewExamPage() {
     />
   );
 
-  const renderQuestionsBuilderProps = (source: 'assignments' | 'questions') => (
+  const renderQuestionsBuilderProps = (source: 'questions' | 'assignments') => (
     <QuestionsBuilder  
       source={source}  
       {...state}
@@ -96,6 +96,9 @@ export default function SchoolAdminNewExamPage() {
       language={language}
       assignmentsExcelRef={assignmentsExcelRef}
       questionsExcelRef={questionsExcelRef}
+      advancedMetadataExcelRef={moduleManagement.advancedMetadataExcelRef}
+      handleAdvancedMetadataExcelChange={(e) => moduleManagement.handleAdvancedMetadataExcelChange(e, state.activeSubExamIndex, source)}
+      downloadAdvancedMetadataTemplate={moduleManagement.downloadAdvancedMetadataTemplate}
     />
   );
 
