@@ -449,7 +449,7 @@ export default function ActivitiesPage() {
             <div className="space-y-4 text-center md:text-right">
               <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 rounded-full border border-white/20">
                 <Sparkles className="w-4 h-4 text-amber-300 animate-spin" style={{ animationDuration: '4s' }} />
-                <span className="text-[11px] font-black tracking-widest uppercase">KLEVRO Skills Hub</span>
+                <span className="text-[11px] font-black tracking-widest uppercase">Skills Hub</span>
               </div>
               <h1 className="text-3xl md:text-5xl font-black leading-tight tracking-tight">
                 {language === 'ar' ? (
@@ -722,7 +722,7 @@ export default function ActivitiesPage() {
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2 px-3.5 py-1.5 bg-amber-50 border border-amber-200/60 rounded-xl text-amber-800 text-xs font-black">
                   <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
-                  <span>KLEVRO SKILLS PLAY</span>
+                  <span>SKILLS PLAY</span>
                 </div>
 
                 <h3 className="text-base md:text-lg font-black text-slate-800 truncate max-w-md hidden sm:block">

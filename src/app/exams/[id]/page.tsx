@@ -97,13 +97,13 @@ function TakeExamPageContent() {
         let text = user.name || user.email || "Student";
         if (user.schoolName) text += " - " + user.schoolName;
         else if (user.schoolId) text += " - School: " + user.schoolId;
-        text += " - klevro";
+        text += " - platform";
         setWatermarkText(text);
       } else {
-        setWatermarkText("klevro");
+        setWatermarkText("platform");
       }
     } catch (e) {
-      setWatermarkText("klevro");
+      setWatermarkText("platform");
     }
   }, []);
 

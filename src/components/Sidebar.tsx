@@ -71,7 +71,7 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose, onToggle, rol
       links: [
         { href: "/school-admin/exams", icon: ClipboardList, label: t('schoolAdmin.sidebar.exams') },
         { href: "/school-admin/courses", icon: BookOpen, label: t('schoolAdmin.sidebar.courses') },
-        { href: "/school-admin/skills-hub", icon: BookOpen, label: language === 'ar' ? 'أنشطة ومهارات كليفروا' : 'Klevro Skills Hub' },
+        { href: "/school-admin/skills-hub", icon: BookOpen, label: language === 'ar' ? 'أنشطة ومهارات' : 'Skills Hub' },
         { href: "/school-admin/skills-hub/create", icon: Plus, label: language === 'ar' ? 'إضافة محور مهاراتي' : 'Add Skill Cluster' },
       ]
     },
@@ -94,12 +94,13 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose, onToggle, rol
         {/* School Identity */}
         <div className="p-8 mb-4 border-b border-slate-50">
           <div className="flex items-center gap-4 group">
-            <div className="w-24 h-24 shrink-0 group-hover:scale-105 transition-transform duration-500">
-              <img src="/logo.jpeg" alt="Klevro" className="w-full h-full object-contain" />
+            <div className="w-10 h-10 bg-white rounded-xl shadow-sm border border-slate-200 flex items-center justify-center p-2">
+              <img src="/logo.jpeg" alt="Logo" className="w-full h-full object-contain" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-xl font-black text-slate-900 tracking-tight truncate">{t('schoolAdmin.sidebar.adminCenter')}</h1>
-              <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[2px]">School Admin</p>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
+                {language === 'ar' ? 'إدارة المدرسة' : 'School Admin'}
+              </span>
             </div>
           </div>
         </div>

@@ -63,7 +63,7 @@ export default function DashboardLayout({ children, hideSidebar }: { children: R
   const isSidebarVisible = hasSidebar && !isFullscreen && (!hideSidebar || isSidebarOpen);
 
   return (
-    <div className={`flex min-h-screen font-sans overflow-x-hidden bg-transparent relative ${isStudent ? 'klevro-watermark' : ''}`} dir={language === 'ar' ? "rtl" : "ltr"}>
+    <div className={`flex min-h-screen font-sans overflow-x-hidden bg-transparent relative ${isStudent ? 'platform-watermark' : ''}`} dir={language === 'ar' ? "rtl" : "ltr"}>
       <AdminErrorBridge />
       <OfflineBanner language={language} />
       {/* Background Ornaments */}

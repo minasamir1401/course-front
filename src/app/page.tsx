@@ -96,8 +96,8 @@ export default function LandingPage() {
             
             <h1 className="text-[56px] lg:text-[72px] font-extrabold text-[#0F172A] leading-[1.1] mb-6 tracking-tight">
               Discover <br />
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#4F46E5] to-[#9333EA]">
-                Klevro
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 animate-gradient bg-[length:200%_auto]">
+                Platform
               </span>
             </h1>
             
@@ -120,9 +120,9 @@ export default function LandingPage() {
           <div className="flex-1 w-full max-w-[650px] relative">
             <div className="relative w-full aspect-square">
               <img 
-                src="/images/hero-3d.png" 
-                alt="Klevro Dashboard Illustration" 
-                className="w-full h-full object-contain animate-in fade-in zoom-in duration-700"
+                src="/dashboard-mockup.png"
+                alt="Dashboard Illustration" 
+                className="w-full h-auto object-cover transform hover:scale-105 transition-transform duration-700"
               />
             </div>
           </div>
@@ -251,9 +251,14 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-8 text-center md:text-left mb-12">
             <div className="flex flex-col items-center md:items-start gap-4">
-              <div className="flex items-center gap-2">
-                <div className="h-16 md:h-20 w-auto">
-                  <img src="/logo.jpeg" alt="Klevro" className="h-full object-contain" />
+              <div className="flex items-center gap-3 relative z-10 group cursor-pointer">
+                <div className="w-12 h-12 rounded-2xl bg-white shadow-[0_0_20px_rgba(79,70,229,0.15)] border border-indigo-100 flex items-center justify-center p-2.5 overflow-hidden group-hover:shadow-[0_0_30px_rgba(79,70,229,0.25)] transition-all duration-300 transform group-hover:scale-105">
+                  <img src="/logo.jpeg" alt="Logo" className="h-full object-contain" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xl font-black bg-gradient-to-r from-slate-900 to-indigo-900 bg-clip-text text-transparent">
+                    Platform
+                  </span>
                 </div>
               </div>
               <div className="text-[14px] text-slate-400 space-y-1">
@@ -262,7 +267,7 @@ export default function LandingPage() {
               </div>
             </div>
             
-            <p className="text-[14px] text-slate-500">© 2026 Klevro. All rights reserved.</p>
+            <p className="text-[14px] text-slate-500">© 2026 Platform. All rights reserved.</p>
             
             <div className="flex flex-col items-center md:items-end gap-6">
               <div className="flex gap-6 text-[14px] font-medium">

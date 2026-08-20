@@ -67,12 +67,8 @@ export default function SuperAdminSidebar({
         {/* Brand Logo */}
         <div className="px-6 py-8 border-b border-slate-100">
           <div className="flex items-center gap-3">
-            <div className="w-24 h-24 shrink-0 group-hover:scale-105 transition-transform duration-500">
-              <img src="/logo.jpeg" alt="Klevro" className="w-full h-full object-contain" />
-            </div>
-            <div>
-              <h1 className="text-base font-black text-slate-900 leading-none">Klevro</h1>
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-[2px]">COMMAND CENTER</span>
+            <div className="w-12 h-12 bg-white rounded-xl shadow-sm border border-slate-200 flex items-center justify-center p-2">
+              <img src="/logo.jpeg" alt="Logo" className="w-full h-full object-contain" />
             </div>
           </div>
         </div>
@@ -111,7 +107,7 @@ export default function SuperAdminSidebar({
           {/* SKILLS HUB */}
           <div className="space-y-1">
             <p className="px-3 py-1 text-[10px] font-black text-slate-400 uppercase tracking-[2px]">{language === 'ar' ? "مكتبة المهارات" : "Skills Library"}</p>
-            <SidebarLink href="/super-admin/skills-hub" icon={BookOpen} label={language === 'ar' ? "أنشطة ومهارات كليفروا" : "Klevro Skills Hub"} active={isActive('/super-admin/skills-hub')} />
+            <SidebarLink href="/super-admin/skills-hub" icon={BookOpen} label={language === 'ar' ? "أنشطة ومهارات" : "Skills Hub"} active={isActive('/super-admin/skills-hub')} />
             <SidebarLink href="/super-admin/skills-hub?action=add-cluster" icon={Plus} label={language === 'ar' ? "إضافة محور مهاراتي" : "Add Skill Cluster"} active={isActive('/super-admin/skills-hub?action=add-cluster')} />
           </div>
 

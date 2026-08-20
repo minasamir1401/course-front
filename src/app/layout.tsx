@@ -3,21 +3,19 @@ import "./globals.css";
 import "katex/dist/katex.min.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://klevro.tech'),
+  metadataBase: new URL('https://platform.tech'),
   title: {
-    default: "Klevro - The Smartest Educational Platform Worldwide",
-    template: "%s | Klevro"
+    default: "Platform - The Smartest Educational Platform Worldwide",
+    template: "%s | Platform"
   },
-  description: "Klevro is the best smart educational platform for managing schools, centers, private tutoring, and exams all over the world. Enjoy a comprehensive and innovative Learning Management System (LMS).",
+  description: "Platform is the best smart educational platform for managing schools, centers, private tutoring, and exams all over the world. Enjoy a comprehensive and innovative Learning Management System (LMS).",
   keywords: [
-    "klevro", "Klevro", "educational platform", "school management", "learning management system", "LMS",
-    "private tutoring", "centers platform", "online exams", "global educational platform",
-    "Smart Education", "E-learning platform", "global e-learning",
-    "school management system", "teacher platform", "education development"
+    "platform", "educational platform", "school management", "learning management system", "LMS",
+    "exams platform", "online courses", "tutoring", "student management", "interactive learning"
   ],
-  authors: [{ name: "Klevro Team" }],
-  creator: "Klevro",
-  publisher: "Klevro EduTech",
+  authors: [{ name: "Platform Team" }],
+  creator: "Platform",
+  publisher: "Platform EduTech",
   formatDetection: {
     email: false,
     address: false,
@@ -30,16 +28,16 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "Klevro - The Future of Smart Education",
-    description: "The most powerful Learning Management System (LMS) for schools and teachers worldwide. Join thousands of students and teachers globally.",
-    url: 'https://klevro.tech',
-    siteName: 'Klevro',
+    title: "Platform - The Future of Smart Education",
+    description: "Join Platform to manage your school, center, or courses with AI-powered tools and interactive assessments.",
+    url: 'https://platform.tech',
+    siteName: 'Platform',
     images: [
       {
-        url: '/logo.jpeg',
+        url: '/og-image.jpg',
         width: 1200,
-        height: 1200,
-        alt: 'Klevro Logo',
+        height: 630,
+        alt: 'Platform Logo',
       }
     ],
     locale: 'en_US',
@@ -47,9 +45,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: "Klevro - The Smartest Educational Platform",
-    description: "Elevate education with the Klevro platform. Comprehensive management for schools, courses, and smart exams.",
-    images: ['/logo.jpeg'],
+    title: "Platform - The Smartest Educational Platform",
+    description: "Elevate education with the Platform. Comprehensive management for schools, courses, and smart exams.",
+    images: ['/twitter-image.jpg'],
   },
   robots: {
     index: true,
