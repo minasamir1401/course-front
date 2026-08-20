@@ -21,7 +21,7 @@ export const QuestionsBuilder = (props: any) => {
     const list = (source === 'questions' && activeSubExamIndex !== null && currentModule.subExams && currentModule.subExams[activeSubExamIndex]) ? (currentModule.subExams[activeSubExamIndex].questions || []) : (currentModule[source] || []);
     const headerLabel = source === 'assignments'
       ? (language === 'ar' ? 'واجبات وتكليفات الدرس (Assignments)' : 'Lesson Assignments')
-      : (language === 'ar' ? 'تدريبات وتقييمات الدرس (Quiz Me)' : 'Quiz Me Practice');
+      : (language === 'ar' ? 'اختبار (Exam)' : 'Exam');
 
     const headerDesc = source === 'assignments'
       ? (language === 'ar' ? 'قم بإضافة التكليفات التطبيقية والواجبات المنزلية للطلاب' : 'Add application homework and assignments for students')
@@ -251,12 +251,12 @@ export const QuestionsBuilder = (props: any) => {
             </div>
 
             <div className="p-8 md:p-12 space-y-8">
-              {/* Unified Metadata & Configuration Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 p-6 bg-slate-50 border border-slate-200 rounded-[30px] shadow-sm mb-6">
+              {/* ── Row 1: Question Type + Points + XP ── */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-6 bg-indigo-50 border border-indigo-100 rounded-[24px]">
                 <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'نوع السؤال' : 'Question Type'}</label>
+                  <label className="text-[10px] font-black text-indigo-700 uppercase tracking-widest">{language === 'ar' ? 'نوع السؤال' : 'Question Type'} <span className="text-red-500">*</span></label>
                   <CustomSelect
-                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
+                    className="bg-white border border-indigo-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
                     value={tempQuestion.type}
                     onChange={(val) => {
                       const newType = val;
@@ -272,55 +272,6 @@ export const QuestionsBuilder = (props: any) => {
                     }}
                     options={QUESTION_TYPES.map(type => ({ value: type.id, label: type.labelEn }))}
                     placeholder={language === 'ar' ? 'اختر النوع...' : 'Select Type...'}
-                  />
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المجال' : 'Domain'}</label>
-                  <CustomSelect
-                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px]"
-                    value={tempQuestion.domain || ""}
-                    onChange={(val) => updateCurrentQuestionField("domain", val)}
-                    options={(availableMetadata.domains || []).map(d => ({ value: d, label: d }))}
-                    placeholder={language === 'ar' ? 'اختر المجال...' : 'Select Domain...'}
-                  />
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المعيار' : 'Standard'}</label>
-                  <CustomSelect
-                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px] truncate"
-                    value={tempQuestion.standard || ""}
-                    onChange={(val) => updateCurrentQuestionField("standard", val)}
-                    options={(availableMetadata.standards || []).map(s => ({ value: s, label: s }))}
-                    placeholder={language === 'ar' ? 'اختر المعيار...' : 'Select Standard...'}
-                  />
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المؤشر' : 'Indicator'}</label>
-                  <CustomSelect
-                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px] truncate"
-                    value={tempQuestion.indicator || ""}
-                    onChange={(val) => updateCurrentQuestionField("indicator", val)}
-                    options={(availableMetadata.indicators || []).map(i => ({ value: i, label: i }))}
-                    placeholder={language === 'ar' ? 'اختر المؤشر...' : 'Select Indicator...'}
-                  />
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'ناتج التعلم (LO)' : 'Learning Outcome (LO)'}</label>
-                  <CustomSelect
-                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
-                    value={tempQuestion.dok || ""}
-                    onChange={(val) => updateCurrentQuestionField("dok", val)}
-                    options={[
-                      { value: "Level 1: Recall", label: "Level 1: Recall" },
-                      { value: "Level 2: Skill/Concept", label: "Level 2: Skill/Concept" },
-                      { value: "Level 3: Strategic Thinking", label: "Level 3: Strategic Thinking" },
-                      { value: "Level 4: Extended Thinking", label: "Level 4: Extended Thinking" }
-                    ]}
-                    placeholder={language === 'ar' ? 'اختر عمق المعرفة...' : 'Select DOK...'}
                   />
                 </div>
 
@@ -356,7 +307,7 @@ export const QuestionsBuilder = (props: any) => {
                       { key: 'course', labelAr: 'الاختبار', labelEn: 'Exam' },
                       { key: 'section', labelAr: 'القسم', labelEn: 'Section' },
                       { key: 'domain', labelAr: 'المجال', labelEn: 'Domain' },
-                      { key: 'standard', labelAr: 'المعيار', labelEn: 'Standard' },
+                      { key: 'standard', labelAr: 'نواتج التعلم', labelEn: 'Learning Outcomes' },
                       { key: 'indicator', labelAr: 'المؤشرات', labelEn: 'Indicators' },
                       { key: 'skill', labelAr: 'المهارة', labelEn: 'Skill' },
                       { key: 'subskill', labelAr: 'المهارة الفرعية', labelEn: 'Subskill' },
@@ -387,7 +338,7 @@ export const QuestionsBuilder = (props: any) => {
                   { key: 'course', labelAr: 'الاختبار', labelEn: 'Exam' },
                   { key: 'section', labelAr: 'القسم', labelEn: 'Section' },
                   { key: 'domain', labelAr: 'المجال', labelEn: 'Domain' },
-                  { key: 'standard', labelAr: 'المعيار', labelEn: 'Standard' },
+                  { key: 'standard', labelAr: 'نواتج التعلم', labelEn: 'Learning Outcomes' },
                   { key: 'indicator', labelAr: 'المؤشرات', labelEn: 'Indicators' },
                   { key: 'skill', labelAr: 'المهارة', labelEn: 'Skill', defaultValue: 'General' },
                   { key: 'subskill', labelAr: 'المهارة الفرعية', labelEn: 'Subskill' },

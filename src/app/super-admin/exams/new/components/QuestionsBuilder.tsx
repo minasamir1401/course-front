@@ -285,6 +285,26 @@ export const QuestionsBuilder = (props: any) => {
                     placeholder={language === 'ar' ? 'اختر النوع...' : 'Select Type...'}
                   />
                 </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'النقاط / الدرجة' : 'Points'}</label>
+                  <input
+                    type="number"
+                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px]"
+                    value={tempQuestion.points !== undefined ? tempQuestion.points : 1}
+                    onChange={(e) => updateCurrentQuestionField("points", parseInt(e.target.value) || 0)}
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? '⭐ نقاط XP' : '⭐ XP Points'}</label>
+                  <input
+                    type="number"
+                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px]"
+                    value={tempQuestion.xpPoints !== undefined ? tempQuestion.xpPoints : 10}
+                    onChange={(e) => updateCurrentQuestionField("xpPoints", parseInt(e.target.value) || 0)}
+                  />
+                </div>
               </div>
               
               {/* ── Question Metadata ── */}
@@ -298,7 +318,7 @@ export const QuestionsBuilder = (props: any) => {
                       { key: 'course', labelAr: 'الاختبار', labelEn: 'Exam' },
                       { key: 'section', labelAr: 'القسم', labelEn: 'Section' },
                       { key: 'domain', labelAr: 'المجال', labelEn: 'Domain' },
-                      { key: 'standard', labelAr: 'المعيار', labelEn: 'Standard' },
+                      { key: 'standard', labelAr: 'نواتج التعلم', labelEn: 'Learning Outcomes' },
                       { key: 'indicator', labelAr: 'المؤشرات', labelEn: 'Indicators' },
                       { key: 'skill', labelAr: 'المهارة', labelEn: 'Skill' },
                       { key: 'subskill', labelAr: 'المهارة الفرعية', labelEn: 'Subskill' },
@@ -329,7 +349,7 @@ export const QuestionsBuilder = (props: any) => {
                   { key: 'course', labelAr: 'الاختبار', labelEn: 'Exam' },
                   { key: 'section', labelAr: 'القسم', labelEn: 'Section' },
                   { key: 'domain', labelAr: 'المجال', labelEn: 'Domain' },
-                  { key: 'standard', labelAr: 'المعيار', labelEn: 'Standard' },
+                  { key: 'standard', labelAr: 'نواتج التعلم', labelEn: 'Learning Outcomes' },
                   { key: 'indicator', labelAr: 'المؤشرات', labelEn: 'Indicators' },
                   { key: 'skill', labelAr: 'المهارة', labelEn: 'Skill', defaultValue: 'General' },
                   { key: 'subskill', labelAr: 'المهارة الفرعية', labelEn: 'Subskill' },

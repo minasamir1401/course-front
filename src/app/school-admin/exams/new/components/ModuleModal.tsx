@@ -74,40 +74,62 @@ export const ModuleModal = (props: any) => {
                           <Target className="w-6 h-6 text-indigo-600" />
                           {language === 'ar' ? "بيانات الاختبار الأساسية" : "Basic Assessment Info"}
                        </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                          <div className="space-y-3">
-                            <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "الاختبار (Exam)" : "Exam"}</label>
-                            <input 
-                              type="text"
-                              value={currentModule.course || ""}
-                              onChange={(e) => setCurrentModule({...currentModule, course: e.target.value})}
-                              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 shadow-sm font-bold"
-                              placeholder={language === 'ar' ? "الاختبار" : "Exam"}
-                            />
-                          </div>
-  
-                          <div className="space-y-3">
-                            <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "القسم (Section)" : "Section"}</label>
-                            <input 
-                              type="text"
-                              value={currentModule.section || ""}
-                              onChange={(e) => setCurrentModule({...currentModule, section: e.target.value})}
-                              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 shadow-sm font-bold"
-                              placeholder={language === 'ar' ? "القسم" : "Section"}
-                            />
-                          </div>
-  
-                          <div className="space-y-3">
-                            <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "المجال (Domain)" : "Domain"}</label>
-                            <input 
-                              type="text"
-                              value={currentModule.domain || ""}
-                              onChange={(e) => setCurrentModule({...currentModule, domain: e.target.value})}
-                              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 shadow-sm font-bold"
-                              placeholder={language === 'ar' ? "المجال" : "Domain"}
-                            />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-3">
+                          <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "الاختبار (Exam)" : "Exam"}</label>
+                          <input 
+                            type="text"
+                            value={currentModule.course || ""}
+                            onChange={(e) => setCurrentModule({...currentModule, course: e.target.value})}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 shadow-sm font-bold"
+                            placeholder={language === 'ar' ? "الاختبار" : "Exam"}
+                          />
+                        </div>
+
+                        <div className="space-y-3">
+                          <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "القسم (Section)" : "Section"}</label>
+                          <input 
+                            type="text"
+                            value={currentModule.section || ""}
+                            onChange={(e) => setCurrentModule({...currentModule, section: e.target.value})}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 shadow-sm font-bold"
+                            placeholder={language === 'ar' ? "القسم" : "Section"}
+                          />
+                        </div>
+
+                        <div className="space-y-3">
+                          <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "المجال (Domain)" : "Domain"}</label>
+                          <input 
+                            type="text"
+                            value={currentModule.domain || ""}
+                            onChange={(e) => setCurrentModule({...currentModule, domain: e.target.value})}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 shadow-sm font-bold"
+                            placeholder={language === 'ar' ? "المجال" : "Domain"}
+                          />
+                        </div>
+
+                        <div className="space-y-3">
+                          <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "الصفوف المستهدفة (Target Grades)" : "Target Grades"}</label>
+                          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 max-h-[120px] overflow-y-auto custom-scrollbar flex flex-wrap gap-2">
+                             {['KG1', 'KG2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'].map(g => {
+                               const grades = currentModule.gradeTarget ? currentModule.gradeTarget.split(',').filter(Boolean) : [];
+                               const isSelected = grades.includes(g);
+                               return (
+                                 <label key={g} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border cursor-pointer transition-all ${isSelected ? 'bg-indigo-50 border-indigo-500 text-indigo-900' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                                    <input type="checkbox" className="hidden" checked={isSelected} onChange={() => {
+                                      if (isSelected) {
+                                        setCurrentModule({...currentModule, gradeTarget: grades.filter(x => x !== g).join(',')});
+                                      } else {
+                                        setCurrentModule({...currentModule, gradeTarget: [...grades, g].join(',')});
+                                      }
+                                    }} />
+                                    <span className="text-[10px] font-black">{g}</span>
+                                 </label>
+                               );
+                             })}
                           </div>
                         </div>
+                      </div>
                      </div>
                   </div>
                 )}

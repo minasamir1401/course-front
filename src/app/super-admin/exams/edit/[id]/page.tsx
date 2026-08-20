@@ -140,6 +140,8 @@ export default function SuperAdminEditExamPage() {
             {showSettings && (
               <SettingsPanel 
                 {...state}
+                {...moduleManagement}
+                metadataExcelRef={metadataExcelRef}
                 language={language}
                 t={t}
                 toggleCourseSubject={toggleCourseSubject}

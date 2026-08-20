@@ -1,13 +1,13 @@
 // @ts-nocheck
 import React from 'react';
-import { Settings, Layers, CheckCircle2, ListOrdered } from 'lucide-react';
+import { Settings, Layers, CheckCircle2, ListOrdered, Upload, Download, FileText } from 'lucide-react';
 import { CustomSelect } from '@/components/ui/CustomSelect';
 import FileUpload from '@/components/FileUpload';
 import { CATEGORIES } from '../constants';
 import { getGradeName, getSubjectName } from '../utils/examUtils';
 
 export const SettingsPanel = (props: any) => {
-  const { examData, setExamData, language, t, toggleCourseSubject, schools, toggleCourseSchool, selectAllSchools, modules } = props;
+  const { examData, setExamData, language, t, toggleCourseSubject, schools, toggleCourseSchool, selectAllSchools, modules, handleExcelUpload, downloadMetadataTemplate, availableMetadata } = props;
 
   return (
     <>
@@ -229,56 +229,60 @@ export const SettingsPanel = (props: any) => {
                         />
                       </div>
                     </div>
-                                        {/* Advanced Module Metadata */}
-                    <div className="bg-indigo-50 border border-indigo-100 p-6 rounded-3xl space-y-4">
-                      <h4 className="font-black text-indigo-900 flex items-center gap-2">
-                        <Settings className="w-5 h-5 text-indigo-600" />
-                        {language === 'ar' ? 'البيانات الوصفية المتقدمة' : 'Advanced Metadata'}
-                      </h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <label className="text-xs font-black text-indigo-700 uppercase tracking-widest">{language === 'ar' ? 'الكورس' : 'Course'}</label>
-                          <input type="text" value={examData.courseName || ""} onChange={(e) => setExamData({...examData, courseName: e.target.value})} className="w-full bg-white border border-indigo-200 rounded-xl py-3 px-4 text-sm font-bold outline-none focus:border-indigo-600 transition-all" />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-xs font-black text-indigo-700 uppercase tracking-widest">{language === 'ar' ? 'القسم' : 'Section'}</label>
-                          <input type="text" value={examData.section || ""} onChange={(e) => setExamData({...examData, section: e.target.value})} className="w-full bg-white border border-indigo-200 rounded-xl py-3 px-4 text-sm font-bold outline-none focus:border-indigo-600 transition-all" />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-xs font-black text-indigo-700 uppercase tracking-widest">{language === 'ar' ? 'المجال' : 'Domain'}</label>
-                          <input type="text" value={examData.domain || ""} onChange={(e) => setExamData({...examData, domain: e.target.value})} className="w-full bg-white border border-indigo-200 rounded-xl py-3 px-4 text-sm font-bold outline-none focus:border-indigo-600 transition-all" />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-xs font-black text-indigo-700 uppercase tracking-widest">{language === 'ar' ? 'مخرجات التعلم' : 'Learning Outcomes'}</label>
-                          <input type="text" value={examData.learningOutcomes || ""} onChange={(e) => setExamData({...examData, learningOutcomes: e.target.value})} className="w-full bg-white border border-indigo-200 rounded-xl py-3 px-4 text-sm font-bold outline-none focus:border-indigo-600 transition-all" />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-xs font-black text-indigo-700 uppercase tracking-widest">{language === 'ar' ? 'المؤشرات' : 'Indicators'}</label>
-                          <input type="text" value={examData.indicators || ""} onChange={(e) => setExamData({...examData, indicators: e.target.value})} className="w-full bg-white border border-indigo-200 rounded-xl py-3 px-4 text-sm font-bold outline-none focus:border-indigo-600 transition-all" />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-xs font-black text-indigo-700 uppercase tracking-widest">{language === 'ar' ? 'المهارات' : 'Skills'}</label>
-                          <input type="text" value={examData.skills || ""} onChange={(e) => setExamData({...examData, skills: e.target.value})} className="w-full bg-white border border-indigo-200 rounded-xl py-3 px-4 text-sm font-bold outline-none focus:border-indigo-600 transition-all" />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-xs font-black text-indigo-700 uppercase tracking-widest">{language === 'ar' ? 'المرحلة المستهدفة' : 'Grade Target'}</label>
-                          <input type="text" value={examData.gradeTarget || ""} onChange={(e) => setExamData({...examData, gradeTarget: e.target.value})} className="w-full bg-white border border-indigo-200 rounded-xl py-3 px-4 text-sm font-bold outline-none focus:border-indigo-600 transition-all" />
-                        </div>
-                      </div>
                     </div>
 
-<div className="space-y-2">
-                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "سياسة النتيجة" : "Result Policy"}</label>
-                      <select
-                        value={examData.resultVisibility}
-                        onChange={(e) => setExamData({...examData, resultVisibility: e.target.value})}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold outline-none focus:border-indigo-600 transition-all"
-                      >
-                        <option value="SHOW_SCORE">{language === 'ar' ? "إظهار النتيجة فقط" : "Show Score Only"}</option>
-                        <option value="SHOW_SCORE_ANSWERS">{language === 'ar' ? "إظهار النتيجة والإجابات" : "Show Score & Answers"}</option>
-                        <option value="HIDDEN">{language === 'ar' ? "إخفاء النتيجة" : "Hidden"}</option>
-                      </select>
+                    {/* Advanced Metadata Excel Upload */}
+                    <div className="bg-slate-50 border border-slate-200 p-6 rounded-[35px] space-y-4">
+                      <h4 className="font-black text-slate-800 flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-indigo-600" />
+                        {language === 'ar' ? 'البيانات الوصفية المتقدمة' : 'Advanced Metadata'}
+                      </h4>
+                      <p className="text-xs text-slate-500 font-bold leading-relaxed">
+                        {language === 'ar' ? 'قم برفع ملف الإكسيل الخاص بالبيانات الوصفية (المجالات، المعايير، المؤشرات، نواتج التعلم) ليتم استخدامها كخيارات عند إضافة الأسئلة.' : 'Upload the metadata Excel file (Domains, Standards, Indicators, Outcomes) to be used as options when adding questions.'}
+                      </p>
+                      
+                      <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => handleExcelUpload && handleExcelUpload('metadata')}
+                          className="flex-1 bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 text-indigo-700 px-4 py-3 rounded-2xl font-black flex justify-center items-center gap-2 transition-all shadow-sm text-sm"
+                        >
+                          <Upload className="w-4 h-4" />
+                          {language === 'ar' ? 'رفع ملف الإكسيل' : 'Upload Excel'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => downloadMetadataTemplate && downloadMetadataTemplate()}
+                          className="flex-1 bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200 text-emerald-700 px-4 py-3 rounded-2xl font-black flex justify-center items-center gap-2 transition-all shadow-sm text-sm"
+                        >
+                          <Download className="w-4 h-4" />
+                          {language === 'ar' ? 'تحميل القالب' : 'Download Template'}
+                        </button>
+                      </div>
+                      
+                      {availableMetadata && (availableMetadata.domains?.length > 0 || availableMetadata.standards?.length > 0) && (
+                        <div className="mt-4 bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-start gap-2">
+                          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                          <p className="text-xs text-emerald-700 font-bold leading-relaxed">
+                            {language === 'ar' ? 'تم رفع البيانات الوصفية بنجاح وهي متاحة الآن في الأسئلة.' : 'Metadata uploaded successfully and is now available in questions.'}
+                          </p>
+                        </div>
+                      )}
                     </div>
+
+                  </div>
+                </div>
+
+                <div className="bg-indigo-50 border border-indigo-100 p-8 rounded-[40px] flex items-center gap-6">
+                   <div className="w-16 h-16 bg-indigo-600 rounded-3xl flex items-center justify-center text-white shadow-xl shadow-indigo-600/20">
+                      <ListOrdered className="w-8 h-8" />
+                   </div>
+                   <div>
+                      <h4 className="text-xl font-black text-slate-900">{language === 'ar' ? 'محتوى التقييم' : 'Assessment Content'}</h4>
+                      <p className="text-indigo-600 font-bold">{language === 'ar' ? `تم إضافة ${modules.length} موديولات` : `${modules.length} Modules Added`}</p>
+                   </div>
+                </div>
+              </div>
                   </div>
                 </div>
 
