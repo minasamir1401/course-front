@@ -342,7 +342,7 @@ export const QuestionsBuilder = (props: any) => {
                       { key: 'dok', labelAr: 'عمق المعرفة (DOK)', labelEn: 'DOK' },
                       { key: 'cognitive', labelAr: 'المستوى المعرفي', labelEn: 'Cognitive' },
                       { key: 'errorPattern', labelAr: 'نمط الخطأ', labelEn: 'Error Pattern' },
-                      { key: 'estimatedTime', labelAr: 'الوقت المقدر', labelEn: 'Estimated Time' },
+                      { key: 'estimatedTime', labelAr: 'Estimated Time', labelEn: 'Estimated Time' },
                     ];
                     const data: any = {};
                     metadataMap.forEach(field => {
@@ -373,7 +373,7 @@ export const QuestionsBuilder = (props: any) => {
                   { key: 'dok', labelAr: 'عمق المعرفة (DOK)', labelEn: 'DOK' },
                   { key: 'cognitive', labelAr: 'المستوى المعرفي', labelEn: 'Cognitive' },
                   { key: 'errorPattern', labelAr: 'نمط الخطأ', labelEn: 'Error Pattern' },
-                  { key: 'estimatedTime', labelAr: 'الوقت المقدر', labelEn: 'Estimated Time' },
+                  { key: 'estimatedTime', labelAr: 'Estimated Time', labelEn: 'Estimated Time' },
                 ].map((field: any) => (
                   <div key={field.key} className="flex flex-col gap-2">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? field.labelAr : field.labelEn}</label>

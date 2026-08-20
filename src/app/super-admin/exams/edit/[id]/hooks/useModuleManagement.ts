@@ -462,10 +462,16 @@ const openAddModuleModal = () => {
       list = currentModule[source] || [];
     }
     const wsData = [];
-    wsData.push(['Question ID', 'Question Text', 'Exam', 'Section', 'Domain', 'Learning Outcomes', 'Indicators', 'Skill', 'Subskill', 'Micro Skill', 'Difficulty', 'DOK', 'Cognitive', 'Error Pattern', 'Estimated Time']);
+    const headersAr = ['Question ID', 'Question Text', 'الاختبار', 'القسم', 'المجال', 'نواتج التعلم', 'المؤشرات', 'المهارة', 'المهارة الفرعية', 'المهارة الدقيقة', 'الصعوبة', 'عمق المعرفة (DOK)', 'المستوى المعرفي', 'نمط الخطأ', 'Estimated Time'];
+    const headersEn = ['Question ID', 'Question Text', 'Exam', 'Section', 'Domain', 'Learning Outcomes', 'Indicators', 'Skill', 'Subskill', 'Micro Skill', 'Difficulty', 'DOK', 'Cognitive', 'Error Pattern', 'Estimated Time'];
+    wsData.push(language === 'ar' ? headersAr : headersEn);
     
     if (list.length === 0) {
-      wsData.push(['', 'Sample Question...', 'مقدمة في الفيزياء', 'القسم الاول', 'الفيزياء', 'Student will be able to...', 'Identifies Basic Concepts', 'General', 'Specific', 'Micro', 'Medium', 'DOK 2', 'Application', '', '5 mins']);
+      if (language === 'ar') {
+        wsData.push(['', 'نص السؤال...', 'مقدمة في الفيزياء', 'القسم الاول', 'الفيزياء', 'Student will be able to...', 'Identifies Basic Concepts', 'General', 'Specific', 'Micro', 'Medium', 'DOK 2', 'Application', '', '5 mins']);
+      } else {
+        wsData.push(['', 'Sample Question...', 'Physics Intro', 'Section One', 'Physics', 'Student will be able to...', 'Identifies Basic Concepts', 'General', 'Specific', 'Micro', 'Medium', 'DOK 2', 'Application', '', '5 mins']);
+      }
     } else {
       list.forEach((q: any) => {
         const cleanText = q.text ? q.text.replace(/<[^>]*>?/gm, '').substring(0, 100) : '';
