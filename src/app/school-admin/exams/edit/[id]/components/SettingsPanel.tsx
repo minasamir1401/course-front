@@ -229,7 +229,6 @@ export const SettingsPanel = (props: any) => {
                         />
                       </div>
                     </div>
-                    </div>
 
                     {/* Advanced Metadata Excel Upload */}
                     <div className="bg-slate-50 border border-slate-200 p-6 rounded-[35px] space-y-4">
