@@ -70,58 +70,45 @@ export const ModuleModal = (props: any) => {
 
 
                 <div className="bg-white p-8 rounded-[35px] border border-slate-100 space-y-8">
-                  <h4 className="text-xl font-black text-slate-900 flex items-center gap-3">
-                    <Target className="w-6 h-6 text-indigo-600" />
-                    {language === 'ar' ? "بيانات الموديول" : "Module Metadata"}
-                  </h4>
-                  {/* ── Exam/Module Metadata ── */}
-                  <div className="flex justify-between items-center mb-4 mt-6">
-                    <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest">
-                      {language === 'ar' ? 'بيانات الميتا داتا' : 'Metadata Fields'}
-                    </h4>
-                    <button 
-                      onClick={() => {
-                        const metadataMap = [
-                          { key: 'course', labelAr: 'الاختبار', labelEn: 'Exam' },
-                          { key: 'section', labelAr: 'القسم', labelEn: 'Section' },
-                          { key: 'domain', labelAr: 'المجال', labelEn: 'Domain' },
-                          { key: 'gradeTarget', labelAr: 'الصف المستهدف', labelEn: 'Grade Target' },
-                        ];
-                        const data: any = {};
-                        metadataMap.forEach(field => {
-                          data[language === 'ar' ? field.labelAr : field.labelEn] = currentModule[field.key] || field.defaultValue || "";
-                        });
-                        const worksheet = XLSX.utils.json_to_sheet([data]);
-                        const workbook = XLSX.utils.book_new();
-                        XLSX.utils.book_append_sheet(workbook, worksheet, "Metadata Template");
-                        XLSX.writeFile(workbook, "Metadata_Template.xlsx");
-                      }}
-                      className="flex items-center gap-2 bg-green-50 text-green-600 hover:bg-green-100 px-4 py-2 rounded-xl text-xs font-bold transition-colors border border-green-200"
-                    >
-                      <Download className="w-4 h-4" />
-                      {language === 'ar' ? 'تحميل قالب الميتا داتا' : 'Download Metadata Template'}
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6 bg-slate-50 border border-slate-100 rounded-[24px]">
-                    {[
-                      { key: 'course', labelAr: 'الاختبار', labelEn: 'Exam' },
-                      { key: 'section', labelAr: 'القسم', labelEn: 'Section' },
-                      { key: 'domain', labelAr: 'المجال', labelEn: 'Domain' },
-                      { key: 'gradeTarget', labelAr: 'الصف المستهدف', labelEn: 'Grade Target' },
-                    ].map((field) => (
-                      <div key={field.key} className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? field.labelAr : field.labelEn}</label>
-                        <input
+                   <h4 className="text-xl font-black text-slate-900 flex items-center gap-3">
+                      <Target className="w-6 h-6 text-indigo-600" />
+                      {language === 'ar' ? "بيانات الاختبار الأساسية" : "Basic Assessment Info"}
+                   </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="space-y-3">
+                        <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "الاختبار (Exam)" : "Exam"}</label>
+                        <input 
                           type="text"
-                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold"
-                          placeholder={language === 'ar' ? field.labelAr : field.labelEn}
-                          value={currentModule[field.key] || field.defaultValue || ''}
-                          onChange={(e) => setCurrentModule({ ...currentModule, [field.key]: e.target.value })}
+                          value={currentModule.course || ""}
+                          onChange={(e) => setCurrentModule({...currentModule, course: e.target.value})}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 shadow-sm font-bold"
+                          placeholder={language === 'ar' ? "الاختبار" : "Exam"}
                         />
                       </div>
-                    ))}
-                  </div>
-                </div>
+
+                      <div className="space-y-3">
+                        <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "القسم (Section)" : "Section"}</label>
+                        <input 
+                          type="text"
+                          value={currentModule.section || ""}
+                          onChange={(e) => setCurrentModule({...currentModule, section: e.target.value})}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 shadow-sm font-bold"
+                          placeholder={language === 'ar' ? "القسم" : "Section"}
+                        />
+                      </div>
+
+                      <div className="space-y-3">
+                        <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "المجال (Domain)" : "Domain"}</label>
+                        <input 
+                          type="text"
+                          value={currentModule.domain || ""}
+                          onChange={(e) => setCurrentModule({...currentModule, domain: e.target.value})}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 shadow-sm font-bold"
+                          placeholder={language === 'ar' ? "المجال" : "Domain"}
+                        />
+                      </div>
+                    </div>
+                 </div>
               </div>
             )}
 

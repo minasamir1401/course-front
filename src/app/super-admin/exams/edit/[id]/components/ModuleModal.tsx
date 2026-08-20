@@ -67,8 +67,47 @@ export const ModuleModal = (props: any) => {
                         />
                       </div>
                     </div>
-
-
+                    
+                    <div className="bg-white p-8 rounded-[35px] border border-slate-100 space-y-8">
+                       <h4 className="text-xl font-black text-slate-900 flex items-center gap-3">
+                          <Target className="w-6 h-6 text-indigo-600" />
+                          {language === 'ar' ? "بيانات الاختبار الأساسية" : "Basic Assessment Info"}
+                       </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          <div className="space-y-3">
+                            <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "الاختبار (Exam)" : "Exam"}</label>
+                            <input 
+                              type="text"
+                              value={currentModule.course || ""}
+                              onChange={(e) => setCurrentModule({...currentModule, course: e.target.value})}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 shadow-sm font-bold"
+                              placeholder={language === 'ar' ? "الاختبار" : "Exam"}
+                            />
+                          </div>
+  
+                          <div className="space-y-3">
+                            <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "القسم (Section)" : "Section"}</label>
+                            <input 
+                              type="text"
+                              value={currentModule.section || ""}
+                              onChange={(e) => setCurrentModule({...currentModule, section: e.target.value})}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 shadow-sm font-bold"
+                              placeholder={language === 'ar' ? "القسم" : "Section"}
+                            />
+                          </div>
+  
+                          <div className="space-y-3">
+                            <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "المجال (Domain)" : "Domain"}</label>
+                            <input 
+                              type="text"
+                              value={currentModule.domain || ""}
+                              onChange={(e) => setCurrentModule({...currentModule, domain: e.target.value})}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 shadow-sm font-bold"
+                              placeholder={language === 'ar' ? "المجال" : "Domain"}
+                            />
+                          </div>
+                        </div>
+                     </div>
                   </div>
                 )}
 
