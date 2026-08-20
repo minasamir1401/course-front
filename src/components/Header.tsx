@@ -178,12 +178,7 @@ export default function Header({
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl overflow-hidden shadow-lg shadow-indigo-100 flex items-center justify-center transform group-hover:scale-105 transition-transform bg-white border border-slate-100">
                   <img src="/logo.jpeg" alt="Logo" className="w-full h-full object-cover" />
                 </div>
-                <div className="hidden sm:block">
-                  <h2 className="text-lg font-black text-slate-900 tracking-tight leading-none mb-1 flex items-center gap-0.5" dir="ltr">
-                    <span className="text-indigo-600">K</span>levro
-                  </h2>
-                  <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest leading-none mt-1">LMS Platform</p>
-                </div>
+
               </div>
             </div>
           )}

@@ -30,12 +30,7 @@ export default function StudentSidebar() {
         <div className="w-12 h-12 rounded-2xl overflow-hidden shadow-lg shadow-indigo-100 transition-transform group-hover:scale-105 bg-white border border-slate-100 flex items-center justify-center">
           <img src="/logo.jpeg" alt="Logo" className="w-full h-full object-cover" />
         </div>
-        <div className="animate-in fade-in slide-in-from-right duration-500">
-          <h1 className="text-xl font-black text-slate-900 italic tracking-tighter leading-none flex items-center gap-0.5" dir="ltr">
-            <span className="text-indigo-600">K</span>levro
-          </h1>
-          <span className="text-indigo-600 text-[10px] block font-black not-italic tracking-[2px] uppercase mt-1">LMS Portal</span>
-        </div>
+
       </div>
 
       {/* Navigation Links */}
