@@ -6,7 +6,7 @@ import MathInput from '@/components/MathInput';
 import { getOptionLetter, cleanOptionText } from '@/lib/utils';
 import { QUESTION_TYPES, SECTION_STYLE_PRESETS } from '../constants';
 import { parseJson } from '../utils/examUtils';
-import {  ChevronUp, ChevronDown, CheckCircle2, Edit2, Trash2, Plus, FileText, Settings, Activity, MoveUp, MoveDown, Mic, Video, Image as ImageIcon, Layout, Check , HelpCircle , Upload, Download, Target, X, Save } from 'lucide-react';
+import { ChevronUp, ChevronDown, CheckCircle2, Edit2, Trash2, Plus, FileText, Settings, Activity, MoveUp, MoveDown, Mic, Video, Image as ImageIcon, Layout, Check, HelpCircle, Upload, Download, Target, X, Save } from 'lucide-react';
 import { CustomSelect } from '@/components/ui/CustomSelect';
 
 
@@ -16,26 +16,26 @@ import InteractiveQuestionEditor from '@/components/InteractiveQuestionEditor';
 export const QuestionsBuilder = (props: any) => {
   const { currentModule, setCurrentModule, activeSubExamIndex, source, language, assignmentsExcelRef, questionsExcelRef, handleAssignmentsExcelChange, handleQuestionsExcelChange, handleExcelUpload, downloadQuestionsTemplate, handleAddQuestionForSource, showQuestionForm, setShowQuestionForm, list, moveQuestionForSource, expandedQuestionIndex, setExpandedQuestionIndex, handleEditQuestionForSource, removeQuestionForSource, tempQuestion, setTempQuestion, updateCurrentQuestionField, customSkills, setCustomSkills, allExistingSkills, availableMetadata, openDropdownId, setOpenDropdownId, addQuestionSection, updateQuestionSectionContent, removeQuestionSection, isQuestionCorrectAnswer, toggleQuestionCorrectAnswer, updateQuestionOption, handleSaveQuestionForSource, editingQuestionIndex } = props;
 
-const renderQuestionsBuilderFunc = () => {
+  const renderQuestionsBuilderFunc = () => {
     const list = (source === 'questions' && activeSubExamIndex !== null && currentModule.subExams && currentModule.subExams[activeSubExamIndex]) ? (currentModule.subExams[activeSubExamIndex].questions || []) : (currentModule[source] || []);
-    const headerLabel = source === 'assignments' 
+    const headerLabel = source === 'assignments'
       ? (language === 'ar' ? 'واجبات وتكليفات الدرس (Assignments)' : 'Lesson Assignments')
       : (language === 'ar' ? 'تدريبات وتقييمات الدرس (Quiz Me)' : 'Quiz Me Practice');
-    
+
     const headerDesc = source === 'assignments'
       ? (language === 'ar' ? 'قم بإضافة التكليفات التطبيقية والواجبات المنزلية للطلاب' : 'Add application homework and assignments for students')
       : (language === 'ar' ? 'قم بإضافة أسئلة لاختبار الطالب في هذا الموديول' : 'Add questions to test student in this module');
 
     return (
       <div className="space-y-8 animate-in fade-in duration-300">
-        <input 
-          type="file" 
-          ref={source === 'assignments' ? assignmentsExcelRef : questionsExcelRef} 
-          style={{ display: 'none' }} 
-          accept=".xlsx,.xls" 
-          onChange={source === 'assignments' ? handleAssignmentsExcelChange : handleQuestionsExcelChange} 
+        <input
+          type="file"
+          ref={source === 'assignments' ? assignmentsExcelRef : questionsExcelRef}
+          style={{ display: 'none' }}
+          accept=".xlsx,.xls"
+          onChange={source === 'assignments' ? handleAssignmentsExcelChange : handleQuestionsExcelChange}
         />
-        
+
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
           <div>
             <h4 className="text-xl font-black text-slate-900 flex items-center gap-3">
@@ -45,7 +45,7 @@ const renderQuestionsBuilderFunc = () => {
             <p className="text-slate-400 text-sm font-bold mt-1">{headerDesc}</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <button 
+            <button
               type="button"
               onClick={() => handleExcelUpload(source === 'assignments' ? 'assignments' : 'questions')}
               className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
@@ -53,7 +53,7 @@ const renderQuestionsBuilderFunc = () => {
               <Upload className="w-4 h-4" />
               {language === 'ar' ? 'استيراد Excel' : 'Import Excel'}
             </button>
-            <button 
+            <button
               type="button"
               onClick={() => downloadQuestionsTemplate(source === 'assignments' ? 'assignments' : 'questions')}
               className="bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
@@ -61,7 +61,7 @@ const renderQuestionsBuilderFunc = () => {
               <Download className="w-4 h-4" />
               {language === 'ar' ? 'تحميل نموذج' : 'Template'}
             </button>
-            <button 
+            <button
               type="button"
               onClick={() => handleAddQuestionForSource(source)}
               className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all shadow-lg cursor-pointer"
@@ -84,7 +84,7 @@ const renderQuestionsBuilderFunc = () => {
                   <h4 className="text-xl font-black text-slate-800 mb-1">{language === 'ar' ? 'لا يوجد أسئلة مضافة' : 'No questions added yet'}</h4>
                   <p className="text-slate-400 font-bold text-xs max-w-sm">{language === 'ar' ? 'ابدأ بإضافة سؤال جديد أو استيراده من ملف إكسيل' : 'Start by adding a new question or importing from Excel'}</p>
                 </div>
-                <button 
+                <button
                   type="button"
                   onClick={() => handleAddQuestionForSource(source)}
                   className="bg-indigo-50 text-indigo-600 px-8 py-3.5 rounded-2xl font-black transition-all hover:bg-indigo-100 cursor-pointer text-xs"
@@ -112,7 +112,7 @@ const renderQuestionsBuilderFunc = () => {
                           </span>
                           {q.standard && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">{q.standard}</span>}
                         </div>
-                        <div 
+                        <div
                           className="text-slate-700 font-bold truncate text-sm"
                           dangerouslySetInnerHTML={{ __html: (q.text || "").replace(/<[^>]*>?/gm, '').substring(0, 120) + '...' }}
                         />
@@ -120,7 +120,7 @@ const renderQuestionsBuilderFunc = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <button 
+                      <button
                         type="button"
                         onClick={() => setExpandedQuestionIndex(expandedQuestionIndex === index ? null : index)}
                         className="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center hover:bg-slate-100 hover:text-indigo-600 transition-all"
@@ -128,7 +128,7 @@ const renderQuestionsBuilderFunc = () => {
                       >
                         {expandedQuestionIndex === index ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                       </button>
-                      <button 
+                      <button
                         type="button"
                         onClick={() => handleEditQuestionForSource(source, index)}
                         className="w-10 h-10 bg-blue-50 text-blue-400 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"
@@ -136,7 +136,7 @@ const renderQuestionsBuilderFunc = () => {
                       >
                         <Edit2 className="w-5 h-5" />
                       </button>
-                      <button 
+                      <button
                         type="button"
                         onClick={() => removeQuestionForSource(source, index)}
                         className="w-10 h-10 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all"
@@ -154,7 +154,7 @@ const renderQuestionsBuilderFunc = () => {
                         <div className="space-y-4">
                           <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'نص السؤال / المحتوى:' : 'Question Content:'}</h5>
                           <HtmlRenderer html={q.text} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm text-sm font-bold" />
-                          
+
                           {q.learningOutcome && (
                             <div className="flex items-center gap-2 text-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-150 w-fit text-xs font-bold">
                               <Target className="w-4 h-4" />
@@ -162,7 +162,7 @@ const renderQuestionsBuilderFunc = () => {
                             </div>
                           )}
                         </div>
-                        
+
                         <div className="space-y-4">
                           {q.type !== 'TEXT' && (
                             <>
@@ -188,8 +188,8 @@ const renderQuestionsBuilderFunc = () => {
                                 </div>
                               ) : q.type === 'FLASH_CARD' ? (
                                 <div className="p-4 bg-slate-50 border border-slate-150 rounded-2xl text-xs space-y-2 font-bold text-right" dir="rtl">
-                                  <p className="text-slate-800"><span className="text-indigo-650">🎴 {language === 'ar' ? 'الوجه الأمامي (السؤال):' : 'Front (Question):'}</span> {parseJson(q.options, {front: ""}).front || q.text}</p>
-                                  <p className="text-slate-800"><span className="text-indigo-650">✨ {language === 'ar' ? 'الوجه الخلفي (الإجابة):' : 'Back (Answer):'}</span> {parseJson(q.options, {back: ""}).back || q.correctAnswer}</p>
+                                  <p className="text-slate-800"><span className="text-indigo-650">🎴 {language === 'ar' ? 'الوجه الأمامي (السؤال):' : 'Front (Question):'}</span> {parseJson(q.options, { front: "" }).front || q.text}</p>
+                                  <p className="text-slate-800"><span className="text-indigo-650">✨ {language === 'ar' ? 'الوجه الخلفي (الإجابة):' : 'Back (Answer):'}</span> {parseJson(q.options, { back: "" }).back || q.correctAnswer}</p>
                                 </div>
                               ) : (
                                 <div className="p-4 bg-slate-50 border border-slate-150 rounded-2xl text-xs space-y-1.5 font-bold text-right" dir="rtl">
@@ -236,25 +236,25 @@ const renderQuestionsBuilderFunc = () => {
             <div className="bg-indigo-600 px-8 py-5 flex justify-between items-center">
               <h4 className="text-white font-black flex items-center gap-3">
                 <Plus className="w-5 h-5" />
-                {editingQuestionIndex !== null 
-                  ? (language === 'ar' ? `تعديل السؤال #${editingQuestionIndex + 1}` : `Edit Question #${editingQuestionIndex + 1}`) 
+                {editingQuestionIndex !== null
+                  ? (language === 'ar' ? `تعديل السؤال #${editingQuestionIndex + 1}` : `Edit Question #${editingQuestionIndex + 1}`)
                   : (language === 'ar' ? 'إضافة سؤال تفاعلي جديد' : 'Add New Question')}
               </h4>
-              <button 
+              <button
                 type="button"
-                onClick={() => { setShowQuestionForm(false); setCurrentModule({...currentModule, _isStandalone: false}); }}
+                onClick={() => { setShowQuestionForm(false); setCurrentModule({ ...currentModule, _isStandalone: false }); }}
                 className="w-10 h-10 bg-white/10 text-white rounded-xl flex items-center justify-center hover:bg-white/20 transition-all"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
-            
+
             <div className="p-8 md:p-12 space-y-8">
               {/* Unified Metadata & Configuration Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 p-6 bg-slate-50 border border-slate-200 rounded-[30px] shadow-sm mb-6">
                 <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'نوع السؤال' : 'Question Type'}</label>
-                  <CustomSelect 
+                  <CustomSelect
                     className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
                     value={tempQuestion.type}
                     onChange={(val) => {
@@ -274,9 +274,9 @@ const renderQuestionsBuilderFunc = () => {
                   />
                 </div>
 
-                                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المجال' : 'Domain'}</label>
-                  <CustomSelect 
+                  <CustomSelect
                     className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px]"
                     value={tempQuestion.domain || ""}
                     onChange={(val) => updateCurrentQuestionField("domain", val)}
@@ -287,7 +287,7 @@ const renderQuestionsBuilderFunc = () => {
 
                 <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المعيار' : 'Standard'}</label>
-                  <CustomSelect 
+                  <CustomSelect
                     className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px] truncate"
                     value={tempQuestion.standard || ""}
                     onChange={(val) => updateCurrentQuestionField("standard", val)}
@@ -298,7 +298,7 @@ const renderQuestionsBuilderFunc = () => {
 
                 <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المؤشر' : 'Indicator'}</label>
-                  <CustomSelect 
+                  <CustomSelect
                     className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px] truncate"
                     value={tempQuestion.indicator || ""}
                     onChange={(val) => updateCurrentQuestionField("indicator", val)}
@@ -309,7 +309,7 @@ const renderQuestionsBuilderFunc = () => {
 
                 <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'ناتج التعلم (LO)' : 'Learning Outcome (LO)'}</label>
-                  <CustomSelect 
+                  <CustomSelect
                     className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
                     value={tempQuestion.dok || ""}
                     onChange={(val) => updateCurrentQuestionField("dok", val)}
@@ -325,7 +325,7 @@ const renderQuestionsBuilderFunc = () => {
 
                 <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'النقاط / الدرجة' : 'Points'}</label>
-                  <input 
+                  <input
                     type="number"
                     className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px]"
                     value={tempQuestion.points !== undefined ? tempQuestion.points : 1}
@@ -336,14 +336,14 @@ const renderQuestionsBuilderFunc = () => {
                 <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? '⭐ نقاط XP' : '⭐ XP Points'}</label>
                   <input
-                      type="number"
-                      className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px]"
-                      value={tempQuestion.xpPoints !== undefined ? tempQuestion.xpPoints : 10}
-                      onChange={(e) => updateCurrentQuestionField("xpPoints", parseInt(e.target.value) || 0)}
-                    />
+                    type="number"
+                    className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px]"
+                    value={tempQuestion.xpPoints !== undefined ? tempQuestion.xpPoints : 10}
+                    onChange={(e) => updateCurrentQuestionField("xpPoints", parseInt(e.target.value) || 0)}
+                  />
                 </div>
 
-                
+
               </div>
 
               {/* Rich Text Editor for Question Text */}
@@ -364,7 +364,7 @@ const renderQuestionsBuilderFunc = () => {
                     <p className="text-slate-400 text-[10px] font-bold mt-0.5">{language === 'ar' ? 'أضف تلميحات أو ملاحظات أو تفسيرات تفصيلية لهذا السؤال' : 'Add hints, tips, or detailed explanations'}</p>
                   </div>
                   <div className="relative" data-dropdown-root="true">
-                    <button 
+                    <button
                       type="button"
                       onClick={() => setOpenDropdownId(openDropdownId === 'question-sections' ? null : 'question-sections')}
                       className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all cursor-pointer border border-indigo-100"
@@ -377,8 +377,8 @@ const renderQuestionsBuilderFunc = () => {
                           key={secType}
                           type="button"
                           onClick={() => {
-                             addQuestionSection(secType);
-                             setOpenDropdownId(null);
+                            addQuestionSection(secType);
+                            setOpenDropdownId(null);
                           }}
                           className="w-full text-right px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors flex items-center gap-2"
                         >
@@ -401,15 +401,15 @@ const renderQuestionsBuilderFunc = () => {
                             <IconComponent className="w-3.5 h-3.5" />
                             {preset.labelEn}
                           </span>
-                          <button 
+                          <button
                             type="button"
-                            onClick={() => removeQuestionSection(idx)} 
+                            onClick={() => removeQuestionSection(idx)}
                             className="text-red-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
-                        <RichTextEditor 
+                        <RichTextEditor
                           value={sec.content || ""}
                           onChange={(value) => updateQuestionSectionContent(idx, value)}
                           placeholder="Write block content here..."
@@ -432,7 +432,7 @@ const renderQuestionsBuilderFunc = () => {
                   {tempQuestion.type === "TRUE_FALSE" ? (
                     <div className="grid grid-cols-2 gap-6 mt-4 col-span-2">
                       <div className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isQuestionCorrectAnswer(language === 'ar' ? "صحيح" : "True") ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
-                        <div 
+                        <div
                           className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isQuestionCorrectAnswer(language === 'ar' ? "صحيح" : "True") ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200'}`}
                           onClick={() => updateCurrentQuestionField('correctAnswer', language === 'ar' ? "صحيح" : "True")}
                         >
@@ -440,9 +440,9 @@ const renderQuestionsBuilderFunc = () => {
                         </div>
                         <span className="font-black text-xl text-slate-700">{language === 'ar' ? "صحيح" : "True"}</span>
                       </div>
-                      
+
                       <div className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isQuestionCorrectAnswer(language === 'ar' ? "خطأ" : "False") ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
-                        <div 
+                        <div
                           className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isQuestionCorrectAnswer(language === 'ar' ? "خطأ" : "False") ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200'}`}
                           onClick={() => updateCurrentQuestionField('correctAnswer', language === 'ar' ? "خطأ" : "False")}
                         >
@@ -455,7 +455,7 @@ const renderQuestionsBuilderFunc = () => {
                     <>
                       {(tempQuestion.options || ["", "", "", ""]).map((opt: string, oIndex: number) => (
                         <div key={oIndex} className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isQuestionCorrectAnswer(opt) && opt !== "" ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
-                          <div 
+                          <div
                             onClick={() => toggleQuestionCorrectAnswer(oIndex)}
                             className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isQuestionCorrectAnswer(opt) && opt !== "" ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200'}`}
                           >
@@ -464,20 +464,20 @@ const renderQuestionsBuilderFunc = () => {
                           <span className="w-7 h-7 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-xs text-indigo-600 shrink-0 select-none">
                             {getOptionLetter(oIndex, language)}
                           </span>
-                          <MathInput 
+                          <MathInput
                             placeholder={language === 'ar' ? `الخيار ${oIndex + 1} (بدون أ، ب، ج)` : `Option ${oIndex + 1} (no A, B, C)`}
                             className="bg-transparent flex-1"
                             value={opt}
                             onChange={(val) => updateQuestionOption(oIndex, val)}
                           />
                           {tempQuestion.options.length > 2 && (
-                            <button 
-                              type="button" 
+                            <button
+                              type="button"
                               onClick={() => {
                                 const newOptions = [...tempQuestion.options];
                                 newOptions.splice(oIndex, 1);
                                 setTempQuestion({ ...tempQuestion, options: newOptions });
-                              }} 
+                              }}
                               className="text-red-400 hover:text-red-600 transition-all"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -485,8 +485,8 @@ const renderQuestionsBuilderFunc = () => {
                           )}
                         </div>
                       ))}
-                      <div 
-                        onClick={() => setTempQuestion({ ...tempQuestion, options: [...tempQuestion.options, ""] })} 
+                      <div
+                        onClick={() => setTempQuestion({ ...tempQuestion, options: [...tempQuestion.options, ""] })}
                         className="flex items-center justify-center gap-2 p-5 rounded-[22px] border-2 border-dashed border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all cursor-pointer text-indigo-600 font-bold text-sm"
                       >
                         <Plus className="w-5 h-5" />
@@ -499,14 +499,14 @@ const renderQuestionsBuilderFunc = () => {
 
               {/* Form Buttons */}
               <div className="flex justify-end gap-4 pt-4 border-t border-slate-100">
-                <button 
+                <button
                   type="button"
                   onClick={() => setShowQuestionForm(false)}
                   className="px-8 py-4 rounded-2xl font-bold bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all whitespace-nowrap shrink-0 cursor-pointer"
                 >
                   {language === 'ar' ? 'إلغاء' : 'Cancel'}
                 </button>
-                <button 
+                <button
                   type="button"
                   onClick={() => handleSaveQuestionForSource(source)}
                   className="px-10 py-4 rounded-2xl font-black bg-indigo-600 text-white shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 whitespace-nowrap shrink-0 cursor-pointer"
