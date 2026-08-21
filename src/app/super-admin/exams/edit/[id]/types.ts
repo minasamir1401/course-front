@@ -84,5 +84,7 @@ export interface SubExamData {
   duration?: number;
   passingScore?: number;
   attemptsAllowed?: number;
+  publishDate?: string;
+  cutOffDate?: string;
   questions: Question[];
 }

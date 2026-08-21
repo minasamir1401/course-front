@@ -101,8 +101,8 @@ export default function ExamsPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {modules.map(module => (
-                  <Link href={`/exams/${module.id}/details`} key={module.id} className="block bg-white rounded-3xl p-6 border-2 transition-all duration-300 cursor-pointer shadow-sm group relative overflow-hidden border-slate-100 hover:border-indigo-300 hover:shadow-lg">
+                {modules.map((module, index) => (
+                  <Link href={`/exams/${module.id}/details`} key={`${module.id ?? 'module'}-${index}`} className="block bg-white rounded-3xl p-6 border-2 transition-all duration-300 cursor-pointer shadow-sm group relative overflow-hidden border-slate-100 hover:border-indigo-300 hover:shadow-lg">
                     <div className="flex justify-between items-start mb-4">
                       <div className="w-14 h-14 rounded-2xl flex items-center justify-center transition-colors bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white">
                         <Layers className="w-7 h-7" />
@@ -144,8 +144,8 @@ export default function ExamsPage() {
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {portfolio.portfolio.map((p: any) => (
-                    <div key={p.id} className="bg-slate-50 p-5 rounded-2xl border border-slate-100 group hover:border-fuchsia-200 transition-colors">
+                  {portfolio.portfolio.map((p: any, index: number) => (
+                    <div key={`${p.id ?? 'portfolio'}-${index}`} className="bg-slate-50 p-5 rounded-2xl border border-slate-100 group hover:border-fuchsia-200 transition-colors">
                       <div className="flex justify-between items-center mb-3">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-fuchsia-100 text-fuchsia-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">

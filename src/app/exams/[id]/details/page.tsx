@@ -60,6 +60,14 @@ export default function ExamDetailsPage() {
     return { label: language === 'ar' ? "متاح الآن" : "Available Now", color: "bg-green-100 text-green-700", icon: PlayCircle, type: "AVAILABLE" };
   };
 
+  const getChildExamStatus = (exam: any, userSubs: any[]) => {
+    const now = new Date();
+    if (exam.publishDate && now < new Date(exam.publishDate)) return { label: language === 'ar' ? 'قريبًا' : 'Upcoming', color: 'bg-amber-100 text-amber-700', type: 'UPCOMING' };
+    if (exam.cutOffDate && now > new Date(exam.cutOffDate)) return { label: language === 'ar' ? 'منتهي' : 'Expired', color: 'bg-slate-100 text-slate-500', type: 'EXPIRED' };
+    if (exam.attemptsAllowed && userSubs.length >= exam.attemptsAllowed) return { label: language === 'ar' ? 'مكتمل' : 'Completed', color: 'bg-indigo-100 text-indigo-700', type: 'COMPLETED' };
+    return { label: language === 'ar' ? 'متاح الآن' : 'Available Now', color: 'bg-green-100 text-green-700', type: 'AVAILABLE' };
+  };
+
   // We are not fetching portfolio here for simplicity, but we could.
   const getSubmissionsForExam = (examId: string): any[] => {
     return []; // Placeholder for student submissions in details page
@@ -122,7 +130,7 @@ export default function ExamDetailsPage() {
                         <div className="space-y-4">
                           {section.subExams?.map((exam: any) => {
                             const userSubs = getSubmissionsForExam(exam.id);
-                            const status = getExamStatus(exam, userSubs);
+                            const status = getChildExamStatus(exam, userSubs);
                             
                             return (
                               <div key={exam.id} className="bg-white rounded-2xl p-4 md:p-5 border border-slate-200 shadow-sm hover:border-indigo-300 hover:shadow-md transition-all flex flex-col md:flex-row gap-4 items-center group">
@@ -133,6 +141,7 @@ export default function ExamDetailsPage() {
                                   <h5 className="font-black text-slate-800 group-hover:text-indigo-600 transition-colors mb-1">{exam.title}</h5>
                                   <div className="flex items-center justify-center md:justify-start gap-3 text-[11px] font-bold text-slate-500">
                                     <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {exam.duration} {language === 'ar' ? 'دقيقة' : 'Minutes'}</span>
+                                    <span className="flex items-center gap-1"><FileText className="w-3.5 h-3.5" /> {exam.questionsCount ?? exam._count?.questions ?? 0} {language === 'ar' ? 'سؤال' : 'Questions'}</span>
                                     {exam.attemptsAllowed !== 999 && (
                                       <span className="flex items-center gap-1"><Timer className="w-3.5 h-3.5" /> {language === 'ar' ? 'مسموح' : 'Allowed'} {exam.attemptsAllowed} {language === 'ar' ? 'محاولات' : 'Attempts'}</span>
                                     )}
@@ -149,7 +158,7 @@ export default function ExamDetailsPage() {
                                     href={status.type === 'AVAILABLE' ? `/exams/${activeModule.id}?subExamId=${exam.id}` : `/exams/result/${userSubs[0]?.id || ''}`}
                                     className={`px-6 py-3 rounded-xl font-black text-xs transition-colors flex items-center gap-2 ${status.type === 'AVAILABLE' ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                                   >
-                                    {status.type === 'AVAILABLE' ? (language === 'ar' ? 'ابدأ الاختبار' : 'Start Exam') : (language === 'ar' ? 'عرض النتيجة' : 'View Result')}
+                                    {status.type === 'AVAILABLE' ? (language === 'ar' ? 'ابدأ الاختبار' : 'Start Exam') : status.type === 'COMPLETED' ? (language === 'ar' ? 'عرض النتيجة' : 'View Result') : status.label}
                                     <ArrowLeft className="w-4 h-4" />
                                   </Link>
                                 </div>

@@ -299,8 +299,8 @@ export const ModuleModal = (props: any) => {
                               className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all shadow-sm"
                             />
                           </div>
-                          <div>
-                            <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">{language === 'ar' ? 'المحاولات المسموحة' : 'Attempts Allowed'}</label>
+                      <div>
+                        <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">{language === 'ar' ? 'المحاولات المسموحة' : 'Attempts Allowed'}</label>
                             <input 
                               type="number"
                               value={currentModule.subExams?.[activeSubExamIndex]?.attemptsAllowed || ''}
@@ -310,8 +310,16 @@ export const ModuleModal = (props: any) => {
                                 setCurrentModule({ ...currentModule, subExams: newSubExams });
                               }}
                               className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all shadow-sm"
-                            />
-                          </div>
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">{language === 'ar' ? 'تاريخ نشر الاختبار' : 'Exam Publish Date'}</label>
+                        <input type="datetime-local" value={currentModule.subExams?.[activeSubExamIndex]?.publishDate || ''} onChange={(e) => { const next = [...(currentModule.subExams || [])]; next[activeSubExamIndex].publishDate = e.target.value || undefined; setCurrentModule({ ...currentModule, subExams: next }); }} className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all shadow-sm" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">{language === 'ar' ? 'تاريخ إيقاف الاختبار' : 'Exam Cut-off Date'}</label>
+                        <input type="datetime-local" value={currentModule.subExams?.[activeSubExamIndex]?.cutOffDate || ''} onChange={(e) => { const next = [...(currentModule.subExams || [])]; next[activeSubExamIndex].cutOffDate = e.target.value || undefined; setCurrentModule({ ...currentModule, subExams: next }); }} className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-red-500 transition-all shadow-sm" />
+                      </div>
                         </div>
                       </div>
                       {renderQuestionsBuilder('questions')}

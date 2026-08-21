@@ -364,13 +364,13 @@ export default function SuperAdminExamsPage() {
                       <Layers className="w-3.5 h-3.5 text-indigo-400" />
                       <span>{exam.modules?.length || 0}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 shrink-0" title={language === 'ar' ? 'عدد الدروس' : 'Lessons count'}>
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 shrink-0" title={language === 'ar' ? 'عدد الاختبارات' : 'Exams count'}>
                       <BookOpen className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>{exam.modules?.reduce((acc: number, m: any) => acc + (m.subExams?.length || 0), 0) || 0}</span>
+                      <span>{exam.modules?.reduce((acc: number, m: any) => acc + (m.examsCount ?? m.subExams?.length ?? 0), 0) || 0}</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 shrink-0" title={language === 'ar' ? 'إجمالي الأسئلة' : 'Total questions count'}>
                       <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
-                      <span>{(exam._count?.questions || 0) + (exam.modules?.reduce((acc: number, m: any) => acc + (m._count?.questions || 0), 0) || 0) || exam.questions?.length || 0}</span>
+                      <span>{(exam._count?.questions || 0) + (exam.modules?.reduce((acc: number, m: any) => acc + (m.questionsCount ?? m._count?.questions ?? 0), 0) || 0) || exam.questions?.length || 0}</span>
                     </div>
                   </div>
 
@@ -389,10 +389,10 @@ export default function SuperAdminExamsPage() {
                   {/* Actions */}
                   <div className="flex items-center gap-2 ml-auto md:ml-0">
                     <Link
-                      href={`/exams/${exam.id}?preview=true`}
+                      href={`/exams/${exam.id}/details`}
                       target="_blank"
                       className="p-2.5 bg-sky-50 text-sky-400 rounded-xl hover:bg-sky-100 hover:text-sky-600 transition-all border border-sky-100"
-                      title={language === 'ar' ? "معاينة الامتحان" : "Preview Exam"}
+                      title={language === 'ar' ? "عرض الموديول والاختبارات" : "Preview Module and Exams"}
                     >
                       <Eye className="w-4 h-4" />
                     </Link>

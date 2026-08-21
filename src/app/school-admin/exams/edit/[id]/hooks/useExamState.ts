@@ -7,6 +7,15 @@ import { ExamData, ModuleData, Question } from '../types';
 
 export const useExamState = (schoolIdParam: string | null, examId: string) => {
   const router = useRouter();
+  const parseStringArray = (value: any): string[] => {
+    if (Array.isArray(value)) return [...new Set(value.filter(Boolean).map(String))];
+    if (typeof value !== 'string' || !value.trim()) return [];
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return [...new Set(parsed.filter(Boolean).map(String))];
+    } catch {}
+    return [...new Set(value.split(',').map((item) => item.trim()).filter(Boolean))];
+  };
 
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = React.useState(true);
@@ -150,8 +159,8 @@ export const useExamState = (schoolIdParam: string | null, examId: string) => {
             title: exam.title || "",
             description: exam.description || "",
             coverImage: exam.coverImage || "",
-            grades: exam.grades || [],
-            subjects: Array.isArray(exam.subjects) ? exam.subjects : [],
+            grades: parseStringArray(exam.grades),
+            subjects: parseStringArray(exam.subjects),
             country: exam.country || "Ù…ØµØ±",
             isCentral: exam.isCentral !== undefined ? exam.isCentral : true,
             schoolIds: exam.schoolIds || [],

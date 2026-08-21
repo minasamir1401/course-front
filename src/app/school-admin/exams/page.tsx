@@ -240,11 +240,11 @@ export default function ExamsListPage() {
                     </div>
                     <div className="flex items-center gap-1.5 text-slate-600 text-xs font-bold bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100" title={language === 'ar' ? 'عدد الدروس' : 'Lessons count'}>
                       <BookOpen className="w-4 h-4 text-emerald-500" />
-                      {exam.modules?.reduce((acc: number, m: any) => acc + (m.subExams?.length || 0), 0) || 0} {language === 'ar' ? 'درس' : 'Lessons'}
+                      {exam.modules?.reduce((acc: number, m: any) => acc + (m.examsCount ?? m.subExams?.length ?? 0), 0) || 0} {language === 'ar' ? 'اختبار' : 'Exams'}
                     </div>
                     <div className="flex items-center gap-1.5 text-slate-600 text-xs font-bold bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100" title={language === 'ar' ? 'إجمالي الأسئلة' : 'Total questions'}>
                       <HelpCircle className="w-4 h-4 text-amber-500" />
-                      {(exam._count?.questions ?? exam.questions?.length ?? 0)} {language === 'ar' ? 'سؤال' : 'Questions'}
+                      {(exam._count?.questions ?? exam.questions?.length ?? 0) + (exam.modules?.reduce((acc: number, m: any) => acc + (m.questionsCount ?? 0), 0) || 0)} {language === 'ar' ? 'سؤال' : 'Questions'}
                     </div>
                     <button 
                       onClick={() => handleUpdateAttempts(exam.id, exam.attemptsAllowed || 1)} 
@@ -263,7 +263,7 @@ export default function ExamsListPage() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-2 shrink-0 w-full md:w-auto mt-4 md:mt-0 justify-end md:justify-start border-t border-slate-100 md:border-none pt-4 md:pt-0">
-                  <Link href={`/exams/${exam.id}?preview=true`} target="_blank" className="w-10 h-10 bg-slate-50 text-slate-500 rounded-xl flex items-center justify-center hover:bg-slate-600 hover:text-white transition-all shadow-sm" title={language === 'ar' ? 'معاينة الامتحان' : 'Preview Exam'}>
+                  <Link href={`/exams/${exam.id}/details`} target="_blank" className="w-10 h-10 bg-slate-50 text-slate-500 rounded-xl flex items-center justify-center hover:bg-slate-600 hover:text-white transition-all shadow-sm" title={language === 'ar' ? 'عرض الموديول والاختبارات' : 'Preview Module and Exams'}>
                     <Eye className="w-5 h-5" />
                   </Link>
                   <Link href={`/school-admin/exams/edit/${exam.id}`} className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm" title={t('schoolAdmin.examsPage.edit')}>

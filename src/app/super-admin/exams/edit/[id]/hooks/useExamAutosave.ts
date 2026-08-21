@@ -57,6 +57,8 @@ export const useExamAutosave = (props: any) => {
                   duration: s.duration || null,
                   passingScore: s.passingScore || null,
                   attemptsAllowed: s.attemptsAllowed || 1,
+                  publishDate: s.publishDate || null,
+                  cutOffDate: s.cutOffDate || null,
                   order: s.order !== undefined ? s.order : sIdx
                };
            });
@@ -67,6 +69,8 @@ export const useExamAutosave = (props: any) => {
               description: m.content || null,
               duration: m.duration || null,
               passingScore: m.passingScore || null,
+              publishDate: m.publishDate || null,
+              cutOffDate: m.cutOffDate || null,
               order: m.order !== undefined ? m.order : index,
               subExams: subExams
            };

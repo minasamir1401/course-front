@@ -21,6 +21,10 @@ export const ModulesList = (props: any) => {
       ) : (
         <div className="flex flex-col gap-4">
           {modules.map((lesson: any, index: number) => (
+            (() => {
+              const examCount = lesson.examsCount ?? lesson.subExams?.length ?? 0;
+              const questionCount = lesson.questionsCount ?? ((lesson.questions?.length || 0) + (lesson.subExams || []).reduce((total: number, exam: any) => total + (exam.questionsCount ?? exam._count?.questions ?? exam.questions?.length ?? 0), 0));
+              return (
             <div key={index} className="bg-white border border-slate-100 rounded-[24px] p-4 hover:border-indigo-500/30 transition-all group relative overflow-hidden shadow-sm hover:shadow-md cursor-pointer flex items-center gap-4"
               onClick={() => { openEditModuleModal(index); setActiveTab('exercises'); }}>
               <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-600 opacity-0 group-hover:opacity-100 transition-all"></div>
@@ -35,7 +39,7 @@ export const ModulesList = (props: any) => {
                 </h3>
                 <div className="flex items-center gap-2 mt-1 text-xs font-bold text-slate-400">
                   <HelpCircle className={`w-3.5 h-3.5 ${lesson.subExams?.length ? 'text-indigo-600' : 'text-slate-300'}`} />
-                  {language === 'ar' ? `${lesson._count?.questions || lesson.questions?.length || 0} أسئلة` : `${lesson._count?.questions || lesson.questions?.length || 0} Questions`}
+                  {language === 'ar' ? `${examCount} اختبارات · ${questionCount} سؤال` : `${examCount} Exams · ${questionCount} Questions`}
                 </div>
               </div>
 
@@ -54,6 +58,8 @@ export const ModulesList = (props: any) => {
                 </button>
               </div>
             </div>
+              );
+            })()
           ))}
           
           

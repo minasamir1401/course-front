@@ -152,7 +152,7 @@ function TakeExamPageContent() {
       const token = isPreviewMode
         ? (localStorage.getItem("super_admin_token") || localStorage.getItem("school_admin_token") || localStorage.getItem("lms_token"))
         : (localStorage.getItem("lms_token") || localStorage.getItem("school_admin_token") || localStorage.getItem("super_admin_token"));
-      const res = await fetch(`${API_URL}/exams/${id}`, {
+      const res = await fetch(`${API_URL}/exams/${id}${subExamId ? `?subExamId=${encodeURIComponent(subExamId)}` : ''}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -190,6 +190,7 @@ function TakeExamPageContent() {
         if (subExam && subExam.duration) {
           subExamDuration = subExam.duration;
         }
+        data.selectedSubExam = subExam;
       }
 
       const mappedQuestions = filteredQuestions.map((q: any) => {
@@ -253,6 +254,15 @@ function TakeExamPageContent() {
       }
       if (exam.endDate && now > new Date(exam.endDate)) {
         showToast(language === 'ar' ? "انتهى موعد هذا الامتحان" : "This exam time has ended", "error");
+        return;
+      }
+      const childExam = exam.selectedSubExam;
+      if (childExam?.publishDate && now < new Date(childExam.publishDate)) {
+        showToast(language === 'ar' ? "لم يحن موعد نشر هذا الاختبار بعد" : "This exam has not been published yet", "error");
+        return;
+      }
+      if (childExam?.cutOffDate && now > new Date(childExam.cutOffDate)) {
+        showToast(language === 'ar' ? "انتهى موعد هذا الاختبار" : "This exam has expired", "error");
         return;
       }
     }

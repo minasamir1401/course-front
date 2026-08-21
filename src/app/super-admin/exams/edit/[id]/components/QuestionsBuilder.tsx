@@ -1,5 +1,6 @@
 // @ts-nocheck
 import React from 'react';
+import { getUniqueListKey } from '@/lib/uniqueListKey';
 import HtmlRenderer from '@/components/HtmlRenderer';
 import RichTextEditor from '@/components/RichTextEditor';
 import MathInput from '@/components/MathInput';
@@ -117,8 +118,10 @@ export const QuestionsBuilder = (props: any) => {
                 </button>
               </div>
             ) : (
-              list.map((q: any, index: number) => (
-                <div key={q.id ?? index} className="bg-white rounded-[30px] border border-slate-100 shadow-sm overflow-hidden group hover:shadow-md transition-all duration-300">
+              (() => {
+                const seenKeys = new Map<string, number>();
+                return list.map((q: any, index: number) => (
+                <div key={getUniqueListKey(q.id, index, seenKeys)} className="bg-white rounded-[30px] border border-slate-100 shadow-sm overflow-hidden group hover:shadow-md transition-all duration-300">
                   <div className="px-6 py-4 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-4 flex-1 overflow-hidden">
                       <div className="flex flex-col items-center gap-1">
@@ -241,7 +244,8 @@ export const QuestionsBuilder = (props: any) => {
                     </div>
                   )}
                 </div>
-              ))
+                ));
+              })()
             )}
           </div>
         )}

@@ -38,6 +38,21 @@ export const useExamAutosave = (props: any) => {
         const allQuestions: any[] = [];
         const modulesPayload = finalModules.map((m, index) => {
            const mId = m.id || String(Date.now() + index);
+           const mSubExams = (m.subExams || []).map((s: any, sIdx: number) => {
+               const sId = s.id || String(Date.now() + index * 1000 + sIdx);
+               const sQuestions = (s.questions || []).map((q: any) => ({ ...q, moduleId: mId, subExamId: sId }));
+               allQuestions.push(...sQuestions);
+               return {
+                   id: sId,
+                   title: s.title,
+                   duration: s.duration || null,
+                   passingScore: s.passingScore || null,
+                   attemptsAllowed: s.attemptsAllowed || 1,
+                   publishDate: s.publishDate || null,
+                   cutOffDate: s.cutOffDate || null,
+                   order: sIdx,
+               };
+           });
            const mQuestions = (m.questions || []).map((q: any) => ({
                ...q,
                moduleId: mId
@@ -49,7 +64,10 @@ export const useExamAutosave = (props: any) => {
               description: m.content || null,
               duration: m.duration || null,
               passingScore: m.passingScore || null,
-              order: index
+              publishDate: m.publishDate || null,
+              cutOffDate: m.cutOffDate || null,
+              order: index,
+              subExams: mSubExams,
            };
         });
         
