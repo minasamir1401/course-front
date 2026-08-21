@@ -157,7 +157,7 @@ export default function SuperAdminNewExamPage() {
               />
             )}
 
-            <div className={`space-y-8 ${showSettings ? 'lg:col-span-8' : 'lg:col-span-12'}`}>
+            <div className={`min-w-0 space-y-8 ${showSettings ? 'lg:col-span-8' : 'lg:col-span-12'}`}>
               <ModulesList 
                 {...state}
                 {...moduleManagement}

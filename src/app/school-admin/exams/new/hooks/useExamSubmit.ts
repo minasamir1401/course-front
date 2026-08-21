@@ -118,6 +118,8 @@ export const useExamSubmit = (props: any) => {
           gradeTarget: examData.gradeTarget,
 
           modules: modulesPayload,
+          // Questions are persisted once in the exam question collection. The
+          // module/sub-exam payload only describes their ownership.
           questions: allQuestions
         })
       });

@@ -57,6 +57,7 @@ export default function LandingPage() {
               Get Started
             </Link>
             <button
+              aria-label={isMenuOpen ? "Close menu" : "Open menu"}
               className="md:hidden text-slate-600 hover:text-indigo-600 p-2"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
@@ -79,6 +80,7 @@ export default function LandingPage() {
         )}
       </header>
 
+      <main>
       {/* Hero Section */}
       <section className="pt-32 pb-20 lg:pt-[180px] lg:pb-32 px-6 relative overflow-hidden bg-gradient-to-br from-[#F8FAFC] via-[#F1F5F9] to-[#E2E8F0]">
         {/* Soft abstract blobs similar to design */}
@@ -246,6 +248,8 @@ export default function LandingPage() {
         </div>
       </section>
 
+      </main>
+
       {/* Footer */}
       <footer className="bg-[#0B0F19] text-slate-400 py-16 border-t border-white/5">
         <div className="max-w-7xl mx-auto px-6">
@@ -267,7 +271,7 @@ export default function LandingPage() {
               </div>
             </div>
             
-            <p className="text-[14px] text-slate-500">© 2026 Platform. All rights reserved.</p>
+            <p className="text-[14px] text-slate-300">© 2026 Platform. All rights reserved.</p>
             
             <div className="flex flex-col items-center md:items-end gap-6">
               <div className="flex gap-6 text-[14px] font-medium">
@@ -276,13 +280,13 @@ export default function LandingPage() {
                 <Link href="#" className="hover:text-white transition-colors">Terms of Service</Link>
               </div>
               <div className="flex gap-4">
-                <Link href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 text-white transition-colors">
+                <Link href="#" aria-label="Facebook" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 text-white transition-colors">
                   <Facebook className="w-5 h-5 fill-current border-none" />
                 </Link>
-                <Link href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 text-white transition-colors">
+                <Link href="#" aria-label="Twitter" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 text-white transition-colors">
                   <Twitter className="w-5 h-5 fill-current border-none" />
                 </Link>
-                <Link href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 text-white transition-colors">
+                <Link href="#" aria-label="Instagram" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 text-white transition-colors">
                   <Instagram className="w-5 h-5" />
                 </Link>
               </div>

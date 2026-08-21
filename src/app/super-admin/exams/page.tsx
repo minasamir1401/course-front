@@ -21,7 +21,7 @@ export default function SuperAdminExamsPage() {
   const [filterSchool, setFilterSchool] = useState("all");
   const [filterType, setFilterType] = useState("all");
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [assessmentType, setAssessmentType] = useState("all");
+  const [assessmentType] = useState("Exam");
   const [isModulesManagerOpen, setIsModulesManagerOpen] = useState(false);
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [examToMove, setExamToMove] = useState<any>(null);
@@ -189,9 +189,8 @@ export default function SuperAdminExamsPage() {
 
   const filteredExams = exams.filter((exam: any) => {
     const matchesSearch = exam.title.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = assessmentType === "all"
-      || exam.type?.toUpperCase() === assessmentType.toUpperCase()
-      || (assessmentType === "Exam" && !exam.type);
+    const matchesType = assessmentType === "Exam"
+      && (!exam.type || exam.type.toUpperCase() === "EXAM" || exam.type.toUpperCase() === "QUIZ");
     return matchesSearch && matchesType;
   });
 
@@ -259,12 +258,9 @@ export default function SuperAdminExamsPage() {
                 <select
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3 md:py-4 outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 transition-all font-bold text-slate-700 text-sm md:text-base"
                   value={assessmentType}
-                  onChange={(e) => setAssessmentType(e.target.value)}
+                  disabled
                 >
-                  <option value="all">{language === 'ar' ? "كل الأنواع" : "All Types"}</option>
-                  <option value="Exam">{language === 'ar' ? "اختبارات (Exams)" : "Exams"}</option>
-                  <option value="Quiz">{language === 'ar' ? "اختبارات قصيرة (Quizzes)" : "Quizzes"}</option>
-                  <option value="Assignment">{language === 'ar' ? "تكليفات (Assignments)" : "Assignments"}</option>
+                  <option value="Exam">{language === 'ar' ? "اختبار" : "Exam"}</option>
                 </select>
               </div>
 
@@ -325,13 +321,8 @@ export default function SuperAdminExamsPage() {
                       </span>
                     </div>
                     <div className="flex flex-wrap items-center gap-3 text-slate-400 font-bold text-[10px] md:text-xs">
-                      <span className={`px-2.5 py-0.5 rounded-md shrink-0 font-black uppercase tracking-wider text-[10px] ${exam.type === 'Quiz' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
-                          exam.type === 'Assignment' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' :
-                            'bg-indigo-100 text-indigo-700 border border-indigo-200'
-                        }`}>
-                        {exam.type === 'Quiz' ? (language === 'ar' ? 'كويز' : 'Quiz') :
-                          exam.type === 'Assignment' ? (language === 'ar' ? 'تكليف' : 'Assignment') :
-                            (language === 'ar' ? 'اختبار' : 'Exam')}
+                      <span className="px-2.5 py-0.5 rounded-md shrink-0 font-black uppercase tracking-wider text-[10px] bg-indigo-100 text-indigo-700 border border-indigo-200">
+                        {language === 'ar' ? 'اختبار' : 'Exam'}
                       </span>
                       <span>•</span>
                       <div className="flex items-center gap-1 text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md shrink-0">
@@ -419,11 +410,7 @@ export default function SuperAdminExamsPage() {
                       {t('examsPage.reports')}
                     </Link>
                     <Link
-                      href={
-                        exam.type === 'Quiz' ? `/super-admin/quizzes/edit/${exam.id}` :
-                          exam.type === 'Assignment' ? `/super-admin/assignments/edit/${exam.id}` :
-                            `/super-admin/exams/edit/${exam.id}`
-                      }
+                      href={`/super-admin/exams/edit/${exam.id}`}
                       className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-indigo-50 hover:text-indigo-600 transition-all border border-slate-100"
                       title={language === 'ar' ? "تعديل الامتحان" : "Edit Exam"}
                     >

@@ -15,7 +15,7 @@ import * as XLSX from "xlsx";
 
 
 export const QuestionsBuilder = (props: any) => {
-  const { currentModule, setCurrentModule, activeSubExamIndex, source, language, assignmentsExcelRef, questionsExcelRef, handleAssignmentsExcelChange, handleQuestionsExcelChange, handleExcelUpload, downloadQuestionsTemplate, handleAddQuestionForSource, showQuestionForm, setShowQuestionForm, list, moveQuestionForSource, expandedQuestionIndex, setExpandedQuestionIndex, handleEditQuestionForSource, removeQuestionForSource, tempQuestion, setTempQuestion, updateCurrentQuestionField, customSkills, setCustomSkills, allExistingSkills, availableMetadata, openDropdownId, setOpenDropdownId, addQuestionSection, updateQuestionSectionContent, removeQuestionSection, isQuestionCorrectAnswer, toggleQuestionCorrectAnswer, updateQuestionOption, handleSaveQuestionForSource, editingQuestionIndex } = props;
+  const { currentModule, setCurrentModule, activeSubExamIndex, source, language, assignmentsExcelRef, questionsExcelRef, handleAssignmentsExcelChange, handleQuestionsExcelChange, handleExcelUpload, downloadQuestionsTemplate, downloadAdvancedMetadataTemplate, handleAddQuestionForSource, showQuestionForm, setShowQuestionForm, list, moveQuestionForSource, expandedQuestionIndex, setExpandedQuestionIndex, handleEditQuestionForSource, removeQuestionForSource, tempQuestion, setTempQuestion, updateCurrentQuestionField, customSkills, setCustomSkills, allExistingSkills, availableMetadata, openDropdownId, setOpenDropdownId, addQuestionSection, updateQuestionSectionContent, removeQuestionSection, isQuestionCorrectAnswer, toggleQuestionCorrectAnswer, updateQuestionOption, handleSaveQuestionForSource, editingQuestionIndex, advancedMetadataExcelRef, handleAdvancedMetadataExcelChange } = props;
 
   const renderQuestionsBuilderFunc = () => {
     const list = (source === 'questions' && activeSubExamIndex !== null && currentModule.subExams && currentModule.subExams[activeSubExamIndex]) ? (currentModule.subExams[activeSubExamIndex].questions || []) : (currentModule[source] || []);
@@ -46,6 +46,19 @@ export const QuestionsBuilder = (props: any) => {
             <p className="text-slate-400 text-sm font-bold mt-1">{headerDesc}</p>
           </div>
           <div className="flex flex-wrap gap-3">
+            {source === 'questions' && (
+              <>
+                <input type="file" ref={advancedMetadataExcelRef} className="hidden" accept=".xlsx,.xls" onChange={(e) => handleAdvancedMetadataExcelChange?.(e)} />
+                <button type="button" onClick={() => advancedMetadataExcelRef?.current?.click()} className="bg-violet-50 hover:bg-violet-100 text-violet-700 border border-violet-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs">
+                  <Upload className="w-4 h-4" />
+                  {language === 'ar' ? 'رفع Advanced Metadata' : 'Upload Advanced Metadata'}
+                </button>
+                <button type="button" onClick={() => downloadAdvancedMetadataTemplate?.()} className="bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs">
+                  <Download className="w-4 h-4" />
+                  {language === 'ar' ? 'نموذج Advanced Metadata' : 'Advanced Metadata Template'}
+                </button>
+              </>
+            )}
             <button
               type="button"
               onClick={() => handleExcelUpload(source === 'assignments' ? 'assignments' : 'questions')}

@@ -122,7 +122,7 @@ export default function StudentLoginPage() {
   };
 
   return (
-    <div
+    <main
       className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
       dir={language === 'ar' ? "rtl" : "ltr"}
       style={{
@@ -205,6 +205,7 @@ export default function StudentLoginPage() {
                   />
                   <button
                     type="button"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                     onClick={() => setShowPassword(!showPassword)}
                     className={`absolute inset-y-0 ${language === 'ar' ? 'left-0 pl-3' : 'right-0 pr-3'} flex items-center text-slate-400 hover:text-white transition-colors`}
                   >
@@ -231,6 +232,6 @@ export default function StudentLoginPage() {
           <span>{t('login.platform')}</span>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

@@ -137,10 +137,10 @@ export const parseQuestionsFromExcel = (rows: any[][]) => {
     const learningOutcome = loIdx >= 0 ? String(row[loIdx] ?? "").trim() : "";
     const videoUrl = videoIdx >= 0 ? String(row[videoIdx] ?? "").trim() : "";
     
-    let level = diffIdx >= 0 ? String(row[diffIdx] ?? "").trim() : "On Level";
+    let level = diffIdx >= 0 ? String(row[diffIdx] ?? "").trim() : "On_Level";
     if (level.toLowerCase().includes("easy") || level.toLowerCase().includes("foundation") || level.includes("سهل") || level.includes("تأسيسي")) level = "Foundation";
     else if (level.toLowerCase().includes("hard") || level.toLowerCase().includes("advanced") || level.includes("صعب") || level.includes("متقدم")) level = "Advanced";
-    else level = "On Level";
+    else level = "On_Level";
 
     const dokRaw = dokIdx >= 0 ? String(row[dokIdx] ?? "").trim() : "";
     const dok = ["DOK 1", "DOK 2", "DOK 3", "DOK 4"].includes(dokRaw) ? dokRaw : "";

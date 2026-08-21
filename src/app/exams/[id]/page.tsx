@@ -394,12 +394,12 @@ function TakeExamPageContent() {
               <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 text-center col-span-2 md:col-span-1">
                 <Calendar className="w-6 h-6 text-indigo-600 mx-auto mb-3" />
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{language === 'ar' ? 'النوع' : 'Type'}</p>
-                <p className="font-black text-slate-700">{exam.type || "Exam"}</p>
+                <p className="font-black text-slate-700">{exam.type === 'Quiz' ? 'Exam' : (exam.type || "Exam")}</p>
               </div>
               <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 text-center">
                 <HelpCircle className="w-6 h-6 text-indigo-600 mx-auto mb-3" />
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{language === 'ar' ? 'المستوى' : 'Level'}</p>
-                <p className="font-black text-slate-700">{exam.level === 'Easy' || exam.level === 'Foundation' ? (language === 'ar' ? 'تأسيسي' : 'Foundation') : exam.level === 'Medium' || exam.level === 'On Level' ? (language === 'ar' ? 'في المستوى' : 'On Level') : (language === 'ar' ? 'متقدم' : 'Advanced')}</p>
+                <p className="font-black text-slate-700">{exam.level === 'Easy' || exam.level === 'Foundation' ? (language === 'ar' ? 'تأسيسي' : 'Foundation') : exam.level === 'Medium' || exam.level === 'On Level' || exam.level === 'On_Level' ? (language === 'ar' ? 'On_Level' : 'On_Level') : (language === 'ar' ? 'متقدم' : 'Advanced')}</p>
               </div>
               <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 text-center">
                 <Play className="w-6 h-6 text-indigo-600 mx-auto mb-3" />
@@ -516,10 +516,10 @@ function TakeExamPageContent() {
           <div className="flex flex-col">
             <h1 className="text-xl font-black text-slate-800 line-clamp-1">{exam.title}</h1>
             <div className="flex gap-2 mt-0.5">
-              <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">{exam.type}</span>
+              <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">{exam.type === 'Quiz' ? 'Exam' : (exam.type || 'Exam')}</span>
               <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">{exam.skill}</span>
               <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
-                {exam.level === 'Easy' || exam.level === 'Foundation' ? 'تأسيسي' : exam.level === 'Medium' || exam.level === 'On Level' ? 'في المستوى' : 'متقدم'}
+                {exam.level === 'Easy' || exam.level === 'Foundation' ? 'تأسيسي' : exam.level === 'Medium' || exam.level === 'On Level' || exam.level === 'On_Level' ? 'On_Level' : 'متقدم'}
               </span>
               {exam.courseName && <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">{exam.courseName}</span>}
               {exam.domain && <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">{exam.domain}</span>}

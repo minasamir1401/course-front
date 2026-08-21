@@ -269,7 +269,7 @@ export const CourseEditorProvider: React.FC<{
     if (!isLoading && initialLoadDoneRef.current) {
       setHasUnsavedChanges(true);
     }
-  }, [courseData, lessons, currentLesson]);
+  }, [courseData, lessons, currentLesson, isLoading]);
 
   // =============================================
   // 💾 EMERGENCY LOCAL DRAFT BACKUP

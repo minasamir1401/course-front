@@ -95,7 +95,7 @@ export default function SchoolAdminLoginPage() {
   };
 
   return (
-    <div
+    <main
       className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
       dir={language === 'ar' ? "rtl" : "ltr"}
       style={{
@@ -198,6 +198,6 @@ export default function SchoolAdminLoginPage() {
           <span>{t('login.platform')}</span>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

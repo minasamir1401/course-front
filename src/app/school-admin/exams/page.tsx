@@ -171,16 +171,9 @@ export default function ExamsListPage() {
           </div>
           
           <div className="flex gap-4 flex-wrap">
-            <select 
-              className="bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 outline-none focus:ring-4 focus:ring-indigo-500/5 focus:bg-white focus:border-indigo-500 transition-all font-bold text-slate-700 min-w-[180px]"
-              value={assessmentType}
-              onChange={(e) => setAssessmentType(e.target.value)}
-            >
-              <option value="all">{language === 'ar' ? "كل الأنواع" : "All Types"}</option>
-              <option value="Exam">{language === 'ar' ? "اختبارات (Exams)" : "Exams"}</option>
-              <option value="Quiz">{language === 'ar' ? "امتحانات داخل الكورس (Course Exams)" : "Course Exams"}</option>
-              <option value="Assignment">{language === 'ar' ? "تكليفات (Assignments)" : "Assignments"}</option>
-            </select>
+            <div className="bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 font-bold text-slate-700 min-w-[180px]">
+              {language === 'ar' ? 'النوع: امتحان' : 'Type: Exam'}
+            </div>
             <select 
               className="bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 outline-none focus:ring-4 focus:ring-indigo-500/5 focus:bg-white focus:border-indigo-500 transition-all font-bold text-slate-700 min-w-[200px]"
               value={filterType}
@@ -221,14 +214,8 @@ export default function ExamsListPage() {
                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-slate-100 px-2 py-1 rounded-md">
                       {exam.category || (exam.isCentral ? t('schoolAdmin.examsPage.central') : t('schoolAdmin.examsPage.school'))}
                     </span>
-                    <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md ${
-                      exam.type === 'Quiz' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
-                      exam.type === 'Assignment' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' :
-                      'bg-indigo-100 text-indigo-700 border border-indigo-200'
-                    }`}>
-                      {exam.type === 'Quiz' ? (language === 'ar' ? 'امتحان فرعي' : 'Course Exam') :
-                       exam.type === 'Assignment' ? (language === 'ar' ? 'تكليف' : 'Assignment') :
-                       (language === 'ar' ? 'اختبار' : 'Exam')}
+                    <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md bg-indigo-100 text-indigo-700 border border-indigo-200">
+                      {language === 'ar' ? 'اختبار' : 'Exam'}
                     </span>
                     <span className="text-[10px] font-bold text-slate-500 bg-slate-50 border border-slate-100 px-2 py-1 rounded-md">
                       {exam.grade || "عام"}
@@ -257,7 +244,7 @@ export default function ExamsListPage() {
                     </div>
                     <div className="flex items-center gap-1.5 text-slate-600 text-xs font-bold bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100" title={language === 'ar' ? 'إجمالي الأسئلة' : 'Total questions'}>
                       <HelpCircle className="w-4 h-4 text-amber-500" />
-                      {(exam._count?.questions || 0) + (exam.modules?.reduce((acc: number, m: any) => acc + (m._count?.questions || 0), 0) || 0) || exam.questions?.length || 0} {language === 'ar' ? 'سؤال' : 'Questions'}
+                      {(exam._count?.questions ?? exam.questions?.length ?? 0)} {language === 'ar' ? 'سؤال' : 'Questions'}
                     </div>
                     <button 
                       onClick={() => handleUpdateAttempts(exam.id, exam.attemptsAllowed || 1)} 
@@ -279,11 +266,7 @@ export default function ExamsListPage() {
                   <Link href={`/exams/${exam.id}?preview=true`} target="_blank" className="w-10 h-10 bg-slate-50 text-slate-500 rounded-xl flex items-center justify-center hover:bg-slate-600 hover:text-white transition-all shadow-sm" title={language === 'ar' ? 'معاينة الامتحان' : 'Preview Exam'}>
                     <Eye className="w-5 h-5" />
                   </Link>
-                  <Link href={
-                      exam.type === 'Quiz' ? `/school-admin/quizzes/edit/${exam.id}` :
-                      exam.type === 'Assignment' ? `/school-admin/assignments/edit/${exam.id}` :
-                      `/school-admin/exams/edit/${exam.id}`
-                    } className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm" title={t('schoolAdmin.examsPage.edit')}>
+                  <Link href={`/school-admin/exams/edit/${exam.id}`} className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm" title={t('schoolAdmin.examsPage.edit')}>
                     <FileEdit className="w-5 h-5" />
                   </Link>
                   <button onClick={() => handleDelete(exam.id)} className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center hover:bg-red-600 hover:text-white transition-all shadow-sm" title={t('schoolAdmin.teachersPage.deleteTooltip')}>

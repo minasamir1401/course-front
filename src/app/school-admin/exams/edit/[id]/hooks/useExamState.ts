@@ -214,6 +214,7 @@ useEffect(() => {
 
   return {
     allExistingSkills,
+    isInitialLoad,
     isLoading, setIsLoading,
     isAutoSaveEnabled, setIsAutoSaveEnabled,
     lastAutoSave, setLastAutoSave,

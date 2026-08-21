@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // Runtime proxy: forwards all /api/* requests to the backend
 // This runs at REQUEST TIME (not build time), so env vars are always available
+import fs from 'node:fs';
+import nodePath from 'node:path';
+
 const BACKEND_REQUEST_TIMEOUT_MS = Math.max(
   1_000,
   Number(process.env.BACKEND_REQUEST_TIMEOUT_MS) || 20_000
@@ -138,7 +141,7 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
     });
   } catch (error: any) {
     console.error('[API Proxy Error]', targetUrl, error?.message);
-    require('fs').appendFileSync(require('path').join(process.cwd(), 'proxy_error.log'), new Date().toISOString() + ' ' + targetUrl + ' ' + error?.message + '\n');
+    fs.appendFileSync(nodePath.join(process.cwd(), 'proxy_error.log'), new Date().toISOString() + ' ' + targetUrl + ' ' + error?.message + '\n');
     return NextResponse.json(
       {
         error: error?.name === 'TimeoutError' ? 'Backend request timed out' : 'Failed to reach backend',

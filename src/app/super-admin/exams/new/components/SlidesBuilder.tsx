@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React from 'react';
-import { ChevronUp, ChevronDown, CheckCircle2, Edit2, Trash2, Plus, FileText, Settings, Activity, MoveUp, MoveDown, Mic, Video, Image as ImageIcon, Layout, Check } from 'lucide-react';
+import { ChevronUp, ChevronDown, CheckCircle2, Edit2, Trash2, Plus, FileText, Settings, Activity, MoveUp, MoveDown, Mic, Video, Image as ImageIcon, Layout, Check, Upload, Download } from 'lucide-react';
 import RichTextEditor from '@/components/RichTextEditor';
 import { getOptionLetter } from '@/lib/utils';
 import MathInput from '@/components/MathInput';
@@ -340,7 +340,7 @@ import { SECTION_STYLE_PRESETS } from '../constants';
                           onChange={(e) => updateBlock(source, sIdx, 'level', e.target.value)}
                         >
                           <option value="Foundation">{language === 'ar' ? 'تأسيسي' : 'Foundation'}</option>
-                          <option value="On Level">{language === 'ar' ? 'في المستوى' : 'On Level'}</option>
+                          <option value="On_Level">On_Level</option>
                           <option value="Advanced">{language === 'ar' ? 'متقدم' : 'Advanced'}</option>
                         </select>
                       </div>
@@ -543,4 +543,4 @@ import { SECTION_STYLE_PRESETS } from '../constants';
         </div>
       </div>
     );
-  };
+  };

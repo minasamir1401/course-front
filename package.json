@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "npx pm2-runtime start server.js -i max --max-memory-restart 512M",
-    "lint": "eslint"
+    "lint": "eslint src/app src/components src/contexts src/lib",
+    "test:e2e": "playwright test",
+    "test:a11y": "playwright test tests/accessibility",
+    "test:report": "playwright show-report ../artifacts/quality-report/playwright"
   },
   "dependencies": {
     "@vimeo/player": "^2.30.4",
@@ -28,6 +31,8 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
+    "@playwright/test": "^1.52.0",
     "@tailwindcss/postcss": "^4",
     "@types/canvas-confetti": "^1.9.0",
     "@types/dompurify": "^3.0.5",

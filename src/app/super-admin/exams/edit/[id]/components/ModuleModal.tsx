@@ -57,7 +57,7 @@ export const ModuleModal = (props: any) => {
                   <div className="space-y-10">
                     <div className="grid grid-cols-1 gap-8">
                       <div>
-                        <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">{language === 'ar' ? "عنوان الاختبار" : "Exam Title"}</label>
+                        <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">{language === 'ar' ? "عنوان الموديول" : "Module Title"}</label>
                         <input
                           type="text"
                           value={currentModule.title}

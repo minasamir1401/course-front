@@ -182,10 +182,10 @@ const openAddModuleModal = () => {
       const learningOutcome = loIdx >= 0 ? String(row[loIdx] ?? "").trim() : "";
       const videoUrl = videoIdx >= 0 ? String(row[videoIdx] ?? "").trim() : "";
       
-      let level = diffIdx >= 0 ? String(row[diffIdx] ?? "").trim() : "On Level";
+      let level = diffIdx >= 0 ? String(row[diffIdx] ?? "").trim() : "On_Level";
       if (level.toLowerCase().includes("easy") || level.toLowerCase().includes("foundation") || level.includes("سهل") || level.includes("تأسيسي")) level = "Foundation";
       else if (level.toLowerCase().includes("hard") || level.toLowerCase().includes("advanced") || level.includes("صعب") || level.includes("متقدم")) level = "Advanced";
-      else level = "On Level";
+      else level = "On_Level";
 
       const dokRaw = dokIdx >= 0 ? String(row[dokIdx] ?? "").trim() : "";
       const dok = ["DOK 1", "DOK 2", "DOK 3", "DOK 4"].includes(dokRaw) ? dokRaw : "";
@@ -245,10 +245,10 @@ const openAddModuleModal = () => {
           return;
         }
 
-        let standardVal = "";
-        let indicatorVal = "";
-        let outcomeVal = "";
-        let domainVal = "";
+        const standardVal = "";
+        const indicatorVal = "";
+        const outcomeVal = "";
+        const domainVal = "";
 
         const dataRows = rows.slice(1).filter(r => r.some(c => String(c).trim() !== ""));
         
@@ -416,7 +416,7 @@ const openAddModuleModal = () => {
     e.target.value = "";
   };
 
-  let handleExcelUpload = (type: 'questions' | 'metadata' | 'assignments' | 'advancedMetadata') => {
+  const handleExcelUpload = (type: 'questions' | 'metadata' | 'assignments' | 'advancedMetadata') => {
     if (type === 'metadata') {
       metadataExcelRef.current?.click();
     } else if (type === 'advancedMetadata') {
@@ -428,7 +428,7 @@ const openAddModuleModal = () => {
     }
   };
 
-  let downloadMetadataTemplate = () => {
+  const downloadMetadataTemplate = () => {
     const wsData = [
       ["Module Title", "Standard", "Indicator", "Outcome", "Domain"],
       ["مقدمة في الفيزياء", "Standard 1: Understanding & Comprehension", "Indicator 1: Identifies Basic Concepts", "Outcome 1: Student will be able to...", "الفيزياء"],
@@ -442,7 +442,7 @@ const openAddModuleModal = () => {
     showToast(language === 'ar' ? "تم تحميل نموذج المعايير بنجاح" : "Metadata template downloaded successfully", "success");
   };
 
-  let downloadAdvancedMetadataTemplate = (activeSubExamIndex: number | null, source: 'questions' | 'assignments' = 'questions') => {
+  const downloadAdvancedMetadataTemplate = (activeSubExamIndex: number | null, source: 'questions' | 'assignments' = 'questions') => {
     let list = [];
     if (source === 'questions' && activeSubExamIndex !== null && currentModule.subExams && currentModule.subExams[activeSubExamIndex]) {
       list = currentModule.subExams[activeSubExamIndex].questions || [];
@@ -615,7 +615,7 @@ const openAddModuleModal = () => {
     });
   };
 
-  let downloadQuestionsTemplate = (type: 'questions' | 'assignments') => {
+  const downloadQuestionsTemplate = (type: 'questions' | 'assignments') => {
     const wsData = [
       [
         language === 'ar' ? "نص السؤال" : "Question Text",

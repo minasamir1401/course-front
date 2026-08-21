@@ -3,10 +3,13 @@ import { useEffect } from 'react';
 import { API_URL } from '@/lib/api';
 
 export const useExamAutosave = (props: any) => {
-  const { isAutoSaveEnabled, isLoading, createdId, examData, modules, isModuleModalOpen, currentModule, editingModuleIndex, manualSubmitRef, lastAutoSaveSnapshotRef, autoSaveGenerationRef, createdIdRef, setCreatedId, setCurrentModule, setModules, setEditingModuleIndex, setLastAutoSave, showToast, language, autoSaveWriteQueueRef, autoSaveTimerRef, standaloneQuestions } = props;
+  const { isAutoSaveEnabled, isLoading, isInitialLoad, createdId, examData, modules, isModuleModalOpen, currentModule, editingModuleIndex, manualSubmitRef, lastAutoSaveSnapshotRef, autoSaveGenerationRef, createdIdRef, setCreatedId, setCurrentModule, setModules, setEditingModuleIndex, setLastAutoSave, showToast, language, autoSaveWriteQueueRef, autoSaveTimerRef, standaloneQuestions } = props;
 
     useEffect(() => {
-    if (!isAutoSaveEnabled || isLoading || manualSubmitRef.current) return;
+    // Never autosave the initial empty state of an edit page. Until the exam
+    // request completes there is no server id, so a PUT can accidentally become
+    // a new POST and duplicate the exam every time the page is opened.
+    if (!isAutoSaveEnabled || isLoading || isInitialLoad || manualSubmitRef.current) return;
 
     const snapshot = JSON.stringify({ createdId, examData, modules, isModuleModalOpen, currentModule, editingModuleIndex });
     if (snapshot === lastAutoSaveSnapshotRef.current) return;
@@ -235,6 +238,6 @@ export const useExamAutosave = (props: any) => {
       clearTimeout(timer);
       if (autoSaveTimerRef.current === timer) autoSaveTimerRef.current = null;
     };
-  }, [isAutoSaveEnabled, isLoading, createdId, examData, modules, isModuleModalOpen, currentModule, editingModuleIndex]);
+  }, [isAutoSaveEnabled, isLoading, isInitialLoad, createdId, examData, modules, isModuleModalOpen, currentModule, editingModuleIndex]);
 
 };
