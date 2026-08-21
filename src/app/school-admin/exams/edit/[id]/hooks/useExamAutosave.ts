@@ -30,7 +30,7 @@ export const useExamAutosave = (props: any) => {
         }
 
                 const targetSchoolIds = (examData.schoolIds || []).filter(Boolean);
-        const isCentral = targetSchoolIds.length === 0;
+        const isCentral = false;
 
         const allQuestions: any[] = [];
         const modulesPayload = finalModules.map((m, index) => {

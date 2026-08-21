@@ -69,29 +69,17 @@ const openAddModuleModal = () => {
     }
 
     const wsData = [
-      [
-        language === 'ar' ? 'نص السؤال' : 'Question Text',
-        language === 'ar' ? 'نوع السؤال' : 'Question Type',
-        language === 'ar' ? 'الخيار 1' : 'Option 1',
-        language === 'ar' ? 'الخيار 2' : 'Option 2',
-        language === 'ar' ? 'الخيار 3' : 'Option 3',
-        language === 'ar' ? 'الخيار 4' : 'Option 4',
-        language === 'ar' ? 'الخيار 5' : 'Option 5',
-        language === 'ar' ? 'الإجابة الصحيحة' : 'Correct Answer',
-        language === 'ar' ? 'الدرجة' : 'Points',
-        language === 'ar' ? 'المؤشرات' : 'Indicators',
-        language === 'ar' ? 'مخرجات التعلم' : 'Learning Outcomes',
-        language === 'ar' ? 'المهارة' : 'Skill',
-        language === 'ar' ? 'المهارة الفرعية' : 'Subskill',
-        language === 'ar' ? 'المهارة الدقيقة' : 'Micro Skill',
-        language === 'ar' ? 'مستوى الصعوبة' : 'Difficulty',
-        'DOK',
-        language === 'ar' ? 'المستوى المعرفي' : 'Cognitive',
-        language === 'ar' ? 'نمط الخطأ' : 'Error Pattern',
-        language === 'ar' ? 'الوقت المقدر' : 'Estimated Time',
-        language === 'ar' ? 'التفسير' : 'Explanation'
-      ]
-    ];
+        [
+          language === 'ar' ? 'نص السؤال' : 'Question Text',
+          language === 'ar' ? 'الخيار 1' : 'Option 1',
+          language === 'ar' ? 'الخيار 2' : 'Option 2',
+          language === 'ar' ? 'الخيار 3' : 'Option 3',
+          language === 'ar' ? 'الخيار 4' : 'Option 4',
+          language === 'ar' ? 'الإجابة الصحيحة' : 'Correct Answer',
+          language === 'ar' ? 'النقاط' : 'Points',
+          language === 'ar' ? 'التفسير' : 'Explanation'
+        ]
+      ];
 
     questionsToExport.forEach(q => {
       let optionsArray = [];
@@ -630,61 +618,26 @@ const openAddModuleModal = () => {
   let downloadQuestionsTemplate = (type: 'questions' | 'assignments') => {
     const wsData = [
       [
-        language === 'ar' ? "نص السؤال" : "Question Text",
-        language === 'ar' ? "نوع السؤال" : "Question Type",
+        language === 'ar' ? "نص السؤال" : "Question",
         language === 'ar' ? "الخيار 1" : "Option 1",
         language === 'ar' ? "الخيار 2" : "Option 2",
         language === 'ar' ? "الخيار 3" : "Option 3",
         language === 'ar' ? "الخيار 4" : "Option 4",
-        language === 'ar' ? "الخيار 5" : "Option 5",
         language === 'ar' ? "الإجابة الصحيحة" : "Correct Answer",
-        language === 'ar' ? "الإجابات الصحيحة المتعددة" : "Correct Answers",
         language === 'ar' ? "الدرجة" : "Points",
-        language === 'ar' ? "المهارة" : "Skill",
-        language === 'ar' ? "المعيار" : "Standard",
-        language === 'ar' ? "المؤشر" : "Indicator",
-        language === 'ar' ? "ناتج التعلم" : "Learning Outcome",
-        language === 'ar' ? "مستوى الصعوبة" : "Difficulty Level",
-        "DOK",
-        language === 'ar' ? "رابط الفيديو" : "Video URL",
         language === 'ar' ? "التفسير" : "Explanation"
       ],
       [
         language === 'ar' ? "ما هو ناتج 5 + 5؟" : "What is 5 + 5?",
-        "MCQ",
-        "8", "9", "10", "11", "",
-        "10", "", "1", "Problem Solving",
-        "Standard 1: Operations",
-        "Indicator 1.1: Addition",
-        "LO: Students can add numbers correctly",
-        "Foundation", "DOK 1",
-        "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        "8", "9", "10", "11",
+        "10", "1",
         language === 'ar' ? "الجمع الصحيح هو 10 لأن 5 زائد 5 يساوي 10" : "5 + 5 is 10"
       ],
       [
         language === 'ar' ? "الأرض كروية الشكل." : "The earth is round.",
-        "TRUE_FALSE",
-        "", "", "", "", "",
-        language === 'ar' ? "صحيح" : "True", "", "1", "Observation",
-        "Standard 2: Physical Geography",
-        "Indicator 2.1: Earth Shape",
-        "LO: Understands planet earth's shape",
-        "Foundation", "DOK 2", "", ""
-      ],
-      [
-        language === 'ar' ? "حدد قارات العالم القديم:" : "Select the ancient world continents:",
-        "MULTI_SELECT",
-        language === 'ar' ? "آسيا" : "Asia", 
-        language === 'ar' ? "أوروبا" : "Europe", 
-        language === 'ar' ? "أفريقيا" : "Africa", 
-        language === 'ar' ? "أستراليا" : "Australia", "",
-        "",
-        language === 'ar' ? "آسيا, أوروبا, أفريقيا" : "Asia, Europe, Africa",
-        "2", "General",
-        "Standard 3: Ancient History",
-        "Indicator 3.1: Continents",
-        "LO: Identifies old world continents",
-        "Medium", "", "", ""
+        language === 'ar' ? "صحيح" : "True", language === 'ar' ? "خطأ" : "False", "", "",
+        language === 'ar' ? "صحيح" : "True", "1",
+        ""
       ]
     ];
     const ws = XLSX.utils.aoa_to_sheet(wsData);

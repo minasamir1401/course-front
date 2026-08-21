@@ -12,7 +12,7 @@ export const ModulesList = (props: any) => {
           <div className="w-24 h-24 bg-slate-50 rounded-[40px] flex items-center justify-center mx-auto mb-8 group-hover:scale-110 transition-all">
             <Monitor className="w-12 h-12 text-slate-300 group-hover:text-indigo-600" />
           </div>
-          <h3 className="text-2xl font-black text-slate-900 mb-3">{language === 'ar' ? 'ابدأ ببناء امتحانك!' : 'Start Building Your Exam!'}</h3>
+          <h3 className="text-2xl font-black text-slate-900 mb-3">{language === 'ar' ? 'إبدأ بناء امتحانك!' : 'Start Building Your Exam!'}</h3>
           <p className="text-slate-400 font-bold max-w-sm mx-auto mb-10 leading-relaxed text-lg">{language === 'ar' ? 'لم يتم إضافة أي موديولات بعد' : 'No modules added yet'}</p>
           <button className="bg-indigo-600 text-white px-10 py-4 rounded-2xl font-black transition-all shadow-xl shadow-indigo-600/20">
             {language === 'ar' ? 'إنشاء موديول' : 'Create Module'}
@@ -35,7 +35,7 @@ export const ModulesList = (props: any) => {
                 </h3>
                 <div className="flex items-center gap-2 mt-1 text-xs font-bold text-slate-400">
                   <HelpCircle className={`w-3.5 h-3.5 ${lesson.subExams?.length ? 'text-indigo-600' : 'text-slate-300'}`} />
-                  {language === 'ar' ? `${lesson.subExams?.length || 0} اختبارات` : `${lesson.subExams?.length || 0} Exams`}
+                  {language === 'ar' ? `${lesson.subExams?.length || 0} امتحانات` : `${lesson.subExams?.length || 0} Exams`}
                 </div>
               </div>
 

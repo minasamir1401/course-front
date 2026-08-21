@@ -69,29 +69,17 @@ const openAddModuleModal = () => {
     }
 
     const wsData = [
-      [
-        language === 'ar' ? 'نص السؤال' : 'Question Text',
-        language === 'ar' ? 'نوع السؤال' : 'Question Type',
-        language === 'ar' ? 'الخيار 1' : 'Option 1',
-        language === 'ar' ? 'الخيار 2' : 'Option 2',
-        language === 'ar' ? 'الخيار 3' : 'Option 3',
-        language === 'ar' ? 'الخيار 4' : 'Option 4',
-        language === 'ar' ? 'الخيار 5' : 'Option 5',
-        language === 'ar' ? 'الإجابة الصحيحة' : 'Correct Answer',
-        language === 'ar' ? 'الدرجة' : 'Points',
-        language === 'ar' ? 'المؤشرات' : 'Indicators',
-        language === 'ar' ? 'مخرجات التعلم' : 'Learning Outcomes',
-        language === 'ar' ? 'المهارة' : 'Skill',
-        language === 'ar' ? 'المهارة الفرعية' : 'Subskill',
-        language === 'ar' ? 'المهارة الدقيقة' : 'Micro Skill',
-        language === 'ar' ? 'مستوى الصعوبة' : 'Difficulty',
-        'DOK',
-        language === 'ar' ? 'المستوى المعرفي' : 'Cognitive',
-        language === 'ar' ? 'نمط الخطأ' : 'Error Pattern',
-        language === 'ar' ? 'الوقت المقدر' : 'Estimated Time',
-        language === 'ar' ? 'التفسير' : 'Explanation'
-      ]
-    ];
+        [
+          language === 'ar' ? 'نص السؤال' : 'Question Text',
+          language === 'ar' ? 'الخيار 1' : 'Option 1',
+          language === 'ar' ? 'الخيار 2' : 'Option 2',
+          language === 'ar' ? 'الخيار 3' : 'Option 3',
+          language === 'ar' ? 'الخيار 4' : 'Option 4',
+          language === 'ar' ? 'الإجابة الصحيحة' : 'Correct Answer',
+          language === 'ar' ? 'النقاط' : 'Points',
+          language === 'ar' ? 'التفسير' : 'Explanation'
+        ]
+      ];
 
     questionsToExport.forEach(q => {
       let optionsArray = [];
