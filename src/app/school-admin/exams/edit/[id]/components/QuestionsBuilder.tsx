@@ -15,7 +15,7 @@ import * as XLSX from "xlsx";
 
 
 export const QuestionsBuilder = (props: any) => {
-  const { currentModule, setCurrentModule, activeSubExamIndex, source, language, assignmentsExcelRef, questionsExcelRef, advancedMetadataExcelRef, handleAssignmentsExcelChange, handleQuestionsExcelChange, handleAdvancedMetadataExcelChange, handleExcelUpload, downloadQuestionsTemplate, downloadAdvancedMetadataTemplate, handleAddQuestionForSource, showQuestionForm, setShowQuestionForm, list, moveQuestionForSource, expandedQuestionIndex, setExpandedQuestionIndex, handleEditQuestionForSource, removeQuestionForSource, tempQuestion, setTempQuestion, updateCurrentQuestionField, customSkills, setCustomSkills, allExistingSkills, availableMetadata, openDropdownId, setOpenDropdownId, addQuestionSection, updateQuestionSectionContent, removeQuestionSection, isQuestionCorrectAnswer, toggleQuestionCorrectAnswer, updateQuestionOption, handleSaveQuestionForSource, editingQuestionIndex } = props;
+  const { currentModule, setCurrentModule, activeSubExamIndex, source, language, assignmentsExcelRef, questionsExcelRef, handleAssignmentsExcelChange, handleQuestionsExcelChange, handleExcelUpload, downloadQuestionsTemplate, handleAddQuestionForSource, showQuestionForm, setShowQuestionForm, list, moveQuestionForSource, expandedQuestionIndex, setExpandedQuestionIndex, handleEditQuestionForSource, removeQuestionForSource, tempQuestion, setTempQuestion, updateCurrentQuestionField, customSkills, setCustomSkills, allExistingSkills, availableMetadata, openDropdownId, setOpenDropdownId, addQuestionSection, updateQuestionSectionContent, removeQuestionSection, isQuestionCorrectAnswer, toggleQuestionCorrectAnswer, updateQuestionOption, handleSaveQuestionForSource, editingQuestionIndex } = props;
 
   const renderQuestionsBuilderFunc = () => {
     const list = (source === 'questions' && activeSubExamIndex !== null && currentModule.subExams && currentModule.subExams[activeSubExamIndex]) ? (currentModule.subExams[activeSubExamIndex].questions || []) : (currentModule[source] || []);
@@ -36,13 +36,6 @@ export const QuestionsBuilder = (props: any) => {
           accept=".xlsx,.xls"
           onChange={source === 'assignments' ? handleAssignmentsExcelChange : handleQuestionsExcelChange}
         />
-        <input
-          type="file"
-          ref={advancedMetadataExcelRef}
-          style={{ display: 'none' }}
-          accept=".xlsx,.xls"
-          onChange={(e) => handleAdvancedMetadataExcelChange(e)}
-        />
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
           <div>
@@ -59,7 +52,7 @@ export const QuestionsBuilder = (props: any) => {
               className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
             >
               <Upload className="w-4 h-4" />
-              {language === 'ar' ? 'استيراد الأسئلة' : 'Import Questions'}
+              {language === 'ar' ? 'استيراد Excel' : 'Import Excel'}
             </button>
             <button
               type="button"
@@ -67,23 +60,7 @@ export const QuestionsBuilder = (props: any) => {
               className="bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
             >
               <Download className="w-4 h-4" />
-              {language === 'ar' ? 'نموذج الأسئلة' : 'Questions Template'}
-            </button>
-            <button
-              type="button"
-              onClick={() => handleExcelUpload('advancedMetadata')}
-              className="bg-fuchsia-50 hover:bg-fuchsia-100 text-fuchsia-700 border border-fuchsia-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
-            >
-              <Upload className="w-4 h-4" />
-              {language === 'ar' ? 'استيراد ميتا داتا متقدمة' : 'Import Advanced Meta Data'}
-            </button>
-            <button
-              type="button"
-              onClick={() => downloadAdvancedMetadataTemplate()}
-              className="bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
-            >
-              <Download className="w-4 h-4" />
-              {language === 'ar' ? 'نموذج الميتا داتا' : 'Metadata Template'}
+              {language === 'ar' ? 'تحميل نموذج' : 'Template'}
             </button>
             <button
               type="button"
@@ -312,83 +289,6 @@ export const QuestionsBuilder = (props: any) => {
               </div>
               
               {/* ── Question Metadata ── */}
-              <div className="flex justify-between items-center mb-4 mt-6">
-                <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest">
-                  {language === 'ar' ? 'بيانات الميتا داتا' : 'Metadata Fields'}
-                </h4>
-                <button 
-                  onClick={() => {
-                    const metadataMap = [
-                      { key: 'course', labelAr: 'الاختبار', labelEn: 'Exam' },
-                      { key: 'section', labelAr: 'القسم', labelEn: 'Section' },
-                      { key: 'domain', labelAr: 'المجال', labelEn: 'Domain' },
-                      { key: 'standard', labelAr: 'نواتج التعلم', labelEn: 'Learning Outcomes' },
-                      { key: 'indicator', labelAr: 'المؤشرات', labelEn: 'Indicators' },
-                      { key: 'skill', labelAr: 'المهارة', labelEn: 'Skill' },
-                      { key: 'subskill', labelAr: 'المهارة الفرعية', labelEn: 'Subskill' },
-                      { key: 'microSkill', labelAr: 'المهارة الدقيقة', labelEn: 'Micro Skill' },
-                      { key: 'level', labelAr: 'الصعوبة', labelEn: 'Difficulty' },
-                      { key: 'dok', labelAr: 'عمق المعرفة (DOK)', labelEn: 'DOK' },
-                      { key: 'cognitive', labelAr: 'المستوى المعرفي', labelEn: 'Cognitive' },
-                      { key: 'errorPattern', labelAr: 'نمط الخطأ', labelEn: 'Error Pattern' },
-                      { key: 'estimatedTime', labelAr: 'Estimated Time', labelEn: 'Estimated Time' },
-                    ];
-                    const data: any = {};
-                    metadataMap.forEach(field => {
-                      data[language === 'ar' ? field.labelAr : field.labelEn] = tempQuestion[field.key] || "";
-                    });
-                    const worksheet = XLSX.utils.json_to_sheet([data]);
-                    const workbook = XLSX.utils.book_new();
-                    XLSX.utils.book_append_sheet(workbook, worksheet, "Metadata Template");
-                    XLSX.writeFile(workbook, "Metadata_Template.xlsx");
-                  }}
-                  className="flex items-center gap-2 bg-green-50 text-green-600 hover:bg-green-100 px-4 py-2 rounded-xl text-xs font-bold transition-colors border border-green-200"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-                  {language === 'ar' ? 'تحميل قالب الميتا داتا' : 'Download Metadata Template'}
-                </button>
-                  <label className="flex items-center gap-2 bg-blue-50 text-blue-600 hover:bg-blue-100 px-4 py-2 rounded-xl text-xs font-bold transition-colors border border-blue-200 cursor-pointer">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
-                    {language === 'ar' ? 'رفع القالب' : 'Upload Metadata'}
-                    <input type="file" className="hidden" accept=".xlsx,.xls" onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      const reader = new FileReader();
-                      reader.onload = (evt) => {
-                        try {
-                          const data = new Uint8Array(evt.target.result);
-                          const workbook = XLSX.read(data, { type: 'array' });
-                          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                          const rows = XLSX.utils.sheet_to_json(firstSheet);
-                          if (rows.length > 0) {
-                            const row = rows[0];
-                            const metadataMap = [
-                              { key: 'course', labelAr: 'الامتحانات', labelEn: 'Exam' },
-                              { key: 'section', labelAr: 'القسم', labelEn: 'Section' },
-                              { key: 'domain', labelAr: 'المجال', labelEn: 'Domain' },
-                              { key: 'standard', labelAr: 'نواتج التعلم', labelEn: 'Learning Outcomes' },
-                              { key: 'indicator', labelAr: 'المؤشرات', labelEn: 'Indicators' },
-                              { key: 'skill', labelAr: 'المهارة', labelEn: 'Skill' },
-                              { key: 'subskill', labelAr: 'المهارة الفرعية', labelEn: 'Subskill' },
-                              { key: 'microSkill', labelAr: 'المهارة الدقيقة', labelEn: 'Micro Skill' },
-                              { key: 'level', labelAr: 'الصعوبة', labelEn: 'Difficulty' },
-                              { key: 'dok', labelAr: 'عمق المعرفة (DOK)', labelEn: 'DOK' },
-                              { key: 'estimatedTime', labelAr: 'Estimated Time', labelEn: 'Estimated Time' },
-                            ];
-                            const updates = {};
-                            metadataMap.forEach(field => {
-                              const val = row[language === 'ar' ? field.labelAr : field.labelEn] || row[field.labelEn] || row[field.labelAr];
-                              if (val !== undefined && val !== null) updates[field.key] = String(val);
-                            });
-                            setTempQuestion({ ...tempQuestion, ...updates });
-                          }
-                        } catch (err) { console.error(err); }
-                        e.target.value = '';
-                      };
-                      reader.readAsArrayBuffer(file);
-                    }} />
-                  </label>
-              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6 bg-slate-50 border border-slate-100 rounded-[24px]">
                 {[
                   { key: 'course', labelAr: 'الاختبار', labelEn: 'Exam' },
@@ -429,6 +329,17 @@ export const QuestionsBuilder = (props: any) => {
                         <option value="Knowledge">Knowledge</option>
                         <option value="Application">Application</option>
                         <option value="Reasoning">Reasoning</option>
+                      </select>
+                    ) : field.key === 'level' ? (
+                      <select
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold appearance-none"
+                        value={tempQuestion.level || ""}
+                        onChange={(e) => updateCurrentQuestionField('level', e.target.value)}
+                      >
+                        <option value="">{language === 'ar' ? 'اختر...' : 'Select...'}</option>
+                        <option value="Foundation">Foundation</option>
+                        <option value="On_Level">On_Level</option>
+                        <option value="Advanced">Advanced</option>
                       </select>
                     ) : (field.optionsKey && availableMetadata && (availableMetadata as any)[field.optionsKey]?.length > 0) ? (
                       <select

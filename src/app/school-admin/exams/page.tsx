@@ -178,7 +178,7 @@ export default function ExamsListPage() {
             >
               <option value="all">{language === 'ar' ? "كل الأنواع" : "All Types"}</option>
               <option value="Exam">{language === 'ar' ? "اختبارات (Exams)" : "Exams"}</option>
-              <option value="Quiz">{language === 'ar' ? "اختبارات قصيرة (Quizzes)" : "Quizzes"}</option>
+              <option value="Quiz">{language === 'ar' ? "امتحانات داخل الكورس (Course Exams)" : "Course Exams"}</option>
               <option value="Assignment">{language === 'ar' ? "تكليفات (Assignments)" : "Assignments"}</option>
             </select>
             <select 
@@ -226,7 +226,7 @@ export default function ExamsListPage() {
                       exam.type === 'Assignment' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' :
                       'bg-indigo-100 text-indigo-700 border border-indigo-200'
                     }`}>
-                      {exam.type === 'Quiz' ? (language === 'ar' ? 'كويز' : 'Quiz') :
+                      {exam.type === 'Quiz' ? (language === 'ar' ? 'امتحان فرعي' : 'Course Exam') :
                        exam.type === 'Assignment' ? (language === 'ar' ? 'تكليف' : 'Assignment') :
                        (language === 'ar' ? 'اختبار' : 'Exam')}
                     </span>
@@ -255,9 +255,9 @@ export default function ExamsListPage() {
                       <BookOpen className="w-4 h-4 text-emerald-500" />
                       {exam.modules?.reduce((acc: number, m: any) => acc + (m.subExams?.length || 0), 0) || 0} {language === 'ar' ? 'درس' : 'Lessons'}
                     </div>
-                    <div className="flex items-center gap-1.5 text-slate-600 text-xs font-bold bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100" title={language === 'ar' ? 'الأسئلة المستقلة' : 'Standalone questions'}>
+                    <div className="flex items-center gap-1.5 text-slate-600 text-xs font-bold bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100" title={language === 'ar' ? 'إجمالي الأسئلة' : 'Total questions'}>
                       <HelpCircle className="w-4 h-4 text-amber-500" />
-                      {exam._count?.questions || exam.questions?.length || 0} {language === 'ar' ? 'سؤال' : 'Questions'}
+                      {(exam._count?.questions || 0) + (exam.modules?.reduce((acc: number, m: any) => acc + (m._count?.questions || 0), 0) || 0) || exam.questions?.length || 0} {language === 'ar' ? 'سؤال' : 'Questions'}
                     </div>
                     <button 
                       onClick={() => handleUpdateAttempts(exam.id, exam.attemptsAllowed || 1)} 

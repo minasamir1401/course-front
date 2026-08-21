@@ -35,7 +35,7 @@ export const ModulesList = (props: any) => {
                 </h3>
                 <div className="flex items-center gap-2 mt-1 text-xs font-bold text-slate-400">
                   <HelpCircle className={`w-3.5 h-3.5 ${lesson.subExams?.length ? 'text-indigo-600' : 'text-slate-300'}`} />
-                  {language === 'ar' ? `${lesson.subExams?.length || 0} امتحانات` : `${lesson.subExams?.length || 0} Exams`}
+                  {language === 'ar' ? `${lesson._count?.questions || lesson.questions?.length || 0} أسئلة` : `${lesson._count?.questions || lesson.questions?.length || 0} Questions`}
                 </div>
               </div>
 

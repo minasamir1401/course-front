@@ -42,8 +42,13 @@ export default function SuperAdminExamsPage() {
       const schoolsRes = await fetch(`${API_URL}/admin/schools`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      const schoolsData = await schoolsRes.json();
-      setSchools(Array.isArray(schoolsData) ? schoolsData : (schoolsData.schools || []));
+      if (schoolsRes.ok) {
+        const schoolsData = await schoolsRes.json();
+        setSchools(Array.isArray(schoolsData) ? schoolsData : (schoolsData.schools || []));
+      } else {
+        console.warn('Failed to fetch schools:', schoolsRes.status);
+        setSchools([]);
+      }
 
       // Fetch Exams with filters
       let url = `${API_URL}/exams?`;
@@ -372,9 +377,9 @@ export default function SuperAdminExamsPage() {
                       <BookOpen className="w-3.5 h-3.5 text-emerald-400" />
                       <span>{exam.modules?.reduce((acc: number, m: any) => acc + (m.subExams?.length || 0), 0) || 0}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 shrink-0" title={language === 'ar' ? 'الأسئلة المستقلة' : 'Standalone questions count'}>
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 shrink-0" title={language === 'ar' ? 'إجمالي الأسئلة' : 'Total questions count'}>
                       <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
-                      <span>{exam._count?.questions || exam.questions?.length || 0}</span>
+                      <span>{(exam._count?.questions || 0) + (exam.modules?.reduce((acc: number, m: any) => acc + (m._count?.questions || 0), 0) || 0) || exam.questions?.length || 0}</span>
                     </div>
                   </div>
 

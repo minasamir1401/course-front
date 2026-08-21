@@ -134,8 +134,6 @@ export const CourseEditorProvider: React.FC<{
   const [isAutoSaveEnabled, setIsAutoSaveEnabled] = useState(true);
   const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const initialLoadDoneRef = useRef(false);
-  const userEditedRef = useRef(false);
   const [isSettingsHidden, setIsSettingsHidden] = useState(true);
 
   const [courseData, setCourseData] = useState<CourseData>({
@@ -259,14 +257,11 @@ export const CourseEditorProvider: React.FC<{
       fetchCourseData(token, courseId);
     } else {
       setIsLoading(false);
-      // Mark initial load done for new courses (no fetch needed)
-      setTimeout(() => { initialLoadDoneRef.current = true; }, 100);
     }
   }, [courseId, role]);
 
   useEffect(() => {
-    // Don't flag unsaved changes during initial data load
-    if (!isLoading && initialLoadDoneRef.current) {
+    if (!isLoading) {
       setHasUnsavedChanges(true);
     }
   }, [courseData, lessons, currentLesson]);
@@ -602,8 +597,6 @@ export const CourseEditorProvider: React.FC<{
       showToast(language === "ar" ? "خطأ في الاتصال" : "Connection error", "error");
     } finally {
       setIsLoading(false);
-      // Mark initial load complete after a brief delay so state updates from fetch are settled
-      setTimeout(() => { initialLoadDoneRef.current = true; }, 200);
     }
   };
 
@@ -1034,21 +1027,17 @@ export const CourseEditorProvider: React.FC<{
       lessonsRef.current = lessons;
 
       // 🛡️ SAFETY: If lesson modal is open, merge currentLesson into lessons before saving
-      // BUT during autosave, do NOT include NEW lessons (no ID) - they should only be saved
-      // when the user explicitly clicks Save Lesson. This prevents ghost lessons on Cancel.
       const lessonsToSend = [...lessons];
       if (isLessonModalOpen && currentLesson.title) {
         if (editingLessonIndex !== null && editingLessonIndex < lessonsToSend.length) {
-          // Editing existing lesson - safe to merge during autosave
           lessonsToSend[editingLessonIndex] = currentLesson;
-        } else if (editingLessonIndex === null && !isAutoSave) {
-          // New lesson during manual save only - push if not already present
+        } else if (editingLessonIndex === null) {
+          // New lesson: only push if not already present by title (prevents double-add after saveLesson)
           const alreadyPresent = lessonsToSend.some(l => !l.id && l.title === currentLesson.title);
           if (!alreadyPresent) {
             lessonsToSend.push(currentLesson);
           }
         }
-        // If editingLessonIndex === null && isAutoSave: skip - don't send new unsaved lesson
       }
 
       // ✅ ROOT CAUSE FIX: Deduplicate lessons by ID to prevent sending the same lesson twice.

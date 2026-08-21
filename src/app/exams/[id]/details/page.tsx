@@ -50,14 +50,14 @@ export default function ExamDetailsPage() {
     const start = exam.startDate ? new Date(exam.startDate) : null;
     const end = exam.endDate ? new Date(exam.endDate) : null;
 
-    if (start && now < start) return { label: "قريباً", color: "bg-amber-100 text-amber-700", icon: CalendarClock, type: "UPCOMING" };
-    if (end && now > end) return { label: "منتهي", color: "bg-slate-100 text-slate-500", icon: Hourglass, type: "EXPIRED" };
+    if (start && now < start) return { label: language === 'ar' ? "قريباً" : "Upcoming", color: "bg-amber-100 text-amber-700", icon: CalendarClock, type: "UPCOMING" };
+    if (end && now > end) return { label: language === 'ar' ? "منتهي" : "Expired", color: "bg-slate-100 text-slate-500", icon: Hourglass, type: "EXPIRED" };
 
     if (exam.attemptsAllowed && userSubs.length >= exam.attemptsAllowed) {
-      return { label: "مكتمل", color: "bg-indigo-100 text-indigo-700", icon: CheckCircle2, type: "COMPLETED" };
+      return { label: language === 'ar' ? "مكتمل" : "Completed", color: "bg-indigo-100 text-indigo-700", icon: CheckCircle2, type: "COMPLETED" };
     }
 
-    return { label: "متاح الآن", color: "bg-green-100 text-green-700", icon: PlayCircle, type: "AVAILABLE" };
+    return { label: language === 'ar' ? "متاح الآن" : "Available Now", color: "bg-green-100 text-green-700", icon: PlayCircle, type: "AVAILABLE" };
   };
 
   // We are not fetching portfolio here for simplicity, but we could.
@@ -73,7 +73,7 @@ export default function ExamDetailsPage() {
             <button onClick={() => router.push('/exams')} className="w-10 h-10 rounded-xl bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors">
                 <ArrowRight className="w-5 h-5" />
             </button>
-            <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">تفاصيل الامتحان</h1>
+            <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">{language === 'ar' ? 'تفاصيل الامتحان' : 'Exam Details'}</h1>
         </div>
 
         {loading ? (
@@ -87,7 +87,7 @@ export default function ExamDetailsPage() {
             </div>
         ) : !activeModule ? (
             <div className="py-24 text-center bg-white rounded-[32px] border border-slate-100 shadow-sm">
-                <p className="text-slate-600 font-black text-xl">لم يتم العثور على الامتحان</p>
+                <p className="text-slate-600 font-black text-xl">{language === 'ar' ? 'لم يتم العثور على الامتحان' : 'Exam not found'}</p>
             </div>
         ) : (
             <div className="bg-white rounded-[40px] border-2 border-indigo-100 shadow-xl shadow-indigo-100/50 p-6 md:p-10 animate-in fade-in slide-in-from-top-4 duration-500">
@@ -97,7 +97,7 @@ export default function ExamDetailsPage() {
                   </div>
                   <div>
                     <h3 className="text-2xl font-black text-slate-900">{activeModule.title}</h3>
-                    <p className="text-slate-500 font-bold">{activeModule.modules?.length || 0} أقسام متاحة</p>
+                    <p className="text-slate-500 font-bold">{activeModule.modules?.length || 0} {language === 'ar' ? 'أقسام متاحة' : 'Available Sections'}</p>
                   </div>
                 </div>
 
@@ -132,9 +132,9 @@ export default function ExamDetailsPage() {
                                 <div className="flex-1 text-center md:text-right">
                                   <h5 className="font-black text-slate-800 group-hover:text-indigo-600 transition-colors mb-1">{exam.title}</h5>
                                   <div className="flex items-center justify-center md:justify-start gap-3 text-[11px] font-bold text-slate-500">
-                                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {exam.duration} دقيقة</span>
+                                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {exam.duration} {language === 'ar' ? 'دقيقة' : 'Minutes'}</span>
                                     {exam.attemptsAllowed !== 999 && (
-                                      <span className="flex items-center gap-1"><Timer className="w-3.5 h-3.5" /> مسموح {exam.attemptsAllowed} محاولات</span>
+                                      <span className="flex items-center gap-1"><Timer className="w-3.5 h-3.5" /> {language === 'ar' ? 'مسموح' : 'Allowed'} {exam.attemptsAllowed} {language === 'ar' ? 'محاولات' : 'Attempts'}</span>
                                     )}
                                   </div>
                                 </div>
@@ -142,14 +142,14 @@ export default function ExamDetailsPage() {
                                   {userSubs.length > 0 && (
                                     <div className="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-black border border-emerald-100 flex items-center gap-1">
                                       <Check className="w-3 h-3" />
-                                      محاولو
+                                      {language === 'ar' ? 'تمت المحاولة' : 'Attempted'}
                                     </div>
                                   )}
                                   <Link
                                     href={status.type === 'AVAILABLE' ? `/exams/${activeModule.id}?subExamId=${exam.id}` : `/exams/result/${userSubs[0]?.id || ''}`}
                                     className={`px-6 py-3 rounded-xl font-black text-xs transition-colors flex items-center gap-2 ${status.type === 'AVAILABLE' ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                                   >
-                                    {status.type === 'AVAILABLE' ? 'ابدأ الاختبار' : 'عرض النتيجة'}
+                                    {status.type === 'AVAILABLE' ? (language === 'ar' ? 'ابدأ الاختبار' : 'Start Exam') : (language === 'ar' ? 'عرض النتيجة' : 'View Result')}
                                     <ArrowLeft className="w-4 h-4" />
                                   </Link>
                                 </div>
@@ -165,9 +165,9 @@ export default function ExamDetailsPage() {
                               <div className="flex-1 text-center md:text-right">
                                 <h5 className="font-black text-slate-800 group-hover:text-indigo-600 transition-colors mb-1">{section.title}</h5>
                                 <div className="flex items-center justify-center md:justify-start gap-3 text-[11px] font-bold text-slate-500">
-                                  <span className="flex items-center gap-1"><FileText className="w-3.5 h-3.5" /> {section.questions.length} سؤال</span>
+                                  <span className="flex items-center gap-1"><FileText className="w-3.5 h-3.5" /> {section.questions.length} {language === 'ar' ? 'سؤال' : 'Questions'}</span>
                                   {activeModule.duration && (
-                                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {activeModule.duration} دقيقة</span>
+                                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {activeModule.duration} {language === 'ar' ? 'دقيقة' : 'Minutes'}</span>
                                   )}
                                 </div>
                               </div>
@@ -176,7 +176,7 @@ export default function ExamDetailsPage() {
                                   href={`/exams/${activeModule.id}?moduleId=${section.id}`}
                                   className="px-6 py-3 rounded-xl font-black text-xs bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-colors flex items-center gap-2"
                                 >
-                                  ابدأ الاختبار
+                                  {language === 'ar' ? 'ابدأ الاختبار' : 'Start Exam'}
                                   <ArrowLeft className="w-4 h-4" />
                                 </Link>
                               </div>
@@ -184,7 +184,7 @@ export default function ExamDetailsPage() {
                           )}
                           {(!section.subExams || section.subExams.length === 0) && (!section.questions || section.questions.length === 0) && (
                             <div className="text-center py-6 text-slate-400 text-sm font-bold bg-white rounded-2xl border border-dashed border-slate-200">
-                              لا يوجد اختبارات في هذا القسم
+                              {language === 'ar' ? 'لا يوجد اختبارات في هذا القسم' : 'No exams in this section'}
                             </div>
                           )}
                         </div>

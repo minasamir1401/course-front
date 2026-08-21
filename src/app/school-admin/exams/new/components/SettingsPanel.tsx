@@ -374,6 +374,45 @@ export const SettingsPanel = (props: any) => {
               </div>
             </div>
 
+            {/* Advanced Metadata Excel Upload */}
+            <div className="bg-slate-50 border border-slate-200 p-6 rounded-[35px] space-y-4">
+              <h4 className="font-black text-slate-800 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-indigo-600" />
+                {language === 'ar' ? 'البيانات الوصفية المتقدمة' : 'Advanced Metadata'}
+              </h4>
+              <p className="text-xs text-slate-500 font-bold leading-relaxed">
+                {language === 'ar' ? 'قم برفع ملف الإكسيل الخاص بالبيانات الوصفية (المجالات، المعايير، المؤشرات، نواتج التعلم) ليتم استخدامها كخيارات عند إضافة الأسئلة.' : 'Upload the metadata Excel file (Domains, Standards, Indicators, Outcomes) to be used as options when adding questions.'}
+              </p>
+              
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => handleExcelUpload && handleExcelUpload('metadata')}
+                  className="flex-1 bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 text-indigo-700 px-4 py-3 rounded-2xl font-black flex justify-center items-center gap-2 transition-all shadow-sm text-sm"
+                >
+                  <Upload className="w-4 h-4" />
+                  {language === 'ar' ? 'رفع ملف الإكسيل' : 'Upload Excel'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => downloadMetadataTemplate && downloadMetadataTemplate()}
+                  className="flex-1 bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200 text-emerald-700 px-4 py-3 rounded-2xl font-black flex justify-center items-center gap-2 transition-all shadow-sm text-sm"
+                >
+                  <Download className="w-4 h-4" />
+                  {language === 'ar' ? 'تحميل القالب' : 'Download Template'}
+                </button>
+              </div>
+              
+              {availableMetadata && (availableMetadata.domains?.length > 0 || availableMetadata.standards?.length > 0) && (
+                <div className="mt-4 bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-start gap-2">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                  <p className="text-xs text-emerald-700 font-bold leading-relaxed">
+                    {language === 'ar' ? 'تم رفع البيانات الوصفية بنجاح وهي متاحة الآن في الأسئلة.' : 'Metadata uploaded successfully and is now available in questions.'}
+                  </p>
+                </div>
+              )}
+            </div>
+
             <div className="space-y-2">
               <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "سياسة النتيجة" : "Result Policy"}</label>
               <select

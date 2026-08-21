@@ -128,7 +128,7 @@ export default function SchoolAdminNewExamPage() {
                 <ArrowLeft className="w-7 h-7" />
               </button>
               <div>
-                <h1 className="text-3xl md:text-4xl font-black text-slate-900">{language === 'ar' ? 'إنشاء موديول جديد' : 'Create New Module'}</h1>
+                <h1 className="text-3xl md:text-4xl font-black text-slate-900">{language === 'ar' ? 'إنشاء اختبار جديد' : 'Create New Exam'}</h1>
                 <p className="text-slate-400 text-lg mt-1 font-bold">{language === 'ar' ? 'صمم تجربة تقييم متكاملة لطلابك' : 'Design a complete assessment experience for your students'}</p>
               </div>
             </div>

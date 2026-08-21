@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 import React from 'react';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -185,7 +185,10 @@ export const useExamState = (schoolIdParam: string | null, examId: string) => {
           
           const standaloneQs = allQs.filter((q: any) => !q.moduleId && !q.subExamId);
           setStandaloneQuestions(standaloneQs);
-          if (exam.id || exam._id) setCreatedId(exam.id || exam._id);
+          if (exam.id || exam._id) {
+            createdIdRef.current = exam.id || exam._id;
+            setCreatedId(exam.id || exam._id);
+          }
         }
       }
     } catch (error) {

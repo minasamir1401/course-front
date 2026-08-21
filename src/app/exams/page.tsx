@@ -65,11 +65,13 @@ export default function ExamsPage() {
             <div className="flex-1 text-white">
               <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 text-indigo-200 text-[10px] md:text-xs font-black uppercase tracking-widest rounded-xl border border-white/10 mb-4 backdrop-blur-md">
                  <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
-                 رحلة التعلم (Modular Journey)
+                 {language === 'ar' ? 'رحلة التعلم (Modular Journey)' : 'Modular Journey'}
               </div>
-              <h1 className="text-3xl md:text-5xl font-black mb-3 tracking-tight leading-tight">اختباراتك المدرسية المتاحة</h1>
+              <h1 className="text-3xl md:text-5xl font-black mb-3 tracking-tight leading-tight">
+                {language === 'ar' ? 'اختباراتك المدرسية المتاحة' : 'Available School Exams'}
+              </h1>
               <p className="text-slate-400 text-sm md:text-base font-bold max-w-2xl leading-relaxed">
-                استعرض التقييمات والاختبارات الخاصة بمدرستك. قم بحل الاختبارات بدقة واجمع النقاط للارتقاء في مستواك.
+                {language === 'ar' ? 'استعرض التقييمات والاختبارات الخاصة بمدرستك. قم بحل الاختبارات بدقة واجمع النقاط للارتقاء في مستواك.' : 'Browse assessments and exams specific to your school. Solve exams accurately and collect points to level up.'}
               </p>
             </div>
           </div>
@@ -93,7 +95,9 @@ export default function ExamsPage() {
                 <div className="w-24 h-24 bg-slate-50 border-2 border-slate-100 rounded-[28px] flex items-center justify-center mx-auto mb-8 text-slate-300">
                   <Layers className="w-12 h-12" />
                 </div>
-                <p className="text-slate-900 font-black text-2xl tracking-tight mb-2">لا يوجد موديولات متاحة حالياً</p>
+                <p className="text-slate-900 font-black text-2xl tracking-tight mb-2">
+                  {language === 'ar' ? 'لا يوجد اختبارات متاحة حالياً' : 'No exams available right now'}
+                </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -104,15 +108,14 @@ export default function ExamsPage() {
                         <Layers className="w-7 h-7" />
                       </div>
                       <span className="bg-slate-50 text-slate-500 text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest border border-slate-200">
-                        {module.modules?.length || 0} أقسام
+                        {module.modules?.length || 0} {language === 'ar' ? 'أقسام' : 'Sections'}
                       </span>
                     </div>
                     <h3 className="text-xl font-black text-slate-900 mb-2 group-hover:text-indigo-600 transition-colors">{module.title}</h3>
-                    <p className="text-slate-500 text-sm font-bold line-clamp-2">{module.description || 'لا يوجد وصف متاح'}</p>
                     
                     <div className="mt-6 flex justify-end">
                       <div className="px-4 py-2 rounded-xl flex items-center gap-2 font-bold text-sm transition-all bg-slate-50 text-slate-500 group-hover:bg-indigo-50 group-hover:text-indigo-600">
-                        عرض الأقسام
+                        {language === 'ar' ? 'عرض الأقسام' : 'View Sections'}
                         <ChevronDown className="w-4 h-4 transition-transform -rotate-90" />
                       </div>
                     </div>
@@ -126,7 +129,7 @@ export default function ExamsPage() {
           <div className="lg:col-span-4 space-y-8">
             <h3 className="text-2xl font-black text-slate-900 tracking-tight px-2 flex items-center gap-2">
               <Award className="w-6 h-6 text-fuchsia-500" />
-              إنجازاتك (Portfolio)
+              {language === 'ar' ? 'إنجازاتك (Portfolio)' : 'Your Portfolio'}
             </h3>
             
             <div className="bg-white p-6 md:p-8 rounded-[32px] border border-slate-100 shadow-sm">
@@ -135,7 +138,9 @@ export default function ExamsPage() {
                   <div className="w-16 h-16 bg-slate-50 border-2 border-slate-100 rounded-2xl flex items-center justify-center text-slate-300">
                     <Trophy className="w-8 h-8" />
                   </div>
-                  <p className="text-sm font-bold">لم تقم بحل أي اختبارات بعد، ابدأ رحلتك الآن!</p>
+                  <p className="text-sm font-bold">
+                    {language === 'ar' ? 'لم تقم بحل أي اختبارات بعد، ابدأ رحلتك الآن!' : 'You haven\'t completed any exams yet, start your journey now!'}
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-6">
@@ -148,7 +153,9 @@ export default function ExamsPage() {
                           </div>
                           <div>
                             <h4 className="font-black text-slate-800 text-sm">{p.title}</h4>
-                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{p.completedExams} اختبار مكتمل</span>
+                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                              {p.completedExams} {language === 'ar' ? 'اختبار مكتمل' : 'Completed Exams'}
+                            </span>
                           </div>
                         </div>
                         <div className="text-right">
@@ -170,12 +177,12 @@ export default function ExamsPage() {
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
               <div className="absolute bottom-0 left-0 w-32 h-32 bg-black/10 rounded-full blur-2xl pointer-events-none" />
               <Medal className="w-12 h-12 text-yellow-400 mb-4 drop-shadow-md" />
-              <h3 className="text-2xl font-black mb-2">استمر في التقدم!</h3>
+              <h3 className="text-2xl font-black mb-2">{language === 'ar' ? 'استمر في التقدم!' : 'Keep Making Progress!'}</h3>
               <p className="text-indigo-100 font-bold text-sm mb-6 opacity-90 leading-relaxed">
-                كل اختبار تحله يقربك أكثر من التميز. نقاطك الحالية تعكس مجهودك.
+                {language === 'ar' ? 'كل اختبار تحله يقربك أكثر من التميز. نقاطك الحالية تعكس مجهودك.' : 'Every exam you solve brings you closer to excellence. Your current points reflect your effort.'}
               </p>
               <button className="w-full py-4 bg-white text-indigo-600 font-black rounded-2xl shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-transform">
-                اكتشف المهام المتاحة
+                {language === 'ar' ? 'اكتشف المهام المتاحة' : 'Discover Available Tasks'}
               </button>
             </div>
           </div>

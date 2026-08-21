@@ -59,16 +59,16 @@ export default function CourseInlineContentCreator({ courseId, type, language, o
 
   const labels = {
     title: isQuiz 
-      ? (language === 'ar' ? "إنشاء اختبار داخل الكورس" : "Create Quiz within Course")
+      ? (language === 'ar' ? "إنشاء امتحان داخل الكورس" : "Create Exam within Course")
       : (language === 'ar' ? "إنشاء تكليف داخل الكورس" : "Create Assignment within Course"),
     subtitle: isQuiz
-      ? (language === 'ar' ? "واجهة مستقلة للاختبارات داخل محتوى الكورس بدون فتح صفحة خارجية." : "Standalone quiz interface within course content without opening an external page.")
+      ? (language === 'ar' ? "واجهة مستقلة للامتحانات داخل محتوى الكورس بدون فتح صفحة خارجية." : "Standalone exam interface within course content without opening an external page.")
       : (language === 'ar' ? "واجهة مستقلة للتكليفات داخل محتوى الكورس بدون فتح صفحة خارجية." : "Standalone assignment interface within course content without opening an external page."),
     itemTitle: isQuiz 
       ? (language === 'ar' ? "إضافة سؤال" : "Add Question")
       : (language === 'ar' ? "إضافة بند تكليف" : "Add Assignment Item"),
     save: isQuiz 
-      ? (language === 'ar' ? "حفظ الاختبار" : "Save Quiz")
+      ? (language === 'ar' ? "حفظ الامتحان" : "Save Exam")
       : (language === 'ar' ? "حفظ التكليف" : "Save Assignment"),
     itemPlaceholder: isQuiz 
       ? (language === 'ar' ? "نص السؤال أو الشريحة" : "Question or slide text")
@@ -80,13 +80,13 @@ export default function CourseInlineContentCreator({ courseId, type, language, o
       ? (language === 'ar' ? "إضافة السؤال للقائمة" : "Add Question to List")
       : (language === 'ar' ? "إضافة البند للقائمة" : "Add Item to List"),
     titlePlaceholder: isQuiz 
-      ? (language === 'ar' ? "عنوان الاختبار" : "Quiz Title")
+      ? (language === 'ar' ? "عنوان الامتحان" : "Exam Title")
       : (language === 'ar' ? "عنوان التكليف" : "Assignment Title"),
     descriptionPlaceholder: isQuiz 
       ? (language === 'ar' ? "وصف مختصر" : "Short Description")
       : (language === 'ar' ? "تعليمات التكليف" : "Assignment Instructions"),
     saved: isQuiz 
-      ? (language === 'ar' ? "تم إنشاء الاختبار وربطه بالكورس" : "Quiz created and linked to course")
+      ? (language === 'ar' ? "تم إنشاء الامتحان وربطه بالكورس" : "Exam created and linked to course")
       : (language === 'ar' ? "تم إنشاء التكليف وربطه بالكورس" : "Assignment created and linked to course"),
   };
 
@@ -153,7 +153,7 @@ export default function CourseInlineContentCreator({ courseId, type, language, o
 
   const saveContent = async () => {
     if (!info.title.trim()) {
-      showToast(isQuiz ? (language === 'ar' ? "يرجى كتابة عنوان الاختبار أولاً" : "Please write quiz title first") : (language === 'ar' ? "يرجى كتابة عنوان التكليف أولاً" : "Please write assignment title first"), "error");
+      showToast(isQuiz ? (language === 'ar' ? "يرجى كتابة عنوان الامتحان أولاً" : "Please write exam title first") : (language === 'ar' ? "يرجى كتابة عنوان التكليف أولاً" : "Please write assignment title first"), "error");
       return;
     }
 
@@ -201,7 +201,7 @@ export default function CourseInlineContentCreator({ courseId, type, language, o
 
       if (!res.ok) {
         const err = await res.json().catch(() => null);
-        throw new Error(err?.error || (isQuiz ? (language === 'ar' ? "فشل إنشاء الاختبار" : "Failed to create quiz") : (language === 'ar' ? "فشل إنشاء التكليف" : "Failed to create assignment")));
+        throw new Error(err?.error || (isQuiz ? (language === 'ar' ? "فشل إنشاء الامتحان" : "Failed to create exam") : (language === 'ar' ? "فشل إنشاء التكليف" : "Failed to create assignment")));
       }
 
       showToast(labels.saved, "success");
