@@ -35,9 +35,8 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
         body: JSON.stringify({ title: title.trim() })
       });
       if (!res.ok) throw new Error("create failed");
-      const created = await res.json();
       setTitle("");
-      router.push(`${role === "SCHOOL_ADMIN" ? "/school-admin" : "/super-admin"}/exams/edit/${state.createdIdRef.current}?moduleId=${encodeURIComponent(moduleId)}&subExamId=${encodeURIComponent(created.id)}`);
+      router.push(`${role === "SCHOOL_ADMIN" ? "/school-admin" : "/super-admin"}/exams/edit/${state.createdIdRef.current}?moduleId=${encodeURIComponent(moduleId)}`);
     } catch (error) {
       console.error(error);
       showToast(language === "ar" ? "تعذر إنشاء الاختبار" : "Failed to create exam", "error");

@@ -327,18 +327,6 @@ export const ModuleModal = (props: any) => {
                     <div className="space-y-6 animate-in fade-in p-2 sm:p-6">
                       <div className="flex justify-between items-center mb-6">
                         <h4 className="text-xl font-black text-slate-900">{language === 'ar' ? "الاختبارات (Exams)" : "Exams"}</h4>
-                        <button 
-                          onClick={() => {
-                            const newSubExams = [...(currentModule.subExams || [])];
-                            newSubExams.push({ id: String(Date.now()), title: language === 'ar' ? "اختبار جديد" : "New Exam", questions: [] });
-                            setCurrentModule({...currentModule, subExams: newSubExams});
-                            setActiveSubExamIndex(newSubExams.length - 1);
-                          }}
-                          className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black flex items-center gap-2 hover:bg-indigo-700 transition-all"
-                        >
-                          <Plus className="w-5 h-5" />
-                          {language === 'ar' ? "إضافة اختبار جديد" : "Add New Exam"}
-                        </button>
                       </div>
                       
                       {(currentModule.subExams?.length || 0) === 0 ? (
