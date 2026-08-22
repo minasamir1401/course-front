@@ -9,8 +9,42 @@ export type ExamModuleView = {
   questionsCount: number;
 };
 
+export type ExamWorkflowView = 'full-editor' | 'module-portal' | 'sub-exam-editor';
+export type ExamWorkflowRole = 'SUPER_ADMIN' | 'SCHOOL_ADMIN';
+
+export function getExamWorkflowView(moduleId?: string | null, subExamId?: string | null): ExamWorkflowView {
+  if (moduleId && subExamId) {
+    return 'sub-exam-editor';
+  }
+
+  if (moduleId) {
+    return 'module-portal';
+  }
+
+  return 'full-editor';
+}
+
 export function shouldRenderModulePortal(moduleId?: string | null, subExamId?: string | null): boolean {
-  return Boolean(moduleId) && !subExamId;
+  return getExamWorkflowView(moduleId, subExamId) === 'module-portal';
+}
+
+export function buildSubExamEditorHref(
+  role: ExamWorkflowRole,
+  parentExamId?: string | null,
+  moduleId?: string | null,
+  subExamId?: string | null,
+): string | null {
+  if (!parentExamId || !moduleId || !subExamId) {
+    return null;
+  }
+
+  const basePath = role === 'SUPER_ADMIN' ? '/super-admin/exams/edit' : '/school-admin/exams/edit';
+  const params = new URLSearchParams({
+    moduleId,
+    subExamId,
+  });
+
+  return `${basePath}/${encodeURIComponent(parentExamId)}?${params.toString()}`;
 }
 
 export function buildExamModuleViews(exams: any[]): ExamModuleView[] {

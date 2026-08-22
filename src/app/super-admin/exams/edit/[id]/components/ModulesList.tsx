@@ -20,6 +20,15 @@ export const ModulesList = (props: any) => {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={openAddModuleModal}
+              className="inline-flex items-center rounded-2xl bg-indigo-600 px-5 py-3 text-sm font-black text-white shadow-xl shadow-indigo-600/20 transition-all hover:bg-indigo-700"
+            >
+              {language === 'ar' ? 'إضافة موديول' : 'Add Module'}
+            </button>
+          </div>
           {modules.map((lesson: any, index: number) => (
             (() => {
               const examCount = lesson.examsCount ?? lesson.subExams?.length ?? 0;

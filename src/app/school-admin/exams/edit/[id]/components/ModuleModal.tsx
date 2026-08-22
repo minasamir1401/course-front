@@ -10,7 +10,19 @@ export const ModuleModal = (props: any) => {
   const { showToast } = useNotification();
   const [editingTitleIndex, setEditingTitleIndex] = React.useState<number | null>(null);
   const [editingTitleValue, setEditingTitleValue] = React.useState('');
-  const { isModuleModalOpen, language, editingModuleIndex, currentModule, setIsModuleModalOpen, activeTab, setActiveTab, setCurrentModule, availableMetadata, t, metadataExcelRef, handleMetadataExcelChange, handleExcelUpload, downloadMetadataTemplate, renderSlidesBuilder, renderQuestionsBuilder, saveModule, standaloneQuestions, visibleStandaloneCount, handleEditStandaloneQuestion, removeStandaloneQuestion, setVisibleStandaloneCount , activeSubExamIndex, setActiveSubExamIndex} = props;
+  const { isModuleModalOpen, language, editingModuleIndex, currentModule, setIsModuleModalOpen, activeTab, setActiveTab, setCurrentModule, availableMetadata, t, metadataExcelRef, handleMetadataExcelChange, handleExcelUpload, downloadMetadataTemplate, renderSlidesBuilder, renderQuestionsBuilder, saveModule, standaloneQuestions, visibleStandaloneCount, handleEditStandaloneQuestion, removeStandaloneQuestion, setVisibleStandaloneCount , activeSubExamIndex, setActiveSubExamIndex, openSubExamEditor, moduleMode = false } = props;
+  const visibleTabs = moduleMode
+    ? [
+        { id: 'info', label: language === 'ar' ? "الأهداف والمعلومات" : "Objectives & Info", icon: Target },
+        { id: 'scheduling', label: language === 'ar' ? "الجدولة والظهور" : "Scheduling & Visibility", icon: Clock },
+      ]
+    : (activeSubExamIndex !== null ? [
+        { id: 'exercises', label: language === 'ar' ? "إعدادات الاختبار والأسئلة" : "Exam Settings & Questions", icon: HelpCircle },
+      ] : [
+        { id: 'info', label: language === 'ar' ? "الأهداف والمعلومات" : "Objectives & Info", icon: Target },
+        { id: 'scheduling', label: language === 'ar' ? "الجدولة والظهور" : "Scheduling & Visibility", icon: Clock },
+        { id: 'exercises', label: language === 'ar' ? "الاختبارات" : "Exams", icon: HelpCircle },
+      ]);
 
   if (!isModuleModalOpen || typeof document === 'undefined') return null;
 
@@ -25,7 +37,11 @@ export const ModuleModal = (props: any) => {
                     <Monitor className="w-8 h-8" />
                     {editingModuleIndex !== null ? (language === 'ar' ? `تعديل الموديول: ${currentModule.title}` : `Edit Module: ${currentModule.title}`) : (language === 'ar' ? "إضافة موديول جديد" : "Design New Module")}
                   </h3>
-                  <p className="hidden sm:block text-slate-400 mt-1 font-bold">{language === 'ar' ? "بناء محتوى الموديول والأسئلة" : "Build module content and questions"}</p>
+                  <p className="hidden sm:block text-slate-400 mt-1 font-bold">
+                    {moduleMode
+                      ? (language === 'ar' ? "عدل إعدادات الموديول فقط. الاختبارات تُدار من البوابة الرئيسية." : "Edit module settings only. Exams are managed from the main portal.")
+                      : (language === 'ar' ? "بناء محتوى الموديول والأسئلة" : "Build module content and questions")}
+                  </p>
                 </div>
                 <button onClick={() => setIsModuleModalOpen(false)} className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-all">
                   <X className="w-6 h-6" />
@@ -34,13 +50,7 @@ export const ModuleModal = (props: any) => {
 
               {/* Modal Tabs */}
               <div className="flex border-b border-slate-100 bg-slate-50/50 overflow-x-auto shrink-0 custom-scrollbar">
-                {(activeSubExamIndex !== null ? [
-                  { id: 'exercises', label: language === 'ar' ? "إعدادات الاختبار والأسئلة" : "Exam Settings & Questions", icon: HelpCircle },
-                ] : [
-                  { id: 'info', label: language === 'ar' ? "الأهداف والمعلومات" : "Objectives & Info", icon: Target },
-                  { id: 'scheduling', label: language === 'ar' ? "الجدولة والظهور" : "Scheduling & Visibility", icon: Clock },
-                  { id: 'exercises', label: language === 'ar' ? "الاختبارات" : "Exams", icon: HelpCircle },
-                ]).map(tab => (
+                {visibleTabs.map(tab => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as any)}
@@ -77,17 +87,6 @@ export const ModuleModal = (props: any) => {
                           {language === 'ar' ? "بيانات الاختبار الأساسية" : "Basic Assessment Info"}
                        </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-3">
-                            <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "الاختبار (Exam)" : "Exam"}</label>
-                            <input 
-                              type="text"
-                              value={currentModule.course || ""}
-                              onChange={(e) => setCurrentModule({...currentModule, course: e.target.value})}
-                              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 shadow-sm font-bold"
-                              placeholder={language === 'ar' ? "الاختبار" : "Exam"}
-                            />
-                          </div>
-  
                           <div className="space-y-3">
                             <label className="text-xs font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? "القسم (Section)" : "Section"}</label>
                             <input 
@@ -188,7 +187,7 @@ export const ModuleModal = (props: any) => {
 
                 {activeTab === 'assignments' && renderQuestionsBuilder('assignments')}
 
-                {activeTab === 'exercises' && (
+                {!moduleMode && activeTab === 'exercises' && (
                   activeSubExamIndex !== null ? (
                     <div className="space-y-4 animate-in fade-in">
                       <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 space-y-6">
@@ -215,19 +214,6 @@ export const ModuleModal = (props: any) => {
                               onChange={(e) => {
                                 const newSubExams = [...(currentModule.subExams || [])];
                                 newSubExams[activeSubExamIndex].title = e.target.value;
-                                setCurrentModule({ ...currentModule, subExams: newSubExams });
-                              }}
-                              className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all shadow-sm"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">{language === 'ar' ? 'اسم الكورس' : 'Course Name'}</label>
-                            <input 
-                              type="text"
-                              value={currentModule.subExams?.[activeSubExamIndex]?.courseName || ''}
-                              onChange={(e) => {
-                                const newSubExams = [...(currentModule.subExams || [])];
-                                newSubExams[activeSubExamIndex].courseName = e.target.value;
                                 setCurrentModule({ ...currentModule, subExams: newSubExams });
                               }}
                               className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all shadow-sm"
@@ -339,7 +325,17 @@ export const ModuleModal = (props: any) => {
                       ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {currentModule.subExams.map((subExam: any, idx: number) => (
-                            <div key={idx} className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm hover:border-indigo-400 transition-all flex justify-between items-center group cursor-pointer" onClick={() => setActiveSubExamIndex(idx)}>
+                            <div
+                              key={idx}
+                              className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm hover:border-indigo-400 transition-all flex justify-between items-center group cursor-pointer"
+                              onClick={() => {
+                                if (subExam.id && currentModule.id && openSubExamEditor) {
+                                  openSubExamEditor(currentModule.id, subExam.id);
+                                  return;
+                                }
+                                setActiveSubExamIndex(idx);
+                              }}
+                            >
                               <div>
                                 {editingTitleIndex === idx ? (
                                   <input 
@@ -376,6 +372,10 @@ export const ModuleModal = (props: any) => {
                                 <button 
                                   onClick={(e) => {
                                     e.stopPropagation();
+                                    if (subExam.id && currentModule.id && openSubExamEditor) {
+                                      openSubExamEditor(currentModule.id, subExam.id);
+                                      return;
+                                    }
                                     setEditingTitleIndex(idx);
                                     setEditingTitleValue(subExam.title || '');
                                   }}
@@ -516,7 +516,7 @@ export const ModuleModal = (props: any) => {
 
               {/* Standalone Questions */}
               {/* Standalone Questions Restored Grid */}
-              <div className="mt-12 standalone-questions-section">
+              {!moduleMode && <div className="mt-12 standalone-questions-section">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {standaloneQuestions.slice(0, visibleStandaloneCount).map((q: any, index: number) => (
                     <div key={index} className="bg-white border border-slate-100 rounded-[24px] p-5 shadow-sm hover:shadow-md transition-all flex flex-col gap-4">
@@ -551,7 +551,7 @@ export const ModuleModal = (props: any) => {
                     </div>
                   )}
                 </div>
-              </div>
+              </div>}
             
               </div>
 

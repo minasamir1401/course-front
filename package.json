@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "start:standalone": "node scripts/run-standalone.js",
     "start": "npx pm2-runtime start server.js -i max --max-memory-restart 512M",
     "lint": "eslint src/app src/components src/contexts src/lib",
     "test:e2e": "playwright test",

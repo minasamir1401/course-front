@@ -37,7 +37,6 @@ export const useExamState = (schoolIdParam: string | null) => {
     startDate: "",
     endDate: "",
     passingScore: 50,
-    courseName: "",
     section: "",
     domain: "",
     learningOutcomes: "",

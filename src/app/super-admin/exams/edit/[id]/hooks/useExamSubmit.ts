@@ -10,11 +10,6 @@ export const useExamSubmit = (props: any) => {
       showToast(t('courseCreate.titleRequired') || "Please enter a course title", "error");
       return;
     }
-    if (!examData.subjects || examData.subjects.length === 0) {
-      showToast(t('courseCreate.subjectRequired') || "Please select at least one subject / specialization", "error");
-      return;
-    }
-    
     manualSubmitRef.current = true;
     autoSaveGenerationRef.current += 1;
     if (autoSaveTimerRef.current) {
@@ -113,7 +108,6 @@ export const useExamSubmit = (props: any) => {
           endDate: examData.endDate || null,
           status: "PUBLISHED",
 
-          courseName: examData.courseName,
           section: examData.section,
           domain: examData.domain,
           learningOutcomes: examData.learningOutcomes,

@@ -14,7 +14,6 @@ export interface ExamData {
   startDate?: string;
   endDate?: string;
   passingScore: number;
-  courseName?: string;
   section?: string;
   domain?: string;
   learningOutcomes?: string;

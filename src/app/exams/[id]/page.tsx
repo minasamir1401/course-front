@@ -531,7 +531,6 @@ function TakeExamPageContent() {
               <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
                 {exam.level === 'Easy' || exam.level === 'Foundation' ? 'تأسيسي' : exam.level === 'Medium' || exam.level === 'On Level' || exam.level === 'On_Level' ? 'On_Level' : 'متقدم'}
               </span>
-              {exam.courseName && <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">{exam.courseName}</span>}
               {exam.domain && <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">{exam.domain}</span>}
               {exam.gradeTarget && <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">{exam.gradeTarget}</span>}
             </div>

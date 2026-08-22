@@ -1,8 +1,9 @@
 // @ts-nocheck
 import { API_URL } from '@/lib/api';
+import { buildCreatedModulePortalHref } from '@/lib/moduleCreationWorkflow';
 
 export const useExamSubmit = (props: any) => {
-  const { examData, modules, isModuleModalOpen, currentModule, editingModuleIndex, manualSubmitRef, autoSaveGenerationRef, autoSaveTimerRef, setIsLoading, autoSaveWriteQueueRef, createdIdRef, standaloneQuestions, showToast, language, router, t, isLoading } = props;
+  const { examData, modules, isModuleModalOpen, currentModule, editingModuleIndex, manualSubmitRef, autoSaveGenerationRef, autoSaveTimerRef, setIsLoading, autoSaveWriteQueueRef, createdIdRef, standaloneQuestions, showToast, language, router, t, isLoading, moduleMode } = props;
 
     const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -10,11 +11,6 @@ export const useExamSubmit = (props: any) => {
       showToast(t('courseCreate.titleRequired') || "Please enter a course title", "error");
       return;
     }
-    if (!examData.subjects || examData.subjects.length === 0) {
-      showToast(t('courseCreate.subjectRequired') || "Please select at least one subject / specialization", "error");
-      return;
-    }
-    
     manualSubmitRef.current = true;
     autoSaveGenerationRef.current += 1;
     if (autoSaveTimerRef.current) {
@@ -36,8 +32,8 @@ export const useExamSubmit = (props: any) => {
         }
       }
 
-            const targetSchoolIds = (examData.schoolIds || []).filter(Boolean);
-        const isCentral = false;
+      const targetSchoolIds = (examData.schoolIds || []).filter(Boolean);
+      const isCentral = targetSchoolIds.length === 0;
 
       const allQuestions: any[] = [];
       const modulesPayload = finalModules.map((m, index) => {
@@ -82,6 +78,21 @@ export const useExamSubmit = (props: any) => {
          };
       });
 
+      if (moduleMode && modulesPayload.length === 0) {
+        showToast(language === 'ar' ? 'أضف الموديول أولًا ثم احفظ' : 'Add the module first, then save', 'error');
+        setIsLoading(false);
+        manualSubmitRef.current = false;
+        return;
+      }
+
+      const resolvedTitle = examData.title || finalModules[0]?.title || "";
+      if (!resolvedTitle) {
+        showToast(language === 'ar' ? 'أدخل عنوان الموديول أولًا' : 'Enter the module title first', 'error');
+        setIsLoading(false);
+        manualSubmitRef.current = false;
+        return;
+      }
+
       const activeExamId = createdIdRef.current;
       const method = activeExamId ? "PUT" : "POST";
       const url = activeExamId 
@@ -95,7 +106,7 @@ export const useExamSubmit = (props: any) => {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          title: examData.title,
+          title: resolvedTitle,
           description: examData.description,
           coverImage: examData.coverImage || null,
           grades: examData.grades,
@@ -113,7 +124,6 @@ export const useExamSubmit = (props: any) => {
           endDate: examData.endDate || null,
           status: "PUBLISHED",
 
-          courseName: examData.courseName,
           section: examData.section,
           domain: examData.domain,
           learningOutcomes: examData.learningOutcomes,
@@ -122,8 +132,6 @@ export const useExamSubmit = (props: any) => {
           gradeTarget: examData.gradeTarget,
 
           modules: modulesPayload,
-          // Questions are persisted once in the exam question collection. The
-          // module/sub-exam payload only describes their ownership.
           questions: allQuestions
         })
       });
@@ -133,7 +141,30 @@ export const useExamSubmit = (props: any) => {
         throw new Error(data.stack || data.details || data.error || "Failed to create exam");
       }
 
-      showToast("Exam created successfully!", "success");
+      const data = await res.json().catch(() => ({}));
+      const createdExam = data?.exam || null;
+      const createdExamId = String(createdExam?.id || activeExamId || "").trim();
+
+      if (createdExamId) {
+        createdIdRef.current = createdExamId;
+      }
+
+      showToast(moduleMode ? (language === 'ar' ? 'تم إنشاء الموديول بنجاح' : 'Module created successfully!') : "Exam created successfully!", "success");
+
+      if (moduleMode) {
+        const redirectHref = buildCreatedModulePortalHref(
+          "SCHOOL_ADMIN",
+          createdExamId,
+          finalModules,
+          createdExam,
+        );
+
+        if (redirectHref) {
+          router.push(redirectHref);
+          return;
+        }
+      }
+
       router.push(`/school-admin/exams`);
     } catch (error: any) {
       console.error("Exam creation error:", error);

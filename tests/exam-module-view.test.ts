@@ -1,9 +1,26 @@
 import assert from 'node:assert/strict';
 // @ts-ignore Node's strip-types runner needs the explicit extension.
-import { buildExamModuleViews, shouldRenderModulePortal } from '../src/lib/examModuleView.ts';
+import {
+  buildExamModuleViews,
+  buildSubExamEditorHref,
+  getExamWorkflowView,
+  shouldRenderModulePortal,
+} from '../src/lib/examModuleView.ts';
 
 assert.equal(shouldRenderModulePortal('module-1', null), true);
 assert.equal(shouldRenderModulePortal('module-1', 'exam-1'), false);
+assert.equal(getExamWorkflowView(null, null), 'full-editor');
+assert.equal(getExamWorkflowView('module-1', null), 'module-portal');
+assert.equal(getExamWorkflowView('module-1', 'exam-1'), 'sub-exam-editor');
+assert.equal(
+  buildSubExamEditorHref('SUPER_ADMIN', 'parent-1', 'module-1', 'exam-1'),
+  '/super-admin/exams/edit/parent-1?moduleId=module-1&subExamId=exam-1',
+);
+assert.equal(
+  buildSubExamEditorHref('SCHOOL_ADMIN', 'parent-2', 'module-2', 'exam-2'),
+  '/school-admin/exams/edit/parent-2?moduleId=module-2&subExamId=exam-2',
+);
+assert.equal(buildSubExamEditorHref('SCHOOL_ADMIN', 'parent-2', null, 'exam-2'), null);
 
 const views = buildExamModuleViews([
   {

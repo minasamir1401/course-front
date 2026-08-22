@@ -48,7 +48,6 @@ export const useExamState = (schoolIdParam: string | null, examId: string, selec
     startDate: "",
     endDate: "",
     passingScore: 50,
-    courseName: "",
     section: "",
     domain: "",
     learningOutcomes: "",
@@ -171,7 +170,6 @@ export const useExamState = (schoolIdParam: string | null, examId: string, selec
             startDate: exam.startDate ? exam.startDate.split('T')[0] : "",
             endDate: exam.endDate ? exam.endDate.split('T')[0] : "",
             passingScore: exam.passingScore || 50,
-            courseName: exam.courseName || "",
             section: exam.section || "",
             domain: exam.domain || "",
             learningOutcomes: exam.learningOutcomes || "",
@@ -239,6 +237,7 @@ useEffect(() => {
 
   return {
     allExistingSkills,
+    isInitialLoad,
     isLoading, setIsLoading,
     isAutoSaveEnabled, setIsAutoSaveEnabled,
     lastAutoSave, setLastAutoSave,

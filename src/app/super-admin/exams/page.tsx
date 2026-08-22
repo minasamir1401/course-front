@@ -28,6 +28,10 @@ export default function SuperAdminExamsPage() {
   const [examToMove, setExamToMove] = useState<any>(null);
   const [targetExamId, setTargetExamId] = useState("");
   const [isMoving, setIsMoving] = useState(false);
+  const [showMoveStandaloneModal, setShowMoveStandaloneModal] = useState(false);
+  const [standaloneMoveContext, setStandaloneMoveContext] = useState<any>(null);
+  const [selectedStandaloneTargetSubExamId, setSelectedStandaloneTargetSubExamId] = useState("");
+  const [isMovingStandalone, setIsMovingStandalone] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -160,6 +164,116 @@ export default function SuperAdminExamsPage() {
       showToast(language === 'ar' ? 'خطأ في الاتصال' : 'Connection error', 'error');
     } finally {
       setIsMoving(false);
+    }
+  };
+
+  const getModuleScopedQuestionsCount = (moduleItem: any) => {
+    const directQuestions = moduleItem?.questionsCount ?? moduleItem?._count?.questions ?? moduleItem?.questions?.length ?? 0;
+    const subExams = Array.isArray(moduleItem?.subExams) ? moduleItem.subExams : [];
+    const subExamQuestions = subExams.reduce(
+      (total: number, subExam: any) => total + (subExam?.questionsCount ?? subExam?._count?.questions ?? subExam?.questions?.length ?? 0),
+      0
+    );
+
+    return directQuestions + subExamQuestions;
+  };
+
+  const getStandaloneQuestionsCount = (exam: any) => {
+    const totalExamQuestions = exam?._count?.questions ?? exam?.questions?.length ?? 0;
+    const moduleQuestions = (exam?.modules || []).reduce(
+      (total: number, moduleItem: any) => total + getModuleScopedQuestionsCount(moduleItem),
+      0
+    );
+
+    return Math.max(0, totalExamQuestions - moduleQuestions);
+  };
+
+  const openMoveStandaloneQuestionsModal = (exam: any, moduleItem?: any) => {
+    const standaloneCount = getStandaloneQuestionsCount(exam);
+    const targetSubExams = exams.flatMap((candidateExam: any) =>
+      (candidateExam.modules || []).flatMap((candidateModule: any) =>
+        (candidateModule.subExams || []).map((subExam: any) => ({
+          id: subExam.id,
+          title: subExam.title,
+          examId: candidateExam.id,
+          examTitle: candidateExam.title,
+          moduleId: candidateModule.id,
+          moduleTitle: candidateModule.title,
+          questionsCount: subExam.questionsCount ?? subExam._count?.questions ?? 0,
+          order: subExam.order || 0
+        }))
+      )
+    );
+
+    if (standaloneCount <= 0) {
+      showToast(language === 'ar' ? 'لا توجد أسئلة منفردة خارج الموديولات لنقلها.' : 'There are no standalone questions outside modules to move.', 'error');
+      return;
+    }
+
+    if (targetSubExams.length === 0) {
+      showToast(language === 'ar' ? 'لا يوجد أي اختبار داخل أي موديول حاليًا. أنشئ اختبارًا داخل موديول أولًا.' : 'There is no exam inside any module yet. Create an exam inside a module first.', 'error');
+      return;
+    }
+
+    setStandaloneMoveContext({
+      examId: exam.id,
+      examTitle: exam.title,
+      preferredModuleId: moduleItem?.id || null,
+      preferredModuleTitle: moduleItem?.title || null,
+      standaloneCount,
+      targets: targetSubExams,
+    });
+    setSelectedStandaloneTargetSubExamId(targetSubExams[0]?.id || "");
+    setShowMoveStandaloneModal(true);
+  };
+
+  const handleMoveStandaloneQuestions = async () => {
+    const selectedTarget = (standaloneMoveContext?.targets || []).find((target: any) => target.id === selectedStandaloneTargetSubExamId);
+
+    if (!standaloneMoveContext?.examId || !selectedTarget?.moduleId || !selectedTarget?.examId || !selectedStandaloneTargetSubExamId) {
+      showToast(language === 'ar' ? 'اختر الاختبار الهدف أولًا.' : 'Select the target exam first.', 'error');
+      return;
+    }
+
+    setIsMovingStandalone(true);
+    try {
+      const token = localStorage.getItem("super_admin_token") || localStorage.getItem("lms_token") || localStorage.getItem("token");
+      const res = await fetch(`${API_URL}/exams/${standaloneMoveContext.examId}/move-standalone-questions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          targetExamId: selectedTarget.examId,
+          targetModuleId: selectedTarget.moduleId,
+          targetSubExamId: selectedStandaloneTargetSubExamId
+        })
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to move standalone questions');
+      }
+
+      showToast(
+        language === 'ar'
+          ? 'تم نقل كل الأسئلة المنفردة إلى الاختبار المحدد داخل الموديول.'
+          : 'All standalone questions were moved to the selected exam inside the module.',
+        'success'
+      );
+      setShowMoveStandaloneModal(false);
+      setStandaloneMoveContext(null);
+      setSelectedStandaloneTargetSubExamId("");
+      await fetchData();
+    } catch (error: any) {
+      console.error(error);
+      showToast(
+        error?.message || (language === 'ar' ? 'تعذر نقل الأسئلة المنفردة.' : 'Failed to move standalone questions.'),
+        'error'
+      );
+    } finally {
+      setIsMovingStandalone(false);
     }
   };
 
@@ -337,6 +451,11 @@ export default function SuperAdminExamsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {moduleViews.map((module: any) => {
               const exam = exams.find((candidate: any) => candidate.id === module.parentExamId) || {};
+              const sourceStandaloneQuestionsCount = getStandaloneQuestionsCount(exam);
+              const actualModule = (exam.modules || []).find((candidate: any) => candidate.id === module.id);
+              const isSyntheticModuleCard = !actualModule;
+              const hasStandaloneQuestions = sourceStandaloneQuestionsCount > 0;
+              const canMoveStandaloneQuestions = hasStandaloneQuestions;
               return (
                 <div key={module.id} className="group bg-white rounded-[32px] border border-slate-100 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all relative overflow-hidden">
                   <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-fuchsia-500" />
@@ -345,10 +464,27 @@ export default function SuperAdminExamsPage() {
                       <BookOpen className="w-8 h-8" />
                     </div>
                     <div className="flex items-center gap-2">
-                      <Link href={`/super-admin/exams/edit/${module.parentExamId}?moduleId=${encodeURIComponent(module.id)}`} className="w-11 h-11 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-indigo-50 hover:text-indigo-600 transition-colors" title={language === 'ar' ? 'تعديل إعدادات الـ Module' : 'Edit module settings'}>
+                      <Link
+                        href={
+                          isSyntheticModuleCard
+                            ? `/super-admin/exams/edit/${module.parentExamId}`
+                            : `/super-admin/exams/edit/${module.parentExamId}?moduleId=${encodeURIComponent(module.id)}`
+                        }
+                        className="w-11 h-11 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                        title={isSyntheticModuleCard
+                          ? (language === 'ar' ? 'تعديل الامتحان' : 'Edit exam')
+                          : (language === 'ar' ? 'تعديل إعدادات الـ Module' : 'Edit module settings')}
+                      >
                         <Settings className="w-5 h-5" />
                       </Link>
-                      <button type="button" onClick={() => handleDeleteModule(module.id, module.parentExamId)} className="w-11 h-11 rounded-2xl bg-rose-50 text-rose-400 flex items-center justify-center hover:bg-rose-100 hover:text-rose-600 transition-colors" title={language === 'ar' ? 'حذف Module نهائيًا' : 'Permanently delete module'}>
+                      <button
+                        type="button"
+                        onClick={() => isSyntheticModuleCard ? handleDelete(module.parentExamId) : handleDeleteModule(module.id, module.parentExamId)}
+                        className="w-11 h-11 rounded-2xl bg-rose-50 text-rose-400 flex items-center justify-center hover:bg-rose-100 hover:text-rose-600 transition-colors"
+                        title={isSyntheticModuleCard
+                          ? (language === 'ar' ? 'حذف الامتحان نهائيًا' : 'Permanently delete exam')
+                          : (language === 'ar' ? 'حذف Module نهائيًا' : 'Permanently delete module')}
+                      >
                         <Trash2 className="w-5 h-5" />
                       </button>
                     </div>
@@ -363,6 +499,35 @@ export default function SuperAdminExamsPage() {
                     <div className="rounded-2xl bg-slate-50 p-4 text-center"><BookOpen className="w-5 h-5 text-indigo-500 mx-auto mb-2" /><p className="text-xl font-black text-slate-900">{module.examsCount}</p><p className="text-[10px] font-bold text-slate-400">{language === 'ar' ? 'اختبارات' : 'Exams'}</p></div>
                     <div className="rounded-2xl bg-slate-50 p-4 text-center"><HelpCircle className="w-5 h-5 text-amber-500 mx-auto mb-2" /><p className="text-xl font-black text-slate-900">{module.questionsCount}</p><p className="text-[10px] font-bold text-slate-400">{language === 'ar' ? 'أسئلة' : 'Questions'}</p></div>
                   </div>
+                  {hasStandaloneQuestions && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (canMoveStandaloneQuestions) {
+                          openMoveStandaloneQuestionsModal(exam, actualModule);
+                          return;
+                        }
+                      }}
+                      className={`mt-5 w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-2xl font-black text-sm transition-colors ${
+                        canMoveStandaloneQuestions
+                          ? 'border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
+                          : 'border border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200'
+                      }`}
+                    >
+                      <FolderOutput className="w-4 h-4" />
+                      {canMoveStandaloneQuestions
+                        ? (
+                          language === 'ar'
+                            ? `نقل ${sourceStandaloneQuestionsCount} سؤال منفرد إلى أي اختبار داخل موديول موجود`
+                            : `Move ${sourceStandaloneQuestionsCount} standalone questions into any existing module exam`
+                        )
+                        : (
+                          language === 'ar'
+                            ? `يوجد ${sourceStandaloneQuestionsCount} سؤال منفرد, لكن يجب إنشاء اختبار أولًا`
+                            : `${sourceStandaloneQuestionsCount} standalone questions found, but create an exam first`
+                        )}
+                    </button>
+                  )}
                   <Link href={`/exams/${exam.id}/details`} target="_blank" className="mt-5 w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-700 transition-colors">
                     {language === 'ar' ? 'فتح بوابة الـ Module' : 'Open Module Portal'} <Eye className="w-4 h-4" />
                   </Link>
@@ -476,6 +641,177 @@ export default function SuperAdminExamsPage() {
                   ));
                 })()}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {showMoveStandaloneModal && standaloneMoveContext && (
+        <div className={`fixed inset-0 z-[110] flex items-center justify-center p-4 ${language === 'ar' ? 'lg:pr-72' : 'lg:pl-72'}`}>
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowMoveStandaloneModal(false)}></div>
+          <div className="relative flex h-[min(92vh,820px)] w-full max-w-4xl flex-col overflow-hidden rounded-[36px] border border-slate-200 bg-white shadow-2xl">
+            <div className="flex items-center justify-between gap-4 border-b border-slate-100 bg-slate-50 px-5 py-5 sm:px-8 sm:py-6">
+              <div>
+                <h3 className="text-xl font-black text-slate-900">{language === 'ar' ? 'نقل الأسئلة المنفردة' : 'Move Standalone Questions'}</h3>
+                <p className="mt-1 text-sm font-bold text-slate-400">
+                  {language === 'ar'
+                    ? `سيتم نقل ${standaloneMoveContext.standaloneCount} سؤال منفرد من "${standaloneMoveContext.examTitle}" إلى أي اختبار تختاره داخل الموديولات الموجودة.`
+                    : `This will move ${standaloneMoveContext.standaloneCount} standalone questions from "${standaloneMoveContext.examTitle}" into any module exam you choose.`}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowMoveStandaloneModal(false)}
+                className="w-10 h-10 rounded-2xl bg-white text-slate-400 hover:text-slate-700 flex items-center justify-center border border-slate-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-hidden px-5 py-5 sm:px-8 sm:py-7">
+              <div className="flex h-full flex-col space-y-5">
+              <div className="rounded-3xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-bold text-amber-800">
+                {language === 'ar'
+                  ? 'اختر الاختبار الذي سيستقبل كل الأسئلة المنفردة الموجودة خارج الموديولات, حتى لو كان داخل موديول آخر.'
+                  : 'Choose which exam should receive all standalone questions currently outside modules, even if it is inside another module.'}
+              </div>
+
+              {(() => {
+                const selectedTarget = standaloneMoveContext.targets.find((target: any) => target.id === selectedStandaloneTargetSubExamId);
+                if (!selectedTarget) return null;
+
+                return (
+                  <div className="rounded-[28px] border border-indigo-200 bg-indigo-50 px-5 py-4">
+                    <div className="text-xs font-black uppercase tracking-[0.2em] text-indigo-600">
+                      {language === 'ar' ? 'الوجهة الحالية' : 'Current destination'}
+                    </div>
+                    <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+                      <div className="rounded-2xl bg-white px-4 py-3">
+                        <div className="text-[11px] font-black uppercase tracking-widest text-slate-400">{language === 'ar' ? 'الاختبار' : 'Exam'}</div>
+                        <div className="mt-2 truncate text-sm font-black text-slate-900">{selectedTarget.title || (language === 'ar' ? 'اختبار بدون عنوان' : 'Untitled Exam')}</div>
+                      </div>
+                      <div className="rounded-2xl bg-white px-4 py-3">
+                        <div className="text-[11px] font-black uppercase tracking-widest text-slate-400">{language === 'ar' ? 'الموديول' : 'Module'}</div>
+                        <div className="mt-2 truncate text-sm font-black text-slate-900">{selectedTarget.moduleTitle}</div>
+                      </div>
+                      <div className="rounded-2xl bg-white px-4 py-3">
+                        <div className="text-[11px] font-black uppercase tracking-widest text-slate-400">{language === 'ar' ? 'الأسئلة بعد النقل' : 'Questions after move'}</div>
+                        <div className="mt-2 text-sm font-black text-slate-900">
+                          {(selectedTarget.questionsCount ?? 0) + (standaloneMoveContext.standaloneCount ?? 0)} {language === 'ar' ? 'سؤال' : 'questions'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div className="min-h-0 overflow-y-auto space-y-4 pr-1 pb-24">
+                {Object.values(
+                  standaloneMoveContext.targets.reduce((groups: Record<string, any>, target: any) => {
+                    const key = `${target.examId}::${target.moduleId}`;
+                    if (!groups[key]) {
+                      groups[key] = {
+                        key,
+                        examId: target.examId,
+                        examTitle: target.examTitle,
+                        moduleId: target.moduleId,
+                        moduleTitle: target.moduleTitle,
+                        exams: []
+                      };
+                    }
+                    groups[key].exams.push(target);
+                    return groups;
+                  }, {})
+                ).map((group: any) => (
+                  <div key={group.key} className="overflow-hidden rounded-[28px] border border-slate-200 bg-white">
+                    <div className="border-b border-slate-100 bg-slate-50 px-5 py-4">
+                      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                        <div className="min-w-0">
+                          <div className="text-[11px] font-black uppercase tracking-[0.2em] text-indigo-600">
+                            {language === 'ar' ? 'الموديول' : 'Module'}
+                          </div>
+                          <div className="mt-2 truncate text-lg font-black text-slate-900">{group.moduleTitle}</div>
+                          <div className="mt-1 truncate text-xs font-bold text-slate-400">
+                            {language === 'ar' ? 'الامتحان الأب:' : 'Parent exam:'} {group.examTitle}
+                          </div>
+                        </div>
+                        <div className="rounded-2xl bg-white px-4 py-3 text-xs font-black text-slate-500">
+                          {group.exams.length} {language === 'ar' ? 'اختبارات داخل هذا الموديول' : 'exams inside this module'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="divide-y divide-slate-100">
+                      {group.exams.map((subExam: any) => (
+                        <div
+                          key={subExam.id}
+                          className={`flex flex-col gap-3 px-4 py-4 transition-all md:flex-row md:items-center md:justify-between md:px-5 ${
+                            selectedStandaloneTargetSubExamId === subExam.id
+                              ? 'border-r-4 border-indigo-500 bg-indigo-50'
+                              : 'bg-white hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <div className="truncate text-base font-black text-slate-900">
+                                {subExam.title || (language === 'ar' ? 'اختبار بدون عنوان' : 'Untitled Exam')}
+                              </div>
+                              {selectedStandaloneTargetSubExamId === subExam.id && (
+                                <span className="rounded-full bg-indigo-600 px-2.5 py-1 text-[10px] font-black text-white">
+                                  {language === 'ar' ? 'المختار الآن' : 'Selected now'}
+                                </span>
+                              )}
+                            </div>
+                            <div className="mt-1 text-xs font-bold text-slate-400">
+                              {selectedStandaloneTargetSubExamId === subExam.id
+                                ? (language === 'ar' ? 'سيتم نقل الأسئلة المنفردة إلى هذا الاختبار' : 'Standalone questions will be moved into this exam')
+                                : (language === 'ar' ? 'اختر هذا الاختبار داخل الموديول كوجهة للنقل' : 'Choose this exam inside the module as the move destination')}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3 md:gap-6">
+                            <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">
+                              {(subExam.questionsCount ?? subExam._count?.questions ?? 0)} {language === 'ar' ? 'سؤال حاليًا' : 'questions now'}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedStandaloneTargetSubExamId(subExam.id)}
+                              className={`inline-flex min-w-[110px] items-center justify-center rounded-2xl px-4 py-2.5 text-xs font-black transition-all ${
+                                selectedStandaloneTargetSubExamId === subExam.id
+                                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
+                                  : 'border border-slate-200 bg-white text-slate-600 hover:border-indigo-200 hover:text-indigo-600'
+                              }`}
+                            >
+                              {selectedStandaloneTargetSubExamId === subExam.id
+                                ? (language === 'ar' ? 'تم الاختيار' : 'Selected')
+                                : (language === 'ar' ? 'اختيار هذا الاختبار' : 'Select this exam')}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              </div>
+            </div>
+
+            <div className="sticky bottom-0 flex items-center justify-end gap-3 border-t border-slate-100 bg-slate-50 px-5 py-4 sm:px-8 sm:py-6">
+              <button
+                type="button"
+                onClick={() => setShowMoveStandaloneModal(false)}
+                className="rounded-2xl border border-slate-200 bg-white px-5 py-3 font-bold text-slate-500 hover:bg-slate-100"
+              >
+                {language === 'ar' ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                disabled={isMovingStandalone || !selectedStandaloneTargetSubExamId}
+                onClick={handleMoveStandaloneQuestions}
+                className="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-6 py-3 font-black text-white hover:bg-indigo-700 disabled:opacity-50"
+              >
+                <FolderOutput className="w-4 h-4" />
+                {isMovingStandalone ? (language === 'ar' ? 'جارٍ النقل...' : 'Moving...') : (language === 'ar' ? 'نقل كل الأسئلة' : 'Move all questions')}
+              </button>
             </div>
           </div>
         </div>

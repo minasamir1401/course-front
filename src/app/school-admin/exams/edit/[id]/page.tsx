@@ -6,7 +6,7 @@ import { useRouter, useSearchParams, useParams } from "next/navigation";
 import { useNotification } from "@/context/NotificationContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Save, ArrowLeft, Settings } from 'lucide-react';
+import { Save, ArrowLeft, Plus, Settings } from 'lucide-react';
 import * as XLSX from "xlsx";
 
 import { useExamState } from "./hooks/useExamState";
@@ -24,7 +24,8 @@ import { SlidesBuilder } from "./components/SlidesBuilder";
 import { QuestionsBuilder } from "./components/QuestionsBuilder";
 import { getGradeName, getSubjectName, parseJson } from "./utils/examUtils";
 import ExamModulePortal from "@/components/exams/ExamModulePortal";
-import { shouldRenderModulePortal } from "@/lib/examModuleView";
+import SubExamEditorScreen from "@/components/exams/SubExamEditorScreen";
+import { buildSubExamEditorHref, getExamWorkflowView } from "@/lib/examModuleView";
 
 export default function SchoolAdminEditExamPage() {
   const router = useRouter();
@@ -34,6 +35,7 @@ export default function SchoolAdminEditExamPage() {
   const schoolIdParam = searchParams.get("schoolId");
   const moduleId = searchParams.get("moduleId");
   const subExamId = searchParams.get("subExamId");
+  const createModule = searchParams.get("createModule");
   
   const { showToast } = useNotification();
   const { language, t } = useLanguage();
@@ -81,11 +83,25 @@ export default function SchoolAdminEditExamPage() {
   
   const { handleSubmit } = useExamSubmit({ ...state, showToast, language, router, t });
 
-  if (shouldRenderModulePortal(moduleId, subExamId)) {
-    return <DashboardLayout><ExamModulePortal state={state} moduleId={moduleId} language={language} role="SCHOOL_ADMIN" /></DashboardLayout>;
-  }
+  const workflowView = getExamWorkflowView(moduleId, subExamId);
+  const hasMatchingModule = Boolean(
+    moduleId && (modules || []).some((module: any) => String(module?.id || "") === String(moduleId))
+  );
+  const shouldFallbackToFullEditor = Boolean(
+    workflowView === "module-portal" &&
+    moduleId &&
+    !isLoading &&
+    (String(moduleId) === String(examId) || !hasMatchingModule)
+  );
+  const effectiveWorkflowView = shouldFallbackToFullEditor ? "full-editor" : workflowView;
 
-  
+  const resolvedModule = effectiveWorkflowView === "sub-exam-editor" && moduleId
+    ? (modules || []).find((module: any) => String(module?.id || "") === String(moduleId))
+      || (String(currentModule?.id || "") === String(moduleId) ? currentModule : null)
+    : null;
+  const resolvedSubExamIndex = effectiveWorkflowView === "sub-exam-editor" && resolvedModule && subExamId
+    ? (resolvedModule.subExams || []).findIndex((subExam: any) => String(subExam?.id || "") === String(subExamId))
+    : -1;
 
   const renderSlidesBuilderProps = () => (
     <SlidesBuilder  
@@ -117,6 +133,42 @@ export default function SchoolAdminEditExamPage() {
     />
   );
 
+  const openSubExamEditor = (moduleRefId?: string | null, subExamRefId?: string | null) => {
+    const href = buildSubExamEditorHref("SCHOOL_ADMIN", examId, moduleRefId, subExamRefId);
+    if (href) {
+      router.push(href);
+    }
+  };
+
+  React.useEffect(() => {
+    if (effectiveWorkflowView !== "full-editor" || createModule !== "1") return;
+    moduleManagement.openAddModuleModal();
+    router.replace(`/school-admin/exams/edit/${examId}`);
+  }, [createModule, effectiveWorkflowView, examId, moduleManagement, router]);
+
+  if (effectiveWorkflowView === "module-portal") {
+    return <DashboardLayout><ExamModulePortal state={state} moduleId={moduleId} language={language} role="SCHOOL_ADMIN" /></DashboardLayout>;
+  }
+
+  if (effectiveWorkflowView === "sub-exam-editor" && moduleId && subExamId) {
+    return (
+      <DashboardLayout>
+        <SubExamEditorScreen
+          backHref={`/school-admin/exams/edit/${examId}?moduleId=${encodeURIComponent(moduleId)}`}
+          examHref={`/exams/${examId}?preview=true&subExamId=${encodeURIComponent(subExamId)}`}
+          currentModule={resolvedModule || currentModule}
+          activeSubExamIndex={resolvedSubExamIndex >= 0 ? resolvedSubExamIndex : (state.activeSubExamIndex ?? -1)}
+          setCurrentModule={setCurrentModule}
+          renderQuestionsBuilder={renderQuestionsBuilderProps}
+          handleSubmit={handleSubmit}
+          isLoading={isLoading}
+          isResolving={isLoading && (!resolvedModule || resolvedSubExamIndex < 0)}
+          language={language}
+        />
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto space-y-12">
@@ -124,6 +176,8 @@ export default function SchoolAdminEditExamPage() {
         <ModuleModal 
           {...state}
           {...moduleManagement}
+          moduleMode={true}
+          openSubExamEditor={openSubExamEditor}
           language={language}
           t={t}
           metadataExcelRef={moduleManagement.metadataExcelRef}
@@ -142,6 +196,14 @@ export default function SchoolAdminEditExamPage() {
                 <p className="text-slate-400 text-lg mt-1 font-bold">{language === 'ar' ? 'صمم تجربة تقييم متكاملة لطلابك' : 'Design a complete assessment experience for your students'}</p>
               </div>
             </div>
+            <button 
+              type="button"
+              onClick={moduleManagement.openAddModuleModal}
+              className="bg-white text-indigo-600 px-8 py-5 rounded-[22px] font-black flex items-center gap-3 border border-indigo-100 hover:bg-indigo-50 transition-all"
+            >
+              {language === 'ar' ? 'إضافة موديول' : 'Add Module'}
+              <Plus className="w-5 h-5" />
+            </button>
             <button 
               onClick={handleSubmit}
               disabled={isLoading}
