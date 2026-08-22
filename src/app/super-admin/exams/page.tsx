@@ -98,6 +98,34 @@ export default function SuperAdminExamsPage() {
     }
   };
 
+  const handleDeleteModule = async (moduleId: string, parentExamId: string) => {
+    const confirmed = await confirm(
+      language === 'ar' ? 'حذف Module نهائيًا' : 'Permanently delete module',
+      language === 'ar'
+        ? 'سيتم حذف الموديول وكل الاختبارات والأسئلة الموجودة بداخله نهائيًا. هل تريد المتابعة؟'
+        : 'This will permanently delete the module and all exams and questions inside it. Continue?'
+    );
+    if (!confirmed) return;
+
+    try {
+      const token = localStorage.getItem('super_admin_token') || localStorage.getItem('lms_token') || localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/exams/${parentExamId}/modules/${moduleId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Failed to delete module');
+      setExams((current) => current.flatMap((exam) => {
+        if (exam.id !== parentExamId) return [exam];
+        const remainingModules = (exam.modules || []).filter((candidate: any) => candidate.id !== moduleId);
+        return remainingModules.length > 0 ? [{ ...exam, modules: remainingModules }] : [];
+      }));
+      showToast(language === 'ar' ? 'تم حذف الموديول نهائيًا' : 'Module permanently deleted', 'success');
+    } catch (error) {
+      console.error(error);
+      showToast(language === 'ar' ? 'تعذر حذف الموديول' : 'Failed to delete module', 'error');
+    }
+  };
+
   const handleMoveToModule = async (id?: string, moduleId?: string, subExamId?: string | null) => {
     const finalTargetId = typeof id === 'string' ? id : targetExamId;
     if (!finalTargetId) {
@@ -316,9 +344,14 @@ export default function SuperAdminExamsPage() {
                     <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                       <BookOpen className="w-8 h-8" />
                     </div>
-                    <Link href={`/super-admin/exams/edit/${module.parentExamId}?moduleId=${encodeURIComponent(module.id)}`} className="w-11 h-11 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-indigo-50 hover:text-indigo-600 transition-colors" title={language === 'ar' ? 'تعديل إعدادات الـ Module' : 'Edit module settings'}>
-                      <Settings className="w-5 h-5" />
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <Link href={`/super-admin/exams/edit/${module.parentExamId}?moduleId=${encodeURIComponent(module.id)}`} className="w-11 h-11 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-indigo-50 hover:text-indigo-600 transition-colors" title={language === 'ar' ? 'تعديل إعدادات الـ Module' : 'Edit module settings'}>
+                        <Settings className="w-5 h-5" />
+                      </Link>
+                      <button type="button" onClick={() => handleDeleteModule(module.id, module.parentExamId)} className="w-11 h-11 rounded-2xl bg-rose-50 text-rose-400 flex items-center justify-center hover:bg-rose-100 hover:text-rose-600 transition-colors" title={language === 'ar' ? 'حذف Module نهائيًا' : 'Permanently delete module'}>
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-2 mb-3">
                     <span className="px-3 py-1 rounded-xl bg-indigo-50 text-indigo-700 text-[10px] font-black uppercase tracking-wider">{language === 'ar' ? 'Module اختبار' : 'Exam Module'}</span>
