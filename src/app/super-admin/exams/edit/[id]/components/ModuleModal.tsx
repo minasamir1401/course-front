@@ -34,11 +34,13 @@ export const ModuleModal = (props: any) => {
 
               {/* Modal Tabs */}
               <div className="flex border-b border-slate-100 bg-slate-50/50 overflow-x-auto shrink-0 custom-scrollbar">
-                {[
+                {(activeSubExamIndex !== null ? [
+                  { id: 'exercises', label: language === 'ar' ? "إعدادات الاختبار والأسئلة" : "Exam Settings & Questions", icon: HelpCircle },
+                ] : [
                   { id: 'info', label: language === 'ar' ? "الأهداف والمعلومات" : "Objectives & Info", icon: Target },
                   { id: 'scheduling', label: language === 'ar' ? "الجدولة والظهور" : "Scheduling & Visibility", icon: Clock },
                   { id: 'exercises', label: language === 'ar' ? "الاختبارات" : "Exams", icon: HelpCircle },
-                ].map(tab => (
+                ]).map(tab => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as any)}

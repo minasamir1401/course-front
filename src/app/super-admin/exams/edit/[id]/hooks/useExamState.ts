@@ -202,6 +202,7 @@ export const useExamState = (schoolIdParam: string | null, examId: string, selec
                  setEditingModuleIndex(selectedModuleIndex);
                  setCurrentModule(mods[selectedModuleIndex]);
                  setActiveSubExamIndex(selectedSubExamIndex);
+                 setActiveTab('exercises');
                  setIsModuleModalOpen(true);
                }
              }
