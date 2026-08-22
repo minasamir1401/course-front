@@ -6,7 +6,7 @@ import { useRouter, useSearchParams, useParams } from "next/navigation";
 import { useNotification } from "@/context/NotificationContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Save, ArrowLeft } from 'lucide-react';
+import { Save, ArrowLeft, Settings } from 'lucide-react';
 import * as XLSX from "xlsx";
 
 import { useExamState } from "./hooks/useExamState";
@@ -23,6 +23,8 @@ import { StandaloneQuestions } from "./components/StandaloneQuestions";
 import { SlidesBuilder } from "./components/SlidesBuilder";
 import { QuestionsBuilder } from "./components/QuestionsBuilder";
 import { getGradeName, getSubjectName, parseJson } from "./utils/examUtils";
+import ExamModulePortal from "@/components/exams/ExamModulePortal";
+import { shouldRenderModulePortal } from "@/lib/examModuleView";
 
 export default function SuperAdminEditExamPage() {
   const router = useRouter();
@@ -30,11 +32,13 @@ export default function SuperAdminEditExamPage() {
   const params = useParams();
   const examId = params?.id as string;
   const schoolIdParam = searchParams.get("schoolId");
+  const moduleId = searchParams.get("moduleId");
+  const subExamId = searchParams.get("subExamId");
   
   const { showToast } = useNotification();
   const { language, t } = useLanguage();
 
-  const state = useExamState(schoolIdParam, examId);
+  const state = useExamState(schoolIdParam, examId, subExamId);
   const {
     examData, setExamData, schools, modules, isModuleModalOpen,
     currentModule, editingModuleIndex, standaloneQuestions,
@@ -44,7 +48,7 @@ export default function SuperAdminEditExamPage() {
     createdIdRef, setCreatedId, setCurrentModule, setModules,
     setEditingModuleIndex, setLastAutoSave, autoSaveWriteQueueRef,
     autoSaveTimerRef, activeTab, setActiveTab, setAvailableMetadata,
-    setIsModuleModalOpen, setStandaloneQuestions, tempQuestion, setTempQuestion,
+    setIsModuleModalOpen, setStandaloneQuestions, tempQuestion, setTempQuestion, setShowSettings,
     setQuestionSource, setShowQuestionForm, openDropdownId, setOpenDropdownId,
     customSkills, setCustomSkills, allExistingSkills, availableMetadata
   } = state;
@@ -76,6 +80,10 @@ export default function SuperAdminEditExamPage() {
   useExamAutosave({ ...state, showToast, language });
   
   const { handleSubmit } = useExamSubmit({ ...state, showToast, language, router, t });
+
+  if (shouldRenderModulePortal(moduleId, subExamId)) {
+    return <DashboardLayout><ExamModulePortal state={state} moduleId={moduleId} language={language} role="SUPER_ADMIN" /></DashboardLayout>;
+  }
 
   const renderSlidesBuilderProps = () => (
     <SlidesBuilder  
@@ -143,7 +151,7 @@ export default function SuperAdminEditExamPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-            {showSettings && (
+            {showSettings ? (
               <SettingsPanel 
                 {...state}
                 {...moduleManagement}
@@ -155,6 +163,13 @@ export default function SuperAdminEditExamPage() {
                 toggleCourseSchool={toggleCourseSchool}
                 selectAllSchools={selectAllSchools}
               />
+            ) : (
+              <div className="lg:col-span-12 flex justify-end">
+                <button type="button" onClick={() => setShowSettings(true)} className="inline-flex items-center gap-2 px-5 py-3 bg-white border border-indigo-100 text-indigo-600 hover:bg-indigo-50 rounded-2xl font-black shadow-sm transition-all">
+                  <Settings className="w-4 h-4" />
+                  {language === 'ar' ? 'تعديل إعدادات الموديول' : 'Edit Module Settings'}
+                </button>
+              </div>
             )}
 
             <div className={`min-w-0 space-y-8 ${showSettings ? 'lg:col-span-8' : 'lg:col-span-12'}`}>

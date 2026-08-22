@@ -7,11 +7,12 @@ import { CATEGORIES } from '../constants';
 import { getGradeName, getSubjectName } from '../utils/examUtils';
 
 export const SettingsPanel = (props: any) => {
-  const { examData, setExamData, language, t, toggleCourseSubject, schools, toggleCourseSchool, selectAllSchools, modules, handleExcelUpload, downloadMetadataTemplate, availableMetadata, showToast } = props;
+  const { examData, setExamData, language, t, toggleCourseSubject, schools, toggleCourseSchool, selectAllSchools, modules, handleExcelUpload, downloadMetadataTemplate, availableMetadata, showToast, setShowSettings } = props;
   const [isLocked, setIsLocked] = useState(false);
 
   const handleLock = () => {
     setIsLocked(true);
+    setShowSettings?.(false);
     if (showToast) {
       showToast(language === 'ar' ? 'تم حفظ وإخفاء الإعدادات بنجاح' : 'Settings saved and hidden successfully', 'success');
     }

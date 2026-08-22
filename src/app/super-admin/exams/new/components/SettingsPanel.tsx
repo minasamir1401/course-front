@@ -1,24 +1,19 @@
 // @ts-nocheck
-import React, { useState } from 'react';
-import { Settings, Layers, CheckCircle2, ListOrdered, Upload, Download, FileText, Lock, Edit3, Eye } from 'lucide-react';
+import React from 'react';
+import { Settings, Layers, CheckCircle2, ListOrdered, Upload, Download, FileText } from 'lucide-react';
 import { CustomSelect } from '@/components/ui/CustomSelect';
 import FileUpload from '@/components/FileUpload';
 import { CATEGORIES } from '../constants';
 import { getGradeName, getSubjectName } from '../utils/examUtils';
 
 export const SettingsPanel = (props: any) => {
-  const { examData, setExamData, language, t, toggleCourseSubject, schools, toggleCourseSchool, selectAllSchools, modules, handleExcelUpload, downloadMetadataTemplate, availableMetadata, showToast } = props;
-  const [isLocked, setIsLocked] = useState(false);
+  const { examData, setExamData, language, t, toggleCourseSubject, schools, toggleCourseSchool, selectAllSchools, modules, handleExcelUpload, downloadMetadataTemplate, availableMetadata, showToast, setShowSettings } = props;
 
   const handleLock = () => {
-    setIsLocked(true);
+    setShowSettings?.(false);
     if (showToast) {
       showToast(language === 'ar' ? 'تم حفظ وإخفاء الإعدادات بنجاح' : 'Settings saved and hidden successfully', 'success');
     }
-  };
-
-  const handleUnlock = () => {
-    setIsLocked(false);
   };
 
   return (
@@ -31,72 +26,16 @@ export const SettingsPanel = (props: any) => {
               <Settings className="w-6 h-6 text-indigo-600" />
               {language === 'ar' ? 'إعدادات الموديول' : 'Module Settings'}
             </h2>
-            {isLocked ? (
-              <button 
-                type="button" 
-                onClick={handleUnlock}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl font-bold transition-all shadow-md active:scale-95 cursor-pointer"
-              >
-                <Eye className="w-4 h-4" />
-                {language === 'ar' ? 'إظهار الإعدادات' : 'Show Settings'}
-              </button>
-            ) : (
-              <button 
+            <button
                 type="button" 
                 onClick={handleLock}
                 className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-md active:scale-95 cursor-pointer"
               >
-                <Lock className="w-4 h-4" />
-                {language === 'ar' ? 'حفظ وإخفاء' : 'Save & Lock'}
+                {language === 'ar' ? 'حفظ وإخفاء' : 'Save & Hide'}
               </button>
-            )}
           </div>
 
-          {isLocked ? (
-            <div className="relative z-10 space-y-4 animate-in fade-in duration-300">
-              <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
-                <div className="flex items-center justify-between text-xs font-bold text-slate-500">
-                  <span>{language === 'ar' ? 'حالة الإعدادات:' : 'Status:'}</span>
-                  <span className="inline-flex items-center gap-1.5 text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full text-xs font-black">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    {language === 'ar' ? 'محفوظة ومخفية' : 'Saved & Hidden'}
-                  </span>
-                </div>
-
-                {examData.title ? (
-                  <div>
-                    <span className="text-[11px] font-bold text-slate-400 block">{language === 'ar' ? 'العنوان:' : 'Title:'}</span>
-                    <p className="text-sm font-black text-slate-800 line-clamp-1">{examData.title}</p>
-                  </div>
-                ) : (
-                  <p className="text-xs font-bold text-slate-400 italic">{language === 'ar' ? 'لم يتم إدخال عنوان بعد' : 'No title entered yet'}</p>
-                )}
-
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {examData.grades && examData.grades.length > 0 && (
-                    <span className="text-[11px] font-bold bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg border border-indigo-100">
-                      {language === 'ar' ? `${examData.grades.length} صفوف دراسية` : `${examData.grades.length} Grades`}
-                    </span>
-                  )}
-                  {examData.subjects && examData.subjects.length > 0 && (
-                    <span className="text-[11px] font-bold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg border border-blue-100">
-                      {examData.subjects.join(', ')}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <button 
-                type="button" 
-                onClick={handleUnlock}
-                className="w-full flex items-center justify-center gap-2 py-3.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-2xl font-bold transition-all border border-indigo-200 shadow-sm active:scale-98 cursor-pointer"
-              >
-                <Edit3 className="w-4 h-4" />
-                {language === 'ar' ? 'إظهار وتعديل الإعدادات' : 'Show & Edit Settings'}
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-6 relative z-10 transition-all duration-300">
+          <div className="space-y-6 relative z-10 transition-all duration-300">
             {/* Cover Image Upload */}
             <div className="space-y-3">
               <FileUpload
@@ -374,7 +313,6 @@ export const SettingsPanel = (props: any) => {
               </select>
             </div>
           </div>
-          )}
         </div>
 
         {modules && modules.length > 0 && (

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { API_URL } from '@/lib/api';
 import { ExamData, ModuleData, Question } from '../types';
 
-export const useExamState = (schoolIdParam: string | null, examId: string) => {
+export const useExamState = (schoolIdParam: string | null, examId: string, selectedSubExamId?: string | null) => {
   const router = useRouter();
   const parseStringArray = (value: any): string[] => {
     if (Array.isArray(value)) return [...new Set(value.filter(Boolean).map(String))];
@@ -191,6 +191,20 @@ export const useExamState = (schoolIdParam: string | null, examId: string) => {
                  return { ...m, questions: mQs, subExams };
              });
              setModules(mods);
+             if (selectedSubExamId) {
+               const selectedModuleIndex = mods.findIndex((module: any) =>
+                 module.subExams?.some((subExam: any) => subExam.id === selectedSubExamId),
+               );
+               const selectedSubExamIndex = selectedModuleIndex >= 0
+                 ? mods[selectedModuleIndex].subExams.findIndex((subExam: any) => subExam.id === selectedSubExamId)
+                 : -1;
+               if (selectedModuleIndex >= 0 && selectedSubExamIndex >= 0) {
+                 setEditingModuleIndex(selectedModuleIndex);
+                 setCurrentModule(mods[selectedModuleIndex]);
+                 setActiveSubExamIndex(selectedSubExamIndex);
+                 setIsModuleModalOpen(true);
+               }
+             }
           }
           
           const standaloneQs = allQs.filter((q: any) => !q.moduleId && !q.subExamId);

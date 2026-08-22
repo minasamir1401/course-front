@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useNotification } from "@/context/NotificationContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Save, ArrowLeft } from 'lucide-react';
+import { Save, ArrowLeft, Settings } from 'lucide-react';
 import * as XLSX from "xlsx";
 
 import { useExamState } from "./hooks/useExamState";
@@ -27,6 +27,7 @@ import { getGradeName, getSubjectName, parseJson } from "./utils/examUtils";
 export default function SchoolAdminNewExamPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const moduleMode = searchParams.get("mode") === "module";
   const schoolIdParam = searchParams.get("schoolId");
   
   const { showToast } = useNotification();
@@ -42,7 +43,7 @@ export default function SchoolAdminNewExamPage() {
     createdIdRef, setCreatedId, setCurrentModule, setModules,
     setEditingModuleIndex, setLastAutoSave, autoSaveWriteQueueRef,
     autoSaveTimerRef, activeTab, setActiveTab, setAvailableMetadata,
-    setIsModuleModalOpen, setStandaloneQuestions, tempQuestion, setTempQuestion,
+    setIsModuleModalOpen, setStandaloneQuestions, tempQuestion, setTempQuestion, setShowSettings,
     setQuestionSource, setShowQuestionForm, openDropdownId, setOpenDropdownId,
     customSkills, setCustomSkills, allExistingSkills, availableMetadata
   } = state;
@@ -128,8 +129,8 @@ export default function SchoolAdminNewExamPage() {
                 <ArrowLeft className="w-7 h-7" />
               </button>
               <div>
-                <h1 className="text-3xl md:text-4xl font-black text-slate-900">{language === 'ar' ? 'إنشاء اختبار جديد' : 'Create New Exam'}</h1>
-                <p className="text-slate-400 text-lg mt-1 font-bold">{language === 'ar' ? 'صمم تجربة تقييم متكاملة لطلابك' : 'Design a complete assessment experience for your students'}</p>
+                <h1 className="text-3xl md:text-4xl font-black text-slate-900">{moduleMode ? (language === 'ar' ? 'إنشاء Module اختبار جديد' : 'Create New Exam Module') : (language === 'ar' ? 'إنشاء اختبار جديد' : 'Create New Exam')}</h1>
+                <p className="text-slate-400 text-lg mt-1 font-bold">{moduleMode ? (language === 'ar' ? 'أنشئ بوابة الاختبارات وإعداداتها الأساسية' : 'Create the exam module portal and its core settings') : (language === 'ar' ? 'صمم تجربة تقييم متكاملة لطلابك' : 'Design a complete assessment experience for your students')}</p>
               </div>
             </div>
             <button 
@@ -137,13 +138,13 @@ export default function SchoolAdminNewExamPage() {
               disabled={isLoading}
               className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-12 py-5 rounded-[22px] font-black flex items-center gap-3 hover:scale-105 hover:shadow-2xl hover:shadow-indigo-500/20 transition-all disabled:opacity-50"
             >
-              {isLoading ? (language === 'ar' ? 'جارٍ الحفظ...' : 'Saving...') : (language === 'ar' ? 'حفظ ونشر التقييم' : 'Save & Publish Exam')}
+              {isLoading ? (language === 'ar' ? 'جارٍ الحفظ...' : 'Saving...') : (moduleMode ? (language === 'ar' ? 'حفظ Module الاختبار' : 'Save Exam Module') : (language === 'ar' ? 'حفظ ونشر التقييم' : 'Save & Publish Exam'))}
               <Save className="w-6 h-6" />
             </button>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-            {showSettings && (
+            {showSettings ? (
               <SettingsPanel 
                 {...state}
                 {...moduleManagement}
@@ -154,6 +155,13 @@ export default function SchoolAdminNewExamPage() {
                 toggleCourseSchool={toggleCourseSchool}
                 selectAllSchools={selectAllSchools}
               />
+            ) : (
+              <div className="lg:col-span-12 flex justify-end">
+                <button type="button" onClick={() => setShowSettings(true)} className="inline-flex items-center gap-2 px-5 py-3 bg-white border border-indigo-100 text-indigo-600 hover:bg-indigo-50 rounded-2xl font-black shadow-sm transition-all">
+                  <Settings className="w-4 h-4" />
+                  {language === 'ar' ? 'تعديل إعدادات الموديول' : 'Edit Module Settings'}
+                </button>
+              </div>
             )}
 
             <div className={`min-w-0 space-y-8 ${showSettings ? 'lg:col-span-8' : 'lg:col-span-12'}`}>

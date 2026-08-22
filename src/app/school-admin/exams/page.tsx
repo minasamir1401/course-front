@@ -8,6 +8,7 @@ import { useNotification } from "@/context/NotificationContext";
 import { API_URL } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import ExamModulesManager from "@/components/exams/ExamModulesManager";
+import { buildExamModuleViews } from "@/lib/examModuleView";
 
 export default function ExamsListPage() {
   const { t, language } = useLanguage();
@@ -121,6 +122,7 @@ export default function ExamsListPage() {
       || (assessmentType === "Exam" && !exam.type);
     return matchesSearch && matchesType;
   });
+  const moduleViews = buildExamModuleViews(filteredExams);
 
   return (
     <DashboardLayout>
@@ -140,13 +142,13 @@ export default function ExamsListPage() {
           <div className="flex flex-col gap-3">
 
               <Link
-                href="/school-admin/exams/new"
+                href="/school-admin/exams/new?mode=module"
                 className="group bg-white text-[#0f0f1d] px-6 py-4 md:px-10 md:py-5 rounded-2xl font-black text-base md:text-lg shadow-2xl shadow-white/10 hover:scale-105 transition-all flex items-center gap-3 w-full md:w-auto justify-center"
               >
                 <div className="w-6 h-6 md:w-8 md:h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center group-hover:rotate-90 transition-transform">
                   <Plus className="w-4 h-4 md:w-5 md:h-5" />
                 </div>
-                {t('schoolAdmin.examsPage.createExam')}
+                {language === 'ar' ? 'إنشاء Module اختبار جديد' : 'Create New Exam Module'}
               </Link>
             </div>
 
@@ -192,13 +194,16 @@ export default function ExamsListPage() {
             <p className="font-black text-slate-400 animate-pulse text-lg">{t('schoolAdmin.examsPage.loading')}</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-4">
-            {filteredExams.map((exam: any) => (
-              <div key={exam.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all p-4 sm:p-6 flex flex-col md:flex-row items-center gap-6 group">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {moduleViews.map((moduleView: any) => {
+              const exam = exams.find((candidate: any) => candidate.id === moduleView.parentExamId) || {};
+              return (
+              <div key={moduleView.id} className="bg-white rounded-[32px] border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all p-6 flex flex-col gap-5 group relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-fuchsia-500" />
                 
                 {/* Icon & Status */}
-                <div className="flex flex-col items-center gap-2 shrink-0">
-                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${exam.isCentral ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'}`}>
+                <div className="flex items-start justify-between gap-4 shrink-0">
+                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${exam.isCentral ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'}`}>
                     <Tag className="w-7 h-7" />
                   </div>
                   <div className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
@@ -206,10 +211,13 @@ export default function ExamsListPage() {
                   }`}>
                     {exam.status === 'DRAFT' ? t('schoolAdmin.examsPage.draft') : t('schoolAdmin.examsPage.published')}
                   </div>
+                  <Link href={`/school-admin/exams/edit/${moduleView.parentExamId}?moduleId=${encodeURIComponent(moduleView.id)}`} className="w-11 h-11 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-indigo-50 hover:text-indigo-600 transition-colors" title={language === 'ar' ? 'تعديل إعدادات الـ Module' : 'Edit module settings'}>
+                    <FileEdit className="w-5 h-5" />
+                  </Link>
                 </div>
 
                 {/* Main Info */}
-                <div className={`flex-1 min-w-0 flex flex-col w-full md:w-auto ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                <div className={`flex-1 min-w-0 flex flex-col w-full ${language === 'ar' ? 'text-right' : 'text-left'}`}>
                   <div className="flex flex-wrap items-center gap-2 mb-2">
                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest bg-slate-100 px-2 py-1 rounded-md">
                       {exam.category || (exam.isCentral ? t('schoolAdmin.examsPage.central') : t('schoolAdmin.examsPage.school'))}
@@ -226,8 +234,8 @@ export default function ExamsListPage() {
                       </span>
                     )}
                   </div>
-                  <h3 className="text-xl font-black text-slate-800 truncate mb-1 group-hover:text-indigo-600 transition-colors">{exam.title}</h3>
-                  <p className="text-slate-500 text-sm truncate">{exam.description || 'لا يوجد وصف متاح لهذا الامتحان.'}</p>
+                  <h3 className="text-xl font-black text-slate-800 truncate mb-1 group-hover:text-indigo-600 transition-colors">{moduleView.title}</h3>
+                  <p className="text-slate-500 text-sm truncate">{moduleView.description || 'لا يوجد وصف متاح لهذا الموديول.'}</p>
                   
                   <div className="flex flex-wrap items-center gap-4 mt-4">
                     <div className="flex items-center gap-1.5 text-slate-600 text-xs font-bold bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
@@ -236,15 +244,15 @@ export default function ExamsListPage() {
                     </div>
                     <div className="flex items-center gap-1.5 text-slate-600 text-xs font-bold bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100" title={language === 'ar' ? 'عدد الموديولات' : 'Modules count'}>
                       <Layers className="w-4 h-4 text-indigo-500" />
-                      {exam.modules?.length || 0} {language === 'ar' ? 'موديول' : 'Modules'}
+                      1 {language === 'ar' ? 'موديول' : 'Module'}
                     </div>
                     <div className="flex items-center gap-1.5 text-slate-600 text-xs font-bold bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100" title={language === 'ar' ? 'عدد الدروس' : 'Lessons count'}>
                       <BookOpen className="w-4 h-4 text-emerald-500" />
-                      {exam.modules?.reduce((acc: number, m: any) => acc + (m.examsCount ?? m.subExams?.length ?? 0), 0) || 0} {language === 'ar' ? 'اختبار' : 'Exams'}
+                      {moduleView.examsCount} {language === 'ar' ? 'اختبار' : 'Exams'}
                     </div>
                     <div className="flex items-center gap-1.5 text-slate-600 text-xs font-bold bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100" title={language === 'ar' ? 'إجمالي الأسئلة' : 'Total questions'}>
                       <HelpCircle className="w-4 h-4 text-amber-500" />
-                      {(exam._count?.questions ?? exam.questions?.length ?? 0) + (exam.modules?.reduce((acc: number, m: any) => acc + (m.questionsCount ?? 0), 0) || 0)} {language === 'ar' ? 'سؤال' : 'Questions'}
+                      {moduleView.questionsCount} {language === 'ar' ? 'سؤال' : 'Questions'}
                     </div>
                     <button 
                       onClick={() => handleUpdateAttempts(exam.id, exam.attemptsAllowed || 1)} 
@@ -262,11 +270,11 @@ export default function ExamsListPage() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2 shrink-0 w-full md:w-auto mt-4 md:mt-0 justify-end md:justify-start border-t border-slate-100 md:border-none pt-4 md:pt-0">
+                <div className="flex flex-wrap items-center gap-2 shrink-0 w-full mt-2 justify-end border-t border-slate-100 pt-4">
                   <Link href={`/exams/${exam.id}/details`} target="_blank" className="w-10 h-10 bg-slate-50 text-slate-500 rounded-xl flex items-center justify-center hover:bg-slate-600 hover:text-white transition-all shadow-sm" title={language === 'ar' ? 'عرض الموديول والاختبارات' : 'Preview Module and Exams'}>
                     <Eye className="w-5 h-5" />
                   </Link>
-                  <Link href={`/school-admin/exams/edit/${exam.id}`} className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm" title={t('schoolAdmin.examsPage.edit')}>
+                  <Link href={`/school-admin/exams/edit/${moduleView.parentExamId}?moduleId=${encodeURIComponent(moduleView.id)}`} className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm" title={t('schoolAdmin.examsPage.edit')}>
                     <FileEdit className="w-5 h-5" />
                   </Link>
                   <button onClick={() => handleDelete(exam.id)} className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center hover:bg-red-600 hover:text-white transition-all shadow-sm" title={t('schoolAdmin.teachersPage.deleteTooltip')}>
@@ -281,16 +289,17 @@ export default function ExamsListPage() {
                   </Link>
                 </div>
               </div>
-            ))}
+              );
+            })}
             
-            {filteredExams.length === 0 && (
+            {moduleViews.length === 0 && (
               <div className="col-span-full py-32 text-center bg-white rounded-[40px] border-4 border-dashed border-slate-100">
                 <div className="w-24 h-24 bg-slate-50 text-slate-200 rounded-full flex items-center justify-center mx-auto mb-8">
                   <ClipboardList className="w-12 h-12" />
                 </div>
                 <h3 className="text-2xl font-black text-slate-800 mb-2">{t('schoolAdmin.examsPage.noExams')}</h3>
                 <p className="text-slate-400 font-medium">{t('schoolAdmin.examsPage.noExamsDesc')}</p>
-                <Link href="/school-admin/exams/new" className="inline-flex items-center gap-2 text-indigo-600 font-black mt-8 hover:gap-3 transition-all">
+                <Link href="/school-admin/exams/new?mode=module" className="inline-flex items-center gap-2 text-indigo-600 font-black mt-8 hover:gap-3 transition-all">
                    {t('schoolAdmin.examsPage.createNow')}
                    <ChevronLeft className={`w-5 h-5 ${language === 'en' ? 'rotate-180' : ''}`} />
                 </Link>

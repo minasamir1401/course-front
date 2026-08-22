@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import ExamModulesManager from "@/components/exams/ExamModulesManager";
+import { buildExamModuleViews } from "@/lib/examModuleView";
 
 export default function SuperAdminExamsPage() {
   const router = useRouter();
@@ -193,6 +194,7 @@ export default function SuperAdminExamsPage() {
       && (!exam.type || exam.type.toUpperCase() === "EXAM" || exam.type.toUpperCase() === "QUIZ");
     return matchesSearch && matchesType;
   });
+  const moduleViews = buildExamModuleViews(filteredExams);
 
   return (
     <DashboardLayout>
@@ -213,13 +215,13 @@ export default function SuperAdminExamsPage() {
             <div className="flex flex-col gap-3">
 
               <Link
-                href="/super-admin/exams/new"
+                href="/super-admin/exams/new?mode=module"
                 className="group bg-white text-[#0f0f1d] px-6 py-4 md:px-10 md:py-5 rounded-2xl font-black text-base md:text-lg shadow-2xl shadow-white/10 hover:scale-105 transition-all flex items-center gap-3 w-full md:w-auto justify-center"
               >
                 <div className="w-6 h-6 md:w-8 md:h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center group-hover:rotate-90 transition-transform">
                   <Plus className="w-4 h-4 md:w-5 md:h-5" />
                 </div>
-                {t('examsPage.createExam')}
+                {language === 'ar' ? 'إنشاء Module اختبار جديد' : 'Create New Exam Module'}
               </Link>
             </div>
           </div>
@@ -296,148 +298,46 @@ export default function SuperAdminExamsPage() {
           <div className="lg:col-span-3 bg-gradient-to-br from-indigo-600 to-indigo-800 p-6 md:p-8 rounded-3xl md:rounded-[32px] text-white shadow-xl shadow-indigo-200 flex flex-col justify-between">
             <TrendingUp className="w-8 h-8 md:w-10 md:h-10 opacity-50" />
             <div>
-              <h4 className="text-3xl md:text-4xl font-black mb-1">{exams.length}</h4>
-              <p className="text-indigo-100 text-[10px] md:text-sm font-bold opacity-80 uppercase tracking-wider">{t('examsPage.totalExams')}</p>
+              <h4 className="text-3xl md:text-4xl font-black mb-1">{moduleViews.length}</h4>
+              <p className="text-indigo-100 text-[10px] md:text-sm font-bold opacity-80 uppercase tracking-wider">{language === 'ar' ? 'إجمالي Modules الاختبار' : 'Total Exam Modules'}</p>
             </div>
           </div>
         </div>
 
-        {/* Exams List Section (Full Width) */}
+        {/* Exam Modules / Courses-style cards */}
         <div className="w-full">
-          <div className="flex flex-col gap-4">
-            {filteredExams.map((exam: any) => (
-              <div key={exam.id} className="group bg-white rounded-2xl md:rounded-3xl border border-slate-100 p-5 md:p-6 hover:shadow-xl hover:shadow-indigo-500/5 transition-all duration-300 relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-5">
-                <div className="flex items-center gap-4 flex-1 min-w-0">
-                  <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 shrink-0">
-                    <BookOpen className="w-6 h-6" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2.5 mb-1.5">
-                      <h3 className="text-base md:text-lg font-black text-slate-800 group-hover:text-indigo-600 transition-colors truncate max-w-[200px] md:max-w-[400px]">
-                        {exam.title}
-                      </h3>
-                      <span className={`px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider shrink-0 ${exam.isCentral ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                        {exam.isCentral ? t('examsPage.central') : t('examsPage.school')}
-                      </span>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {moduleViews.map((module: any) => {
+              const exam = exams.find((candidate: any) => candidate.id === module.parentExamId) || {};
+              return (
+                <div key={module.id} className="group bg-white rounded-[32px] border border-slate-100 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all relative overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-fuchsia-500" />
+                  <div className="flex items-start justify-between gap-4 mb-6">
+                    <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                      <BookOpen className="w-8 h-8" />
                     </div>
-                    <div className="flex flex-wrap items-center gap-3 text-slate-400 font-bold text-[10px] md:text-xs">
-                      <span className="px-2.5 py-0.5 rounded-md shrink-0 font-black uppercase tracking-wider text-[10px] bg-indigo-100 text-indigo-700 border border-indigo-200">
-                        {language === 'ar' ? 'اختبار' : 'Exam'}
-                      </span>
-                      <span>•</span>
-                      <div className="flex items-center gap-1 text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md shrink-0">
-                        <GraduationCap className="w-3.5 h-3.5" />
-                        {getGradeName(exam.grade) || (language === 'ar' ? "عام" : "General")}
-                      </div>
-                      {exam.description && (
-                        <>
-                          <span>•</span>
-                          <span className="text-slate-500 font-medium truncate max-w-[150px] md:max-w-[300px]" title={exam.description}>
-                            {exam.description}
-                          </span>
-                        </>
-                      )}
-                    </div>
+                    <Link href={`/super-admin/exams/edit/${module.parentExamId}?moduleId=${encodeURIComponent(module.id)}`} className="w-11 h-11 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-indigo-50 hover:text-indigo-600 transition-colors" title={language === 'ar' ? 'تعديل إعدادات الـ Module' : 'Edit module settings'}>
+                      <Settings className="w-5 h-5" />
+                    </Link>
                   </div>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    <span className="px-3 py-1 rounded-xl bg-indigo-50 text-indigo-700 text-[10px] font-black uppercase tracking-wider">{language === 'ar' ? 'Module اختبار' : 'Exam Module'}</span>
+                    <span className="px-3 py-1 rounded-xl bg-slate-50 text-slate-500 text-[10px] font-black">{getGradeName(module.grade) || (language === 'ar' ? 'عام' : 'General')}</span>
+                  </div>
+                  <h3 className="text-2xl font-black text-slate-900 truncate mb-2">{module.title}</h3>
+                  <p className="text-sm text-slate-500 font-medium line-clamp-2 min-h-10">{module.description || (language === 'ar' ? 'بوابة اختبارات جديدة' : 'Exam module portal')}</p>
+                  <div className="grid grid-cols-2 gap-3 mt-7">
+                    <div className="rounded-2xl bg-slate-50 p-4 text-center"><BookOpen className="w-5 h-5 text-indigo-500 mx-auto mb-2" /><p className="text-xl font-black text-slate-900">{module.examsCount}</p><p className="text-[10px] font-bold text-slate-400">{language === 'ar' ? 'اختبارات' : 'Exams'}</p></div>
+                    <div className="rounded-2xl bg-slate-50 p-4 text-center"><HelpCircle className="w-5 h-5 text-amber-500 mx-auto mb-2" /><p className="text-xl font-black text-slate-900">{module.questionsCount}</p><p className="text-[10px] font-bold text-slate-400">{language === 'ar' ? 'أسئلة' : 'Questions'}</p></div>
+                  </div>
+                  <Link href={`/exams/${exam.id}/details`} target="_blank" className="mt-5 w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-700 transition-colors">
+                    {language === 'ar' ? 'فتح بوابة الـ Module' : 'Open Module Portal'} <Eye className="w-4 h-4" />
+                  </Link>
                 </div>
+              );
+            })}
 
-                <div className="flex flex-wrap md:flex-nowrap items-center justify-between md:justify-end gap-5 shrink-0 w-full md:w-auto border-t md:border-t-0 pt-4 md:pt-0 border-slate-50">
-                  {/* Duration & Attempts */}
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 shrink-0">
-                      <Clock className="w-4 h-4 text-slate-400" />
-                      <span>{exam.duration} {language === 'ar' ? 'دقيقة' : 'mins'}</span>
-                    </div>
-                    <button
-                      onClick={() => handleUpdateAttempts(exam.id, exam.attemptsAllowed || 1)}
-                      title={language === 'ar' ? "اضغط لتغيير عدد المحاولات" : "Click to change attempts count"}
-                      className="flex items-center gap-1.5 bg-amber-50 text-amber-600 px-2.5 py-1 rounded-xl text-xs font-black border border-amber-100 hover:bg-amber-100 transition-all shrink-0"
-                    >
-                      <Hash className="w-3.5 h-3.5" />
-                      <span>{(exam.attemptsAllowed || 1) >= 999 ? '∞' : exam.attemptsAllowed || 1} {language === 'ar' ? 'محاولة' : 'attempt(s)'}</span>
-                    </button>
-                  </div>
-
-                  {/* Stats (Modules, Lessons, Questions) */}
-                  <div className={`flex items-center gap-4 ${language === 'ar' ? 'border-r pr-4 mr-2' : 'border-l pl-4 ml-2'} border-slate-200 shrink-0`}>
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 shrink-0" title={language === 'ar' ? 'عدد الموديولات' : 'Modules count'}>
-                      <Layers className="w-3.5 h-3.5 text-indigo-400" />
-                      <span>{exam.modules?.length || 0}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 shrink-0" title={language === 'ar' ? 'عدد الاختبارات' : 'Exams count'}>
-                      <BookOpen className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>{exam.modules?.reduce((acc: number, m: any) => acc + (m.examsCount ?? m.subExams?.length ?? 0), 0) || 0}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 shrink-0" title={language === 'ar' ? 'إجمالي الأسئلة' : 'Total questions count'}>
-                      <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
-                      <span>{(exam._count?.questions || 0) + (exam.modules?.reduce((acc: number, m: any) => acc + (m.questionsCount ?? m._count?.questions ?? 0), 0) || 0) || exam.questions?.length || 0}</span>
-                    </div>
-                  </div>
-
-                  {/* Target Schools */}
-                  <div className="flex items-center gap-2 text-slate-500 font-bold text-xs shrink-0">
-                    <Building2 className="w-4 h-4 text-indigo-500" />
-                    <span className="truncate max-w-[120px]">
-                      {exam.isCentral
-                        ? t('examsPage.allSchoolsTarget')
-                        : (exam.schools?.length > 1
-                          ? (language === 'ar' ? `${exam.schools.length} مدارس` : `${exam.schools.length} schools`)
-                          : (exam.schools?.[0]?.name || (language === 'ar' ? "مدرسة واحدة" : "One school")))}
-                    </span>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 ml-auto md:ml-0">
-                    <Link
-                      href={`/exams/${exam.id}/details`}
-                      target="_blank"
-                      className="p-2.5 bg-sky-50 text-sky-400 rounded-xl hover:bg-sky-100 hover:text-sky-600 transition-all border border-sky-100"
-                      title={language === 'ar' ? "عرض الموديول والاختبارات" : "Preview Module and Exams"}
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Link>
-                    <Link
-                      href={`/super-admin/exams/analytics/${exam.id}`}
-                      className="bg-indigo-50 text-indigo-600 px-4 py-2.5 rounded-xl text-xs font-black hover:bg-indigo-100 transition-all border border-indigo-100 whitespace-nowrap"
-                      title={language === 'ar' ? "تحليلات" : "Analytics"}
-                    >
-                      📊 {language === 'ar' ? "تحليلات" : "Analytics"}
-                    </Link>
-                    <Link
-                      href={`/super-admin/exams/results/${exam.id}`}
-                      className="bg-[#0f0f1d] text-white px-4 py-2.5 rounded-xl text-xs font-black hover:bg-indigo-600 transition-all shadow-md whitespace-nowrap"
-                    >
-                      {t('examsPage.reports')}
-                    </Link>
-                    <Link
-                      href={`/super-admin/exams/edit/${exam.id}`}
-                      className="p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-indigo-50 hover:text-indigo-600 transition-all border border-slate-100"
-                      title={language === 'ar' ? "تعديل الامتحان" : "Edit Exam"}
-                    >
-                      <Settings className="w-4 h-4" />
-                    </Link>
-                    <button
-                      onClick={() => { setExamToMove(exam); setShowMoveModal(true); setTargetExamId(""); }}
-                      className="p-2.5 bg-emerald-50 text-emerald-400 rounded-xl hover:bg-emerald-100 hover:text-emerald-600 transition-all border border-emerald-100"
-                      title={language === 'ar' ? "نقل إلى الموديولات" : "Move to Modules"}
-                    >
-                      <FolderOutput className="w-4 h-4" />
-                    </button>
-                    {isSuperAdmin && (
-                      <button
-                        onClick={() => handleDelete(exam.id)}
-                        className="p-2.5 bg-rose-50 text-rose-400 rounded-xl hover:bg-rose-100 hover:text-rose-600 transition-all border border-rose-100 animate-fade-in"
-                        title={t('examsPage.deleteExam')}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {filteredExams.length === 0 && (
+            {moduleViews.length === 0 && (
               <div className="col-span-full py-32 text-center bg-slate-50/50 rounded-[40px] border-2 border-dashed border-slate-200">
                 <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm">
                   <Search className="w-10 h-10 text-slate-200" />
