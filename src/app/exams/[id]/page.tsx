@@ -4,7 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { API_URL } from "@/lib/api";
 import { sanitizeHtml } from "@/lib/sanitize";
-import { Clock, ChevronRight, ChevronLeft, Send, AlertCircle, HelpCircle, Lock, Play, Calendar, ShieldCheck, CheckCircle2, Target, Info, Sparkles, BookOpen, MessageSquare, Star, ListOrdered, Award, TrendingUp } from 'lucide-react';
+import { Clock, ChevronRight, ChevronLeft, Send, AlertCircle, HelpCircle, Lock, Play, Calendar, ShieldCheck, CheckCircle2, Target, Info, Sparkles, BookOpen, MessageSquare, Star, ListOrdered, Award, TrendingUp, Flag } from 'lucide-react';
 import { useNotification } from "@/context/NotificationContext";
 import VideoPlayer from "@/components/VideoPlayer";
 import HtmlRenderer from "@/components/HtmlRenderer";
@@ -14,6 +14,7 @@ import { getOptionLetter, cleanOptionText } from "@/lib/utils";
 import { ItemSectionsBubbles, MetadataModalButton } from '@/components/LessonSubComponents';
 import { InteractiveTag } from '@/components/InteractiveTag';
 import dynamic from 'next/dynamic';
+import { getAnswerStatusLabel, getInExamQuestionTypeLabel, toggleReviewFlag } from '@/lib/takeExamUi';
 
 const InteractiveQuestionRenderer = dynamic(() => import('@/components/InteractiveQuestionRenderer'), { ssr: false });
 
@@ -86,6 +87,7 @@ function TakeExamPageContent() {
   const [submitting, setSubmitting] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showPreviewAnswers, setShowPreviewAnswers] = useState(false);
+  const [reviewFlags, setReviewFlags] = useState<string[]>([]);
   const hasAutoSubmitted = React.useRef(false);
   const [watermarkText, setWatermarkText] = useState("");
 
@@ -117,6 +119,8 @@ function TakeExamPageContent() {
       try {
         const savedAnswers = localStorage.getItem(`exam_${id}_${subExamId || "root"}_answers`);
         if (savedAnswers) setAnswers(JSON.parse(savedAnswers));
+        const savedReviewFlags = localStorage.getItem(`exam_${id}_${subExamId || "root"}_review_flags`);
+        if (savedReviewFlags) setReviewFlags(JSON.parse(savedReviewFlags));
         const savedTime = localStorage.getItem(`exam_${id}_${subExamId || "root"}_time`);
         if (savedTime && parseInt(savedTime) > 0) {
           setTimeLeft(parseInt(savedTime));
@@ -130,6 +134,11 @@ function TakeExamPageContent() {
       setTimeLeft(exam.duration * 60);
     }
   }, [exam, id, isPreviewMode]);
+
+  useEffect(() => {
+    if (isPreviewMode) return;
+    localStorage.setItem(`exam_${id}_${subExamId || "root"}_review_flags`, JSON.stringify(reviewFlags));
+  }, [id, isPreviewMode, reviewFlags, subExamId]);
 
   useEffect(() => {
     if (started && timeLeft > 0) {
@@ -337,6 +346,7 @@ function TakeExamPageContent() {
         if (!isPreviewMode) {
           localStorage.removeItem(`exam_${id}_${subExamId || "root"}_answers`);
           localStorage.removeItem(`exam_${id}_${subExamId || "root"}_time`);
+          localStorage.removeItem(`exam_${id}_${subExamId || "root"}_review_flags`);
         }
         if (isPreviewMode) {
           showToast(language === 'ar' ? "تم التسليم بنجاح في وضع المعاينة" : "Preview submitted successfully", "success");
@@ -464,6 +474,10 @@ function TakeExamPageContent() {
   const answerObj = answers.find((a) => a.questionId === question.id);
   const selectedAnswer = answerObj?.selectedAnswer;
   const selectedAnswers = answerObj?.selectedAnswers || [];
+  const isCurrentQuestionFlagged = reviewFlags.includes(String(question.id || ''));
+  const currentQuestionSection = question.section || exam.selectedSubExam?.section || exam.section || '';
+  const currentAnswerStatus = getAnswerStatusLabel(question, answerObj, language);
+  const flaggedQuestionsCount = reviewFlags.length;
   
   const questionsThatRequireAnswer = exam.questions.filter((q: any) => q.type !== "TEXT");
   const answeredQuestionsCount = answers.filter(a => {
@@ -527,12 +541,23 @@ function TakeExamPageContent() {
             <h1 className="text-xl font-black text-slate-800 line-clamp-1">{exam.title}</h1>
             <div className="flex gap-2 mt-0.5">
               <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">{exam.type === 'Quiz' ? 'Exam' : (exam.type || 'Exam')}</span>
-              <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">{exam.skill}</span>
-              <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
-                {exam.level === 'Easy' || exam.level === 'Foundation' ? 'تأسيسي' : exam.level === 'Medium' || exam.level === 'On Level' || exam.level === 'On_Level' ? 'On_Level' : 'متقدم'}
+              {currentQuestionSection && (
+                <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
+                  {language === 'ar' ? 'القسم: ' : 'Section: '} {currentQuestionSection}
+                </span>
+              )}
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                currentAnswerStatus === (language === 'ar' ? 'تمت الإجابة' : 'Answered')
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                  : 'bg-amber-50 text-amber-700 border-amber-100'
+              }`}>
+                {language === 'ar' ? 'الحالة: ' : 'Answer Status: '} {currentAnswerStatus}
               </span>
-              {exam.domain && <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">{exam.domain}</span>}
-              {exam.gradeTarget && <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">{exam.gradeTarget}</span>}
+              {flaggedQuestionsCount > 0 && (
+                <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-100">
+                  {language === 'ar' ? 'للمراجعة: ' : 'Flagged: '} {flaggedQuestionsCount}
+                </span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-6">
@@ -555,6 +580,13 @@ function TakeExamPageContent() {
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
                 {language === 'ar' ? 'السؤال' : 'Question'} {currentQuestion + 1} {language === 'ar' ? 'من' : 'of'} {exam.questions.length}
+              </span>
+              <span className={`text-sm font-bold px-3 py-1 rounded-full ${
+                currentAnswerStatus === (language === 'ar' ? 'تمت الإجابة' : 'Answered')
+                  ? 'bg-emerald-50 text-emerald-700'
+                  : 'bg-amber-50 text-amber-700'
+              }`}>
+                {language === 'ar' ? 'الحالة: ' : 'Answer Status: '} {currentAnswerStatus}
               </span>
             </div>
             <span className="text-sm font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
@@ -582,19 +614,8 @@ function TakeExamPageContent() {
               </div>
             <div className="flex flex-wrap items-center gap-3 mb-6">
               <span className="bg-indigo-600 text-white px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-sm shadow-indigo-200">
-                {question.type === 'MCQ' ? (language === 'ar' ? 'اختيار من متعدد' : 'Multiple Choice') : question.type === 'MULTI_SELECT' ? (language === 'ar' ? 'اختيار متعدد' : 'Multiple Select') : question.type === 'TEXT' ? (language === 'ar' ? 'شريحة شرح' : 'Explanation Slide') : (language === 'ar' ? 'صح وخطأ' : 'True / False')}
+                {getInExamQuestionTypeLabel(question, language)}
               </span>
-              {question.cognitive && <span className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-xl text-[10px] font-bold shadow-sm border border-slate-200">{language === 'ar' ? 'المعرفي: ' : 'Cognitive: '} {question.cognitive}</span>}
-              {question.dok && <span className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-xl text-[10px] font-bold shadow-sm border border-slate-200">DOK: {question.dok}</span>}
-              {question.difficulty && <span className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-xl text-[10px] font-bold shadow-sm border border-slate-200">{language === 'ar' ? 'الصعوبة: ' : 'Difficulty: '} {question.difficulty}</span>}
-              {question.estimatedTime && <span className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-xl text-[10px] font-bold shadow-sm border border-slate-200 flex items-center gap-1"><Clock className="w-3 h-3"/> {question.estimatedTime}</span>}
-              {question.indicators && <span className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-xl text-[10px] font-bold shadow-sm border border-slate-200">{language === 'ar' ? 'المؤشر: ' : 'Indicator: '} {question.indicators}</span>}
-              {question.learningOutcomes && <span className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-xl text-[10px] font-bold shadow-sm border border-slate-200">{language === 'ar' ? 'ناتج التعلم: ' : 'Outcome: '} {question.learningOutcomes}</span>}
-              {question.skill && <span className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-xl text-[10px] font-bold shadow-sm border border-slate-200">{language === 'ar' ? 'المهارة: ' : 'Skill: '} {question.skill}</span>}
-              {question.subskill && <span className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-xl text-[10px] font-bold shadow-sm border border-slate-200">{language === 'ar' ? 'المهارة الفرعية: ' : 'Subskill: '} {question.subskill}</span>}
-              {question.microSkill && <span className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-xl text-[10px] font-bold shadow-sm border border-slate-200">{language === 'ar' ? 'المهارة الدقيقة: ' : 'Micro: '} {question.microSkill}</span>}
-
-
             </div>
             </div>
             <HtmlRenderer 
@@ -734,16 +755,28 @@ function TakeExamPageContent() {
         </div>
 
         {/* Navigation */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-wrap justify-between items-center gap-3">
           <button
             disabled={currentQuestion === 0}
             onClick={() => setCurrentQuestion(currentQuestion - 1)}
-            className="flex items-center gap-2 font-bold text-slate-500 hover:text-indigo-600 disabled:opacity-30 transition-colors"
+            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 font-bold text-slate-500 hover:text-indigo-600 hover:border-indigo-200 disabled:opacity-30 transition-colors"
           >
             {language === 'ar' ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
-            {language === 'ar' ? 'السؤال السابق' : 'Previous Question'}
+            {language === 'ar' ? 'السؤال السابق' : 'Previous'}
           </button>
-          
+
+          <button
+            onClick={() => setReviewFlags((currentFlags) => toggleReviewFlag(currentFlags, String(question.id || '')))}
+            className={`inline-flex items-center gap-2 rounded-2xl px-5 py-3 font-bold transition-all ${
+              isCurrentQuestionFlagged
+                ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                : 'bg-white text-slate-600 border border-slate-200 hover:border-rose-200 hover:text-rose-600'
+            }`}
+          >
+            <Flag className="w-4 h-4" />
+            {language === 'ar' ? 'وضع علامة للمراجعة' : 'Mark for Review'}
+          </button>
+
           <div className="flex-1 flex justify-end">
             {currentQuestion === exam.questions.length - 1 ? (
               <button
@@ -759,7 +792,7 @@ function TakeExamPageContent() {
                 onClick={() => setCurrentQuestion(currentQuestion + 1)}
                 className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center gap-2"
               >
-                {language === 'ar' ? 'السؤال التالي' : 'Next Question'}
+                {language === 'ar' ? 'السؤال التالي' : 'Next'}
                 {language === 'ar' ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
               </button>
             )}

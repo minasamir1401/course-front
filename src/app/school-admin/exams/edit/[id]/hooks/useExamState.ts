@@ -3,6 +3,7 @@ import React from 'react';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { API_URL } from '@/lib/api';
+import { findSelectedSubExamLocation } from '@/lib/selectedSubExam';
 import { ExamData, ModuleData, Question } from '../types';
 
 export const useExamState = (schoolIdParam: string | null, examId: string, selectedSubExamId?: string | null) => {
@@ -189,16 +190,11 @@ export const useExamState = (schoolIdParam: string | null, examId: string, selec
              });
              setModules(mods);
              if (selectedSubExamId) {
-               const selectedModuleIndex = mods.findIndex((module: any) =>
-                 module.subExams?.some((subExam: any) => subExam.id === selectedSubExamId),
-               );
-               const selectedSubExamIndex = selectedModuleIndex >= 0
-                 ? mods[selectedModuleIndex].subExams.findIndex((subExam: any) => subExam.id === selectedSubExamId)
-                 : -1;
-               if (selectedModuleIndex >= 0 && selectedSubExamIndex >= 0) {
-                 setEditingModuleIndex(selectedModuleIndex);
-                 setCurrentModule(mods[selectedModuleIndex]);
-                 setActiveSubExamIndex(selectedSubExamIndex);
+               const selectedLocation = findSelectedSubExamLocation(mods, selectedSubExamId);
+               if (selectedLocation) {
+                 setEditingModuleIndex(selectedLocation.moduleIndex);
+                 setCurrentModule(mods[selectedLocation.moduleIndex]);
+                 setActiveSubExamIndex(selectedLocation.subExamIndex);
                  setActiveTab('exercises');
                  setIsModuleModalOpen(true);
                }

@@ -3,17 +3,19 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { BookOpen, Calendar, Edit2, Eye, HelpCircle, Plus, Settings, Trash2 } from "lucide-react";
+import { BookOpen, Calendar, Download, Edit2, Eye, HelpCircle, Plus, Trash2 } from "lucide-react";
 import { API_URL } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";
+import * as XLSX from "xlsx";
+import { buildQuestionExportRows } from "@/lib/examExcelTemplates";
 
 export default function ExamModulePortal({ state, moduleId, language, role }: any) {
   const router = useRouter();
   const { showToast } = useNotification();
   const normalizedModuleId = String(moduleId || "");
+  const normalizeId = (value: unknown) => String(value ?? "");
   const examModule = (state.modules || []).find((item: any) => String(item.id || "") === normalizedModuleId)
     || (String(state.currentModule?.id || "") === normalizedModuleId ? state.currentModule : null);
-  const [showSettings, setShowSettings] = useState(false);
   const [title, setTitle] = useState("");
   const [creating, setCreating] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -38,6 +40,16 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
   const tokenKey = role === "SCHOOL_ADMIN" ? "school_admin_token" : "super_admin_token";
   const exams = examModule.subExams || [];
   const questions = exams.reduce((total: number, exam: any) => total + (exam.questions?.length || exam.questionsCount || exam._count?.questions || 0), 0);
+
+  const exportExamData = (exam: any) => {
+    const exportRows = buildQuestionExportRows(exam.questions || [], language);
+    const ws = XLSX.utils.aoa_to_sheet(exportRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Questions');
+    const examTitleSlug = String(exam.title || 'exam').trim().replace(/[\\/:*?"<>|]+/g, '-');
+    XLSX.writeFile(wb, `${examTitleSlug}_export.xlsx`);
+    showToast(language === "ar" ? "تم تصدير بيانات الاختبار" : "Exam data exported successfully", "success");
+  };
 
   const createExam = async () => {
     if (!title.trim()) {
@@ -80,13 +92,27 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
       });
       if (!res.ok) throw new Error("delete failed");
 
+      const normalizedSubExamId = normalizeId(subExamId);
       state.setModules((currentModules: any[]) =>
         currentModules.map((currentModule: any) =>
-          currentModule.id === moduleId
-            ? { ...currentModule, subExams: (currentModule.subExams || []).filter((subExam: any) => subExam.id !== subExamId) }
+          normalizeId(currentModule.id) === normalizedModuleId
+            ? {
+                ...currentModule,
+                subExams: (currentModule.subExams || []).filter(
+                  (subExam: any) => normalizeId(subExam.id) !== normalizedSubExamId,
+                ),
+              }
             : currentModule,
         ),
       );
+      if (normalizeId(state.currentModule?.id) === normalizedModuleId) {
+        state.setCurrentModule((currentModule: any) => ({
+          ...currentModule,
+          subExams: (currentModule.subExams || []).filter(
+            (subExam: any) => normalizeId(subExam.id) !== normalizedSubExamId,
+          ),
+        }));
+      }
 
       showToast(language === "ar" ? "تم حذف الاختبار" : "Exam deleted successfully", "success");
     } catch (error) {
@@ -109,11 +135,8 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
           <Plus className="w-4 h-4" />
           {language === "ar" ? "إضافة موديول" : "Add Module"}
         </Link>
-        <button onClick={() => setShowSettings(v => !v)} className="inline-flex items-center gap-2 rounded-2xl bg-slate-50 px-5 py-3 text-sm font-black text-slate-600 hover:bg-indigo-50 hover:text-indigo-600"><Settings className="w-4 h-4" />{language === "ar" ? "إظهار إعدادات الموديول" : "Show Module Settings"}</button>
       </div>
     </div>
-
-    {showSettings && <div className="rounded-[30px] bg-indigo-50/60 border border-indigo-100 p-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm font-black text-slate-600"><div>{language === "ar" ? "المدة" : "Duration"}: {examModule.duration || "—"}</div><div>{language === "ar" ? "درجة النجاح" : "Passing score"}: {examModule.passingScore || "—"}</div><div>{language === "ar" ? "حالة النشر" : "Visibility"}: {examModule.isVisible === false ? "Hidden" : "Visible"}</div></div>}
 
     <div className="rounded-[36px] bg-white border border-slate-100 shadow-sm p-7">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6"><div><h2 className="text-2xl font-black text-slate-900">{language === "ar" ? "الاختبارات" : "Exams"}</h2><p className="text-slate-400 font-bold mt-1">{exams.length} {language === "ar" ? "اختبارات" : "exams"} · {questions} {language === "ar" ? "سؤال" : "questions"}</p></div><div className="flex gap-2 w-full md:w-auto"><input ref={titleInputRef} value={title} onChange={e => setTitle(e.target.value)} onKeyDown={e => { if (e.key === "Enter") createExam(); }} placeholder={language === "ar" ? "اسم الاختبار الجديد" : "New exam name"} className="min-w-0 flex-1 md:w-56 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold outline-none focus:border-indigo-500" /><button disabled={creating} onClick={createExam} className="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-white font-black disabled:opacity-50"><Plus className="w-5 h-5" />{language === "ar" ? "إنشاء اختبار" : "Create Exam"}</button></div></div>
@@ -134,6 +157,9 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
                   <Link href={previewHref} target="_blank" className="w-10 h-10 rounded-xl bg-white text-slate-400 hover:text-emerald-600 flex items-center justify-center">
                     <Eye className="w-4 h-4" />
                   </Link>
+                  <button onClick={() => exportExamData(exam)} className="w-10 h-10 rounded-xl bg-white text-slate-400 hover:text-sky-600 flex items-center justify-center">
+                    <Download className="w-4 h-4" />
+                  </button>
                   <button onClick={() => router.push(editHref)} className="w-10 h-10 rounded-xl bg-white text-slate-400 hover:text-indigo-600 flex items-center justify-center">
                     <Edit2 className="w-4 h-4" />
                   </button>

@@ -1,4 +1,8 @@
 import * as XLSX from 'xlsx';
+import {
+  buildQuestionExportRows,
+  buildQuestionTemplateRows,
+} from '@/lib/examExcelTemplates';
 
 export const exportQuestionsToExcel = (
   questionsToExport: any[], 
@@ -11,62 +15,7 @@ export const exportQuestionsToExcel = (
     return;
   }
 
-  const wsData = [
-    [
-      language === 'ar' ? 'نص السؤال' : 'Question Text',
-      language === 'ar' ? 'نوع السؤال' : 'Question Type',
-      language === 'ar' ? 'الخيار 1' : 'Option 1',
-      language === 'ar' ? 'الخيار 2' : 'Option 2',
-      language === 'ar' ? 'الخيار 3' : 'Option 3',
-      language === 'ar' ? 'الخيار 4' : 'Option 4',
-      language === 'ar' ? 'الخيار 5' : 'Option 5',
-      language === 'ar' ? 'الإجابة الصحيحة' : 'Correct Answer',
-      language === 'ar' ? 'الدرجة' : 'Points',
-      language === 'ar' ? 'المؤشرات' : 'Indicators',
-      language === 'ar' ? 'مخرجات التعلم' : 'Learning Outcomes',
-      language === 'ar' ? 'المهارة' : 'Skill',
-      language === 'ar' ? 'المهارة الفرعية' : 'Subskill',
-      language === 'ar' ? 'المهارة الدقيقة' : 'Micro Skill',
-      language === 'ar' ? 'مستوى الصعوبة' : 'Difficulty',
-      'DOK',
-      language === 'ar' ? 'المستوى المعرفي' : 'Cognitive',
-      language === 'ar' ? 'نمط الخطأ' : 'Error Pattern',
-      language === 'ar' ? 'الوقت المقدر' : 'Estimated Time',
-      language === 'ar' ? 'التفسير' : 'Explanation'
-    ]
-  ];
-
-  questionsToExport.forEach(q => {
-    let optionsArray = [];
-    if (typeof q.options === 'string') {
-      try { optionsArray = JSON.parse(q.options); } catch (e) { optionsArray = [q.options]; }
-    } else if (Array.isArray(q.options)) {
-      optionsArray = q.options;
-    }
-
-    wsData.push([
-      q.text ? q.text.replace(/<[^>]*>?/gm, '') : '',
-      q.questionType || q.type || 'MCQ',
-      optionsArray[0] || '',
-      optionsArray[1] || '',
-      optionsArray[2] || '',
-      optionsArray[3] || '',
-      optionsArray[4] || '',
-      typeof q.correctAnswer === 'string' ? q.correctAnswer : JSON.stringify(q.correctAnswer || ''),
-      q.points || 1,
-      q.indicators || q.indicator || '',
-      q.learningOutcome || q.learningOutcomes || '',
-      q.skill || '',
-      q.subskill || '',
-      q.microSkill || '',
-      q.level || 'Medium',
-      q.dok || '',
-      q.cognitive || 'Knowledge',
-      q.errorPattern || '',
-      q.estimatedTime || '',
-      q.explanation || ''
-    ]);
-  });
+  const wsData = buildQuestionExportRows(questionsToExport, language);
 
   const ws = XLSX.utils.aoa_to_sheet(wsData);
   const wb = XLSX.utils.book_new();
@@ -187,65 +136,7 @@ export const downloadMetadataTemplate = (language: string, showToast: (msg: stri
 };
 
 export const downloadQuestionsTemplate = (type: 'questions' | 'assignments', language: string, showToast: (msg: string, type: string) => void) => {
-  const wsData = [
-    [
-      language === 'ar' ? "نص السؤال" : "Question Text",
-      language === 'ar' ? "نوع السؤال" : "Question Type",
-      language === 'ar' ? "الخيار 1" : "Option 1",
-      language === 'ar' ? "الخيار 2" : "Option 2",
-      language === 'ar' ? "الخيار 3" : "Option 3",
-      language === 'ar' ? "الخيار 4" : "Option 4",
-      language === 'ar' ? "الخيار 5" : "Option 5",
-      language === 'ar' ? "الإجابة الصحيحة" : "Correct Answer",
-      language === 'ar' ? "الإجابات الصحيحة المتعددة" : "Correct Answers",
-      language === 'ar' ? "الدرجة" : "Points",
-      language === 'ar' ? "المهارة" : "Skill",
-      language === 'ar' ? "المعيار" : "Standard",
-      language === 'ar' ? "المؤشر" : "Indicator",
-      language === 'ar' ? "ناتج التعلم" : "Learning Outcome",
-      language === 'ar' ? "مستوى الصعوبة" : "Difficulty Level",
-      "DOK",
-      language === 'ar' ? "رابط الفيديو" : "Video URL",
-      language === 'ar' ? "التفسير" : "Explanation"
-    ],
-    [
-      language === 'ar' ? "ما هو ناتج 5 + 5؟" : "What is 5 + 5?",
-      "MCQ",
-      "8", "9", "10", "11", "",
-      "10", "", "1", "Problem Solving",
-      "Standard 1: Operations",
-      "Indicator 1.1: Addition",
-      "LO: Students can add numbers correctly",
-      "Foundation", "DOK 1",
-      "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-      language === 'ar' ? "الجمع الصحيح هو 10 لأن 5 زائد 5 يساوي 10" : "5 + 5 is 10"
-    ],
-    [
-      language === 'ar' ? "الأرض كروية الشكل." : "The earth is round.",
-      "TRUE_FALSE",
-      "", "", "", "", "",
-      language === 'ar' ? "صحيح" : "True", "", "1", "Observation",
-      "Standard 2: Physical Geography",
-      "Indicator 2.1: Earth Shape",
-      "LO: Understands planet earth's shape",
-      "Foundation", "DOK 2", "", ""
-    ],
-    [
-      language === 'ar' ? "حدد قارات العالم القديم:" : "Select the ancient world continents:",
-      "MULTI_SELECT",
-      language === 'ar' ? "آسيا" : "Asia", 
-      language === 'ar' ? "أوروبا" : "Europe", 
-      language === 'ar' ? "أفريقيا" : "Africa", 
-      language === 'ar' ? "أستراليا" : "Australia", "",
-      "",
-      language === 'ar' ? "آسيا, أوروبا, أفريقيا" : "Asia, Europe, Africa",
-      "2", "General",
-      "Standard 3: Ancient History",
-      "Indicator 3.1: Continents",
-      "LO: Identifies old world continents",
-      "Medium", "", "", ""
-    ]
-  ];
+  const wsData = buildQuestionTemplateRows(type, language);
   const ws = XLSX.utils.aoa_to_sheet(wsData);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Questions Template");

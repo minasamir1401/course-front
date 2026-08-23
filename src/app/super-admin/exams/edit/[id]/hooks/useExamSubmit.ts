@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { API_URL } from '@/lib/api';
+import { buildDraftModules, buildModulesSubmissionPayload } from '@/lib/examEditingPayload';
 
 export const useExamSubmit = (props: any) => {
   const { examData, modules, isModuleModalOpen, currentModule, editingModuleIndex, manualSubmitRef, autoSaveGenerationRef, autoSaveTimerRef, setIsLoading, autoSaveWriteQueueRef, createdIdRef, standaloneQuestions, showToast, language, router, t, isLoading } = props;
@@ -22,60 +23,17 @@ export const useExamSubmit = (props: any) => {
     try {
       await autoSaveWriteQueueRef.current;
 
-      const finalModules = [...modules];
-      if (isModuleModalOpen && currentModule.title) {
-        if (editingModuleIndex !== null) {
-          finalModules[editingModuleIndex] = currentModule;
-        } else {
-          finalModules.push(currentModule);
-        }
-      }
+      const finalModules = buildDraftModules({
+        modules,
+        currentModule,
+        editingModuleIndex,
+        isModuleModalOpen,
+      });
 
             const targetSchoolIds = (examData.schoolIds || []).filter(Boolean);
       const isCentral = targetSchoolIds.length === 0;
 
-      const allQuestions: any[] = [];
-      const modulesPayload = finalModules.map((m, index) => {
-         const mId = m.id || String(Date.now() + index);
-         
-         const mSubExams = (m.subExams || []).map((s: any, sIdx: number) => {
-             const sId = s.id || String(Date.now() + index * 1000 + sIdx);
-             const sQuestions = (s.questions || []).map((q: any) => ({
-                 ...q,
-                 moduleId: mId,
-                 subExamId: sId
-             }));
-             allQuestions.push(...sQuestions);
-             return {
-                 id: sId,
-                 title: s.title,
-                 duration: s.duration || null,
-                 passingScore: s.passingScore || null,
-                 attemptsAllowed: s.attemptsAllowed || 1,
-                 publishDate: s.publishDate || null,
-                 cutOffDate: s.cutOffDate || null,
-                 order: sIdx
-             };
-         });
-         
-         const mQuestions = (m.questions || []).map((q: any) => ({
-             ...q,
-             moduleId: mId
-         }));
-         allQuestions.push(...mQuestions);
-
-         return {
-            id: mId,
-            title: m.title,
-            description: m.content || null,
-            duration: m.duration || null,
-            passingScore: m.passingScore || null,
-            publishDate: m.publishDate || null,
-            cutOffDate: m.cutOffDate || null,
-            order: index,
-            subExams: mSubExams
-         };
-      });
+      const { modulesPayload, allQuestions } = buildModulesSubmissionPayload(finalModules);
 
       const activeExamId = createdIdRef.current;
       const method = activeExamId ? "PUT" : "POST";

@@ -26,6 +26,7 @@ import { getGradeName, getSubjectName, parseJson } from "./utils/examUtils";
 import ExamModulePortal from "@/components/exams/ExamModulePortal";
 import SubExamEditorScreen from "@/components/exams/SubExamEditorScreen";
 import { buildSubExamEditorHref, getExamWorkflowView } from "@/lib/examModuleView";
+import { selectEditableModule, selectEditableSubExamIndex } from "@/lib/examEditorSelection";
 
 export default function SchoolAdminEditExamPage() {
   const router = useRouter();
@@ -84,6 +85,7 @@ export default function SchoolAdminEditExamPage() {
   const { handleSubmit } = useExamSubmit({ ...state, showToast, language, router, t });
 
   const workflowView = getExamWorkflowView(moduleId, subExamId);
+  const didAutoOpenModuleModalRef = useRef(false);
   const hasMatchingModule = Boolean(
     moduleId && (modules || []).some((module: any) => String(module?.id || "") === String(moduleId))
   );
@@ -102,6 +104,8 @@ export default function SchoolAdminEditExamPage() {
   const resolvedSubExamIndex = effectiveWorkflowView === "sub-exam-editor" && resolvedModule && subExamId
     ? (resolvedModule.subExams || []).findIndex((subExam: any) => String(subExam?.id || "") === String(subExamId))
     : -1;
+  const editableModule = selectEditableModule(moduleId, resolvedModule, currentModule);
+  const editableSubExamIndex = selectEditableSubExamIndex(resolvedSubExamIndex, state.activeSubExamIndex);
 
   const renderSlidesBuilderProps = () => (
     <SlidesBuilder  
@@ -115,21 +119,24 @@ export default function SchoolAdminEditExamPage() {
     <QuestionsBuilder  
       source={source}  
       {...state}
+      currentModule={effectiveWorkflowView === "sub-exam-editor" ? editableModule : state.currentModule}
+      activeSubExamIndex={effectiveWorkflowView === "sub-exam-editor" ? editableSubExamIndex : state.activeSubExamIndex}
       {...questionLogic}
       {...moduleManagement}
       language={language}
       assignmentsExcelRef={moduleManagement.assignmentsExcelRef}
       questionsExcelRef={moduleManagement.questionsExcelRef}
-      handleQuestionsExcelChange={(e) => moduleManagement.handleQuestionsExcelChange(e, state.activeSubExamIndex)}
-      handleAssignmentsExcelChange={(e) => moduleManagement.handleAssignmentsExcelChange(e, state.activeSubExamIndex)}
+      handleQuestionsExcelChange={(e) => moduleManagement.handleQuestionsExcelChange(e, effectiveWorkflowView === "sub-exam-editor" ? editableSubExamIndex : state.activeSubExamIndex)}
+      handleAssignmentsExcelChange={(e) => moduleManagement.handleAssignmentsExcelChange(e, effectiveWorkflowView === "sub-exam-editor" ? editableSubExamIndex : state.activeSubExamIndex)}
       advancedMetadataExcelRef={moduleManagement.advancedMetadataExcelRef}
       handleAdvancedMetadataExcelChange={async (e) => {
-        const updatedList = await moduleManagement.handleAdvancedMetadataExcelChange(e, state.activeSubExamIndex, source);
+        const activeIndex = effectiveWorkflowView === "sub-exam-editor" ? editableSubExamIndex : state.activeSubExamIndex;
+        const updatedList = await moduleManagement.handleAdvancedMetadataExcelChange(e, activeIndex, source);
         if (updatedList && updatedList.length > 0 && state.editingQuestionIndex !== null && state.showQuestionForm) {
           state.setTempQuestion(updatedList[state.editingQuestionIndex]);
         }
       }}
-      downloadAdvancedMetadataTemplate={() => moduleManagement.downloadAdvancedMetadataTemplate(state.activeSubExamIndex, source)}
+      downloadAdvancedMetadataTemplate={() => moduleManagement.downloadAdvancedMetadataTemplate(effectiveWorkflowView === "sub-exam-editor" ? editableSubExamIndex : state.activeSubExamIndex, source)}
     />
   );
 
@@ -141,10 +148,35 @@ export default function SchoolAdminEditExamPage() {
   };
 
   React.useEffect(() => {
-    if (effectiveWorkflowView !== "full-editor" || createModule !== "1") return;
-    moduleManagement.openAddModuleModal();
+    if (effectiveWorkflowView !== "full-editor" || createModule !== "1") {
+      didAutoOpenModuleModalRef.current = false;
+      return;
+    }
+    if (didAutoOpenModuleModalRef.current) return;
+    didAutoOpenModuleModalRef.current = true;
+    setEditingModuleIndex(null);
+    setCurrentModule({
+      title: "",
+      domain: "",
+      content: "",
+      videoUrl: "",
+      summary: "",
+      notes: "",
+      standards: "",
+      indicators: "",
+      learningOutcomes: "",
+      isVisible: true,
+      publishDate: "",
+      cutOffDate: "",
+      slides: [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? "المقدمة" : "Introduction", content: "", videoUrl: "", sections: [] }],
+      questions: [],
+      assignments: [],
+      attachments: []
+    });
+    setActiveTab('info');
+    setIsModuleModalOpen(true);
     router.replace(`/school-admin/exams/edit/${examId}`);
-  }, [createModule, effectiveWorkflowView, examId, moduleManagement, router]);
+  }, [createModule, effectiveWorkflowView, examId, language, router, setActiveTab, setCurrentModule, setEditingModuleIndex, setIsModuleModalOpen]);
 
   if (effectiveWorkflowView === "module-portal") {
     return <DashboardLayout><ExamModulePortal state={state} moduleId={moduleId} language={language} role="SCHOOL_ADMIN" /></DashboardLayout>;
@@ -156,13 +188,13 @@ export default function SchoolAdminEditExamPage() {
         <SubExamEditorScreen
           backHref={`/school-admin/exams/edit/${examId}?moduleId=${encodeURIComponent(moduleId)}`}
           examHref={`/exams/${examId}?preview=true&subExamId=${encodeURIComponent(subExamId)}`}
-          currentModule={resolvedModule || currentModule}
-          activeSubExamIndex={resolvedSubExamIndex >= 0 ? resolvedSubExamIndex : (state.activeSubExamIndex ?? -1)}
+          currentModule={editableModule}
+          activeSubExamIndex={editableSubExamIndex}
           setCurrentModule={setCurrentModule}
           renderQuestionsBuilder={renderQuestionsBuilderProps}
           handleSubmit={handleSubmit}
           isLoading={isLoading}
-          isResolving={isLoading && (!resolvedModule || resolvedSubExamIndex < 0)}
+          isResolving={isLoading && (!editableModule || editableSubExamIndex < 0)}
           language={language}
         />
       </DashboardLayout>
