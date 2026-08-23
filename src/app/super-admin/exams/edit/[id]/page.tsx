@@ -107,6 +107,25 @@ export default function SuperAdminEditExamPage() {
   const editableModule = selectEditableModule(moduleId, resolvedModule, currentModule);
   const editableSubExamIndex = selectEditableSubExamIndex(resolvedSubExamIndex, state.activeSubExamIndex);
 
+  React.useEffect(() => {
+    if (effectiveWorkflowView !== "sub-exam-editor") return;
+    if (!editableModule?.id) return;
+
+    if (String(state.currentModule?.id || "") !== String(editableModule.id)) {
+      setCurrentModule(editableModule);
+    }
+
+    if (editableSubExamIndex >= 0 && state.activeSubExamIndex !== editableSubExamIndex) {
+      state.setActiveSubExamIndex(editableSubExamIndex);
+    }
+  }, [
+    editableModule,
+    editableSubExamIndex,
+    effectiveWorkflowView,
+    setCurrentModule,
+    state,
+  ]);
+
   const renderSlidesBuilderProps = () => (
     <SlidesBuilder  
       {...state}

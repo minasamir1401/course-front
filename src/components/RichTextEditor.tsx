@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Type, Eraser, Palette, Heading1, Heading2, ChevronDown, Image as ImageIcon, Table, Sigma, X, Highlighter, Trash2 } from 'lucide-react';
 import { uploadFileToServer } from "@/lib/image-utils";
+import { buildRichTextImageHtml, getRichTextImageStyles } from "@/lib/richTextImage";
 import { useLanguage } from "@/contexts/LanguageContext";
 import katex from "katex";
 import "katex/dist/katex.min.css";
@@ -255,12 +256,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
     if (editingImage) {
       applyImageSettings(editingImage);
     } else {
-      const floatStyle = imageSettings.align === 'center' ? 'none' : imageSettings.align;
-      const marginStyle = imageSettings.align === 'center' ? '10px auto' : 
-                          imageSettings.align === 'right' ? '10px 0 10px 20px' : '10px 20px 10px 0';
-      const displayStyle = imageSettings.align === 'center' ? 'block' : 'inline-block';
-      
-      const imgHtml = `<img loading="lazy" decoding="async" src="${imageSettings.src}" style="width: ${imageSettings.width}%; max-width: 100%; height: auto; border-radius: 12px; margin: ${marginStyle}; display: ${displayStyle}; float: ${floatStyle};" />&nbsp;`;
+      const imgHtml = buildRichTextImageHtml(imageSettings.src, imageSettings.width, imageSettings.align);
       execCommand('insertHTML', imgHtml, true);
     }
     setActiveModal(null);
@@ -268,15 +264,19 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
   };
 
   const applyImageSettings = (img: HTMLImageElement) => {
-    const floatStyle = imageSettings.align === 'center' ? 'none' : imageSettings.align;
-    const marginStyle = imageSettings.align === 'center' ? '10px auto' : 
-                        imageSettings.align === 'right' ? '10px 0 10px 20px' : '10px 20px 10px 0';
-    const displayStyle = imageSettings.align === 'center' ? 'block' : 'inline-block';
-    
-    img.style.width = `${imageSettings.width}%`;
-    img.style.float = floatStyle;
-    img.style.margin = marginStyle;
-    img.style.display = displayStyle;
+    const styles = getRichTextImageStyles(imageSettings.align, imageSettings.width);
+
+    img.style.width = styles.width;
+    img.style.maxWidth = styles.maxWidth;
+    img.style.height = styles.height;
+    img.style.borderRadius = styles.borderRadius;
+    img.style.display = styles.display;
+    img.style.marginTop = styles.marginTop;
+    img.style.marginBottom = styles.marginBottom;
+    img.style.marginLeft = styles.marginLeft;
+    img.style.marginRight = styles.marginRight;
+    img.style.float = 'none';
+    img.dataset.align = imageSettings.align;
     handleInput(true);
   };
 
@@ -288,7 +288,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
         setImageSettings({
           src: img.src,
           width: img.style.width.replace('%', '') || "100",
-          align: (img.style.float as any) || 'center'
+          align: (img.dataset.align as any) || 'center'
         });
         setActiveModal('image');
       } else {
@@ -668,7 +668,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
               <Table className="w-5 h-5 text-indigo-600" />
               {language === 'ar' ? "إدراج جدول" : "Insert Table"}
             </h4>
-            <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+            <button type="button" onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
           </div>
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="flex flex-col gap-1.5">
@@ -691,6 +691,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
             </div>
           </div>
           <button
+            type="button"
             onClick={handleInsertTable}
             className="w-full bg-indigo-600 text-white py-3 rounded-xl font-black shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
           >
@@ -708,7 +709,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
             <ImageIcon className="w-6 h-6 text-indigo-600" />
             {language === 'ar' ? "إدراج صورة" : "Insert Image"}
           </h3>
-            <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+            <button type="button" onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
           </div>
           
           <div className="space-y-3 mb-4">
@@ -737,6 +738,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
                 ].map((pos) => (
                   <button
                     key={pos.id}
+                    type="button"
                     onClick={() => setImageSettings({ ...imageSettings, align: pos.id as any })}
                     className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${imageSettings.align === pos.id ? 'bg-indigo-50 border-indigo-500 text-indigo-600' : 'bg-slate-50 border-transparent text-slate-400 hover:border-slate-200'}`}
                   >
@@ -749,6 +751,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
           </div>
 
           <button
+            type="button"
             onClick={handleInsertImage}
             className="w-full bg-indigo-600 text-white py-2.5 rounded-xl font-black shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
           >
@@ -778,6 +781,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
             </h4>
             <div className="flex items-center gap-2">
               <button 
+                type="button"
                 title={language === 'ar' ? "تبديل لوحة المفاتيح المتقدمة" : "Toggle Advanced Keyboard"}
                 onClick={() => {
                   const vk = (window as any).mathVirtualKeyboard;
@@ -795,7 +799,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
                   <path d="M528 64H48C21.49 64 0 85.49 0 112v288c0 26.51 21.49 48 48 48h480c26.51 0 48-21.49 48-48V112c0-26.51-21.49-48-48-48zm16 336c0 8.823-7.177 16-16 16H48c-8.823 0-16-7.177-16-16V112c0-8.823 7.177-16 16-16h480c8.823 0 16 7.177 16 16v288zM168 268v-24c0-6.627-5.373-12-12-12h-24c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm96 0v-24c0-6.627-5.373-12-12-12h-24c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm96 0v-24c0-6.627-5.373-12-12-12h-24c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm96 0v-24c0-6.627-5.373-12-12-12h-24c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm-336 80v-24c0-6.627-5.373-12-12-12H84c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm384 0v-24c0-6.627-5.373-12-12-12h-24c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zM120 188v-24c0-6.627-5.373-12-12-12H84c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm96 0v-24c0-6.627-5.373-12-12-12h-24c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm96 0v-24c0-6.627-5.373-12-12-12h-24c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm96 0v-24c0-6.627-5.373-12-12-12h-24c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm96 0v-24c0-6.627-5.373-12-12-12h-24c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm-96 152v-8c0-6.627-5.373-12-12-12H180c-6.627 0-12 5.373-12 12v8c0 6.627 5.373 12 12 12h216c6.627 0 12-5.373 12-12z"></path>
                 </svg>
               </button>
-              <button onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 p-1.5 rounded-lg transition-all"><X className="w-5 h-5" /></button>
+              <button type="button" onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 p-1.5 rounded-lg transition-all"><X className="w-5 h-5" /></button>
             </div>
           </div>
           <div className="flex flex-col gap-3 mb-6">
@@ -804,35 +808,35 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
               {/* Top Row: Arrows & Backspace */}
               <div className="flex justify-between gap-2">
                 <div className="flex gap-1 sm:gap-1.5">
-                  <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.executeCommand('moveToPreviousChar'); mf.focus(); } }} className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-lg shadow-sm font-bold text-base sm:text-lg hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all">←</button>
-                  <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.executeCommand('moveUp'); mf.focus(); } }} className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-lg shadow-sm font-bold text-base sm:text-lg hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all">↑</button>
-                  <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.executeCommand('moveDown'); mf.focus(); } }} className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-lg shadow-sm font-bold text-base sm:text-lg hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all">↓</button>
-                  <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.executeCommand('moveToNextChar'); mf.focus(); } }} className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-lg shadow-sm font-bold text-base sm:text-lg hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all">→</button>
+                  <button type="button" onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.executeCommand('moveToPreviousChar'); mf.focus(); } }} className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-lg shadow-sm font-bold text-base sm:text-lg hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all">←</button>
+                  <button type="button" onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.executeCommand('moveUp'); mf.focus(); } }} className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-lg shadow-sm font-bold text-base sm:text-lg hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all">↑</button>
+                  <button type="button" onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.executeCommand('moveDown'); mf.focus(); } }} className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-lg shadow-sm font-bold text-base sm:text-lg hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all">↓</button>
+                  <button type="button" onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.executeCommand('moveToNextChar'); mf.focus(); } }} className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-lg shadow-sm font-bold text-base sm:text-lg hover:bg-slate-50 hover:text-indigo-600 active:scale-95 transition-all">→</button>
                 </div>
-                <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.executeCommand('deleteBackward'); mf.focus(); } }} className="w-14 h-8 sm:h-10 bg-red-100 text-red-600 rounded-lg shadow-sm font-bold hover:bg-red-200 active:scale-95 transition-all text-xs sm:text-sm">⌫ {language === 'ar' ? "مسح" : "Del"}</button>
+                <button type="button" onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.executeCommand('deleteBackward'); mf.focus(); } }} className="w-14 h-8 sm:h-10 bg-red-100 text-red-600 rounded-lg shadow-sm font-bold hover:bg-red-200 active:scale-95 transition-all text-xs sm:text-sm">⌫ {language === 'ar' ? "مسح" : "Del"}</button>
               </div>
               
               {/* Middle Row: Functions */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert('\\frac{#?}{#?}'); mf.focus(); } }} className="py-2 bg-indigo-50 text-indigo-700 rounded-lg shadow-sm font-black hover:bg-indigo-100 active:scale-95 transition-all text-xs sm:text-sm">½ {language === 'ar' ? "كسر" : "Frac"}</button>
-                <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert('^{#?}'); mf.focus(); } }} className="py-2 bg-indigo-50 text-indigo-700 rounded-lg shadow-sm font-black hover:bg-indigo-100 active:scale-95 transition-all text-xs sm:text-sm">x² {language === 'ar' ? "أُس" : "Exp"}</button>
-                <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert('\\sqrt{#?}'); mf.focus(); } }} className="py-2 bg-indigo-50 text-indigo-700 rounded-lg shadow-sm font-black hover:bg-indigo-100 active:scale-95 transition-all text-xs sm:text-sm">√ {language === 'ar' ? "جذر" : "Root"}</button>
-                <button onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert('\\left(#?\\right)'); mf.focus(); } }} className="py-2 bg-indigo-50 text-indigo-700 rounded-lg shadow-sm font-black hover:bg-indigo-100 active:scale-95 transition-all text-xs sm:text-sm">( ) {language === 'ar' ? "أقواس" : "Brackets"}</button>
+                <button type="button" onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert('\\frac{#?}{#?}'); mf.focus(); } }} className="py-2 bg-indigo-50 text-indigo-700 rounded-lg shadow-sm font-black hover:bg-indigo-100 active:scale-95 transition-all text-xs sm:text-sm">½ {language === 'ar' ? "كسر" : "Frac"}</button>
+                <button type="button" onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert('^{#?}'); mf.focus(); } }} className="py-2 bg-indigo-50 text-indigo-700 rounded-lg shadow-sm font-black hover:bg-indigo-100 active:scale-95 transition-all text-xs sm:text-sm">x² {language === 'ar' ? "أُس" : "Exp"}</button>
+                <button type="button" onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert('\\sqrt{#?}'); mf.focus(); } }} className="py-2 bg-indigo-50 text-indigo-700 rounded-lg shadow-sm font-black hover:bg-indigo-100 active:scale-95 transition-all text-xs sm:text-sm">√ {language === 'ar' ? "جذر" : "Root"}</button>
+                <button type="button" onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert('\\left(#?\\right)'); mf.focus(); } }} className="py-2 bg-indigo-50 text-indigo-700 rounded-lg shadow-sm font-black hover:bg-indigo-100 active:scale-95 transition-all text-xs sm:text-sm">( ) {language === 'ar' ? "أقواس" : "Brackets"}</button>
               </div>
 
               {/* Bottom Grid: Numbers & Operators */}
               <div className="grid grid-cols-4 gap-2">
                 {['7', '8', '9', '+'].map(btn => (
-                  <button key={btn} onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert(btn); mf.focus(); } }} className="py-2 sm:py-2.5 bg-white rounded-lg shadow-sm font-bold text-base sm:text-xl hover:bg-slate-50 text-slate-700 active:scale-95 transition-all">{btn}</button>
+                  <button type="button" key={btn} onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert(btn); mf.focus(); } }} className="py-2 sm:py-2.5 bg-white rounded-lg shadow-sm font-bold text-base sm:text-xl hover:bg-slate-50 text-slate-700 active:scale-95 transition-all">{btn}</button>
                 ))}
                 {['4', '5', '6', '-'].map(btn => (
-                  <button key={btn} onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert(btn); mf.focus(); } }} className="py-2 sm:py-2.5 bg-white rounded-lg shadow-sm font-bold text-base sm:text-xl hover:bg-slate-50 text-slate-700 active:scale-95 transition-all">{btn}</button>
+                  <button type="button" key={btn} onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert(btn); mf.focus(); } }} className="py-2 sm:py-2.5 bg-white rounded-lg shadow-sm font-bold text-base sm:text-xl hover:bg-slate-50 text-slate-700 active:scale-95 transition-all">{btn}</button>
                 ))}
                 {['1', '2', '3', '*'].map(btn => (
-                  <button key={btn} onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert(btn === '*' ? '\\cdot' : btn); mf.focus(); } }} className="py-2 sm:py-2.5 bg-white rounded-lg shadow-sm font-bold text-base sm:text-xl hover:bg-slate-50 text-slate-700 active:scale-95 transition-all">{btn === '*' ? '×' : btn}</button>
+                  <button type="button" key={btn} onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert(btn === '*' ? '\\cdot' : btn); mf.focus(); } }} className="py-2 sm:py-2.5 bg-white rounded-lg shadow-sm font-bold text-base sm:text-xl hover:bg-slate-50 text-slate-700 active:scale-95 transition-all">{btn === '*' ? '×' : btn}</button>
                 ))}
                 {['0', '.', '=', '/'].map(btn => (
-                  <button key={btn} onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert(btn === '/' ? '\\div' : btn); mf.focus(); } }} className="py-2 sm:py-2.5 bg-white rounded-lg shadow-sm font-bold text-base sm:text-xl hover:bg-slate-50 text-slate-700 active:scale-95 transition-all">{btn === '/' ? '÷' : btn}</button>
+                  <button type="button" key={btn} onClick={() => { const mf = mathContainerRef.current?.firstChild as any; if(mf){ mf.insert(btn === '/' ? '\\div' : btn); mf.focus(); } }} className="py-2 sm:py-2.5 bg-white rounded-lg shadow-sm font-bold text-base sm:text-xl hover:bg-slate-50 text-slate-700 active:scale-95 transition-all">{btn === '/' ? '÷' : btn}</button>
                 ))}
               </div>
             </div>
@@ -840,6 +844,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
             <div ref={mathContainerRef} className="w-full mt-2" dir="ltr" />
           </div>
           <button
+            type="button"
             onClick={handleInsertMath}
             className="w-full bg-indigo-600 text-white py-3 rounded-xl font-black shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
           >

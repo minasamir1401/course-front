@@ -5,6 +5,11 @@ type BuildDraftModulesArgs = {
   isModuleModalOpen: boolean;
 };
 
+type BuildExamSubmissionPayloadArgs = {
+  modules: any[];
+  standaloneQuestions?: any[];
+};
+
 export function buildDraftModules({
   modules,
   currentModule,
@@ -76,4 +81,21 @@ export function buildModulesSubmissionPayload(modules: any[]) {
   });
 
   return { modulesPayload, allQuestions };
+}
+
+export function buildExamSubmissionPayload({
+  modules,
+  standaloneQuestions = [],
+}: BuildExamSubmissionPayloadArgs) {
+  const { modulesPayload, allQuestions } = buildModulesSubmissionPayload(modules);
+  const standalonePayload = (Array.isArray(standaloneQuestions) ? standaloneQuestions : []).map((question: any) => ({
+    ...question,
+    moduleId: null,
+    subExamId: null,
+  }));
+
+  return {
+    modulesPayload,
+    allQuestions: [...allQuestions, ...standalonePayload],
+  };
 }

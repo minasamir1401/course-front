@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useEffect } from 'react';
 import { API_URL } from '@/lib/api';
+import { buildDraftModules, buildExamSubmissionPayload } from '@/lib/examEditingPayload';
 
 export const useExamAutosave = (props: any) => {
   const { isAutoSaveEnabled, isLoading, isInitialLoad, createdId, examData, modules, isModuleModalOpen, currentModule, editingModuleIndex, manualSubmitRef, lastAutoSaveSnapshotRef, autoSaveGenerationRef, createdIdRef, setCreatedId, setCurrentModule, setModules, setEditingModuleIndex, setLastAutoSave, showToast, language, autoSaveWriteQueueRef, autoSaveTimerRef, standaloneQuestions } = props;
@@ -11,7 +12,15 @@ export const useExamAutosave = (props: any) => {
     // a new POST and duplicate the exam every time the page is opened.
     if (!isAutoSaveEnabled || isLoading || isInitialLoad || manualSubmitRef.current) return;
 
-    const snapshot = JSON.stringify({ createdId, examData, modules, isModuleModalOpen, currentModule, editingModuleIndex });
+    const snapshot = JSON.stringify({
+      createdId,
+      examData,
+      modules,
+      standaloneQuestions,
+      isModuleModalOpen,
+      currentModule,
+      editingModuleIndex,
+    });
     if (snapshot === lastAutoSaveSnapshotRef.current) return;
     lastAutoSaveSnapshotRef.current = snapshot;
     const requestGeneration = ++autoSaveGenerationRef.current;
@@ -23,55 +32,20 @@ export const useExamAutosave = (props: any) => {
         const token = localStorage.getItem("school_admin_token");
         if (!token) return;
 
-        const finalModules = [...modules];
-        if (isModuleModalOpen && currentModule.title) {
-          if (editingModuleIndex !== null) {
-            finalModules[editingModuleIndex] = currentModule;
-          } else {
-            finalModules.push(currentModule);
-          }
-        }
+        const finalModules = buildDraftModules({
+          modules,
+          currentModule,
+          editingModuleIndex,
+          isModuleModalOpen,
+        });
 
                 const targetSchoolIds = (examData.schoolIds || []).filter(Boolean);
         const isCentral = false;
 
-        const allQuestions: any[] = [];
-        const modulesPayload = finalModules.map((m, index) => {
-           const mId = m.id || String(Date.now() + index);
-           const mSubExams = (m.subExams || []).map((s: any, sIdx: number) => {
-               const sId = s.id || String(Date.now() + index * 1000 + sIdx);
-               const sQuestions = (s.questions || []).map((q: any) => ({ ...q, moduleId: mId, subExamId: sId }));
-               allQuestions.push(...sQuestions);
-               return {
-                   id: sId,
-                   title: s.title,
-                   duration: s.duration || null,
-                   passingScore: s.passingScore || null,
-                   attemptsAllowed: s.attemptsAllowed || 1,
-                   publishDate: s.publishDate || null,
-                   cutOffDate: s.cutOffDate || null,
-                   order: sIdx,
-               };
-           });
-           const mQuestions = (m.questions || []).map((q: any) => ({
-               ...q,
-               moduleId: mId
-           }));
-           allQuestions.push(...mQuestions);
-           return {
-              id: mId,
-              title: m.title,
-              description: m.content || null,
-              duration: m.duration || null,
-              passingScore: m.passingScore || null,
-              publishDate: m.publishDate || null,
-              cutOffDate: m.cutOffDate || null,
-              order: index,
-              subExams: mSubExams,
-           };
+        const { modulesPayload, allQuestions } = buildExamSubmissionPayload({
+          modules: finalModules,
+          standaloneQuestions,
         });
-        
-        allQuestions.push(...(standaloneQuestions || []).map(q => ({ ...q, moduleId: null })));
         const payload = {
           title: examData.title || (language === 'ar' ? "مسودة امتحان بدون عنوان" : "Untitled Exam Draft"),
           description: examData.description,

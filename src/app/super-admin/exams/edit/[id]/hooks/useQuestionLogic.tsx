@@ -63,6 +63,7 @@ export const useQuestionLogic = (props: any) => {
     });
     setShowQuestionForm(false);
     setEditingStandaloneIndex(null);
+    setCurrentModule((prev: any) => ({ ...prev, _isStandalone: false }));
     showToast(language === 'ar' ? "تم حفظ السؤال بنجاح" : "Question saved successfully", "success");
   };
 
@@ -98,6 +99,7 @@ export const useQuestionLogic = (props: any) => {
       attempts: 1
     });
     setEditingQuestionIndex(null);
+    setCurrentModule((prev: any) => ({ ...prev, _isStandalone: false }));
     setQuestionSource(source);
     setShowQuestionForm(true);
   };
@@ -110,6 +112,7 @@ export const useQuestionLogic = (props: any) => {
     if (!item.type) item.type = item.label || "MCQ";
     setTempQuestion(item);
     setEditingQuestionIndex(index);
+    setCurrentModule((prev: any) => ({ ...prev, _isStandalone: false }));
     setQuestionSource(source);
     setShowQuestionForm(true);
   };

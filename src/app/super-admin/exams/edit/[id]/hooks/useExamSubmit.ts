@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { API_URL } from '@/lib/api';
-import { buildDraftModules, buildModulesSubmissionPayload } from '@/lib/examEditingPayload';
+import { buildDraftModules, buildExamSubmissionPayload } from '@/lib/examEditingPayload';
 
 export const useExamSubmit = (props: any) => {
   const { examData, modules, isModuleModalOpen, currentModule, editingModuleIndex, manualSubmitRef, autoSaveGenerationRef, autoSaveTimerRef, setIsLoading, autoSaveWriteQueueRef, createdIdRef, standaloneQuestions, showToast, language, router, t, isLoading } = props;
@@ -33,7 +33,10 @@ export const useExamSubmit = (props: any) => {
             const targetSchoolIds = (examData.schoolIds || []).filter(Boolean);
       const isCentral = targetSchoolIds.length === 0;
 
-      const { modulesPayload, allQuestions } = buildModulesSubmissionPayload(finalModules);
+      const { modulesPayload, allQuestions } = buildExamSubmissionPayload({
+        modules: finalModules,
+        standaloneQuestions,
+      });
 
       const activeExamId = createdIdRef.current;
       const method = activeExamId ? "PUT" : "POST";

@@ -63,6 +63,7 @@ export const useQuestionLogic = (props: any) => {
     });
     setShowQuestionForm(false);
     setEditingStandaloneIndex(null);
+    setCurrentModule((prev: any) => ({ ...prev, _isStandalone: false }));
     showToast(language === 'ar' ? "تم حفظ السؤال بنجاح" : "Question saved successfully", "success");
   };
 
@@ -99,6 +100,7 @@ export const useQuestionLogic = (props: any) => {
     });
     setEditingQuestionIndex(null);
     setQuestionSource(source);
+    setCurrentModule((prev: any) => ({ ...prev, _isStandalone: false }));
     setShowQuestionForm(true);
   };
 
@@ -111,6 +113,7 @@ export const useQuestionLogic = (props: any) => {
     setTempQuestion(item);
     setEditingQuestionIndex(index);
     setQuestionSource(source);
+    setCurrentModule((prev: any) => ({ ...prev, _isStandalone: false }));
     setShowQuestionForm(true);
   };
 
@@ -162,6 +165,7 @@ export const useQuestionLogic = (props: any) => {
     });
     setShowQuestionForm(false);
     setEditingQuestionIndex(null);
+    setCurrentModule((prev: any) => ({ ...prev, _isStandalone: false }));
     showToast(language === 'ar' ? "تم حفظ السؤال في القائمة بنجاح" : "Question saved to list successfully", "success");
   };
 

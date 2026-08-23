@@ -178,6 +178,22 @@ export default function SchoolAdminEditExamPage() {
     router.replace(`/school-admin/exams/edit/${examId}`);
   }, [createModule, effectiveWorkflowView, examId, language, router, setActiveTab, setCurrentModule, setEditingModuleIndex, setIsModuleModalOpen]);
 
+  React.useEffect(() => {
+    if (effectiveWorkflowView !== "sub-exam-editor" || !editableModule) return;
+    if (state.currentModule !== editableModule) {
+      setCurrentModule(editableModule);
+    }
+    if (editableSubExamIndex >= 0 && state.activeSubExamIndex !== editableSubExamIndex) {
+      state.setActiveSubExamIndex(editableSubExamIndex);
+    }
+  }, [
+    editableModule,
+    editableSubExamIndex,
+    effectiveWorkflowView,
+    setCurrentModule,
+    state,
+  ]);
+
   if (effectiveWorkflowView === "module-portal") {
     return <DashboardLayout><ExamModulePortal state={state} moduleId={moduleId} language={language} role="SCHOOL_ADMIN" /></DashboardLayout>;
   }

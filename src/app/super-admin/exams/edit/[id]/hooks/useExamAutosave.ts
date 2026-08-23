@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useEffect } from 'react';
 import { API_URL } from '@/lib/api';
+import { buildDraftModules, buildExamSubmissionPayload } from '@/lib/examEditingPayload';
 
 export const useExamAutosave = (props: any) => {
   const { isAutoSaveEnabled, isLoading, createdId, examData, modules, isModuleModalOpen, currentModule, editingModuleIndex, manualSubmitRef, lastAutoSaveSnapshotRef, autoSaveGenerationRef, createdIdRef, setCreatedId, setCurrentModule, setModules, setEditingModuleIndex, setLastAutoSave, showToast, language, autoSaveWriteQueueRef, autoSaveTimerRef, standaloneQuestions } = props;
@@ -8,7 +9,7 @@ export const useExamAutosave = (props: any) => {
     useEffect(() => {
     if (!isAutoSaveEnabled || isLoading || manualSubmitRef.current) return;
 
-    const snapshot = JSON.stringify({ createdId, examData, modules, isModuleModalOpen, currentModule, editingModuleIndex });
+    const snapshot = JSON.stringify({ createdId, examData, modules, isModuleModalOpen, currentModule, editingModuleIndex, standaloneQuestions });
     if (snapshot === lastAutoSaveSnapshotRef.current) return;
     lastAutoSaveSnapshotRef.current = snapshot;
     const requestGeneration = ++autoSaveGenerationRef.current;
@@ -20,63 +21,20 @@ export const useExamAutosave = (props: any) => {
         const token = localStorage.getItem("super_admin_token");
         if (!token) return;
 
-        const finalModules = [...modules];
-        if (isModuleModalOpen && currentModule.title) {
-          if (editingModuleIndex !== null) {
-            finalModules[editingModuleIndex] = currentModule;
-          } else {
-            finalModules.push(currentModule);
-          }
-        }
+        const finalModules = buildDraftModules({
+          modules,
+          currentModule,
+          editingModuleIndex,
+          isModuleModalOpen,
+        });
         
         const targetSchoolIds = (examData.schoolIds || []).filter(Boolean);
         const isCentral = targetSchoolIds.length === 0;
 
-        const allQuestions = [];
-        const modulesPayload = finalModules.map((m, index) => {
-           const mId = m.id || String(Date.now() + index);
-           
-           const mQuestions = (m.questions || []).map((q) => ({
-               ...q,
-               moduleId: mId,
-               subExamId: null
-           }));
-           allQuestions.push(...mQuestions);
-
-           const subExams = (m.subExams || []).map((s, sIdx) => {
-               const sId = s.id || String(Date.now() + index * 100 + sIdx);
-               const sQuestions = (s.questions || []).map((q) => ({
-                   ...q,
-                   moduleId: mId,
-                   subExamId: sId
-               }));
-               allQuestions.push(...sQuestions);
-               return {
-                  id: sId,
-                  title: s.title,
-                  duration: s.duration || null,
-                  passingScore: s.passingScore || null,
-                  attemptsAllowed: s.attemptsAllowed || 1,
-                  publishDate: s.publishDate || null,
-                  cutOffDate: s.cutOffDate || null,
-                  order: s.order !== undefined ? s.order : sIdx
-               };
-           });
-
-           return {
-              id: mId,
-              title: m.title,
-              description: m.content || null,
-              duration: m.duration || null,
-              passingScore: m.passingScore || null,
-              publishDate: m.publishDate || null,
-              cutOffDate: m.cutOffDate || null,
-              order: m.order !== undefined ? m.order : index,
-              subExams: subExams
-           };
+        const { modulesPayload, allQuestions } = buildExamSubmissionPayload({
+          modules: finalModules,
+          standaloneQuestions,
         });
-        
-        allQuestions.push(...(standaloneQuestions || []).map(q => ({ ...q, moduleId: null, subExamId: null })));
         
         const payload = {
           title: examData.title || (language === 'ar' ? 'مسودة امتحان بدون عنوان' : 'Untitled Exam Draft'),
@@ -261,6 +219,6 @@ const activeExamId = createdIdRef.current;
       clearTimeout(timer);
       if (autoSaveTimerRef.current === timer) autoSaveTimerRef.current = null;
     };
-  }, [isAutoSaveEnabled, isLoading, createdId, examData, modules, isModuleModalOpen, currentModule, editingModuleIndex]);
+  }, [isAutoSaveEnabled, isLoading, createdId, examData, modules, isModuleModalOpen, currentModule, editingModuleIndex, standaloneQuestions]);
 
 };

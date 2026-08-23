@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { API_URL } from '@/lib/api';
-import { buildDraftModules, buildModulesSubmissionPayload } from '@/lib/examEditingPayload';
+import { buildDraftModules, buildExamSubmissionPayload } from '@/lib/examEditingPayload';
 
 export const useExamSubmit = (props: any) => {
   const { examData, modules, isModuleModalOpen, currentModule, editingModuleIndex, manualSubmitRef, autoSaveGenerationRef, autoSaveTimerRef, setIsLoading, autoSaveWriteQueueRef, createdIdRef, standaloneQuestions, showToast, language, router, t, isLoading } = props;
@@ -33,7 +33,10 @@ export const useExamSubmit = (props: any) => {
             const targetSchoolIds = (examData.schoolIds || []).filter(Boolean);
         const isCentral = false;
 
-      const { modulesPayload, allQuestions } = buildModulesSubmissionPayload(finalModules);
+      const { modulesPayload, allQuestions } = buildExamSubmissionPayload({
+        modules: finalModules,
+        standaloneQuestions,
+      });
 
       const activeExamId = createdIdRef.current;
       const method = activeExamId ? "PUT" : "POST";
@@ -83,7 +86,7 @@ export const useExamSubmit = (props: any) => {
         throw new Error(data.stack || data.details || data.error || "Failed to create exam");
       }
 
-      showToast("Exam created successfully!", "success");
+      showToast(language === 'ar' ? "تم حفظ الاختبار بنجاح" : "Exam saved successfully!", "success");
       router.push(`/school-admin/exams`);
     } catch (error: any) {
       console.error("Exam creation error:", error);
