@@ -20,8 +20,27 @@ const cspHeader = [
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  compress: true, // Enable Gzip / Brotli compression for smaller bundles and faster transfers
+  reactStrictMode: true,
+  poweredByHeader: false,
+
+  // Modern Image Optimization
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+    ],
+  },
+
+  // Production compiler optimizations
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
+  },
+
   // API proxy is handled by src/app/api/[...path]/route.ts (runtime proxy)
-  // This avoids build-time env variable issues with next.config.ts rewrites
   allowedDevOrigins: ['lms-front-mina.loca.lt', 'dull-walls-allow.loca.lt', 'lemon-sides-invent.loca.lt'],
 
   async headers() {

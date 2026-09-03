@@ -44,9 +44,23 @@ export const logout = (router: any, currentPath: string = "") => {
     authKey = AUTH_KEYS.SCHOOL_ADMIN;
   }
 
+  // Clear httpOnly cookie on server
+  try {
+    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
+  } catch {
+    // Non-fatal
+  }
+
   localStorage.removeItem(authKey.TOKEN);
   localStorage.removeItem(authKey.USER);
-  router.replace(redirectPath);
+  localStorage.removeItem(`${authKey.TOKEN}_expires_at`);
+  clearAllAuthData();
+
+  if (router && typeof router.replace === 'function') {
+    router.replace(redirectPath);
+  } else if (typeof window !== 'undefined') {
+    window.location.replace(redirectPath);
+  }
 };
 
 export const startImpersonation = (targetToken: string, targetUser: any, targetRole: string) => {

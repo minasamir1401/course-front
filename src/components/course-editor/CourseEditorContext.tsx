@@ -1444,6 +1444,13 @@ export const CourseEditorProvider: React.FC<{
             : "No connection - changes saved locally and will upload automatically ✅",
           "info"
         );
+      } else {
+        showToast(
+          language === "ar"
+            ? "انقطع الاتصال - تم حفظ مسودة التعديلات محلياً ⚠️"
+            : "Connection lost - edits saved locally as draft ⚠️",
+          "info"
+        );
       }
     } finally {
       isSavingRef.current = false;
