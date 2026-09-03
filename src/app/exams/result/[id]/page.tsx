@@ -422,127 +422,134 @@ export default function ExamResultPage() {
               const isQuestionCorrect = answer.isCorrect || (
                 !!answer.question.correctAnswer && isOptionMatch(answer.question.correctAnswer, answer.selectedAnswer, -1)
               );
+              const questionTags = [
+                answer.question.domain && {
+                  key: 'domain',
+                  label: t('domain', lang),
+                  value: answer.question.domain,
+                  icon: Globe,
+                  colorClass: 'bg-cyan-50 text-cyan-700 border border-cyan-100 hover:bg-cyan-100',
+                  bubbleTheme: 'border-cyan-200 text-cyan-900',
+                },
+                answer.question.level && {
+                  key: 'level',
+                  label: t('level', lang),
+                  value: translateLevel(answer.question.level),
+                  icon: undefined,
+                  colorClass: 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200',
+                  bubbleTheme: 'border-slate-200 text-slate-800',
+                },
+                answer.question.dok && {
+                  key: 'dok',
+                  label: t('dok', lang),
+                  value: answer.question.dok,
+                  icon: ListOrdered,
+                  colorClass: 'bg-yellow-50 text-yellow-700 border border-yellow-100 hover:bg-yellow-100',
+                  bubbleTheme: 'border-yellow-200 text-yellow-900',
+                },
+                answer.question.skill && {
+                  key: 'skill',
+                  label: t('skill', lang),
+                  value: answer.question.skill,
+                  icon: Star,
+                  colorClass: 'bg-amber-50 text-amber-600 border border-amber-100 hover:bg-amber-100',
+                  bubbleTheme: 'border-amber-200 text-amber-900',
+                },
+                answer.question.subskill && {
+                  key: 'subskill',
+                  label: t('subskill', lang),
+                  value: answer.question.subskill,
+                  icon: Star,
+                  colorClass: 'bg-orange-50 text-orange-600 border border-orange-100 hover:bg-orange-100',
+                  bubbleTheme: 'border-orange-200 text-orange-900',
+                },
+                answer.question.microSkill && {
+                  key: 'microSkill',
+                  label: t('microSkill', lang),
+                  value: answer.question.microSkill,
+                  icon: Star,
+                  colorClass: 'bg-rose-50 text-rose-600 border border-rose-100 hover:bg-rose-100',
+                  bubbleTheme: 'border-rose-200 text-rose-900',
+                },
+                answer.question.cognitive && {
+                  key: 'cognitive',
+                  label: t('cognitive', lang),
+                  value: answer.question.cognitive,
+                  icon: Target,
+                  colorClass: 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200',
+                  bubbleTheme: 'border-slate-300 text-slate-900',
+                },
+                answer.question.standard && {
+                  key: 'standard',
+                  label: t('standard', lang),
+                  value: answer.question.standard,
+                  icon: Target,
+                  colorClass: 'bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100',
+                  bubbleTheme: 'border-blue-200 text-blue-900',
+                },
+                answer.question.indicator && {
+                  key: 'indicator',
+                  label: t('indicator', lang),
+                  value: answer.question.indicator,
+                  icon: TrendingUp,
+                  colorClass: 'bg-purple-50 text-purple-600 border border-purple-100 hover:bg-purple-100',
+                  bubbleTheme: 'border-purple-200 text-purple-900',
+                },
+                answer.question.learningOutcome && {
+                  key: 'outcome',
+                  label: t('outcome', lang),
+                  value: answer.question.learningOutcome,
+                  icon: Award,
+                  colorClass: 'bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100',
+                  bubbleTheme: 'border-emerald-200 text-emerald-900',
+                },
+                answer.question.errorPattern && {
+                  key: 'errorPattern',
+                  label: t('errorPattern', lang),
+                  value: answer.question.errorPattern,
+                  icon: AlertCircle,
+                  colorClass: 'bg-rose-50 text-rose-600 border border-rose-100 hover:bg-rose-100',
+                  bubbleTheme: 'border-rose-200 text-rose-900',
+                },
+              ].filter(Boolean) as any[];
+
               return (
                 <div key={index} className="bg-white rounded-[32px] shadow-sm border border-slate-200 overflow-hidden group hover:border-indigo-200 transition-all">
                   <div className="p-8 md:p-10">
-                    <div className="flex justify-between items-start mb-8">
-                      <div className="flex items-center gap-4">
-                        <span className="w-10 h-10 bg-slate-800 text-white rounded-2xl flex items-center justify-center font-black text-lg">
+                    <div className="flex justify-between items-start gap-4 mb-6">
+                      <div className="flex items-start gap-3.5 flex-1 min-w-0">
+                        <span className="w-9 h-9 sm:w-10 sm:h-10 bg-slate-800 text-white rounded-2xl flex items-center justify-center font-black text-base sm:text-lg shrink-0 mt-0.5">
                           {index + 1}
                         </span>
-                        <div className="flex flex-col">
-                          <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest leading-none mb-1">
+                        <div className="flex flex-col flex-1 min-w-0">
+                          <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest leading-none mb-1.5">
                             {answer.question.type === 'MCQ' ? t('mcq', lang) : answer.question.type === 'MULTI_SELECT' ? t('multiSelect', lang) : t('trueFalse', lang)}
                           </span>
-                          <div className="flex flex-wrap gap-2">
-                            {answer.question.domain && (
+                          {/* Unified metadata tags container: compact tags, maximum 2 rows, never exceeds 2 rows */}
+                          <div className="flex flex-wrap items-center gap-1.5 max-h-[60px] md:max-h-[64px] overflow-hidden">
+
+                            {questionTags.slice(0, 8).map((tag: any) => (
                               <InteractiveTag
-                                label={t('domain', lang)}
-                                value={answer.question.domain}
-                                icon={Globe}
-                                colorClass="bg-cyan-50 text-cyan-700 border border-cyan-100 hover:bg-cyan-100"
-                                bubbleTheme="border-cyan-200 text-cyan-900"
+                                key={tag.key}
+                                label={tag.label}
+                                value={tag.value}
+                                icon={tag.icon}
+                                colorClass={tag.colorClass}
+                                bubbleTheme={tag.bubbleTheme}
+                                size="sm"
                               />
-                            )}
-                            {answer.question.level && (
-                              <InteractiveTag
-                                label={t('level', lang)}
-                                value={translateLevel(answer.question.level)}
-                                colorClass="bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200"
-                              />
-                            )}
-                            {answer.question.dok && (
-                              <InteractiveTag
-                                label={t('dok', lang)}
-                                value={answer.question.dok}
-                                icon={ListOrdered}
-                                colorClass="bg-yellow-50 text-yellow-700 border border-yellow-100 hover:bg-yellow-100"
-                                bubbleTheme="border-yellow-200 text-yellow-900"
-                              />
-                            )}
-                            {answer.question.skill && (
-                              <InteractiveTag
-                                label={t('skill', lang)}
-                                value={answer.question.skill}
-                                icon={Star}
-                                colorClass="bg-amber-50 text-amber-600 border border-amber-100 hover:bg-amber-100"
-                                bubbleTheme="border-amber-200 text-amber-900"
-                              />
-                            )}
-                            {answer.question.subskill && (
-                              <InteractiveTag
-                                label={t('subskill', lang)}
-                                value={answer.question.subskill}
-                                icon={Star}
-                                colorClass="bg-orange-50 text-orange-600 border border-orange-100 hover:bg-orange-100"
-                                bubbleTheme="border-orange-200 text-orange-900"
-                              />
-                            )}
-                            {answer.question.microSkill && (
-                              <InteractiveTag
-                                label={t('microSkill', lang)}
-                                value={answer.question.microSkill}
-                                icon={Star}
-                                colorClass="bg-rose-50 text-rose-600 border border-rose-100 hover:bg-rose-100"
-                                bubbleTheme="border-rose-200 text-rose-900"
-                              />
-                            )}
-                            {answer.question.cognitive && (
-                              <InteractiveTag
-                                label={t('cognitive', lang)}
-                                value={answer.question.cognitive}
-                                icon={Target}
-                                colorClass="bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200"
-                                bubbleTheme="border-slate-300 text-slate-900"
-                              />
-                            )}
+                            ))}
                           </div>
                         </div>
                       </div>
-                      <div className={`px-4 py-2 rounded-xl font-black text-sm flex items-center gap-2 ${isQuestionCorrect ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"}`}>
-                        {isQuestionCorrect ? <CheckCircle2 className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
-                        {isQuestionCorrect ? `+${answer.question.points} ${lang === 'ar' ? 'درجة' : 'pts'}` : t('wrong', lang)}
+                      {/* Auto-fit Right Badge: never wrap text, keep Wrong and Correct intact */}
+
+                      <div className={`shrink-0 whitespace-nowrap self-start px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl font-black text-xs sm:text-sm flex items-center gap-1.5 border shadow-2xs ${isQuestionCorrect ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-rose-50 text-rose-600 border-rose-100"}`}>
+                        {isQuestionCorrect ? <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" /> : <XCircle className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />}
+                        <span>{isQuestionCorrect ? `+${answer.question.points} ${lang === 'ar' ? 'درجة' : 'pts'}` : t('wrong', lang)}</span>
                       </div>
                     </div>
 
-                    <div className="mb-4 flex flex-wrap gap-2">
-                      {answer.question.standard && (
-                        <InteractiveTag
-                          label={t('standard', lang)}
-                          value={answer.question.standard}
-                          icon={Target}
-                          colorClass="bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100"
-                          bubbleTheme="border-blue-200 text-blue-900"
-                        />
-                      )}
-                      {answer.question.indicator && (
-                        <InteractiveTag
-                          label={t('indicator', lang)}
-                          value={answer.question.indicator}
-                          icon={TrendingUp}
-                          colorClass="bg-purple-50 text-purple-600 border border-purple-100 hover:bg-purple-100"
-                          bubbleTheme="border-purple-200 text-purple-900"
-                        />
-                      )}
-                      {answer.question.learningOutcome && (
-                        <InteractiveTag
-                          label={t('outcome', lang)}
-                          value={answer.question.learningOutcome}
-                          icon={Award}
-                          colorClass="bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100"
-                          bubbleTheme="border-emerald-200 text-emerald-900"
-                        />
-                      )}
-                      {answer.question.errorPattern && (
-                        <InteractiveTag
-                          label={t('errorPattern', lang)}
-                          value={answer.question.errorPattern}
-                          icon={AlertCircle}
-                          colorClass="bg-rose-50 text-rose-600 border border-rose-100 hover:bg-rose-100"
-                          bubbleTheme="border-rose-200 text-rose-900"
-                        />
-                      )}
-                    </div>
 
                     <HtmlRenderer
                       html={answer.question.text}

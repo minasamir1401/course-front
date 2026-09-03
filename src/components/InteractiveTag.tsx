@@ -11,15 +11,21 @@ interface InteractiveTagProps {
   colorClass: string; 
   bubbleTheme?: string; 
   variant?: 'meta' | 'helper';
+  size?: 'xs' | 'sm' | 'md';
 }
 
-export function InteractiveTag({ label, value, icon: Icon, colorClass, bubbleTheme = "border-slate-200 text-slate-700", variant = 'meta' }: InteractiveTagProps) {
+export function InteractiveTag({ label, value, icon: Icon, colorClass, bubbleTheme = "border-slate-200 text-slate-700", variant = 'meta', size = 'sm' }: InteractiveTagProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const isSm = size === 'sm' || size === 'xs';
   const buttonClass = variant === 'helper'
-    ? "px-3 py-1.5 rounded-full text-[11px] font-black tracking-normal normal-case gap-2 shadow-sm"
-    : "px-3 py-2 rounded-full text-xs md:text-sm font-bold uppercase tracking-wider gap-1.5 shadow-sm";
-  const iconClass = variant === 'helper' ? "w-3.5 h-3.5" : "w-4 h-4";
+    ? (isSm ? "px-2.5 py-0.5 md:py-1 rounded-full text-[10px] md:text-[10.5px] font-black tracking-normal normal-case gap-1.5 shadow-2xs whitespace-nowrap" : "px-3 py-1.5 rounded-full text-[11px] font-black tracking-normal normal-case gap-2 shadow-sm whitespace-nowrap")
+    : (isSm
+        ? "px-2 py-0.5 md:px-2.5 md:py-1 rounded-full text-[9.5px] md:text-[10.5px] font-bold uppercase tracking-wide gap-1 shadow-2xs whitespace-nowrap"
+        : "px-2.5 py-1 md:py-1.5 rounded-full text-[11px] md:text-xs font-bold uppercase tracking-wider gap-1.5 shadow-2xs whitespace-nowrap");
+
+  const iconClass = isSm ? "w-3 h-3 md:w-3.5 md:h-3.5" : (variant === 'helper' ? "w-3.5 h-3.5" : "w-3.5 h-3.5 md:w-4 md:h-4");
+
 
   useEffect(() => {
     setMounted(true);

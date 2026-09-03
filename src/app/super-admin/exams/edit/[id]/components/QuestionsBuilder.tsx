@@ -323,8 +323,20 @@ export const QuestionsBuilder = (props: any) => {
               </div>
               
               {/* ── Question Metadata ── */}
+              <div className="flex items-center justify-between px-1 mb-2">
+                <span className="text-[11.5px] font-bold text-indigo-700 flex items-center gap-1.5 bg-indigo-50/70 border border-indigo-100/80 px-3 py-1.5 rounded-xl">
+                  <span>💡</span>
+                  <span>
+                    {language === 'ar'
+                      ? 'توجيه المحتوى: يُنصح ألا تزيد البيانات الوصفية (Metadata) عن 8 عناصر للحفاظ على تناسق العرض وسرعة المراجعة.'
+                      : 'Content Guidance: Recommended maximum of 8 metadata tags for optimal 2-row presentation.'}
+                  </span>
+                </span>
+              </div>
+
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6 bg-slate-50 border border-slate-100 rounded-[24px]">
+
                 {[
                   { key: 'course', labelAr: 'الاختبار', labelEn: 'Exam' },
                   { key: 'section', labelAr: 'القسم', labelEn: 'Section' },
