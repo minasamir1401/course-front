@@ -52,6 +52,18 @@ const getBackendBase = () => {
   return 'http://backend:5000';
 };
 
+const HOP_BY_HOP_HEADERS = new Set([
+  'connection',
+  'keep-alive',
+  'proxy-authenticate',
+  'proxy-authorization',
+  'te',
+  'trailer',
+  'transfer-encoding',
+  'upgrade',
+  'host',
+]);
+
 async function handler(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   const { path } = await params;
   const backendBase = getBackendBase();
@@ -59,12 +71,11 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
 
   const contentType = req.headers.get('content-type') || '';
   
-  // Forward the request to the backend
+  // Forward clean request headers to backend (strip hop-by-hop headers)
   const headers = new Headers();
   req.headers.forEach((value, key) => {
     const lowerKey = key.toLowerCase();
-    // Skip host header to avoid conflicts
-    if (lowerKey === 'host') return;
+    if (HOP_BY_HOP_HEADERS.has(lowerKey)) return;
     
     // Skip content-length ONLY for multipart to prevent multer 'request aborted' errors
     if (lowerKey === 'content-length' && contentType.includes('multipart/form-data')) {
@@ -77,7 +88,6 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
   try {
     let bodyData: any = undefined;
     let isStream = false;
-
 
     if (req.method !== 'GET' && req.method !== 'HEAD' && req.body) {
       if (contentType.includes('multipart/form-data')) {
@@ -120,9 +130,14 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
       timeoutMs = Math.max(timeoutMs, 120_000); // 2 minutes for heavy learning content
     }
 
+    const timeoutSignal = AbortSignal.timeout(timeoutMs);
+    const fetchSignal = typeof (AbortSignal as any).any === 'function' && req.signal
+      ? (AbortSignal as any).any([req.signal, timeoutSignal])
+      : timeoutSignal;
+
     const backendResponse = await fetch(targetUrl, {
       ...requestInit,
-      signal: AbortSignal.timeout(timeoutMs),
+      signal: fetchSignal,
     });
 
     // Copy response headers
@@ -132,7 +147,9 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
       'access-control-allow-credentials',
       'content-encoding',
       'content-length',
-      'transfer-encoding'
+      'transfer-encoding',
+      'connection',
+      'keep-alive'
     ]);
     backendResponse.headers.forEach((value, key) => {
       if (!HEADERS_TO_SKIP.has(key.toLowerCase())) {
@@ -146,14 +163,23 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
       headers: responseHeaders,
     });
   } catch (error: any) {
+    const isClientDisconnect = Boolean(req.signal?.aborted);
     const isTimeout =
-      error?.name === 'TimeoutError' ||
-      error?.name === 'AbortError' ||
-      String(error?.message || '').toLowerCase().includes('abort') ||
-      String(error?.message || '').toLowerCase().includes('timeout');
+      !isClientDisconnect &&
+      (error?.name === 'TimeoutError' ||
+       String(error?.message || '').toLowerCase().includes('timeout'));
+
+    if (isClientDisconnect) {
+      // Client closed tab, reloaded, or navigated away before response completed
+      console.warn('[API Proxy Client Disconnect]', targetUrl);
+      return new NextResponse(null, { status: 499 });
+    }
 
     console.error('[API Proxy Error]', targetUrl, error?.message);
-    fs.appendFileSync(nodePath.join(process.cwd(), 'proxy_error.log'), new Date().toISOString() + ' ' + targetUrl + ' ' + error?.message + '\n');
+    try {
+      fs.appendFileSync(nodePath.join(process.cwd(), 'proxy_error.log'), new Date().toISOString() + ' ' + targetUrl + ' ' + (error?.message || error) + '\n');
+    } catch {}
+
     return NextResponse.json(
       {
         error: isTimeout ? 'Backend request timed out' : 'Failed to reach backend',
