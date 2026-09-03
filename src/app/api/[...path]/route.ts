@@ -7,7 +7,7 @@ import nodePath from 'node:path';
 
 const BACKEND_REQUEST_TIMEOUT_MS = Math.max(
   1_000,
-  Number(process.env.BACKEND_REQUEST_TIMEOUT_MS) || 20_000
+  Number(process.env.BACKEND_REQUEST_TIMEOUT_MS) || 60_000
 );
 const BACKEND_WRITE_TIMEOUT_MS = Math.max(
   BACKEND_REQUEST_TIMEOUT_MS,
@@ -112,6 +112,12 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
     // Specific endpoints that take a long time
     if (targetUrl.includes('/admin/backup/download')) {
       timeoutMs = Math.max(timeoutMs, 600_000); // 10 minutes
+    } else if (
+      targetUrl.includes('/api/exams') ||
+      targetUrl.includes('/api/courses') ||
+      targetUrl.includes('/api/admin/exams')
+    ) {
+      timeoutMs = Math.max(timeoutMs, 120_000); // 2 minutes for heavy learning content
     }
 
     const backendResponse = await fetch(targetUrl, {
@@ -140,14 +146,20 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
       headers: responseHeaders,
     });
   } catch (error: any) {
+    const isTimeout =
+      error?.name === 'TimeoutError' ||
+      error?.name === 'AbortError' ||
+      String(error?.message || '').toLowerCase().includes('abort') ||
+      String(error?.message || '').toLowerCase().includes('timeout');
+
     console.error('[API Proxy Error]', targetUrl, error?.message);
     fs.appendFileSync(nodePath.join(process.cwd(), 'proxy_error.log'), new Date().toISOString() + ' ' + targetUrl + ' ' + error?.message + '\n');
     return NextResponse.json(
       {
-        error: error?.name === 'TimeoutError' ? 'Backend request timed out' : 'Failed to reach backend',
+        error: isTimeout ? 'Backend request timed out' : 'Failed to reach backend',
         details: error?.message,
       },
-      { status: error?.name === 'TimeoutError' ? 504 : 502 }
+      { status: isTimeout ? 504 : 502 }
     );
   }
 }
