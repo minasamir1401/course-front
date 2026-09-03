@@ -1,0 +1,5 @@
+﻿commit d630a9b6da9e28e9abd97d369d0abf175d834498
+Author: Mithaly Admin <admin@mithaly.com>
+Date:   Sun Aug 16 23:37:40 2026 -0700
+
+    fix: Add 'Add Module' button to Edit pages
