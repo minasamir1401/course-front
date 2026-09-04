@@ -2,7 +2,7 @@
 import { useLanguage } from '@/contexts/LanguageContext';
 import * as XLSX from "xlsx";
 import { useRef } from "react";
-import { collectMetadataFromQuestions, mergeAvailableMetadata } from '@/lib/examQuestionMetadata';
+import { collectMetadataFromQuestions, mergeAvailableMetadata, normalizeDok } from '@/lib/examQuestionMetadata';
 import { canCreateModule } from '@/lib/moduleCreationPolicy';
 import { createModuleDraft, upsertModuleDraft } from '@/lib/moduleInlineWorkspace';
 export const useModuleManagement = (
@@ -121,9 +121,9 @@ const openAddModuleModal = () => {
     const skillIdx = headers.findIndex(h => h.includes("skill") || h.includes("المهارة") || h.includes("المهاره"));
     const stdIdx = headers.findIndex(h => h.includes("standard") || h.includes("معيار") || h.includes("المعيار"));
     const indIdx = headers.findIndex(h => h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشر"));
-    const loIdx = headers.findIndex(h => h.includes("outcome") || h.includes("مخرج") || h.includes("ناتج") || h.includes("التعلم"));
+    const loIdx = headers.findIndex(h => h.includes("outcome") || h.includes("مخرج") || h.includes("ناتج") || h.includes("التعلم") || h.includes("learning"));
     const diffIdx = headers.findIndex(h => h.includes("difficulty") || h.includes("صعوبة") || h.includes("الصعوبة"));
-    const dokIdx = headers.findIndex(h => h.includes("dok"));
+    const dokIdx = headers.findIndex(h => h.includes("dok") || h.includes("عمق") || h.includes("depth"));
     const videoIdx = headers.findIndex(h => h.includes("video") || h.includes("فيديو") || h.includes("الفيديو"));
     const expIdx = headers.findIndex(h => h.includes("explanation") || h.includes("تفسير") || h.includes("التفسير") || h.includes("شرح"));
 
@@ -161,9 +161,12 @@ const openAddModuleModal = () => {
 
       const points = pointsIdx >= 0 ? (parseInt(String(row[pointsIdx])) || 1) : 1;
       const skill = skillIdx >= 0 ? String(row[skillIdx] ?? "").trim() : "General";
-      const standard = stdIdx >= 0 ? String(row[stdIdx] ?? "").trim() : "";
+      const rawStandard = stdIdx >= 0 ? String(row[stdIdx] ?? "").trim() : "";
       const indicator = indIdx >= 0 ? String(row[indIdx] ?? "").trim() : "";
-      const learningOutcome = loIdx >= 0 ? String(row[loIdx] ?? "").trim() : "";
+      const rawLearningOutcome = loIdx >= 0 ? String(row[loIdx] ?? "").trim() : "";
+      const finalOutcome = rawLearningOutcome || rawStandard;
+      const standard = finalOutcome;
+      const learningOutcome = finalOutcome;
       const videoUrl = videoIdx >= 0 ? String(row[videoIdx] ?? "").trim() : "";
       
       let level = diffIdx >= 0 ? String(row[diffIdx] ?? "").trim() : "On_Level";
@@ -173,7 +176,7 @@ const openAddModuleModal = () => {
 
 
       const dokRaw = dokIdx >= 0 ? String(row[dokIdx] ?? "").trim() : "";
-      const dok = ["DOK 1", "DOK 2", "DOK 3", "DOK 4"].includes(dokRaw) ? dokRaw : "";
+      const dok = normalizeDok(dokRaw) || dokRaw;
 
       const explanation = expIdx >= 0 ? String(row[expIdx] ?? "").trim() : "";
       const sections = explanation ? [{ id: Date.now() + Math.random(), type: "EXPLANATION", content: explanation }] : [];
@@ -454,13 +457,13 @@ const openAddModuleModal = () => {
           q.course || '',
           q.section || '',
           q.domain || '',
-          q.standard || '',
+          q.standard || q.learningOutcome || '',
           q.indicator || '',
           q.skill || '',
           q.subskill || '',
           q.microSkill || '',
           q.level || '',
-          q.dok || '',
+          normalizeDok(q.dok) || q.dok || '',
           q.cognitive || '',
           q.errorPattern || '',
           q.estimatedTime || ''
@@ -495,13 +498,13 @@ const openAddModuleModal = () => {
         const courseIdx = headers.findIndex(h => h.includes("exam") || h.includes("course") || h.includes("اختبار") || h.includes("الاختبار"));
         const sectionIdx = headers.findIndex(h => h.includes("section") || h.includes("قسم") || h.includes("القسم"));
         const domainIdx = headers.findIndex(h => h.includes("domain") || h.includes("مجال") || h.includes("المجال"));
-        const loIdx = headers.findIndex(h => h.includes("outcome") || h.includes("ناتج") || h.includes("مخرج") || h.includes("النواتج"));
+        const loIdx = headers.findIndex(h => h.includes("outcome") || h.includes("ناتج") || h.includes("مخرج") || h.includes("النواتج") || h.includes("المخرجات") || h.includes("learning") || h.includes("standard") || h.includes("معيار") || h.includes("المعايير"));
         const indIdx = headers.findIndex(h => h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشرات"));
         const skillIdx = headers.findIndex(h => (h.includes("skill") || h.includes("مهارة") || h.includes("المهارة")) && !h.includes("sub") && !h.includes("micro") && !h.includes("فرعية") && !h.includes("دقيقة"));
         const subskillIdx = headers.findIndex(h => h.includes("subskill") || h.includes("فرعية"));
         const microSkillIdx = headers.findIndex(h => h.includes("micro") || h.includes("دقيقة"));
         const levelIdx = headers.findIndex(h => h.includes("difficulty") || h.includes("صعوبة"));
-        const dokIdx = headers.findIndex(h => h.includes("dok") || h.includes("عمق"));
+        const dokIdx = headers.findIndex(h => h.includes("dok") || h.includes("عمق") || h.includes("depth"));
         const cognitiveIdx = headers.findIndex(h => h.includes("cognitive") || h.includes("معرفي"));
         const errorPatternIdx = headers.findIndex(h => h.includes("error") || h.includes("خطأ"));
         const timeIdx = headers.findIndex(h => h.includes("time") || h.includes("وقت"));
@@ -563,13 +566,17 @@ const openAddModuleModal = () => {
             if (courseIdx >= 0) q.course = String(row[courseIdx]).trim();
             if (sectionIdx >= 0) q.section = String(row[sectionIdx]).trim();
             if (domainIdx >= 0) q.domain = String(row[domainIdx]).trim();
-            if (loIdx >= 0) q.learningOutcome = String(row[loIdx]).trim();
+            if (loIdx >= 0) {
+              const loVal = String(row[loIdx]).trim();
+              q.learningOutcome = loVal;
+              q.standard = loVal;
+            }
             if (indIdx >= 0) q.indicator = String(row[indIdx]).trim();
             if (skillIdx >= 0) q.skill = String(row[skillIdx]).trim();
             if (subskillIdx >= 0) q.subskill = String(row[subskillIdx]).trim();
             if (microSkillIdx >= 0) q.microSkill = String(row[microSkillIdx]).trim();
             if (levelIdx >= 0) q.level = String(row[levelIdx]).trim();
-            if (dokIdx >= 0) q.dok = String(row[dokIdx]).trim();
+            if (dokIdx >= 0) q.dok = normalizeDok(row[dokIdx]) || String(row[dokIdx]).trim();
             if (cognitiveIdx >= 0) q.cognitive = String(row[cognitiveIdx]).trim();
             if (errorPatternIdx >= 0) q.errorPattern = String(row[errorPatternIdx]).trim();
             if (timeIdx >= 0) q.estimatedTime = String(row[timeIdx]).trim();

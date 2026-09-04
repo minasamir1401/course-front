@@ -100,6 +100,8 @@ export function buildQuestionTemplateRows(_type: 'questions' | 'assignments', la
   return rows;
 }
 
+import { normalizeDok } from './examQuestionMetadata';
+
 export function buildAdvancedMetadataTemplateRows(language: string, list: any[]) {
   const rows = [[
     'Question ID',
@@ -131,13 +133,13 @@ export function buildAdvancedMetadataTemplateRows(language: string, list: any[])
       question.course || '',
       question.section || '',
       question.domain || '',
-      question.standard || '',
+      question.standard || question.learningOutcome || '',
       question.indicator || '',
       question.skill || '',
       question.subskill || '',
       question.microSkill || '',
       question.level || '',
-      question.dok || '',
+      normalizeDok(question.dok) || question.dok || '',
       question.cognitive || '',
       question.errorPattern || '',
       question.estimatedTime || '',

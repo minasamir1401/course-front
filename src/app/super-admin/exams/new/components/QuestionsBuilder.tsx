@@ -10,6 +10,7 @@ import { parseJson } from '../utils/examUtils';
 import { sanitizeHtml } from '@/lib/sanitize';
 import { ChevronUp, ChevronDown, CheckCircle2, Edit2, Trash2, Plus, FileText, Settings, Activity, MoveUp, MoveDown, Mic, Video, Image as ImageIcon, Layout, Check, HelpCircle, Upload, Download, Target, X, Save } from 'lucide-react';
 import { CustomSelect } from '@/components/ui/CustomSelect';
+import { normalizeDok } from '@/lib/examQuestionMetadata';
 
 
 import InteractiveQuestionEditor from '@/components/InteractiveQuestionEditor';
@@ -335,6 +336,17 @@ export const QuestionsBuilder = (props: any) => {
               </div>
               
               {/* ── Question Metadata ── */}
+              <div className="flex items-center justify-between px-1 mb-2">
+                <span className="text-[11.5px] font-bold text-indigo-700 flex items-center gap-1.5 bg-indigo-50/70 border border-indigo-100/80 px-3 py-1.5 rounded-xl">
+                  <span>💡</span>
+                  <span>
+                    {language === 'ar'
+                      ? 'توجيه المحتوى: يُنصح ألا تزيد البيانات الوصفية (Metadata) عن 8 عناصر للحفاظ على تناسق العرض وسرعة المراجعة.'
+                      : 'Content Guidance: Recommended maximum of 8 metadata tags for optimal 2-row presentation.'}
+                  </span>
+                </span>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6 bg-slate-50 border border-slate-100 rounded-[24px]">
                 {[
                   { key: 'course', labelAr: 'الاختبار', labelEn: 'Exam' },
@@ -350,65 +362,101 @@ export const QuestionsBuilder = (props: any) => {
                   { key: 'cognitive', labelAr: 'المستوى المعرفي', labelEn: 'Cognitive' },
                   { key: 'errorPattern', labelAr: 'نمط الخطأ', labelEn: 'Error Pattern' },
                   { key: 'estimatedTime', labelAr: 'Estimated Time', labelEn: 'Estimated Time' },
-                ].map((field: any) => (
-                  <div key={field.key} className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? field.labelAr : field.labelEn}</label>
-                    {field.key === 'dok' ? (
-                      <select
-                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold appearance-none"
-                        value={tempQuestion.dok || ""}
-                        onChange={(e) => updateCurrentQuestionField('dok', e.target.value)}
-                      >
-                        <option value="">{language === 'ar' ? 'اختر...' : 'Select...'}</option>
-                        <option value="DOK 1">DOK 1</option>
-                        <option value="DOK 2">DOK 2</option>
-                        <option value="DOK 3">DOK 3</option>
-                        <option value="DOK 4">DOK 4</option>
-                      </select>
-                    ) : field.key === 'cognitive' ? (
-                      <select
-                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold appearance-none"
-                        value={tempQuestion.cognitive || ""}
-                        onChange={(e) => updateCurrentQuestionField('cognitive', e.target.value)}
-                      >
-                        <option value="">{language === 'ar' ? 'اختر...' : 'Select...'}</option>
-                        <option value="Knowledge">Knowledge</option>
-                        <option value="Application">Application</option>
-                        <option value="Reasoning">Reasoning</option>
-                      </select>
-                    ) : field.key === 'level' ? (
-                      <select
-                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold appearance-none"
-                        value={tempQuestion.level || ""}
-                        onChange={(e) => updateCurrentQuestionField('level', e.target.value)}
-                      >
-                        <option value="">{language === 'ar' ? 'اختر...' : 'Select...'}</option>
-                        <option value="Foundation">Foundation</option>
-                        <option value="On_Level">On_Level</option>
-                        <option value="Advanced">Advanced</option>
-                      </select>
-                    ) : (field.optionsKey && availableMetadata && (availableMetadata as any)[field.optionsKey]?.length > 0) ? (
-                      <select
-                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold appearance-none"
-                        value={tempQuestion[field.key] || field.defaultValue || ''}
-                        onChange={(e) => updateCurrentQuestionField(field.key, e.target.value)}
-                      >
-                        <option value="">{language === 'ar' ? 'اختر...' : 'Select...'}</option>
-                        {(availableMetadata as any)[field.optionsKey].map((opt: string, i: number) => (
-                          <option key={i} value={opt}>{opt}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        type="text"
-                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold"
-                        placeholder={language === 'ar' ? field.labelAr : field.labelEn}
-                        value={tempQuestion[field.key] || field.defaultValue || ''}
-                        onChange={(e) => updateCurrentQuestionField(field.key, e.target.value)}
-                      />
-                    )}
-                  </div>
-                ))}
+                ].map((field: any) => {
+                  const currentVal = field.key === 'standard'
+                    ? (tempQuestion.standard || tempQuestion.learningOutcome || '')
+                    : field.key === 'dok'
+                    ? (normalizeDok(tempQuestion.dok) || tempQuestion.dok || '')
+                    : (tempQuestion[field.key] || field.defaultValue || '');
+
+                  return (
+                    <div key={field.key} className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? field.labelAr : field.labelEn}</label>
+                      {field.key === 'dok' ? (
+                        <select
+                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold appearance-none"
+                          value={normalizeDok(tempQuestion.dok) || tempQuestion.dok || ""}
+                          onChange={(e) => updateCurrentQuestionField('dok', normalizeDok(e.target.value) || e.target.value)}
+                        >
+                          <option value="">{language === 'ar' ? 'اختر...' : 'Select...'}</option>
+                          <option value="DOK 1">DOK 1</option>
+                          <option value="DOK 2">DOK 2</option>
+                          <option value="DOK 3">DOK 3</option>
+                          <option value="DOK 4">DOK 4</option>
+                          {(() => {
+                            const val = normalizeDok(tempQuestion.dok) || tempQuestion.dok;
+                            if (val && !['DOK 1', 'DOK 2', 'DOK 3', 'DOK 4'].includes(val)) {
+                              return <option value={val}>{val}</option>;
+                            }
+                            return null;
+                          })()}
+                        </select>
+                      ) : field.key === 'cognitive' ? (
+                        <select
+                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold appearance-none"
+                          value={tempQuestion.cognitive || ""}
+                          onChange={(e) => updateCurrentQuestionField('cognitive', e.target.value)}
+                        >
+                          <option value="">{language === 'ar' ? 'اختر...' : 'Select...'}</option>
+                          <option value="Knowledge">Knowledge</option>
+                          <option value="Application">Application</option>
+                          <option value="Reasoning">Reasoning</option>
+                          {tempQuestion.cognitive && !['Knowledge', 'Application', 'Reasoning'].includes(tempQuestion.cognitive) && (
+                            <option value={tempQuestion.cognitive}>{tempQuestion.cognitive}</option>
+                          )}
+                        </select>
+                      ) : field.key === 'level' ? (
+                        <select
+                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold appearance-none"
+                          value={tempQuestion.level || ""}
+                          onChange={(e) => updateCurrentQuestionField('level', e.target.value)}
+                        >
+                          <option value="">{language === 'ar' ? 'اختر...' : 'Select...'}</option>
+                          <option value="Foundation">Foundation</option>
+                          <option value="On_Level">On_Level</option>
+                          <option value="Advanced">Advanced</option>
+                          {tempQuestion.level && !['Foundation', 'On_Level', 'Advanced'].includes(tempQuestion.level) && (
+                            <option value={tempQuestion.level}>{tempQuestion.level}</option>
+                          )}
+                        </select>
+                      ) : (field.optionsKey && availableMetadata && (availableMetadata as any)[field.optionsKey]?.length > 0) ? (
+                        <select
+                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold appearance-none"
+                          value={currentVal}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            updateCurrentQuestionField(field.key, val);
+                            if (field.key === 'standard') {
+                              updateCurrentQuestionField('learningOutcome', val);
+                            }
+                          }}
+                        >
+                          <option value="">{language === 'ar' ? 'اختر...' : 'Select...'}</option>
+                          {(availableMetadata as any)[field.optionsKey].map((opt: string, i: number) => (
+                            <option key={i} value={opt}>{opt}</option>
+                          ))}
+                          {currentVal && !(availableMetadata as any)[field.optionsKey].includes(currentVal) && (
+                            <option value={currentVal}>{currentVal}</option>
+                          )}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold"
+                          placeholder={language === 'ar' ? field.labelAr : field.labelEn}
+                          value={currentVal}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            updateCurrentQuestionField(field.key, val);
+                            if (field.key === 'standard') {
+                              updateCurrentQuestionField('learningOutcome', val);
+                            }
+                          }}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Rich Text Editor for Question Text */}

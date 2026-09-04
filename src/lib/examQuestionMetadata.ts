@@ -35,6 +35,24 @@ export const mergeAvailableMetadata = (current: any, patch: any) => {
   return next;
 };
 
+export const normalizeDok = (val: any): string => {
+  if (val === null || val === undefined) return "";
+  const s = String(val).trim();
+  if (!s) return "";
+  const dokMatch = s.match(/^DOK\s*([1-4])$/i);
+  if (dokMatch) return `DOK ${dokMatch[1]}`;
+
+  const numMatch = s.match(/^([1-4])(?:\.0+)?$/);
+  if (numMatch) return `DOK ${numMatch[1]}`;
+
+  const wordMatch = s.match(/(?:dok|level|مستوى|عمق|درجة)\s*[:\-]?\s*([1-4])/i);
+  if (wordMatch) return `DOK ${wordMatch[1]}`;
+
+  if (/^[1-4]$/.test(s)) return `DOK ${s}`;
+
+  return s;
+};
+
 export const collectMetadataFromQuestions = (questions: any[] = []) => ({
   domains: dedupeStrings(questions.map((question) => question?.domain)),
   standards: dedupeStrings(
@@ -58,7 +76,7 @@ export const collectMetadataFromQuestions = (questions: any[] = []) => ({
   ]),
   doks: dedupeStrings([
     ...INITIAL_AVAILABLE_METADATA.doks,
-    ...questions.map((question) => question?.dok),
+    ...questions.map((question) => normalizeDok(question?.dok) || question?.dok),
   ]),
   cognitives: dedupeStrings([
     ...INITIAL_AVAILABLE_METADATA.cognitives,

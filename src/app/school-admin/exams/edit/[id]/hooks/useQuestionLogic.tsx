@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { normalizeDok } from '@/lib/examQuestionMetadata';
 
 import { ChevronDown, Edit2, Trash2, Plus } from 'lucide-react';
 import { useState } from 'react';
@@ -51,6 +52,10 @@ export const useQuestionLogic = (props: any) => {
     item.options = normalizeQuestionOptions(item.options);
     if (!item.sections) item.sections = [];
     if (!item.type) item.type = item.label || "MCQ";
+    const outcome = item.standard || item.learningOutcome || "";
+    item.standard = outcome;
+    item.learningOutcome = outcome;
+    if (item.dok) item.dok = normalizeDok(item.dok) || item.dok;
     setTempQuestion(item);
     setEditingStandaloneIndex(index);
     setQuestionSource('questions');
@@ -64,7 +69,14 @@ export const useQuestionLogic = (props: any) => {
       showToast(validation.error, "error");
       return;
     }
-    const itemToSave = { ...tempQuestion, label: tempQuestion.type };
+    const outcome = tempQuestion.standard || tempQuestion.learningOutcome || "";
+    const itemToSave = {
+      ...tempQuestion,
+      standard: outcome,
+      learningOutcome: outcome,
+      dok: normalizeDok(tempQuestion.dok) || tempQuestion.dok || "",
+      label: tempQuestion.type
+    };
     setStandaloneQuestions((prev: any) => {
       const newList = [...prev];
       if (editingStandaloneIndex !== null) newList[editingStandaloneIndex] = itemToSave;
@@ -126,6 +138,10 @@ export const useQuestionLogic = (props: any) => {
     item.options = normalizeQuestionOptions(item.options);
     if (!item.sections) item.sections = [];
     if (!item.type) item.type = item.label || "MCQ";
+    const outcome = item.standard || item.learningOutcome || "";
+    item.standard = outcome;
+    item.learningOutcome = outcome;
+    if (item.dok) item.dok = normalizeDok(item.dok) || item.dok;
     setTempQuestion(item);
     setEditingQuestionIndex(index);
     setQuestionSource(source);
@@ -140,8 +156,12 @@ export const useQuestionLogic = (props: any) => {
       return;
     }
 
+    const outcome = tempQuestion.standard || tempQuestion.learningOutcome || "";
     const itemToSave = {
       ...tempQuestion,
+      standard: outcome,
+      learningOutcome: outcome,
+      dok: normalizeDok(tempQuestion.dok) || tempQuestion.dok || "",
       label: tempQuestion.type // Ensure label is synced with type
     };
 
@@ -211,7 +231,17 @@ export const useQuestionLogic = (props: any) => {
   };
 
   const updateCurrentQuestionField = (field: string, value: any) => {
-    setTempQuestion((prev: any) => ({ ...prev, [field]: value }));
+    setTempQuestion((prev: any) => {
+      const updated: any = { ...prev, [field]: value };
+      if (field === 'standard') {
+        updated.learningOutcome = value;
+      } else if (field === 'learningOutcome') {
+        updated.standard = value;
+      } else if (field === 'dok') {
+        updated.dok = normalizeDok(value) || value;
+      }
+      return updated;
+    });
   };
 
   const updateQuestionOption = (oIdx: number, value: string) => {

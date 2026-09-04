@@ -1,3 +1,4 @@
+import { normalizeDok } from '@/lib/examQuestionMetadata';
 "use client";
 
 import React, { useState } from "react";
@@ -131,6 +132,10 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
     if (!item.options) item.options = ["", "", "", ""];
     if (!item.sections) item.sections = [];
     if (!item.type) item.type = item.label || "MCQ";
+    const outcome = item.standard || item.learningOutcome || "";
+    item.standard = outcome;
+    item.learningOutcome = outcome;
+    if (item.dok) item.dok = normalizeDok(item.dok) || item.dok;
     setTempQuestion(item);
     setEditingQuestionIndex(index);
     setQuestionSource(source);
@@ -165,8 +170,12 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
       }
     }
 
+    const outcome = tempQuestion.standard || tempQuestion.learningOutcome || "";
     const itemToSave = {
       ...tempQuestion,
+      standard: outcome,
+      learningOutcome: outcome,
+      dok: normalizeDok(tempQuestion.dok) || tempQuestion.dok || "",
       label: tempQuestion.type // Ensure label is synced with type
     };
 
@@ -216,7 +225,17 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
   };
 
   const updateCurrentQuestionField = (field: string, value: any) => {
-    setTempQuestion((prev: any) => ({ ...prev, [field]: value }));
+    setTempQuestion((prev: any) => {
+      const updated: any = { ...prev, [field]: value };
+      if (field === 'standard') {
+        updated.learningOutcome = value;
+      } else if (field === 'learningOutcome') {
+        updated.standard = value;
+      } else if (field === 'dok') {
+        updated.dok = normalizeDok(value) || value;
+      }
+      return updated;
+    });
   };
 
   const updateQuestionOption = (oIdx: number, value: string) => {
@@ -747,7 +766,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                   { key: 'course', labelAr: 'الدرس', labelEn: 'Lesson' },
                   { key: 'section', labelAr: 'القسم', labelEn: 'Section' },
                   { key: 'domain', labelAr: 'المجال', labelEn: 'Domain' },
-                  { key: 'standard', labelAr: 'المعيار', labelEn: 'Standard' },
+                  { key: 'standard', labelAr: 'نواتج التعلم', labelEn: 'Learning Outcomes' },
                   { key: 'indicator', labelAr: 'المؤشرات', labelEn: 'Indicators' },
                   { key: 'skill', labelAr: 'المهارة', labelEn: 'Skill', defaultValue: 'General' },
                   { key: 'subskill', labelAr: 'المهارة الفرعية', labelEn: 'Subskill' },
@@ -757,43 +776,67 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                   { key: 'cognitive', labelAr: 'المستوى المعرفي', labelEn: 'Cognitive' },
                   { key: 'errorPattern', labelAr: 'نمط الخطأ', labelEn: 'Error Pattern' },
                   { key: 'estimatedTime', labelAr: 'الوقت المقدر', labelEn: 'Estimated Time' },
-                ].map((field) => (
-                  <div key={field.key} className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? field.labelAr : field.labelEn}</label>
-                    {field.key === 'dok' ? (
-                      <select
-                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold appearance-none"
-                        value={tempQuestion.dok || ""}
-                        onChange={(e) => updateCurrentQuestionField('dok', e.target.value)}
-                      >
-                        <option value="">{language === 'ar' ? 'اختر...' : 'Select...'}</option>
-                        <option value="DOK 1">DOK 1</option>
-                        <option value="DOK 2">DOK 2</option>
-                        <option value="DOK 3">DOK 3</option>
-                        <option value="DOK 4">DOK 4</option>
-                      </select>
-                    ) : field.key === 'cognitive' ? (
-                      <select
-                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold appearance-none"
-                        value={tempQuestion.cognitive || ""}
-                        onChange={(e) => updateCurrentQuestionField('cognitive', e.target.value)}
-                      >
-                        <option value="">{language === 'ar' ? 'اختر...' : 'Select...'}</option>
-                        <option value="Knowledge">Knowledge</option>
-                        <option value="Application">Application</option>
-                        <option value="Reasoning">Reasoning</option>
-                      </select>
-                    ) : (
-                      <input
-                        type="text"
-                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold"
-                        placeholder={language === 'ar' ? field.labelAr : field.labelEn}
-                        value={tempQuestion[field.key] || field.defaultValue || ''}
-                        onChange={(e) => updateCurrentQuestionField(field.key, e.target.value)}
-                      />
-                    )}
-                  </div>
-                ))}
+                ].map((field) => {
+                  const currentVal = field.key === 'standard'
+                    ? (tempQuestion.standard || tempQuestion.learningOutcome || '')
+                    : field.key === 'dok'
+                    ? (normalizeDok(tempQuestion.dok) || tempQuestion.dok || '')
+                    : (tempQuestion[field.key] || field.defaultValue || '');
+
+                  return (
+                    <div key={field.key} className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? field.labelAr : field.labelEn}</label>
+                      {field.key === 'dok' ? (
+                        <select
+                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold appearance-none"
+                          value={normalizeDok(tempQuestion.dok) || tempQuestion.dok || ""}
+                          onChange={(e) => updateCurrentQuestionField('dok', normalizeDok(e.target.value) || e.target.value)}
+                        >
+                          <option value="">{language === 'ar' ? 'اختر...' : 'Select...'}</option>
+                          <option value="DOK 1">DOK 1</option>
+                          <option value="DOK 2">DOK 2</option>
+                          <option value="DOK 3">DOK 3</option>
+                          <option value="DOK 4">DOK 4</option>
+                          {(() => {
+                            const val = normalizeDok(tempQuestion.dok) || tempQuestion.dok;
+                            if (val && !['DOK 1', 'DOK 2', 'DOK 3', 'DOK 4'].includes(val)) {
+                              return <option value={val}>{val}</option>;
+                            }
+                            return null;
+                          })()}
+                        </select>
+                      ) : field.key === 'cognitive' ? (
+                        <select
+                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold appearance-none"
+                          value={tempQuestion.cognitive || ""}
+                          onChange={(e) => updateCurrentQuestionField('cognitive', e.target.value)}
+                        >
+                          <option value="">{language === 'ar' ? 'اختر...' : 'Select...'}</option>
+                          <option value="Knowledge">Knowledge</option>
+                          <option value="Application">Application</option>
+                          <option value="Reasoning">Reasoning</option>
+                          {tempQuestion.cognitive && !['Knowledge', 'Application', 'Reasoning'].includes(tempQuestion.cognitive) && (
+                            <option value={tempQuestion.cognitive}>{tempQuestion.cognitive}</option>
+                          )}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold"
+                          placeholder={language === 'ar' ? field.labelAr : field.labelEn}
+                          value={currentVal}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            updateCurrentQuestionField(field.key, val);
+                            if (field.key === 'standard') {
+                              updateCurrentQuestionField('learningOutcome', val);
+                            }
+                          }}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
                   <div className="flex flex-col gap-2">

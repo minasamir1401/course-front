@@ -1,3 +1,4 @@
+import { normalizeDok } from '@/lib/examQuestionMetadata';
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
@@ -486,9 +487,9 @@ export default function CreateCoursePage() {
     const skillIdx = headers.findIndex(h => h.includes("skill") || h.includes("المهارة") || h.includes("المهاره"));
     const stdIdx = headers.findIndex(h => h.includes("standard") || h.includes("معيار") || h.includes("المعيار"));
     const indIdx = headers.findIndex(h => h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشر"));
-    const loIdx = headers.findIndex(h => h.includes("outcome") || h.includes("مخرج") || h.includes("ناتج") || h.includes("التعلم"));
+    const loIdx = headers.findIndex(h => h.includes("outcome") || h.includes("مخرج") || h.includes("ناتج") || h.includes("التعلم") || h.includes("learning"));
     const diffIdx = headers.findIndex(h => h.includes("difficulty") || h.includes("صعوبة") || h.includes("الصعوبة"));
-    const dokIdx = headers.findIndex(h => h.includes("dok"));
+    const dokIdx = headers.findIndex(h => h.includes("dok") || h.includes("عمق") || h.includes("depth"));
     const videoIdx = headers.findIndex(h => h.includes("video") || h.includes("فيديو") || h.includes("الفيديو"));
     const expIdx = headers.findIndex(h => h.includes("explanation") || h.includes("تفسير") || h.includes("التفسير") || h.includes("شرح"));
 
@@ -526,9 +527,12 @@ export default function CreateCoursePage() {
 
       const points = pointsIdx >= 0 ? (parseInt(String(row[pointsIdx])) || 1) : 1;
       const skill = skillIdx >= 0 ? String(row[skillIdx] ?? "").trim() : "General";
-      const standard = stdIdx >= 0 ? String(row[stdIdx] ?? "").trim() : "";
       const indicator = indIdx >= 0 ? String(row[indIdx] ?? "").trim() : "";
-      const learningOutcome = loIdx >= 0 ? String(row[loIdx] ?? "").trim() : "";
+      const rawLearningOutcome = loIdx >= 0 ? String(row[loIdx] ?? "").trim() : "";
+      const rawStandard = stdIdx >= 0 ? String(row[stdIdx] ?? "").trim() : "";
+      const finalOutcome = rawLearningOutcome || rawStandard || "";
+      const standard = finalOutcome;
+      const learningOutcome = finalOutcome;
       const videoUrl = videoIdx >= 0 ? String(row[videoIdx] ?? "").trim() : "";
 
       let level = diffIdx >= 0 ? String(row[diffIdx] ?? "").trim() : "On Level";
@@ -537,7 +541,7 @@ export default function CreateCoursePage() {
       else level = "On Level";
 
       const dokRaw = dokIdx >= 0 ? String(row[dokIdx] ?? "").trim() : "";
-      const dok = ["DOK 1", "DOK 2", "DOK 3", "DOK 4"].includes(dokRaw) ? dokRaw : "";
+      const dok = normalizeDok(dokRaw) || (["DOK 1", "DOK 2", "DOK 3", "DOK 4"].includes(dokRaw) ? dokRaw : dokRaw);
 
       const explanation = expIdx >= 0 ? String(row[expIdx] ?? "").trim() : "";
       const sections = explanation ? [{ id: Date.now() + Math.random(), type: "EXPLANATION", content: explanation }] : [];
