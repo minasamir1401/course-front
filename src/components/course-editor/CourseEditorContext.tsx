@@ -399,7 +399,8 @@ export const CourseEditorProvider: React.FC<{
   };
 
   const toggleCourseSchool = (id: string) => {
-    const current = courseData.schoolIds || [];
+    if (!id || id === "null" || id === "undefined") return;
+    const current = (courseData.schoolIds || []).filter(Boolean);
     if (current.includes(id)) {
       setCourseData({ ...courseData, schoolIds: current.filter((s) => s !== id) });
     } else {
@@ -408,10 +409,11 @@ export const CourseEditorProvider: React.FC<{
   };
 
   const selectAllSchools = () => {
-    if ((courseData.schoolIds || []).length === schools.length) {
+    const validSchoolIds = (schools || []).map((s) => s.id).filter(Boolean);
+    if ((courseData.schoolIds || []).length === validSchoolIds.length) {
       setCourseData({ ...courseData, schoolIds: [] });
     } else {
-      setCourseData({ ...courseData, schoolIds: schools.map((s) => s.id) });
+      setCourseData({ ...courseData, schoolIds: validSchoolIds });
     }
   };
 
@@ -481,7 +483,9 @@ export const CourseEditorProvider: React.FC<{
           country: data.country || "مصر",
           isCentral: data.isCentral,
           schoolId: data.schoolId || "",
-          schoolIds: data.schools && data.schools.length > 0 ? data.schools.map((s: any) => s.id) : data.schoolId ? [data.schoolId] : [],
+          schoolIds: data.schools && data.schools.length > 0
+            ? data.schools.map((s: any) => (typeof s === "object" && s ? s.id : s)).filter((sid: any) => Boolean(sid && sid !== "null" && sid !== "undefined"))
+            : (data.schoolId && data.schoolId !== "null" && data.schoolId !== "undefined" ? [data.schoolId] : []),
         });
 
         setExams(data.exams || []);
@@ -843,6 +847,30 @@ export const CourseEditorProvider: React.FC<{
     showToast(language === "ar" ? "تم إضافة السؤال للدرس" : "Question added to lesson", "success");
   };
 
+  const getSchoolPayload = () => {
+    const sanitizedTargetSchoolIds = (courseData.schoolIds || [])
+      .map((s: any) => (typeof s === "object" && s ? s.id : s))
+      .filter((s: any): s is string => Boolean(s && typeof s === "string" && s !== "null" && s !== "undefined" && s.trim() !== ""))
+      .map((s: string) => s.trim());
+
+    const fallbackSchoolId = (schoolIdParam && schoolIdParam !== "null" && schoolIdParam !== "undefined" ? schoolIdParam.trim() : null)
+      || (courseData.schoolId && courseData.schoolId !== "null" && courseData.schoolId !== "undefined" ? courseData.schoolId.trim() : null);
+
+    const resolvedSchoolId = role === "SUPER_ADMIN"
+      ? (sanitizedTargetSchoolIds.length > 0 ? sanitizedTargetSchoolIds[0] : null)
+      : fallbackSchoolId;
+
+    const resolvedSchoolIds = role === "SUPER_ADMIN"
+      ? sanitizedTargetSchoolIds
+      : (fallbackSchoolId ? [fallbackSchoolId] : []);
+
+    return {
+      isCentral: role === "SUPER_ADMIN" ? sanitizedTargetSchoolIds.length === 0 : false,
+      schoolId: resolvedSchoolId,
+      schoolIds: resolvedSchoolIds,
+    };
+  };
+
   const saveLesson = async () => {
     if (!currentLesson.title) {
       showToast(language === "ar" ? "يجب إدخال عنوان الدرس" : "Lesson title is required", "error");
@@ -872,8 +900,6 @@ export const CourseEditorProvider: React.FC<{
     else snapshotLessons.push(currentLesson);
 
     try {
-      const targetSchoolIds = (courseData.schoolIds || []).filter(Boolean);
-
       const deduplicatedLessons = snapshotLessons.filter((l, idx, arr) => {
         if (!l.id) return true;
         return arr.findIndex(other => other.id === l.id) === idx;
@@ -887,9 +913,7 @@ export const CourseEditorProvider: React.FC<{
         },
         body: JSON.stringify({
           ...courseData,
-          isCentral: role === "SUPER_ADMIN" ? targetSchoolIds.length === 0 : false,
-          schoolId: role === "SUPER_ADMIN" ? (targetSchoolIds.length > 0 ? targetSchoolIds[0] : null) : schoolIdParam,
-          schoolIds: role === "SUPER_ADMIN" ? targetSchoolIds : [schoolIdParam],
+          ...getSchoolPayload(),
           lessons: deduplicatedLessons.map((l) => ({
             id: l.id,
             title: l.title,
@@ -1015,7 +1039,6 @@ export const CourseEditorProvider: React.FC<{
         // ── Offline / server-down: enqueue for auto-retry ────────────────────
         if (res.status >= 500 || !navigator.onLine) {
           const tokenOffline = localStorage.getItem(tokenKey) || localStorage.getItem("token") || "";
-          const targetSchoolIds2 = (courseData.schoolIds || []).filter(Boolean);
           const deduplicatedLessons2 = snapshotLessons.filter((l, idx, arr) => {
             if (!l.id) return true;
             return arr.findIndex(other => other.id === l.id) === idx;
@@ -1026,9 +1049,7 @@ export const CourseEditorProvider: React.FC<{
             headers: { Authorization: `Bearer ${tokenOffline}`, "Content-Type": "application/json" },
             body: JSON.stringify({
               ...courseData,
-              isCentral: role === "SUPER_ADMIN" ? targetSchoolIds2.length === 0 : false,
-              schoolId: role === "SUPER_ADMIN" ? (targetSchoolIds2.length > 0 ? targetSchoolIds2[0] : null) : schoolIdParam,
-              schoolIds: role === "SUPER_ADMIN" ? targetSchoolIds2 : [schoolIdParam],
+              ...getSchoolPayload(),
               lessons: deduplicatedLessons2.map((l) => ({
                 id: l.id, title: l.title, domain: l.domain || null, videoUrl: l.videoUrl || null,
                 summary: l.summary || null, notes: l.notes || null, standards: l.standards || null,
@@ -1064,7 +1085,6 @@ export const CourseEditorProvider: React.FC<{
       // Network error — enqueue for later retry
       if (!navigator.onLine || error?.message?.includes('fetch')) {
         const tokenOffline2 = localStorage.getItem(tokenKey) || localStorage.getItem("token") || "";
-        const targetSchoolIds3 = (courseData.schoolIds || []).filter(Boolean);
         const deduplicatedLessons3 = snapshotLessons.filter((l, idx, arr) => {
           if (!l.id) return true;
           return arr.findIndex(other => other.id === l.id) === idx;
@@ -1075,9 +1095,7 @@ export const CourseEditorProvider: React.FC<{
           headers: { Authorization: `Bearer ${tokenOffline2}`, "Content-Type": "application/json" },
           body: JSON.stringify({
             ...courseData,
-            isCentral: role === "SUPER_ADMIN" ? targetSchoolIds3.length === 0 : false,
-            schoolId: role === "SUPER_ADMIN" ? (targetSchoolIds3.length > 0 ? targetSchoolIds3[0] : null) : schoolIdParam,
-            schoolIds: role === "SUPER_ADMIN" ? targetSchoolIds3 : [schoolIdParam],
+            ...getSchoolPayload(),
             lessons: deduplicatedLessons3.map((l) => ({
               id: l.id, title: l.title, domain: l.domain || null, videoUrl: l.videoUrl || null,
               summary: l.summary || null, notes: l.notes || null, standards: l.standards || null,
@@ -1123,8 +1141,6 @@ export const CourseEditorProvider: React.FC<{
     const token = localStorage.getItem(tokenKey) || localStorage.getItem("token");
 
     try {
-      const targetSchoolIds = (courseData.schoolIds || []).filter(Boolean);
-
       // 🔒 FIX: Force-sync the ref to current state immediately before snapshotting.
       lessonsRef.current = lessons;
 
@@ -1164,9 +1180,7 @@ export const CourseEditorProvider: React.FC<{
         },
         body: JSON.stringify({
           ...courseData,
-          isCentral: role === "SUPER_ADMIN" ? targetSchoolIds.length === 0 : false,
-          schoolId: role === "SUPER_ADMIN" ? (targetSchoolIds.length > 0 ? targetSchoolIds[0] : null) : schoolIdParam,
-          schoolIds: role === "SUPER_ADMIN" ? targetSchoolIds : [schoolIdParam],
+          ...getSchoolPayload(),
           lessons: deduplicatedLessonsToSend.map((l) => ({
             id: l.id,
             title: l.title,
@@ -1356,7 +1370,6 @@ export const CourseEditorProvider: React.FC<{
           // Server error during course update — enqueue for auto-retry
           if (res.status >= 500) {
             const token = localStorage.getItem(tokenKey) || localStorage.getItem("token") || "";
-            const targetSchoolIds4 = (courseData.schoolIds || []).filter(Boolean);
             const deduplicatedLessons4 = [...lessons].filter((l, idx, arr) => {
               if (!l.id) return true;
               return arr.findIndex(other => other.id === l.id) === idx;
@@ -1367,9 +1380,7 @@ export const CourseEditorProvider: React.FC<{
               headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
               body: JSON.stringify({
                 ...courseData,
-                isCentral: role === "SUPER_ADMIN" ? targetSchoolIds4.length === 0 : false,
-                schoolId: role === "SUPER_ADMIN" ? (targetSchoolIds4.length > 0 ? targetSchoolIds4[0] : null) : schoolIdParam,
-                schoolIds: role === "SUPER_ADMIN" ? targetSchoolIds4 : [schoolIdParam],
+                ...getSchoolPayload(),
                 lessons: deduplicatedLessons4.map((l) => ({
                   id: l.id, title: l.title, domain: l.domain || null, videoUrl: l.videoUrl || null,
                   summary: l.summary || null, notes: l.notes || null, standards: l.standards || null,
@@ -1408,7 +1419,6 @@ export const CourseEditorProvider: React.FC<{
       console.error("Course update error:", error);
       // Network failure — enqueue for offline sync
       const token = localStorage.getItem(tokenKey) || localStorage.getItem("token") || "";
-      const targetSchoolIds5 = (courseData.schoolIds || []).filter(Boolean);
       const deduplicatedLessons5 = [...lessons].filter((l, idx, arr) => {
         if (!l.id) return true;
         return arr.findIndex(other => other.id === l.id) === idx;
@@ -1419,9 +1429,7 @@ export const CourseEditorProvider: React.FC<{
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           ...courseData,
-          isCentral: role === "SUPER_ADMIN" ? targetSchoolIds5.length === 0 : false,
-          schoolId: role === "SUPER_ADMIN" ? (targetSchoolIds5.length > 0 ? targetSchoolIds5[0] : null) : schoolIdParam,
-          schoolIds: role === "SUPER_ADMIN" ? targetSchoolIds5 : [schoolIdParam],
+          ...getSchoolPayload(),
           lessons: deduplicatedLessons5.map((l) => ({
             id: l.id, title: l.title, domain: l.domain || null, videoUrl: l.videoUrl || null,
             summary: l.summary || null, notes: l.notes || null, standards: l.standards || null,
