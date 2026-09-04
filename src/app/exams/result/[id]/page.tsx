@@ -305,7 +305,7 @@ export default function ExamResultPage() {
           <h1 className="text-3xl font-black text-slate-800 mb-4">{t('resultsHidden', lang)}</h1>
           <p className="text-slate-500 mb-10 leading-relaxed text-lg">{t('resultsHiddenMsg', lang)}</p>
           <div className="bg-slate-50 p-6 rounded-2xl mb-10 text-right border border-slate-100">
-            <h4 className="font-black text-slate-700 mb-1">{submission.exam.title}</h4>
+            <h4 className="font-black text-slate-700 mb-1">{submission.subExam?.title || submission.exam.title}</h4>
             <p className="text-sm text-slate-400">{t('submittedOn', lang)} {new Date(submission.createdAt).toLocaleDateString(lang === 'ar' ? "ar-EG" : "en-GB")}</p>
           </div>
           <Link href="/exams" className="w-full bg-indigo-600 text-white py-5 rounded-2xl font-black text-xl shadow-xl shadow-indigo-100 hover:scale-[1.02] transition-all flex items-center justify-center gap-3">
@@ -334,7 +334,7 @@ export default function ExamResultPage() {
           <h1 className="text-3xl md:text-5xl font-black mb-3 drop-shadow-sm">
             {t('result', lang)}
           </h1>
-          <p className="text-white/80 text-lg font-bold">{submission.exam.title}</p>
+          <p className="text-white/80 text-lg font-bold">{submission.subExam?.title || submission.exam.title}</p>
           <div className="flex justify-center gap-3 mt-4">
             <span className="bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-black border border-white/20">
               {submission.exam.skill || t('general', lang)}
@@ -513,6 +513,15 @@ export default function ExamResultPage() {
                 },
               ].filter(Boolean) as any[];
 
+              const bottomKeys = ['level', 'skill', 'subskill', 'microSkill'];
+              const topTags = questionTags.filter((tag: any) => !bottomKeys.includes(tag.key)).slice(0, 4);
+              const bottomTags = [
+                questionTags.find((tag: any) => tag.key === 'level'),
+                questionTags.find((tag: any) => tag.key === 'skill'),
+                questionTags.find((tag: any) => tag.key === 'subskill'),
+                questionTags.find((tag: any) => tag.key === 'microSkill'),
+              ].filter(Boolean);
+
               return (
                 <div key={index} className="bg-white rounded-[32px] shadow-sm border border-slate-200 overflow-hidden group hover:border-indigo-200 transition-all">
                   <div className="p-8 md:p-10">
@@ -525,20 +534,38 @@ export default function ExamResultPage() {
                           <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest leading-none mb-1.5">
                             {answer.question.type === 'MCQ' ? t('mcq', lang) : answer.question.type === 'MULTI_SELECT' ? t('multiSelect', lang) : t('trueFalse', lang)}
                           </span>
-                          {/* Unified metadata tags container: compact tags, maximum 2 rows, never exceeds 2 rows */}
-                          <div className="flex flex-wrap items-center gap-1.5 max-h-[60px] md:max-h-[64px] overflow-hidden">
-
-                            {questionTags.slice(0, 8).map((tag: any) => (
-                              <InteractiveTag
-                                key={tag.key}
-                                label={tag.label}
-                                value={tag.value}
-                                icon={tag.icon}
-                                colorClass={tag.colorClass}
-                                bubbleTheme={tag.bubbleTheme}
-                                size="sm"
-                              />
-                            ))}
+                          {/* Parallel 4+4 metadata tags container: Top 4 (Domain, DOK, Cognitive, Indicator) + Bottom 4 (Level, Skill, Subskill, Micro Skill) */}
+                          <div className="flex flex-col gap-1.5 pt-0.5">
+                            {topTags.length > 0 && (
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {topTags.map((tag: any) => (
+                                  <InteractiveTag
+                                    key={tag.key}
+                                    label={tag.label}
+                                    value={tag.value}
+                                    icon={tag.icon}
+                                    colorClass={tag.colorClass}
+                                    bubbleTheme={tag.bubbleTheme}
+                                    size="sm"
+                                  />
+                                ))}
+                              </div>
+                            )}
+                            {bottomTags.length > 0 && (
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {bottomTags.map((tag: any) => (
+                                  <InteractiveTag
+                                    key={tag.key}
+                                    label={tag.label}
+                                    value={tag.value}
+                                    icon={tag.icon}
+                                    colorClass={tag.colorClass}
+                                    bubbleTheme={tag.bubbleTheme}
+                                    size="sm"
+                                  />
+                                ))}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>

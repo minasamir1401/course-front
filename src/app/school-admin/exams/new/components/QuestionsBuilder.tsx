@@ -164,14 +164,6 @@ export const QuestionsBuilder = (props: any) => {
                       >
                         <Edit2 className="w-5 h-5" />
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => removeQuestionForSource(source, index)}
-                        className="w-10 h-10 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
                     </div>
                   </div>
 

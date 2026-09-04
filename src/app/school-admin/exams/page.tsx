@@ -457,16 +457,6 @@ export default function SchoolAdminExamsPage() {
                       >
                         <Settings className="w-5 h-5" />
                       </Link>
-                      <button
-                        type="button"
-                        onClick={() => isSyntheticModuleCard ? handleDelete(module.parentExamId) : handleDeleteModule(module.id, module.parentExamId)}
-                        className="w-11 h-11 rounded-2xl bg-rose-50 text-rose-400 flex items-center justify-center hover:bg-rose-100 hover:text-rose-600 transition-colors"
-                        title={isSyntheticModuleCard
-                          ? (language === 'ar' ? 'حذف الامتحان نهائيًا' : 'Permanently delete exam')
-                          : (language === 'ar' ? 'حذف Module نهائيًا' : 'Permanently delete module')}
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2 mb-3">

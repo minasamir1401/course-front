@@ -167,7 +167,7 @@ function TakeExamPageContent() {
       });
       const data = await res.json();
       if (!res.ok) {
-        showToast(data.error || "خطأ في تحميل الامتحان", "error");
+        showToast(data.error || "Failed to load exam", "error");
         router.back();
         return;
       }
@@ -180,7 +180,7 @@ function TakeExamPageContent() {
         if (checkRes.ok) {
           const checkData = await checkRes.json();
           if (!checkData.canTakeAgain) {
-            showToast("لقد استنفدت عدد المحاولات المسموح بها.", "error");
+            showToast("You have reached the maximum number of attempts allowed for this exam.", "error");
             if (checkData.submissionId) {
               router.replace(`/exams/result/${checkData.submissionId}`);
             } else {
@@ -380,11 +380,11 @@ function TakeExamPageContent() {
         }
         router.push(`/exams/result/${data.submissionId}`);
       } else {
-        showToast(data.error || "خطأ في تقديم الامتحان", "error");
+        showToast(data.error || "Failed to submit exam", "error");
       }
     } catch (err) {
       console.error(err);
-      showToast("خطأ في الاتصال بالخادم", "error");
+      showToast("Failed to connect to the server", "error");
     } finally {
       setSubmitting(false);
     }

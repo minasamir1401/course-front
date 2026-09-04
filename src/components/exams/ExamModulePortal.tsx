@@ -293,9 +293,11 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
-                  <button onClick={() => deleteExam(exam.id)} className="w-10 h-10 rounded-xl bg-white text-slate-400 hover:text-red-600 flex items-center justify-center">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {role === "SUPER_ADMIN" && (
+                    <button onClick={() => deleteExam(exam.id)} className="w-10 h-10 rounded-xl bg-white text-slate-400 hover:text-red-600 flex items-center justify-center">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
 

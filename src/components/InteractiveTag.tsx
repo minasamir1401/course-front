@@ -75,7 +75,7 @@ export function InteractiveTag({ label, value, icon: Icon, colorClass, bubbleThe
                 onClick={() => setIsOpen(false)}
                 className="px-8 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-black text-sm transition-all"
               >
-                إغلاق / Close
+                Close
               </button>
             </div>
           </div>
