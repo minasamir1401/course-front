@@ -1,9 +1,9 @@
-import { normalizeDok } from '@/lib/examQuestionMetadata';
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { API_URL } from '@/lib/api';
+import { normalizeDok } from '@/lib/examQuestionMetadata';
 import { useNotification } from "@/context/NotificationContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import { LessonInfoTab } from "@/components/course-editor/lesson-builder/LessonInfoTab";

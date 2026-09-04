@@ -1,6 +1,6 @@
-import { normalizeDok } from '@/lib/examQuestionMetadata';
 "use client";
 
+import { normalizeDok } from '@/lib/examQuestionMetadata';
 import React, { useState } from "react";
 import { 
   Plus, Trash2, HelpCircle, Upload, Download, Edit2, CheckCircle2, 
