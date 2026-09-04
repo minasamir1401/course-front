@@ -227,23 +227,33 @@ export const QuestionsBuilder = (props: any) => {
                             </>
                           )}
 
-                          {q.sections && q.sections.length > 0 && (
+                          {((q.sections && q.sections.length > 0) || (q.explanation && String(q.explanation).trim() !== '' && q.explanation !== '[]' && q.explanation !== '""')) && (
                             <div className="space-y-3 pt-2">
                               <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'تفسيرات وملاحظات إضافية:' : 'Explanations & Notes:'}</h5>
                               <div className="space-y-2">
-                                {q.sections.map((sec: any, secIdx: number) => {
-                                  const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
-                                  const SectionIcon = preset.icon;
-                                  return (
-                                    <div key={secIdx} className={`p-4 rounded-xl border ${preset.container} text-xs`}>
-                                      <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider inline-flex items-center gap-1 mb-1.5 ${preset.badge}`}>
-                                        <SectionIcon className="w-3 h-3" />
-                                        {preset.labelEn}
-                                      </span>
-                                      <HtmlRenderer html={sec.content} className="text-slate-700 font-bold font-sans" />
-                                    </div>
-                                  );
-                                })}
+                                {q.sections && q.sections.length > 0 ? (
+                                  q.sections.map((sec: any, secIdx: number) => {
+                                    const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
+                                    const SectionIcon = preset.icon;
+                                    return (
+                                      <div key={secIdx} className={`p-4 rounded-xl border ${preset.container} text-xs`}>
+                                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider inline-flex items-center gap-1 mb-1.5 ${preset.badge}`}>
+                                          <SectionIcon className="w-3 h-3" />
+                                          {preset.labelEn}
+                                        </span>
+                                        <HtmlRenderer html={sec.content} className="text-slate-700 font-bold font-sans" />
+                                      </div>
+                                    );
+                                  })
+                                ) : (
+                                  <div className="p-4 rounded-xl border bg-amber-50/60 border-amber-200/60 text-xs">
+                                    <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider inline-flex items-center gap-1 mb-1.5 bg-amber-100 text-amber-800">
+                                      <FileText className="w-3 h-3" />
+                                      {language === 'ar' ? 'تفسير الإجابة' : 'Explanation'}
+                                    </span>
+                                    <HtmlRenderer html={String(q.explanation)} className="text-slate-700 font-bold font-sans" />
+                                  </div>
+                                )}
                               </div>
                             </div>
                           )}

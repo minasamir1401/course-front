@@ -3,7 +3,7 @@
 import { ChangeEvent, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { BookOpen, Calendar, Download, Edit2, Eye, FileCode, HelpCircle, Plus, Trash2, Upload } from "lucide-react";
+import { BookOpen, Calendar, Download, Edit2, Eye, FileCode, HelpCircle, Plus, Trash2, Upload, ArrowRightLeft, FolderInput, X } from "lucide-react";
 import { API_URL } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";
 import * as XLSX from "xlsx";
@@ -24,6 +24,11 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
   const [creating, setCreating] = useState(false);
   const [collectingSubExamId, setCollectingSubExamId] = useState<string | null>(null);
   const [selectedTargetExamId, setSelectedTargetExamId] = useState("");
+  const [movingSubExam, setMovingSubExam] = useState<any | null>(null);
+  const [moveMode, setMoveMode] = useState<"existing" | "new">("existing");
+  const [targetMoveModuleId, setTargetMoveModuleId] = useState("");
+  const [newModuleTitle, setNewModuleTitle] = useState("");
+  const [isMovingSubExam, setIsMovingSubExam] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
   const moduleEditHref = buildModuleEditHref(role, state.createdIdRef.current || state.createdId || "", normalizedModuleId);
@@ -240,6 +245,132 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
     }
   };
 
+  const otherModules = (state.modules || []).filter(
+    (mod: any) => normalizeId(mod.id) !== normalizedModuleId
+  );
+
+  const openMoveModal = (exam: any) => {
+    setMovingSubExam(exam);
+    const available = (state.modules || []).filter(
+      (mod: any) => normalizeId(mod.id) !== normalizedModuleId
+    );
+    setMoveMode(available.length > 0 ? "existing" : "new");
+    setTargetMoveModuleId(available[0]?.id ? String(available[0].id) : "");
+    setNewModuleTitle("");
+  };
+
+  const handleConfirmMove = async () => {
+    if (!movingSubExam) return;
+
+    if (moveMode === "existing" && !targetMoveModuleId) {
+      showToast(language === "ar" ? "يرجى اختيار الموديول المستهدف" : "Please select the target module", "error");
+      return;
+    }
+    if (moveMode === "new" && !newModuleTitle.trim()) {
+      showToast(language === "ar" ? "يرجى إدخال اسم الموديول الجديد" : "Please enter the new module name", "error");
+      return;
+    }
+
+    const parentExamId = state.createdIdRef?.current || state.createdId;
+    if (!parentExamId) {
+      showToast(language === "ar" ? "تعذر تحديد الاختبار الرئيسي" : "Main exam not found", "error");
+      return;
+    }
+
+    setIsMovingSubExam(true);
+    try {
+      const payload = moveMode === "new"
+        ? { newModuleTitle: newModuleTitle.trim() }
+        : { targetModuleId: targetMoveModuleId };
+
+      const res = await fetch(
+        `${API_URL}/exams/${parentExamId}/modules/${normalizedModuleId}/exams/${movingSubExam.id}/move`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem(tokenKey) || ""}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to move exam");
+      }
+
+      const movedSubExamId = normalizeId(movingSubExam.id);
+      const destModId = normalizeId(data.destinationModule?.id || (moveMode === "existing" ? targetMoveModuleId : ""));
+
+      state.setModules((currentModules: any[]) => {
+        let next = currentModules.map((mod: any) => {
+          if (normalizeId(mod.id) === normalizedModuleId) {
+            return {
+              ...mod,
+              subExams: (mod.subExams || []).filter(
+                (se: any) => normalizeId(se.id) !== movedSubExamId
+              ),
+            };
+          }
+          if (normalizeId(mod.id) === destModId) {
+            const existingSubExams = mod.subExams || [];
+            const exists = existingSubExams.some((se: any) => normalizeId(se.id) === movedSubExamId);
+            return {
+              ...mod,
+              subExams: exists
+                ? existingSubExams.map((se: any) => normalizeId(se.id) === movedSubExamId ? (data.subExam || movingSubExam) : se)
+                : [...existingSubExams, (data.subExam || movingSubExam)],
+            };
+          }
+          return mod;
+        });
+
+        if (data.isNewModule && data.destinationModule) {
+          const alreadyInList = next.some((mod: any) => normalizeId(mod.id) === destModId);
+          if (!alreadyInList) {
+            next = [
+              ...next,
+              {
+                ...data.destinationModule,
+                subExams: [data.subExam || movingSubExam],
+              },
+            ];
+          }
+        }
+
+        return next;
+      });
+
+      if (normalizeId(state.currentModule?.id) === normalizedModuleId) {
+        state.setCurrentModule((currentModule: any) => ({
+          ...currentModule,
+          subExams: (currentModule.subExams || []).filter(
+            (se: any) => normalizeId(se.id) !== movedSubExamId
+          ),
+        }));
+      }
+
+      showToast(
+        language === "ar"
+          ? `تم نقل الاختبار "${movingSubExam.title}" بنجاح!`
+          : `Exam "${movingSubExam.title}" moved successfully!`,
+        "success"
+      );
+      setMovingSubExam(null);
+    } catch (error: any) {
+      console.error("Failed to move subExam:", error);
+      showToast(
+        language === "ar"
+          ? `فشل نقل الاختبار: ${error?.message || ""}`
+          : `Failed to move exam: ${error?.message || ""}`,
+        "error"
+      );
+    } finally {
+      setIsMovingSubExam(false);
+    }
+  };
+
   return <div className="space-y-8" dir={language === "ar" ? "rtl" : "ltr"}>
     <div className="rounded-[36px] bg-white border border-slate-100 shadow-sm p-7 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
       <div className="flex items-center gap-4">
@@ -280,8 +411,16 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
                   <button onClick={() => exportExamData(exam)} className="w-10 h-10 rounded-xl bg-white text-slate-400 hover:text-sky-600 flex items-center justify-center">
                     <Download className="w-4 h-4" />
                   </button>
-                  <button onClick={() => exportExamJson(exam.id)} className="w-10 h-10 rounded-xl bg-white text-slate-400 hover:text-emerald-600 flex items-center justify-center">
+                  <button onClick={() => exportExamJson(exam.id)} className="w-10 h-10 rounded-xl bg-white text-slate-400 hover:text-emerald-600 flex items-center justify-center" title={language === "ar" ? "تصدير JSON" : "Export JSON"}>
                     <FileCode className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openMoveModal(exam)}
+                    className="w-10 h-10 rounded-xl bg-white text-slate-400 hover:text-purple-600 hover:bg-purple-50 transition-all flex items-center justify-center shadow-xs"
+                    title={language === "ar" ? "نقل الاختبار بأسئلته إلى موديول آخر" : "Move exam to another module"}
+                  >
+                    <ArrowRightLeft className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => {
@@ -417,5 +556,146 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
         ))}
       </div>
     </div>}
+
+    {movingSubExam && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="bg-white rounded-[32px] max-w-lg w-full p-7 shadow-2xl border border-slate-100 space-y-6 animate-in zoom-in-95 duration-200">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                <ArrowRightLeft className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-slate-900">
+                  {language === "ar" ? "نقل الاختبار إلى موديول آخر" : "Move Exam to Another Module"}
+                </h3>
+                <p className="text-xs font-bold text-slate-400">
+                  {language === "ar" ? "سيتم نقل الاختبار بجميع أسئلته المحفوظة" : "The exam and all its questions will be moved"}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setMovingSubExam(null)}
+              className="w-9 h-9 rounded-xl bg-slate-100 text-slate-400 hover:text-slate-600 hover:bg-slate-200 flex items-center justify-center transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-purple-50/60 border border-purple-100 space-y-1">
+            <div className="text-xs font-bold text-purple-700">
+              {language === "ar" ? "الاختبار المحدد:" : "Selected Exam:"}
+            </div>
+            <div className="text-sm font-black text-purple-900 flex items-center justify-between">
+              <span>{movingSubExam.title}</span>
+              <span className="text-xs font-bold bg-white px-2.5 py-1 rounded-lg text-purple-700 shadow-xs">
+                {movingSubExam.questions?.length || movingSubExam.questionsCount || movingSubExam._count?.questions || 0} {language === "ar" ? "سؤال" : "questions"}
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <label className="text-xs font-black text-slate-500 uppercase tracking-wider block">
+              {language === "ar" ? "اختر وجهة النقل:" : "Select Destination:"}
+            </label>
+
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setMoveMode("existing")}
+                disabled={otherModules.length === 0}
+                className={`p-3.5 rounded-2xl border text-xs font-black transition-all flex flex-col items-center gap-1.5 ${
+                  moveMode === "existing"
+                    ? "border-purple-600 bg-purple-50/50 text-purple-700 shadow-xs"
+                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                }`}
+              >
+                <FolderInput className="w-5 h-5" />
+                <span>{language === "ar" ? "موديول موجود" : "Existing Module"}</span>
+                {otherModules.length === 0 && (
+                  <span className="text-[10px] text-slate-400">({language === "ar" ? "لا يوجد غيره" : "None available"})</span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMoveMode("new")}
+                className={`p-3.5 rounded-2xl border text-xs font-black transition-all flex flex-col items-center gap-1.5 ${
+                  moveMode === "new"
+                    ? "border-purple-600 bg-purple-50/50 text-purple-700 shadow-xs"
+                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                <Plus className="w-5 h-5" />
+                <span>{language === "ar" ? "إنشاء موديول جديد" : "Create New Module"}</span>
+              </button>
+            </div>
+
+            {moveMode === "existing" ? (
+              <div className="space-y-2 pt-2">
+                <label className="text-xs font-bold text-slate-700 block">
+                  {language === "ar" ? "حدد الموديول المستهدف:" : "Target Module:"}
+                </label>
+                <select
+                  value={targetMoveModuleId}
+                  onChange={(e) => setTargetMoveModuleId(e.target.value)}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-purple-600 transition-all"
+                >
+                  <option value="">{language === "ar" ? "-- اختر موديول --" : "-- Select Module --"}</option>
+                  {otherModules.map((mod: any) => (
+                    <option key={mod.id} value={mod.id}>
+                      {mod.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="space-y-2 pt-2">
+                <label className="text-xs font-bold text-slate-700 block">
+                  {language === "ar" ? "اسم الموديول الجديد:" : "New Module Name:"}
+                </label>
+                <input
+                  type="text"
+                  value={newModuleTitle}
+                  onChange={(e) => setNewModuleTitle(e.target.value)}
+                  placeholder={language === "ar" ? "مثال: موديول 3 - المراجعة النهائية" : "e.g., Module 3 - Final Review"}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-purple-600 transition-all"
+                  autoFocus
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => setMovingSubExam(null)}
+              disabled={isMovingSubExam}
+              className="px-5 py-3 rounded-2xl border border-slate-200 text-slate-600 font-black text-sm hover:bg-slate-50 transition-colors disabled:opacity-50"
+            >
+              {language === "ar" ? "إلغاء" : "Cancel"}
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmMove}
+              disabled={isMovingSubExam}
+              className="px-6 py-3 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-black text-sm shadow-md shadow-purple-600/20 flex items-center gap-2 transition-all disabled:opacity-50"
+            >
+              {isMovingSubExam ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>{language === "ar" ? "جارٍ النقل..." : "Moving..."}</span>
+                </>
+              ) : (
+                <>
+                  <ArrowRightLeft className="w-4 h-4" />
+                  <span>{language === "ar" ? "تأكيد النقل" : "Confirm Move"}</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
   </div>;
 }

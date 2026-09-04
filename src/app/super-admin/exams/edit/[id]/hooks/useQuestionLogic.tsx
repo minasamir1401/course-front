@@ -5,6 +5,7 @@ import { ChevronDown, Edit2, Trash2, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { validateExamQuestionForSave } from '@/lib/examQuestionValidation';
 import { normalizeQuestionOptions } from '@/lib/questionOptions';
+import { normalizeQuestionSections } from '@/lib/persistedExamQuestion';
 
 export const useQuestionLogic = (props: any) => {
   const { currentModule, activeSubExamIndex, setCurrentModule, standaloneQuestions, setStandaloneQuestions, setDeletedQuestionIds, tempQuestion, setTempQuestion, setQuestionSource, setShowQuestionForm, showToast, language, editingQuestionIndex, setEditingQuestionIndex } = props;
@@ -50,7 +51,9 @@ export const useQuestionLogic = (props: any) => {
   const handleEditStandaloneQuestion = (index: number) => {
     const item = { ...standaloneQuestions[index] };
     item.options = normalizeQuestionOptions(item.options);
-    if (!item.sections) item.sections = [];
+    if (!item.sections || item.sections.length === 0) {
+      item.sections = normalizeQuestionSections(item.explanation);
+    }
     if (!item.type) item.type = item.label || "MCQ";
     const outcome = item.standard || item.learningOutcome || "";
     item.standard = outcome;
@@ -70,8 +73,15 @@ export const useQuestionLogic = (props: any) => {
       return;
     }
     const outcome = tempQuestion.standard || tempQuestion.learningOutcome || "";
+    const validSections = (tempQuestion.sections || []).filter((s: any) => s && String(s.content || s.text || '').trim() !== '');
+    const serializedExplanation = validSections.length > 0
+      ? JSON.stringify(validSections)
+      : (tempQuestion.explanation && String(tempQuestion.explanation).trim() !== '' ? tempQuestion.explanation : null);
+
     const itemToSave = {
       ...tempQuestion,
+      sections: tempQuestion.sections || [],
+      explanation: serializedExplanation,
       standard: outcome,
       learningOutcome: outcome,
       dok: normalizeDok(tempQuestion.dok) || tempQuestion.dok || "",
@@ -137,20 +147,7 @@ export const useQuestionLogic = (props: any) => {
     const item = { ...list[index] };
     item.options = normalizeQuestionOptions(item.options);
     if (!item.sections || item.sections.length === 0) {
-      if (typeof item.explanation === 'string' && item.explanation.startsWith('[')) {
-        try {
-          const parsed = JSON.parse(item.explanation);
-          if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].type) {
-            item.sections = parsed;
-          }
-        } catch (e) {
-          item.sections = [];
-        }
-      } else if (item.explanation) {
-        item.sections = [{ id: Date.now(), type: 'EXPLANATION', content: item.explanation }];
-      } else {
-        item.sections = [];
-      }
+      item.sections = normalizeQuestionSections(item.explanation);
     }
     if (item.type === 'QUESTION' && item.label) {
       item.type = item.label;
@@ -172,8 +169,15 @@ export const useQuestionLogic = (props: any) => {
     }
 
     const outcome = tempQuestion.standard || tempQuestion.learningOutcome || "";
+    const validSections = (tempQuestion.sections || []).filter((s: any) => s && String(s.content || s.text || '').trim() !== '');
+    const serializedExplanation = validSections.length > 0
+      ? JSON.stringify(validSections)
+      : (tempQuestion.explanation && String(tempQuestion.explanation).trim() !== '' ? tempQuestion.explanation : null);
+
     const itemToSave = {
       ...tempQuestion,
+      sections: tempQuestion.sections || [],
+      explanation: serializedExplanation,
       standard: outcome,
       learningOutcome: outcome,
       dok: normalizeDok(tempQuestion.dok) || tempQuestion.dok || "",
