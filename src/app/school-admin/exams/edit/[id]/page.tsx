@@ -331,15 +331,18 @@ export default function SchoolAdminEditExamPage() {
                 {...state}
                 {...moduleManagement}
                 language={language}
+                editModuleId={editModuleId}
               />
 
-              <StandaloneQuestionsToNewExam state={state} language={language} role="SCHOOL_ADMIN" />
+              {!editModuleId && <StandaloneQuestionsToNewExam state={state} language={language} role="SCHOOL_ADMIN" />}
 
-              <StandaloneQuestions 
-                {...state}
-                {...questionLogic}
-                language={language}
-              />
+              {!editModuleId && (
+                <StandaloneQuestions 
+                  {...state}
+                  {...questionLogic}
+                  language={language}
+                />
+              )}
             </div>
           </div>
         </div>

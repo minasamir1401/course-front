@@ -4,11 +4,26 @@ import { Monitor, HelpCircle, Edit2, Trash2 } from 'lucide-react';
 import ModuleQuestionCollectionAction from '@/components/exams/ModuleQuestionCollectionAction';
 
 export const ModulesList = (props: any) => {
-  const { modules, showSettings, openAddModuleModal, language, openEditModuleModal, setActiveTab, handleRemoveModule } = props;
+  const { modules, showSettings, openAddModuleModal, language, openEditModuleModal, setActiveTab, handleRemoveModule, editModuleId } = props;
+
+  const matchedModules = editModuleId
+    ? (modules || []).filter((m: any) => String(m.id) === String(editModuleId))
+    : [];
+  const displayModules = matchedModules.length > 0 ? matchedModules : (modules || []);
 
   return (
     <div className={`space-y-8 ${showSettings ? 'lg:col-span-8' : 'lg:col-span-12'}`}>
-      {modules.length === 0 ? (
+      {editModuleId && matchedModules.length > 0 && (
+        <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl flex items-center justify-between gap-4">
+          <div className="text-sm font-black text-indigo-900">
+            {language === 'ar' ? 'عرض الموديول المحدد فقط' : 'Showing selected module only'}
+          </div>
+          <a href="?view=editor" className="text-xs font-bold text-indigo-600 hover:underline">
+            {language === 'ar' ? 'عرض كل الموديولات' : 'Show all modules'}
+          </a>
+        </div>
+      )}
+      {displayModules.length === 0 ? (
         <div className="bg-white border-4 border-dashed border-slate-100 rounded-[50px] p-24 text-center group cursor-pointer hover:border-indigo-500/20 transition-all" onClick={openAddModuleModal}>
           <div className="w-24 h-24 bg-slate-50 rounded-[40px] flex items-center justify-center mx-auto mb-8 group-hover:scale-110 transition-all">
             <Monitor className="w-12 h-12 text-slate-300 group-hover:text-indigo-600" />
@@ -21,17 +36,19 @@ export const ModulesList = (props: any) => {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          {modules.map((lesson: any, index: number) => (
+          {displayModules.map((lesson: any, index: number) => (
             (() => {
+              const originalIndex = modules.findIndex((m: any) => String(m.id) === String(lesson.id));
+              const effectiveIndex = originalIndex >= 0 ? originalIndex : index;
               const examCount = lesson.examsCount ?? lesson.subExams?.length ?? 0;
               const questionCount = lesson.questionsCount ?? ((lesson.questions?.length || 0) + (lesson.subExams || []).reduce((total: number, exam: any) => total + (exam.questionsCount ?? exam._count?.questions ?? exam.questions?.length ?? 0), 0));
               return (
-            <div key={index} className="bg-white border border-slate-100 rounded-[24px] p-4 hover:border-indigo-500/30 transition-all group relative overflow-hidden shadow-sm hover:shadow-md cursor-pointer flex items-center gap-4"
-              onClick={() => { openEditModuleModal(index); setActiveTab('exercises'); }}>
+            <div key={lesson.id || index} className="bg-white border border-slate-100 rounded-[24px] p-4 hover:border-indigo-500/30 transition-all group relative overflow-hidden shadow-sm hover:shadow-md cursor-pointer flex items-center gap-4"
+              onClick={() => { openEditModuleModal(effectiveIndex); setActiveTab('exercises'); }}>
               <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-600 opacity-0 group-hover:opacity-100 transition-all"></div>
               
               <div className="w-12 h-12 shrink-0 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-xl border border-indigo-100">
-                {index + 1}
+                {effectiveIndex + 1}
               </div>
 
               <div className="flex-1 min-w-0">

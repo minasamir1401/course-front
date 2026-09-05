@@ -20,7 +20,21 @@ export const useExamState = (schoolIdParam: string | null) => {
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const manualSubmitRef = useRef(false);
   
-  const [schools, setSchools] = useState<any[]>([]);
+  const getSessionSchool = () => {
+    try {
+      if (typeof window === 'undefined') return { schoolId: schoolIdParam || "", schoolName: "" };
+      const userStr = localStorage.getItem("school_admin_user");
+      const user = userStr ? JSON.parse(userStr) : null;
+      const sId = schoolIdParam || user?.schoolId || "";
+      const sName = user?.schoolName || user?.name || "مدرستي";
+      return { schoolId: sId, schoolName: sName };
+    } catch {
+      return { schoolId: schoolIdParam || "", schoolName: "" };
+    }
+  };
+
+  const initialSession = getSessionSchool();
+  const [schools, setSchools] = useState<any[]>(initialSession.schoolId ? [{ id: initialSession.schoolId, name: initialSession.schoolName }] : []);
   
   const [examData, setExamData] = useState<ExamData>({
     title: "",
@@ -30,7 +44,7 @@ export const useExamState = (schoolIdParam: string | null) => {
     subjects: [],
     country: "مصر",
     isCentral: false,
-    schoolIds: schoolIdParam ? [schoolIdParam] : [],
+    schoolIds: initialSession.schoolId ? [initialSession.schoolId] : [],
     duration: 60,
     password: "",
     resultVisibility: "SHOW_SCORE",

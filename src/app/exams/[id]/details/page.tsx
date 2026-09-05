@@ -110,13 +110,13 @@ export default function ExamDetailsPage() {
                 </div>
 
                 <div className="space-y-8">
-                  {activeModule.modules?.map((section: any, idx: number) => (
+                  {(activeModule.modules || []).filter((m: any) => !m.parentModuleId).map((section: any, idx: number) => (
                     <div key={section.id} className="relative pl-0 pr-8 md:pr-12">
                       <div className="absolute top-0 right-0 w-8 md:w-12 h-full flex flex-col items-center">
                         <div className="w-8 h-8 md:w-10 md:h-10 bg-indigo-50 border-2 border-indigo-200 text-indigo-600 rounded-full flex items-center justify-center font-black text-sm z-10 shadow-sm">
                           {idx + 1}
                         </div>
-                        {idx !== (activeModule.modules.length - 1) && (
+                        {idx !== ((activeModule.modules || []).filter((m: any) => !m.parentModuleId).length - 1) && (
                           <div className="w-1 flex-1 bg-indigo-50 my-2 rounded-full"></div>
                         )}
                       </div>
@@ -165,6 +165,64 @@ export default function ExamDetailsPage() {
                               </div>
                             );
                           })}
+
+                          {/* Sub-modules inside this section */}
+                          {section.subModules && section.subModules.length > 0 && (
+                            <div className="mt-6 space-y-4 pt-4 border-t border-slate-200/80">
+                              <div className="text-xs font-black text-slate-600 uppercase tracking-wider flex items-center gap-2">
+                                <Layers className="w-4 h-4 text-indigo-600" />
+                                {language === 'ar' ? 'الموديولات الفرعية' : 'Sub-Modules'}
+                              </div>
+                              <div className="space-y-4">
+                                {section.subModules.map((subMod: any) => (
+                                  <div key={subMod.id} className="bg-white/90 rounded-2xl p-5 border border-indigo-100/80 shadow-xs space-y-3">
+                                    <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                                      <h5 className="font-black text-slate-800 text-base flex items-center gap-2">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+                                        {subMod.title}
+                                      </h5>
+                                      <span className="text-xs font-bold text-slate-400">
+                                        {(subMod.subExams?.length || 0)} {language === 'ar' ? 'اختبار' : 'exams'}
+                                      </span>
+                                    </div>
+                                    <div className="space-y-2">
+                                      {subMod.subExams?.map((smExam: any) => {
+                                        const smSubs = getSubmissionsForExam(smExam.id);
+                                        const smStatus = getChildExamStatus(smExam, smSubs);
+                                        return (
+                                          <div key={smExam.id} className="bg-slate-50/80 rounded-xl p-3.5 border border-slate-200/60 flex flex-col sm:flex-row gap-3 items-center justify-between hover:border-indigo-300 transition-all">
+                                            <div className="flex items-center gap-3">
+                                              <FileText className="w-4 h-4 text-indigo-500 shrink-0" />
+                                              <div>
+                                                <span className="font-bold text-sm text-slate-800">{smExam.title}</span>
+                                                <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium">
+                                                  <span>{smExam.duration} {language === 'ar' ? 'دقيقة' : 'min'}</span>
+                                                  <span>•</span>
+                                                  <span>{smExam.questionsCount ?? smExam._count?.questions ?? 0} {language === 'ar' ? 'سؤال' : 'questions'}</span>
+                                                </div>
+                                              </div>
+                                            </div>
+                                            <Link
+                                              href={smStatus.type === 'AVAILABLE' ? `/exams/${activeModule.id}?subExamId=${smExam.id}` : `/exams/result/${smSubs[0]?.id || ''}`}
+                                              className="px-4 py-2 rounded-xl text-xs font-black bg-indigo-600 hover:bg-indigo-700 text-white transition-all shadow-xs"
+                                            >
+                                              {language === 'ar' ? 'ابدأ' : 'Start'}
+                                            </Link>
+                                          </div>
+                                        );
+                                      })}
+                                      {(!subMod.subExams || subMod.subExams.length === 0) && (
+                                        <div className="text-xs text-slate-400 text-center py-2">
+                                          {language === 'ar' ? 'لا توجد اختبارات داخل هذا الموديول الفرعي بعد' : 'No exams in this sub-module yet'}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
                           {/* If no subExams but there are questions directly in the module, show start button */}
                           {(!section.subExams || section.subExams.length === 0) && section.questions && section.questions.length > 0 && (
                             <div className="bg-white rounded-2xl p-4 md:p-5 border border-slate-200 shadow-sm hover:border-indigo-300 hover:shadow-md transition-all flex flex-col md:flex-row gap-4 items-center group">
@@ -191,7 +249,7 @@ export default function ExamDetailsPage() {
                               </div>
                             </div>
                           )}
-                          {(!section.subExams || section.subExams.length === 0) && (!section.questions || section.questions.length === 0) && (
+                          {(!section.subExams || section.subExams.length === 0) && (!section.questions || section.questions.length === 0) && (!section.subModules || section.subModules.length === 0) && (
                             <div className="text-center py-6 text-slate-400 text-sm font-bold bg-white rounded-2xl border border-dashed border-slate-200">
                               {language === 'ar' ? 'لا يوجد اختبارات في هذا القسم' : 'No exams in this section'}
                             </div>

@@ -1,6 +1,7 @@
 export type ExamModuleView = {
   id: string;
   parentExamId: string;
+  parentModuleId?: string | null;
   title: string;
   description?: string | null;
   grade?: string | null;
@@ -9,6 +10,8 @@ export type ExamModuleView = {
   updatedAt?: string | Date | null;
   examsCount: number;
   questionsCount: number;
+  subModulesCount?: number;
+  subModules?: any[];
 };
 
 export type ExamWorkflowView = 'full-editor' | 'module-portal' | 'sub-exam-editor';
@@ -76,7 +79,7 @@ export function buildModuleEditHref(
   }
 
   const basePath = role === 'SUPER_ADMIN' ? '/super-admin/exams/edit' : '/school-admin/exams/edit';
-  const params = new URLSearchParams({ view: 'editor' });
+  const params = new URLSearchParams({ editModuleId: moduleId });
 
   return `${basePath}/${encodeURIComponent(parentExamId)}?${params.toString()}`;
 }
@@ -134,6 +137,7 @@ export function buildExamModuleViews(exams: any[]): ExamModuleView[] {
       views.push({
         id: exam.id,
         parentExamId: exam.id,
+        parentModuleId: null,
         title: exam.title || 'Untitled Module',
         description: exam.description,
         grade: exam.grade,
@@ -142,38 +146,61 @@ export function buildExamModuleViews(exams: any[]): ExamModuleView[] {
         updatedAt: exam.updatedAt,
         examsCount: 0,
         questionsCount: exam._count?.questions ?? exam.questions?.length ?? 0,
+        subModulesCount: 0,
+        subModules: [],
       });
       continue;
     }
 
     for (const moduleItem of modules) {
+      // In the top-level list, display root modules (parentModuleId == null).
+      // Sub-modules are displayed inside their parent module in the portal.
+      if (moduleItem.parentModuleId) {
+        continue;
+      }
+
+      const subModules = Array.isArray(moduleItem?.subModules) ? moduleItem.subModules : [];
       const subExams = Array.isArray(moduleItem?.subExams) ? moduleItem.subExams : [];
       const directQuestions = moduleItem?.questionsCount ?? moduleItem?._count?.questions ?? moduleItem?.questions?.length ?? 0;
-      const childQuestions = subExams.reduce(
+      
+      let childQuestions = subExams.reduce(
         (total: number, subExam: any) => total + (subExam?.questionsCount ?? subExam?._count?.questions ?? subExam?.questions?.length ?? 0),
         0,
       );
+      let totalExamsCount = moduleItem.examsCount ?? subExams.length;
+
+      // Include recursive counts from direct subModules
+      for (const sm of subModules) {
+        const smSubExams = Array.isArray(sm?.subExams) ? sm.subExams : [];
+        totalExamsCount += sm.examsCount ?? smSubExams.length;
+        childQuestions += smSubExams.reduce(
+          (total: number, se: any) => total + (se?.questionsCount ?? se?._count?.questions ?? se?.questions?.length ?? 0),
+          0,
+        );
+      }
+
       const hasChildQuestionCounts = subExams.some((subExam: any) =>
         typeof subExam?.questionsCount === 'number'
         || typeof subExam?._count?.questions === 'number'
         || Array.isArray(subExam?.questions),
-      );
+      ) || subModules.length > 0;
 
       const createdAt = moduleItem.createdAt || exam.createdAt;
       const updatedAt = moduleItem.updatedAt || exam.updatedAt;
       const moduleView: ExamModuleView = {
         id: moduleItem.id,
         parentExamId: exam.id,
+        parentModuleId: moduleItem.parentModuleId || null,
         title: moduleItem.title || 'Untitled Module',
         description: moduleItem.description,
         grade: exam.grade,
         isCentral: !!exam.isCentral,
-        examsCount: moduleItem.examsCount ?? subExams.length,
-        // New workflow owns questions on child Exams. Direct Module questions
-        // are legacy content and must not inflate the Module total when Exams exist.
-        questionsCount: subExams.length > 0
+        examsCount: totalExamsCount,
+        questionsCount: totalExamsCount > 0
           ? (hasChildQuestionCounts ? childQuestions : directQuestions)
           : directQuestions,
+        subModulesCount: subModules.length,
+        subModules: subModules,
       };
 
       if (createdAt) {

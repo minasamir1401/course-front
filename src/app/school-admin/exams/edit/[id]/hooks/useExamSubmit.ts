@@ -35,8 +35,15 @@ export const useExamSubmit = (props: any) => {
         isModuleModalOpen,
       });
 
-            const targetSchoolIds = (examData.schoolIds || []).filter(Boolean);
-        const isCentral = false;
+      let targetSchoolIds = (examData.schoolIds || []).filter(Boolean);
+      if (targetSchoolIds.length === 0 && typeof window !== 'undefined') {
+        try {
+          const user = JSON.parse(localStorage.getItem("school_admin_user") || "{}");
+          const sId = String(user?.schoolId || "").trim();
+          if (sId) targetSchoolIds = [sId];
+        } catch {}
+      }
+      const isCentral = false;
 
       const { modulesPayload, allQuestions } = buildExamSubmissionPayload({
         modules: finalModules,

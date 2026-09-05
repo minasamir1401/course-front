@@ -55,9 +55,7 @@ const pushError = (entry: Omit<FrontendErrorEntry, "id" | "timestamp">) => {
 
   // Send error to backend (fire-and-forget, ignore failures)
   try {
-    const apiUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/api$/, '');
-    if (!apiUrl) return; // Skip if no API URL configured
-    fetch(`${apiUrl}/api/admin/log-error`, {
+    fetch('/api/admin/log-error', {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

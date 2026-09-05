@@ -10,7 +10,7 @@ const cspHeader = [
   "font-src 'self' https://fonts.gstatic.com data:",
   "img-src 'self' blob: data: https:",
   "media-src 'self' blob:",
-  "connect-src 'self' https://*.klevro.com",
+  "connect-src 'self' https://*.klevro.com http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*",
   "frame-ancestors 'none'",
   "object-src 'none'",
   "base-uri 'self'",

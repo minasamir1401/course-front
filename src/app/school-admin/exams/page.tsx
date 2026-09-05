@@ -13,6 +13,7 @@ import { buildExamModuleViews, buildModuleCardSettingsHref, buildModulePortalHre
 import { getCreatedAtLabel, getCreatorLabel, getExamAudienceLabel, getUpdatedAtLabel } from "@/lib/examModulePresentation";
 import { buildStandaloneMoveGroups, buildStandaloneMoveSelectionSummary } from "@/lib/standaloneQuestionMoveView";
 import { getModuleQuestionCardCounts, getStandaloneQuestionsCount } from "@/lib/standaloneQuestionCount";
+import MoveModuleModal from "@/components/exams/MoveModuleModal";
 
 export default function SchoolAdminExamsPage() {
   const router = useRouter();
@@ -33,117 +34,14 @@ export default function SchoolAdminExamsPage() {
   const [standaloneMoveContext, setStandaloneMoveContext] = useState<any>(null);
   const [selectedStandaloneTargetSubExamId, setSelectedStandaloneTargetSubExamId] = useState("");
   const [isMovingStandalone, setIsMovingStandalone] = useState(false);
-  const [showMoveAllSubExamsModal, setShowMoveAllSubExamsModal] = useState(false);
-  const [moduleToMoveAll, setModuleToMoveAll] = useState<any>(null);
-  const [parentExamForMoveAll, setParentExamForMoveAll] = useState<any>(null);
-  const [moveAllMode, setMoveAllMode] = useState<"existing" | "new">("existing");
-  const [targetMoveModuleId, setTargetMoveModuleId] = useState("");
-  const [newModuleTitle, setNewModuleTitle] = useState("");
-  const [targetExamIdForNew, setTargetExamIdForNew] = useState("");
-  const [isMovingAllSubExams, setIsMovingAllSubExams] = useState(false);
+  const [showMoveModalUnified, setShowMoveModalUnified] = useState(false);
+  const [selectedModuleForMove, setSelectedModuleForMove] = useState<any>(null);
+  const [parentExamForMove, setParentExamForMove] = useState<any>(null);
 
-  const availableMoveAllDestinations = exams.flatMap((e) =>
-    (e.modules || [])
-      .filter((m: any) => String(m.id) !== String(moduleToMoveAll?.id))
-      .map((m: any) => ({
-        id: String(m.id),
-        title: m.title || (language === "ar" ? "موديول بدون عنوان" : "Untitled Module"),
-        examId: String(e.id),
-        examTitle: e.title || (language === "ar" ? "اختبار بدون عنوان" : "Untitled Exam"),
-        isCurrentExam: String(e.id) === String(parentExamForMoveAll?.id),
-      }))
-  );
-
-  const openMoveAllSubExamsForModule = (parentExam: any, mod: any) => {
-    setParentExamForMoveAll(parentExam);
-    setModuleToMoveAll(mod);
-    setNewModuleTitle("");
-    setTargetExamIdForNew(parentExam.id);
-
-    const otherModules = exams.flatMap((e) =>
-      (e.modules || [])
-        .filter((m: any) => String(m.id) !== String(mod.id))
-        .map((m: any) => ({
-          id: String(m.id),
-          title: m.title || (language === "ar" ? "موديول بدون عنوان" : "Untitled Module"),
-          examId: String(e.id),
-          examTitle: e.title || (language === "ar" ? "اختبار بدون عنوان" : "Untitled Exam"),
-          isCurrentExam: String(e.id) === String(parentExam.id),
-        }))
-    );
-
-    if (otherModules.length > 0) {
-      setTargetMoveModuleId(otherModules[0].id);
-      setMoveAllMode("existing");
-    } else {
-      setTargetMoveModuleId("");
-      setMoveAllMode("new");
-    }
-
-    setShowMoveAllSubExamsModal(true);
-  };
-
-  const handleConfirmMoveAllSubExams = async () => {
-    if (!parentExamForMoveAll || !moduleToMoveAll) return;
-
-    if (moveAllMode === "existing" && !targetMoveModuleId) {
-      showToast(language === "ar" ? "يرجى اختيار الموديول المستهدف" : "Please select the target module", "error");
-      return;
-    }
-    if (moveAllMode === "new" && !newModuleTitle.trim()) {
-      showToast(language === "ar" ? "يرجى إدخال اسم الموديول الجديد" : "Please enter the new module name", "error");
-      return;
-    }
-
-    setIsMovingAllSubExams(true);
-    try {
-      const token = localStorage.getItem("school_admin_token") || localStorage.getItem("token") || "";
-      const payload = moveAllMode === "new"
-        ? {
-            newModuleTitle: newModuleTitle.trim(),
-            targetExamId: targetExamIdForNew || parentExamForMoveAll.id,
-          }
-        : {
-            targetModuleId: targetMoveModuleId,
-          };
-
-      const res = await fetch(
-        `${API_URL}/exams/${parentExamForMoveAll.id}/modules/${moduleToMoveAll.id}/exams/move-all`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error || "Failed to move sub-exams");
-      }
-
-      showToast(
-        language === "ar"
-          ? `تم نقل جميع الاختبارات الفرعية (${data.movedSubExamsCount ?? ""} اختبار) بنجاح!`
-          : `All sub-exams moved successfully!`,
-        "success"
-      );
-
-      setShowMoveAllSubExamsModal(false);
-      setModuleToMoveAll(null);
-      setParentExamForMoveAll(null);
-      await fetchData();
-    } catch (error: any) {
-      console.error(error);
-      showToast(
-        error?.message || (language === "ar" ? "تعذر نقل الاختبارات الفرعية" : "Failed to move sub-exams"),
-        "error"
-      );
-    } finally {
-      setIsMovingAllSubExams(false);
-    }
+  const openMoveModuleModal = (parentExam: any, mod: any) => {
+    setParentExamForMove(parentExam);
+    setSelectedModuleForMove(mod);
+    setShowMoveModalUnified(true);
   };
   const standaloneMoveGroups = buildStandaloneMoveGroups(standaloneMoveContext?.targets || []);
   const standaloneMoveSummary = buildStandaloneMoveSelectionSummary(
@@ -560,12 +458,12 @@ export default function SchoolAdminExamsPage() {
                       <BookOpen className="w-8 h-8" />
                     </div>
                     <div className="flex items-center gap-2">
-                      {!isSyntheticModuleCard && module.examsCount > 0 && (
+                      {!isSyntheticModuleCard && (
                         <button
                           type="button"
-                          onClick={() => openMoveAllSubExamsForModule(exam, actualModule || module)}
+                          onClick={() => openMoveModuleModal(exam, actualModule || module)}
                           className="w-11 h-11 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center hover:bg-purple-100 hover:text-purple-700 transition-colors shadow-xs"
-                          title={language === 'ar' ? 'نقل جميع الامتحانات الفرعية إلى موديول آخر' : 'Move all sub-exams to another module'}
+                          title={language === 'ar' ? 'نقل الموديول بالكامل أو اختباراته' : 'Move module or sub-exams'}
                         >
                           <ArrowRightLeft className="w-5 h-5" />
                         </button>
@@ -584,6 +482,11 @@ export default function SchoolAdminExamsPage() {
                   <div className="flex flex-wrap gap-2 mb-3">
                     <span className="px-3 py-1 rounded-xl bg-indigo-50 text-indigo-700 text-[10px] font-black uppercase tracking-wider">{language === 'ar' ? 'Module اختبار' : 'Exam Module'}</span>
                     <span className="px-3 py-1 rounded-xl bg-slate-50 text-slate-500 text-[10px] font-black">{audienceLabel}</span>
+                    {module.subModulesCount !== undefined && module.subModulesCount > 0 && (
+                      <span className="px-3 py-1 rounded-xl bg-purple-50 text-purple-700 text-[10px] font-black">
+                        {module.subModulesCount} {language === 'ar' ? 'موديول فرعي' : 'sub-modules'}
+                      </span>
+                    )}
                   </div>
                   <h3 className="text-2xl font-black text-slate-900 truncate mb-2">{module.title}</h3>
                   <p className="text-sm text-slate-500 font-medium line-clamp-2 min-h-10">{module.description || (language === 'ar' ? 'بوابة اختبارات جديدة' : 'Exam module portal')}</p>
@@ -852,209 +755,21 @@ export default function SchoolAdminExamsPage() {
           </div>
         </div>
       )}
-      {showMoveAllSubExamsModal && moduleToMoveAll && (
-        <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 ${language === 'ar' ? 'lg:pr-72' : 'lg:pl-72'}`}>
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowMoveAllSubExamsModal(false)}></div>
-          <div className="relative bg-white rounded-[36px] shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-slate-200/60 p-6 space-y-6">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center">
-                  <ArrowRightLeft className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-black text-slate-900">
-                    {language === 'ar' ? 'نقل جميع الامتحانات الفرعية' : 'Move All Sub-Exams'}
-                  </h3>
-                  <p className="text-xs font-bold text-slate-400">
-                    {language === 'ar' ? 'سيتم نقل كافة امتحانات هذا الموديول بأسئلتها بالكامل' : 'All sub-exams of this module and their questions will be moved'}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowMoveAllSubExamsModal(false)}
-                className="w-10 h-10 rounded-2xl bg-slate-50 text-slate-400 hover:text-slate-700 flex items-center justify-center border border-slate-200 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-purple-50/60 border border-purple-100 space-y-2">
-              <div className="text-xs font-bold text-purple-700">
-                {language === 'ar' ? 'الموديول المصدر الحالي:' : 'Current Source Module:'}
-              </div>
-              <div className="text-sm font-black text-purple-900 flex items-center justify-between">
-                <span>{moduleToMoveAll.title}</span>
-                <span className="text-xs font-bold bg-white px-2.5 py-1 rounded-lg text-purple-700 shadow-xs">
-                  {moduleToMoveAll.examsCount || 0} {language === 'ar' ? 'اختبار فرعي' : 'sub-exams'}
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <label className="text-xs font-black text-slate-500 uppercase tracking-wider block">
-                {language === 'ar' ? 'اختر وجهة النقل:' : 'Select Destination:'}
-              </label>
-
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setMoveAllMode('existing')}
-                  disabled={availableMoveAllDestinations.length === 0}
-                  className={`p-3.5 rounded-2xl border text-xs font-black transition-all flex flex-col items-center gap-1.5 ${
-                    moveAllMode === 'existing'
-                      ? 'border-purple-600 bg-purple-50/50 text-purple-700 shadow-xs'
-                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed'
-                  }`}
-                >
-                  <FolderInput className="w-5 h-5" />
-                  <span>{language === 'ar' ? 'موديول موجود' : 'Existing Module'}</span>
-                  {availableMoveAllDestinations.length === 0 ? (
-                    <span className="text-[10px] text-slate-400">
-                      ({language === 'ar' ? 'لا يوجد غيره' : 'None available'})
-                    </span>
-                  ) : (
-                    <span className="text-[10px] text-purple-600 font-bold">
-                      ({availableMoveAllDestinations.length} {language === 'ar' ? 'متاح' : 'available'})
-                    </span>
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setMoveAllMode('new')}
-                  className={`p-3.5 rounded-2xl border text-xs font-black transition-all flex flex-col items-center gap-1.5 ${
-                    moveAllMode === 'new'
-                      ? 'border-purple-600 bg-purple-50/50 text-purple-700 shadow-xs'
-                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <Plus className="w-5 h-5" />
-                  <span>{language === 'ar' ? 'إنشاء موديول جديد' : 'Create New Module'}</span>
-                </button>
-              </div>
-
-              {moveAllMode === 'existing' ? (
-                <div className="space-y-2 pt-2">
-                  <label className="text-xs font-bold text-slate-700 block">
-                    {language === 'ar' ? 'حدد الموديول المستهدف لاستقبال جميع الاختبارات:' : 'Target Module for all exams:'}
-                  </label>
-                  <select
-                    value={targetMoveModuleId}
-                    onChange={(e) => setTargetMoveModuleId(e.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-purple-600 transition-all"
-                  >
-                    <option value="">
-                      {language === 'ar' ? '-- اختر الموديول المستهدف --' : '-- Select Target Module --'}
-                    </option>
-                    {availableMoveAllDestinations.filter((m) => m.isCurrentExam).length > 0 && (
-                      <optgroup
-                        label={
-                          language === 'ar'
-                            ? `هذا الامتحان (${parentExamForMoveAll?.title || 'الحالي'})`
-                            : `Current Exam (${parentExamForMoveAll?.title || 'Current'})`
-                        }
-                      >
-                        {availableMoveAllDestinations
-                          .filter((m) => m.isCurrentExam)
-                          .map((mod) => (
-                            <option key={mod.id} value={mod.id}>
-                              {mod.title}
-                            </option>
-                          ))}
-                      </optgroup>
-                    )}
-                    {Array.from(new Set(availableMoveAllDestinations.filter((m) => !m.isCurrentExam).map((m) => m.examId))).map(
-                      (examId) => {
-                        const examItems = availableMoveAllDestinations.filter((m) => m.examId === examId);
-                        const examTitle = examItems[0]?.examTitle || examId;
-                        return (
-                          <optgroup key={examId} label={examTitle}>
-                            {examItems.map((mod) => (
-                              <option key={mod.id} value={mod.id}>
-                                {mod.title}
-                              </option>
-                            ))}
-                          </optgroup>
-                        );
-                      }
-                    )}
-                  </select>
-                </div>
-              ) : (
-                <div className="space-y-3 pt-2">
-                  {exams.length > 1 && (
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-700 block">
-                        {language === 'ar' ? 'الامتحان التابع له الموديول الجديد:' : 'Target Exam:'}
-                      </label>
-                      <select
-                        value={targetExamIdForNew}
-                        onChange={(e) => setTargetExamIdForNew(e.target.value)}
-                        className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-purple-600 transition-all"
-                      >
-                        <option value={parentExamForMoveAll?.id}>
-                          {language === 'ar'
-                            ? `هذا الامتحان (${parentExamForMoveAll?.title || 'الحالي'})`
-                            : `Current Exam (${parentExamForMoveAll?.title || 'Current'})`}
-                        </option>
-                        {exams
-                          .filter((e: any) => String(e.id) !== String(parentExamForMoveAll?.id))
-                          .map((e: any) => (
-                            <option key={e.id} value={e.id}>
-                              {e.title || (language === 'ar' ? 'امتحان بدون عنوان' : 'Untitled Exam')}
-                            </option>
-                          ))}
-                      </select>
-                    </div>
-                  )}
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 block">
-                      {language === 'ar' ? 'اسم الموديول الجديد:' : 'New Module Name:'}
-                    </label>
-                    <input
-                      type="text"
-                      value={newModuleTitle}
-                      onChange={(e) => setNewModuleTitle(e.target.value)}
-                      placeholder={language === 'ar' ? 'مثال: موديول 3 - المراجعة النهائية' : 'e.g., Module 3 - Final Review'}
-                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-purple-600 transition-all"
-                      autoFocus
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setShowMoveAllSubExamsModal(false)}
-                disabled={isMovingAllSubExams}
-                className="px-5 py-3 rounded-2xl border border-slate-200 text-slate-600 font-black text-sm hover:bg-slate-50 transition-colors disabled:opacity-50"
-              >
-                {language === 'ar' ? 'إلغاء' : 'Cancel'}
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmMoveAllSubExams}
-                disabled={isMovingAllSubExams}
-                className="px-6 py-3 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-black text-sm shadow-md shadow-purple-600/20 flex items-center gap-2 transition-all disabled:opacity-50"
-              >
-                {isMovingAllSubExams ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>{language === 'ar' ? 'جارٍ النقل الجماعي...' : 'Moving all...'}</span>
-                  </>
-                ) : (
-                  <>
-                    <ArrowRightLeft className="w-4 h-4" />
-                    <span>{language === 'ar' ? `تأكيد نقل جميع الاختبارات (${moduleToMoveAll.examsCount || 0})` : `Confirm Move All (${moduleToMoveAll.examsCount || 0})`}</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
+      {showMoveModalUnified && selectedModuleForMove && parentExamForMove && (
+        <MoveModuleModal
+          isOpen={showMoveModalUnified}
+          onClose={() => {
+            setShowMoveModalUnified(false);
+            setSelectedModuleForMove(null);
+            setParentExamForMove(null);
+          }}
+          onSuccess={fetchData}
+          moduleToMove={selectedModuleForMove}
+          parentExam={parentExamForMove}
+          allExams={exams}
+          language={language}
+          role="SCHOOL_ADMIN"
+        />
       )}
     </DashboardLayout>
   );
