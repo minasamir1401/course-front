@@ -10,7 +10,7 @@ import { syncClientItemsWithServerIds } from '@/lib/examAutosaveModuleSync';
 import { buildExamSavePayload } from '@/lib/examSaveScope';
 
 export const useExamAutosave = (props: any) => {
-  const { isAutoSaveEnabled, isLoading, isInitialLoad, createdId, examData, modules, isModuleModalOpen, currentModule, editingModuleIndex, manualSubmitRef, lastAutoSaveSnapshotRef, autoSaveGenerationRef, createdIdRef, setCreatedId, setCurrentModule, setModules, setEditingModuleIndex, setLastAutoSave, deletedQuestionIds, setDeletedQuestionIds, showToast, language, autoSaveWriteQueueRef, autoSaveTimerRef, standaloneQuestions, setStandaloneQuestions, moduleId, subExamId } = props;
+  const { isAutoSaveEnabled, isLoading, isLoadingQuestions, isInitialLoad, createdId, examData, modules, isModuleModalOpen, currentModule, editingModuleIndex, manualSubmitRef, lastAutoSaveSnapshotRef, autoSaveGenerationRef, createdIdRef, setCreatedId, setCurrentModule, setModules, setEditingModuleIndex, setLastAutoSave, deletedQuestionIds, setDeletedQuestionIds, showToast, language, autoSaveWriteQueueRef, autoSaveTimerRef, standaloneQuestions, setStandaloneQuestions, moduleId, subExamId } = props;
 
   useEffect(() => {
     const activeExamId = createdIdRef.current || createdId;
@@ -20,6 +20,7 @@ export const useExamAutosave = (props: any) => {
     if (!canRunExamAutosave({
       isAutoSaveEnabled,
       isLoading,
+      isLoadingQuestions,
       isInitialLoad,
       isManualSubmit: manualSubmitRef.current,
       activeExamId,

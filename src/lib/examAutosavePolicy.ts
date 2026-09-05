@@ -1,6 +1,7 @@
 type ExamAutosavePolicyArgs = {
   isAutoSaveEnabled: boolean;
   isLoading: boolean;
+  isLoadingQuestions?: boolean;
   isInitialLoad?: boolean;
   isManualSubmit: boolean;
   activeExamId?: string | null;
@@ -10,12 +11,13 @@ type ExamAutosavePolicyArgs = {
 export function canRunExamAutosave({
   isAutoSaveEnabled,
   isLoading,
+  isLoadingQuestions = false,
   isInitialLoad = false,
   isManualSubmit,
   activeExamId,
   allowCreateWithoutId = false,
 }: ExamAutosavePolicyArgs) {
-  if (!isAutoSaveEnabled || isLoading || isInitialLoad || isManualSubmit) {
+  if (!isAutoSaveEnabled || isLoading || isLoadingQuestions || isInitialLoad || isManualSubmit) {
     return false;
   }
 

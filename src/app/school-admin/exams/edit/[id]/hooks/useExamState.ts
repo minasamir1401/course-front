@@ -23,6 +23,8 @@ export const useExamState = (schoolIdParam: string | null, examId: string, selec
   };
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
+  const [isQuestionsLoaded, setIsQuestionsLoaded] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = React.useState(true);
   const [isAutoSaveEnabled, setIsAutoSaveEnabled] = useState(true);
   const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
@@ -143,11 +145,59 @@ export const useExamState = (schoolIdParam: string | null, examId: string, selec
   };
 
   
+  const fetchQuestions = async (token: string, eId: string) => {
+    try {
+      setIsLoadingQuestions(true);
+      const qRes = await fetch(`${API_URL}/exams/${eId}/questions`, {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store'
+      });
+      if (qRes.ok) {
+        const qData = await qRes.json();
+        const rawQuestions = qData.questions || (Array.isArray(qData) ? qData : []);
+        const allQs = normalizePersistedExamQuestions(rawQuestions);
+
+        setModules((prevModules: any[]) => {
+          return attachQuestionsToModules(prevModules, allQs);
+        });
+
+        setCurrentModule((prevCurrent: any) => {
+          if (!prevCurrent?.id) return prevCurrent;
+          const currentModuleQs = allQs.filter((q: any) => String(q.moduleId || '') === String(prevCurrent.id));
+          return {
+            ...prevCurrent,
+            questions: currentModuleQs.filter((q: any) => !q.subExamId),
+            subExams: (prevCurrent.subExams || []).map((se: any) => {
+              const seQs = currentModuleQs.filter((q: any) => String(q.subExamId || '') === String(se.id));
+              return {
+                ...se,
+                questions: seQs,
+                questionsCount: seQs.length || se.questionsCount || se._count?.questions || 0
+              };
+            })
+          };
+        });
+
+        const standaloneQs = allQs.filter((q: any) => !q.moduleId && !q.subExamId);
+        setStandaloneQuestions(standaloneQs);
+        setAvailableMetadata((prev: any) => mergeAvailableMetadata(prev, collectMetadataFromQuestions(allQs)));
+        setIsQuestionsLoaded(true);
+      }
+    } catch (error) {
+      console.error("Failed to fetch questions in background:", error);
+    } finally {
+      setIsLoadingQuestions(false);
+    }
+  };
+
   const fetchExamData = async (token: string, eId: string) => {
     try {
       setIsLoading(true);
-      const res = await fetch(`${API_URL}/exams/${eId}`, {
-        headers: { Authorization: `Bearer ${token}` }
+      setIsLoadingQuestions(true);
+      // Phase 1: Fetch exam structure and modules without questions for instant display
+      const res = await fetch(`${API_URL}/exams/${eId}?includeQuestions=false`, {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store'
       });
       if (res.ok) {
         const data = await res.json();
@@ -177,29 +227,44 @@ export const useExamState = (schoolIdParam: string | null, examId: string, selec
             skills: exam.skills || "",
             gradeTarget: exam.gradeTarget || ""
           });
-          const allQs = normalizePersistedExamQuestions(exam.questions);
+
           if (exam.modules) {
-             const mods = attachQuestionsToModules(exam.modules, allQs);
-             setModules(mods);
-             if (selectedSubExamId) {
-               const selectedLocation = findSelectedSubExamLocation(mods, selectedSubExamId);
-               if (selectedLocation) {
-                 setEditingModuleIndex(selectedLocation.moduleIndex);
-                 setCurrentModule(mods[selectedLocation.moduleIndex]);
-                 setActiveSubExamIndex(selectedLocation.subExamIndex);
-                 setActiveTab('exercises');
-                 setIsModuleModalOpen(true);
-               }
-             }
+            const initialModules = exam.modules.map((m: any) => ({
+              ...m,
+              questions: m.questions || [],
+              assignments: m.assignments || [],
+              subExams: (m.subExams || []).map((se: any) => ({
+                ...se,
+                questions: se.questions || [],
+                questionsCount: se.questionsCount ?? se._count?.questions ?? 0
+              }))
+            }));
+            setModules(initialModules);
+
+            if (selectedSubExamId) {
+              const selectedLocation = findSelectedSubExamLocation(initialModules, selectedSubExamId);
+              if (selectedLocation) {
+                setEditingModuleIndex(selectedLocation.moduleIndex);
+                setCurrentModule(initialModules[selectedLocation.moduleIndex]);
+                setActiveSubExamIndex(selectedLocation.subExamIndex);
+                setActiveTab('exercises');
+                setIsModuleModalOpen(true);
+              }
+            }
           }
-          
-          const standaloneQs = allQs.filter((q: any) => !q.moduleId && !q.subExamId);
-          setStandaloneQuestions(standaloneQs);
-          setAvailableMetadata((prev: any) => mergeAvailableMetadata(prev, collectMetadataFromQuestions(allQs)));
+
           if (exam.id || exam._id) {
             createdIdRef.current = exam.id || exam._id;
             setCreatedId(exam.id || exam._id);
           }
+
+          // Unblock the page immediately so all exams/modules appear without waiting
+          setIsLoading(false);
+          setIsInitialLoad(false);
+
+          // Phase 2: Load questions asynchronously in background
+          fetchQuestions(token, eId);
+          return;
         }
       }
     } catch (error) {
@@ -227,6 +292,8 @@ useEffect(() => {
     allExistingSkills,
     isInitialLoad,
     isLoading, setIsLoading,
+    isLoadingQuestions, setIsLoadingQuestions,
+    isQuestionsLoaded,
     isAutoSaveEnabled, setIsAutoSaveEnabled,
     lastAutoSave, setLastAutoSave,
     createdId, setCreatedId,

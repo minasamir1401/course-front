@@ -3,7 +3,7 @@
 import { ChangeEvent, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { BookOpen, Calendar, Download, Edit2, Eye, FileCode, HelpCircle, Plus, Trash2, Upload, ArrowRightLeft, FolderInput, X } from "lucide-react";
+import { BookOpen, Calendar, Download, Edit2, Eye, FileCode, HelpCircle, Plus, Trash2, Upload, ArrowRightLeft, FolderInput, X, Loader2 } from "lucide-react";
 import { API_URL } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";
 import * as XLSX from "xlsx";
@@ -61,6 +61,10 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
   const questions = directQuestions.length + exams.reduce((total: number, exam: any) => total + (exam.questions?.length || exam.questionsCount || exam._count?.questions || 0), 0);
 
   const exportExamData = (exam: any) => {
+    if (state.isLoadingQuestions) {
+      showToast(language === "ar" ? "جارٍ استكمال تحميل الأسئلة في الخلفية، يرجى المحاولة بعد قليل..." : "Questions are still loading in the background, please try shortly...", "info");
+      return;
+    }
     const exportRows = buildQuestionExportRows(exam.questions || [], language);
     const ws = XLSX.utils.aoa_to_sheet(exportRows);
     const wb = XLSX.utils.book_new();
@@ -199,6 +203,10 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
   };
 
   const collectQuestions = async (subExamId: string) => {
+    if (state.isLoadingQuestions) {
+      showToast(language === "ar" ? "جارٍ استكمال تحميل الأسئلة في الخلفية، يرجى المحاولة بعد قليل..." : "Questions are still loading in the background, please try shortly...", "info");
+      return;
+    }
     const sourceCount = directQuestions.length + standaloneQuestions.length;
     if (sourceCount === 0) return;
 
@@ -653,7 +661,7 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
 
     <div className="rounded-[36px] bg-white border border-slate-100 shadow-sm p-7">
       <input ref={jsonInputRef} type="file" accept=".json,application/json" onChange={importExamJson} className="hidden" />
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6"><div><h2 className="text-2xl font-black text-slate-900">{language === "ar" ? "الاختبارات" : "Exams"}</h2><p className="text-slate-400 font-bold mt-1">{exams.length} {language === "ar" ? "اختبارات" : "exams"} · {questions} {language === "ar" ? "سؤال" : "questions"}</p></div><div className="flex flex-wrap gap-2 w-full md:w-auto">{exams.length > 0 && <button type="button" onClick={openMoveAllModal} className="inline-flex items-center gap-2 rounded-2xl border border-purple-200 bg-purple-50 px-4 py-3 text-sm font-black text-purple-700 transition-all hover:bg-purple-100 shadow-xs"><ArrowRightLeft className="w-4 h-4" /><span>{language === "ar" ? "نقل كل الاختبارات إلى موديول آخر" : "Move All Exams"}</span><span className="rounded-lg bg-purple-200/70 px-2 py-0.5 text-xs font-black text-purple-900">{exams.length}</span></button>}{role === "SUPER_ADMIN" && <button onClick={() => jsonInputRef.current?.click()} className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-700 transition-all hover:bg-emerald-100"><Upload className="w-4 h-4" />{language === "ar" ? "استعادة JSON" : "Restore JSON"}</button>}<input ref={titleInputRef} value={title} onChange={e => setTitle(e.target.value)} onKeyDown={e => { if (e.key === "Enter") createExam(); }} placeholder={language === "ar" ? "اسم الاختبار الجديد" : "New exam name"} className="min-w-0 flex-1 md:w-56 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold outline-none focus:border-indigo-500" /><button disabled={creating} onClick={createExam} className="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-white font-black disabled:opacity-50"><Plus className="w-5 h-5" />{language === "ar" ? "إنشاء اختبار" : "Create Exam"}</button></div></div>
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6"><div><h2 className="text-2xl font-black text-slate-900">{language === "ar" ? "الاختبارات" : "Exams"}</h2><p className="text-slate-400 font-bold mt-1 flex items-center flex-wrap gap-2"><span>{exams.length} {language === "ar" ? "اختبارات" : "exams"} · {questions} {language === "ar" ? "سؤال" : "questions"}</span>{state.isLoadingQuestions && (<span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 border border-indigo-100/80 px-2.5 py-0.5 text-xs font-black text-indigo-600 animate-pulse"><Loader2 className="w-3 h-3 animate-spin text-indigo-600" /><span>{language === "ar" ? "جارٍ مزامنة الأسئلة في الخلفية..." : "Loading questions in background..."}</span></span>)}</p></div><div className="flex flex-wrap gap-2 w-full md:w-auto">{exams.length > 0 && <button type="button" onClick={openMoveAllModal} className="inline-flex items-center gap-2 rounded-2xl border border-purple-200 bg-purple-50 px-4 py-3 text-sm font-black text-purple-700 transition-all hover:bg-purple-100 shadow-xs"><ArrowRightLeft className="w-4 h-4" /><span>{language === "ar" ? "نقل كل الاختبارات إلى موديول آخر" : "Move All Exams"}</span><span className="rounded-lg bg-purple-200/70 px-2 py-0.5 text-xs font-black text-purple-900">{exams.length}</span></button>}{role === "SUPER_ADMIN" && <button onClick={() => jsonInputRef.current?.click()} className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-700 transition-all hover:bg-emerald-100"><Upload className="w-4 h-4" />{language === "ar" ? "استعادة JSON" : "Restore JSON"}</button>}<input ref={titleInputRef} value={title} onChange={e => setTitle(e.target.value)} onKeyDown={e => { if (e.key === "Enter") createExam(); }} placeholder={language === "ar" ? "اسم الاختبار الجديد" : "New exam name"} className="min-w-0 flex-1 md:w-56 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold outline-none focus:border-indigo-500" /><button disabled={creating} onClick={createExam} className="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-white font-black disabled:opacity-50"><Plus className="w-5 h-5" />{language === "ar" ? "إنشاء اختبار" : "Create Exam"}</button></div></div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {exams.map((exam: any, index: number) => {
           const editHref = buildSubExamEditorHref(

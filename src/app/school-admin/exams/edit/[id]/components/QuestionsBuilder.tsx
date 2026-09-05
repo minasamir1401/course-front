@@ -8,7 +8,7 @@ import { getOptionLetter, cleanOptionText } from '@/lib/utils';
 import { QUESTION_TYPES, SECTION_STYLE_PRESETS } from '../constants';
 import { parseJson } from '../utils/examUtils';
 import { sanitizeHtml } from '@/lib/sanitize';
-import { ChevronUp, ChevronDown, CheckCircle2, Edit2, Trash2, Plus, FileText, Settings, Activity, MoveUp, MoveDown, Mic, Video, Image as ImageIcon, Layout, Check, HelpCircle, Upload, Download, Target, X, Save } from 'lucide-react';
+import { ChevronUp, ChevronDown, CheckCircle2, Edit2, Trash2, Plus, FileText, Settings, Activity, MoveUp, MoveDown, Mic, Video, Image as ImageIcon, Layout, Check, HelpCircle, Upload, Download, Target, X, Save, Loader2 } from 'lucide-react';
 import { CustomSelect } from '@/components/ui/CustomSelect';
 import InteractiveQuestionEditor from '@/components/InteractiveQuestionEditor';
 import * as XLSX from "xlsx";
@@ -105,7 +105,17 @@ export const QuestionsBuilder = (props: any) => {
         </div>
         {!showQuestionForm && (
           <div className="space-y-4">
-            {list.length === 0 ? (
+            {props.isLoadingQuestions ? (
+              <div className="bg-white rounded-[35px] border-2 border-indigo-100 p-16 flex flex-col items-center justify-center text-center gap-4">
+                <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
+                  <Loader2 className="w-8 h-8 animate-spin" />
+                </div>
+                <div>
+                  <h4 className="text-xl font-black text-slate-800 mb-1">{language === 'ar' ? 'جارٍ تحميل أسئلة الاختبار...' : 'Loading questions...'}</h4>
+                  <p className="text-slate-400 font-bold text-xs max-w-sm">{language === 'ar' ? 'يرجى الانتظار بضع ثوانٍ بينما يتم جلب الأسئلة' : 'Please wait while questions are being loaded'}</p>
+                </div>
+              </div>
+            ) : list.length === 0 ? (
               <div className="bg-white rounded-[35px] border-4 border-dashed border-slate-100 p-16 flex flex-col items-center justify-center text-center gap-4">
                 <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300">
                   <HelpCircle className="w-8 h-8" />

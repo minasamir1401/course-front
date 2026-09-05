@@ -4,10 +4,14 @@ import { buildDraftModules, buildExamSubmissionPayload } from '@/lib/examEditing
 import { buildExamSavePayload, isChildExamSave } from '@/lib/examSaveScope';
 
 export const useExamSubmit = (props: any) => {
-  const { examData, modules, isModuleModalOpen, currentModule, editingModuleIndex, manualSubmitRef, autoSaveGenerationRef, autoSaveTimerRef, setIsLoading, autoSaveWriteQueueRef, createdIdRef, standaloneQuestions, deletedQuestionIds, setDeletedQuestionIds, showToast, language, router, t, isLoading, moduleId, subExamId } = props;
+  const { examData, modules, isModuleModalOpen, currentModule, editingModuleIndex, manualSubmitRef, autoSaveGenerationRef, autoSaveTimerRef, setIsLoading, autoSaveWriteQueueRef, createdIdRef, standaloneQuestions, deletedQuestionIds, setDeletedQuestionIds, showToast, language, router, t, isLoading, isLoadingQuestions, moduleId, subExamId } = props;
 
     const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoadingQuestions) {
+      showToast(language === 'ar' ? 'يرجى الانتظار لحظات حتى يكتمل تحميل الأسئلة أولاً' : 'Please wait for questions to finish loading first', 'warning');
+      return;
+    }
     if (!examData.title) {
       showToast(t('courseCreate.titleRequired') || "Please enter a course title", "error");
       return;
