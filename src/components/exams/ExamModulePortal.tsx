@@ -33,6 +33,8 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
   const [isLoadingDestinations, setIsLoadingDestinations] = useState(false);
   const [allExamsList, setAllExamsList] = useState<any[]>([]);
   const [targetExamIdForNew, setTargetExamIdForNew] = useState("");
+  const [isMoveAllModalOpen, setIsMoveAllModalOpen] = useState(false);
+  const [isMovingAllSubExams, setIsMovingAllSubExams] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
   const moduleEditHref = buildModuleEditHref(role, state.createdIdRef.current || state.createdId || "", normalizedModuleId);
@@ -492,9 +494,6 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
       setIsMovingSubExam(false);
     }
   };
-
-  const [isMoveAllModalOpen, setIsMoveAllModalOpen] = useState(false);
-  const [isMovingAllSubExams, setIsMovingAllSubExams] = useState(false);
 
   const openMoveAllModal = () => {
     setMovingSubExam(null);

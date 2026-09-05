@@ -150,10 +150,17 @@ export const useExamState = (schoolIdParam: string | null, examId: string, selec
   const fetchQuestions = async (token: string, eId: string) => {
     try {
       setIsLoadingQuestions(true);
-      const qRes = await fetch(`${API_URL}/exams/${eId}/questions`, {
+      let qRes = await fetch(`${API_URL}/exams/${eId}/questions`, {
         headers: { Authorization: `Bearer ${token}` },
         cache: 'no-store'
       });
+      if (qRes.status === 404) {
+        // Fallback for servers where /questions is not yet deployed
+        qRes = await fetch(`${API_URL}/exams/${eId}?onlyQuestions=true`, {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store'
+        });
+      }
       if (qRes.ok) {
         const qData = await qRes.json();
         const rawQuestions = qData.questions || (Array.isArray(qData) ? qData : []);
