@@ -3,6 +3,7 @@ type BuildDraftModulesArgs = {
   currentModule: any;
   editingModuleIndex: number | null;
   isModuleModalOpen: boolean;
+  moduleMode?: boolean;
 };
 
 type BuildExamSubmissionPayloadArgs = {
@@ -10,30 +11,53 @@ type BuildExamSubmissionPayloadArgs = {
   standaloneQuestions?: any[];
 };
 
+export function deduplicateModules(modules: any[]) {
+  const seenIds = new Set<string>();
+  const seenTitles = new Set<string>();
+  const result: any[] = [];
+
+  for (const m of (Array.isArray(modules) ? modules : [])) {
+    if (!m) continue;
+    const id = m.id ? String(m.id).trim() : '';
+    const title = m.title ? String(m.title).trim().toLowerCase() : '';
+
+    if (id && seenIds.has(id)) continue;
+    if (title && seenTitles.has(title)) continue;
+
+    if (id) seenIds.add(id);
+    if (title) seenTitles.add(title);
+    result.push(m);
+  }
+
+  return result;
+}
+
 export function buildDraftModules({
   modules,
   currentModule,
   editingModuleIndex,
   isModuleModalOpen,
+  moduleMode,
 }: BuildDraftModulesArgs) {
   const finalModules = Array.isArray(modules) ? [...modules] : [];
   const hasCurrentModule = !!currentModule?.title || !!currentModule?.id;
-  if (!hasCurrentModule) return finalModules;
+  if (!hasCurrentModule) return deduplicateModules(finalModules);
 
   const matchedIndex = editingModuleIndex !== null
     ? editingModuleIndex
-    : finalModules.findIndex((module) => String(module?.id || '') === String(currentModule?.id || ''));
+    : finalModules.findIndex((module) => {
+        if (module?.id && currentModule?.id && String(module.id) === String(currentModule.id)) return true;
+        if (module?.title && currentModule?.title && String(module.title).trim() === String(currentModule.title).trim()) return true;
+        return false;
+      });
 
-  if (matchedIndex >= 0) {
-    finalModules[matchedIndex] = currentModule;
-    return finalModules;
-  }
-
-  if (isModuleModalOpen) {
+  if (matchedIndex >= 0 && matchedIndex < finalModules.length) {
+    finalModules[matchedIndex] = { ...finalModules[matchedIndex], ...currentModule };
+  } else if (isModuleModalOpen || (moduleMode && finalModules.length === 0)) {
     finalModules.push(currentModule);
   }
 
-  return finalModules;
+  return deduplicateModules(finalModules);
 }
 
 export function buildModulesSubmissionPayload(modules: any[]) {

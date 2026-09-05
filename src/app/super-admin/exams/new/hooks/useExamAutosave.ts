@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { API_URL } from '@/lib/api';
 import { canRunExamAutosave } from '@/lib/examAutosavePolicy';
+import { buildDraftModules } from '@/lib/examEditingPayload';
 
 export const useExamAutosave = (props: any) => {
   const { isAutoSaveEnabled, isLoading, createdId, examData, modules, isModuleModalOpen, currentModule, editingModuleIndex, manualSubmitRef, lastAutoSaveSnapshotRef, autoSaveGenerationRef, createdIdRef, setCreatedId, setCurrentModule, setModules, setEditingModuleIndex, setLastAutoSave, deletedQuestionIds, setDeletedQuestionIds, showToast, language, autoSaveWriteQueueRef, autoSaveTimerRef, standaloneQuestions } = props;
@@ -28,14 +29,12 @@ export const useExamAutosave = (props: any) => {
         const token = localStorage.getItem("super_admin_token");
         if (!token) return;
 
-        const finalModules = [...modules];
-        if (isModuleModalOpen && currentModule.title) {
-          if (editingModuleIndex !== null) {
-            finalModules[editingModuleIndex] = currentModule;
-          } else {
-            finalModules.push(currentModule);
-          }
-        }
+        const finalModules = buildDraftModules({
+          modules,
+          currentModule,
+          editingModuleIndex,
+          isModuleModalOpen,
+        });
 
                 const targetSchoolIds = (examData.schoolIds || []).filter(Boolean);
         const isCentral = targetSchoolIds.length === 0;

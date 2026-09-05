@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { API_URL } from '@/lib/api';
 import { buildCreatedModulePortalHref } from '@/lib/moduleCreationWorkflow';
+import { buildDraftModules } from '@/lib/examEditingPayload';
 
 export const useExamSubmit = (props: any) => {
   const { examData, modules, isModuleModalOpen, currentModule, editingModuleIndex, manualSubmitRef, autoSaveGenerationRef, autoSaveTimerRef, setIsLoading, autoSaveWriteQueueRef, createdIdRef, standaloneQuestions, deletedQuestionIds, setDeletedQuestionIds, showToast, language, router, t, isLoading, moduleMode } = props;
@@ -23,14 +24,13 @@ export const useExamSubmit = (props: any) => {
     try {
       await autoSaveWriteQueueRef.current;
 
-      const finalModules = [...modules];
-      if ((isModuleModalOpen || moduleMode) && currentModule.title) {
-        if (editingModuleIndex !== null) {
-          finalModules[editingModuleIndex] = currentModule;
-        } else {
-          finalModules.push(currentModule);
-        }
-      }
+      const finalModules = buildDraftModules({
+        modules,
+        currentModule,
+        editingModuleIndex,
+        isModuleModalOpen,
+        moduleMode,
+      });
 
       const targetSchoolIds = (examData.schoolIds || []).filter(Boolean);
       const isCentral = false;

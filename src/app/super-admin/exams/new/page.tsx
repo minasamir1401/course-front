@@ -24,6 +24,7 @@ import { SlidesBuilder } from "./components/SlidesBuilder";
 import { QuestionsBuilder } from "./components/QuestionsBuilder";
 import { getGradeName, getSubjectName, parseJson } from "./utils/examUtils";
 import { getModuleCreationView } from "@/lib/moduleCreationWorkflow";
+import { buildDraftModules } from "@/lib/examEditingPayload";
 import { API_URL } from "@/lib/api";
 import { Edit2, PlusCircle } from "lucide-react";
 
@@ -140,6 +141,7 @@ export default function SuperAdminNewExamPage() {
     });
 
     setCurrentModule(nextModule);
+    if (editingModuleIndex === null) setEditingModuleIndex(0);
   };
 
   const addDraftExam = () => {
@@ -218,14 +220,13 @@ export default function SuperAdminNewExamPage() {
       try {
         await autoSaveWriteQueueRef.current;
 
-        const finalModules = [...modules];
-        if (isModuleModalOpen && currentModule.title) {
-          if (editingModuleIndex !== null) {
-            finalModules[editingModuleIndex] = currentModule;
-          } else {
-            finalModules.push(currentModule);
-          }
-        }
+        const finalModules = buildDraftModules({
+          modules,
+          currentModule,
+          editingModuleIndex,
+          isModuleModalOpen,
+          moduleMode,
+        });
 
         const targetSchoolIds = (examData.schoolIds || []).filter(Boolean);
         const isCentral = targetSchoolIds.length === 0;
