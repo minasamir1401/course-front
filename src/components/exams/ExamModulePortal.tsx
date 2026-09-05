@@ -29,6 +29,10 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
   const [targetMoveModuleId, setTargetMoveModuleId] = useState("");
   const [newModuleTitle, setNewModuleTitle] = useState("");
   const [isMovingSubExam, setIsMovingSubExam] = useState(false);
+  const [destinationModules, setDestinationModules] = useState<any[]>([]);
+  const [isLoadingDestinations, setIsLoadingDestinations] = useState(false);
+  const [allExamsList, setAllExamsList] = useState<any[]>([]);
+  const [targetExamIdForNew, setTargetExamIdForNew] = useState("");
   const titleInputRef = useRef<HTMLInputElement>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
   const moduleEditHref = buildModuleEditHref(role, state.createdIdRef.current || state.createdId || "", normalizedModuleId);
@@ -245,18 +249,112 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
     }
   };
 
-  const otherModules = (state.modules || []).filter(
-    (mod: any) => normalizeId(mod.id) !== normalizedModuleId
-  );
+  const getAuthToken = () => {
+    return (
+      localStorage.getItem(tokenKey) ||
+      localStorage.getItem("super_admin_token") ||
+      localStorage.getItem("school_admin_token") ||
+      ""
+    );
+  };
+
+  const fetchAvailableDestinations = async (currentExamId: string) => {
+    setIsLoadingDestinations(true);
+    try {
+      const res = await fetch(`${API_URL}/exams`, {
+        headers: {
+          Authorization: `Bearer ${getAuthToken()}`,
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const examsList: any[] = Array.isArray(data) ? data : (data.exams || data.data || []);
+        setAllExamsList(examsList);
+
+        const currentExamApi = examsList.find((e: any) => normalizeId(e.id) === normalizeId(currentExamId));
+        const currentExamTitle = state.examData?.title || currentExamApi?.title || (language === "ar" ? "الاختبار الحالي" : "Current Exam");
+
+        const collected: any[] = [];
+
+        // 1. Current exam's other modules (prefer state.modules if available)
+        const currentModules = (state.modules && state.modules.length > 0) ? state.modules : (currentExamApi?.modules || []);
+        currentModules.forEach((m: any) => {
+          if (normalizeId(m.id) !== normalizedModuleId) {
+            collected.push({
+              id: normalizeId(m.id),
+              title: m.title || (language === "ar" ? "موديول بدون عنوان" : "Untitled Module"),
+              examId: normalizeId(currentExamId),
+              examTitle: currentExamTitle,
+              isCurrentExam: true,
+            });
+          }
+        });
+
+        // 2. Modules from all other accessible exams
+        examsList.forEach((exam: any) => {
+          const examId = normalizeId(exam.id);
+          if (examId !== normalizeId(currentExamId)) {
+            const eTitle = exam.title || (language === "ar" ? "اختبار بدون عنوان" : "Untitled Exam");
+            (exam.modules || []).forEach((m: any) => {
+              if (normalizeId(m.id) !== normalizedModuleId) {
+                collected.push({
+                  id: normalizeId(m.id),
+                  title: m.title || (language === "ar" ? "موديول بدون عنوان" : "Untitled Module"),
+                  examId: examId,
+                  examTitle: eTitle,
+                  isCurrentExam: false,
+                });
+              }
+            });
+          }
+        });
+
+        setDestinationModules(collected);
+
+        if (collected.length > 0) {
+          setTargetMoveModuleId((prev) => {
+            if (prev && collected.some((item) => item.id === prev)) return prev;
+            return collected[0].id;
+          });
+          setMoveMode("existing");
+        } else {
+          setMoveMode("new");
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load destination modules:", err);
+    } finally {
+      setIsLoadingDestinations(false);
+    }
+  };
 
   const openMoveModal = (exam: any) => {
     setMovingSubExam(exam);
-    const available = (state.modules || []).filter(
-      (mod: any) => normalizeId(mod.id) !== normalizedModuleId
-    );
-    setMoveMode(available.length > 0 ? "existing" : "new");
-    setTargetMoveModuleId(available[0]?.id ? String(available[0].id) : "");
     setNewModuleTitle("");
+    const currentExamId = normalizeId(state.createdIdRef?.current || state.createdId || "");
+    setTargetExamIdForNew(currentExamId);
+
+    // Populate immediately with any local other modules from current exam
+    const localOther = (state.modules || [])
+      .filter((m: any) => normalizeId(m.id) !== normalizedModuleId)
+      .map((m: any) => ({
+        id: normalizeId(m.id),
+        title: m.title || (language === "ar" ? "موديول بدون عنوان" : "Untitled Module"),
+        examId: currentExamId,
+        examTitle: state.examData?.title || (language === "ar" ? "الاختبار الحالي" : "Current Exam"),
+        isCurrentExam: true,
+      }));
+
+    setDestinationModules(localOther);
+    if (localOther.length > 0) {
+      setMoveMode("existing");
+      setTargetMoveModuleId(localOther[0].id);
+    } else {
+      setMoveMode("new");
+      setTargetMoveModuleId("");
+    }
+
+    fetchAvailableDestinations(currentExamId);
   };
 
   const handleConfirmMove = async () => {
@@ -280,8 +378,13 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
     setIsMovingSubExam(true);
     try {
       const payload = moveMode === "new"
-        ? { newModuleTitle: newModuleTitle.trim() }
-        : { targetModuleId: targetMoveModuleId };
+        ? {
+            newModuleTitle: newModuleTitle.trim(),
+            targetExamId: targetExamIdForNew || parentExamId,
+          }
+        : {
+            targetModuleId: targetMoveModuleId,
+          };
 
       const res = await fetch(
         `${API_URL}/exams/${parentExamId}/modules/${normalizedModuleId}/exams/${movingSubExam.id}/move`,
@@ -289,7 +392,7 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem(tokenKey) || ""}`,
+            Authorization: `Bearer ${getAuthToken()}`,
           },
           body: JSON.stringify(payload),
         }
@@ -326,7 +429,7 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
           return mod;
         });
 
-        if (data.isNewModule && data.destinationModule) {
+        if (data.isNewModule && data.destinationModule && (!data.isCrossExam || normalizeId(data.destinationExamId) === normalizeId(parentExamId))) {
           const alreadyInList = next.some((mod: any) => normalizeId(mod.id) === destModId);
           if (!alreadyInList) {
             next = [
@@ -351,10 +454,21 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
         }));
       }
 
+      const chosenDestination = destinationModules.find((m) => m.id === targetMoveModuleId);
+      const destExamTitle = moveMode === "new"
+        ? (allExamsList.find((e: any) => normalizeId(e.id) === normalizeId(targetExamIdForNew))?.title || state.examData?.title)
+        : (chosenDestination?.examTitle || state.examData?.title);
+
+      const destModuleTitle = moveMode === "new"
+        ? newModuleTitle.trim()
+        : (chosenDestination?.title || data.destinationModule?.title || "");
+
+      const isCross = data.isCrossExam || (chosenDestination && !chosenDestination.isCurrentExam);
+
       showToast(
         language === "ar"
-          ? `تم نقل الاختبار "${movingSubExam.title}" بنجاح!`
-          : `Exam "${movingSubExam.title}" moved successfully!`,
+          ? `تم نقل الاختبار "${movingSubExam.title}" بنجاح${isCross ? ` إلى ${destExamTitle} (${destModuleTitle})` : ` إلى موديول "${destModuleTitle}"`}!`
+          : `Exam "${movingSubExam.title}" moved successfully${isCross ? ` to ${destExamTitle} (${destModuleTitle})` : ` to module "${destModuleTitle}"`}!`,
         "success"
       );
       setMovingSubExam(null);
@@ -603,7 +717,7 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
               <button
                 type="button"
                 onClick={() => setMoveMode("existing")}
-                disabled={otherModules.length === 0}
+                disabled={destinationModules.length === 0}
                 className={`p-3.5 rounded-2xl border text-xs font-black transition-all flex flex-col items-center gap-1.5 ${
                   moveMode === "existing"
                     ? "border-purple-600 bg-purple-50/50 text-purple-700 shadow-xs"
@@ -612,8 +726,18 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
               >
                 <FolderInput className="w-5 h-5" />
                 <span>{language === "ar" ? "موديول موجود" : "Existing Module"}</span>
-                {otherModules.length === 0 && (
-                  <span className="text-[10px] text-slate-400">({language === "ar" ? "لا يوجد غيره" : "None available"})</span>
+                {isLoadingDestinations ? (
+                  <span className="text-[10px] text-purple-500 animate-pulse">
+                    {language === "ar" ? "جارٍ التحميل..." : "Loading..."}
+                  </span>
+                ) : destinationModules.length === 0 ? (
+                  <span className="text-[10px] text-slate-400">
+                    ({language === "ar" ? "لا يوجد غيره" : "None available"})
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-purple-600 font-bold">
+                    ({destinationModules.length} {language === "ar" ? "متاح" : "available"})
+                  </span>
                 )}
               </button>
 
@@ -633,35 +757,99 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
 
             {moveMode === "existing" ? (
               <div className="space-y-2 pt-2">
-                <label className="text-xs font-bold text-slate-700 block">
-                  {language === "ar" ? "حدد الموديول المستهدف:" : "Target Module:"}
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700 block">
+                    {language === "ar" ? "حدد الموديول المستهدف:" : "Target Module:"}
+                  </label>
+                  {isLoadingDestinations && (
+                    <span className="text-xs text-purple-600 animate-pulse">
+                      {language === "ar" ? "جارٍ التحديث..." : "Updating..."}
+                    </span>
+                  )}
+                </div>
                 <select
                   value={targetMoveModuleId}
                   onChange={(e) => setTargetMoveModuleId(e.target.value)}
                   className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-purple-600 transition-all"
                 >
-                  <option value="">{language === "ar" ? "-- اختر موديول --" : "-- Select Module --"}</option>
-                  {otherModules.map((mod: any) => (
-                    <option key={mod.id} value={mod.id}>
-                      {mod.title}
-                    </option>
-                  ))}
+                  <option value="">
+                    {language === "ar" ? "-- اختر الموديول المستهدف --" : "-- Select Target Module --"}
+                  </option>
+                  {destinationModules.filter((m) => m.isCurrentExam).length > 0 && (
+                    <optgroup
+                      label={
+                        language === "ar"
+                          ? `هذا الاختبار (${state.examData?.title || "الحالي"})`
+                          : `Current Exam (${state.examData?.title || "Current"})`
+                      }
+                    >
+                      {destinationModules
+                        .filter((m) => m.isCurrentExam)
+                        .map((mod) => (
+                          <option key={mod.id} value={mod.id}>
+                            {mod.title}
+                          </option>
+                        ))}
+                    </optgroup>
+                  )}
+                  {Array.from(new Set(destinationModules.filter((m) => !m.isCurrentExam).map((m) => m.examId))).map(
+                    (examId) => {
+                      const examItems = destinationModules.filter((m) => m.examId === examId);
+                      const examTitle = examItems[0]?.examTitle || examId;
+                      return (
+                        <optgroup key={examId} label={examTitle}>
+                          {examItems.map((mod) => (
+                            <option key={mod.id} value={mod.id}>
+                              {mod.title}
+                            </option>
+                          ))}
+                        </optgroup>
+                      );
+                    }
+                  )}
                 </select>
               </div>
             ) : (
-              <div className="space-y-2 pt-2">
-                <label className="text-xs font-bold text-slate-700 block">
-                  {language === "ar" ? "اسم الموديول الجديد:" : "New Module Name:"}
-                </label>
-                <input
-                  type="text"
-                  value={newModuleTitle}
-                  onChange={(e) => setNewModuleTitle(e.target.value)}
-                  placeholder={language === "ar" ? "مثال: موديول 3 - المراجعة النهائية" : "e.g., Module 3 - Final Review"}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-purple-600 transition-all"
-                  autoFocus
-                />
+              <div className="space-y-3 pt-2">
+                {allExamsList.length > 1 && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 block">
+                      {language === "ar" ? "الاختبار التابع له الموديول الجديد:" : "Target Exam:"}
+                    </label>
+                    <select
+                      value={targetExamIdForNew}
+                      onChange={(e) => setTargetExamIdForNew(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-purple-600 transition-all"
+                    >
+                      <option value={state.createdIdRef?.current || state.createdId}>
+                        {language === "ar"
+                          ? `هذا الاختبار (${state.examData?.title || "الحالي"})`
+                          : `Current Exam (${state.examData?.title || "Current"})`}
+                      </option>
+                      {allExamsList
+                        .filter((e: any) => normalizeId(e.id) !== normalizeId(state.createdIdRef?.current || state.createdId))
+                        .map((e: any) => (
+                          <option key={e.id} value={e.id}>
+                            {e.title || (language === "ar" ? "اختبار بدون عنوان" : "Untitled Exam")}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                )}
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 block">
+                    {language === "ar" ? "اسم الموديول الجديد:" : "New Module Name:"}
+                  </label>
+                  <input
+                    type="text"
+                    value={newModuleTitle}
+                    onChange={(e) => setNewModuleTitle(e.target.value)}
+                    placeholder={language === "ar" ? "مثال: موديول 3 - المراجعة النهائية" : "e.g., Module 3 - Final Review"}
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-purple-600 transition-all"
+                    autoFocus
+                  />
+                </div>
               </div>
             )}
           </div>
