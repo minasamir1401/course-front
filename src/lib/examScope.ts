@@ -24,7 +24,7 @@ export function resolveExamSchoolIds(source: ExamScopeSource, fallbackSchoolId?:
 
 export function resolveExamEditScope(source: ExamScopeSource, fallbackSchoolId?: string | null) {
   const schoolIds = resolveExamSchoolIds(source, fallbackSchoolId);
-  const isCentral = source?.isCentral === true || schoolIds.length === 0;
+  const isCentral = source?.isCentral === true;
 
   return {
     isCentral,

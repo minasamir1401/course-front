@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 import { useState, useRef, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { API_URL } from '@/lib/api';
@@ -29,7 +29,7 @@ export const useExamState = (schoolIdParam: string | null) => {
     grades: [],
     subjects: [],
     country: "مصر",
-    isCentral: !schoolIdParam,
+    isCentral: false,
     schoolIds: schoolIdParam ? [schoolIdParam] : [],
     duration: 60,
     password: "",

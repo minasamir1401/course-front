@@ -44,7 +44,7 @@ export const useExamState = (schoolIdParam: string | null, examId: string, selec
     grades: [],
     subjects: [],
     country: "مصر",
-    isCentral: !schoolIdParam,
+    isCentral: false,
     schoolIds: schoolIdParam ? [schoolIdParam] : [],
     duration: 60,
     password: "",

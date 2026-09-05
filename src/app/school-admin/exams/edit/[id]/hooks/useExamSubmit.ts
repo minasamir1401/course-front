@@ -32,7 +32,7 @@ export const useExamSubmit = (props: any) => {
       });
 
             const targetSchoolIds = (examData.schoolIds || []).filter(Boolean);
-        const isCentral = examData.isCentral || false;
+        const isCentral = false;
 
       const { modulesPayload, allQuestions } = buildExamSubmissionPayload({
         modules: finalModules,
