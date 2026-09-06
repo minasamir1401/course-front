@@ -12,6 +12,7 @@ import { ChevronUp, ChevronDown, CheckCircle2, Edit2, Trash2, Plus, FileText, Se
 import { CustomSelect } from '@/components/ui/CustomSelect';
 import InteractiveQuestionEditor from '@/components/InteractiveQuestionEditor';
 import * as XLSX from "xlsx";
+import { QuestionExcelExportButton } from '@/components/QuestionExcelExportButton';
 
 
 export const QuestionsBuilder = (props: any) => {
@@ -47,6 +48,7 @@ export const QuestionsBuilder = (props: any) => {
             <p className="text-slate-400 text-sm font-bold mt-1">{headerDesc}</p>
           </div>
           <div className="flex flex-wrap gap-2.5 items-center">
+            <QuestionExcelExportButton questions={props.isLoadingQuestions ? [] : list} language={language} />
             <button
               type="button"
               onClick={() => handleExcelUpload(source === 'assignments' ? 'assignments' : 'questions')}

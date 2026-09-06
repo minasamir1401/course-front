@@ -7,7 +7,7 @@ import { BookOpen, Calendar, Download, Edit2, Eye, FileCode, HelpCircle, Plus, T
 import { API_URL } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";
 import * as XLSX from "xlsx";
-import { buildQuestionExportRows } from "@/lib/examExcelTemplates";
+import { buildQuestionWorkbook } from "@/lib/questionExcelWorkbook";
 import { buildModuleEditHref, buildSubExamEditorHref, buildModulePortalHref, getModulePortalQuestions, getStandaloneQuestions } from "@/lib/examModuleView";
 import { collectQuestionsIntoSubExam, getQuestionCollectionTargets } from "@/lib/examQuestionCollection";
 import { getCreatedAtLabel, getUpdatedAtLabel } from "@/lib/examModulePresentation";
@@ -244,10 +244,12 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
       showToast(language === "ar" ? "جارٍ استكمال تحميل الأسئلة في الخلفية، يرجى المحاولة بعد قليل..." : "Questions are still loading in the background, please try shortly...", "info");
       return;
     }
-    const exportRows = buildQuestionExportRows(exam.questions || [], language);
-    const ws = XLSX.utils.aoa_to_sheet(exportRows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Questions');
+    let wb: XLSX.WorkBook;
+    try { wb = buildQuestionWorkbook(exam.questions || [], language); }
+    catch (error) {
+      showToast(error instanceof Error ? error.message : String(error), 'error');
+      return;
+    }
     const examTitleSlug = String(exam.title || 'exam').trim().replace(/[\\/:*?"<>|]+/g, '-');
     XLSX.writeFile(wb, `${examTitleSlug}_export.xlsx`);
     showToast(language === "ar" ? "تم تصدير بيانات الاختبار" : "Exam data exported successfully", "success");

@@ -17,6 +17,7 @@ import { getSectionStylePresets } from "./constants";
 import CopySlidesModal from "@/components/modals/CopySlidesModal";
 import { useCourseEditor } from "../CourseEditorContext";
 import * as XLSX from "xlsx";
+import { QuestionExcelExportButton } from '@/components/QuestionExcelExportButton';
 interface LessonQuestionsBuilderProps {
   source: 'assignments' | 'questions';
   currentLesson: any;
@@ -469,6 +470,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
             <p className="text-slate-400 text-sm font-bold mt-1">{headerDesc}</p>
           </div>
           <div className="flex flex-wrap gap-3">
+            <QuestionExcelExportButton questions={currentLesson[source] || []} language={language} />
             <button 
               type="button"
               onClick={() => handleExcelUpload(source === 'assignments' ? 'assignments' : 'questions')}

@@ -1,4 +1,5 @@
 "use client";
+import { buildQuestionWorkbook, importModuleQuestions } from '@/lib/questionExcelWorkbook';
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -649,111 +650,12 @@ export default function CreateCoursePage() {
     e.target.value = "";
   };
 
-  const handleQuestionsExcelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-        const wb = XLSX.read(data, { type: "array" });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
-
-        const parsed = parseQuestionsFromExcel(rows);
-        if (parsed.length === 0) {
-          showToast(language === 'ar' ? "لم يتم العثور على أسئلة صالحة في الملف" : "No valid questions found in the file", "error");
-          return;
-        }
-
-        const newStds = Array.from(new Set(parsed.map(q => q.standard).filter(Boolean)));
-        const newInds = Array.from(new Set(parsed.map(q => q.indicator).filter(Boolean)));
-        const newLos = Array.from(new Set(parsed.map(q => q.learningOutcome).filter(Boolean)));
-
-        const currentStds = (currentLesson.standards || "").split("\n").filter(Boolean);
-        const currentInds = (currentLesson.indicators || "").split("\n").filter(Boolean);
-        const currentLos = (currentLesson.learningOutcomes || "").split("\n").filter(Boolean);
-
-        const updatedStds = Array.from(new Set([...currentStds, ...newStds])).join("\n");
-        const updatedInds = Array.from(new Set([...currentInds, ...newInds])).join("\n");
-        const updatedLos = Array.from(new Set([...currentLos, ...newLos])).join("\n");
-
-        setCurrentLesson((prev: any) => ({
-          ...prev,
-          questions: [...(prev.questions || []), ...parsed],
-          standards: updatedStds,
-          indicators: updatedInds,
-          learningOutcomes: updatedLos
-        }));
-
-        showToast(
-          language === 'ar'
-            ? `تم استيراد ${parsed.length} سؤال بنجاح`
-            : `Imported ${parsed.length} questions successfully`,
-          "success"
-        );
-      } catch (err) {
-        console.error(err);
-        showToast(language === 'ar' ? "حدث خطأ أثناء قراءة ملف Excel" : "Error reading Excel file", "error");
-      }
-    };
-    reader.readAsArrayBuffer(file);
-    e.target.value = "";
-  };
-
-  const handleAssignmentsExcelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-        const wb = XLSX.read(data, { type: "array" });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
-
-        const parsed = parseQuestionsFromExcel(rows);
-        if (parsed.length === 0) {
-          showToast(language === 'ar' ? "لم يتم العثور على واجبات صالحة في الملف" : "No valid assignments found in the file", "error");
-          return;
-        }
-
-        const newStds = Array.from(new Set(parsed.map(q => q.standard).filter(Boolean)));
-        const newInds = Array.from(new Set(parsed.map(q => q.indicator).filter(Boolean)));
-        const newLos = Array.from(new Set(parsed.map(q => q.learningOutcome).filter(Boolean)));
-
-        const currentStds = (currentLesson.standards || "").split("\n").filter(Boolean);
-        const currentInds = (currentLesson.indicators || "").split("\n").filter(Boolean);
-        const currentLos = (currentLesson.learningOutcomes || "").split("\n").filter(Boolean);
-
-        const updatedStds = Array.from(new Set([...currentStds, ...newStds])).join("\n");
-        const updatedInds = Array.from(new Set([...currentInds, ...newInds])).join("\n");
-        const updatedLos = Array.from(new Set([...currentLos, ...newLos])).join("\n");
-
-        setCurrentLesson((prev: any) => ({
-          ...prev,
-          assignments: [...(prev.assignments || []), ...parsed],
-          standards: updatedStds,
-          indicators: updatedInds,
-          learningOutcomes: updatedLos
-        }));
-
-        showToast(
-          language === 'ar'
-            ? `تم استيراد ${parsed.length} واجب بنجاح`
-            : `Imported ${parsed.length} assignments successfully`,
-          "success"
-        );
-      } catch (err) {
-        console.error(err);
-        showToast(language === 'ar' ? "حدث خطأ أثناء قراءة ملف Excel" : "Error reading Excel file", "error");
-      }
-    };
-    reader.readAsArrayBuffer(file);
-    e.target.value = "";
-  };
+  const excelContext = useRef<any>(null);
+  excelContext.current = { currentModule: currentLesson, setCurrentModule: setCurrentLesson, language, showToast };
+  const handleQuestionsExcelChange = (e: React.ChangeEvent<HTMLInputElement>) =>
+    importModuleQuestions(e, null, 'questions', () => excelContext.current, true);
+  const handleAssignmentsExcelChange = (e: React.ChangeEvent<HTMLInputElement>) =>
+    importModuleQuestions(e, null, 'assignments', () => excelContext.current, true);
 
   const handleExcelUpload = (type: 'questions' | 'metadata' | 'assignments') => {
     if (type === 'metadata') {
@@ -780,78 +682,8 @@ export default function CreateCoursePage() {
   };
 
   const downloadQuestionsTemplate = (type: 'questions' | 'assignments') => {
-    const wsData = [
-      [
-        language === 'ar' ? "نص السؤال" : "Question Text",
-        language === 'ar' ? "نوع السؤال" : "Question Type",
-        language === 'ar' ? "الخيار 1" : "Option 1",
-        language === 'ar' ? "الخيار 2" : "Option 2",
-        language === 'ar' ? "الخيار 3" : "Option 3",
-        language === 'ar' ? "الخيار 4" : "Option 4",
-        language === 'ar' ? "الخيار 5" : "Option 5",
-        language === 'ar' ? "الإجابة الصحيحة" : "Correct Answer",
-        language === 'ar' ? "الإجابات الصحيحة المتعددة" : "Correct Answers",
-        language === 'ar' ? "الدرجة" : "Points",
-        language === 'ar' ? "المهارة" : "Skill",
-        language === 'ar' ? "المعيار" : "Standard",
-        language === 'ar' ? "المؤشر" : "Indicator",
-        language === 'ar' ? "ناتج التعلم" : "Learning Outcome",
-        language === 'ar' ? "مستوى الصعوبة" : "Difficulty Level",
-        "DOK",
-        language === 'ar' ? "رابط الفيديو" : "Video URL",
-        language === 'ar' ? "التفسير" : "Explanation"
-      ],
-      [
-        language === 'ar' ? "ما هو ناتج 5 + 5؟" : "What is 5 + 5?",
-        "MCQ",
-        "8", "9", "10", "11", "",
-        "10", "", "1", "Problem Solving",
-        "Standard 1: Operations",
-        "Indicator 1.1: Addition",
-        "LO: Students can add numbers correctly",
-        "Foundation", "DOK 1",
-        "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-        language === 'ar' ? "الجمع الصحيح هو 10 لأن 5 زائد 5 يساوي 10" : "5 + 5 is 10"
-      ],
-      [
-        language === 'ar' ? "الأرض كروية الشكل." : "The earth is round.",
-        "TRUE_FALSE",
-        "", "", "", "", "",
-        language === 'ar' ? "صحيح" : "True", "", "1", "Observation",
-        "Standard 2: Physical Geography",
-        "Indicator 2.1: Earth Shape",
-        "LO: Understands planet earth's shape",
-        "Foundation", "DOK 2", "", ""
-      ],
-      [
-        language === 'ar' ? "حدد قارات العالم القديم:" : "Select the ancient world continents:",
-        "MULTI_SELECT",
-        language === 'ar' ? "آسيا" : "Asia",
-        language === 'ar' ? "أوروبا" : "Europe",
-        language === 'ar' ? "أفريقيا" : "Africa",
-        language === 'ar' ? "أستراليا" : "Australia", "",
-        "",
-        language === 'ar' ? "آسيا, أوروبا, أفريقيا" : "Asia, Europe, Africa",
-        "2", "General",
-        "Standard 3: Ancient History",
-        "Indicator 3.1: Continents",
-        "LO: Identifies old world continents",
-        "Medium", "", "", ""
-      ]
-    ];
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Questions Template");
-    const filename = type === 'assignments' ? "assignments_template.xlsx" : "practice_questions_template.xlsx";
-    XLSX.writeFile(wb, filename);
-    showToast(
-      language === 'ar'
-        ? "تم تحميل نموذج الأسئلة الاسترشادي بنجاح"
-        : "Questions template downloaded successfully",
-      "success"
-    );
+    XLSX.writeFile(buildQuestionWorkbook(null, language), type === 'assignments' ? 'assignments_template.xlsx' : 'questions_template.xlsx');
   };
-
   const addBlock = (source: 'slides' | 'assignments' | 'questions' = 'slides', type: 'TEXT' | 'QUESTION') => {
     const newBlock = type === 'TEXT'
       ? { id: Date.now() + Math.random(), type: 'TEXT', label: 'CONTENT', title: `New Content`, content: "", text: "", videoUrl: "", sections: [] }

@@ -1,6 +1,7 @@
 "use client";
+import { buildQuestionWorkbook, importModuleQuestions } from '@/lib/questionExcelWorkbook';
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useCourseEditor } from "./CourseEditorContext";
 import { 
@@ -27,6 +28,7 @@ export const LessonBuilderModal: React.FC = () => {
   const { language } = useLanguage();
   const { showToast } = useNotification();
   const {
+    role,
     currentLesson,
     setCurrentLesson,
     activeTab,
@@ -55,214 +57,16 @@ export const LessonBuilderModal: React.FC = () => {
     else if (type === 'assignments' && assignmentsExcelRef.current) assignmentsExcelRef.current.click();
   };
 
-  const handleQuestionsExcelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-        const wb = XLSX.read(data, { type: "array" });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
-        
-        if (rows.length < 2) {
-          showToast(language === 'ar' ? "الملف فارغ أو لا يحتوي على أسئلة" : "File is empty or does not contain questions", "error");
-          return;
-        }
-
-        const newQuestions: any[] = [];
-        for (let i = 1; i < rows.length; i++) {
-          const row = rows[i];
-          if (!row || !row[0]) continue;
-
-          const text = String(row[0]);
-          const typeRaw = String(row[1] || "MCQ").toUpperCase();
-          const type = ["MCQ", "TRUE_FALSE", "MULTI_SELECT", "TEXT"].includes(typeRaw) ? typeRaw : "MCQ";
-          
-          let options: string[] = ["", "", "", ""];
-          let correctAnswer: any = "";
-
-          if (type === "TRUE_FALSE") {
-            options = ["صحيح", "خطأ", "", ""];
-            const ansRaw = String(row[2] || "صحيح").trim();
-            correctAnswer = (ansRaw === "صح" || ansRaw === "صحيح" || ansRaw === "true" || ansRaw === "1") ? "صحيح" : "خطأ";
-          } else if (type === "MULTI_SELECT") {
-            options = [
-              String(row[2] || ""),
-              String(row[3] || ""),
-              String(row[4] || ""),
-              String(row[5] || "")
-            ];
-            const ansRaw = String(row[6] || "");
-            const indices = ansRaw.split(/[,\-]/).map(x => parseInt(x.trim()) - 1).filter(idx => idx >= 0 && idx < 4);
-            correctAnswer = indices.map(idx => options[idx]).filter(Boolean);
-          } else if (type === "MCQ") {
-            options = [
-              String(row[2] || ""),
-              String(row[3] || ""),
-              String(row[4] || ""),
-              String(row[5] || "")
-            ];
-            const ansIdx = parseInt(String(row[6] || "1")) - 1;
-            correctAnswer = options[ansIdx >= 0 && ansIdx < 4 ? ansIdx : 0] || options[0];
-          } else {
-            correctAnswer = String(row[2] || "");
-          }
-
-          const explanationText = String(row[7] || "");
-          const sections = explanationText ? [{
-            id: Date.now() + i,
-            type: "EXPLANATION",
-            content: explanationText
-          }] : [];
-
-          const points = parseInt(String(row[8] || "1")) || 1;
-          const level = String(row[9] || "Medium");
-
-          newQuestions.push({
-            id: Date.now() + i + Math.random(),
-            type,
-            text,
-            options,
-            correctAnswer,
-            correctAnswers: Array.isArray(correctAnswer) ? correctAnswer : [],
-            sections,
-            points,
-            level,
-            label: type
-          });
-        }
-
-        const updatedQuestions = [...(currentLesson.questions || []), ...newQuestions];
-        setCurrentLesson({ ...currentLesson, questions: updatedQuestions });
-        showToast(language === 'ar' ? `تم استيراد ${newQuestions.length} أسئلة بنجاح` : `Successfully imported ${newQuestions.length} questions`, "success");
-      } catch (err) {
-        console.error("Error reading questions excel:", err);
-        showToast(language === 'ar' ? "حدث خطأ أثناء قراءة ملف الأسئلة" : "Error reading questions file", "error");
-      }
-    };
-    reader.readAsArrayBuffer(file);
-    if (e.target) e.target.value = "";
-  };
-
-  const handleAssignmentsExcelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-        const wb = XLSX.read(data, { type: "array" });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
-        
-        if (rows.length < 2) {
-          showToast(language === 'ar' ? "الملف فارغ أو لا يحتوي على واجبات" : "File is empty or does not contain assignments", "error");
-          return;
-        }
-
-        const newAssignments: any[] = [];
-        for (let i = 1; i < rows.length; i++) {
-          const row = rows[i];
-          if (!row || !row[0]) continue;
-
-          const text = String(row[0]);
-          const typeRaw = String(row[1] || "TEXT").toUpperCase();
-          const type = ["MCQ", "TRUE_FALSE", "MULTI_SELECT", "TEXT"].includes(typeRaw) ? typeRaw : "TEXT";
-          
-          let options: string[] = ["", "", "", ""];
-          let correctAnswer: any = "";
-
-          if (type === "TRUE_FALSE") {
-            options = ["صحيح", "خطأ", "", ""];
-            const ansRaw = String(row[2] || "صحيح").trim();
-            correctAnswer = (ansRaw === "صح" || ansRaw === "صحيح" || ansRaw === "true" || ansRaw === "1") ? "صحيح" : "خطأ";
-          } else if (type === "MULTI_SELECT" || type === "MCQ") {
-            options = [
-              String(row[2] || ""),
-              String(row[3] || ""),
-              String(row[4] || ""),
-              String(row[5] || "")
-            ];
-            correctAnswer = String(row[6] || "");
-          } else {
-            correctAnswer = String(row[2] || "");
-          }
-
-          const explanationText = String(row[7] || "");
-          const sections = explanationText ? [{
-            id: Date.now() + i,
-            type: "EXPLANATION",
-            content: explanationText
-          }] : [];
-
-          const points = parseInt(String(row[8] || "5")) || 5;
-          const level = String(row[9] || "Medium");
-
-          newAssignments.push({
-            id: Date.now() + i + Math.random(),
-            type,
-            text,
-            options,
-            correctAnswer,
-            sections,
-            points,
-            level,
-            label: type
-          });
-        }
-
-        const updatedAssignments = [...(currentLesson.assignments || []), ...newAssignments];
-        setCurrentLesson({ ...currentLesson, assignments: updatedAssignments });
-        showToast(language === 'ar' ? `تم استيراد ${newAssignments.length} واجبات بنجاح` : `Successfully imported ${newAssignments.length} assignments`, "success");
-      } catch (err) {
-        console.error("Error reading assignments excel:", err);
-        showToast(language === 'ar' ? "حدث خطأ أثناء قراءة ملف الواجبات" : "Error reading assignments file", "error");
-      }
-    };
-    reader.readAsArrayBuffer(file);
-    if (e.target) e.target.value = "";
-  };
+  const excelContext = useRef<any>(null);
+  excelContext.current = { currentModule: currentLesson, setCurrentModule: setCurrentLesson, language, showToast, isLoadingQuestions: isLessonContentLoading };
+  const handleQuestionsExcelChange = (e: React.ChangeEvent<HTMLInputElement>) =>
+    importModuleQuestions(e, null, 'questions', () => excelContext.current, role === 'SUPER_ADMIN');
+  const handleAssignmentsExcelChange = (e: React.ChangeEvent<HTMLInputElement>) =>
+    importModuleQuestions(e, null, 'assignments', () => excelContext.current, role === 'SUPER_ADMIN');
 
   const downloadQuestionsTemplate = (type: 'questions' | 'assignments') => {
-    const isQuestions = type === 'questions';
-    const wsData = [
-      [
-        isQuestions ? "Question Prompt (نص السؤال)" : "Assignment Prompt (نص التكليف)", 
-        "Type (MCQ/TRUE_FALSE/TEXT/MULTI_SELECT)", 
-        "Option 1 / Answer", 
-        "Option 2", 
-        "Option 3", 
-        "Option 4", 
-        "Correct Answer (1-4 or comma separated for MULTI)", 
-        "Explanation / Tip / Solution Note", 
-        "Points", 
-        "Difficulty Level (Easy/Medium/Hard)"
-      ],
-      [
-        isQuestions ? "ما هو وحدة قياس القوة في النظام الدولي؟" : "قم بإعداد تقرير مبسط عن تطبيقات قوانين نيوتن في الحياة اليومية",
-        isQuestions ? "MCQ" : "TEXT",
-        isQuestions ? "النيوتن" : "",
-        isQuestions ? "الجول" : "",
-        isQuestions ? "الواط" : "",
-        isQuestions ? "الباسكال" : "",
-        isQuestions ? "1" : "",
-        isQuestions ? "القوة تقاس بالنيوتن نسبة للعالم إسحاق نيوتن." : "تأكد من شمول التقرير لأمثلة حية من واقع الميكانيكا.",
-        isQuestions ? "2" : "10",
-        "Medium"
-      ]
-    ];
-
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, isQuestions ? "Questions Template" : "Assignments Template");
-    XLSX.writeFile(wb, isQuestions ? "questions_template.xlsx" : "assignments_template.xlsx");
-    showToast(language === 'ar' ? "تم تحميل النموذج بنجاح" : "Template downloaded successfully", "success");
+    XLSX.writeFile(buildQuestionWorkbook(null, language), type === 'assignments' ? 'assignments_template.xlsx' : 'questions_template.xlsx');
   };
-
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   if (!isLessonModalOpen || !mounted || !currentLesson) return null;
