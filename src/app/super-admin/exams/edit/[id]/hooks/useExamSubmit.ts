@@ -35,8 +35,8 @@ export const useExamSubmit = (props: any) => {
         isModuleModalOpen,
       });
 
-            const targetSchoolIds = (examData.schoolIds || []).filter((id: string) => id && id !== "null");
-      const isCentral = examData.isCentral;
+      const targetSchoolIds = (examData.schoolIds || []).filter((id: string) => id && id !== "null");
+      const isCentral = targetSchoolIds.length > 0 ? false : !!examData.isCentral;
 
       const { modulesPayload, allQuestions } = buildExamSubmissionPayload({
         modules: finalModules,

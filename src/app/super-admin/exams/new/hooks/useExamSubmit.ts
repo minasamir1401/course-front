@@ -57,7 +57,7 @@ export const useExamSubmit = (props: any) => {
       });
 
       const targetSchoolIds = (examData.schoolIds || []).filter((id: string) => id && id !== "null");
-      const isCentral = examData.isCentral;
+      const isCentral = targetSchoolIds.length > 0 ? false : !!examData.isCentral;
 
       const allQuestions: any[] = [];
       const modulesPayload = finalModules.map((m, index) => {

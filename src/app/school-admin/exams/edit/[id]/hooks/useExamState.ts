@@ -232,7 +232,8 @@ export const useExamState = (schoolIdParam: string | null, examId: string, selec
             learningOutcomes: exam.learningOutcomes || "",
             indicators: exam.indicators || "",
             skills: exam.skills || "",
-            gradeTarget: exam.gradeTarget || ""
+            gradeTarget: exam.gradeTarget || "",
+            status: exam.status || "PUBLISHED"
           });
 
           if (exam.modules) {

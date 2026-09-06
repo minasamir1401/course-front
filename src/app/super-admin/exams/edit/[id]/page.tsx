@@ -80,15 +80,18 @@ export default function SuperAdminEditExamPage() {
 
   const toggleCourseSchool = (sId: string, checked?: boolean) => {
     const isSelected = (examData.schoolIds || []).includes(sId);
-    if (isSelected) setExamData({ ...examData, schoolIds: (examData.schoolIds || []).filter(s => s !== sId) });
-    else setExamData({ ...examData, schoolIds: [...(examData.schoolIds || []), sId] });
+    const nextSchoolIds = isSelected
+      ? (examData.schoolIds || []).filter((s: string) => s !== sId)
+      : [...(examData.schoolIds || []), sId];
+    setExamData({ ...examData, schoolIds: nextSchoolIds, isCentral: nextSchoolIds.length === 0 });
   };
 
   const selectAllSchools = () => {
     if ((examData.schoolIds || []).length === schools.length) {
-      setExamData({ ...examData, schoolIds: [] });
+      setExamData({ ...examData, schoolIds: [], isCentral: true });
     } else {
-      setExamData({ ...examData, schoolIds: schools.map((s: any) => s.id) });
+      const allIds = schools.map((s: any) => s.id);
+      setExamData({ ...examData, schoolIds: allIds, isCentral: false });
     }
   };
 

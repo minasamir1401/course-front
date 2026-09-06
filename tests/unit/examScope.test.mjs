@@ -17,9 +17,15 @@ test("resolveExamEditScope keeps school-scoped exams out of central mode when th
 test("resolveExamEditScope keeps central exams without attached schools", () => {
   const scope = resolveExamEditScope({
     isCentral: true,
-    schools: [{ id: "school-a" }],
+    schools: [],
   });
 
   assert.equal(scope.isCentral, true);
   assert.deepEqual(scope.schoolIds, []);
+});
+
+test("selected schools take priority over a stale central flag when opening settings", () => {
+  const scope = resolveExamEditScope({ isCentral: true, schools: [{ id: "school-a" }] });
+  assert.equal(scope.isCentral, false);
+  assert.deepEqual(scope.schoolIds, ["school-a"]);
 });

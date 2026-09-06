@@ -17,6 +17,35 @@ export type ExamModuleView = {
 export type ExamWorkflowView = 'full-editor' | 'module-portal' | 'sub-exam-editor';
 export type ExamWorkflowRole = 'SUPER_ADMIN' | 'SCHOOL_ADMIN';
 
+export function getStudentExamTitle(exam: any): string {
+  const roots = (exam?.modules || []).filter((module: any) => !module.parentModuleId);
+  return (roots.length === 1 ? roots[0].title : exam?.title) || exam?.title || '';
+}
+
+// Use the same inheritance for the details page and the running exam timer.
+export function getStudentExamDuration(exam: any, subExamId?: string | null, moduleId?: string | null): number {
+  const modules = new Map<string, any>();
+  const collect = (items: any[], parentId?: string) => {
+    for (const item of items || []) {
+      modules.set(item.id, { ...item, parentModuleId: item.parentModuleId || parentId });
+      collect(item.subModules, item.id);
+    }
+  };
+  collect(exam?.modules);
+  const owner = subExamId ? [...modules.values()].find(module => (module.subExams || []).some((sub: any) => sub.id === subExamId)) : modules.get(moduleId || '');
+  const child = (owner?.subExams || []).find((sub: any) => sub.id === subExamId);
+  const durations = [child?.duration];
+  const visited = new Set<string>();
+  let current = owner;
+  while (current && !visited.has(current.id)) {
+    visited.add(current.id);
+    durations.push(current.duration);
+    current = modules.get(current.parentModuleId);
+  }
+  durations.push(exam?.duration);
+  return durations.map(Number).find(value => Number.isFinite(value) && value > 0) ?? 60;
+}
+
 export function getExamWorkflowView(moduleId?: string | null, subExamId?: string | null): ExamWorkflowView {
   if (moduleId && subExamId) {
     return 'sub-exam-editor';
@@ -124,12 +153,10 @@ export function buildExamModuleViews(exams: any[]): ExamModuleView[] {
 
   for (const exam of Array.isArray(exams) ? exams : []) {
     const modules = Array.isArray(exam?.modules) ? exam.modules : [];
-    const isEmptyDraft =
-      String(exam?.status || '').toUpperCase() === 'DRAFT'
-      && modules.length === 0
-      && (exam?._count?.questions ?? exam?.questions?.length ?? 0) === 0;
+    const questionsCount = exam?._count?.questions ?? exam?.questions?.length ?? 0;
+    const isEmpty = modules.length === 0 && questionsCount === 0;
 
-    if (isEmptyDraft) {
+    if (isEmpty) {
       continue;
     }
 
@@ -172,7 +199,7 @@ export function buildExamModuleViews(exams: any[]): ExamModuleView[] {
       // Include recursive counts from direct subModules
       for (const sm of subModules) {
         const smSubExams = Array.isArray(sm?.subExams) ? sm.subExams : [];
-        totalExamsCount += sm.examsCount ?? smSubExams.length;
+        if (moduleItem.examsCount == null) totalExamsCount += sm.examsCount ?? smSubExams.length;
         childQuestions += smSubExams.reduce(
           (total: number, se: any) => total + (se?.questionsCount ?? se?._count?.questions ?? se?.questions?.length ?? 0),
           0,

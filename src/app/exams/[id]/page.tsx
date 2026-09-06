@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { API_URL } from "@/lib/api";
+import { getStudentExamDuration } from "@/lib/examModuleView";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { Clock, ChevronRight, ChevronLeft, Send, AlertCircle, HelpCircle, Lock, Play, Calendar, ShieldCheck, CheckCircle2, Target, Info, Sparkles, BookOpen, MessageSquare, Star, ListOrdered, Award, TrendingUp, Flag } from 'lucide-react';
 import { useNotification } from "@/context/NotificationContext";
@@ -60,6 +61,7 @@ function TakeExamPageContent() {
   const searchParams = useSearchParams();
   const isPreviewMode = searchParams.get('preview') === 'true';
   const subExamId = searchParams.get('subExamId');
+  const moduleId = searchParams.get('moduleId');
   const { showToast } = useNotification();
   const { language } = useLanguage();
 
@@ -192,14 +194,11 @@ function TakeExamPageContent() {
       }
 
       let filteredQuestions = data.questions || [];
-      let subExamDuration = data.duration;
+      const subExamDuration = getStudentExamDuration(data, subExamId, moduleId);
       if (subExamId) {
         filteredQuestions = filteredQuestions.filter((q: any) => q.subExamId === subExamId);
         // Find subExam duration if possible
         const subExam = data.modules?.flatMap((m: any) => m.subExams || []).find((se: any) => se.id === subExamId);
-        if (subExam && subExam.duration) {
-          subExamDuration = subExam.duration;
-        }
         data.selectedSubExam = subExam;
       }
 
@@ -551,8 +550,8 @@ function TakeExamPageContent() {
           </h2>
           <p className="mt-3 text-sm font-bold text-slate-500">
             {language === 'ar'
-              ? 'تأكد من ربط الأسئلة بالاختبار أو بالموديول الصحيح ثم أعد المحاولة.'
-              : 'Make sure questions are attached to the correct exam or module, then try again.'}
+              ? 'تأكد من ربط الأسئلة بالاختبار أو بالقسم الصحيح ثم أعد المحاولة.'
+              : 'Make sure questions are attached to the correct exam or section, then try again.'}
           </p>
         </div>
       </div>

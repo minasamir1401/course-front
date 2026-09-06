@@ -6,7 +6,17 @@ import { FileText, Clock, AlertCircle, CheckCircle2, Calendar, Lock, Eye, EyeOff
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { API_URL } from "@/lib/api";
+import { getStudentExamTitle, getStudentExamDuration } from "@/lib/examModuleView";
 import { useLanguage } from "@/contexts/LanguageContext";
+
+const cleanStudentTitle = (title: string | undefined | null) => {
+  if (!title) return "";
+  return title
+    .replace(/الموديول\s+/gi, "القسم ")
+    .replace(/موديول\s+/gi, "قسم ")
+    .replace(/المديول\s+/gi, "القسم ")
+    .replace(/مديول\s+/gi, "قسم ");
+};
 
 export default function ExamDetailsPage() {
   const { t, language } = useLanguage();
@@ -62,26 +72,40 @@ export default function ExamDetailsPage() {
 
   const getChildExamStatus = (exam: any, userSubs: any[]) => {
     const now = new Date();
-    if (exam.publishDate && now < new Date(exam.publishDate)) return { label: language === 'ar' ? 'قريبًا' : 'Upcoming', color: 'bg-amber-100 text-amber-700', type: 'UPCOMING' };
-    if (exam.cutOffDate && now > new Date(exam.cutOffDate)) return { label: language === 'ar' ? 'منتهي' : 'Expired', color: 'bg-slate-100 text-slate-500', type: 'EXPIRED' };
-    if (exam.attemptsAllowed && userSubs.length >= exam.attemptsAllowed) return { label: language === 'ar' ? 'مكتمل' : 'Completed', color: 'bg-indigo-100 text-indigo-700', type: 'COMPLETED' };
-    return { label: language === 'ar' ? 'متاح الآن' : 'Available Now', color: 'bg-green-100 text-green-700', type: 'AVAILABLE' };
+    const start = exam.publishDate ? new Date(exam.publishDate) : (exam.startDate ? new Date(exam.startDate) : null);
+    const end = exam.cutOffDate ? new Date(exam.cutOffDate) : (exam.endDate ? new Date(exam.endDate) : null);
+
+    if (start && now < start) return { label: language === 'ar' ? "قريباً" : "Upcoming", color: "bg-amber-100 text-amber-700", icon: CalendarClock, type: "UPCOMING" };
+    if (end && now > end) return { label: language === 'ar' ? "منتهي" : "Expired", color: "bg-slate-100 text-slate-500", icon: Hourglass, type: "EXPIRED" };
+
+    if (exam.attemptsAllowed && exam.attemptsAllowed !== 999 && userSubs.length >= exam.attemptsAllowed) {
+      return { label: language === 'ar' ? "مكتمل" : "Completed", color: "bg-indigo-100 text-indigo-700", icon: CheckCircle2, type: "COMPLETED" };
+    }
+
+    return { label: language === 'ar' ? "متاح الآن" : "Available Now", color: "bg-green-100 text-green-700", icon: PlayCircle, type: "AVAILABLE" };
   };
 
-  // We are not fetching portfolio here for simplicity, but we could.
-  const getSubmissionsForExam = (examId: string): any[] => {
-    return []; // Placeholder for student submissions in details page
+  const getSubmissionsForExam = (examId: string) => {
+    return (activeModule?.submissions || []).filter((sub: any) => sub.subExamId === examId);
   };
+
+  const rootSections = (activeModule?.modules || []).filter((m: any) => !m.parentModuleId);
 
   return (
     <DashboardLayout>
       <div className={`w-full max-w-[1000px] mx-auto space-y-8 pb-24 px-4 sm:px-6 md:px-8 bg-slate-50/50 min-h-screen overflow-x-hidden ${language === 'ar' ? 'rtl' : 'ltr'}`} dir={language === 'ar' ? "rtl" : "ltr"}>
         
+        {/* Navigation & Header */}
         <div className="pt-8 flex items-center gap-4">
-            <button onClick={() => router.push('/exams')} className="w-10 h-10 rounded-xl bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors">
-                <ArrowRight className="w-5 h-5" />
-            </button>
-            <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">{language === 'ar' ? 'تفاصيل الامتحان' : 'Exam Details'}</h1>
+          <button
+            onClick={() => router.push('/exams')}
+            className="w-10 h-10 rounded-xl bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
+          >
+            <ArrowRight className="w-5 h-5" />
+          </button>
+          <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+            {language === 'ar' ? 'تفاصيل الامتحان' : 'Exam Details'}
+          </h1>
         </div>
 
         {loading ? (
@@ -104,19 +128,23 @@ export default function ExamDetailsPage() {
                     <Layers className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-black text-slate-900">{activeModule.title}</h3>
-                    <p className="text-slate-500 font-bold">{activeModule.modules?.length || 0} {language === 'ar' ? 'أقسام متاحة' : 'Available Sections'}</p>
+                    <h3 className="text-2xl font-black text-slate-900">{cleanStudentTitle(getStudentExamTitle(activeModule))}</h3>
+                    <p className="text-slate-500 font-bold">
+                      {language === 'ar'
+                        ? (rootSections.length === 1 ? 'قسم واحد متاح' : rootSections.length === 2 ? 'قسمان متاحان' : rootSections.length >= 3 && rootSections.length <= 10 ? `${rootSections.length} أقسام متاحة` : `${rootSections.length} قسماً متاحاً`)
+                        : `${rootSections.length} Available Sections`}
+                    </p>
                   </div>
                 </div>
 
                 <div className="space-y-8">
-                  {(activeModule.modules || []).filter((m: any) => !m.parentModuleId).map((section: any, idx: number) => (
+                  {rootSections.map((section: any, idx: number) => (
                     <div key={section.id} className="relative pl-0 pr-8 md:pr-12">
                       <div className="absolute top-0 right-0 w-8 md:w-12 h-full flex flex-col items-center">
                         <div className="w-8 h-8 md:w-10 md:h-10 bg-indigo-50 border-2 border-indigo-200 text-indigo-600 rounded-full flex items-center justify-center font-black text-sm z-10 shadow-sm">
                           {idx + 1}
                         </div>
-                        {idx !== ((activeModule.modules || []).filter((m: any) => !m.parentModuleId).length - 1) && (
+                        {idx !== (rootSections.length - 1) && (
                           <div className="w-1 flex-1 bg-indigo-50 my-2 rounded-full"></div>
                         )}
                       </div>
@@ -124,7 +152,7 @@ export default function ExamDetailsPage() {
                       <div className="bg-slate-50 rounded-3xl p-6 border border-slate-100 mr-2 md:mr-4">
                         <h4 className="text-lg md:text-xl font-black text-slate-900 mb-6 flex items-center gap-2">
                           <Target className="w-5 h-5 text-indigo-500" />
-                          {section.title}
+                          {cleanStudentTitle(section.title)}
                         </h4>
                         
                         <div className="space-y-4">
@@ -140,7 +168,7 @@ export default function ExamDetailsPage() {
                                 <div className="flex-1 text-center md:text-right">
                                   <h5 className="font-black text-slate-800 group-hover:text-indigo-600 transition-colors mb-1">{exam.title}</h5>
                                   <div className="flex items-center justify-center md:justify-start gap-3 text-[11px] font-bold text-slate-500">
-                                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {exam.duration} {language === 'ar' ? 'دقيقة' : 'Minutes'}</span>
+                                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {getStudentExamDuration(activeModule, exam.id)} {language === 'ar' ? 'دقيقة' : 'Minutes'}</span>
                                     <span className="flex items-center gap-1"><FileText className="w-3.5 h-3.5" /> {exam.questionsCount ?? exam._count?.questions ?? 0} {language === 'ar' ? 'سؤال' : 'Questions'}</span>
                                     {exam.attemptsAllowed !== 999 && (
                                       <span className="flex items-center gap-1"><Timer className="w-3.5 h-3.5" /> {language === 'ar' ? 'مسموح' : 'Allowed'} {exam.attemptsAllowed} {language === 'ar' ? 'محاولات' : 'Attempts'}</span>
@@ -171,7 +199,7 @@ export default function ExamDetailsPage() {
                             <div className="mt-6 space-y-4 pt-4 border-t border-slate-200/80">
                               <div className="text-xs font-black text-slate-600 uppercase tracking-wider flex items-center gap-2">
                                 <Layers className="w-4 h-4 text-indigo-600" />
-                                {language === 'ar' ? 'الموديولات الفرعية' : 'Sub-Modules'}
+                                {language === 'ar' ? 'الأقسام الفرعية' : 'Sub-Sections'}
                               </div>
                               <div className="space-y-4">
                                 {section.subModules.map((subMod: any) => (
@@ -179,7 +207,7 @@ export default function ExamDetailsPage() {
                                     <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
                                       <h5 className="font-black text-slate-800 text-base flex items-center gap-2">
                                         <span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
-                                        {subMod.title}
+                                        {cleanStudentTitle(subMod.title)}
                                       </h5>
                                       <span className="text-xs font-bold text-slate-400">
                                         {(subMod.subExams?.length || 0)} {language === 'ar' ? 'اختبار' : 'exams'}
@@ -196,7 +224,7 @@ export default function ExamDetailsPage() {
                                               <div>
                                                 <span className="font-bold text-sm text-slate-800">{smExam.title}</span>
                                                 <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium">
-                                                  <span>{smExam.duration} {language === 'ar' ? 'دقيقة' : 'min'}</span>
+                                                  <span>{getStudentExamDuration(activeModule, smExam.id)} {language === 'ar' ? 'دقيقة' : 'min'}</span>
                                                   <span>•</span>
                                                   <span>{smExam.questionsCount ?? smExam._count?.questions ?? 0} {language === 'ar' ? 'سؤال' : 'questions'}</span>
                                                 </div>
@@ -213,7 +241,7 @@ export default function ExamDetailsPage() {
                                       })}
                                       {(!subMod.subExams || subMod.subExams.length === 0) && (
                                         <div className="text-xs text-slate-400 text-center py-2">
-                                          {language === 'ar' ? 'لا توجد اختبارات داخل هذا الموديول الفرعي بعد' : 'No exams in this sub-module yet'}
+                                          {language === 'ar' ? 'لا توجد اختبارات داخل هذا القسم الفرعي بعد' : 'No exams in this sub-section yet'}
                                         </div>
                                       )}
                                     </div>
@@ -230,11 +258,11 @@ export default function ExamDetailsPage() {
                                 <FileText className="w-6 h-6" />
                               </div>
                               <div className="flex-1 text-center md:text-right">
-                                <h5 className="font-black text-slate-800 group-hover:text-indigo-600 transition-colors mb-1">{section.title}</h5>
+                                <h5 className="font-black text-slate-800 group-hover:text-indigo-600 transition-colors mb-1">{cleanStudentTitle(section.title)}</h5>
                                 <div className="flex items-center justify-center md:justify-start gap-3 text-[11px] font-bold text-slate-500">
                                   <span className="flex items-center gap-1"><FileText className="w-3.5 h-3.5" /> {section.questions.length} {language === 'ar' ? 'سؤال' : 'Questions'}</span>
                                   {activeModule.duration && (
-                                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {activeModule.duration} {language === 'ar' ? 'دقيقة' : 'Minutes'}</span>
+                                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {getStudentExamDuration(activeModule, null, section.id)} {language === 'ar' ? 'دقيقة' : 'Minutes'}</span>
                                   )}
                                 </div>
                               </div>

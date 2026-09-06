@@ -87,7 +87,7 @@ export const useExamAutosave = (props: any) => {
           attemptsAllowed: examData.attemptsAllowed === "" || examData.attemptsAllowed === undefined || examData.attemptsAllowed === null ? 999 : Number(examData.attemptsAllowed),
           startDate: examData.startDate || null,
           endDate: examData.endDate || null,
-          status: "DRAFT",
+          status: examData.status || (activeExamId ? "PUBLISHED" : "DRAFT"),
           modules: modulesPayload,
           questions: allQuestions,
           deletedQuestionIds: submittedDeletedQuestionIds
@@ -230,6 +230,8 @@ export const useExamAutosave = (props: any) => {
             setDeletedQuestionIds?.((prev: string[]) => prev.filter((id) => !submittedDeletedQuestionIds.includes(id)));
           }
           setLastAutoSave(new Date());
+        } else if (res.status === 404) {
+          console.warn("Auto-save skipped: Exam has been moved or deleted.");
         } else {
           const message = await res.text().catch(() => "");
           console.error("Auto-save failed:", message);

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { ArrowRightLeft, FolderInput, Plus, X, Layers, ArrowUpRight, FolderTree } from "lucide-react";
+import { ArrowRightLeft, FolderInput, Plus, X, Layers, ArrowUpRight, FolderTree, CheckCircle2 } from "lucide-react";
 import { API_URL } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";
 
@@ -70,6 +70,8 @@ export default function MoveModuleModal({
     isCurrentExam: boolean;
   }> = [];
 
+  const seenTargetModuleIds = new Set<string>();
+
   for (const ex of allExams || []) {
     const isCur = String(ex.id) === String(parentExam.id);
     const exTitle = ex.title || (isAr ? "اختبار بدون عنوان" : "Untitled Exam");
@@ -77,17 +79,20 @@ export default function MoveModuleModal({
     // Recursive collector for available modules
     const collectModules = (mods: any[]) => {
       for (const m of mods || []) {
-        if (!descendantIds.has(String(m.id))) {
-          availableTargetModules.push({
-            id: String(m.id),
-            title: m.title || (isAr ? "موديول بدون عنوان" : "Untitled Module"),
-            examId: String(ex.id),
-            examTitle: exTitle,
-            isCurrentExam: isCur,
-          });
-          if (Array.isArray(m.subModules)) {
-            collectModules(m.subModules);
-          }
+        const modId = String(m?.id || "");
+        if (!modId || seenTargetModuleIds.has(modId) || descendantIds.has(modId)) {
+          continue;
+        }
+        seenTargetModuleIds.add(modId);
+        availableTargetModules.push({
+          id: modId,
+          title: m.title || (isAr ? "موديول بدون عنوان" : "Untitled Module"),
+          examId: String(ex.id),
+          examTitle: exTitle,
+          isCurrentExam: isCur,
+        });
+        if (Array.isArray(m.subModules)) {
+          collectModules(m.subModules);
         }
       }
     };
@@ -308,7 +313,7 @@ export default function MoveModuleModal({
                 }`}
               >
                 <FolderInput className="w-5 h-5" />
-                <span>{isAr ? "داخل موديول آخر (فرعي)" : "Inside Module (Sub-Module)"}</span>
+                <span>{isAr ? "كموديول فرعي (يرث إعدادات الأب)" : "As Sub-Module (Inherits Settings)"}</span>
               </button>
 
               <button
@@ -343,51 +348,67 @@ export default function MoveModuleModal({
 
             {/* Destination Specific Dropdowns */}
             {entireMoveDestination === "as_sub_module" && (
-              <div className="space-y-2 pt-2">
-                <label className="text-xs font-bold text-slate-700 block">
-                  {isAr ? "حدد الموديول الأب الذي سيحتوي هذا الموديول:" : "Select Parent Module:"}
-                </label>
-                <select
-                  value={targetParentModuleId}
-                  onChange={(e) => setTargetParentModuleId(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-indigo-600 transition-all"
-                >
-                  <option value="">
-                    {isAr ? "-- اختر الموديول الأب --" : "-- Select Parent Module --"}
-                  </option>
-                  {availableTargetModules.filter((m) => m.isCurrentExam).length > 0 && (
-                    <optgroup
-                      label={
-                        isAr
-                          ? `هذا الامتحان (${parentExam?.title || "الحالي"})`
-                          : `Current Exam (${parentExam?.title || "Current"})`
-                      }
-                    >
-                      {availableTargetModules
-                        .filter((m) => m.isCurrentExam)
-                        .map((mod) => (
-                          <option key={mod.id} value={mod.id}>
-                            {mod.title}
-                          </option>
-                        ))}
-                    </optgroup>
-                  )}
-                  {Array.from(
-                    new Set(availableTargetModules.filter((m) => !m.isCurrentExam).map((m) => m.examId))
-                  ).map((examId) => {
-                    const examItems = availableTargetModules.filter((m) => m.examId === examId);
-                    const examTitle = examItems[0]?.examTitle || examId;
-                    return (
-                      <optgroup key={examId} label={examTitle}>
-                        {examItems.map((mod) => (
-                          <option key={mod.id} value={mod.id}>
-                            {mod.title}
-                          </option>
-                        ))}
+              <div className="space-y-3 pt-2">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    {isAr ? "حدد الموديول الأب الذي سيحتوي هذا الموديول:" : "Select Parent Module:"}
+                  </label>
+                  <select
+                    value={targetParentModuleId}
+                    onChange={(e) => setTargetParentModuleId(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:border-indigo-600 transition-all"
+                  >
+                    <option value="">
+                      {isAr ? "-- اختر الموديول الأب (سيرث إعداداته) --" : "-- Select Parent Module --"}
+                    </option>
+                    {availableTargetModules.filter((m) => m.isCurrentExam).length > 0 && (
+                      <optgroup
+                        label={
+                          isAr
+                            ? `هذا الامتحان (${parentExam?.title || "الحالي"})`
+                            : `Current Exam (${parentExam?.title || "Current"})`
+                        }
+                      >
+                        {availableTargetModules
+                          .filter((m) => m.isCurrentExam)
+                          .map((mod) => (
+                            <option key={`cur-${mod.id}`} value={mod.id}>
+                              {mod.title}
+                            </option>
+                          ))}
                       </optgroup>
-                    );
-                  })}
-                </select>
+                    )}
+                    {Array.from(
+                      new Set(availableTargetModules.filter((m) => !m.isCurrentExam).map((m) => m.examId))
+                    ).map((examId) => {
+                      const examItems = availableTargetModules.filter((m) => m.examId === examId);
+                      const examTitle = examItems[0]?.examTitle || examId;
+                      return (
+                        <optgroup key={`grp-${examId}`} label={examTitle}>
+                          {examItems.map((mod) => (
+                            <option key={`ext-${examId}-${mod.id}`} value={mod.id}>
+                              {mod.title}
+                            </option>
+                          ))}
+                        </optgroup>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                {targetParentModuleId && (
+                  <div className="p-3.5 rounded-2xl bg-emerald-50/90 border border-emerald-200 text-emerald-800 text-xs font-medium space-y-1 animate-in fade-in duration-200">
+                    <div className="flex items-center gap-2 font-bold text-emerald-900">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>{isAr ? "سيتم النقل كموديول فرعي" : "Will be moved as a Sub-Module"}</span>
+                    </div>
+                    <p className="text-[11px] leading-relaxed text-emerald-700">
+                      {isAr
+                        ? "سيرث هذا الموديول الفرعي وكافة اختباراته وأسئلته تلقائياً إعدادات الموديول الأب (المدة، درجة النجاح، تواريخ النشر والإغلاق، والفئة المستهدفة)."
+                        : "The sub-module and all its exams will automatically inherit the parent module's settings (duration, passing score, dates, and target grade)."}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -404,13 +425,15 @@ export default function MoveModuleModal({
                   <option value="">
                     {isAr ? "-- اختر الامتحان المستهدف --" : "-- Select Target Exam --"}
                   </option>
-                  {allExams
-                    .filter((e) => String(e.id) !== String(parentExam.id))
-                    .map((e) => (
-                      <option key={e.id} value={e.id}>
-                        {e.title || (isAr ? "امتحان بدون عنوان" : "Untitled Exam")}
-                      </option>
-                    ))}
+                  {Array.from(new Set((allExams || []).filter((e) => String(e.id) !== String(parentExam.id)).map(e => String(e.id))))
+                    .map((targetExamId) => {
+                      const e = (allExams || []).find((item) => String(item.id) === targetExamId);
+                      return (
+                        <option key={`target-ex-${targetExamId}`} value={targetExamId}>
+                          {e?.title || (isAr ? "امتحان بدون عنوان" : "Untitled Exam")}
+                        </option>
+                      );
+                    })}
                 </select>
               </div>
             )}
@@ -488,7 +511,7 @@ export default function MoveModuleModal({
                       {availableTargetModules
                         .filter((m) => m.isCurrentExam)
                         .map((mod) => (
-                          <option key={mod.id} value={mod.id}>
+                          <option key={`cur2-${mod.id}`} value={mod.id}>
                             {mod.title}
                           </option>
                         ))}
@@ -500,9 +523,9 @@ export default function MoveModuleModal({
                     const examItems = availableTargetModules.filter((m) => m.examId === examId);
                     const examTitle = examItems[0]?.examTitle || examId;
                     return (
-                      <optgroup key={examId} label={examTitle}>
+                      <optgroup key={`grp2-${examId}`} label={examTitle}>
                         {examItems.map((mod) => (
-                          <option key={mod.id} value={mod.id}>
+                          <option key={`ext2-${examId}-${mod.id}`} value={mod.id}>
                             {mod.title}
                           </option>
                         ))}
@@ -528,13 +551,15 @@ export default function MoveModuleModal({
                           ? `هذا الامتحان (${parentExam?.title || "الحالي"})`
                           : `Current Exam (${parentExam?.title || "Current"})`}
                       </option>
-                      {allExams
-                        .filter((e) => String(e.id) !== String(parentExam?.id))
-                        .map((e) => (
-                          <option key={e.id} value={e.id}>
-                            {e.title || (isAr ? "امتحان بدون عنوان" : "Untitled Exam")}
-                          </option>
-                        ))}
+                      {Array.from(new Set((allExams || []).filter((e) => String(e.id) !== String(parentExam?.id)).map(e => String(e.id))))
+                        .map((targetExamId) => {
+                          const e = (allExams || []).find((item) => String(item.id) === targetExamId);
+                          return (
+                            <option key={`target2-ex-${targetExamId}`} value={targetExamId}>
+                              {e?.title || (isAr ? "امتحان بدون عنوان" : "Untitled Exam")}
+                            </option>
+                          );
+                        })}
                     </select>
                   </div>
                 )}

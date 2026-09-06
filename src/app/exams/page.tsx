@@ -5,7 +5,17 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { AlertCircle, Award, Trophy, Flame, Medal, Layers, Sparkles, ChevronDown } from 'lucide-react';
 import Link from "next/link";
 import { API_URL } from "@/lib/api";
+import { getStudentExamTitle } from "@/lib/examModuleView";
 import { useLanguage } from "@/contexts/LanguageContext";
+
+const cleanStudentTitle = (title: string | undefined | null) => {
+  if (!title) return "";
+  return title
+    .replace(/الموديول\s+/gi, "القسم ")
+    .replace(/موديول\s+/gi, "قسم ")
+    .replace(/المديول\s+/gi, "القسم ")
+    .replace(/مديول\s+/gi, "قسم ");
+};
 
 export default function ExamsPage() {
   const { t, language } = useLanguage();
@@ -65,7 +75,7 @@ export default function ExamsPage() {
             <div className="flex-1 text-white">
               <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 text-indigo-200 text-[10px] md:text-xs font-black uppercase tracking-widest rounded-xl border border-white/10 mb-4 backdrop-blur-md">
                  <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
-                 {language === 'ar' ? 'رحلة التعلم (Modular Journey)' : 'Modular Journey'}
+                 {language === 'ar' ? 'رحلة التعلم' : 'Learning Journey'}
               </div>
               <h1 className="text-3xl md:text-5xl font-black mb-3 tracking-tight leading-tight">
                 {language === 'ar' ? 'اختباراتك المدرسية المتاحة' : 'Available School Exams'}
@@ -90,7 +100,7 @@ export default function ExamsPage() {
                 <AlertCircle className="w-12 h-12 text-rose-500 mx-auto mb-4" />
                 <p className="text-rose-600 font-black text-xl">{error}</p>
               </div>
-            ) : modules.length === 0 ? (
+            ) : modules.filter((m) => (m.modules || []).filter((x: any) => !x.parentModuleId).length > 0).length === 0 ? (
               <div className="py-32 text-center bg-white rounded-[40px] border border-slate-100 shadow-sm group">
                 <div className="w-24 h-24 bg-slate-50 border-2 border-slate-100 rounded-[28px] flex items-center justify-center mx-auto mb-8 text-slate-300">
                   <Layers className="w-12 h-12" />
@@ -101,26 +111,31 @@ export default function ExamsPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {modules.map((module, index) => (
-                  <Link href={`/exams/${module.id}/details`} key={`${module.id ?? 'module'}-${index}`} className="block bg-white rounded-3xl p-6 border-2 transition-all duration-300 cursor-pointer shadow-sm group relative overflow-hidden border-slate-100 hover:border-indigo-300 hover:shadow-lg">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="w-14 h-14 rounded-2xl flex items-center justify-center transition-colors bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white">
-                        <Layers className="w-7 h-7" />
-                      </div>
-                      <span className="bg-slate-50 text-slate-500 text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest border border-slate-200">
-                        {module.modules?.length || 0} {language === 'ar' ? 'أقسام' : 'Sections'}
-                      </span>
-                    </div>
-                    <h3 className="text-xl font-black text-slate-900 mb-2 group-hover:text-indigo-600 transition-colors">{module.title}</h3>
-                    
-                    <div className="mt-6 flex justify-end">
-                      <div className="px-4 py-2 rounded-xl flex items-center gap-2 font-bold text-sm transition-all bg-slate-50 text-slate-500 group-hover:bg-indigo-50 group-hover:text-indigo-600">
-                        {language === 'ar' ? 'عرض الأقسام' : 'View Sections'}
-                        <ChevronDown className="w-4 h-4 transition-transform -rotate-90" />
-                      </div>
-                    </div>
-                  </Link>
-                ))}
+                {modules
+                  .filter((m) => (m.modules || []).filter((x: any) => !x.parentModuleId).length > 0)
+                  .map((module, index) => {
+                    const rootSectionsCount = (module.modules || []).filter((m: any) => !m.parentModuleId).length;
+                    return (
+                      <Link href={`/exams/${module.id}/details`} key={`${module.id ?? 'module'}-${index}`} className="block bg-white rounded-3xl p-6 border-2 transition-all duration-300 cursor-pointer shadow-sm group relative overflow-hidden border-slate-100 hover:border-indigo-300 hover:shadow-lg">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="w-14 h-14 rounded-2xl flex items-center justify-center transition-colors bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white">
+                            <Layers className="w-7 h-7" />
+                          </div>
+                          <span className="bg-slate-50 text-slate-500 text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest border border-slate-200">
+                            {rootSectionsCount} {language === 'ar' ? (rootSectionsCount === 1 ? 'قسم' : rootSectionsCount === 2 ? 'قسمان' : rootSectionsCount >= 3 && rootSectionsCount <= 10 ? 'أقسام' : 'قسماً') : 'Sections'}
+                          </span>
+                        </div>
+                        <h3 className="text-xl font-black text-slate-900 mb-2 group-hover:text-indigo-600 transition-colors">{cleanStudentTitle(getStudentExamTitle(module))}</h3>
+
+                        <div className="mt-6 flex justify-end">
+                          <div className="px-4 py-2 rounded-xl flex items-center gap-2 font-bold text-sm transition-all bg-slate-50 text-slate-500 group-hover:bg-indigo-50 group-hover:text-indigo-600">
+                            {language === 'ar' ? 'عرض الأقسام' : 'View Sections'}
+                            <ChevronDown className="w-4 h-4 transition-transform -rotate-90" />
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })}
               </div>
             )}
           </div>

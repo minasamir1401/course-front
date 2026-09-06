@@ -912,7 +912,7 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
 
   const handleOpenModuleSettings = () => {
     if (!examModule) return;
-    setModuleSettingsTitle(examModule.title || state.examData?.title || "");
+    setModuleSettingsTitle(examModule.title || "");
     setModuleSettingsDescription(examModule.description || state.examData?.description || "");
     setModuleSettingsCoverImage(state.examData?.coverImage || "");
     setModuleSettingsDuration(examModule.duration ?? state.examData?.duration ?? 60);
@@ -920,8 +920,19 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
     setModuleSettingsAttempts(state.examData?.attemptsAllowed ?? "");
     setModuleSettingsPassword(state.examData?.password || "");
     setModuleSettingsResultVisibility(state.examData?.resultVisibility || "SHOW_SCORE");
-    setModuleSettingsIsCentral(state.examData?.isCentral ?? true);
-    setModuleSettingsSchoolIds(Array.isArray(state.examData?.schoolIds) ? [...state.examData.schoolIds] : []);
+    // Resolve schools properly from examData (handling schools array, schoolIds array, or schoolId)
+    const existingSchoolIds: string[] = Array.isArray(state.examData?.schoolIds) && state.examData.schoolIds.length > 0
+      ? state.examData.schoolIds
+      : Array.isArray(state.examData?.schools) && state.examData.schools.length > 0
+        ? state.examData.schools.map((s: any) => (typeof s === "object" ? s?.id : s)).filter(Boolean)
+        : state.examData?.schoolId ? [state.examData.schoolId] : [];
+
+    const isCentralSetting = existingSchoolIds.length > 0
+      ? false
+      : (state.examData?.isCentral !== undefined ? Boolean(state.examData.isCentral) : true);
+
+    setModuleSettingsIsCentral(isCentralSetting);
+    setModuleSettingsSchoolIds(existingSchoolIds);
 
     let currentGrades: string[] = [];
     if (Array.isArray(state.examData?.grades) && state.examData.grades.length > 0) {
@@ -957,20 +968,29 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
       return;
     }
     setIsSavingModuleSettings(true);
+    // Drain older autosaves before writing settings so they cannot restore an
+    // outdated school selection or module title after this explicit save.
+    if (state.manualSubmitRef) state.manualSubmitRef.current = true;
+    if (state.autoSaveGenerationRef) state.autoSaveGenerationRef.current += 1;
+    if (state.autoSaveTimerRef?.current) clearTimeout(state.autoSaveTimerRef.current);
     try {
+      await state.autoSaveWriteQueueRef?.current;
       const parentExamId = state.createdIdRef.current || state.createdId;
       const token = localStorage.getItem(tokenKey) || "";
       const targetSchoolIds = moduleSettingsIsCentral ? [] : (moduleSettingsSchoolIds || []).filter(Boolean);
 
-      // 1. Update parent exam with full settings
+      // Keep a single root module's assessment title in sync; preserve multi-module titles.
       const examPayload: any = {
-        title: moduleSettingsTitle.trim(),
-        description: moduleSettingsDescription.trim(),
+        title: !examModule.parentModuleId && (state.modules || []).filter((m: any) => !m.parentModuleId).length === 1
+          ? moduleSettingsTitle.trim()
+          : state.examData?.title || examModule.title || moduleSettingsTitle.trim(),
+        description: state.examData?.description || moduleSettingsDescription.trim(),
         coverImage: moduleSettingsCoverImage || null,
         grades: moduleSettingsGrades,
         subjects: moduleSettingsSubjects,
         isCentral: moduleSettingsIsCentral,
         schoolIds: targetSchoolIds,
+        schoolId: targetSchoolIds.length > 0 ? targetSchoolIds[0] : null,
         duration: moduleSettingsDuration !== "" ? Number(moduleSettingsDuration) : 60,
         passingScore: moduleSettingsPassingScore !== "" ? Number(moduleSettingsPassingScore) : 50,
         attemptsAllowed: moduleSettingsAttempts !== "" && moduleSettingsAttempts !== null ? Number(moduleSettingsAttempts) : 999,
@@ -978,25 +998,34 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
         startDate: moduleSettingsStartDate ? new Date(moduleSettingsStartDate).toISOString() : null,
         endDate: moduleSettingsEndDate ? new Date(moduleSettingsEndDate).toISOString() : null,
         resultVisibility: moduleSettingsResultVisibility,
+        status: state.examData?.status || "PUBLISHED",
       };
 
-      try {
-        const examRes = await fetch(`${API_URL}/exams/${parentExamId}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(examPayload),
-        });
-        if (examRes.ok) {
-          const updatedExam = await examRes.json();
-          if (typeof state.setExamData === "function") {
-            state.setExamData((prev: any) => ({ ...prev, ...examPayload, ...updatedExam }));
-          }
-        }
-      } catch (examErr) {
-        console.warn("Exam settings sync error:", examErr);
+      const examRes = await fetch(`${API_URL}/exams/${parentExamId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(examPayload),
+      });
+
+      if (!examRes.ok) {
+        const examErr = await examRes.json().catch(() => ({}));
+        throw new Error(examErr.error || examErr.message || (language === "ar" ? "فشل تحديث إعدادات التقييم" : "Failed to update assessment settings"));
+      }
+
+      const updatedExamData = await examRes.json().catch(() => ({}));
+      const resolvedExam = updatedExamData.exam || updatedExamData;
+      if (typeof state.setExamData === "function") {
+        state.setExamData((prev: any) => ({
+          ...prev,
+          ...examPayload,
+          ...resolvedExam,
+          isCentral: moduleSettingsIsCentral,
+          schoolIds: targetSchoolIds,
+          schools: (state.schools || []).filter((s: any) => targetSchoolIds.includes(s.id)),
+        }));
       }
 
       // 2. Update the specific active module
@@ -1055,6 +1084,7 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
         "error"
       );
     } finally {
+      if (state.manualSubmitRef) state.manualSubmitRef.current = false;
       setIsSavingModuleSettings(false);
     }
   };
@@ -2138,8 +2168,8 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
                         </div>
                         <p className="text-[10px] text-slate-400 font-bold">
                           {language === "ar"
-                            ? "لو ما اخترتش مدارس: التقييم يبقى مركزي. لو اخترت أكثر من مدرسة: النظام هيعمل نسخة من نفس التقييم لكل مدرسة."
-                            : "If no schools are selected, the assessment remains central. If multiple schools are selected, a copy will be created for each school."}
+                            ? "المحتوى متاح لطلاب المدارس المحددة فقط. إلغاء كل المدارس في الوضع المخصص يخفيه عن الطلاب؛ لإتاحته للجميع اختر التقييم المركزي."
+                            : "Only students of the selected schools can access this content. No selected schools in this mode means no student access; choose Centralized to share with all schools."}
                         </p>
                       </>
                     )}
