@@ -152,6 +152,10 @@ export const apiFetch = async (
   if (token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`);
   }
+  // Legacy callers read this login marker from localStorage. It is not a JWT.
+  if (headers.get('Authorization') === 'Bearer cookie_auth') {
+    headers.delete('Authorization');
+  }
   finalInit = { ...init, headers, credentials: 'include' };
 
   let res = await fetch(input, finalInit);
