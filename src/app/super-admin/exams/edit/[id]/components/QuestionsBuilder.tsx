@@ -9,7 +9,7 @@ import { getOptionLetter, cleanOptionText } from '@/lib/utils';
 import { QUESTION_TYPES, SECTION_STYLE_PRESETS } from '../constants';
 import { parseJson } from '../utils/examUtils';
 import { sanitizeHtml } from '@/lib/sanitize';
-import { ChevronUp, ChevronDown, CheckCircle2, Edit2, Trash2, Plus, FileText, Settings, Activity, MoveUp, MoveDown, Mic, Video, Image as ImageIcon, Layout, Check, HelpCircle, Upload, Download, Target, X, Save, Loader2 } from 'lucide-react';
+import { ChevronUp, ChevronDown, CheckCircle2, Edit2, Trash2, Plus, FileText, Settings, Activity, MoveUp, MoveDown, Mic, Video, Image as ImageIcon, Layout, Check, HelpCircle, Upload, Download, Target, X, Save, Loader2, Sparkles } from 'lucide-react';
 import { CustomSelect } from '@/components/ui/CustomSelect';
 import InteractiveQuestionEditor from '@/components/InteractiveQuestionEditor';
 import * as XLSX from "xlsx";
@@ -18,6 +18,72 @@ import { QuestionExcelExportButton } from '@/components/QuestionExcelExportButto
 
 export const QuestionsBuilder = (props: any) => {
   const { currentModule, setCurrentModule, activeSubExamIndex, source, language, assignmentsExcelRef, questionsExcelRef, advancedMetadataExcelRef, handleAssignmentsExcelChange, handleQuestionsExcelChange, handleAdvancedMetadataExcelChange, handleExcelUpload, downloadQuestionsTemplate, downloadAdvancedMetadataTemplate, handleAddQuestionForSource, showQuestionForm, setShowQuestionForm, list, moveQuestionForSource, expandedQuestionIndex, setExpandedQuestionIndex, handleEditQuestionForSource, removeQuestionForSource, tempQuestion, setTempQuestion, updateCurrentQuestionField, customSkills, setCustomSkills, allExistingSkills, availableMetadata, openDropdownId, setOpenDropdownId, addQuestionSection, updateQuestionSectionContent, removeQuestionSection, isQuestionCorrectAnswer, toggleQuestionCorrectAnswer, updateQuestionOption, handleSaveQuestionForSource, editingQuestionIndex } = props;
+
+  const [isCleaningDuplicates, setIsCleaningDuplicates] = React.useState(false);
+
+  const handleCleanDuplicates = async () => {
+    const confirmMsg = language === 'ar'
+      ? 'هل تريد بالتأكيد فحص وتنظيف الأسئلة المكررة والفارغة في هذا الاختبار؟\n(الأسئلة التي أجاب عليها طلاب لن تُحذف أبداً)'
+      : 'Are you sure you want to clean duplicate and empty questions?\n(Questions with student answers will NEVER be deleted)';
+    if (!window.confirm(confirmMsg)) return;
+
+    setIsCleaningDuplicates(true);
+    try {
+      // 1. Clean from local React state immediately so user sees immediate results
+      const seen = new Set<string>();
+      const filterCleanList = (qList: any[]) => {
+        return (qList || []).filter((q: any) => {
+          const rawText = String(q.text || '')
+            .replace(/<[^>]*>/g, ' ')
+            .replace(/&nbsp;/gi, ' ')
+            .replace(/[−–—]/g, '-')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase()
+            .replace(/^(question|سؤال|q)\s*\d+(\s*\([^)]*\))?[:.\s-]*/i, '')
+            .trim();
+          const hasMedia = Boolean((q.imageUrl && q.imageUrl.trim()) || (q.videoUrl && q.videoUrl.trim()));
+          if (rawText.length < 2 && !hasMedia) return false; // empty question!
+          
+          const alpha = rawText.replace(/[^a-z0-9\u0600-\u06FF]/gi, '');
+          const key = alpha.length >= 15 ? alpha.substring(0, 35) : rawText;
+          if (seen.has(key)) return false; // duplicate!
+          seen.add(key);
+          return true;
+        });
+      };
+
+      if (source === 'questions' && activeSubExamIndex !== null && currentModule.subExams && currentModule.subExams[activeSubExamIndex]) {
+        const cleaned = filterCleanList(currentModule.subExams[activeSubExamIndex].questions);
+        const updatedSubExams = [...currentModule.subExams];
+        updatedSubExams[activeSubExamIndex] = { ...updatedSubExams[activeSubExamIndex], questions: cleaned };
+        setCurrentModule({ ...currentModule, subExams: updatedSubExams });
+      } else {
+        const cleaned = filterCleanList(currentModule[source]);
+        setCurrentModule({ ...currentModule, [source]: cleaned });
+      }
+
+      // 2. Call backend clean-duplicates endpoint if examId is available
+      const pathParts = typeof window !== 'undefined' ? window.location.pathname.split('/') : [];
+      const examId = props.examId || pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2];
+      if (examId && examId !== 'new' && examId !== 'edit') {
+        const token = localStorage.getItem('token');
+        await fetch(`/api/exams/${examId}/clean-duplicates`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          }
+        }).then(r => r.json()).catch(() => {});
+      }
+
+      alert(language === 'ar' ? 'تم تنظيف الأسئلة المكررة والفارغة بنجاح!' : 'Duplicates and empty questions cleaned successfully!');
+    } catch (err) {
+      console.error('Failed to clean duplicates:', err);
+    } finally {
+      setIsCleaningDuplicates(false);
+    }
+  };
 
   const renderQuestionsBuilderFunc = () => {
     const list = (source === 'questions' && activeSubExamIndex !== null && currentModule.subExams && currentModule.subExams[activeSubExamIndex]) ? (currentModule.subExams[activeSubExamIndex].questions || []) : (currentModule[source] || []);

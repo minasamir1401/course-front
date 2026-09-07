@@ -108,6 +108,43 @@ export function buildModulesSubmissionPayload(modules: any[]) {
   return { modulesPayload, allQuestions };
 }
 
+export function deduplicateSubmissionQuestions(questions: any[]) {
+  const seenIds = new Set<string>();
+  const seenSignatures = new Set<string>();
+  const result: any[] = [];
+
+  for (const q of (Array.isArray(questions) ? questions : [])) {
+    if (!q) continue;
+    const rawText = String(q.text || q.content || '')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/[−–—]/g, '-')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase()
+      .replace(/^(question|سؤال|q)\s*\d+(\s*\([^)]*\))?[:.\s-]*/i, '')
+      .trim();
+
+    const hasMedia = Boolean((q.imageUrl && String(q.imageUrl).trim()) || (q.videoUrl && String(q.videoUrl).trim()));
+    // Skip empty questions
+    if (rawText.length < 2 && !hasMedia) continue;
+
+    const id = q.id && typeof q.id === 'string' && q.id.length > 20 ? q.id : null;
+    if (id && seenIds.has(id)) continue;
+
+    const alpha = rawText.replace(/[^a-z0-9\u0600-\u06FF]/gi, '');
+    const sig = alpha.length >= 15 ? alpha.substring(0, 35) : rawText;
+    const scopeKey = `${q.moduleId || 'none'}:${q.subExamId || 'none'}:${sig}`;
+    if (sig.length >= 5 && seenSignatures.has(scopeKey)) continue;
+
+    if (id) seenIds.add(id);
+    if (sig.length >= 5) seenSignatures.add(scopeKey);
+    result.push(q);
+  }
+
+  return result;
+}
+
 export function buildExamSubmissionPayload({
   modules,
   standaloneQuestions = [],
@@ -119,8 +156,10 @@ export function buildExamSubmissionPayload({
     subExamId: null,
   }));
 
+  const rawCombined = [...allQuestions, ...standalonePayload];
+
   return {
     modulesPayload,
-    allQuestions: [...allQuestions, ...standalonePayload],
+    allQuestions: deduplicateSubmissionQuestions(rawCombined),
   };
 }

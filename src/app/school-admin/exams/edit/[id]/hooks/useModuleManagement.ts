@@ -269,30 +269,10 @@ const openAddModuleModal = () => {
               }
               let q: any;
               if (qIndex < targetList.length) {
-              q = { ...targetList[qIndex] };
-            } else {
-              q = {
-                id: Date.now() + Math.random(),
-                text: "",
-                type: "MCQ",
-                label: "MCQ",
-                options: ["", "", "", ""],
-                correctAnswer: "",
-                correctAnswers: [],
-                points: 1,
-                xpPoints: 10,
-                skill: "General",
-                level: "Medium",
-                dok: "",
-                standard: "",
-                indicator: "",
-                learningOutcome: "",
-                videoUrl: "",
-                sections: [],
-                attempts: 1
-              };
-              targetList.push(q);
-                qIndex = targetList.length - 1;
+                q = { ...targetList[qIndex] };
+              } else {
+                // Do not create empty questions from metadata excel if there is no question at this index
+                continue;
               }
 
             if (courseIdx >= 0) q.course = String(row[courseIdx]).trim();

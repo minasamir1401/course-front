@@ -48,16 +48,20 @@ export function collectQuestionsIntoSubExam({
   const existingIds = new Set(existingQuestions.map((q: any, i: number) => questionKey(q, i)));
   const normalizeContent = (text: string) =>
     String(text || '')
-      .replace(/<[^>]+>/g, '')
-      .replace(/&nbsp;/g, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/[−–—]/g, '-')
       .replace(/\s+/g, ' ')
       .trim()
-      .toLowerCase();
+      .toLowerCase()
+      .replace(/^(question|سؤال|q)\s*\d+(\s*\([^)]*\))?[:.\s-]*/i, '')
+      .replace(/[^a-z0-9\u0600-\u06FF]/gi, '')
+      .substring(0, 40);
 
   const existingSigs = new Set(
     existingQuestions
       .map((q: any) => normalizeContent(q?.text))
-      .filter((s: string) => s.length > 5),
+      .filter((s: string) => s.length >= 6),
   );
   const movedQuestionIds: string[] = [];
   const collectedQuestions = [...existingQuestions];

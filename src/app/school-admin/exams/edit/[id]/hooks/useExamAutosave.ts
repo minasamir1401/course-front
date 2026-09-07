@@ -6,7 +6,7 @@ import { canRunExamAutosave } from '@/lib/examAutosavePolicy';
 import { attachQuestionsToModules, getStandaloneExamQuestions } from '@/lib/examModuleQuestions';
 import { normalizePersistedExamQuestions } from '@/lib/persistedExamQuestion';
 import { requiresExamAutosaveIdSync, requiresStandaloneExamQuestionIdSync } from '@/lib/examAutosaveIdSync';
-import { syncClientItemsWithServerIds } from '@/lib/examAutosaveModuleSync';
+import { syncClientItemsWithServerIds, syncClientSubExamsWithServerIds } from '@/lib/examAutosaveModuleSync';
 import { buildExamSavePayload } from '@/lib/examSaveScope';
 
 export const useExamAutosave = (props: any) => {
@@ -185,12 +185,13 @@ export const useExamAutosave = (props: any) => {
                 // Keep current state edits so we don't overwrite user actively typing, 
                 // but preserve backend-assigned IDs (UUIDs)
                 setCurrentModule((prev: any) => ({
-                ...prev,
-                id: parsedModules[idx].id,
-                content: prev.content,
-                slides: syncClientItemsWithServerIds(prev.slides, parsedModules[idx].slides),
-                questions: syncClientItemsWithServerIds(prev.questions, parsedModules[idx].questions),
-                assignments: syncClientItemsWithServerIds(prev.assignments, parsedModules[idx].assignments),
+                  ...prev,
+                  id: parsedModules[idx].id,
+                  content: prev.content,
+                  slides: syncClientItemsWithServerIds(prev.slides, parsedModules[idx].slides),
+                  questions: syncClientItemsWithServerIds(prev.questions, parsedModules[idx].questions),
+                  assignments: syncClientItemsWithServerIds(prev.assignments, parsedModules[idx].assignments),
+                  subExams: syncClientSubExamsWithServerIds(prev.subExams, parsedModules[idx].subExams),
                 }));
               }
               // Set all modules with backend IDs
@@ -213,6 +214,7 @@ export const useExamAutosave = (props: any) => {
                     slides: syncClientItemsWithServerIds(currentModule.slides, pl.slides),
                     questions: syncClientItemsWithServerIds(currentModule.questions, pl.questions),
                     assignments: syncClientItemsWithServerIds(currentModule.assignments, pl.assignments),
+                    subExams: syncClientSubExamsWithServerIds(currentModule.subExams, pl.subExams),
                   };
                 }
                 return pl;
