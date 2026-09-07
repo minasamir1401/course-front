@@ -38,41 +38,41 @@ export default function TakeExamPage() {
 const parseQuestionChoices = (options: any): string[] => {
   if (!options) return [];
   if (Array.isArray(options)) {
-    return options.map(String).filter((s) => s.trim().length > 0);
+    return options.map(String).filter((s: string) => s.trim().length > 0);
   }
   if (typeof options === 'string') {
     try {
-      const parsed = JSON.parse(options);
+      const parsed: any = JSON.parse(options);
       if (Array.isArray(parsed)) {
-        return parsed.map(String).filter((s) => s.trim().length > 0);
+        return (parsed as unknown[]).map(String).filter((s: string) => s.trim().length > 0);
       }
       if (parsed && typeof parsed === 'object') {
         if (Array.isArray(parsed.choices)) {
-          return parsed.choices.map(String).filter((s) => s.trim().length > 0);
+          return (parsed.choices as unknown[]).map(String).filter((s: string) => s.trim().length > 0);
         }
         if (Array.isArray(parsed.options)) {
-          return parsed.options.map(String).filter((s) => s.trim().length > 0);
+          return (parsed.options as unknown[]).map(String).filter((s: string) => s.trim().length > 0);
         }
-        const values = Object.values(parsed).map(String).filter((s) => s.trim().length > 0);
+        const values = Object.values(parsed).map(String).filter((s: string) => s.trim().length > 0);
         if (values.length > 0) return values;
       }
     } catch {
       if (options.includes('\n')) {
-        return options.split('\n').map((s) => s.trim()).filter((s) => s.length > 0);
+        return options.split('\n').map((s: string) => s.trim()).filter((s: string) => s.length > 0);
       }
       if (options.includes(',')) {
-        return options.split(',').map((s) => s.trim()).filter((s) => s.length > 0);
+        return options.split(',').map((s: string) => s.trim()).filter((s: string) => s.length > 0);
       }
     }
   }
   if (typeof options === 'object' && options !== null) {
     if (Array.isArray(options.choices)) {
-      return options.choices.map(String).filter((s) => s.trim().length > 0);
+      return (options.choices as unknown[]).map(String).filter((s: string) => s.trim().length > 0);
     }
     if (Array.isArray(options.options)) {
-      return options.options.map(String).filter((s) => s.trim().length > 0);
+      return (options.options as unknown[]).map(String).filter((s: string) => s.trim().length > 0);
     }
-    const values = Object.values(options).map(String).filter((s) => s.trim().length > 0);
+    const values = Object.values(options).map(String).filter((s: string) => s.trim().length > 0);
     if (values.length > 0) return values;
   }
   return [];
