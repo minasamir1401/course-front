@@ -3,7 +3,7 @@ import { buildQuestionWorkbook, importModuleQuestions } from '@/lib/questionExce
 import { planQuestionImport } from '@/lib/questionExcelSync';
 import { useLanguage } from '@/contexts/LanguageContext';
 import * as XLSX from "xlsx";
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import { collectMetadataFromQuestions, mergeAvailableMetadata, normalizeDok } from '@/lib/examQuestionMetadata';
 import { canCreateModule } from '@/lib/moduleCreationPolicy';
 import { createModuleDraft, upsertModuleDraft } from '@/lib/moduleInlineWorkspace';
@@ -135,7 +135,9 @@ const openAddModuleModal = () => {
   };
 
   const excelContext = useRef(props);
-  excelContext.current = props;
+  useEffect(() => {
+    excelContext.current = props;
+  });
   const handleQuestionsExcelChange = (e: React.ChangeEvent<HTMLInputElement>, activeSubExamIndex: number | null) =>
     importModuleQuestions(e, activeSubExamIndex, 'questions', () => excelContext.current, false);
   const handleAssignmentsExcelChange = (e: React.ChangeEvent<HTMLInputElement>, activeSubExamIndex: number | null) =>

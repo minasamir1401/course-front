@@ -1,4 +1,9 @@
-
+/**
+ * 🔒 AUTHENTICATION ARCHITECTURE NOTE:
+ * Actual JWTs are NEVER stored in localStorage to protect against XSS token exfiltration.
+ * Authentication uses httpOnly cookies ('auth_token') sent automatically via credentials: 'include'.
+ * The TOKEN keys below only store the UI marker string 'cookie_auth' for client-side route guards.
+ */
 export const AUTH_KEYS = {
   SUPER_ADMIN: {
     TOKEN: "super_admin_token",
@@ -17,6 +22,17 @@ export const AUTH_KEYS = {
     USER: "lms_user",
     LOGIN_PATH: "/login",
     DASHBOARD_PATH: "/dashboard"
+  }
+};
+
+export const checkAuthSession = async (): Promise<{ authenticated: boolean; user: any | null }> => {
+  try {
+    const res = await fetch('/api/auth/me', { credentials: 'include' });
+    if (!res.ok) return { authenticated: false, user: null };
+    const data = await res.json();
+    return { authenticated: Boolean(data.authenticated), user: data.user || null };
+  } catch {
+    return { authenticated: false, user: null };
   }
 };
 
@@ -63,37 +79,41 @@ export const logout = (router: any, currentPath: string = "") => {
   }
 };
 
-export const startImpersonation = (targetToken: string, targetUser: any, targetRole: string) => {
-  // 1. Capture current admin data
-  const adminToken = localStorage.getItem(AUTH_KEYS.SUPER_ADMIN.TOKEN) || localStorage.getItem(AUTH_KEYS.SCHOOL_ADMIN.TOKEN);
+export const startImpersonation = (_targetToken: string, targetUser: any, targetRole: string) => {
+  // 1. Capture current admin display data (no raw JWT)
   const adminUser = localStorage.getItem(AUTH_KEYS.SUPER_ADMIN.USER) || localStorage.getItem(AUTH_KEYS.SCHOOL_ADMIN.USER);
-  const adminType = localStorage.getItem(AUTH_KEYS.SUPER_ADMIN.TOKEN) ? 'SUPER' : 'SCHOOL';
+  const adminType = localStorage.getItem(AUTH_KEYS.SUPER_ADMIN.USER) ? 'SUPER' : 'SCHOOL';
 
-  // 2. Clear everything
+  // 2. Clear previous session display state
   clearAllAuthData();
 
-  // 3. Save backup
-  if (adminToken) {
-    localStorage.setItem("original_admin_token", adminToken);
-    localStorage.setItem("original_admin_user", adminUser || "");
-    localStorage.setItem("original_admin_type", adminType);
-    localStorage.setItem("is_impersonating", "true");
-  }
+  // 3. Save display backup metadata (NOT the raw JWT)
+  localStorage.setItem("original_admin_user", adminUser || "");
+  localStorage.setItem("original_admin_type", adminType);
+  localStorage.setItem("is_impersonating", "true");
 
-  // 4. Set target session
+  // 4. Set target session display info; token is safely kept in httpOnly cookie
   if (targetRole === 'STUDENT') {
-    localStorage.setItem(AUTH_KEYS.STUDENT.TOKEN, targetToken);
+    localStorage.setItem(AUTH_KEYS.STUDENT.TOKEN, 'cookie_auth');
     localStorage.setItem(AUTH_KEYS.STUDENT.USER, JSON.stringify(targetUser));
   } else if (targetRole === 'SCHOOL_ADMIN' || targetRole === 'TEACHER') {
-    localStorage.setItem(AUTH_KEYS.SCHOOL_ADMIN.TOKEN, targetToken);
+    localStorage.setItem(AUTH_KEYS.SCHOOL_ADMIN.TOKEN, 'cookie_auth');
     localStorage.setItem(AUTH_KEYS.SCHOOL_ADMIN.USER, JSON.stringify(targetUser));
   }
 };
 
-export const stopImpersonation = () => {
-  const adminToken = localStorage.getItem("original_admin_token");
+export const stopImpersonation = async () => {
   const adminUser = localStorage.getItem("original_admin_user");
   const adminType = localStorage.getItem("original_admin_type");
+
+  try {
+    await fetch('/api/admin/stop-impersonate', {
+      method: 'POST',
+      credentials: 'include'
+    });
+  } catch {
+    // Non-fatal, server might be offline
+  }
 
   // Clear current impersonation session
   localStorage.removeItem("lms_token");
@@ -105,13 +125,12 @@ export const stopImpersonation = () => {
   localStorage.removeItem("original_admin_user");
   localStorage.removeItem("original_admin_type");
 
-  if (adminToken && adminType) {
-    // Restore original session
+  if (adminType) {
     const key = adminType === 'SUPER' ? AUTH_KEYS.SUPER_ADMIN : AUTH_KEYS.SCHOOL_ADMIN;
-    localStorage.setItem(key.TOKEN, adminToken);
-    localStorage.setItem(key.USER, adminUser || "");
-    
-    // Redirect to correct dashboard with a full reload to clear all React states
+    localStorage.setItem(key.TOKEN, 'cookie_auth');
+    if (adminUser) {
+      localStorage.setItem(key.USER, adminUser);
+    }
     window.location.href = key.DASHBOARD_PATH;
   } else {
     window.location.href = AUTH_KEYS.STUDENT.LOGIN_PATH;

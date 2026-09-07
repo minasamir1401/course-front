@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { 
   Play, Zap, BarChart2, Users, ArrowRight,
   BookOpen, CheckCircle, Trophy, Menu, X, Hexagon
@@ -37,8 +38,8 @@ export default function LandingPage() {
       <header className="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-md z-50">
         <div className="max-w-7xl mx-auto px-6 h-[90px] flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-16 md:h-20 w-auto hover:scale-105 transition-transform duration-300">
-              <img src="/logo.jpeg" alt="Klevro" className="h-full object-contain" />
+            <div className="h-16 md:h-20 w-auto hover:scale-105 transition-transform duration-300 relative">
+              <Image src="/logo.jpeg" alt="Klevro" width={160} height={60} priority className="h-full w-auto object-contain" />
             </div>
           </div>
 

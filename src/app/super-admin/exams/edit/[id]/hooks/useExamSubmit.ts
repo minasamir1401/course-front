@@ -1,10 +1,12 @@
-// @ts-nocheck
 import { API_URL } from '@/lib/api';
 import { buildDraftModules, buildExamSubmissionPayload } from '@/lib/examEditingPayload';
 import { buildExamSavePayload, isChildExamSave } from '@/lib/examSaveScope';
+import { getStandaloneExamQuestions } from '@/lib/examModuleQuestions';
+import { normalizePersistedExamQuestions } from '@/lib/persistedExamQuestion';
+import { syncClientItemsWithServerIds } from '@/lib/examAutosaveModuleSync';
 
 export const useExamSubmit = (props: any) => {
-  const { examData, modules, isModuleModalOpen, currentModule, editingModuleIndex, manualSubmitRef, autoSaveGenerationRef, autoSaveTimerRef, setIsLoading, autoSaveWriteQueueRef, createdIdRef, standaloneQuestions, deletedQuestionIds, setDeletedQuestionIds, showToast, language, router, t, isLoading, isLoadingQuestions, moduleId, subExamId } = props;
+  const { examData, modules, isModuleModalOpen, currentModule, editingModuleIndex, manualSubmitRef, autoSaveGenerationRef, autoSaveTimerRef, setIsLoading, autoSaveWriteQueueRef, createdIdRef, standaloneQuestions, setStandaloneQuestions, deletedQuestionIds, setDeletedQuestionIds, showToast, language, router, t, isLoading, isLoadingQuestions, moduleId, subExamId } = props;
 
     const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,6 +54,7 @@ export const useExamSubmit = (props: any) => {
         const childRes = await fetch(`${API_URL}/exams/${createdIdRef.current}/modules/${moduleId}/exams/${subExamId}`, {
           method: 'PUT',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({
             title: activeSubExam.title,
             password: activeSubExam.password || null,
@@ -80,6 +83,7 @@ export const useExamSubmit = (props: any) => {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json"
         },
+        credentials: 'include',
         body: JSON.stringify(buildExamSavePayload({
           title: examData.title,
           description: examData.description,
@@ -115,6 +119,15 @@ export const useExamSubmit = (props: any) => {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.stack || data.details || data.error || "Failed to create exam");
+      }
+
+      const resData = await res.json().catch(() => null);
+      if (resData && resData.modules) {
+        const persistedQuestions = normalizePersistedExamQuestions(resData.questions);
+        const serverStandaloneQuestions = getStandaloneExamQuestions(persistedQuestions);
+        setStandaloneQuestions?.((current: any[]) =>
+          syncClientItemsWithServerIds(current, serverStandaloneQuestions),
+        );
       }
 
       if (submittedDeletedQuestionIds.length > 0) {

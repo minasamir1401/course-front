@@ -130,6 +130,7 @@ export const useExamSubmit = (props: any) => {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json"
         },
+        credentials: 'include',
         body: JSON.stringify({
           title: resolvedTitle,
           description: examData.description,

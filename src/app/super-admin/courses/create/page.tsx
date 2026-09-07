@@ -651,7 +651,9 @@ export default function CreateCoursePage() {
   };
 
   const excelContext = useRef<any>(null);
-  excelContext.current = { currentModule: currentLesson, setCurrentModule: setCurrentLesson, language, showToast };
+  useEffect(() => {
+    excelContext.current = { currentModule: currentLesson, setCurrentModule: setCurrentLesson, language, showToast };
+  });
   const handleQuestionsExcelChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     importModuleQuestions(e, null, 'questions', () => excelContext.current, true);
   const handleAssignmentsExcelChange = (e: React.ChangeEvent<HTMLInputElement>) =>

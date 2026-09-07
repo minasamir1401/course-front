@@ -58,7 +58,9 @@ export const LessonBuilderModal: React.FC = () => {
   };
 
   const excelContext = useRef<any>(null);
-  excelContext.current = { currentModule: currentLesson, setCurrentModule: setCurrentLesson, language, showToast, isLoadingQuestions: isLessonContentLoading };
+  useEffect(() => {
+    excelContext.current = { currentModule: currentLesson, setCurrentModule: setCurrentLesson, language, showToast, isLoadingQuestions: isLessonContentLoading };
+  });
   const handleQuestionsExcelChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     importModuleQuestions(e, null, 'questions', () => excelContext.current, role === 'SUPER_ADMIN');
   const handleAssignmentsExcelChange = (e: React.ChangeEvent<HTMLInputElement>) =>
