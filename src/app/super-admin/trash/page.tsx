@@ -40,6 +40,8 @@ export default function TrashPage() {
   const [totalItems, setTotalItems] = useState(0);
   const [selectedItems, setSelectedItems] = useState<{ id: string, type: 'course' | 'lesson' | 'exam' | 'question' | 'user' }[]>([]);
   const [isBulkRestoring, setIsBulkRestoring] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('all');
   const [isEmptyingTrash, setIsEmptyingTrash] = useState(false);
   const [showEmptyModal, setShowEmptyModal] = useState(false);
@@ -169,6 +171,64 @@ export default function TrashPage() {
     }
   };
 
+  const handlePermanentDelete = async (id: string, type: 'course' | 'lesson' | 'exam' | 'question' | 'user') => {
+    if (!confirm(language === 'ar' ? 'هل أنت متأكد من الحذف النهائي لهذا العنصر؟ لا يمكن التراجع عن هذا الإجراء.' : 'Are you sure you want to permanently delete this item? This action cannot be undone.')) {
+      return;
+    }
+    setDeletingId(id);
+    try {
+      const token = localStorage.getItem("super_admin_token");
+      const res = await fetch(`${API_URL}/admin/trash/item/${type}/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        showToast(language === 'ar' ? "تم الحذف النهائي بنجاح" : "Permanently deleted successfully", "success");
+        setSelectedItems(prev => prev.filter(item => item.id !== id));
+        fetchTrash(currentPage);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showToast(err.error || (language === 'ar' ? "فشل الحذف النهائي" : "Permanent delete failed"), "error");
+      }
+    } catch (e) {
+      console.error(e);
+      showToast(language === 'ar' ? "حدث خطأ" : "An error occurred", "error");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleBulkPermanentDelete = async () => {
+    if (selectedItems.length === 0) return;
+    if (!confirm(language === 'ar' ? `هل أنت متأكد من الحذف النهائي لـ ${selectedItems.length} عنصر؟ لا يمكن التراجع عن هذا الإجراء.` : `Are you sure you want to permanently delete ${selectedItems.length} items? This cannot be undone.`)) {
+      return;
+    }
+    setIsBulkDeleting(true);
+    try {
+      const token = localStorage.getItem("super_admin_token");
+      const res = await fetch(`${API_URL}/admin/trash/bulk-delete`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ items: selectedItems })
+      });
+      if (res.ok) {
+        showToast(language === 'ar' ? "تم الحذف النهائي للعناصر المحددة بنجاح" : "Selected items permanently deleted", "success");
+        setSelectedItems([]);
+        fetchTrash(currentPage);
+      } else {
+        showToast(language === 'ar' ? "فشل الحذف الجماعي" : "Bulk permanent delete failed", "error");
+      }
+    } catch (e) {
+      console.error(e);
+      showToast(language === 'ar' ? "حدث خطأ" : "An error occurred", "error");
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
   const handleEmptyTrash = async () => {
     setIsEmptyingTrash(true);
     try {
@@ -236,14 +296,24 @@ export default function TrashPage() {
           </div>
           <div className="flex flex-wrap items-center gap-3">
             {selectedItems.length > 0 && (
-              <button 
-                onClick={handleBulkRestore}
-                disabled={isBulkRestoring}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-4 rounded-2xl flex items-center gap-3 transition-all shadow-sm text-sm disabled:opacity-50"
-              >
-                <RefreshCw className={`w-5 h-5 ${isBulkRestoring ? 'animate-spin' : ''}`} />
-                <span>{language === 'ar' ? `استعادة المحدد (${selectedItems.length})` : `Restore Selected (${selectedItems.length})`}</span>
-              </button>
+              <>
+                <button 
+                  onClick={handleBulkRestore}
+                  disabled={isBulkRestoring || isBulkDeleting}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-4 rounded-2xl flex items-center gap-3 transition-all shadow-sm text-sm disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-5 h-5 ${isBulkRestoring ? 'animate-spin' : ''}`} />
+                  <span>{language === 'ar' ? `استعادة المحدد (${selectedItems.length})` : `Restore Selected (${selectedItems.length})`}</span>
+                </button>
+                <button 
+                  onClick={handleBulkPermanentDelete}
+                  disabled={isBulkRestoring || isBulkDeleting}
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-4 rounded-2xl flex items-center gap-3 transition-all shadow-sm text-sm disabled:opacity-50"
+                >
+                  <Trash className={`w-5 h-5 ${isBulkDeleting ? 'animate-spin' : ''}`} />
+                  <span>{language === 'ar' ? `حذف المحدد نهائياً (${selectedItems.length})` : `Delete Selected (${selectedItems.length})`}</span>
+                </button>
+              </>
             )}
             
             <button 
@@ -351,14 +421,25 @@ export default function TrashPage() {
                     <p className="text-slate-400 font-bold text-xs mt-1">{formatDate(item.deletedAt)}</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleRestore(item.id, item.type)}
-                  disabled={restoringId === item.id}
-                  className="bg-slate-100 hover:bg-slate-800 hover:text-white text-slate-700 font-black px-6 py-3 rounded-xl transition-all flex items-center gap-2 text-sm disabled:opacity-50 shrink-0"
-                >
-                  {restoringId === item.id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                  {language === 'ar' ? "استعادة" : "Restore"}
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => handleRestore(item.id, item.type)}
+                    disabled={restoringId === item.id || deletingId === item.id}
+                    className="bg-slate-100 hover:bg-slate-800 hover:text-white text-slate-700 font-black px-5 py-3 rounded-xl transition-all flex items-center gap-2 text-sm disabled:opacity-50"
+                  >
+                    {restoringId === item.id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                    {language === 'ar' ? "استعادة" : "Restore"}
+                  </button>
+                  <button
+                    onClick={() => handlePermanentDelete(item.id, item.type)}
+                    disabled={restoringId === item.id || deletingId === item.id}
+                    className="bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-600 font-black px-4 py-3 rounded-xl transition-all flex items-center gap-2 text-sm disabled:opacity-50 border border-rose-200"
+                    title={language === 'ar' ? "حذف نهائي" : "Delete permanently"}
+                  >
+                    {deletingId === item.id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                    <span className="hidden sm:inline">{language === 'ar' ? "حذف نهائي" : "Delete"}</span>
+                  </button>
+                </div>
               </div>
             ))}
 

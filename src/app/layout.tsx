@@ -4,6 +4,9 @@ import "katex/dist/katex.min.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://platform.tech'),
+  other: {
+    google: 'notranslate',
+  },
   title: {
     default: "Platform",
     template: "%s | Platform"
@@ -81,8 +84,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ar" dir="rtl">
-      <body className="font-sans bg-[#F8FAFC] text-slate-800">
+    <html lang="ar" dir="rtl" translate="no" className="notranslate">
+      <head>
+        <meta name="google" content="notranslate" />
+      </head>
+      <body className="font-sans bg-[#F8FAFC] text-slate-800 notranslate" translate="no">
         <LanguageProvider>
           <NotificationProvider>
             <ImpersonationBanner />

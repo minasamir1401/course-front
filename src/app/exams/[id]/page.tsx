@@ -34,23 +34,46 @@ export default function TakeExamPage() {
 
 
 
-// Helper: extract choices array from options (handles both array and JSON object formats)
+// Helper: extract choices array from options (handles array, JSON object, and delimited string formats)
 const parseQuestionChoices = (options: any): string[] => {
   if (!options) return [];
-  // If it's already an array, return it
-  if (Array.isArray(options)) return options;
-  // If it's a string, try to parse it
+  if (Array.isArray(options)) {
+    return options.map(String).filter((s) => s.trim().length > 0);
+  }
   if (typeof options === 'string') {
     try {
       const parsed = JSON.parse(options);
-      if (Array.isArray(parsed)) return parsed;
-      // Handle {choices: [...]} format
-      if (parsed && Array.isArray(parsed.choices)) return parsed.choices;
-    } catch {}
+      if (Array.isArray(parsed)) {
+        return parsed.map(String).filter((s) => s.trim().length > 0);
+      }
+      if (parsed && typeof parsed === 'object') {
+        if (Array.isArray(parsed.choices)) {
+          return parsed.choices.map(String).filter((s) => s.trim().length > 0);
+        }
+        if (Array.isArray(parsed.options)) {
+          return parsed.options.map(String).filter((s) => s.trim().length > 0);
+        }
+        const values = Object.values(parsed).map(String).filter((s) => s.trim().length > 0);
+        if (values.length > 0) return values;
+      }
+    } catch {
+      if (options.includes('\n')) {
+        return options.split('\n').map((s) => s.trim()).filter((s) => s.length > 0);
+      }
+      if (options.includes(',')) {
+        return options.split(',').map((s) => s.trim()).filter((s) => s.length > 0);
+      }
+    }
   }
-  // If it's an object with choices property
-  if (typeof options === 'object' && Array.isArray(options.choices)) {
-    return options.choices;
+  if (typeof options === 'object' && options !== null) {
+    if (Array.isArray(options.choices)) {
+      return options.choices.map(String).filter((s) => s.trim().length > 0);
+    }
+    if (Array.isArray(options.options)) {
+      return options.options.map(String).filter((s) => s.trim().length > 0);
+    }
+    const values = Object.values(options).map(String).filter((s) => s.trim().length > 0);
+    if (values.length > 0) return values;
   }
   return [];
 };
@@ -736,56 +759,83 @@ function TakeExamPageContent() {
             {question.type !== "TEXT" ? (
               <>
                 {question.type === "MCQ" || question.type === "MULTI_SELECT" ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {parseQuestionChoices(question.options).filter((opt: string) => opt && opt.trim() !== "").map((option: string, i: number) => {
-                    const isSelected = question.type === "MULTI_SELECT" 
-                      ? selectedAnswers.includes(option)
-                      : selectedAnswer === option;
-
-                    return (
-                      <button
-                        key={i}
-                        dir={language === 'ar' ? 'rtl' : 'ltr'}
-                        onClick={() => handleSelectAnswer(option)}
-                        className={`w-full text-start p-5 rounded-2xl border-2 transition-all flex items-center justify-between gap-4 group ${
-                          showPreviewAnswers && isPreviewMode && (question.type === "MULTI_SELECT" ? Array.isArray(question.correctAnswers) && question.correctAnswers.includes(option) : question.correctAnswer === option)
-                            ? "bg-emerald-50 border-emerald-500 shadow-md shadow-emerald-100"
-                            : showPreviewAnswers && isPreviewMode && isSelected && !(question.type === "MULTI_SELECT" ? Array.isArray(question.correctAnswers) && question.correctAnswers.includes(option) : question.correctAnswer === option)
-                            ? "bg-rose-50 border-rose-500 shadow-md shadow-rose-100"
-                            : isSelected
-                            ? "bg-indigo-50 border-indigo-600 shadow-md shadow-indigo-100"
-                            : "bg-white border-slate-100 hover:border-slate-300 hover:bg-slate-50"
-                        }`}
-                      >
-                        <div className="flex items-center gap-3.5 flex-1 text-start">
-                          <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 transition-colors ${
-                            isSelected
-                              ? "bg-indigo-600 text-white shadow-sm"
-                              : "bg-slate-100 text-slate-600 group-hover:bg-slate-200"
-                          }`}>
-                            {getOptionLetter(i, language)}
-                          </span>
-                          <span className={`text-lg font-bold ${isSelected ? "text-indigo-900" : "text-slate-700"}`}>
-                            <HtmlRenderer html={cleanOptionText(option)} tag="span" />
-                          </span>
-                        </div>
-                        <div
-                          className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ms-3 ${
-                            isSelected
-                              ? "bg-indigo-600 border-indigo-600"
-                              : "border-slate-300 group-hover:border-indigo-400"
-                          }`}
-                        >
-                          {isSelected && (
-                            question.type === "MULTI_SELECT" 
-                              ? <CheckCircle2 className="w-4 h-4 text-white" />
-                              : <div className="w-2 h-2 bg-white rounded-full"></div>
+                  (() => {
+                    const choices = parseQuestionChoices(question.options).filter((opt: string) => opt && opt.trim() !== "");
+                    if (choices.length === 0) {
+                      return (
+                        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-4 animate-in fade-in">
+                          <label className="block text-sm font-black text-slate-700">
+                            {language === 'ar' ? 'اكتب إجابتك هنا (إجابة حرة / رقمية):' : 'Enter your answer here (Student-Produced Response / Numeric):'}
+                          </label>
+                          <input
+                            type="text"
+                            value={selectedAnswer || ''}
+                            onChange={(e) => handleSelectAnswer(e.target.value)}
+                            placeholder={language === 'ar' ? 'أدخل الإجابة...' : 'Enter your answer...'}
+                            className="w-full px-5 py-4 bg-white border-2 border-slate-200 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 rounded-xl text-lg font-bold text-slate-800 transition-all outline-none"
+                          />
+                          {showPreviewAnswers && isPreviewMode && question.correctAnswer && (
+                            <div className="text-sm font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 p-3 rounded-xl mt-2 flex items-center gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                              <span>{language === 'ar' ? `الإجابة النموذجية: ${question.correctAnswer}` : `Correct Answer: ${question.correctAnswer}`}</span>
+                            </div>
                           )}
                         </div>
-                      </button>
+                      );
+                    }
+                    return (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {choices.map((option: string, i: number) => {
+                          const isSelected = question.type === "MULTI_SELECT" 
+                            ? selectedAnswers.includes(option)
+                            : selectedAnswer === option;
+
+                          return (
+                            <button
+                              key={i}
+                              dir={language === 'ar' ? 'rtl' : 'ltr'}
+                              onClick={() => handleSelectAnswer(option)}
+                              className={`w-full text-start p-5 rounded-2xl border-2 transition-all flex items-center justify-between gap-4 group ${
+                                showPreviewAnswers && isPreviewMode && (question.type === "MULTI_SELECT" ? Array.isArray(question.correctAnswers) && question.correctAnswers.includes(option) : question.correctAnswer === option)
+                                  ? "bg-emerald-50 border-emerald-500 shadow-md shadow-emerald-100"
+                                  : showPreviewAnswers && isPreviewMode && isSelected && !(question.type === "MULTI_SELECT" ? Array.isArray(question.correctAnswers) && question.correctAnswers.includes(option) : question.correctAnswer === option)
+                                  ? "bg-rose-50 border-rose-500 shadow-md shadow-rose-100"
+                                  : isSelected
+                                  ? "bg-indigo-50 border-indigo-600 shadow-md shadow-indigo-100"
+                                  : "bg-white border-slate-100 hover:border-slate-300 hover:bg-slate-50"
+                              }`}
+                            >
+                              <div className="flex items-center gap-3.5 flex-1 text-start">
+                                <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 transition-colors ${
+                                  isSelected
+                                    ? "bg-indigo-600 text-white shadow-sm"
+                                    : "bg-slate-100 text-slate-600 group-hover:bg-slate-200"
+                                }`}>
+                                  {getOptionLetter(i, language)}
+                                </span>
+                                <span className={`text-lg font-bold ${isSelected ? "text-indigo-900" : "text-slate-700"}`}>
+                                  <HtmlRenderer html={cleanOptionText(option)} tag="span" />
+                                </span>
+                              </div>
+                              <div
+                                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ms-3 ${
+                                  isSelected
+                                    ? "bg-indigo-600 border-indigo-600"
+                                    : "border-slate-300 group-hover:border-indigo-400"
+                                }`}
+                              >
+                                {isSelected && (
+                                  question.type === "MULTI_SELECT" 
+                                    ? <CheckCircle2 className="w-4 h-4 text-white" />
+                                    : <div className="w-2 h-2 bg-white rounded-full"></div>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
                     );
-                  })}
-                  </div>
+                  })()
                 ) : question.type === "TRUE_FALSE" ? (
                   <div className="flex gap-4">
                     {[

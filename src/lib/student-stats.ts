@@ -43,15 +43,25 @@ export const writeCachedStudentStats = (data: any) => {
 };
 
 export const fetchStudentStats = async (token: string): Promise<any> => {
-  const res = await fetch(`${API_URL}/student/stats`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-  if (!res.ok) {
-    const message = await res.text().catch(() => "");
-    throw new Error(message || "Failed to fetch student stats");
+  const cached = readCachedStudentStats();
+
+  try {
+    const res = await fetch(`${API_URL}/student/stats`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) {
+      if (cached) return cached;
+      const message = await res.text().catch(() => "");
+      console.warn("Could not fetch fresh student stats, using fallback:", res.status, message);
+      return { totalXP: 0, completedCourses: 0, passedExams: 0, courseProgresses: [], recentActivities: [] };
+    }
+    const data = await res.json();
+    writeCachedStudentStats(data);
+    return data;
+  } catch (err: any) {
+    if (cached) return cached;
+    console.warn("fetchStudentStats failed, returning fallback stats:", err?.message || err);
+    return { totalXP: 0, completedCourses: 0, passedExams: 0, courseProgresses: [], recentActivities: [] };
   }
-  const data = await res.json();
-  writeCachedStudentStats(data);
-  return data;
 };
 

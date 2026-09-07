@@ -45,14 +45,29 @@ export function collectQuestionsIntoSubExam({
     ...(Array.isArray(module?.questions) ? module.questions : []),
     ...(Array.isArray(standaloneQuestions) ? standaloneQuestions : []),
   ];
-  const existingIds = new Set(existingQuestions.map(questionKey));
+  const existingIds = new Set(existingQuestions.map((q, i) => questionKey(q, i)));
+  const normalizeContent = (text: string) =>
+    String(text || '')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+
+  const existingSigs = new Set(
+    existingQuestions
+      .map((q: any) => normalizeContent(q?.text))
+      .filter((s: string) => s.length > 5),
+  );
   const movedQuestionIds: string[] = [];
   const collectedQuestions = [...existingQuestions];
 
   sourceQuestions.forEach((question, index) => {
     const id = questionKey(question, index);
-    if (existingIds.has(id)) return;
+    const sig = normalizeContent(question?.text);
+    if (existingIds.has(id) || (sig.length > 5 && existingSigs.has(sig))) return;
     existingIds.add(id);
+    if (sig.length > 5) existingSigs.add(sig);
     movedQuestionIds.push(id);
     collectedQuestions.push({ ...question, moduleId: module.id, subExamId });
   });

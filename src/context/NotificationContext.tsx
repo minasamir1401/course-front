@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { CheckCircle2, XCircle, AlertCircle, X, WifiOff, ServerCrash } from 'lucide-react';
-import { offlineSync } from '@/lib/offlineSync';
+import { offlineSync, captureOfflineOwner, type OfflineOwner } from '@/lib/offlineSync';
 
 type ToastType = 'success' | 'error' | 'info';
 
@@ -19,7 +19,7 @@ interface NotificationContextType {
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
-const queueFailedWrite = async (input: RequestInfo | URL, init: RequestInit | undefined, url: string) => {
+const queueFailedWrite = async (input: RequestInfo | URL, init: RequestInit | undefined, url: string, owner: OfflineOwner | null) => {
   const method = (init?.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
   if (!['POST', 'PUT', 'PATCH'].includes(method) || url.includes('/auth/')) return;
 
@@ -39,7 +39,8 @@ const queueFailedWrite = async (input: RequestInfo | URL, init: RequestInit | un
     savedHeaders[key] = value;
   });
 
-  offlineSync.enqueue({
+  await offlineSync.enqueue({
+    owner,
     url,
     method,
     headers: savedHeaders,
@@ -139,9 +140,22 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     window.fetch = async function (input, init) {
       const urlStr = typeof input === 'string' ? input : (input instanceof URL ? input.toString() : input.url);
       const isApiCall = urlStr.includes('/api/');
+      const requestHeaders = new Headers(init?.headers || (input instanceof Request ? input.headers : undefined));
+      const owner = captureOfflineOwner(requestHeaders);
+      const queueInput = input instanceof Request ? input.clone() : input;
+      const queueFailure = async () => {
+        if (requestHeaders.has('X-Offline-User-Id') || requestHeaders.has('X-Offline-Queue-Managed')) return;
+        try {
+          await queueFailedWrite(queueInput, init, urlStr, owner);
+        } catch {
+          showToast(localStorage.getItem('language') === 'en'
+            ? 'Changes could not be saved locally. Keep this page open and download pending changes.'
+            : 'تعذر حفظ التغييرات محلياً. لا تغلق الصفحة ونزّل نسخة من التغييرات.', 'error');
+        }
+      };
 
       if (!navigator.onLine && isApiCall) {
-        void queueFailedWrite(input, init, urlStr);
+        await queueFailure();
         showToast(
           localStorage.getItem('language') === 'en'
             ? 'Offline mode: Cannot save or upload data.'
@@ -157,7 +171,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         // Only API failures indicate backend availability. A missing image, video, or
         // other static asset must not make the entire application look offline.
         if (isApiCall && response.status >= 500) {
-          void queueFailedWrite(input, init, urlStr);
+          await queueFailure();
           if (response.status === 502 || response.status === 503 || response.status === 504) {
             consecutive502Ref.current++;
             if (consecutive502Ref.current >= 2 && !backendDownRef.current) {
@@ -168,8 +182,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             // First failure → toast only
             showToast(
               localStorage.getItem('language') === 'en'
-                ? 'Server unreachable. Retrying...'
-                : 'تعذّر الوصول للخادم، جارٍ إعادة المحاولة...',
+                ? 'Server unreachable. Pending changes may require review.'
+                : 'تعذّر الوصول للخادم. قد تحتاج التغييرات المعلقة إلى مراجعة.',
               'error'
             );
             }
@@ -219,7 +233,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           errMessage.includes('NetworkError') ||
           errMessage.includes('Failed to reach backend')
         )) {
-          void queueFailedWrite(input, init, urlStr);
+          await queueFailure();
           consecutive502Ref.current++;
           if (consecutive502Ref.current >= 2 && !backendDownRef.current) {
             backendDownRef.current = true;

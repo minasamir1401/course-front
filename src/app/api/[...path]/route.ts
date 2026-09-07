@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // This runs at REQUEST TIME (not build time), so env vars are always available
 import fs from 'node:fs';
 import nodePath from 'node:path';
+import { ProxyBodyTooLargeError, proxyBodyLimit, proxyLifetime, readProxyBody, proxyResponseBody } from '../../../lib/apiProxy';
 
 const BACKEND_REQUEST_TIMEOUT_MS = Math.max(
   1_000,
@@ -24,21 +25,21 @@ export const maxDuration = 300;
 const getBackendBase = () => {
   // Priority 1: Explicit internal Docker URL, if configured by the deployment (avoids DNS/loopback issues)
   const internalOrigin = process.env.INTERNAL_BACKEND_URL?.replace(/\/+$/, '')?.trim();
-  if (internalOrigin) return internalOrigin;
+  if (internalOrigin) return internalOrigin.replace('localhost', '127.0.0.1');
 
   // Priority 2: Explicit public backend origin when present
   const publicOrigin = process.env.NEXT_PUBLIC_BACKEND_ORIGIN?.replace(/\/+$/, '')?.trim();
-  if (publicOrigin) return publicOrigin;
+  if (publicOrigin) return publicOrigin.replace('localhost', '127.0.0.1');
 
   // Priority 3: BACKEND_ORIGIN env var
   const origin = process.env.BACKEND_ORIGIN?.replace(/\/+$/, '')?.trim();
-  if (origin) return origin;
+  if (origin) return origin.replace('localhost', '127.0.0.1');
 
   // Priority 4: Extract origin from NEXT_PUBLIC_API_URL
   const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/"/g, '').trim();
   if (apiUrl) {
     try {
-      return new URL(apiUrl).origin;
+      return new URL(apiUrl).origin.replace('localhost', '127.0.0.1');
     } catch {}
   }
 
@@ -49,7 +50,7 @@ const getBackendBase = () => {
     return 'https://api.klevro.tech';
   }
 
-  return 'http://backend:5000';
+  return 'http://127.0.0.1:5000';
 };
 
 const HOP_BY_HOP_HEADERS = new Set([
@@ -69,80 +70,86 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
   const backendBase = getBackendBase();
   const targetUrl = `${backendBase}/api/${(path || []).join('/')}${req.nextUrl.search}`;
 
-  const contentType = req.headers.get('content-type') || '';
+  const contentType = (req.headers.get('content-type') || '').toLowerCase();
+  const isStream = contentType.includes('multipart/form-data');
   
   // Forward clean request headers to backend (strip hop-by-hop headers)
   const headers = new Headers();
+  const requestHopHeaders = new Set([...HOP_BY_HOP_HEADERS, ...(req.headers.get('connection') || '').toLowerCase().split(',').map(value => value.trim())]);
   req.headers.forEach((value, key) => {
     const lowerKey = key.toLowerCase();
-    if (HOP_BY_HOP_HEADERS.has(lowerKey)) return;
+    if (requestHopHeaders.has(lowerKey)) return;
     
-    // Skip content-length ONLY for multipart to prevent multer 'request aborted' errors
-    if (lowerKey === 'content-length' && contentType.includes('multipart/form-data')) {
+    // Fetch computes buffered lengths; multipart stays chunked. Never trust the client length.
+    if (lowerKey === 'content-length') {
       return;
     }
     
     headers.set(key, value);
   });
 
-  try {
-    let bodyData: any = undefined;
-    let isStream = false;
+  let timeoutMs = isStream
+    ? BACKEND_UPLOAD_TIMEOUT_MS
+    : req.method === 'GET' || req.method === 'HEAD'
+      ? BACKEND_REQUEST_TIMEOUT_MS
+      : BACKEND_WRITE_TIMEOUT_MS;
 
+  // Specific endpoints that take a long time
+  if (targetUrl.includes('/admin/backup/download')) {
+    timeoutMs = Math.max(timeoutMs, 600_000); // 10 minutes
+  } else if (
+    targetUrl.includes('/api/exams') ||
+    targetUrl.includes('/api/courses') ||
+    targetUrl.includes('/api/admin/exams')
+  ) {
+    timeoutMs = Math.max(timeoutMs, 120_000); // 2 minutes for heavy learning content
+  }
+
+  const lifetime = proxyLifetime(req.signal, timeoutMs);
+  try {
+    lifetime.signal.throwIfAborted();
+    let bodyData: BodyInit | undefined;
     if (req.method !== 'GET' && req.method !== 'HEAD' && req.body) {
-      if (contentType.includes('multipart/form-data')) {
+      if (isStream) {
         bodyData = req.body;
-        isStream = true;
       } else {
-        const arrayBuffer = await req.arrayBuffer();
-        if (arrayBuffer.byteLength > 0) {
-          bodyData = arrayBuffer;
+        const limit = proxyBodyLimit();
+        const declaredLength = Number(req.headers.get('content-length'));
+        if (Number.isFinite(declaredLength) && declaredLength > limit) {
+          void req.body.cancel().catch(() => {});
+          throw new ProxyBodyTooLargeError();
         }
+        bodyData = await readProxyBody(req.body, limit, lifetime.signal);
       }
     }
-
     const requestInit: RequestInit & { duplex?: 'half' } = {
       method: req.method,
       headers,
       body: bodyData,
       redirect: 'follow',
       cache: 'no-store',
+      signal: lifetime.signal,
     };
+    if (isStream && bodyData) requestInit.duplex = 'half';
 
-    if (isStream) {
-      requestInit.duplex = 'half';
+    // A failed connection can occur after a write commits. Never replay writes.
+    let backendResponse: Response;
+    try {
+      backendResponse = await fetch(targetUrl, requestInit);
+    } catch (primaryFetchErr) {
+      if (lifetime.signal.aborted || !['GET', 'HEAD'].includes(req.method)) throw primaryFetchErr;
+      const fallback = new URL(targetUrl);
+      if (fallback.hostname === '127.0.0.1') fallback.hostname = 'localhost';
+      else if (fallback.hostname === 'localhost') fallback.hostname = '127.0.0.1';
+      else throw primaryFetchErr;
+      backendResponse = await fetch(fallback, requestInit);
     }
-
-    let timeoutMs = isStream
-      ? BACKEND_UPLOAD_TIMEOUT_MS
-      : req.method === 'GET' || req.method === 'HEAD'
-        ? BACKEND_REQUEST_TIMEOUT_MS
-        : BACKEND_WRITE_TIMEOUT_MS;
-
-    // Specific endpoints that take a long time
-    if (targetUrl.includes('/admin/backup/download')) {
-      timeoutMs = Math.max(timeoutMs, 600_000); // 10 minutes
-    } else if (
-      targetUrl.includes('/api/exams') ||
-      targetUrl.includes('/api/courses') ||
-      targetUrl.includes('/api/admin/exams')
-    ) {
-      timeoutMs = Math.max(timeoutMs, 120_000); // 2 minutes for heavy learning content
-    }
-
-    const timeoutSignal = AbortSignal.timeout(timeoutMs);
-    const fetchSignal = typeof (AbortSignal as any).any === 'function' && req.signal
-      ? (AbortSignal as any).any([req.signal, timeoutSignal])
-      : timeoutSignal;
-
-    const backendResponse = await fetch(targetUrl, {
-      ...requestInit,
-      signal: fetchSignal,
-    });
 
     // Copy response headers
     const responseHeaders = new Headers();
     const HEADERS_TO_SKIP = new Set([
+      ...HOP_BY_HOP_HEADERS,
+      ...(backendResponse.headers.get('connection') || '').toLowerCase().split(',').map(value => value.trim()),
       'access-control-allow-origin',
       'access-control-allow-credentials',
       'content-encoding',
@@ -157,16 +164,26 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
       }
     });
 
-    const responseBody = await backendResponse.arrayBuffer();
+    const noBody = req.method === 'HEAD' || [204, 205, 304].includes(backendResponse.status) || !backendResponse.body;
+    if (noBody) {
+      void backendResponse.body?.cancel().catch(() => {});
+      lifetime.dispose();
+    }
+    const responseBody = noBody ? null : proxyResponseBody(backendResponse.body!, lifetime);
     return new NextResponse(responseBody, {
       status: backendResponse.status,
+      statusText: backendResponse.statusText,
       headers: responseHeaders,
     });
   } catch (error: any) {
+    lifetime.dispose();
+    if (error instanceof ProxyBodyTooLargeError) {
+      return NextResponse.json({ error: error.message }, { status: 413 });
+    }
     const isClientDisconnect = Boolean(req.signal?.aborted);
     const isTimeout =
       !isClientDisconnect &&
-      (error?.name === 'TimeoutError' ||
+      (lifetime.signal.reason?.name === 'TimeoutError' || error?.name === 'TimeoutError' ||
        String(error?.message || '').toLowerCase().includes('timeout'));
 
     if (isClientDisconnect) {
@@ -191,6 +208,7 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
 }
 
 export const GET = handler;
+export const HEAD = handler;
 export const POST = handler;
 export const PUT = handler;
 export const DELETE = handler;

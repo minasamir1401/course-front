@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { API_URL, apiFetch } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { offlineSync } from "@/lib/offlineSync";
+import { offlineSync, captureOfflineOwner } from "@/lib/offlineSync";
 import { buildCourseLessonSummary } from "@/lib/courseLessonSummary";
 
 export interface CourseData {
@@ -289,7 +289,7 @@ export const CourseEditorProvider: React.FC<{
   // 💾 EMERGENCY LOCAL DRAFT BACKUP
   // IndexedDB stores full lesson content; localStorage is only a fallback.
   // =============================================
-  const DRAFT_KEY = courseId ? `lms_draft_course_${courseId}` : 'lms_draft_course_new';
+  const DRAFT_KEY = offlineSync.getDraftStorageKey(courseId ? `lms_draft_course_${courseId}` : 'lms_draft_course_new');
 
   // Save draft on every lesson or slide change
   useEffect(() => {
@@ -847,6 +847,19 @@ export const CourseEditorProvider: React.FC<{
     showToast(language === "ar" ? "تم إضافة السؤال للدرس" : "Question added to lesson", "success");
   };
 
+  const persistFailedWrite = async (item: Parameters<typeof offlineSync.enqueue>[0]) => {
+    try {
+      await offlineSync.enqueue(item);
+      return true;
+    } catch {
+      setHasUnsavedChanges(true);
+      showToast(language === "ar"
+        ? "تعذر حفظ التغييرات محلياً. لا تغلق الصفحة ونزّل نسخة من التغييرات المعلقة."
+        : "Changes could not be saved locally. Keep this page open and download pending changes.", "error");
+      return false;
+    }
+  };
+
   const getSchoolPayload = () => {
     const sanitizedTargetSchoolIds = (courseData.schoolIds || [])
       .map((s: any) => (typeof s === "object" && s ? s.id : s))
@@ -895,6 +908,7 @@ export const CourseEditorProvider: React.FC<{
     // one cycle stale. Syncing here prevents old snapshots that miss lessons.
     lessonsRef.current = lessons;
 
+    const requestOwner = captureOfflineOwner({ Authorization: `Bearer ${token}` });
     const snapshotLessons = [...lessonsRef.current];
     if (editingLessonIndex !== null) snapshotLessons[editingLessonIndex] = currentLesson;
     else snapshotLessons.push(currentLesson);
@@ -908,6 +922,7 @@ export const CourseEditorProvider: React.FC<{
       const res = await apiFetch(`${API_URL}/school/courses/${courseId}`, {
         method: "PUT",
         headers: {
+          "X-Offline-Queue-Managed": "1",
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
@@ -1043,7 +1058,8 @@ export const CourseEditorProvider: React.FC<{
             if (!l.id) return true;
             return arr.findIndex(other => other.id === l.id) === idx;
           });
-          offlineSync.enqueue({
+          if (!await persistFailedWrite({
+            owner: requestOwner,
             url: `${API_URL}/school/courses/${courseId}`,
             method: "PUT",
             headers: { Authorization: `Bearer ${tokenOffline}`, "Content-Type": "application/json" },
@@ -1064,14 +1080,14 @@ export const CourseEditorProvider: React.FC<{
               })),
             }),
             label: language === "ar" ? `درس: ${currentLesson.title}` : `Lesson: ${currentLesson.title}`,
-          });
+          })) return;
           // Update local state so UI reflects the snapshot
           lessonsRef.current = snapshotLessons;
           setLessons(snapshotLessons);
           showToast(
             language === "ar"
-              ? "السيرفر غير متاح - تم حفظ التغييرات محلياً وسترفع تلقائياً ✅"
-              : "Server unavailable - changes saved locally and will upload automatically ✅",
+              ? "السيرفر غير متاح - تم حفظ التغييرات محلياً؛ راجع حالة المزامنة في التغييرات المعلقة"
+              : "Server unavailable - changes saved locally; check pending saves for sync status",
             "info"
           );
         } else if (errBody?.details?.includes('SAFETY_BLOCK')) {
@@ -1089,7 +1105,8 @@ export const CourseEditorProvider: React.FC<{
           if (!l.id) return true;
           return arr.findIndex(other => other.id === l.id) === idx;
         });
-        offlineSync.enqueue({
+        if (!await persistFailedWrite({
+            owner: requestOwner,
           url: `${API_URL}/school/courses/${courseId}`,
           method: "PUT",
           headers: { Authorization: `Bearer ${tokenOffline2}`, "Content-Type": "application/json" },
@@ -1110,14 +1127,14 @@ export const CourseEditorProvider: React.FC<{
             })),
           }),
           label: language === "ar" ? `درس: ${currentLesson.title}` : `Lesson: ${currentLesson.title}`,
-        });
+        })) return;
         // Reflect snapshot in local state
         lessonsRef.current = snapshotLessons;
         setLessons(snapshotLessons);
         showToast(
           language === "ar"
-            ? "لا يوجد اتصال - تم حفظ التغييرات محلياً وسترفع تلقائياً ✅"
-            : "No connection - changes saved locally and will upload automatically ✅",
+            ? "لا يوجد اتصال - تم حفظ التغييرات محلياً؛ راجع حالة المزامنة في التغييرات المعلقة"
+            : "No connection - changes saved locally; check pending saves for sync status",
           "info"
         );
       } else {
@@ -1139,6 +1156,7 @@ export const CourseEditorProvider: React.FC<{
     if (!(await acquireSaveLock(!isAutoSave))) return;
     setIsSubmitting(true);
     const token = localStorage.getItem(tokenKey) || localStorage.getItem("token");
+    const requestOwner = captureOfflineOwner({ Authorization: `Bearer ${token}` });
 
     try {
       // 🔒 FIX: Force-sync the ref to current state immediately before snapshotting.
@@ -1175,6 +1193,7 @@ export const CourseEditorProvider: React.FC<{
       const res = await apiFetch(`${API_URL}/school/courses/${courseId}`, {
         method: "PUT",
         headers: {
+          "X-Offline-Queue-Managed": "1",
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
@@ -1374,7 +1393,8 @@ export const CourseEditorProvider: React.FC<{
               if (!l.id) return true;
               return arr.findIndex(other => other.id === l.id) === idx;
             });
-            offlineSync.enqueue({
+            if (!await persistFailedWrite({
+            owner: requestOwner,
               url: `${API_URL}/school/courses/${courseId}`,
               method: "PUT",
               headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
@@ -1395,11 +1415,11 @@ export const CourseEditorProvider: React.FC<{
                 })),
               }),
               label: language === "ar" ? `كورس: ${courseData.title}` : `Course: ${courseData.title}`,
-            });
+            })) return;
             showToast(
               language === "ar"
-                ? "السيرفر غير متاح - تم حفظ التغييرات محلياً وسترفع تلقائياً ✅"
-                : "Server unavailable - changes saved locally and will upload automatically ✅",
+                ? "السيرفر غير متاح - تم حفظ التغييرات محلياً؛ راجع حالة المزامنة في التغييرات المعلقة"
+                : "Server unavailable - changes saved locally; check pending saves for sync status",
               "info"
             );
           } else {
@@ -1423,7 +1443,8 @@ export const CourseEditorProvider: React.FC<{
         if (!l.id) return true;
         return arr.findIndex(other => other.id === l.id) === idx;
       });
-      offlineSync.enqueue({
+      if (!await persistFailedWrite({
+            owner: requestOwner,
         url: `${API_URL}/school/courses/${courseId}`,
         method: "PUT",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
@@ -1444,19 +1465,19 @@ export const CourseEditorProvider: React.FC<{
           })),
         }),
         label: language === "ar" ? `كورس: ${courseData.title}` : `Course: ${courseData.title}`,
-      });
+      })) return;
       if (!isAutoSave) {
         showToast(
           language === "ar"
-            ? "لا يوجد اتصال - تم حفظ التغييرات محلياً وسترفع تلقائياً ✅"
-            : "No connection - changes saved locally and will upload automatically ✅",
+            ? "لا يوجد اتصال - تم حفظ التغييرات محلياً؛ راجع حالة المزامنة في التغييرات المعلقة"
+            : "No connection - changes saved locally; check pending saves for sync status",
           "info"
         );
       } else {
         showToast(
           language === "ar"
-            ? "انقطع الاتصال - تم حفظ مسودة التعديلات محلياً ⚠️"
-            : "Connection lost - edits saved locally as draft ⚠️",
+            ? "انقطع الاتصال - تم حفظ التغييرات في قائمة الانتظار"
+            : "Connection lost - changes saved to the pending queue",
           "info"
         );
       }
