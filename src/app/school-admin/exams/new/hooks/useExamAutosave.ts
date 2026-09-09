@@ -114,7 +114,7 @@ export const useExamAutosave = (props: any) => {
 
         const method = activeExamId ? "PUT" : "POST";
         const url = activeExamId 
-          ? `${API_URL}/exams/${activeExamId}`
+          ? `${API_URL}/exams/${activeExamId}?compact=true`
           : `${API_URL}/exams`;
 
         const res = await fetch(url, {

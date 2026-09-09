@@ -16,5 +16,11 @@ export function buildExamSavePayload<T extends { modules?: unknown; questions?: 
   if (!isChildExamSave(scope)) return payload;
 
   const { modules: _modules, ...childSafePayload } = payload;
-  return childSafePayload;
+  return {
+    ...childSafePayload,
+    questionScopeId: scope.subExamId,
+    questions: Array.isArray(payload.questions)
+      ? payload.questions.filter((q: any) => String(q.subExamId || '') === String(scope.subExamId))
+      : payload.questions,
+  };
 }

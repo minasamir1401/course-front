@@ -36,6 +36,10 @@ export const useExamState = (schoolIdParam: string | null, examId: string, selec
   const lastAutoSaveSnapshotRef = useRef("");
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const manualSubmitRef = useRef(false);
+  const loadGenerationRef = useRef(0);
+  const flushAutoSaveRef = useRef<null | (() => Promise<unknown>)>(null);
+  const loadedHrefRef = useRef<string | null>(null);
+  const restoreDraftHrefRef = useRef<string | null>(null);
   
   const [schools, setSchools] = useState<any[]>([]);
   
@@ -147,22 +151,23 @@ export const useExamState = (schoolIdParam: string | null, examId: string, selec
   };
 
   
-  const fetchQuestions = async (token: string, eId: string) => {
+  const fetchQuestions = async (token: string, eId: string, generation: number, href: string) => {
     try {
       setIsLoadingQuestions(true);
-      let qRes = await fetch(`${API_URL}/exams/${eId}/questions`, {
+      let qRes = await fetch(`${API_URL}/exams/${eId}/questions${selectedSubExamId ? `?subExamId=${encodeURIComponent(selectedSubExamId)}` : ''}`, {
         headers: { Authorization: `Bearer ${token}` },
         cache: 'no-store'
       });
       if (qRes.status === 404) {
         // Fallback for servers where /questions is not yet deployed
-        qRes = await fetch(`${API_URL}/exams/${eId}?onlyQuestions=true`, {
+        qRes = await fetch(`${API_URL}/exams/${eId}?onlyQuestions=true${selectedSubExamId ? `&subExamId=${encodeURIComponent(selectedSubExamId)}` : ''}`, {
           headers: { Authorization: `Bearer ${token}` },
           cache: 'no-store'
         });
       }
       if (qRes.ok) {
         const qData = await qRes.json();
+        if (generation !== loadGenerationRef.current) return;
         const rawQuestions = qData.questions || (Array.isArray(qData) ? qData : []);
         const allQs = normalizePersistedExamQuestions(rawQuestions);
 
@@ -190,18 +195,42 @@ export const useExamState = (schoolIdParam: string | null, examId: string, selec
         const standaloneQs = allQs.filter((q: any) => !q.moduleId && !q.subExamId);
         setStandaloneQuestions(standaloneQs);
         setAvailableMetadata((prev: any) => mergeAvailableMetadata(prev, collectMetadataFromQuestions(allQs)));
+        loadedHrefRef.current = href;
         setIsQuestionsLoaded(true);
       }
     } catch (error) {
       console.error("Failed to fetch questions in background:", error);
     } finally {
-      setIsLoadingQuestions(false);
+      if (generation === loadGenerationRef.current) setIsLoadingQuestions(false);
     }
   };
 
   const fetchExamData = async (token: string, eId: string) => {
+    const href = window.location.pathname + window.location.search;
+    if (restoreDraftHrefRef.current === href) {
+      restoreDraftHrefRef.current = null;
+      setIsLoading(false);
+      setIsInitialLoad(false);
+      return;
+    }
+    const generation = ++loadGenerationRef.current;
     try {
       setIsLoading(true);
+      // Flush the previous scope's latest draft before replacing its editor state.
+      if (loadedHrefRef.current && flushAutoSaveRef.current) {
+        const saved = await flushAutoSaveRef.current();
+        if (generation !== loadGenerationRef.current) return;
+        if (saved === false) {
+          restoreDraftHrefRef.current = loadedHrefRef.current;
+          router.replace(loadedHrefRef.current);
+          return;
+        }
+      }
+      await autoSaveWriteQueueRef.current;
+      if (generation !== loadGenerationRef.current) return;
+      setIsInitialLoad(true);
+      setIsQuestionsLoaded(false);
+      autoSaveGenerationRef.current += 1;
       setIsLoadingQuestions(true);
       // Phase 1: Fetch exam structure and modules without questions for instant display
       const res = await fetch(`${API_URL}/exams/${eId}?includeQuestions=false`, {
@@ -210,6 +239,7 @@ export const useExamState = (schoolIdParam: string | null, examId: string, selec
       });
       if (res.ok) {
         const data = await res.json();
+        if (generation !== loadGenerationRef.current) return;
         const exam = data.data || data;
         if (exam) {
           const resolvedScope = resolveExamEditScope(exam, schoolIdParam);
@@ -273,15 +303,17 @@ export const useExamState = (schoolIdParam: string | null, examId: string, selec
           setIsInitialLoad(false);
 
           // Phase 2: Load questions asynchronously in background
-          fetchQuestions(token, eId);
+          fetchQuestions(token, eId, generation, href);
           return;
         }
       }
     } catch (error) {
       console.error("Failed to fetch exam:", error);
     } finally {
-      setIsLoading(false);
-      setIsInitialLoad(false);
+      if (generation === loadGenerationRef.current) {
+        setIsLoading(false);
+        setIsInitialLoad(false);
+      }
     }
   };
 useEffect(() => {
@@ -291,10 +323,11 @@ useEffect(() => {
       return;
     }
     fetchSchools(token);
-    if (examId && isInitialLoad) {
+    if (examId) {
       fetchExamData(token, examId);
     }
-  }, [examId, isInitialLoad]);
+    return () => { loadGenerationRef.current += 1; };
+  }, [examId, selectedSubExamId]);
 
     const allExistingSkills = Array.from(new Set([...(customSkills || []), 'Problem Solving', 'Critical Thinking', 'Data Analysis', 'Reading Comprehension']));
 
@@ -308,7 +341,7 @@ useEffect(() => {
     lastAutoSave, setLastAutoSave,
     createdId, setCreatedId,
     createdIdRef, autoSaveWriteQueueRef, autoSaveGenerationRef,
-    lastAutoSaveSnapshotRef, autoSaveTimerRef, manualSubmitRef,
+    lastAutoSaveSnapshotRef, autoSaveTimerRef, manualSubmitRef, flushAutoSaveRef,
     schools, setSchools,
     examData, setExamData,
     modules, setModules,

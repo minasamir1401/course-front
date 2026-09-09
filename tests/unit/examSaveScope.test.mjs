@@ -20,3 +20,13 @@ test("whole assessment saves continue to submit their modules collection", () =>
 
   assert.deepEqual(payload.modules, modules);
 });
+
+test("child saves only contain questions in the selected child and declare the scope", () => {
+  const payload = buildExamSavePayload({ modules: [], questions: [
+    { id: 'a', moduleId: 'm', subExamId: 'child' },
+    { id: 'b', moduleId: 'm', subExamId: 'sibling' },
+    { id: 'c', moduleId: null, subExamId: null },
+  ] }, { moduleId: 'm', subExamId: 'child' });
+  assert.deepEqual(payload.questions.map(q => q.id), ['a']);
+  assert.equal(payload.questionScopeId, 'child');
+});

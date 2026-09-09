@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
+import ExamCountdown from "@/components/ExamCountdown";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { API_URL } from "@/lib/api";
 import { getStudentExamDuration } from "@/lib/examModuleView";
@@ -110,6 +111,9 @@ function TakeExamPageContent() {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<any[]>([]);
   const [timeLeft, setTimeLeft] = useState(0);
+  const remainingTimeRef = React.useRef(0);
+  const answersById = React.useMemo(() => new Map(answers.map(answer => [answer.questionId, answer])), [answers]);
+  const examQuestions = React.useMemo(() => resolveTakeExamQuestions(exam), [exam]);
   const [submitting, setSubmitting] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showPreviewAnswers, setShowPreviewAnswers] = useState(false);
@@ -166,30 +170,19 @@ function TakeExamPageContent() {
     localStorage.setItem(`exam_${id}_${subExamId || "root"}_review_flags`, JSON.stringify(reviewFlags));
   }, [id, isPreviewMode, reviewFlags, subExamId]);
 
-  useEffect(() => {
-    if (started && timeLeft > 0) {
-      const timer = setInterval(() => {
-        setTimeLeft((prev) => {
-          const newTime = prev - 1;
-          if (!isPreviewMode) localStorage.setItem(`exam_${id}_${subExamId || "root"}_time`, newTime.toString());
-          return newTime;
-        });
-      }, 1000);
-      return () => clearInterval(timer);
-    } else if (started && timeLeft <= 0 && exam && !loading && !hasAutoSubmitted.current) {
-      hasAutoSubmitted.current = true;
-      handleSubmit();
-    }
-  }, [timeLeft, exam, loading, started, isPreviewMode, id]);
-
   const fetchExam = async () => {
     try {
       const token = isPreviewMode
         ? (localStorage.getItem("super_admin_token") || localStorage.getItem("school_admin_token") || localStorage.getItem("lms_token"))
         : (localStorage.getItem("lms_token") || localStorage.getItem("school_admin_token") || localStorage.getItem("super_admin_token"));
-      const res = await fetch(`${API_URL}/exams/${id}${subExamId ? `?subExamId=${encodeURIComponent(subExamId)}` : ''}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const [res, checkRes] = await Promise.all([
+        fetch(`${API_URL}/exams/${id}${subExamId ? `?subExamId=${encodeURIComponent(subExamId)}` : ''}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        isPreviewMode ? Promise.resolve(null) : fetch(`${API_URL}/exams/${id}/check?subExamId=${encodeURIComponent(subExamId || '')}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
       const data = await res.json();
       if (!res.ok) {
         showToast(data.error || "Failed to load exam", "error");
@@ -199,10 +192,7 @@ function TakeExamPageContent() {
 
       // Check attempts (skip in preview mode)
       if (!isPreviewMode) {
-        const checkRes = await fetch(`${API_URL}/exams/${id}/check?subExamId=${subExamId || ""}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (checkRes.ok) {
+        if (checkRes?.ok) {
           const checkData = await checkRes.json();
           if (!checkData.canTakeAgain) {
             showToast("You have reached the maximum number of attempts allowed for this exam.", "error");
@@ -368,7 +358,8 @@ function TakeExamPageContent() {
     }
     setAnswers(newAnswers);
     if (!isPreviewMode) {
-      localStorage.setItem(`exam_${id}_${subExamId || "root"}_answers`, JSON.stringify(newAnswers));
+      try { localStorage.setItem(`exam_${id}_${subExamId || "root"}_answers`, JSON.stringify(newAnswers)); }
+      catch { /* Keep the in-memory answer usable if browser storage is unavailable. */ }
     }
   };
 
@@ -381,7 +372,7 @@ function TakeExamPageContent() {
         ? (localStorage.getItem("super_admin_token") || localStorage.getItem("school_admin_token") || localStorage.getItem("lms_token"))
         : (localStorage.getItem("lms_token") || localStorage.getItem("school_admin_token") || localStorage.getItem("super_admin_token"));
       
-      const timeTakenInSeconds = exam.duration * 60 - timeLeft;
+      const timeTakenInSeconds = Math.max(0, exam.duration * 60 - remainingTimeRef.current);
       const res = await fetch(`${API_URL}/exams/${id}/submit`, {
         method: "POST",
         headers: {
@@ -412,12 +403,6 @@ function TakeExamPageContent() {
     }
   };
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-6">
@@ -440,7 +425,7 @@ function TakeExamPageContent() {
     exam.selectedSubExam?.courseTitle ||
     '';
   const displayDomain = exam.selectedSubExam?.domain || exam.domain || '';
-  const examQuestions = resolveTakeExamQuestions(exam);
+
 
   // ── Gatekeeper Screen ─────────────────────────────────────────────────────
   if (!started) {
@@ -538,7 +523,7 @@ function TakeExamPageContent() {
 
   // ── Exam Taking Screen ────────────────────────────────────────────────────
   const question = getSafeCurrentQuestion(examQuestions, currentQuestion);
-  const answerObj = question ? answers.find((a) => a.questionId === question.id) : null;
+  const answerObj = question ? answersById.get(question.id) : null;
   const selectedAnswer = answerObj?.selectedAnswer;
   const selectedAnswers = answerObj?.selectedAnswers || [];
   const isCurrentQuestionFlagged = question ? reviewFlags.includes(String(question.id || '')) : false;
@@ -556,7 +541,7 @@ function TakeExamPageContent() {
   const completedProgress = Math.round((answeredQuestionsCount / progressDenominator) * 100);
   const isQuestionAnswered = (examQuestion: any) => {
     if (examQuestion.type === "TEXT") return true;
-    const examAnswer = answers.find((entry) => entry.questionId === examQuestion.id);
+    const examAnswer = answersById.get(examQuestion.id);
     return Boolean(
       examAnswer?.selectedAnswer ||
       (Array.isArray(examAnswer?.selectedAnswers) && examAnswer.selectedAnswers.length > 0)
@@ -657,14 +642,14 @@ function TakeExamPageContent() {
             </div>
           </div>
           <div className="flex items-center gap-6">
-            <div
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-mono font-bold ${
-                timeLeft < 300 ? "bg-red-100 text-red-600 animate-pulse" : "bg-indigo-50 text-indigo-600"
-              }`}
-            >
-              <Clock className="w-5 h-5" />
-              {formatTime(timeLeft)}
-            </div>
+            <ExamCountdown
+              initialSeconds={timeLeft}
+              storageKey={isPreviewMode ? null : `exam_${id}_${subExamId || "root"}_time`}
+              onTick={seconds => { remainingTimeRef.current = seconds; }}
+              onExpire={() => {
+                if (!hasAutoSubmitted.current) { hasAutoSubmitted.current = true; handleSubmit(); }
+              }}
+            />
           </div>
         </div>
       </div>

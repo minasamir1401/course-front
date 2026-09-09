@@ -13,6 +13,7 @@ export const useExamAutosave = (props: any) => {
   const { isAutoSaveEnabled, isLoading, isLoadingQuestions, isInitialLoad, createdId, examData, modules, isModuleModalOpen, currentModule, editingModuleIndex, manualSubmitRef, lastAutoSaveSnapshotRef, autoSaveGenerationRef, createdIdRef, setCreatedId, setCurrentModule, setModules, setEditingModuleIndex, setLastAutoSave, deletedQuestionIds, setDeletedQuestionIds, showToast, language, autoSaveWriteQueueRef, autoSaveTimerRef, standaloneQuestions, setStandaloneQuestions, moduleId, subExamId } = props;
 
   useEffect(() => {
+    if (props.isQuestionsLoaded === false) return;
     const activeExamId = createdIdRef.current || createdId;
     // Never autosave the initial empty state of an edit page. Until the exam
     // request completes there is no server id, so a PUT can accidentally become
@@ -41,8 +42,7 @@ export const useExamAutosave = (props: any) => {
     lastAutoSaveSnapshotRef.current = snapshot;
     const requestGeneration = ++autoSaveGenerationRef.current;
     
-    const timer = setTimeout(() => {
-      const runAutoSave = async () => {
+    const runAutoSave = async () => {
         if (manualSubmitRef.current || requestGeneration !== autoSaveGenerationRef.current) return;
       try {
         const token = localStorage.getItem("school_admin_token");
@@ -95,7 +95,7 @@ export const useExamAutosave = (props: any) => {
 
         const method = activeExamId ? "PUT" : "POST";
         const url = activeExamId 
-          ? `${API_URL}/exams/${activeExamId}`
+          ? `${API_URL}/exams/${activeExamId}?compact=true`
           : `${API_URL}/exams`;
 
         const res = await fetch(url, {
@@ -233,6 +233,7 @@ export const useExamAutosave = (props: any) => {
             setDeletedQuestionIds?.((prev: string[]) => prev.filter((id) => !submittedDeletedQuestionIds.includes(id)));
           }
           setLastAutoSave(new Date());
+          return true;
         } else if (res.status === 404) {
           console.warn("Auto-save skipped: Exam has been moved or deleted.");
         } else {
@@ -244,17 +245,26 @@ export const useExamAutosave = (props: any) => {
         console.error("Auto save failed", err);
         showToast(language === 'ar' ? "فشل الحفظ التلقائي. تأكد من الاتصال ثم احفظ يدوياً." : "Auto-save failed. Check your connection, then save manually.", "error");
       }
+        return false;
       };
 
-      const queuedWrite = autoSaveWriteQueueRef.current.then(runAutoSave, runAutoSave);
-      autoSaveWriteQueueRef.current = queuedWrite.catch(() => undefined);
-    }, 1_500);
+    let queuedWrite: Promise<unknown> | null = null;
+    const queueWrite = () => {
+      clearTimeout(timer);
+      if (!queuedWrite) {
+        queuedWrite = autoSaveWriteQueueRef.current.then(runAutoSave, runAutoSave);
+        autoSaveWriteQueueRef.current = queuedWrite.then(() => undefined, () => undefined);
+      }
+      return queuedWrite;
+    };
+    const timer = setTimeout(() => { void queueWrite(); }, 1_500);
+    if (props.flushAutoSaveRef) props.flushAutoSaveRef.current = queueWrite;
     autoSaveTimerRef.current = timer;
 
     return () => {
       clearTimeout(timer);
       if (autoSaveTimerRef.current === timer) autoSaveTimerRef.current = null;
     };
-  }, [isAutoSaveEnabled, isLoading, isInitialLoad, createdId, examData, modules, isModuleModalOpen, currentModule, editingModuleIndex, standaloneQuestions, deletedQuestionIds]);
+  }, [props.isQuestionsLoaded, isLoadingQuestions, isInitialLoad, isAutoSaveEnabled, isLoading, isInitialLoad, createdId, examData, modules, isModuleModalOpen, currentModule, editingModuleIndex, standaloneQuestions, deletedQuestionIds]);
 
 };

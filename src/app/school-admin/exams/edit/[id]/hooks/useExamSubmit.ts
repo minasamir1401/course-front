@@ -10,7 +10,7 @@ export const useExamSubmit = (props: any) => {
 
     const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLoadingQuestions) {
+    if (isLoadingQuestions || props.isQuestionsLoaded === false) {
       showToast(language === 'ar' ? 'يرجى الانتظار لحظات حتى يكتمل تحميل الأسئلة أولاً' : 'Please wait for questions to finish loading first', 'warning');
       return;
     }
@@ -81,7 +81,7 @@ export const useExamSubmit = (props: any) => {
       const activeExamId = createdIdRef.current;
       const method = activeExamId ? "PUT" : "POST";
       const url = activeExamId 
-        ? `${API_URL}/exams/${activeExamId}`
+        ? `${API_URL}/exams/${activeExamId}?compact=true`
         : `${API_URL}/exams`;
 
       const res = await fetch(url, {

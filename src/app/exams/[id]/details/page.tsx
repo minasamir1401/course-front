@@ -42,7 +42,7 @@ export default function ExamDetailsPage() {
         return;
       }
 
-      const res = await fetch(`${API_URL}/exams/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${API_URL}/exams/${id}?includeQuestions=false`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
         setActiveModule(await res.json());
       } else {
