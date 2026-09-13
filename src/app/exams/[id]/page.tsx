@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import ExamCountdown from "@/components/ExamCountdown";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { API_URL } from "@/lib/api";
+import { API_URL, apiFetch } from "@/lib/api";
 import { getStudentExamDuration } from "@/lib/examModuleView";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { Clock, ChevronRight, ChevronLeft, Send, AlertCircle, HelpCircle, Lock, Play, Calendar, ShieldCheck, CheckCircle2, Target, Info, Sparkles, BookOpen, MessageSquare, Star, ListOrdered, Award, TrendingUp, Flag } from 'lucide-react';
@@ -120,24 +120,38 @@ function TakeExamPageContent() {
   const [reviewFlags, setReviewFlags] = useState<string[]>([]);
   const hasAutoSubmitted = React.useRef(false);
   const [watermarkText, setWatermarkText] = useState("");
+  const [studentQuestionLang, setStudentQuestionLang] = useState<'ar' | 'en'>(language === 'en' ? 'en' : 'ar');
+
+  const getAuthHeaders = React.useCallback((): HeadersInit => {
+    const candidateToken = isPreviewMode
+      ? (localStorage.getItem("super_admin_token") || localStorage.getItem("school_admin_token") || localStorage.getItem("lms_token"))
+      : (localStorage.getItem("lms_token") || localStorage.getItem("school_admin_token") || localStorage.getItem("super_admin_token"));
+    const headers: Record<string, string> = {};
+    if (candidateToken && candidateToken !== "cookie_auth" && candidateToken !== "null" && candidateToken !== "undefined") {
+      headers["Authorization"] = `Bearer ${candidateToken}`;
+    }
+    return headers;
+  }, [isPreviewMode]);
 
   useEffect(() => {
     try {
-      const userStr = localStorage.getItem("lms_user");
+      const userStr = isPreviewMode
+        ? (localStorage.getItem("super_admin_user") || localStorage.getItem("school_admin_user") || localStorage.getItem("lms_user"))
+        : (localStorage.getItem("lms_user") || localStorage.getItem("school_admin_user") || localStorage.getItem("super_admin_user"));
       if (userStr) {
         const user = JSON.parse(userStr);
-        let text = user.name || user.email || "Student";
+        let text = user.name || user.email || (isPreviewMode ? "Preview Mode" : "Student");
         if (user.schoolName) text += " - " + user.schoolName;
         else if (user.schoolId) text += " - School: " + user.schoolId;
         text += " - KLEVRO";
         setWatermarkText(text);
       } else {
-        setWatermarkText("KLEVRO");
+        setWatermarkText(isPreviewMode ? "Preview Mode - KLEVRO" : "KLEVRO");
       }
     } catch (e) {
-      setWatermarkText("KLEVRO");
+      setWatermarkText(isPreviewMode ? "Preview Mode - KLEVRO" : "KLEVRO");
     }
-  }, []);
+  }, [isPreviewMode]);
 
   useEffect(() => {
     fetchExam();
@@ -172,21 +186,20 @@ function TakeExamPageContent() {
 
   const fetchExam = async () => {
     try {
-      const token = isPreviewMode
-        ? (localStorage.getItem("super_admin_token") || localStorage.getItem("school_admin_token") || localStorage.getItem("lms_token"))
-        : (localStorage.getItem("lms_token") || localStorage.getItem("school_admin_token") || localStorage.getItem("super_admin_token"));
       const [res, checkRes] = await Promise.all([
-        fetch(`${API_URL}/exams/${id}${subExamId ? `?subExamId=${encodeURIComponent(subExamId)}` : ''}`, {
-          headers: { Authorization: `Bearer ${token}` },
+        apiFetch(`${API_URL}/exams/${id}${subExamId ? `?subExamId=${encodeURIComponent(subExamId)}` : ''}`, {
+          headers: getAuthHeaders(),
         }),
-        isPreviewMode ? Promise.resolve(null) : fetch(`${API_URL}/exams/${id}/check?subExamId=${encodeURIComponent(subExamId || '')}`, {
-          headers: { Authorization: `Bearer ${token}` },
+        isPreviewMode ? Promise.resolve(null) : apiFetch(`${API_URL}/exams/${id}/check?subExamId=${encodeURIComponent(subExamId || '')}`, {
+          headers: getAuthHeaders(),
         }),
       ]);
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         showToast(data.error || "Failed to load exam", "error");
-        router.back();
+        if (!isPreviewMode) {
+          router.back();
+        }
         return;
       }
 
@@ -210,9 +223,12 @@ function TakeExamPageContent() {
       const subExamDuration = getStudentExamDuration(data, subExamId, moduleId);
       if (subExamId) {
         filteredQuestions = filteredQuestions.filter((q: any) => q.subExamId === subExamId);
-        // Find subExam duration if possible
-        const subExam = data.modules?.flatMap((m: any) => m.subExams || []).find((se: any) => se.id === subExamId);
-        data.selectedSubExam = subExam;
+        const allSubExams = (data.modules || []).flatMap((m: any) => [
+          ...(m.subExams || []),
+          ...((m.subModules || []).flatMap((sm: any) => sm.subExams || []))
+        ]);
+        const matchedSubExam = allSubExams.find((se: any) => se.id === subExamId);
+        data.selectedSubExam = data.selectedSubExam || matchedSubExam;
       }
 
       const mappedQuestions = filteredQuestions.map((q: any) => {
@@ -248,6 +264,9 @@ function TakeExamPageContent() {
         return {
           ...q,
           options: parseQuestionChoices(q.options),
+          optionsEn: parseQuestionChoices(q.optionsEn),
+          textEn: q.textEn || null,
+          explanationEn: q.explanationEn || null,
           correctAnswers: q.type === 'MULTI_SELECT' ? correctAnswers : [],
           sections: parsedSections
         };
@@ -274,36 +293,38 @@ function TakeExamPageContent() {
   };
 
   const handleStartExam = async () => {
-    if (!isPreviewMode) {
-      const now = new Date();
-      if (exam.startDate && now < new Date(exam.startDate)) {
-        showToast(language === 'ar' ? "لم يحن موعد بدأ الامتحان بعد" : "The exam has not started yet", "error");
-        return;
-      }
-      if (exam.endDate && now > new Date(exam.endDate)) {
-        showToast(language === 'ar' ? "انتهى موعد هذا الامتحان" : "This exam time has ended", "error");
-        return;
-      }
-      const childExam = exam.selectedSubExam;
-      if (childExam?.publishDate && now < new Date(childExam.publishDate)) {
-        showToast(language === 'ar' ? "لم يحن موعد نشر هذا الاختبار بعد" : "This exam has not been published yet", "error");
-        return;
-      }
-      if (childExam?.cutOffDate && now > new Date(childExam.cutOffDate)) {
-        showToast(language === 'ar' ? "انتهى موعد هذا الاختبار" : "This exam has expired", "error");
-        return;
-      }
+    if (!exam) return;
+    if (isPreviewMode) {
+      setStarted(true);
+      return;
     }
+
+    const now = new Date();
+    if (exam.startDate && now < new Date(exam.startDate)) {
+      showToast(language === 'ar' ? "لم يحن موعد بدأ الامتحان بعد" : "The exam has not started yet", "error");
+      return;
+    }
+    if (exam.endDate && now > new Date(exam.endDate)) {
+      showToast(language === 'ar' ? "انتهى موعد هذا الامتحان" : "This exam time has ended", "error");
+      return;
+    }
+    const childExam = exam.selectedSubExam;
+    if (childExam?.publishDate && now < new Date(childExam.publishDate)) {
+      showToast(language === 'ar' ? "لم يحن موعد نشر هذا الاختبار بعد" : "This exam has not been published yet", "error");
+      return;
+    }
+    if (childExam?.cutOffDate && now > new Date(childExam.cutOffDate)) {
+      showToast(language === 'ar' ? "انتهى موعد هذا الاختبار" : "This exam has expired", "error");
+      return;
+    }
+
     setIsVerifying(true);
     try {
-      const token = isPreviewMode
-        ? (localStorage.getItem("super_admin_token") || localStorage.getItem("school_admin_token") || localStorage.getItem("lms_token"))
-        : (localStorage.getItem("lms_token") || localStorage.getItem("school_admin_token") || localStorage.getItem("super_admin_token"));
-      const res = await fetch(`${API_URL}/exams/${id}/verify-access${subExamId ? `?subExamId=${encodeURIComponent(subExamId)}` : ''}`, {
+      const res = await apiFetch(`${API_URL}/exams/${id}/verify-access${subExamId ? `?subExamId=${encodeURIComponent(subExamId)}` : ''}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          ...getAuthHeaders(),
         },
         body: JSON.stringify({
           password: passwordInput || null,
@@ -368,20 +389,16 @@ function TakeExamPageContent() {
     setSubmitting(true);
     setShowSubmitModal(false);
     try {
-      const token = isPreviewMode
-        ? (localStorage.getItem("super_admin_token") || localStorage.getItem("school_admin_token") || localStorage.getItem("lms_token"))
-        : (localStorage.getItem("lms_token") || localStorage.getItem("school_admin_token") || localStorage.getItem("super_admin_token"));
-      
       const timeTakenInSeconds = Math.max(0, exam.duration * 60 - remainingTimeRef.current);
-      const res = await fetch(`${API_URL}/exams/${id}/submit`, {
+      const res = await apiFetch(`${API_URL}/exams/${id}/submit`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          ...getAuthHeaders(),
         },
         body: JSON.stringify({ answers, totalTime: timeTakenInSeconds, subExamId, password: passwordInput || null }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         if (!isPreviewMode) {
           localStorage.removeItem(`exam_${id}_${subExamId || "root"}_answers`);
@@ -414,24 +431,47 @@ function TakeExamPageContent() {
 
   if (!exam) return null; // Prevent crash if exam failed to load but loading is finished (redirecting)
 
-  const displayExamTitle =
-    exam.selectedSubExam?.title ||
-    exam.examTitle ||
-    exam.title ||
-    (language === 'ar' ? 'اختبار بدون عنوان' : 'Untitled Exam');
-  const displayCourseTitle =
-    exam.courseTitle ||
-    exam.course?.title ||
-    exam.selectedSubExam?.courseTitle ||
-    '';
-  const displayDomain = exam.selectedSubExam?.domain || exam.domain || '';
+  const isEn = studentQuestionLang === 'en';
+  const activeExamLang: 'ar' | 'en' = studentQuestionLang;
+
+  const displayExamTitle = isEn
+    ? (exam.selectedSubExam?.titleEn || exam.titleEn || exam.examTitleEn || exam.selectedSubExam?.title || exam.examTitle || exam.title || 'Untitled Exam')
+    : (exam.selectedSubExam?.title || exam.examTitle || exam.title || (language === 'ar' ? 'اختبار بدون عنوان' : 'Untitled Exam'));
+  const displayCourseTitle = isEn
+    ? (exam.courseTitleEn || exam.course?.titleEn || exam.selectedSubExam?.courseTitleEn || exam.courseTitle || exam.course?.title || exam.selectedSubExam?.courseTitle || '')
+    : (exam.courseTitle || exam.course?.title || exam.selectedSubExam?.courseTitle || '');
+  const displayDomain = isEn
+    ? (exam.selectedSubExam?.domainEn || exam.domainEn || exam.selectedSubExam?.domain || exam.domain || '')
+    : (exam.selectedSubExam?.domain || exam.domain || '');
 
 
   // ── Gatekeeper Screen ─────────────────────────────────────────────────────
   if (!started) {
     return (
-      <div className={`min-h-screen bg-[#f8fafc] flex items-center justify-center p-6 ${language === 'ar' ? 'rtl' : 'ltr'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
-        <div className="max-w-2xl w-full bg-white rounded-[50px] shadow-2xl shadow-slate-200 border border-slate-100 overflow-hidden">
+      <div className={`min-h-screen bg-[#f8fafc] flex items-center justify-center p-6 ${isEn ? 'ltr' : 'rtl'}`} dir={isEn ? 'ltr' : 'rtl'}>
+        <div className="max-w-2xl w-full bg-white rounded-[50px] shadow-2xl shadow-slate-200 border border-slate-100 overflow-hidden relative">
+          {/* Gatekeeper Language Switcher */}
+          <div className="absolute top-6 end-6 z-20 flex items-center gap-1 bg-white/20 backdrop-blur-md p-1 rounded-xl border border-white/30 text-xs font-black">
+            <button
+              type="button"
+              onClick={() => setStudentQuestionLang('ar')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                !isEn ? 'bg-white text-indigo-900 shadow-sm' : 'text-white hover:bg-white/10'
+              }`}
+            >
+              العربية
+            </button>
+            <button
+              type="button"
+              onClick={() => setStudentQuestionLang('en')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                isEn ? 'bg-white text-indigo-900 shadow-sm' : 'text-white hover:bg-white/10'
+              }`}
+            >
+              English
+            </button>
+          </div>
+
           {/* Header */}
           <div className="bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 p-12 text-center relative overflow-hidden shadow-2xl shadow-indigo-200/50">
             <div className="relative z-10">
@@ -439,7 +479,7 @@ function TakeExamPageContent() {
                 <ShieldCheck className="w-10 h-10 text-amber-300" />
               </div>
               <h1 className="text-3xl md:text-4xl font-black text-white mb-3">{displayExamTitle}</h1>
-              <p className="text-indigo-100 font-medium">{language === 'ar' ? 'يرجى قراءة التعليمات بعناية قبل البدء.' : 'Please read the instructions carefully before starting.'}</p>
+              <p className="text-indigo-100 font-medium">{isEn ? 'Please read the instructions carefully before starting.' : 'يرجى قراءة التعليمات بعناية قبل البدء.'}</p>
             </div>
             <div className="absolute top-0 right-0 w-64 h-64 bg-violet-400/20 blur-[100px] -mr-32 -mt-32"></div>
           </div>
@@ -450,37 +490,37 @@ function TakeExamPageContent() {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
               <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 text-center">
                 <Clock className="w-6 h-6 text-indigo-600 mx-auto mb-3" />
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{language === 'ar' ? 'المدة' : 'Duration'}</p>
-                <p className="font-black text-slate-700">{exam.duration} {language === 'ar' ? 'دقيقة' : 'Minutes'}</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{isEn ? 'Duration' : 'المدة'}</p>
+                <p className="font-black text-slate-700">{exam.duration} {isEn ? 'Minutes' : 'دقيقة'}</p>
               </div>
               <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 text-center">
                 <Play className="w-6 h-6 text-indigo-600 mx-auto mb-3" />
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{language === 'ar' ? 'الأسئلة' : 'Questions'}</p>
-                <p className="font-black text-slate-700">{examQuestions.length} {language === 'ar' ? 'سؤال' : 'Questions'}</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{isEn ? 'Questions' : 'الأسئلة'}</p>
+                <p className="font-black text-slate-700">{examQuestions.length} {isEn ? 'Questions' : 'سؤال'}</p>
               </div>
               <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 text-center col-span-2 md:col-span-1">
                 <Calendar className="w-6 h-6 text-indigo-600 mx-auto mb-3" />
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{language === 'ar' ? 'النوع' : 'Type'}</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{isEn ? 'Type' : 'النوع'}</p>
                 <p className="font-black text-slate-700">{exam.type === 'Quiz' ? 'Exam' : (exam.type || "Exam")}</p>
               </div>
               {displayCourseTitle && (
                 <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 text-center">
                   <BookOpen className="w-6 h-6 text-indigo-600 mx-auto mb-3" />
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{language === 'ar' ? 'الكورس' : 'Course'}</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{isEn ? 'Course' : 'الكورس'}</p>
                   <p className="font-black text-slate-700 line-clamp-2">{displayCourseTitle}</p>
                 </div>
               )}
               {displayDomain && (
                 <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 text-center">
                   <Target className="w-6 h-6 text-indigo-600 mx-auto mb-3" />
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{language === 'ar' ? 'المجال' : 'Domain'}</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{isEn ? 'Domain' : 'المجال'}</p>
                   <p className="font-black text-slate-700 line-clamp-2">{displayDomain}</p>
                 </div>
               )}
               {exam.password && isPreviewMode && typeof exam.password === 'string' && (
                 <div className="bg-amber-50 p-6 rounded-3xl border border-amber-100 text-center">
                   <Lock className="w-6 h-6 text-amber-600 mx-auto mb-3" />
-                  <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-1">{language === 'ar' ? 'كلمة المرور' : 'Password'}</p>
+                  <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest mb-1">{isEn ? 'Password' : 'كلمة المرور'}</p>
                   <p className="font-black text-slate-800 break-words">{exam.password}</p>
                 </div>
               )}
@@ -491,11 +531,11 @@ function TakeExamPageContent() {
               <div className="space-y-4">
                 <label className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                   <Lock className="w-4 h-4" />
-                  {language === 'ar' ? 'كلمة سر فتح الامتحان' : 'Exam Password'}
+                  {isEn ? 'Exam Password' : 'كلمة سر فتح الامتحان'}
                 </label>
                 <input
                   type="password"
-                  placeholder={language === 'ar' ? "أدخل كلمة السر هنا..." : "Enter password here..."}
+                  placeholder={isEn ? "Enter password here..." : "أدخل كلمة السر هنا..."}
                   className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 text-xl font-black outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
@@ -511,8 +551,8 @@ function TakeExamPageContent() {
                 disabled={isVerifying}
                 className="py-5 rounded-2xl bg-indigo-600 text-white font-black text-xl shadow-xl shadow-indigo-100 hover:scale-[1.02] transition-all flex items-center justify-center gap-3 disabled:opacity-60"
               >
-                {isVerifying ? (language === 'ar' ? "جاري التحقق..." : "Verifying...") : (language === 'ar' ? "ابدأ الامتحان الآن" : "Start Exam Now")}
-                <ChevronLeft className="w-6 h-6" />
+                {isVerifying ? (isEn ? "Verifying..." : "جاري التحقق...") : (isEn ? "Start Exam Now" : "ابدأ الامتحان الآن")}
+                {isEn ? <ChevronRight className="w-6 h-6" /> : <ChevronLeft className="w-6 h-6" />}
               </button>
             </div>
           </div>
@@ -527,8 +567,10 @@ function TakeExamPageContent() {
   const selectedAnswer = answerObj?.selectedAnswer;
   const selectedAnswers = answerObj?.selectedAnswers || [];
   const isCurrentQuestionFlagged = question ? reviewFlags.includes(String(question.id || '')) : false;
-  const currentQuestionSection = question?.section || exam.selectedSubExam?.section || exam.section || '';
-  const currentAnswerStatus = getAnswerStatusLabel(question, answerObj, language);
+  const currentQuestionSection = isEn
+    ? (question?.sectionEn || exam.selectedSubExam?.sectionEn || exam.sectionEn || question?.section || exam.selectedSubExam?.section || exam.section || '')
+    : (question?.section || exam.selectedSubExam?.section || exam.section || '');
+  const currentAnswerStatus = getAnswerStatusLabel(question, answerObj, activeExamLang);
   const flaggedQuestionsCount = reviewFlags.length;
   
   const questionsThatRequireAnswer = examQuestions.filter((q: any) => q.type !== "TEXT");
@@ -550,16 +592,16 @@ function TakeExamPageContent() {
 
   if (!question) {
     return (
-      <div className={`min-h-screen bg-slate-50 flex items-center justify-center p-6 ${language === 'ar' ? 'rtl' : 'ltr'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <div className={`min-h-screen bg-slate-50 flex items-center justify-center p-6 ${isEn ? 'ltr' : 'rtl'}`} dir={isEn ? 'ltr' : 'rtl'}>
         <div className="max-w-xl rounded-[32px] border border-slate-200 bg-white p-10 text-center shadow-sm">
           <AlertCircle className="mx-auto mb-4 h-10 w-10 text-amber-500" />
           <h2 className="text-2xl font-black text-slate-900">
-            {language === 'ar' ? 'لا توجد أسئلة متاحة لهذا الاختبار' : 'No questions are available for this exam'}
+            {isEn ? 'No questions are available for this exam' : 'لا توجد أسئلة متاحة لهذا الاختبار'}
           </h2>
           <p className="mt-3 text-sm font-bold text-slate-500">
-            {language === 'ar'
-              ? 'تأكد من ربط الأسئلة بالاختبار أو بالقسم الصحيح ثم أعد المحاولة.'
-              : 'Make sure questions are attached to the correct exam or section, then try again.'}
+            {isEn
+              ? 'Make sure questions are attached to the correct exam or section, then try again.'
+              : 'تأكد من ربط الأسئلة بالاختبار أو بالقسم الصحيح ثم أعد المحاولة.'}
           </p>
         </div>
       </div>
@@ -567,7 +609,7 @@ function TakeExamPageContent() {
   }
 
   return (
-    <div className={`min-h-screen bg-slate-50 flex flex-col ${language === 'ar' ? 'rtl' : 'ltr'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+    <div className={`min-h-screen bg-slate-50 flex flex-col ${isEn ? 'ltr' : 'rtl'}`} dir={isEn ? 'ltr' : 'rtl'}>
       <Watermark text={watermarkText} />
       <StudentExamCalculator />
 
@@ -583,65 +625,109 @@ function TakeExamPageContent() {
               {unansweredCount > 0 ? <AlertCircle className="w-10 h-10" /> : <Send className="w-10 h-10" />}
             </div>
             <h2 className="text-3xl font-black text-slate-800 mb-4">
-              {unansweredCount > 0 ? (language === 'ar' ? "تنبيه: أسئلة لم تحل" : "Warning: Unanswered Questions") : (language === 'ar' ? "تسليم الامتحان؟" : "Submit Exam?")}
+              {unansweredCount > 0 ? (isEn ? "Warning: Unanswered Questions" : "تنبيه: أسئلة لم تحل") : (isEn ? "Submit Exam?" : "تسليم الامتحان؟")}
             </h2>
             <p className="text-slate-500 mb-10 leading-relaxed">
               {unansweredCount > 0 
-                ? (language === 'ar' ? `لقد أجبت على ${answers.length} من أصل ${examQuestions.length} سؤال. هناك ${unansweredCount} سؤال لم يتم حلهم بعد. هل أنت متأكد من التسليم؟` : `You have answered ${answers.length} out of ${examQuestions.length} questions. There are ${unansweredCount} unanswered questions. Are you sure you want to submit?`)
-                : (language === 'ar' ? "أنت على وشك إنهاء الامتحان وتسليم إجاباتك. يرجى التأكد من مراجعة كافة الأسئلة قبل التأكيد." : "You are about to finish the exam and submit your answers. Please review all questions before confirming.")}
+                ? (isEn ? `You have answered ${answers.length} out of ${examQuestions.length} questions. There are ${unansweredCount} unanswered questions. Are you sure you want to submit?` : `لقد أجبت على ${answers.length} من أصل ${examQuestions.length} سؤال. هناك ${unansweredCount} سؤال لم يتم حلهم بعد. هل أنت متأكد من التسليم؟`)
+                : (isEn ? "You are about to finish the exam and submit your answers. Please review all questions before confirming." : "أنت على وشك إنهاء الامتحان وتسليم إجاباتك. يرجى التأكد من مراجعة كافة الأسئلة قبل التأكيد.")}
             </p>
             <div className="flex flex-col gap-4">
               <button
                 onClick={handleSubmit}
                 className={`w-full py-4 rounded-2xl font-bold text-lg shadow-xl transition-all hover:scale-105 ${unansweredCount > 0 ? 'bg-amber-600 shadow-amber-100 hover:bg-amber-700 text-black' : 'bg-emerald-600 shadow-emerald-100 hover:bg-emerald-700 text-white'}`}
               >
-                {language === 'ar' ? "نعم، قم بالتسليم الآن" : "Yes, Submit Now"}
+                {isEn ? "Yes, Submit Now" : "نعم، قم بالتسليم الآن"}
               </button>
               <button
                 onClick={() => setShowSubmitModal(false)}
                 className="w-full bg-slate-50 text-slate-500 py-4 rounded-2xl font-bold text-lg hover:bg-slate-100 transition-all"
               >
-                {language === 'ar' ? "الرجوع للمراجعة" : "Go Back to Review"}
+                {isEn ? "Go Back to Review" : "الرجوع للمراجعة"}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Preview Mode Banner */}
+      {/* Preview Mode Banner with Language Switcher */}
       {isPreviewMode && (
-        <div className="bg-amber-500 text-white text-center py-2.5 px-6 text-sm font-black uppercase tracking-widest shadow-md">
-          👁️ {language === 'ar' ? "وضع المعاينة – البيانات لن تُحفظ" : "Preview Mode – Data will NOT be saved"}
+        <div className="bg-amber-500 text-white py-2 px-6 text-xs sm:text-sm font-black tracking-wide shadow-md flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span>{isEn ? "Preview Mode – Data will NOT be saved" : "وضع المعاينة – البيانات لن تُحفظ"}</span>
+          </div>
+          <div className="flex items-center gap-1 bg-amber-600/80 p-0.5 rounded-lg border border-amber-400/60 text-xs">
+            <button
+              type="button"
+              onClick={() => setStudentQuestionLang('ar')}
+              className={`px-2.5 py-1 rounded-md transition-all font-black ${
+                !isEn ? 'bg-white text-amber-900 shadow-xs' : 'text-white hover:bg-white/20'
+              }`}
+            >
+              العربية
+            </button>
+            <button
+              type="button"
+              onClick={() => setStudentQuestionLang('en')}
+              className={`px-2.5 py-1 rounded-md transition-all font-black ${
+                isEn ? 'bg-white text-amber-900 shadow-xs' : 'text-white hover:bg-white/20'
+              }`}
+            >
+              English
+            </button>
+          </div>
         </div>
       )}
 
       {/* Top Bar */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-10 px-6 py-4 shadow-sm">
-        <div className="max-w-4xl mx-auto flex justify-between items-center">
+        <div className="max-w-4xl mx-auto flex justify-between items-center gap-4">
           <div className="flex flex-col">
             <h1 className="text-xl font-black text-slate-800 line-clamp-1">{displayExamTitle}</h1>
-            <div className="flex gap-2 mt-0.5">
+            <div className="flex flex-wrap gap-2 mt-0.5">
               <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">{exam.type === 'Quiz' ? 'Exam' : (exam.type || 'Exam')}</span>
               {currentQuestionSection && (
                 <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
-                  {language === 'ar' ? 'القسم: ' : 'Section: '} {currentQuestionSection}
+                  {isEn ? 'Section: ' : 'القسم: '} {currentQuestionSection}
                 </span>
               )}
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
-                currentAnswerStatus === (language === 'ar' ? 'تمت الإجابة' : 'Answered')
+                currentAnswerStatus === (isEn ? 'Answered' : 'تمت الإجابة')
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
                   : 'bg-amber-50 text-amber-700 border-amber-100'
               }`}>
-                {language === 'ar' ? 'الحالة: ' : 'Answer Status: '} {currentAnswerStatus}
+                {isEn ? 'Answer Status: ' : 'الحالة: '} {currentAnswerStatus}
               </span>
               {flaggedQuestionsCount > 0 && (
                 <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-100">
-                  {language === 'ar' ? 'للمراجعة: ' : 'Flagged: '} {flaggedQuestionsCount}
+                  {isEn ? 'Flagged: ' : 'للمراجعة: '} {flaggedQuestionsCount}
                 </span>
               )}
             </div>
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3 sm:gap-6">
+            {/* Top Bar Language Switcher */}
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
+              <button
+                type="button"
+                onClick={() => setStudentQuestionLang('ar')}
+                className={`px-3 py-1 rounded-lg text-xs font-black transition-all ${
+                  !isEn ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white'
+                }`}
+              >
+                العربية
+              </button>
+              <button
+                type="button"
+                onClick={() => setStudentQuestionLang('en')}
+                className={`px-3 py-1 rounded-lg text-xs font-black transition-all ${
+                  isEn ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white'
+                }`}
+              >
+                English
+              </button>
+            </div>
+
             <ExamCountdown
               initialSeconds={timeLeft}
               storageKey={isPreviewMode ? null : `exam_${id}_${subExamId || "root"}_time`}
@@ -673,7 +759,7 @@ function TakeExamPageContent() {
                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                         : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-200 hover:text-indigo-600'
                   }`}
-                  aria-label={`${language === 'ar' ? 'السؤال' : 'Question'} ${index + 1}`}
+                  aria-label={`${isEn ? 'Question' : 'السؤال'} ${index + 1}`}
                 >
                   {index + 1}
                 </button>
@@ -683,18 +769,18 @@ function TakeExamPageContent() {
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
-                {language === 'ar' ? 'السؤال' : 'Question'} {Math.min(currentQuestion + 1, examQuestions.length)} {language === 'ar' ? 'من' : 'of'} {examQuestions.length}
+                {isEn ? 'Question' : 'السؤال'} {Math.min(currentQuestion + 1, examQuestions.length)} {isEn ? 'of' : 'من'} {examQuestions.length}
               </span>
               <span className={`text-sm font-bold px-3 py-1 rounded-full ${
-                currentAnswerStatus === (language === 'ar' ? 'تمت الإجابة' : 'Answered')
+                currentAnswerStatus === (isEn ? 'Answered' : 'تمت الإجابة')
                   ? 'bg-emerald-50 text-emerald-700'
                   : 'bg-amber-50 text-amber-700'
               }`}>
-                {language === 'ar' ? 'الحالة: ' : 'Answer Status: '} {currentAnswerStatus}
+                {isEn ? 'Answer Status: ' : 'الحالة: '} {currentAnswerStatus}
               </span>
             </div>
             <span className="text-sm font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
-              {completedProgress}% {language === 'ar' ? 'اكتمل' : 'Completed'}
+              {completedProgress}% {isEn ? 'Completed' : 'اكتمل'}
             </span>
           </div>
           <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
@@ -709,24 +795,46 @@ function TakeExamPageContent() {
           <div className="p-8">
             {question.sections && question.sections.length > 0 && (
               <div className="flex flex-wrap gap-2 justify-end mb-4">
-                <ItemSectionsBubbles item={{sections: question.sections}} isSubmitted={false} language={language} filterType="HINT_ONLY" />
+                <ItemSectionsBubbles item={{sections: question.sections}} isSubmitted={false} language={activeExamLang} filterType="HINT_ONLY" />
               </div>
             )}
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600">
-                <HelpCircle className="w-6 h-6" />
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600">
+                  <HelpCircle className="w-6 h-6" />
+                </div>
+                <span className="bg-indigo-600 text-white px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-sm shadow-indigo-200">
+                  {getInExamQuestionTypeLabel(question, activeExamLang)}
+                </span>
               </div>
-            <div className="flex flex-wrap items-center gap-3 mb-6">
-              <span className="bg-indigo-600 text-white px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-sm shadow-indigo-200">
-                {getInExamQuestionTypeLabel(question, language)}
-              </span>
+              <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setStudentQuestionLang('ar')}
+                  className={`px-3 py-1 rounded-lg text-xs font-black transition-all ${
+                    !isEn ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white'
+                  }`}
+                >
+                  العربية
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStudentQuestionLang('en')}
+                  className={`px-3 py-1 rounded-lg text-xs font-black transition-all ${
+                    isEn ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white'
+                  }`}
+                >
+                  English
+                </button>
+              </div>
             </div>
+            <div dir={isEn ? 'ltr' : 'rtl'}>
+              <HtmlRenderer 
+                html={sanitizeHtml((isEn && question.textEn) ? question.textEn : (question.text || question.textEn || ''))}
+                tag="h2"
+                className="text-2xl font-bold text-slate-800 mb-8 leading-relaxed animate-in fade-in duration-500"
+              />
             </div>
-            <HtmlRenderer 
-              html={sanitizeHtml(question.text)}
-              tag="h2"
-              className="text-2xl font-bold text-slate-800 mb-8 leading-relaxed animate-in fade-in duration-500"
-            />
             {question.imageUrl && (
               <img
                 src={question.imageUrl}
@@ -745,24 +853,27 @@ function TakeExamPageContent() {
               <>
                 {question.type === "MCQ" || question.type === "MULTI_SELECT" ? (
                   (() => {
-                    const choices = parseQuestionChoices(question.options).filter((opt: string) => opt && opt.trim() !== "");
+                    const rawArChoices = parseQuestionChoices(question.options);
+                    const rawEnChoices = parseQuestionChoices(question.optionsEn);
+                    const activeChoices = (isEn && rawEnChoices.length > 0) ? rawEnChoices : rawArChoices;
+                    const choices = activeChoices.filter((opt: string) => opt && opt.trim() !== "");
                     if (choices.length === 0) {
                       return (
                         <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-4 animate-in fade-in">
                           <label className="block text-sm font-black text-slate-700">
-                            {language === 'ar' ? 'اكتب إجابتك هنا (إجابة حرة / رقمية):' : 'Enter your answer here (Student-Produced Response / Numeric):'}
+                            {isEn ? 'Enter your answer here (Student-Produced Response / Numeric):' : 'اكتب إجابتك هنا (إجابة حرة / رقمية):'}
                           </label>
                           <input
                             type="text"
                             value={selectedAnswer || ''}
                             onChange={(e) => handleSelectAnswer(e.target.value)}
-                            placeholder={language === 'ar' ? 'أدخل الإجابة...' : 'Enter your answer...'}
+                            placeholder={isEn ? 'Enter your answer...' : 'أدخل الإجابة...'}
                             className="w-full px-5 py-4 bg-white border-2 border-slate-200 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 rounded-xl text-lg font-bold text-slate-800 transition-all outline-none"
                           />
                           {showPreviewAnswers && isPreviewMode && question.correctAnswer && (
                             <div className="text-sm font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 p-3 rounded-xl mt-2 flex items-center gap-2">
                               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                              <span>{language === 'ar' ? `الإجابة النموذجية: ${question.correctAnswer}` : `Correct Answer: ${question.correctAnswer}`}</span>
+                              <span>{isEn ? `Correct Answer: ${question.correctAnswerEn || question.correctAnswer}` : `الإجابة النموذجية: ${question.correctAnswer}`}</span>
                             </div>
                           )}
                         </div>
@@ -771,19 +882,25 @@ function TakeExamPageContent() {
                     return (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {choices.map((option: string, i: number) => {
+                          const arOpt = rawArChoices[i];
+                          const enOpt = rawEnChoices[i];
                           const isSelected = question.type === "MULTI_SELECT" 
-                            ? selectedAnswers.includes(option)
-                            : selectedAnswer === option;
+                            ? (selectedAnswers.includes(option) || (arOpt && selectedAnswers.includes(arOpt)) || (enOpt && selectedAnswers.includes(enOpt)))
+                            : (selectedAnswer === option || (arOpt && selectedAnswer === arOpt) || (enOpt && selectedAnswer === enOpt));
+
+                          const isOptionCorrectInPreview = question.type === "MULTI_SELECT"
+                            ? Array.isArray(question.correctAnswers) && (question.correctAnswers.includes(option) || (arOpt && question.correctAnswers.includes(arOpt)))
+                            : (question.correctAnswer === option || (arOpt && question.correctAnswer === arOpt));
 
                           return (
                             <button
                               key={i}
-                              dir={language === 'ar' ? 'rtl' : 'ltr'}
+                              dir={isEn ? 'ltr' : 'rtl'}
                               onClick={() => handleSelectAnswer(option)}
                               className={`w-full text-start p-5 rounded-2xl border-2 transition-all flex items-center justify-between gap-4 group ${
-                                showPreviewAnswers && isPreviewMode && (question.type === "MULTI_SELECT" ? Array.isArray(question.correctAnswers) && question.correctAnswers.includes(option) : question.correctAnswer === option)
+                                showPreviewAnswers && isPreviewMode && isOptionCorrectInPreview
                                   ? "bg-emerald-50 border-emerald-500 shadow-md shadow-emerald-100"
-                                  : showPreviewAnswers && isPreviewMode && isSelected && !(question.type === "MULTI_SELECT" ? Array.isArray(question.correctAnswers) && question.correctAnswers.includes(option) : question.correctAnswer === option)
+                                  : showPreviewAnswers && isPreviewMode && isSelected && !isOptionCorrectInPreview
                                   ? "bg-rose-50 border-rose-500 shadow-md shadow-rose-100"
                                   : isSelected
                                   ? "bg-indigo-50 border-indigo-600 shadow-md shadow-indigo-100"
@@ -796,7 +913,7 @@ function TakeExamPageContent() {
                                     ? "bg-indigo-600 text-white shadow-sm"
                                     : "bg-slate-100 text-slate-600 group-hover:bg-slate-200"
                                 }`}>
-                                  {getOptionLetter(i, language)}
+                                  {getOptionLetter(i, activeExamLang)}
                                 </span>
                                 <span className={`text-lg font-bold ${isSelected ? "text-indigo-900" : "text-slate-700"}`}>
                                   <HtmlRenderer html={cleanOptionText(option)} tag="span" />
@@ -824,11 +941,12 @@ function TakeExamPageContent() {
                 ) : question.type === "TRUE_FALSE" ? (
                   <div className="flex gap-4">
                     {[
-                      { value: "True", label: language === 'ar' ? "صحيح" : "True" },
-                      { value: "False", label: language === 'ar' ? "خطأ" : "False" }
+                      { value: "True", label: isEn ? "True" : "صحيح" },
+                      { value: "False", label: isEn ? "False" : "خطأ" }
                     ].map((option) => {
                       const normCorrect = question.correctAnswer === "صحيح" ? "True" : question.correctAnswer === "خطأ" ? "False" : question.correctAnswer;
                       const isCorrect = normCorrect === option.value;
+                      const isSelected = selectedAnswer === option.value || (option.value === "True" && selectedAnswer === "صحيح") || (option.value === "False" && selectedAnswer === "خطأ");
                       return (
                       <button
                         key={option.value}
@@ -836,9 +954,9 @@ function TakeExamPageContent() {
                         className={`flex-1 py-6 rounded-2xl border-2 font-bold text-xl transition-all ${
                           showPreviewAnswers && isPreviewMode && isCorrect
                             ? "bg-emerald-50 border-emerald-600 text-emerald-900"
-                            : showPreviewAnswers && isPreviewMode && selectedAnswer === option.value && !isCorrect
+                            : showPreviewAnswers && isPreviewMode && isSelected && !isCorrect
                             ? "bg-rose-50 border-rose-600 text-rose-900"
-                            : selectedAnswer === option.value
+                            : isSelected
                             ? "bg-indigo-50 border-indigo-600 text-indigo-900"
                             : "bg-white border-slate-100 text-slate-500 hover:bg-slate-50"
                         }`}
@@ -851,14 +969,14 @@ function TakeExamPageContent() {
                   // Advanced question types (MATCHING, DRAG_DROP_FILL, GROUP_SORTING, etc.)
                   <div className="mt-2">
                     <InteractiveQuestionRenderer
-                      key={question.id}
+                      key={`${question.id}-${activeExamLang}`}
                       question={{
                         ...question,
                         type: question.label || question.type,
                       }}
                       value={selectedAnswer || ''}
                       onChange={(val: string) => handleSelectAnswer(val)}
-                      language={language}
+                      language={activeExamLang}
                     />
                   </div>
                 )}
@@ -869,13 +987,14 @@ function TakeExamPageContent() {
                   {question.sections.map((sec: any, sIdx: number) => {
                     const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
                     const Icon = preset.icon;
+                    const content = (isEn && (sec.contentEn || sec.textEn)) ? (sec.contentEn || sec.textEn) : sec.content;
                     return (
                       <div key={sIdx} className={`p-6 rounded-2xl border-2 ${preset.bg} ${preset.border}`}>
                         <div className={`flex items-center gap-2 mb-3 font-black ${preset.text}`}>
                           <Icon className="w-5 h-5 animate-bounce-slow shrink-0" />
                           <span>{preset.label}</span>
                         </div>
-                        <HtmlRenderer html={sanitizeHtml(sec.content)} className={`prose prose-sm max-w-none ${preset.text}`} />
+                        <HtmlRenderer html={sanitizeHtml(content)} className={`prose prose-sm max-w-none ${preset.text}`} />
                       </div>
                     );
                   })}
@@ -892,8 +1011,8 @@ function TakeExamPageContent() {
             onClick={() => setCurrentQuestion(currentQuestion - 1)}
             className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 font-bold text-slate-500 hover:text-indigo-600 hover:border-indigo-200 disabled:opacity-30 transition-colors"
           >
-            {language === 'ar' ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
-            {language === 'ar' ? 'السؤال السابق' : 'Previous'}
+            {isEn ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+            {isEn ? 'Previous' : 'السؤال السابق'}
           </button>
 
           <button
@@ -905,7 +1024,7 @@ function TakeExamPageContent() {
             }`}
           >
             <Flag className="w-4 h-4" />
-            {language === 'ar' ? 'وضع علامة للمراجعة' : 'Mark for Review'}
+            {isEn ? 'Mark for Review' : 'وضع علامة للمراجعة'}
           </button>
 
           <div className="flex-1 flex justify-end">
@@ -915,7 +1034,7 @@ function TakeExamPageContent() {
                 disabled={submitting}
                 className="bg-emerald-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 flex items-center gap-2"
               >
-                {submitting ? (language === 'ar' ? "جاري الإرسال..." : "Submitting...") : (language === 'ar' ? "تسليم الامتحان النهائي" : "Submit Final Exam")}
+                {submitting ? (isEn ? "Submitting..." : "جاري الإرسال...") : (isEn ? "Submit Final Exam" : "تسليم الامتحان النهائي")}
                 <Send className="w-5 h-5" />
               </button>
             ) : (
@@ -923,8 +1042,8 @@ function TakeExamPageContent() {
                 onClick={() => setCurrentQuestion(currentQuestion + 1)}
                 className="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center gap-2"
               >
-                {language === 'ar' ? 'السؤال التالي' : 'Next'}
-                {language === 'ar' ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                {isEn ? 'Next' : 'السؤال التالي'}
+                {isEn ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
               </button>
             )}
           </div>

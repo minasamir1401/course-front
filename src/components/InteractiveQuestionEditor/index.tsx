@@ -28,64 +28,99 @@ import ImageLabelEditor from "./editors/ImageLabelEditor";
 import ColorMatchEditor from "./editors/ColorMatchEditor";
 
 export default function InteractiveQuestionEditor({ question, onChange, language }: EditorProps) {
+  const isEn = language === 'en';
+
+  const hasEnOptions = typeof question.optionsEn === 'string'
+    ? question.optionsEn.trim().length > 0
+    : (question.optionsEn !== undefined && question.optionsEn !== null);
+
+  const activeOptions = isEn
+    ? (hasEnOptions ? question.optionsEn : question.options)
+    : question.options;
+
+  const hasEnAnswer = typeof question.correctAnswerEn === 'string'
+    ? question.correctAnswerEn.trim().length > 0
+    : (question.correctAnswerEn !== undefined && question.correctAnswerEn !== null);
+
+  const activeCorrectAnswer = isEn
+    ? (hasEnAnswer ? question.correctAnswerEn : question.correctAnswer)
+    : question.correctAnswer;
+
+  const effectiveQuestion = {
+    ...question,
+    options: activeOptions,
+    correctAnswer: activeCorrectAnswer
+  };
+
   const updateQuestionData = (optionsObj: any, correctAnswerVal: any) => {
-    onChange({
-      ...question,
-      options: typeof optionsObj === "string" ? optionsObj : JSON.stringify(optionsObj),
-      correctAnswer: typeof correctAnswerVal === "string" ? correctAnswerVal : JSON.stringify(correctAnswerVal)
-    });
+    const stringifiedOpts = typeof optionsObj === "string" ? optionsObj : JSON.stringify(optionsObj);
+    const stringifiedAns = typeof correctAnswerVal === "string" ? correctAnswerVal : JSON.stringify(correctAnswerVal);
+
+    if (isEn) {
+      onChange({
+        ...question,
+        optionsEn: stringifiedOpts,
+        correctAnswerEn: stringifiedAns
+      });
+    } else {
+      onChange({
+        ...question,
+        options: stringifiedOpts,
+        correctAnswer: stringifiedAns
+      });
+    }
   };
 
   const renderEditor = () => {
     switch (question.type) {
       case "MCQ":
-        return <McqEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+        return <McqEditor question={effectiveQuestion} updateQuestionData={updateQuestionData} language={language} />;
       case "TRUE_FALSE":
-        return <TrueFalseEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+        return <TrueFalseEditor question={effectiveQuestion} updateQuestionData={updateQuestionData} language={language} />;
       case "MULTI_SELECT":
-        return <MultiSelectEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+        return <MultiSelectEditor question={effectiveQuestion} updateQuestionData={updateQuestionData} language={language} />;
       case "MATCHING":
-        return <MatchingEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+        return <MatchingEditor question={effectiveQuestion} updateQuestionData={updateQuestionData} language={language} />;
       case "DRAG_DROP_FILL":
-        return <DragDropFillEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+        return <DragDropFillEditor question={effectiveQuestion} updateQuestionData={updateQuestionData} language={language} />;
       case "GROUP_SORTING":
-        return <GroupSortingEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+        return <GroupSortingEditor question={effectiveQuestion} updateQuestionData={updateQuestionData} language={language} />;
       case "CLOCK":
-        return <ClockEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+        return <ClockEditor question={effectiveQuestion} updateQuestionData={updateQuestionData} language={language} />;
       case "MIND_MAP":
-        return <MindMapEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+        return <MindMapEditor question={effectiveQuestion} updateQuestionData={updateQuestionData} language={language} />;
       case "VIDEO_CHECKPOINT":
-        return <VideoCheckpointEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+        return <VideoCheckpointEditor question={effectiveQuestion} updateQuestionData={updateQuestionData} language={language} />;
       case "NUMBER_LINE":
-        return <NumberLineEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+        return <NumberLineEditor question={effectiveQuestion} updateQuestionData={updateQuestionData} language={language} />;
       case "SWIPE_SORT":
-        return <SwipeSortEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+        return <SwipeSortEditor question={effectiveQuestion} updateQuestionData={updateQuestionData} language={language} />;
       case "MAZE":
-        return <MazeEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+        return <MazeEditor question={effectiveQuestion} updateQuestionData={updateQuestionData} language={language} />;
       case "WORD_SEARCH":
-        return <WordSearchEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+        return <WordSearchEditor question={effectiveQuestion} updateQuestionData={updateQuestionData} language={language} />;
       case "GEOGEBRA":
-        return <GeoGebraEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+        return <GeoGebraEditor question={effectiveQuestion} updateQuestionData={updateQuestionData} language={language} />;
       case "FLASH_CARD":
-        return <FlashCardEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+        return <FlashCardEditor question={effectiveQuestion} updateQuestionData={updateQuestionData} language={language} />;
       case "MEMORY_GAME":
-        return <MemoryGameEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+        return <MemoryGameEditor question={effectiveQuestion} updateQuestionData={updateQuestionData} language={language} />;
       case "WORD_SCRAMBLE":
-        return <WordScrambleEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+        return <WordScrambleEditor question={effectiveQuestion} updateQuestionData={updateQuestionData} language={language} />;
       case "SENTENCE_REORDER":
-        return <SentenceReorderEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+        return <SentenceReorderEditor question={effectiveQuestion} updateQuestionData={updateQuestionData} language={language} />;
       case "MATH_EQUATION":
-        return <MathEquationEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+        return <MathEquationEditor question={effectiveQuestion} updateQuestionData={updateQuestionData} language={language} />;
       case "SEQUENCE_ORDER":
-        return <SequenceOrderEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+        return <SequenceOrderEditor question={effectiveQuestion} updateQuestionData={updateQuestionData} language={language} />;
       case "CROSSWORD":
-        return <CrosswordEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+        return <CrosswordEditor question={effectiveQuestion} updateQuestionData={updateQuestionData} language={language} />;
       case "COUNT_OBJECTS":
-        return <CountObjectsEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+        return <CountObjectsEditor question={effectiveQuestion} updateQuestionData={updateQuestionData} language={language} />;
       case "IMAGE_LABEL":
-        return <ImageLabelEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+        return <ImageLabelEditor question={effectiveQuestion} updateQuestionData={updateQuestionData} language={language} />;
       case "COLOR_MATCH":
-        return <ColorMatchEditor question={question} updateQuestionData={updateQuestionData} language={language} />;
+        return <ColorMatchEditor question={effectiveQuestion} updateQuestionData={updateQuestionData} language={language} />;
       default:
         return (
           <div className="p-4 text-center text-slate-400 font-bold w-full max-w-full">

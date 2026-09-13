@@ -26,7 +26,7 @@ export const useLessons = (props: { clusterId: string | null; language: string; 
   };
 
   const openAddLesson = () => {
-    setEditingLesson(null);
+    setEditingLesson({ name: '', description: '', order: lessons.length + 1 });
     setIsLessonModalOpen(true);
   };
 
@@ -35,18 +35,24 @@ export const useLessons = (props: { clusterId: string | null; language: string; 
     setIsLessonModalOpen(true);
   };
 
-  const handleSaveLesson = async (lessonData: any) => {
-    if (!lessonData.title || lessonData.skills.length === 0) {
-      showToast(language === 'ar' ? 'يرجى إكمال البيانات الأساسية للدرس' : 'Please complete basic lesson info', 'error');
+  const handleSaveLesson = async (lessonData?: any) => {
+    const data = (lessonData && typeof lessonData === 'object' && !('nativeEvent' in lessonData))
+      ? lessonData
+      : editingLesson;
+
+    const lessonName = (data?.name || data?.title || '').trim();
+    if (!lessonName) {
+      showToast(language === 'ar' ? 'يرجى إدخال اسم الدرس' : 'Please enter lesson name', 'error');
       return;
     }
 
     try {
       const token = localStorage.getItem('school_admin_token');
-      const url = editingLesson 
+      const isEdit = Boolean(editingLesson && editingLesson.id);
+      const url = isEdit 
         ? `${API_URL}/skills-hub/lessons/${editingLesson.id}` 
-        : `${API_URL}/skills-hub/clusters/${clusterId}/lessons`;
-      const method = editingLesson ? 'PUT' : 'POST';
+        : `${API_URL}/skills-hub/lessons`;
+      const method = isEdit ? 'PUT' : 'POST';
 
       const res = await fetch(url, {
         method,
@@ -55,16 +61,18 @@ export const useLessons = (props: { clusterId: string | null; language: string; 
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          title: lessonData.title,
-          description: lessonData.description,
-          skills: lessonData.skills,
-          metadata: lessonData.metadata
+          clusterId,
+          name: lessonName,
+          title: lessonName,
+          description: data?.description || '',
+          order: Number(data?.order) || 0
         })
       });
 
       if (res.ok) {
         showToast(language === 'ar' ? 'تم حفظ الدرس بنجاح' : 'Lesson saved', 'success');
         setIsLessonModalOpen(false);
+        setEditingLesson(null);
         fetchLessons();
       } else {
         const errData = await res.json().catch(() => ({}));
@@ -112,7 +120,6 @@ export const useLessons = (props: { clusterId: string | null; language: string; 
 
       if (res.ok) {
         showToast(language === 'ar' ? 'تم رفع الأنشطة بنجاح' : 'Activities uploaded successfully', 'success');
-        // Let the caller handle reloading activities if they are expanded
       } else {
         const err = await res.json();
         showToast(err.error || (language === 'ar' ? 'فشل رفع الملف' : 'Upload failed'), 'error');

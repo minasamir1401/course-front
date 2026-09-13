@@ -75,7 +75,7 @@ export default function SchoolAdminLoginPage() {
 
       // Token is stored in httpOnly cookie set by the server — do NOT persist in localStorage.
       // Keep user data in localStorage only for UI display purposes (name, role, etc.).
-      localStorage.setItem("school_admin_token", "cookie_auth");
+      localStorage.setItem("school_admin_token", data.token || "cookie_auth");
       localStorage.setItem(
         "school_admin_user",
         JSON.stringify({

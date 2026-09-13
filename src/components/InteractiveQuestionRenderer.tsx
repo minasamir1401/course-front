@@ -37,64 +37,82 @@ interface QuestionProps {
 export default function InteractiveQuestionRenderer({ question, value, onChange, language }: QuestionProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const effectiveQuestion = React.useMemo(() => {
+    if (language === 'en') {
+      return {
+        ...question,
+        title: question?.titleEn || question?.title,
+        text: question?.questionTextEn || question?.textEn || question?.questionText || question?.text,
+        questionText: question?.questionTextEn || question?.textEn || question?.questionText || question?.text,
+        options: question?.optionsEn || question?.options,
+        correctAnswer: question?.correctAnswerEn || question?.correctAnswer,
+        explanation: question?.explanationEn || question?.explanation,
+        hint: question?.hintEn || question?.hint,
+        tip: question?.tipEn || question?.tip,
+        keyInsight: question?.keyInsightEn || question?.keyInsight,
+      };
+    }
+    return question;
+  }, [question, language]);
+
   // Render individual component based on type
   const renderWidget = () => {
     // 💡 Fix: Support newer format where type="QUESTION" and label="MCQ"
-    const qType = question.type === "QUESTION" && question.label ? question.label : question.type;
+    const qType = effectiveQuestion.type === "QUESTION" && effectiveQuestion.label ? effectiveQuestion.label : effectiveQuestion.type;
 
     switch (qType) {
       case "MCQ":
-        return <McqRenderer question={question} value={value} onChange={onChange} language={language} />;
+        return <McqRenderer question={effectiveQuestion} value={value} onChange={onChange} language={language} />;
       case "TRUE_FALSE":
-        return <TrueFalseRenderer question={question} value={value} onChange={onChange} language={language} />;
+        return <TrueFalseRenderer question={effectiveQuestion} value={value} onChange={onChange} language={language} />;
       case "MULTI_SELECT":
-        return <MultiSelectRenderer question={question} value={value} onChange={onChange} language={language} />;
+        return <MultiSelectRenderer question={effectiveQuestion} value={value} onChange={onChange} language={language} />;
       case "MATCHING":
-        return <MatchingRenderer question={question} value={value} onChange={onChange} language={language} />;
+        return <MatchingRenderer question={effectiveQuestion} value={value} onChange={onChange} language={language} />;
       case "DRAG_DROP_FILL":
-        return <DragDropFillRenderer question={question} value={value} onChange={onChange} language={language} />;
+        return <DragDropFillRenderer question={effectiveQuestion} value={value} onChange={onChange} language={language} />;
       case "GROUP_SORTING":
-        return <GroupSortingRenderer question={question} value={value} onChange={onChange} language={language} />;
+        return <GroupSortingRenderer question={effectiveQuestion} value={value} onChange={onChange} language={language} />;
       case "CLOCK":
-        return <ClockRenderer question={question} value={value} onChange={onChange} language={language} />;
+        return <ClockRenderer question={effectiveQuestion} value={value} onChange={onChange} language={language} />;
       case "MIND_MAP":
-        return <MindMapRenderer question={question} value={value} onChange={onChange} language={language} />;
+        return <MindMapRenderer question={effectiveQuestion} value={value} onChange={onChange} language={language} />;
       case "VIDEO_CHECKPOINT":
-        return <VideoCheckpointRenderer question={question} value={value} onChange={onChange} language={language} />;
+        return <VideoCheckpointRenderer question={effectiveQuestion} value={value} onChange={onChange} language={language} />;
       case "NUMBER_LINE":
-        return <NumberLineRenderer question={question} value={value} onChange={onChange} language={language} />;
+        return <NumberLineRenderer question={effectiveQuestion} value={value} onChange={onChange} language={language} />;
       case "SWIPE_SORT":
-        return <SwipeSortRenderer question={question} value={value} onChange={onChange} language={language} />;
+        return <SwipeSortRenderer question={effectiveQuestion} value={value} onChange={onChange} language={language} />;
       case "MAZE":
-        return <MazeRenderer question={question} value={value} onChange={onChange} language={language} />;
+        return <MazeRenderer question={effectiveQuestion} value={value} onChange={onChange} language={language} />;
       case "WORD_SEARCH":
-        return <WordSearchRenderer question={question} value={value} onChange={onChange} language={language} />;
+        return <WordSearchRenderer question={effectiveQuestion} value={value} onChange={onChange} language={language} />;
       case "GEOGEBRA":
-        return <GeoGebraRenderer question={question} value={value} onChange={onChange} language={language} />;
+        return <GeoGebraRenderer question={effectiveQuestion} value={value} onChange={onChange} language={language} />;
       case "FLASH_CARD":
-        return <FlashCardRenderer question={question} value={value} onChange={onChange} language={language} />;
+        return <FlashCardRenderer question={effectiveQuestion} value={value} onChange={onChange} language={language} />;
       case "MEMORY_GAME":
-        return <MemoryGameRenderer question={question} value={value} onChange={onChange} language={language} />;
+        return <MemoryGameRenderer question={effectiveQuestion} value={value} onChange={onChange} language={language} />;
       case "WORD_SCRAMBLE":
-        return <WordScrambleRenderer question={question} value={value} onChange={onChange} language={language} />;
+        return <WordScrambleRenderer question={effectiveQuestion} value={value} onChange={onChange} language={language} />;
       case "SENTENCE_REORDER":
-        return <SentenceReorderRenderer question={question} value={value} onChange={onChange} language={language} />;
+        return <SentenceReorderRenderer question={effectiveQuestion} value={value} onChange={onChange} language={language} />;
       case "MATH_EQUATION":
-        return <MathEquationRenderer question={question} value={value} onChange={onChange} language={language} />;
+        return <MathEquationRenderer question={effectiveQuestion} value={value} onChange={onChange} language={language} />;
       case "SEQUENCE_ORDER":
-        return <SequenceOrderRenderer question={question} value={value} onChange={onChange} language={language} />;
+        return <SequenceOrderRenderer question={effectiveQuestion} value={value} onChange={onChange} language={language} />;
       case "CROSSWORD":
-        return <CrosswordRenderer question={question} value={value} onChange={onChange} language={language} />;
+        return <CrosswordRenderer question={effectiveQuestion} value={value} onChange={onChange} language={language} />;
       case "COUNT_OBJECTS":
-        return <CountObjectsRenderer question={question} value={value} onChange={onChange} language={language} />;
+        return <CountObjectsRenderer question={effectiveQuestion} value={value} onChange={onChange} language={language} />;
       case "IMAGE_LABEL":
-        return <ImageLabelRenderer question={question} value={value} onChange={onChange} language={language} />;
+        return <ImageLabelRenderer question={effectiveQuestion} value={value} onChange={onChange} language={language} />;
       case "COLOR_MATCH":
-        return <ColorMatchRenderer question={question} value={value} onChange={onChange} language={language} />;
+        return <ColorMatchRenderer question={effectiveQuestion} value={value} onChange={onChange} language={language} />;
       default:
         return (
-          <div className="p-4 bg-amber-50 text-amber-600 rounded-xl font-bold border border-amber-200">
-            {language === 'ar' ? `نوع السؤال غير مدعوم: ${qType}` : `Unsupported question type: ${qType}`}
+          <div className="p-4 text-center text-slate-400 font-bold">
+            {language === 'ar' ? 'نوع النشاط غير مدعوم حالياً' : 'Activity type not supported'}
           </div>
         );
     }

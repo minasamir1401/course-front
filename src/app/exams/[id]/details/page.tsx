@@ -5,7 +5,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { FileText, Clock, AlertCircle, CheckCircle2, Calendar, Lock, Eye, EyeOff, Hourglass, CalendarClock, Sparkles, Target, Award, PlayCircle, Timer, ArrowLeft, ArrowRight, ChevronRight, Layers, Flame, Zap, Trophy, Medal, Map, ArrowDown, ChevronDown, Check } from 'lucide-react';
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { API_URL } from "@/lib/api";
+import { API_URL, apiFetch } from "@/lib/api";
 import { getStudentExamTitle, getStudentExamDuration } from "@/lib/examModuleView";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -33,16 +33,16 @@ export default function ExamDetailsPage() {
 
   const fetchData = async () => {
     try {
-      const token = localStorage.getItem("lms_token") ||
+      const candidateToken = localStorage.getItem("lms_token") ||
         localStorage.getItem("school_admin_token") ||
         localStorage.getItem("super_admin_token");
 
-      if (!token) {
-        setLoading(false);
-        return;
+      const headers: Record<string, string> = {};
+      if (candidateToken && candidateToken !== "cookie_auth" && candidateToken !== "null" && candidateToken !== "undefined") {
+        headers["Authorization"] = `Bearer ${candidateToken}`;
       }
 
-      const res = await fetch(`${API_URL}/exams/${id}?includeQuestions=false`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await apiFetch(`${API_URL}/exams/${id}?includeQuestions=false`, { headers });
       if (res.ok) {
         setActiveModule(await res.json());
       } else {

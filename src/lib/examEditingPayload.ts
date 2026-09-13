@@ -92,16 +92,60 @@ export function buildModulesSubmissionPayload(modules: any[]) {
     }));
     allQuestions.push(...moduleQuestions);
 
+    const subModules = (moduleItem.subModules || []).map((subModuleItem: any, subModuleIndex: number) => {
+      const subModuleId = subModuleItem.id || String(Date.now() + moduleIndex * 10000 + subModuleIndex * 100);
+      const subModSubExams = (subModuleItem.subExams || []).map((subExam: any, subExamIndex: number) => {
+        const subExamId = subExam.id || String(Date.now() + moduleIndex * 10000 + subModuleIndex * 100 + subExamIndex + 1);
+        const subExamQuestions = (subExam.questions || []).map((question: any) => ({
+          ...question,
+          moduleId: subModuleId,
+          subExamId,
+        }));
+        allQuestions.push(...subExamQuestions);
+
+        return {
+          id: subExamId,
+          title: subExam.title,
+          password: subExam.password || null,
+          duration: subExam.duration || null,
+          passingScore: subExam.passingScore || null,
+          attemptsAllowed: subExam.attemptsAllowed === "" || subExam.attemptsAllowed === undefined || subExam.attemptsAllowed === null ? 999 : Number(subExam.attemptsAllowed),
+          publishDate: subExam.publishDate || null,
+          cutOffDate: subExam.cutOffDate || null,
+          order: subExamIndex,
+        };
+      });
+
+      const subModuleQuestions = (subModuleItem.questions || []).map((question: any) => ({
+        ...question,
+        moduleId: subModuleId,
+      }));
+      allQuestions.push(...subModuleQuestions);
+
+      return {
+        id: subModuleId,
+        title: subModuleItem.title,
+        description: subModuleItem.content || subModuleItem.description || null,
+        duration: subModuleItem.duration || null,
+        passingScore: subModuleItem.passingScore || null,
+        publishDate: subModuleItem.publishDate || null,
+        cutOffDate: subModuleItem.cutOffDate || null,
+        order: subModuleIndex,
+        subExams: subModSubExams,
+      };
+    });
+
     return {
       id: moduleId,
       title: moduleItem.title,
-      description: moduleItem.content || null,
+      description: moduleItem.content || moduleItem.description || null,
       duration: moduleItem.duration || null,
       passingScore: moduleItem.passingScore || null,
       publishDate: moduleItem.publishDate || null,
       cutOffDate: moduleItem.cutOffDate || null,
       order: moduleIndex,
       subExams,
+      subModules,
     };
   });
 
@@ -125,15 +169,26 @@ export function deduplicateSubmissionQuestions(questions: any[]) {
       .replace(/^(question|سؤال|q)\s*\d+(\s*\([^)]*\))?[:.\s-]*/i, '')
       .trim();
 
+    const rawTextEn = String(q.textEn || '')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/[−–—]/g, '-')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase()
+      .replace(/^(question|q)\s*\d+(\s*\([^)]*\))?[:.\s-]*/i, '')
+      .trim();
+
     const hasMedia = Boolean((q.imageUrl && String(q.imageUrl).trim()) || (q.videoUrl && String(q.videoUrl).trim()));
-    // Skip empty questions
-    if (rawText.length < 2 && !hasMedia) continue;
+    // Skip empty questions only when neither Arabic nor English text is provided and no media exists
+    if (rawText.length < 2 && rawTextEn.length < 2 && !hasMedia) continue;
 
     const id = q.id && typeof q.id === 'string' && q.id.length > 20 ? q.id : null;
     if (id && seenIds.has(id)) continue;
 
-    const alpha = rawText.replace(/[^a-z0-9\u0600-\u06FF]/gi, '');
-    const sig = alpha.length >= 15 ? alpha.substring(0, 35) : rawText;
+    const combinedText = rawText || rawTextEn;
+    const alpha = combinedText.replace(/[^a-z0-9\u0600-\u06FF]/gi, '');
+    const sig = alpha.length >= 15 ? alpha.substring(0, 35) : combinedText;
     const scopeKey = `${q.moduleId || 'none'}:${q.subExamId || 'none'}:${sig}`;
     if (sig.length >= 5 && seenSignatures.has(scopeKey)) continue;
 

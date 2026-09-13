@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Image from "next/image";
 import DashboardLayout from "@/components/DashboardLayout";
 import { BookOpen, Clock, TrendingUp, Award, Play, ArrowUpRight, FileText, Sparkles, Zap, ListOrdered, GraduationCap, Target, Calendar, ArrowLeft, ChevronLeft } from 'lucide-react';
 import { useRouter } from "next/navigation";
@@ -214,10 +215,13 @@ export default function StudentDashboard() {
 
           {/* Right Area (Books Image) */}
           <div className="w-full md:w-1/3 flex justify-center md:justify-start relative z-10 order-1 mb-8 md:mb-0">
-             <img loading="lazy" decoding="async" src="https://cdn3d.iconscout.com/3d/premium/thumb/graduation-cap-and-books-5358784-4487403.png" 
+             <Image
+               src="https://cdn3d.iconscout.com/3d/premium/thumb/graduation-cap-and-books-5358784-4487403.png" 
                alt="Graduation Books" 
+               width={256}
+               height={256}
                className="w-48 h-48 md:w-64 md:h-64 object-contain drop-shadow-2xl" 
-               onError={(e) => { e.currentTarget.style.display = 'none'; }}
+               priority
              />
           </div>
 

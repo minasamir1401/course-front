@@ -15,7 +15,10 @@ export const parseJson = (str: any, fallback: any = {}) => {
       return fallback;
     }
     if (fallback && !Array.isArray(fallback) && Array.isArray(parsed)) {
-      return fallback;
+      if (typeof fallback === 'object' && 'choices' in fallback) {
+        return { ...fallback, choices: parsed };
+      }
+      return parsed;
     }
     return parsed;
   } catch {

@@ -145,6 +145,7 @@ class OfflineSyncManager {
     const ids = this.queue.map(entry => entry.id);
     await this.persistMutation([], ids);
     this.queue = this.queue.filter(entry => !ids.includes(entry.id));
+    this.lastError = null;
     this.notify();
   }
   subscribe(listener: Listener): () => void {
@@ -226,12 +227,13 @@ class OfflineSyncManager {
     if (database) return Boolean(await requestResult(database.transaction(QUEUE_STORE, "readonly").objectStore(QUEUE_STORE).get(id)));
     return readLegacyQueue().some(entry => entry.id === id);
   }
-  async flush() {
+  async flush(options?: { forceAll?: boolean }) {
     await this.ready;
     await this.persistChain;
     if (this.isSyncing || !this.isOnline || this.queue.length === 0) return;
     this.isSyncing = true; this.lastError = null; this.notify();
     let retryAfter: number | null = null;
+    const forceAll = Boolean(options?.forceAll);
     try {
       for (const item of [...this.queue]) {
         if (!this.queue.some(entry => entry.id === item.id)) continue;
@@ -239,16 +241,29 @@ class OfflineSyncManager {
           this.queue = this.queue.filter(entry => entry.id !== item.id);
           continue;
         }
-        if (!item.owner) { this.lastError = "تغييرات قديمة بلا حساب موثّق. نزّلها للمراجعة؛ لن تُرسل تلقائياً."; continue; }
+        if (!item.owner) {
+          if (forceAll) {
+            const currentOwner = captureOfflineOwner();
+            if (currentOwner) {
+              item.owner = currentOwner;
+            } else {
+              this.lastError = "سجّل الدخول بالحساب لإعادة محاولة إرسال التغييرات.";
+              continue;
+            }
+          } else {
+            this.lastError = "تغييرات قديمة بلا حساب موثّق. نزّلها للمراجعة؛ لن تُرسل تلقائياً.";
+            continue;
+          }
+        }
         const target = new URL(item.url, window.location.origin);
         if (target.origin !== window.location.origin || !target.pathname.startsWith("/api/")) {
           this.lastError = "مسار حفظ غير معتمد؛ تم الاحتفاظ بالتغييرات للمراجعة."; continue;
         }
-        if (!["PUT"].includes(item.method)) {
+        if (!forceAll && !["PUT"].includes(item.method)) {
           this.lastError = "عمليات إنشاء أو تعديل جزئي تحتاج مراجعة قبل إعادة الإرسال لتجنب التكرار. نزّل التغييرات المحفوظة."; continue;
         }
         const currentOwner = captureOfflineOwner();
-        if (!sameOwner(item.owner, currentOwner)) {
+        if (!sameOwner(item.owner, currentOwner) && !forceAll) {
           this.lastError = "سجّل الدخول بالحساب الذي أنشأ التغييرات لاستكمال المزامنة."; continue;
         }
         const headers = new Headers(item.headers);
@@ -264,7 +279,7 @@ class OfflineSyncManager {
           break;
         }
         const session = await identity.json();
-        if (!sameOwner(ownerFromUser(session.user), item.owner)) {
+        if (!sameOwner(ownerFromUser(session.user), item.owner) && !forceAll) {
           this.lastError = "جلسة المتصفح تخص حساباً آخر. لم تُرسل التغييرات."; continue;
         }
         headers.set("X-Offline-User-Id", item.owner.userId);

@@ -1,11 +1,17 @@
 import { isOptionMatch } from './answerEvaluation';
 type Question = Record<string, any>;
-export const syncHeaders = ['Question ID', 'Action', 'Question Text', 'Question Type',
+export const syncHeaders = [
+  'Question ID', 'Action', 'Question Text', 'Question Text (En)', 'Question Type',
   'Option 1', 'Option 2', 'Option 3', 'Option 4', 'Option 5',
-  'Correct Answer', 'Correct Answers', 'Points', 'Video URL', 'Explanation'];
-const arabicHeaders = ['Question ID', 'Action', 'نص السؤال', 'نوع السؤال',
+  'Option 1 (En)', 'Option 2 (En)', 'Option 3 (En)', 'Option 4 (En)', 'Option 5 (En)',
+  'Correct Answer', 'Correct Answers', 'Points', 'Video URL', 'Explanation', 'Explanation (En)'
+];
+const arabicHeaders = [
+  'Question ID', 'Action', 'نص السؤال', 'نص السؤال (إنجليزي)', 'نوع السؤال',
   'الخيار 1', 'الخيار 2', 'الخيار 3', 'الخيار 4', 'الخيار 5',
-  'الإجابة الصحيحة', 'الإجابات الصحيحة المتعددة', 'الدرجة', 'رابط الفيديو', 'التفسير'];
+  'الخيار 1 (إنجليزي)', 'الخيار 2 (إنجليزي)', 'الخيار 3 (إنجليزي)', 'الخيار 4 (إنجليزي)', 'الخيار 5 (إنجليزي)',
+  'الإجابة الصحيحة', 'الإجابات الصحيحة المتعددة', 'الدرجة', 'رابط الفيديو', 'التفسير', 'التفسير (إنجليزي)'
+];
 const key = (v: unknown) => String(v ?? '').trim();
 const array = (v: any): any[] => {
   if (Array.isArray(v)) return v;
@@ -15,29 +21,68 @@ const array = (v: any): any[] => {
 export function questionExportRows(questions: Question[], language: string): any[][] {
   return [language === 'ar' ? arabicHeaders : syncHeaders, ...questions.map(q => {
     const options = array(q.options);
+    const optionsEn = array(q.optionsEn);
     const rawOptions = typeof q.options === 'string' ? (() => { try { return JSON.parse(q.options); } catch { return q.options; } })() : q.options;
     if ((rawOptions != null && !Array.isArray(rawOptions)) || options.length > 5 || options.some(o => typeof o !== 'string')) {
       throw new Error('Edit complex options in the question editor. / عدّل الاختيارات المركبة من محرر الأسئلة.');
     }
-    return [key(q.id), q.id ? 'UPDATE' : 'ADD', q.text ?? q.content ?? '',
+    return [
+      key(q.id),
+      q.id ? 'UPDATE' : 'ADD',
+      q.text ?? q.content ?? '',
+      q.textEn ?? '',
       q.questionType || (q.type === 'QUESTION' ? q.label : q.type) || 'MCQ',
       ...Array.from({ length: 5 }, (_, i) => options[i] ?? ''),
+      ...Array.from({ length: 5 }, (_, i) => optionsEn[i] ?? ''),
       Array.isArray(q.correctAnswer) ? JSON.stringify(q.correctAnswer) : q.correctAnswer ?? '',
       JSON.stringify(array(q.correctAnswers).length ? array(q.correctAnswers)
         : (q.type === 'MULTI_SELECT' || q.label === 'MULTI_SELECT') ? array(q.correctAnswer) : []),
-      q.points ?? 1, q.videoUrl ?? '', q.explanation ?? (q.sections?.length ? JSON.stringify(q.sections) : '')];
+      q.points ?? 1,
+      q.videoUrl ?? '',
+      q.explanation ?? (q.sections?.length ? JSON.stringify(q.sections) : ''),
+      q.explanationEn ?? ''
+    ];
   })];
 }
 
 export function questionTemplateRows(language: string): any[][] {
-  return questionExportRows([{ text: language === 'ar' ? 'ما ناتج 5 + 5؟' : 'What is 5 + 5?',
-    type: 'MCQ', options: ['8', '9', '10', '11'], correctAnswer: '10', points: 1 },
-    { text: language === 'ar' ? 'الأرض كروية الشكل.' : 'The Earth is spherical.',
-      type: 'TRUE_FALSE', options: [], correctAnswer: 'True', points: 1 },
-    { text: language === 'ar' ? 'اختر الأعداد الزوجية.' : 'Select the even numbers.',
-      type: 'MULTI_SELECT', options: ['2', '3', '4', '5'], correctAnswers: ['2', '4'], points: 2 },
-    { text: language === 'ar' ? 'اكتب تقريرًا قصيرًا عن موضوع الدرس.' : 'Write a short report about the lesson.',
-      type: 'TEXT', options: [], correctAnswer: '', points: 1 },
+  return questionExportRows([
+    {
+      text: language === 'ar' ? 'ما ناتج 5 + 5؟' : 'What is 5 + 5?',
+      textEn: 'What is 5 + 5?',
+      type: 'MCQ',
+      options: ['8', '9', '10', '11'],
+      optionsEn: ['8', '9', '10', '11'],
+      correctAnswer: '10',
+      points: 1
+    },
+    {
+      text: language === 'ar' ? 'الأرض كروية الشكل.' : 'The Earth is spherical.',
+      textEn: 'The Earth is spherical.',
+      type: 'TRUE_FALSE',
+      options: [],
+      optionsEn: [],
+      correctAnswer: 'True',
+      points: 1
+    },
+    {
+      text: language === 'ar' ? 'اختر الأعداد الزوجية.' : 'Select the even numbers.',
+      textEn: 'Select the even numbers.',
+      type: 'MULTI_SELECT',
+      options: ['2', '3', '4', '5'],
+      optionsEn: ['2', '3', '4', '5'],
+      correctAnswers: ['2', '4'],
+      points: 2
+    },
+    {
+      text: language === 'ar' ? 'اكتب تقريرًا قصيرًا عن موضوع الدرس.' : 'Write a short report about the lesson.',
+      textEn: 'Write a short report about the lesson.',
+      type: 'TEXT',
+      options: [],
+      optionsEn: [],
+      correctAnswer: '',
+      points: 1
+    },
   ], language);
 }
 
@@ -78,6 +123,11 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
     const q: Question = { ...(previous || { points: 1, skill: 'General', options: [], correctAnswer: '', correctAnswers: [] }) };
     q.text = String(row[textIndex] ?? '');
     if (!key(q.text)) rowFail('Question text is required.', 'نص السؤال مطلوب.');
+    const textEnIndex = index('question text (en)', 'question text en', 'text (en)', 'text en', 'نص السؤال (إنجليزي)', 'نص السؤال بالإنجليزية', 'السؤال بالإنجليزية');
+    if (textEnIndex >= 0) {
+      const val = String(row[textEnIndex] ?? '').trim();
+      q.textEn = val || null;
+    }
     const typeIndex = index('question type', 'type', 'نوع السؤال', 'النوع', 'type (mcq/true_false/text/multi_select)');
     let type = typeIndex < 0 ? (previous?.type === 'QUESTION' ? previous.label : previous?.type) || 'MCQ' : key(row[typeIndex]).toUpperCase();
     if (['صح وخطأ', 'صح أو خطأ', 'T/F'].includes(type)) type = 'TRUE_FALSE';
@@ -92,6 +142,21 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
       q.options = optionIndices.map((i, n) => i < 0 ? array(previous?.options)[n] ?? '' : String(row[i] ?? ''));
       while (q.options.length && !key(q.options[q.options.length - 1])) q.options.pop();
     } else q.options = array(q.options);
+
+    const optionEnIndices = Array.from({ length: 5 }, (_, i) => index(
+      `option ${i + 1} (en)`,
+      `option ${i + 1} en`,
+      `الخيار ${i + 1} (إنجليزي)`,
+      `الخيار ${i + 1} بالإنجليزية`
+    ));
+    if (optionEnIndices.some(i => i >= 0)) {
+      q.optionsEn = optionEnIndices.map((i, n) => i < 0 ? array(previous?.optionsEn)[n] ?? '' : String(row[i] ?? ''));
+      while (q.optionsEn.length && !key(q.optionsEn[q.optionsEn.length - 1])) q.optionsEn.pop();
+      if (q.optionsEn.length === 0) q.optionsEn = null;
+    } else if (previous?.optionsEn) {
+      q.optionsEn = array(previous.optionsEn);
+    }
+
     const legacyAnswerIndex = index('correct answer (1-4 or comma separated for multi)');
     const correctIndex = index('correct answer', 'الإجابة الصحيحة', 'الاجابه الصحيحه', 'correct answer (1-4 or comma separated for multi)');
     if (correctIndex >= 0) q.correctAnswer = String(row[correctIndex] ?? '');
@@ -131,11 +196,16 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
     if (index(...metadataFields.learningOutcome) >= 0) q.standard = q.learningOutcome;
     else if (index(...metadataFields.standard) >= 0) q.learningOutcome = q.standard;
     const expIndex = index('explanation', 'التفسير', 'الشرح', 'explanation / tip / solution note');
-    if (expIndex >= 0 && (!previous || String(row[expIndex] ?? '') !== questionExportRows([previous], 'en')[1][13])) {
+    if (expIndex >= 0 && (!previous || String(row[expIndex] ?? '') !== questionExportRows([previous], 'en')[1][19])) {
       q.explanation = String(row[expIndex] ?? '');
       q.clearExplanation = q.explanation === '';
       q.sections = array(q.explanation);
       if (!q.sections.length && q.explanation) q.sections = [{ type: 'EXPLANATION', content: q.explanation }];
+    }
+    const expEnIndex = index('explanation (en)', 'explanation en', 'التفسير (إنجليزي)', 'التفسير بالإنجليزية', 'الشرح بالإنجليزية');
+    if (expEnIndex >= 0) {
+      const val = String(row[expEnIndex] ?? '').trim();
+      q.explanationEn = val || null;
     }
     if (['MCQ', 'MULTI_SELECT'].includes(type) && q.options.filter((o: any) => key(o)).length < 2) rowFail('At least two options are required.', 'مطلوب اختياران على الأقل.');
     if (type === 'MCQ' && !q.options.some((o: string, i: number) => isOptionMatch(q.correctAnswer, o, i))) rowFail('Correct answer must match an option.', 'الإجابة الصحيحة يجب أن تطابق أحد الاختيارات.');

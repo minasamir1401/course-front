@@ -101,7 +101,7 @@ export default function StudentLoginPage() {
         router.push("/school-admin");
       } else {
         // Token is stored in httpOnly cookie — do NOT persist in localStorage.
-        localStorage.setItem("lms_token", "cookie_auth");
+        localStorage.setItem("lms_token", data.token || "cookie_auth");
         localStorage.setItem(
           "lms_user",
           JSON.stringify({

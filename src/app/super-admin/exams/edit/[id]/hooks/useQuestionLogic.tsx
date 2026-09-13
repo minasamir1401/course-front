@@ -146,6 +146,7 @@ export const useQuestionLogic = (props: any) => {
     const list = (source === 'questions' && activeSubExamIndex !== null && currentModule.subExams && currentModule.subExams[activeSubExamIndex]) ? (currentModule.subExams[activeSubExamIndex].questions || []) : (currentModule[source] || []);
     const item = { ...list[index] };
     item.options = normalizeQuestionOptions(item.options);
+    item.optionsEn = normalizeQuestionOptions(item.optionsEn);
     if (!item.sections || item.sections.length === 0) {
       item.sections = normalizeQuestionSections(item.explanation);
     }
@@ -154,6 +155,32 @@ export const useQuestionLogic = (props: any) => {
     } else if (!item.type) {
       item.type = item.label || "MCQ";
     }
+    const outcome = item.standard || item.learningOutcome || "";
+    item.standard = outcome;
+    item.learningOutcome = outcome;
+    if (item.dok) item.dok = normalizeDok(item.dok) || item.dok;
+
+    if (item.correctAnswerIndex === undefined || item.correctAnswerIndex === null) {
+      if (item.correctAnswer) {
+        const arIdx = item.options.findIndex((o: string) => String(o).trim() === String(item.correctAnswer).trim());
+        if (arIdx !== -1) {
+          item.correctAnswerIndex = arIdx;
+          if (!item.correctAnswerEn && item.optionsEn?.[arIdx]) {
+            item.correctAnswerEn = item.optionsEn[arIdx];
+          }
+        } else {
+          const enIdx = (item.optionsEn || []).findIndex((o: string) => String(o).trim() === String(item.correctAnswer).trim());
+          if (enIdx !== -1) {
+            item.correctAnswerIndex = enIdx;
+            item.correctAnswerEn = item.optionsEn[enIdx];
+          }
+        }
+      } else if (item.correctAnswerEn) {
+        const enIdx = (item.optionsEn || []).findIndex((o: string) => String(o).trim() === String(item.correctAnswerEn).trim());
+        if (enIdx !== -1) item.correctAnswerIndex = enIdx;
+      }
+    }
+
     setTempQuestion(item);
     setEditingQuestionIndex(index);
     setCurrentModule((prev: any) => ({ ...prev, _isStandalone: false }));
@@ -162,26 +189,39 @@ export const useQuestionLogic = (props: any) => {
   };
 
   const handleSaveQuestionForSource = (source: 'assignments' | 'questions') => {
-    const validation = validateExamQuestionForSave(tempQuestion, language);
+    const preparedQuestion = { ...tempQuestion };
+    if (preparedQuestion.correctAnswerIndex !== undefined && preparedQuestion.correctAnswerIndex !== null) {
+      const idx = preparedQuestion.correctAnswerIndex;
+      const arOpt = (preparedQuestion.options || [])[idx];
+      const enOpt = (preparedQuestion.optionsEn || [])[idx];
+      if (!preparedQuestion.correctAnswer && (arOpt || enOpt)) {
+        preparedQuestion.correctAnswer = arOpt || enOpt;
+      }
+      if (!preparedQuestion.correctAnswerEn && enOpt) {
+        preparedQuestion.correctAnswerEn = enOpt;
+      }
+    }
+
+    const validation = validateExamQuestionForSave(preparedQuestion, language);
     if (validation.error) {
       showToast(validation.error, "error");
       return;
     }
 
-    const outcome = tempQuestion.standard || tempQuestion.learningOutcome || "";
-    const validSections = (tempQuestion.sections || []).filter((s: any) => s && String(s.content || s.text || '').trim() !== '');
+    const outcome = preparedQuestion.standard || preparedQuestion.learningOutcome || "";
+    const validSections = (preparedQuestion.sections || []).filter((s: any) => s && String(s.content || s.text || '').trim() !== '');
     const serializedExplanation = validSections.length > 0
       ? JSON.stringify(validSections)
-      : (tempQuestion.explanation && String(tempQuestion.explanation).trim() !== '' ? tempQuestion.explanation : null);
+      : (preparedQuestion.explanation && String(preparedQuestion.explanation).trim() !== '' ? preparedQuestion.explanation : null);
 
     const itemToSave = {
-      ...tempQuestion,
-      sections: tempQuestion.sections || [],
+      ...preparedQuestion,
+      sections: preparedQuestion.sections || [],
       explanation: serializedExplanation,
       standard: outcome,
       learningOutcome: outcome,
-      dok: normalizeDok(tempQuestion.dok) || tempQuestion.dok || "",
-      label: tempQuestion.type // Ensure label is synced with type
+      dok: normalizeDok(preparedQuestion.dok) || preparedQuestion.dok || "",
+      label: preparedQuestion.type // Ensure label is synced with type
     };
 
     setCurrentModule((prev: any) => {
@@ -268,6 +308,11 @@ export const useQuestionLogic = (props: any) => {
       const oldVal = newOpts[oIdx];
       newOpts[oIdx] = value;
       const updated: any = { ...prev, options: newOpts };
+
+      if (prev.correctAnswerIndex === oIdx) {
+        updated.correctAnswer = value;
+      }
+
       if (prev.type === 'MULTI_SELECT') {
         const answers = prev.correctAnswers || [];
         if (answers.includes(oldVal)) {
@@ -284,30 +329,62 @@ export const useQuestionLogic = (props: any) => {
 
   const toggleQuestionCorrectAnswer = (oIdx: number) => {
     setTempQuestion((prev: any) => {
-      const opt = prev.options[oIdx];
-      if (!opt && prev.type !== 'TRUE_FALSE') return prev;
-      
+      const baseLength = Math.max(
+        (prev.options || []).length,
+        (prev.optionsEn || []).length,
+        4
+      );
+      const currentOptsAr = Array.from({ length: baseLength }, (_, i) => String(prev.options?.[i] || ''));
+      const currentOptsEn = Array.from({ length: baseLength }, (_, i) => String(prev.optionsEn?.[i] || ''));
+
+      const arOpt = currentOptsAr[oIdx] || '';
+      const enOpt = currentOptsEn[oIdx] || '';
+
       const updated = { ...prev };
+      updated.correctAnswerIndex = oIdx;
+
       if (prev.type === 'MULTI_SELECT') {
         const answers = prev.correctAnswers || [];
-        if (answers.includes(opt)) {
-          updated.correctAnswers = answers.filter((a: string) => a !== opt);
+        const indices = prev.correctAnswerIndices || [];
+        const answersEn = prev.correctAnswersEn || [];
+
+        const isCurrentlySelected =
+          indices.includes(oIdx) ||
+          (arOpt && answers.includes(arOpt)) ||
+          (enOpt && (answers.includes(enOpt) || answersEn.includes(enOpt)));
+
+        if (isCurrentlySelected) {
+          updated.correctAnswerIndices = indices.filter((i: number) => i !== oIdx);
+          if (arOpt) updated.correctAnswers = answers.filter((a: string) => a !== arOpt);
+          if (enOpt) updated.correctAnswersEn = answersEn.filter((a: string) => a !== enOpt);
         } else {
-          updated.correctAnswers = [...answers, opt];
+          updated.correctAnswerIndices = [...indices.filter((i: number) => i !== oIdx), oIdx];
+          if (arOpt) updated.correctAnswers = [...answers.filter((a: string) => a !== arOpt), arOpt];
+          if (enOpt) updated.correctAnswersEn = [...answersEn.filter((a: string) => a !== enOpt), enOpt];
         }
       } else {
-        updated.correctAnswer = opt;
+        updated.correctAnswer = arOpt || enOpt || '';
+        if (enOpt) updated.correctAnswerEn = enOpt;
+        if (arOpt) updated.correctAnswer = arOpt;
       }
       return updated;
     });
   };
 
   const isQuestionCorrectAnswer = (opt: string) => {
-    if (!opt) return false;
+    if (!opt && typeof opt !== 'string') return false;
+    const clean = String(opt).trim();
+    if (!clean) return false;
+
     if (tempQuestion.type === 'MULTI_SELECT') {
-      return (tempQuestion.correctAnswers || []).includes(opt);
+      const answers = (tempQuestion.correctAnswers || []).map((a: any) => String(a).trim());
+      const answersEn = (tempQuestion.correctAnswersEn || []).map((a: any) => String(a).trim());
+      return answers.includes(clean) || answersEn.includes(clean);
     }
-    return tempQuestion.correctAnswer === opt;
+
+    const curAns = String(tempQuestion.correctAnswer || '').trim();
+    const curAnsEn = String(tempQuestion.correctAnswerEn || '').trim();
+    return curAns === clean || curAnsEn === clean;
   };
 
   const addQuestionSection = (secType: string) => {

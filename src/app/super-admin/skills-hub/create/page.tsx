@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { API_URL } from '@/lib/api';
+import { API_URL, apiFetch } from '@/lib/api';
 import { useNotification } from "@/context/NotificationContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -46,12 +46,12 @@ export default function CreateSkillClusterPage() {
     "الصف الرابع الابتدائي": { ar: "الصف الرابع الابتدائي", en: "Grade 4 Elementary" },
     "الصف الخامس الابتدائي": { ar: "الصف الخامس الابتدائي", en: "Grade 5 Elementary" },
     "الصف السادس الابتدائي": { ar: "الصف السادس الابتدائي", en: "Grade 6 Elementary" },
-    "الصف الأول الإعدادي": { ar: "الصف الأول الإعدادي", en: "Grade 1 Middle School" },
-    "الصف الثاني الإعدادي": { ar: "الصف الثاني الإعدادي", en: "Grade 2 Middle School" },
-    "الصف الثالث الإعدادي": { ar: "الصف الثالث الإعدادي", en: "Grade 3 Middle School" },
-    "الصف الأول الثانوي": { ar: "الصف الأول الثانوي", en: "Grade 1 High School" },
-    "الصف الثاني الثانوي": { ar: "الصف الثاني الثانوي", en: "Grade 2 High School" },
-    "الصف الثالث الثانوي": { ar: "الصف الثالث الثانوي", en: "Grade 3 High School" },
+    "الصف الأول الإعدادي": { ar: "الصف الأول الإعدادي", en: "Grade 7 Prep" },
+    "الصف الثاني الإعدادي": { ar: "الصف الثاني الإعدادي", en: "Grade 8 Prep" },
+    "الصف الثالث الإعدادي": { ar: "الصف الثالث الإعدادي", en: "Grade 9 Prep" },
+    "الصف الأول الثانوي": { ar: "الصف الأول الثانوي", en: "Grade 10 Secondary" },
+    "الصف الثاني الثانوي": { ar: "الصف الثاني الثانوي", en: "Grade 11 Secondary" },
+    "الصف الثالث الثانوي": { ar: "الصف الثالث الثانوي", en: "Grade 12 Secondary" }
   };
 
   const getGradeDisplay = (g: string) => GRADE_LABELS[g]?.[language === 'ar' ? 'ar' : 'en'] || g;
@@ -65,36 +65,36 @@ export default function CreateSkillClusterPage() {
     "SAT Math", "SAT English"
   ];
 
-  const isGrade123 = (g: string) => [
+  const isElementary = (g: string) => [
     "الصف الأول الابتدائي",
     "الصف الثاني الابتدائي",
     "الصف الثالث الابتدائي"
   ].some(gr => g.includes(gr));
+  const isGrade123 = isElementary;
 
   useEffect(() => {
-    const token = localStorage.getItem("super_admin_token");
-    if (!token) {
+    const userStr = typeof window !== 'undefined' ? localStorage.getItem("super_admin_user") : null;
+    if (!userStr) {
       router.push("/super-admin/login");
       return;
     }
-    
+
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      setIsSuperAdmin(payload.role === 'SUPER_ADMIN');
-    } catch (e) {
-      console.error("Invalid token");
+      const user = JSON.parse(userStr);
+      setIsSuperAdmin(user.role === 'SUPER_ADMIN');
+    } catch {
+      setIsSuperAdmin(false);
     }
 
-    fetchSchools(token);
+    fetchSchools();
   }, []);
 
-  const fetchSchools = async (token: string) => {
+  const fetchSchools = async () => {
     try {
-      const res = await fetch(`${API_URL}/admin/schools`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
+      const res = await apiFetch(`${API_URL}/admin/schools`);
       if (res.status === 400 || res.status === 401) {
         localStorage.removeItem("super_admin_token");
+        localStorage.removeItem("super_admin_user");
         router.push("/super-admin/login");
         return;
       }
@@ -120,12 +120,10 @@ export default function CreateSkillClusterPage() {
 
     try {
       setIsLoading(true);
-      const token = localStorage.getItem("super_admin_token");
-      const res = await fetch(`${API_URL}/skills-hub/clusters`, {
+      const res = await apiFetch(`${API_URL}/skills-hub/clusters`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           ...clusterData,

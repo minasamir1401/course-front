@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { API_URL } from '@/lib/api';
+import { API_URL, apiFetch } from '@/lib/api';
 import DashboardLayout from "@/components/DashboardLayout";
 import { Play, Pause, ChevronLeft, ChevronRight, CheckCircle2, HelpCircle, BookOpen, Target, Layout, Monitor, MessageSquare, FileDown, Clock, Info, X, Maximize, Volume2, Settings, ArrowRight, ArrowLeft, Star, Award, RotateCcw, AlertCircle, Sparkles, Lock, Timer, ArrowUpRight, ListOrdered, TrendingUp, GraduationCap } from 'lucide-react';
 import dynamic from 'next/dynamic';
@@ -152,11 +152,10 @@ export function useLessonPlayer() {
                     localStorage.getItem("school_admin_token");
       if (!token) return;
 
-      const res = await fetch(`${API_URL}/progress/lesson/${lessonId}/submit-answer`, {
+      const res = await apiFetch(`${API_URL}/progress/lesson/${lessonId}/submit-answer`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           questionId,
@@ -362,19 +361,20 @@ export function useLessonPlayer() {
         return;
       }
 
-      const res = await fetch(`${API_URL}/lessons/${lessonId}`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
+      const res = await apiFetch(`${API_URL}/lessons/${lessonId}`);
 
       if (res.ok) {
         const data = await res.json();
 
-        // Check user role from token
         let userRole = "";
-        try {
-          const payload = JSON.parse(atob(token.split('.')[1]));
-          userRole = payload.role || "";
-        } catch (e) {}
+        const storedUser = localStorage.getItem("lms_user") || 
+                           localStorage.getItem("school_admin_user") || 
+                           localStorage.getItem("super_admin_user");
+        if (storedUser) {
+          try {
+            userRole = JSON.parse(storedUser).role || "";
+          } catch {}
+        }
 
         const isStaff = ['SUPER_ADMIN', 'SCHOOL_ADMIN', 'TEACHER'].includes(userRole);
 
@@ -436,9 +436,7 @@ export function useLessonPlayer() {
 
         const finalCourseId = data.courseId || courseId;
         if (finalCourseId) {
-          const cRes = await fetch(`${API_URL}/courses/${finalCourseId}`, {
-            headers: { "Authorization": `Bearer ${token}` }
-          });
+          const cRes = await apiFetch(`${API_URL}/courses/${finalCourseId}`);
           if (cRes.ok) {
             const courseData = await cRes.json();
             setCourse(courseData);
@@ -464,11 +462,10 @@ export function useLessonPlayer() {
                     localStorage.getItem("school_admin_token");
       if (!token) return;
 
-      await fetch(`${API_URL}/progress/lesson/${lessonId}`, {
+      await apiFetch(`${API_URL}/progress/lesson/${lessonId}`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ watchedSeconds: Math.floor(state.playedSeconds) })
       });

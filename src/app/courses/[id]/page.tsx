@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useParams, useRouter } from "next/navigation";
 import { API_URL, getFullImageUrl } from '@/lib/api';
@@ -160,7 +161,15 @@ export default function CourseDetailsPage() {
             {/* Cover Image (Poster Style) */}
             {course.coverImage && getFullImageUrl(course.coverImage) ? (
               <div className="relative w-full md:w-[280px] lg:w-[340px] aspect-[4/5] rounded-[32px] overflow-hidden border border-white/10 shadow-2xl shrink-0 transition-transform duration-700 group-hover:scale-105 group-hover:shadow-indigo-500/50">
-                <img loading="lazy" decoding="async" src={getFullImageUrl(course.coverImage)!} className="w-full h-full object-cover" alt={course.title} />
+                <Image
+                  src={getFullImageUrl(course.coverImage)!}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 340px"
+                  className="object-cover"
+                  alt={course.title || "Course Cover"}
+                  priority
+                  unoptimized={getFullImageUrl(course.coverImage)?.startsWith('data:')}
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent"></div>
               </div>
             ) : (

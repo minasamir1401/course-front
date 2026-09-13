@@ -8,7 +8,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { createPortal } from "react-dom";
 import * as XLSX from "xlsx";
-import { ArrowLeft, ArrowRight, Save, BookOpen, Layers, Monitor, Plus, Edit2, Trash2, ChevronDown, ChevronUp, Settings, ListOrdered, CheckCircle2, Sparkles, Upload, Download, Play, Clock, X, Info, BrainCircuit, Star, StarOff, RefreshCw, Target, GraduationCap, Award, Zap, HelpCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Save, BookOpen, Layers, Monitor, Plus, Edit2, Trash2, ChevronDown, ChevronUp, Settings, ListOrdered, CheckCircle2, Sparkles, Upload, Download, Play, Clock, X, Info, BrainCircuit, Star, StarOff, RefreshCw, Target, GraduationCap, Award, Zap, HelpCircle, Globe, Languages, Loader2 } from 'lucide-react';
 import InteractiveQuestionEditor from "@/components/InteractiveQuestionEditor";
 import InteractiveQuestionRenderer from "@/components/InteractiveQuestionRenderer";
 import { isAnswerCorrect } from "@/lib/answerEvaluation";
@@ -16,6 +16,7 @@ import RichTextEditor from "@/components/RichTextEditor";
 import AnimatedFeedback from "@/components/AnimatedFeedback";
 import { InteractiveTag } from "@/components/InteractiveTag";
 import HtmlRenderer from "@/components/HtmlRenderer";
+import { translateBatch } from "@/lib/translationService";
 
 
 import { useClusterInfo } from './hooks/useClusterInfo';
@@ -60,6 +61,104 @@ export default function EditSkillClusterPage() {
 
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
+  const [activityActiveLang, setActivityActiveLang] = useState<'ar' | 'en'>('ar');
+  const [previewLang, setPreviewLang] = useState<'ar' | 'en'>('ar');
+  const [isTranslatingActivity, setIsTranslatingActivity] = useState(false);
+
+  const handleAutoTranslateActivity = async () => {
+    if (!editingActivity) return;
+    setIsTranslatingActivity(true);
+    try {
+      const from = activityActiveLang;
+      const to = from === 'ar' ? 'en' : 'ar';
+      
+      const srcTitle = from === 'ar' ? editingActivity.title : editingActivity.titleEn;
+      const srcPrompt = from === 'ar' ? editingActivity.questionText : editingActivity.questionTextEn;
+      const srcExplanation = from === 'ar' ? editingActivity.explanation : editingActivity.explanationEn;
+      const srcHint = from === 'ar' ? editingActivity.hint : editingActivity.hintEn;
+      const srcTip = from === 'ar' ? editingActivity.tip : editingActivity.tipEn;
+      const srcKeyInsight = from === 'ar' ? editingActivity.keyInsight : editingActivity.keyInsightEn;
+
+      const baseTexts = [
+        srcTitle || '',
+        srcPrompt || '',
+        srcExplanation || '',
+        srcHint || '',
+        srcTip || '',
+        srcKeyInsight || '',
+      ];
+
+      let rawOpts: any = null;
+      const srcOpts = from === 'ar' ? editingActivity.options : editingActivity.optionsEn;
+      try {
+        rawOpts = typeof srcOpts === 'string' ? JSON.parse(srcOpts) : srcOpts;
+      } catch {
+        rawOpts = null;
+      }
+
+      let choiceTexts: string[] = [];
+      if (rawOpts && Array.isArray(rawOpts.choices)) {
+        choiceTexts = rawOpts.choices.map((c: any) => (typeof c === 'object' && c ? c.text || '' : String(c || '')));
+      }
+
+      const allTexts = [...baseTexts, ...choiceTexts];
+      const translations = await translateBatch(allTexts, from, to);
+
+      const [trTitle, trPrompt, trExplanation, trHint, trTip, trKeyInsight] = translations.slice(0, 6);
+      const trChoices = translations.slice(6);
+
+      const updated = { ...editingActivity };
+      if (to === 'en') {
+        if (trTitle) updated.titleEn = trTitle;
+        if (trPrompt) updated.questionTextEn = trPrompt;
+        if (trExplanation) updated.explanationEn = trExplanation;
+        if (trHint) updated.hintEn = trHint;
+        if (trTip) updated.tipEn = trTip;
+        if (trKeyInsight) updated.keyInsightEn = trKeyInsight;
+
+        if (rawOpts && Array.isArray(rawOpts.choices)) {
+          const translatedOpts = {
+            ...rawOpts,
+            choices: rawOpts.choices.map((c: any, i: number) => {
+              if (typeof c === 'object' && c) {
+                return { ...c, text: trChoices[i] || c.text };
+              }
+              return trChoices[i] || c;
+            })
+          };
+          updated.optionsEn = JSON.stringify(translatedOpts);
+        }
+        setActivityActiveLang('en');
+      } else {
+        if (trTitle) updated.title = trTitle;
+        if (trPrompt) updated.questionText = trPrompt;
+        if (trExplanation) updated.explanation = trExplanation;
+        if (trHint) updated.hint = trHint;
+        if (trTip) updated.tip = trTip;
+        if (trKeyInsight) updated.keyInsight = trKeyInsight;
+
+        if (rawOpts && Array.isArray(rawOpts.choices)) {
+          const translatedOpts = {
+            ...rawOpts,
+            choices: rawOpts.choices.map((c: any, i: number) => {
+              if (typeof c === 'object' && c) {
+                return { ...c, text: trChoices[i] || c.text };
+              }
+              return trChoices[i] || c;
+            })
+          };
+          updated.options = JSON.stringify(translatedOpts);
+        }
+        setActivityActiveLang('ar');
+      }
+      setEditingActivity(updated);
+      showToast(language === 'ar' ? 'تمت الترجمة الفورية بنجاح' : 'Content translated successfully', 'success');
+    } catch (err: any) {
+      showToast(err.message || (language === 'ar' ? 'حدث خطأ أثناء الترجمة' : 'Translation failed'), 'error');
+    } finally {
+      setIsTranslatingActivity(false);
+    }
+  };
 
   const getCleanDescription = (desc: string | null) => {
     if (!desc) return "";
@@ -67,17 +166,29 @@ export default function EditSkillClusterPage() {
     return clean.length > 50 ? clean.substring(0, 50) + '...' : clean;
   };
 
-  const saveLessonMetadata = async (lesson: any, newMetadata: any) => {
+  const saveLessonMetadata = async (lessonOrId: any, newMetadata: any) => {
     try {
-      const token = localStorage.getItem('super_token');
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/lessons/${lesson.id}`, {
+      const lessonId = typeof lessonOrId === 'object' ? lessonOrId?.id : lessonOrId;
+      if (!lessonId) return;
+      const lesson = lessons.find(l => l.id === lessonId);
+      const token = localStorage.getItem('super_admin_token') || localStorage.getItem('super_token');
+      const updatedDescription = JSON.stringify(newMetadata);
+
+      const res = await fetch(`${API_URL}/skills-hub/lessons/${lessonId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ metadata: newMetadata })
+        body: JSON.stringify({ 
+          name: lesson?.name || '',
+          description: updatedDescription,
+          metadata: newMetadata,
+          order: lesson?.order !== undefined ? lesson.order : 0
+        })
       });
-      lessonsMgr.fetchLessons();
+      if (res.ok) {
+        lessonsMgr.fetchLessons();
+      }
     } catch (e) {
-      console.error(e);
+      console.error('Error saving lesson metadata:', e);
     }
   };
 
@@ -114,13 +225,31 @@ export default function EditSkillClusterPage() {
   ]));
 
   const getLessonMetadata = (lesson: any) => {
-    let md: any = {};
+    let md: any = { standards: [], indicators: [], outcomes: [] };
+    if (!lesson) return md;
+
     if (typeof lesson.metadata === 'string') {
-      try { md = JSON.parse(lesson.metadata); } catch (e) {}
+      try { 
+        const parsed = JSON.parse(lesson.metadata); 
+        if (parsed && typeof parsed === 'object') md = { ...md, ...parsed };
+      } catch (e) {}
     } else if (lesson.metadata && typeof lesson.metadata === 'object') {
-      md = lesson.metadata;
+      md = { ...md, ...lesson.metadata };
     }
-    return md;
+
+    if ((!md.standards?.length && !md.indicators?.length && !md.outcomes?.length) && typeof lesson.description === 'string' && lesson.description.trim().startsWith('{')) {
+      try {
+        const parsed = JSON.parse(lesson.description);
+        if (parsed && typeof parsed === 'object') md = { ...md, ...parsed };
+      } catch (e) {}
+    }
+
+    return {
+      ...md,
+      standards: Array.isArray(md.standards) ? md.standards : [],
+      indicators: Array.isArray(md.indicators) ? md.indicators : [],
+      outcomes: Array.isArray(md.outcomes) ? md.outcomes : []
+    };
   };
   
   const isGrade123 = (g: string) => ["الصف الأول الابتدائي", "الصف الثاني الابتدائي", "الصف الثالث الابتدائي"].includes(g);
@@ -569,17 +698,104 @@ export default function EditSkillClusterPage() {
 
             {/* Modal Body - Scrollable */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-8 bg-slate-50/20">
+
+              {/* Bilingual Switcher Bar */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-indigo-100 p-4 rounded-2xl shadow-xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold shrink-0">
+                    <Globe className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-black text-slate-900">
+                      {language === 'ar' ? 'لغة تحرير السؤال والخيارات' : 'Question & Activity Content Language'}
+                    </div>
+                    <div className="text-xs font-bold text-slate-400">
+                      {language === 'ar' ? 'يمكنك التبديل بين اللغتين لكتابة السؤال، الخيارات، والتوجيهات بالعربية والإنجليزية' : 'Switch between languages to author question, options, and guidance in Arabic and English'}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                  <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setActivityActiveLang('ar')}
+                      className={`px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 ${
+                        activityActiveLang === 'ar'
+                          ? 'bg-indigo-600 text-white shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                      }`}
+                    >
+                      <span>العربية (AR)</span>
+                      {editingActivity.title && <span className="w-2 h-2 rounded-full bg-emerald-400"></span>}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActivityActiveLang('en')}
+                      className={`px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 ${
+                        activityActiveLang === 'en'
+                          ? 'bg-indigo-600 text-white shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                      }`}
+                    >
+                      <span>English (EN)</span>
+                      {editingActivity.titleEn && <span className="w-2 h-2 rounded-full bg-emerald-400"></span>}
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={isTranslatingActivity}
+                    onClick={handleAutoTranslateActivity}
+                    className="px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-sm hover:opacity-90 disabled:opacity-50 cursor-pointer"
+                  >
+                    {isTranslatingActivity ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Languages className="w-3.5 h-3.5" />
+                    )}
+                    <span>
+                      {isTranslatingActivity
+                        ? (language === 'ar' ? 'جارٍ الترجمة...' : 'Translating...')
+                        : (activityActiveLang === 'ar'
+                            ? (language === 'ar' ? 'ترجمة فورية للإنجليزية' : 'Translate to English')
+                            : (language === 'ar' ? 'ترجمة فورية للعربية' : 'Translate to Arabic'))}
+                    </span>
+                  </button>
+                </div>
+              </div>
               
               {/* Top Settings Grid */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-5 bg-white border border-slate-200 rounded-2xl shadow-sm">
                 
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "عنوان السؤال (Question Title)" : "Question Title"} <span className="text-red-500">*</span></label>
-                  <input 
-                    type="text" value={editingActivity.title} onChange={(e) => setEditingActivity({...editingActivity, title: e.target.value})}
-                    placeholder={language === 'ar' ? "مثال: سؤال جمع، توصيل..." : "e.g. Addition Question..."}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none"
-                  />
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      {activityActiveLang === 'ar'
+                        ? (language === 'ar' ? 'عنوان السؤال (بالعربية)' : 'Question Title (Arabic)')
+                        : (language === 'ar' ? 'عنوان السؤال (بالإنجليزية)' : 'Question Title (English)')}
+                      {activityActiveLang === 'ar' && <span className="text-red-500"> *</span>}
+                    </label>
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 uppercase">
+                      {activityActiveLang === 'ar' ? 'العربية' : 'English'}
+                    </span>
+                  </div>
+                  {activityActiveLang === 'ar' ? (
+                    <input 
+                      type="text" 
+                      value={editingActivity.title || ''} 
+                      onChange={(e) => setEditingActivity({...editingActivity, title: e.target.value})}
+                      placeholder={language === 'ar' ? "مثال: سؤال جمع، توصيل..." : "e.g. Addition Question..."}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none"
+                    />
+                  ) : (
+                    <input 
+                      type="text" 
+                      value={editingActivity.titleEn || ''} 
+                      onChange={(e) => setEditingActivity({...editingActivity, titleEn: e.target.value})}
+                      placeholder="e.g. Addition Question, Matching Shapes..."
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none"
+                    />
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -646,12 +862,30 @@ export default function EditSkillClusterPage() {
 
                 {/* Question Rich Text */}
                 <div className="space-y-2 md:col-span-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "نص السؤال (Question Text)" : "Question Text"}</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      {activityActiveLang === 'ar'
+                        ? (language === 'ar' ? 'نص السؤال (بالعربية)' : 'Question Text (Arabic)')
+                        : (language === 'ar' ? 'نص السؤال (بالإنجليزية)' : 'Question Text (English)')}
+                    </label>
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 uppercase">
+                      {activityActiveLang === 'ar' ? 'العربية' : 'English'}
+                    </span>
+                  </div>
                   <div className="bg-white border border-slate-200 rounded-[24px] overflow-hidden min-h-[200px] shadow-sm hover:border-indigo-300 transition-all duration-300">
-                    <RichTextEditor 
-                      value={editingActivity.questionText || ""} 
-                      onChange={(val) => setEditingActivity({...editingActivity, questionText: val})} 
-                    />
+                    {activityActiveLang === 'ar' ? (
+                      <RichTextEditor 
+                        key="ar-qtext"
+                        value={editingActivity.questionText || ""} 
+                        onChange={(val) => setEditingActivity({...editingActivity, questionText: val})} 
+                      />
+                    ) : (
+                      <RichTextEditor 
+                        key="en-qtext"
+                        value={editingActivity.questionTextEn || ""} 
+                        onChange={(val) => setEditingActivity({...editingActivity, questionTextEn: val})} 
+                      />
+                    )}
                   </div>
                 </div>
 
@@ -664,7 +898,7 @@ export default function EditSkillClusterPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "⭐ نقاط XP" : "⭐ XP Points"}</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "نقاط XP" : "XP Points"}</label>
                   <input 
                     type="number" value={editingActivity.xpPoints !== undefined ? editingActivity.xpPoints : 10} onChange={(e) => setEditingActivity({...editingActivity, xpPoints: parseInt(e.target.value) || 0})}
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none"
@@ -692,22 +926,55 @@ export default function EditSkillClusterPage() {
 
               {/* Core Interactive Editor */}
               <div className="bg-white border border-indigo-100 rounded-[24px] shadow-sm p-6 overflow-hidden">
+                 <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
+                   <div className="text-xs font-black text-slate-700 flex items-center gap-2">
+                     <Sparkles className="w-4 h-4 text-indigo-500" />
+                     <span>
+                       {activityActiveLang === 'ar'
+                         ? (language === 'ar' ? 'محتوى وبدائل النشاط (باللغة العربية)' : 'Activity Content & Choices (Arabic)')
+                         : (language === 'ar' ? 'محتوى وبدائل النشاط (باللغة الإنجليزية)' : 'Activity Content & Choices (English)')}
+                     </span>
+                   </div>
+                   <span className="text-[10px] font-black px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700">
+                     {activityActiveLang === 'ar' ? 'العربية (AR)' : 'English (EN)'}
+                   </span>
+                 </div>
                  <InteractiveQuestionEditor 
                    question={editingActivity}
                    onChange={(updatedQ) => setEditingActivity(updatedQ)}
-                   language={language}
+                   language={activityActiveLang}
                  />
               </div>
 
               {/* Explanation (Optional) */}
               <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5">
-                <label className="text-xs font-black text-slate-500 uppercase tracking-widest mb-3 block">{language === 'ar' ? "التفسير (يظهر بعد الإجابة - اختياري)" : "Explanation (Shows after answering - Optional)"}</label>
-                <textarea 
-                  value={editingActivity.explanation || ""} onChange={(e) => setEditingActivity({...editingActivity, explanation: e.target.value})}
-                  rows={3}
-                  placeholder={language === 'ar' ? "اكتب شرحاً يوضح سبب الإجابة الصحيحة للطالب..." : "Explain why the answer is correct..."}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none resize-none"
-                />
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-xs font-black text-slate-500 uppercase tracking-widest block">
+                    {activityActiveLang === 'ar'
+                      ? (language === 'ar' ? 'التفسير بالعربية (يظهر بعد الإجابة - اختياري)' : 'Explanation (Arabic - Optional)')
+                      : (language === 'ar' ? 'التفسير بالإنجليزية (يظهر بعد الإجابة - اختياري)' : 'Explanation (English - Optional)')}
+                  </label>
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 uppercase">
+                    {activityActiveLang === 'ar' ? 'العربية' : 'English'}
+                  </span>
+                </div>
+                {activityActiveLang === 'ar' ? (
+                  <textarea 
+                    value={editingActivity.explanation || ""} 
+                    onChange={(e) => setEditingActivity({...editingActivity, explanation: e.target.value})}
+                    rows={3}
+                    placeholder={language === 'ar' ? "اكتب شرحاً يوضح سبب الإجابة الصحيحة للطالب..." : "Explain why the answer is correct..."}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none resize-none"
+                  />
+                ) : (
+                  <textarea 
+                    value={editingActivity.explanationEn || ""} 
+                    onChange={(e) => setEditingActivity({...editingActivity, explanationEn: e.target.value})}
+                    rows={3}
+                    placeholder="Explain why the answer is correct in English..."
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none resize-none"
+                  />
+                )}
               </div>
 
               {/* Educational Standards & Alignment */}
@@ -732,7 +999,7 @@ export default function EditSkillClusterPage() {
                             const trimmed = newVal.trim();
                             const updatedMetadata = {
                               ...lessonMetadata,
-                              standards: Array.from(new Set([...lessonMetadata.standards, trimmed]))
+                              standards: Array.from(new Set([...(lessonMetadata.standards || []), trimmed]))
                             };
                             await saveLessonMetadata(editingActivity.lessonId, updatedMetadata);
                             setEditingActivity({ ...editingActivity, standard: trimmed });
@@ -744,10 +1011,10 @@ export default function EditSkillClusterPage() {
                       className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none"
                     >
                       <option value="">{language === 'ar' ? '-- اختر المعيار --' : '-- Select Standard --'}</option>
-                      {getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).standards.map((std: string) => (
+                      {(getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).standards || []).map((std: string) => (
                         <option key={std} value={std}>{std}</option>
                       ))}
-                      {editingActivity.standard && !getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).standards.includes(editingActivity.standard) && (
+                      {editingActivity.standard && !(getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).standards || []).includes(editingActivity.standard) && (
                         <option value={editingActivity.standard}>{editingActivity.standard}</option>
                       )}
                       <option value="add_custom" className="text-indigo-600 font-bold">
@@ -770,7 +1037,7 @@ export default function EditSkillClusterPage() {
                             const trimmed = newVal.trim();
                             const updatedMetadata = {
                               ...lessonMetadata,
-                              indicators: Array.from(new Set([...lessonMetadata.indicators, trimmed]))
+                              indicators: Array.from(new Set([...(lessonMetadata.indicators || []), trimmed]))
                             };
                             await saveLessonMetadata(editingActivity.lessonId, updatedMetadata);
                             setEditingActivity({ ...editingActivity, indicator: trimmed });
@@ -782,10 +1049,10 @@ export default function EditSkillClusterPage() {
                       className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none"
                     >
                       <option value="">{language === 'ar' ? '-- اختر المؤشر --' : '-- Select Indicator --'}</option>
-                      {getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).indicators.map((ind: string) => (
+                      {(getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).indicators || []).map((ind: string) => (
                         <option key={ind} value={ind}>{ind}</option>
                       ))}
-                      {editingActivity.indicator && !getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).indicators.includes(editingActivity.indicator) && (
+                      {editingActivity.indicator && !(getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).indicators || []).includes(editingActivity.indicator) && (
                         <option value={editingActivity.indicator}>{editingActivity.indicator}</option>
                       )}
                       <option value="add_custom" className="text-indigo-600 font-bold">
@@ -808,7 +1075,7 @@ export default function EditSkillClusterPage() {
                             const trimmed = newVal.trim();
                             const updatedMetadata = {
                               ...lessonMetadata,
-                              outcomes: Array.from(new Set([...lessonMetadata.outcomes, trimmed]))
+                              outcomes: Array.from(new Set([...(lessonMetadata.outcomes || []), trimmed]))
                             };
                             await saveLessonMetadata(editingActivity.lessonId, updatedMetadata);
                             setEditingActivity({ ...editingActivity, learningOutcome: trimmed });
@@ -820,10 +1087,10 @@ export default function EditSkillClusterPage() {
                       className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none"
                     >
                       <option value="">{language === 'ar' ? '-- اختر مخرج التعلم --' : '-- Select Learning Outcome --'}</option>
-                      {getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).outcomes.map((out: string) => (
+                      {(getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).outcomes || []).map((out: string) => (
                         <option key={out} value={out}>{out}</option>
                       ))}
-                      {editingActivity.learningOutcome && !getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).outcomes.includes(editingActivity.learningOutcome) && (
+                      {editingActivity.learningOutcome && !(getLessonMetadata(lessons.find(l => l.id === editingActivity.lessonId)).outcomes || []).includes(editingActivity.learningOutcome) && (
                         <option value={editingActivity.learningOutcome}>{editingActivity.learningOutcome}</option>
                       )}
                       <option value="add_custom" className="text-indigo-600 font-bold">
@@ -836,46 +1103,96 @@ export default function EditSkillClusterPage() {
 
               {/* Learning Aids & Supports */}
               <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-4">
-                <h4 className="text-sm font-black text-slate-900 border-b border-slate-100 pb-2 uppercase tracking-wider flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-amber-500" />
-                  {language === 'ar' ? "مساعدات التعلم والتوجيه الذكي" : "Learning Supports & Intelligent Guidance"}
-                </h4>
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <h4 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-500" />
+                    {language === 'ar' ? "مساعدات التعلم والتوجيه الذكي" : "Learning Supports & Intelligent Guidance"}
+                  </h4>
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 uppercase">
+                    {activityActiveLang === 'ar' ? 'العربية' : 'English'}
+                  </span>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-sky-500"></span>
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "التلميح المساعد" : "Hint"}</label>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        {activityActiveLang === 'ar'
+                          ? (language === 'ar' ? "التلميح المساعد (بالعربية)" : "Hint (Arabic)")
+                          : (language === 'ar' ? "التلميح المساعد (بالإنجليزية)" : "Hint (English)")}
+                      </label>
                     </div>
-                    <textarea 
-                      value={editingActivity.hint || ""} onChange={(e) => setEditingActivity({...editingActivity, hint: e.target.value})}
-                      rows={2}
-                      placeholder={language === 'ar' ? "تلميح بسيط لمساعدة الطالب على الحل..." : "Simple hint to help the student..."}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none resize-none"
-                    />
+                    {activityActiveLang === 'ar' ? (
+                      <textarea 
+                        value={editingActivity.hint || ""} 
+                        onChange={(e) => setEditingActivity({...editingActivity, hint: e.target.value})}
+                        rows={2}
+                        placeholder={language === 'ar' ? "تلميح بسيط لمساعدة الطالب على الحل..." : "Simple hint to help the student..."}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none resize-none"
+                      />
+                    ) : (
+                      <textarea 
+                        value={editingActivity.hintEn || ""} 
+                        onChange={(e) => setEditingActivity({...editingActivity, hintEn: e.target.value})}
+                        rows={2}
+                        placeholder="Simple hint to help the student in English..."
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none resize-none"
+                      />
+                    )}
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "نصيحة تعليمية" : "Tip"}</label>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        {activityActiveLang === 'ar'
+                          ? (language === 'ar' ? "نصيحة تعليمية (بالعربية)" : "Tip (Arabic)")
+                          : (language === 'ar' ? "نصيحة تعليمية (بالإنجليزية)" : "Tip (English)")}
+                      </label>
                     </div>
-                    <textarea 
-                      value={editingActivity.tip || ""} onChange={(e) => setEditingActivity({...editingActivity, tip: e.target.value})}
-                      rows={2}
-                      placeholder={language === 'ar' ? "نصيحة لتجنب الأخطاء الشائعة..." : "Tip to avoid common mistakes..."}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none resize-none"
-                    />
+                    {activityActiveLang === 'ar' ? (
+                      <textarea 
+                        value={editingActivity.tip || ""} 
+                        onChange={(e) => setEditingActivity({...editingActivity, tip: e.target.value})}
+                        rows={2}
+                        placeholder={language === 'ar' ? "نصيحة لتجنب الأخطاء الشائعة..." : "Tip to avoid common mistakes..."}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none resize-none"
+                      />
+                    ) : (
+                      <textarea 
+                        value={editingActivity.tipEn || ""} 
+                        onChange={(e) => setEditingActivity({...editingActivity, tipEn: e.target.value})}
+                        rows={2}
+                        placeholder="Tip to avoid common mistakes in English..."
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none resize-none"
+                      />
+                    )}
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? "الرؤية المعرفية / الخلاصة" : "Key Insight"}</label>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        {activityActiveLang === 'ar'
+                          ? (language === 'ar' ? "الرؤية المعرفية / الخلاصة (بالعربية)" : "Key Insight (Arabic)")
+                          : (language === 'ar' ? "الرؤية المعرفية / الخلاصة (بالإنجليزية)" : "Key Insight (English)")}
+                      </label>
                     </div>
-                    <textarea 
-                      value={editingActivity.keyInsight || ""} onChange={(e) => setEditingActivity({...editingActivity, keyInsight: e.target.value})}
-                      rows={2}
-                      placeholder={language === 'ar' ? "الخلاصة أو الفكرة الكبرى من السؤال..." : "The big idea or summary behind the question..."}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none resize-none"
-                    />
+                    {activityActiveLang === 'ar' ? (
+                      <textarea 
+                        value={editingActivity.keyInsight || ""} 
+                        onChange={(e) => setEditingActivity({...editingActivity, keyInsight: e.target.value})}
+                        rows={2}
+                        placeholder={language === 'ar' ? "الخلاصة أو الفكرة الكبرى من السؤال..." : "The big idea or summary behind the question..."}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none resize-none"
+                      />
+                    ) : (
+                      <textarea 
+                        value={editingActivity.keyInsightEn || ""} 
+                        onChange={(e) => setEditingActivity({...editingActivity, keyInsightEn: e.target.value})}
+                        rows={2}
+                        placeholder="The big idea or summary behind the question in English..."
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none resize-none"
+                      />
+                    )}
                   </div>
                 </div>
               </div>
@@ -914,11 +1231,37 @@ export default function EditSkillClusterPage() {
               )}
 
               <h3 className="text-base md:text-lg font-black text-slate-800 truncate max-w-md hidden sm:block">
-                {translateText(previewActivity.title, language)}
+                {previewLang === 'en' ? (previewActivity.titleEn || previewActivity.title) : previewActivity.title}
               </h3>
             </div>
 
             <div className="flex items-center gap-3">
+              {/* Preview Language Switcher */}
+              <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setPreviewLang('ar')}
+                  className={`px-3 py-1.5 rounded-lg font-black transition-all ${
+                    previewLang === 'ar'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  العربية
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewLang('en')}
+                  className={`px-3 py-1.5 rounded-lg font-black transition-all ${
+                    previewLang === 'en'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  English
+                </button>
+              </div>
+
               <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-50 border border-amber-200/60 rounded-xl text-amber-700 text-xs font-black shadow-2xs">
                 <Award className="w-4 h-4 text-amber-500" />
                 <span>+{previewActivity.xpPoints || previewActivity.points || 10} XP</span>
@@ -932,7 +1275,7 @@ export default function EditSkillClusterPage() {
                 <Clock className={`w-4 h-4 ${previewTimeLeft !== null && previewTimeLeft <= 10 ? 'text-rose-500' : 'text-indigo-600'}`} />
                 <span>
                   {previewTimeLeft !== null
-                    ? `${language === 'ar' ? 'الوقت' : 'Time'}: ${Math.floor(previewTimeLeft / 60)}:${(previewTimeLeft % 60).toString().padStart(2, '0')}`
+                    ? `${previewLang === 'ar' ? 'الوقت' : 'Time'}: ${Math.floor(previewTimeLeft / 60)}:${(previewTimeLeft % 60).toString().padStart(2, '0')}`
                     : `${previewActivity.estimatedTime || 60}s`}
                 </span>
               </div>
@@ -940,10 +1283,10 @@ export default function EditSkillClusterPage() {
               <button
                 onClick={() => setPreviewActivity(null)}
                 className="p-2.5 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-500 transition-colors border border-slate-200 cursor-pointer flex items-center gap-1.5 font-bold text-xs"
-                title={language === 'ar' ? 'إغلاق المعاينة' : 'Close Preview'}
+                title={previewLang === 'ar' ? 'إغلاق المعاينة' : 'Close Preview'}
               >
                 <X className="w-5 h-5" />
-                <span className="hidden sm:inline">{language === 'ar' ? 'إغلاق' : 'Close'}</span>
+                <span className="hidden sm:inline">{previewLang === 'ar' ? 'إغلاق' : 'Close'}</span>
               </button>
             </div>
           </header>
@@ -965,35 +1308,35 @@ export default function EditSkillClusterPage() {
                     {/* Metadata Tags */}
                     <div className="flex flex-wrap items-center gap-2">
                       <InteractiveTag 
-                        label={language === 'ar' ? 'المعيار' : 'Standard'} 
-                        value={previewActivity.standard} 
+                        label={previewLang === 'ar' ? 'المعيار' : 'Standard'} 
+                        value={previewLang === 'en' ? (previewActivity.standardEn || previewActivity.standard) : previewActivity.standard} 
                         icon={Target} 
                         colorClass="bg-rose-50 text-rose-700 border border-rose-100" 
                         bubbleTheme="border-rose-200 text-rose-800" 
                       />
                       <InteractiveTag 
-                        label={language === 'ar' ? 'المؤشر' : 'Indicator'} 
-                        value={previewActivity.indicator} 
+                        label={previewLang === 'ar' ? 'المؤشر' : 'Indicator'} 
+                        value={previewLang === 'en' ? (previewActivity.indicatorEn || previewActivity.indicator) : previewActivity.indicator} 
                         icon={CheckCircle2} 
                         colorClass="bg-emerald-50 text-emerald-700 border border-emerald-100" 
                         bubbleTheme="border-emerald-200 text-emerald-800" 
                       />
                       <InteractiveTag 
-                        label={language === 'ar' ? 'الهدف' : 'Outcome'} 
-                        value={previewActivity.learningOutcome} 
+                        label={previewLang === 'ar' ? 'الهدف' : 'Outcome'} 
+                        value={previewLang === 'en' ? (previewActivity.learningOutcomeEn || previewActivity.learningOutcome) : previewActivity.learningOutcome} 
                         icon={GraduationCap} 
                         colorClass="bg-purple-50 text-purple-700 border border-purple-100" 
                         bubbleTheme="border-purple-200 text-purple-800" 
                       />
                       <InteractiveTag 
-                        label={language === 'ar' ? 'DOK' : 'DOK'} 
+                        label={previewLang === 'ar' ? 'DOK' : 'DOK'} 
                         value={previewActivity.dok} 
                         icon={BrainCircuit} 
                         colorClass="bg-amber-50 text-amber-700 border border-amber-100" 
                         bubbleTheme="border-amber-200 text-amber-800" 
                       />
                       <InteractiveTag 
-                        label={language === 'ar' ? 'المستوى' : 'Level'} 
+                        label={previewLang === 'ar' ? 'المستوى' : 'Level'} 
                         value={previewActivity.skillLevel} 
                         icon={Layers} 
                         colorClass="bg-sky-50 text-sky-700 border border-sky-100" 
@@ -1003,34 +1346,47 @@ export default function EditSkillClusterPage() {
 
                     {/* Helper Buttons */}
                     <div className="flex flex-wrap items-center gap-2">
-                      {previewActivity.hint && (
+                      {(previewActivity.hint || previewActivity.hintEn) && (
                         <button
                           onClick={() => {
                             setPreviewHintsUsed(prev => prev + 1);
-                            setPreviewHelperModal({ type: "hint", content: translateText(previewActivity.hint, language) });
+                            const hintText = previewLang === 'en' 
+                              ? (previewActivity.hintEn || previewActivity.hint) 
+                              : (previewActivity.hint || previewActivity.hintEn);
+                            setPreviewHelperModal({ type: "hint", content: hintText });
                           }}
                           className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-amber-200 bg-amber-50 hover:scale-[1.02] text-amber-700 font-black text-[11px] transition-all cursor-pointer shadow-sm group"
                         >
                           <HelpCircle className="w-3.5 h-3.5" />
-                          <span>{language === 'ar' ? 'تلميح' : 'Hint'}</span>
+                          <span>{previewLang === 'ar' ? 'تلميح' : 'Hint'}</span>
                         </button>
                       )}
-                      {previewActivity.tip && (
+                      {(previewActivity.tip || previewActivity.tipEn) && (
                         <button
-                          onClick={() => setPreviewHelperModal({ type: "tip", content: translateText(previewActivity.tip, language) })}
+                          onClick={() => {
+                            const tipText = previewLang === 'en' 
+                              ? (previewActivity.tipEn || previewActivity.tip) 
+                              : (previewActivity.tip || previewActivity.tipEn);
+                            setPreviewHelperModal({ type: "tip", content: tipText });
+                          }}
                           className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 hover:scale-[1.02] text-emerald-700 font-black text-[11px] transition-all cursor-pointer shadow-sm group"
                         >
                           <Info className="w-3.5 h-3.5" />
-                          <span>{language === 'ar' ? 'نصيحة' : 'Tip'}</span>
+                          <span>{previewLang === 'ar' ? 'نصيحة' : 'Tip'}</span>
                         </button>
                       )}
-                      {previewActivity.keyInsight && (
+                      {(previewActivity.keyInsight || previewActivity.keyInsightEn) && (
                         <button
-                          onClick={() => setPreviewHelperModal({ type: "keyInsight", content: translateText(previewActivity.keyInsight, language) })}
+                          onClick={() => {
+                            const insightText = previewLang === 'en' 
+                              ? (previewActivity.keyInsightEn || previewActivity.keyInsight) 
+                              : (previewActivity.keyInsight || previewActivity.keyInsightEn);
+                            setPreviewHelperModal({ type: "keyInsight", content: insightText });
+                          }}
                           className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:scale-[1.02] text-indigo-700 font-black text-[11px] transition-all cursor-pointer shadow-sm group"
                         >
                           <Sparkles className="w-3.5 h-3.5" />
-                          <span>{language === 'ar' ? 'فكرة' : 'Insight'}</span>
+                          <span>{previewLang === 'ar' ? 'فكرة' : 'Insight'}</span>
                         </button>
                       )}
                     </div>
@@ -1038,7 +1394,7 @@ export default function EditSkillClusterPage() {
 
                   <div className="border-b border-slate-100 pb-2 flex items-center justify-between hidden">
                     <h3 className="text-lg md:text-xl font-black text-slate-900">
-                      {translateText(previewActivity.title, language)}
+                      {previewLang === 'en' ? (previewActivity.titleEn || previewActivity.title) : previewActivity.title}
                     </h3>
                     <span className="text-[10px] font-black px-2 py-0.5 bg-sky-50 text-sky-700 rounded-lg border border-sky-100">
                       {previewActivity.type || "MCQ"}
@@ -1050,7 +1406,7 @@ export default function EditSkillClusterPage() {
                       question={previewActivity}
                       value={previewAnswer}
                       onChange={setPreviewAnswer}
-                      language={language}
+                      language={previewLang}
                     />
                   </div>
                 </div>
@@ -1062,7 +1418,7 @@ export default function EditSkillClusterPage() {
                   onClick={() => setPreviewActivity(null)}
                   className="px-6 py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-sm transition-all cursor-pointer w-full sm:w-auto"
                 >
-                  {language === 'ar' ? 'إغلاق المعاينة' : 'Close Preview'}
+                  {previewLang === 'ar' ? 'إغلاق المعاينة' : 'Close Preview'}
                 </button>
 
                 <div className="flex items-center gap-3 w-full sm:w-auto justify-center">
@@ -1076,8 +1432,8 @@ export default function EditSkillClusterPage() {
                         : "bg-slate-50/50 border-slate-100 text-slate-300 cursor-not-allowed"
                     }`}
                   >
-                    {language === 'ar' ? <ArrowRight className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />}
-                    <span>{language === 'ar' ? 'السابق' : 'Previous'}</span>
+                    {previewLang === 'ar' ? <ArrowRight className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />}
+                    <span>{previewLang === 'ar' ? 'السابق' : 'Previous'}</span>
                   </button>
 
                   <button
@@ -1090,8 +1446,8 @@ export default function EditSkillClusterPage() {
                         : "bg-slate-50/50 border-slate-100 text-slate-300 cursor-not-allowed"
                     }`}
                   >
-                    <span>{language === 'ar' ? 'التالي' : 'Next'}</span>
-                    {language === 'ar' ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+                    <span>{previewLang === 'ar' ? 'التالي' : 'Next'}</span>
+                    {previewLang === 'ar' ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
                   </button>
                 </div>
 
@@ -1108,11 +1464,11 @@ export default function EditSkillClusterPage() {
                     {previewIsSubmitting ? (
                       <>
                         <RefreshCw className="w-4 h-4 animate-spin" />
-                        {language === 'ar' ? 'جاري التقييم...' : 'Evaluating...'}
+                        {previewLang === 'ar' ? 'جاري التقييم...' : 'Evaluating...'}
                       </>
                     ) : (
                       <>
-                        <span>{language === 'ar' ? 'أرسل الحل للتصحيح' : 'Submit for review'}</span>
+                        <span>{previewLang === 'ar' ? 'أرسل الحل للتصحيح' : 'Submit for review'}</span>
                         <CheckCircle2 className="w-4 h-4" />
                       </>
                     )}

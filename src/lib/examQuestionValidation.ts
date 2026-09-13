@@ -14,7 +14,10 @@ const hasExplanationContent = (question: any) => {
 };
 
 export const validateExamQuestionForSave = (question: any, language: string) => {
-  if (!stripHtml(question?.text)) {
+  const hasArabicText = Boolean(stripHtml(question?.text));
+  const hasEnglishText = Boolean(stripHtml(question?.textEn));
+
+  if (!hasArabicText && !hasEnglishText) {
     return {
       error: language === "ar" ? "يرجى إدخال نص السؤال" : "Please enter question text",
     };
@@ -31,8 +34,10 @@ export const validateExamQuestionForSave = (question: any, language: string) => 
   }
 
   const filledOptions = getFilledOptions(question?.options);
+  const filledOptionsEn = getFilledOptions(question?.optionsEn);
+  const effectiveFilledCount = Math.max(filledOptions.length, filledOptionsEn.length);
 
-  if (["MCQ", "MULTI_SELECT"].includes(question?.type) && filledOptions.length < 2) {
+  if (["MCQ", "MULTI_SELECT"].includes(question?.type) && effectiveFilledCount < 2) {
     return {
       error: language === "ar"
         ? "يرجى إدخال اختيارين على الأقل لهذا السؤال"

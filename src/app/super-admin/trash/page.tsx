@@ -50,10 +50,6 @@ export default function TrashPage() {
 
   useEffect(() => {
     setToken(localStorage.getItem("super_admin_token"));
-    fetchTrash(1);
-  }, []);
-
-  useEffect(() => {
     fetchTrash(currentPage);
   }, [currentPage]);
 

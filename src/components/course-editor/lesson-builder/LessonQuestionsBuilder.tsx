@@ -4,7 +4,8 @@ import { normalizeDok } from '@/lib/examQuestionMetadata';
 import React, { useState } from "react";
 import { 
   Plus, Trash2, HelpCircle, Upload, Download, Edit2, CheckCircle2, 
-  Lightbulb, TriangleAlert, ChevronDown, ChevronUp, Save, X, BookOpen, Target, FileText, Copy
+  Lightbulb, TriangleAlert, ChevronDown, ChevronUp, Save, X, BookOpen, Target, FileText, Copy, Languages, Loader2,
+  Image as ImageIcon
 } from "lucide-react";
 import RichTextEditor from "@/components/RichTextEditor";
 import { getOptionLetter, cleanOptionText } from "@/lib/utils";
@@ -18,6 +19,7 @@ import CopySlidesModal from "@/components/modals/CopySlidesModal";
 import { useCourseEditor } from "../CourseEditorContext";
 import * as XLSX from "xlsx";
 import { QuestionExcelExportButton } from '@/components/QuestionExcelExportButton';
+import { translateBatch } from '@/lib/translationService';
 interface LessonQuestionsBuilderProps {
   source: 'assignments' | 'questions';
   currentLesson: any;
@@ -77,6 +79,179 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
   const isSuperAdmin = adminRole === 'SUPER_ADMIN';
 
   const [customSkills, setCustomSkills] = useState<string[]>([]);
+  const [questionActiveLang, setQuestionActiveLang] = useState<'ar' | 'en'>('ar');
+  const [cardPreviewLang, setCardPreviewLang] = useState<Record<number, 'ar' | 'en'>>({});
+  const [isTranslatingQuestion, setIsTranslatingQuestion] = useState(false);
+
+  const extractFirstImage = (question: any): string | null => {
+    if (!question) return null;
+    if (question.imageUrl && typeof question.imageUrl === 'string' && question.imageUrl.trim()) {
+      return question.imageUrl.trim();
+    }
+    const match = (question.text || '').match(/<img[^>]+src=["']([^"']+)["']/i);
+    if (match && match[1]) return match[1];
+    const matchEn = (question.textEn || '').match(/<img[^>]+src=["']([^"']+)["']/i);
+    if (matchEn && matchEn[1]) return matchEn[1];
+    return null;
+  };
+
+  const handleAutoTranslateQuestion = async () => {
+    if (!tempQuestion) return;
+    setIsTranslatingQuestion(true);
+    try {
+      const from = questionActiveLang;
+      const to = from === 'ar' ? 'en' : 'ar';
+
+      const srcText = from === 'ar' ? tempQuestion.text : tempQuestion.textEn;
+      const srcExplanation = from === 'ar' ? tempQuestion.explanation : tempQuestion.explanationEn;
+
+      const baseLength = Math.max((tempQuestion.options || []).length, (tempQuestion.optionsEn || []).length, 4);
+      const srcOpts = from === 'ar'
+        ? Array.from({ length: baseLength }, (_, i) => String(tempQuestion.options?.[i] || ''))
+        : Array.from({ length: baseLength }, (_, i) => String(tempQuestion.optionsEn?.[i] || ''));
+
+      const sectionsList = tempQuestion.sections || [];
+      const srcSections = sectionsList.map((sec: any) =>
+        from === 'ar' ? (sec.content || '') : (sec.contentEn || sec.content || '')
+      );
+
+      const srcDomain = from === 'ar' ? (tempQuestion.domain || '') : (tempQuestion.domainEn || tempQuestion.domain || '');
+      const srcOutcome = from === 'ar' ? (tempQuestion.standard || tempQuestion.learningOutcome || '') : (tempQuestion.standardEn || tempQuestion.learningOutcomeEn || tempQuestion.standard || '');
+      const srcIndicator = from === 'ar' ? (tempQuestion.indicator || '') : (tempQuestion.indicatorEn || tempQuestion.indicator || '');
+      const srcSkill = from === 'ar' ? (tempQuestion.skill || '') : (tempQuestion.skillEn || tempQuestion.skill || '');
+      const srcSubskill = from === 'ar' ? (tempQuestion.subskill || '') : (tempQuestion.subskillEn || tempQuestion.subskill || '');
+      const srcMicroSkill = from === 'ar' ? (tempQuestion.microSkill || '') : (tempQuestion.microSkillEn || tempQuestion.microSkill || '');
+      const srcErrorPattern = from === 'ar' ? (tempQuestion.errorPattern || '') : (tempQuestion.errorPatternEn || tempQuestion.errorPattern || '');
+
+      const textsToTranslate = [
+        srcText || '',
+        srcExplanation || '',
+        ...srcOpts,
+        ...srcSections,
+        srcDomain,
+        srcOutcome,
+        srcIndicator,
+        srcSkill,
+        srcSubskill,
+        srcMicroSkill,
+        srcErrorPattern
+      ];
+
+      const translations = await translateBatch(textsToTranslate, from, to);
+
+      let cursor = 0;
+      const trText = translations[cursor++] || '';
+      const trExplanation = translations[cursor++] || '';
+
+      const trOpts = translations.slice(cursor, cursor + srcOpts.length);
+      cursor += srcOpts.length;
+
+      const trSections = translations.slice(cursor, cursor + srcSections.length);
+      cursor += srcSections.length;
+
+      const trDomain = translations[cursor++] || '';
+      const trOutcome = translations[cursor++] || '';
+      const trIndicator = translations[cursor++] || '';
+      const trSkill = translations[cursor++] || '';
+      const trSubskill = translations[cursor++] || '';
+      const trMicroSkill = translations[cursor++] || '';
+      const trErrorPattern = translations[cursor++] || '';
+
+      const updated = { ...tempQuestion };
+      if (to === 'en') {
+        if (trText) updated.textEn = trText;
+        if (trExplanation) updated.explanationEn = trExplanation;
+        updated.optionsEn = trOpts;
+
+        if (sectionsList.length > 0) {
+          updated.sections = sectionsList.map((sec: any, i: number) => ({
+            ...sec,
+            contentEn: trSections[i] || sec.contentEn || sec.content || ''
+          }));
+          if (!updated.explanationEn && trSections[0]) {
+            updated.explanationEn = trSections[0];
+          }
+        } else if (trExplanation) {
+          updated.sections = [{ id: Date.now(), type: 'EXPLANATION', content: srcExplanation || '', contentEn: trExplanation }];
+        }
+
+        if (trDomain) updated.domainEn = trDomain;
+        if (trOutcome) {
+          updated.standardEn = trOutcome;
+          updated.learningOutcomeEn = trOutcome;
+        }
+        if (trIndicator) updated.indicatorEn = trIndicator;
+        if (trSkill) updated.skillEn = trSkill;
+        if (trSubskill) updated.subskillEn = trSubskill;
+        if (trMicroSkill) updated.microSkillEn = trMicroSkill;
+        if (trErrorPattern) updated.errorPatternEn = trErrorPattern;
+
+        if (tempQuestion.correctAnswerIndex !== undefined && tempQuestion.correctAnswerIndex !== null) {
+          if (trOpts[tempQuestion.correctAnswerIndex]) {
+            updated.correctAnswerEn = trOpts[tempQuestion.correctAnswerIndex];
+          }
+        } else if (tempQuestion.correctAnswer) {
+          const arOpts = tempQuestion.options || [];
+          const matchedIdx = arOpts.findIndex((o: string) => String(o).trim() === String(tempQuestion.correctAnswer).trim());
+          if (matchedIdx !== -1 && trOpts[matchedIdx]) {
+            updated.correctAnswerEn = trOpts[matchedIdx];
+            updated.correctAnswerIndex = matchedIdx;
+          }
+        }
+        setQuestionActiveLang('en');
+      } else {
+        if (trText) updated.text = trText;
+        if (trExplanation) updated.explanation = trExplanation;
+        updated.options = trOpts;
+
+        if (sectionsList.length > 0) {
+          updated.sections = sectionsList.map((sec: any, i: number) => ({
+            ...sec,
+            content: trSections[i] || sec.content || sec.contentEn || ''
+          }));
+          if (!updated.explanation && trSections[0]) {
+            updated.explanation = trSections[0];
+          }
+        } else if (trExplanation) {
+          updated.sections = [{ id: Date.now(), type: 'EXPLANATION', content: trExplanation, contentEn: srcExplanation || '' }];
+        }
+
+        if (trDomain) updated.domain = trDomain;
+        if (trOutcome) {
+          updated.standard = trOutcome;
+          updated.learningOutcome = trOutcome;
+        }
+        if (trIndicator) updated.indicator = trIndicator;
+        if (trSkill) updated.skill = trSkill;
+        if (trSubskill) updated.subskill = trSubskill;
+        if (trMicroSkill) updated.microSkill = trMicroSkill;
+        if (trErrorPattern) updated.errorPattern = trErrorPattern;
+
+        if (tempQuestion.correctAnswerIndex !== undefined && tempQuestion.correctAnswerIndex !== null) {
+          if (trOpts[tempQuestion.correctAnswerIndex]) {
+            updated.correctAnswer = trOpts[tempQuestion.correctAnswerIndex];
+          }
+        } else if (tempQuestion.correctAnswerEn || tempQuestion.correctAnswer) {
+          const enOpts = tempQuestion.optionsEn || [];
+          const target = tempQuestion.correctAnswerEn || tempQuestion.correctAnswer;
+          const matchedIdx = enOpts.findIndex((o: string) => String(o).trim() === String(target).trim());
+          if (matchedIdx !== -1 && trOpts[matchedIdx]) {
+            updated.correctAnswer = trOpts[matchedIdx];
+            updated.correctAnswerIndex = matchedIdx;
+          }
+        }
+        setQuestionActiveLang('ar');
+      }
+
+      setTempQuestion(updated);
+      showToast(language === 'ar' ? 'تمت الترجمة الفورية لكامل السؤال والميتا داتا بنجاح' : 'Question and metadata translated successfully', 'success');
+    } catch (err: any) {
+      console.error('Auto translate question error:', err);
+      showToast(err.message || (language === 'ar' ? 'فشلت الترجمة التلقائية' : 'Auto translation failed'), 'error');
+    } finally {
+      setIsTranslatingQuestion(false);
+    }
+  };
 
   const DEFAULT_SKILLS = [
     "Problem Solving", "Reasoning", "Number Sense", "Algebraic Thinking", "Geometry", "Data Analysis",
@@ -146,7 +321,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
   };
 
   const handleSaveQuestionForSource = (source: 'assignments' | 'questions') => {
-    if (!tempQuestion.text) {
+    if (!tempQuestion.text && !tempQuestion.textEn) {
       showToast(language === 'ar' ? "يرجى إدخال نص السؤال" : "Please enter question text", "error");
       return;
     }
@@ -174,6 +349,10 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
     const outcome = tempQuestion.standard || tempQuestion.learningOutcome || "";
     const itemToSave = {
       ...tempQuestion,
+      text: tempQuestion.text || tempQuestion.textEn || "",
+      textEn: tempQuestion.textEn || "",
+      optionsEn: tempQuestion.optionsEn || [],
+      explanationEn: tempQuestion.explanationEn || "",
       standard: outcome,
       learningOutcome: outcome,
       dok: normalizeDok(tempQuestion.dok) || tempQuestion.dok || "",
@@ -241,7 +420,8 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
 
   const updateQuestionOption = (oIdx: number, value: string) => {
     setTempQuestion((prev: any) => {
-      const newOpts = [...prev.options];
+      const baseLength = Math.max((prev.options || []).length, 4);
+      const newOpts = Array.from({ length: baseLength }, (_, i) => String(prev.options?.[i] || ''));
       const oldVal = newOpts[oIdx];
       newOpts[oIdx] = value;
       const updated: any = { ...prev, options: newOpts };
@@ -251,7 +431,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
           updated.correctAnswers = Array.isArray(answers) ? answers.map((a: string) => a === oldVal ? value : a) : [];
         }
       } else {
-        if (prev.correctAnswer === oldVal) {
+        if (prev.correctAnswer === oldVal || prev.correctAnswerIndex === oIdx) {
           updated.correctAnswer = value;
         }
       }
@@ -261,33 +441,67 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
 
   const toggleQuestionCorrectAnswer = (oIdx: number) => {
     setTempQuestion((prev: any) => {
-      const opt = prev.options[oIdx];
-      if (!opt && prev.type !== 'TRUE_FALSE') return prev;
-      
+      const baseLength = Math.max(
+        (prev.options || []).length,
+        (prev.optionsEn || []).length,
+        4
+      );
+      const currentOptsAr = Array.from({ length: baseLength }, (_, i) => String(prev.options?.[i] || ''));
+      const currentOptsEn = Array.from({ length: baseLength }, (_, i) => String(prev.optionsEn?.[i] || ''));
+
+      const arOpt = currentOptsAr[oIdx] || '';
+      const enOpt = currentOptsEn[oIdx] || '';
+
       const updated = { ...prev };
+      updated.correctAnswerIndex = oIdx;
+
       if (prev.type === 'MULTI_SELECT') {
         const answers = prev.correctAnswers || [];
-        if (answers.includes(opt)) {
-          updated.correctAnswers = answers.filter((a: string) => a !== opt);
+        const indices = prev.correctAnswerIndices || [];
+        const answersEn = prev.correctAnswersEn || [];
+
+        const isCurrentlySelected =
+          indices.includes(oIdx) ||
+          (arOpt && answers.includes(arOpt)) ||
+          (enOpt && (answers.includes(enOpt) || answersEn.includes(enOpt)));
+
+        if (isCurrentlySelected) {
+          updated.correctAnswerIndices = indices.filter((i: number) => i !== oIdx);
+          if (arOpt) updated.correctAnswers = answers.filter((a: string) => a !== arOpt);
+          if (enOpt) updated.correctAnswersEn = answersEn.filter((a: string) => a !== enOpt);
         } else {
-          updated.correctAnswers = [...answers, opt];
+          updated.correctAnswerIndices = [...indices.filter((i: number) => i !== oIdx), oIdx];
+          if (arOpt) updated.correctAnswers = [...answers.filter((a: string) => a !== arOpt), arOpt];
+          if (enOpt) updated.correctAnswersEn = [...answersEn.filter((a: string) => a !== enOpt), enOpt];
         }
       } else {
-        updated.correctAnswer = opt;
+        updated.correctAnswer = arOpt || enOpt || '';
+        if (enOpt) updated.correctAnswerEn = enOpt;
+        if (arOpt) updated.correctAnswer = arOpt;
       }
       return updated;
     });
   };
 
   const isQuestionCorrectAnswer = (opt: string) => {
-    if (!opt) return false;
+    if (!opt && typeof opt !== 'string') return false;
+    const clean = String(opt).trim();
+    if (!clean) return false;
+
     if (tempQuestion.type === 'TRUE_FALSE') {
-      return normalizeAnswerGlobal(tempQuestion.correctAnswer) === normalizeAnswerGlobal(opt);
+      return normalizeAnswerGlobal(tempQuestion.correctAnswer) === normalizeAnswerGlobal(clean) ||
+             normalizeAnswerGlobal(tempQuestion.correctAnswerEn) === normalizeAnswerGlobal(clean);
     }
+
     if (tempQuestion.type === 'MULTI_SELECT') {
-      return (tempQuestion.correctAnswers || []).includes(opt);
+      const answers = (tempQuestion.correctAnswers || []).map((a: any) => String(a).trim());
+      const answersEn = (tempQuestion.correctAnswersEn || []).map((a: any) => String(a).trim());
+      return answers.includes(clean) || answersEn.includes(clean);
     }
-    return tempQuestion.correctAnswer === opt;
+
+    const curAns = String(tempQuestion.correctAnswer || '').trim();
+    const curAnsEn = String(tempQuestion.correctAnswerEn || '').trim();
+    return curAns === clean || curAnsEn === clean;
   };
 
   const addQuestionSection = (secType: string) => {
@@ -538,6 +752,15 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                         <span className="w-8 h-8 min-w-8 shrink-0 whitespace-nowrap tabular-nums bg-slate-900 text-white rounded-lg flex items-center justify-center font-black text-xs">{index + 1}</span>
                         <button type="button" onClick={() => moveQuestionForSource(source, index, 'DOWN')} disabled={index === list.length - 1} className="text-slate-300 hover:text-indigo-600 disabled:opacity-20 transition-colors"><ChevronDown className="w-4 h-4" /></button>
                       </div>
+                      {(() => {
+                        const img = extractFirstImage(q);
+                        if (!img) return null;
+                        return (
+                          <div className="w-14 h-14 rounded-xl border border-slate-200 overflow-hidden bg-slate-50 shrink-0 flex items-center justify-center">
+                            <img src={img} alt="Question image" className="w-full h-full object-cover" />
+                          </div>
+                        );
+                      })()}
                       <div className="flex flex-col flex-1 overflow-hidden">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded uppercase">
@@ -585,17 +808,64 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
 
 
                   {/* Question details collapsible view */}
-                  {expandedQuestionIndex === index && (
+                  {expandedQuestionIndex === index && (() => {
+                    const qPreviewLang = cardPreviewLang[index] || questionActiveLang || 'ar';
+                    const isCardEn = qPreviewLang === 'en';
+                    const activeQText = (isCardEn && q.textEn) ? q.textEn : (q.text || q.textEn || '');
+                    const rawArOpts = Array.isArray(q.options) ? q.options : [];
+                    const rawEnOpts = Array.isArray(q.optionsEn) ? q.optionsEn : [];
+                    const activeQOpts = (isCardEn && rawEnOpts.length > 0) ? rawEnOpts : rawArOpts;
+                    const hasEnContent = Boolean(q.textEn) || rawEnOpts.length > 0 || Boolean(q.explanationEn);
+                    const cardSectionPresets: Record<string, any> = getSectionStylePresets(qPreviewLang);
+
+                    return (
                     <div className="px-8 pb-8 pt-4 border-t border-slate-50 bg-slate-50/30 animate-in slide-in-from-top-2 duration-300">
+                      {hasEnContent && (
+                        <div className="flex justify-end mb-4">
+                          <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 text-xs font-black shadow-xs">
+                            <span className="text-[10px] text-slate-400 px-2">{language === 'ar' ? 'لغة المعاينة:' : 'Preview Language:'}</span>
+                            <button
+                              type="button"
+                              onClick={() => setCardPreviewLang(prev => ({ ...prev, [index]: 'ar' }))}
+                              className={`px-3 py-1 rounded-lg transition-all ${
+                                !isCardEn ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-50'
+                              }`}
+                            >
+                              العربية
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setCardPreviewLang(prev => ({ ...prev, [index]: 'en' }))}
+                              className={`px-3 py-1 rounded-lg transition-all ${
+                                isCardEn ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-50'
+                              }`}
+                            >
+                              English
+                            </button>
+                          </div>
+                        </div>
+                      )}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div className="space-y-4">
-                          <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'نص السؤال / المحتوى:' : 'Question Content:'}</h5>
-                          <HtmlRenderer html={q.text} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm text-sm font-bold" />
+                          {(() => {
+                            const img = extractFirstImage(q);
+                            if (!img) return null;
+                            return (
+                              <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-2">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{isCardEn ? 'Question Image:' : 'الصورة المرفقة بالسؤال:'}</span>
+                                <div className="rounded-xl overflow-hidden border border-slate-100 max-h-60 flex items-center justify-center bg-slate-50">
+                                  <img src={img} alt="Question preview" className="max-h-60 w-auto object-contain" />
+                                </div>
+                              </div>
+                            );
+                          })()}
+                          <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{isCardEn ? 'Question Content:' : 'نص السؤال / المحتوى:'}</h5>
+                          <HtmlRenderer html={activeQText} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm text-sm font-bold" />
                           
-                          {q.learningOutcome && (
+                          {(isCardEn ? (q.learningOutcomeEn || q.learningOutcome) : q.learningOutcome) && (
                             <div className="flex items-center gap-2 text-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-150 w-fit text-xs font-bold">
                               <Target className="w-4 h-4" />
-                              <span>{q.learningOutcome}</span>
+                              <span>{isCardEn ? (q.learningOutcomeEn || q.learningOutcome) : q.learningOutcome}</span>
                             </div>
                           )}
                         </div>
@@ -603,20 +873,21 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                         <div className="space-y-4">
                           {q.type !== 'TEXT' && (
                             <>
-                              <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'معاينة السؤال:' : 'Question Preview:'}</h5>
+                              <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{isCardEn ? 'Question Preview:' : 'معاينة السؤال:'}</h5>
                               {['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(q.type) ? (
                                 <div className="space-y-2">
-                                  {Array.isArray(q.options) && q.options.filter(Boolean).map((opt: string, oIdx: number) => {
+                                  {Array.isArray(activeQOpts) && activeQOpts.filter(Boolean).map((opt: string, oIdx: number) => {
+                                    const arOpt = rawArOpts[oIdx];
                                     const isCorrect = q.type === 'MULTI_SELECT'
-                                      ? (q.correctAnswers || []).includes(opt)
-                                      : q.correctAnswer === opt;
+                                      ? ((q.correctAnswers || []).includes(opt) || (arOpt && (q.correctAnswers || []).includes(arOpt)))
+                                      : (q.correctAnswer === opt || (arOpt && q.correctAnswer === arOpt));
                                     return (
                                       <div key={oIdx} className={`p-3 rounded-xl border flex items-center gap-3 text-xs font-bold transition-all ${isCorrect ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-white border-slate-100 text-slate-600'}`}>
                                         <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${isCorrect ? 'bg-emerald-500 text-white' : 'bg-slate-100'}`}>
                                           {isCorrect ? '✓' : ''}
                                         </div>
                                         <span className="w-5 h-5 rounded-md bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-[10px] text-indigo-600 shrink-0">
-                                          {getOptionLetter(oIdx, language)}
+                                          {getOptionLetter(oIdx, qPreviewLang)}
                                         </span>
                                         <HtmlRenderer html={cleanOptionText(opt)} tag="span" className="flex-1 break-words whitespace-normal min-w-0 !leading-relaxed" />
                                       </div>
@@ -624,14 +895,14 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                                   })}
                                 </div>
                               ) : q.type === 'FLASH_CARD' ? (
-                                <div className="p-4 bg-slate-50 border border-slate-150 rounded-2xl text-xs space-y-2 font-bold text-right" dir="rtl">
-                                  <p className="text-slate-800"><span className="text-indigo-650">🎴 {language === 'ar' ? 'الوجه الأمامي (السؤال):' : 'Front (Question):'}</span> {parseJson(q.options, {front: ""}).front || q.text}</p>
-                                  <p className="text-slate-800"><span className="text-indigo-650">✨ {language === 'ar' ? 'الوجه الخلفي (الإجابة):' : 'Back (Answer):'}</span> {parseJson(q.options, {back: ""}).back || q.correctAnswer}</p>
+                                <div className="p-4 bg-slate-50 border border-slate-150 rounded-2xl text-xs space-y-2 font-bold text-right" dir={isCardEn ? 'ltr' : 'rtl'}>
+                                  <p className="text-slate-800"><span className="text-indigo-600">{isCardEn ? 'Front (Question):' : 'الوجه الأمامي (السؤال):'}</span> {parseJson(isCardEn ? (q.optionsEn || q.options) : q.options, {front: ""}).front || activeQText}</p>
+                                  <p className="text-slate-800"><span className="text-indigo-600">{isCardEn ? 'Back (Answer):' : 'الوجه الخلفي (الإجابة):'}</span> {parseJson(isCardEn ? (q.optionsEn || q.options) : q.options, {back: ""}).back || (isCardEn ? (q.correctAnswerEn || q.correctAnswer) : q.correctAnswer)}</p>
                                 </div>
                               ) : (
-                                <div className="p-4 bg-slate-50 border border-slate-150 rounded-2xl text-xs space-y-1.5 font-bold text-right" dir="rtl">
-                                  <p className="text-slate-400">{language === 'ar' ? `نوع النشاط: ${q.type}` : `Activity Type: ${q.type}`}</p>
-                                  <p className="text-slate-800"><span className="text-emerald-600">✓ {language === 'ar' ? 'الإجابة النموذجية:' : 'Correct Answer:'}</span> {typeof q.correctAnswer === 'object' ? JSON.stringify(q.correctAnswer) : String(q.correctAnswer || "")}</p>
+                                <div className="p-4 bg-slate-50 border border-slate-150 rounded-2xl text-xs space-y-1.5 font-bold text-right" dir={isCardEn ? 'ltr' : 'rtl'}>
+                                  <p className="text-slate-400">{isCardEn ? `Activity Type: ${q.type}` : `نوع النشاط: ${q.type}`}</p>
+                                  <p className="text-slate-800"><span className="text-emerald-600">✓ {isCardEn ? 'Correct Answer:' : 'الإجابة النموذجية:'}</span> {isCardEn ? (q.correctAnswerEn || q.correctAnswer) : (typeof q.correctAnswer === 'object' ? JSON.stringify(q.correctAnswer) : String(q.correctAnswer || ""))}</p>
                                 </div>
                               )}
                             </>
@@ -639,18 +910,19 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
 
                           {q.sections && q.sections.length > 0 && (
                             <div className="space-y-3 pt-2">
-                              <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'تفسيرات وملاحظات إضافية:' : 'Explanations & Notes:'}</h5>
+                              <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{isCardEn ? 'Explanations & Notes:' : 'تفسيرات وملاحظات إضافية:'}</h5>
                               <div className="space-y-2">
                                 {(Array.isArray(q.sections) ? q.sections : []).map((sec: any, secIdx: number) => {
-                                  const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
+                                  const preset = cardSectionPresets[sec.type] || cardSectionPresets.EXPLANATION;
                                   const SectionIcon = preset.icon;
+                                  const secContent = isCardEn ? (sec.contentEn || sec.textEn || sec.content) : (sec.content || sec.textEn);
                                   return (
                                     <div key={secIdx} className={`p-4 rounded-xl border ${preset.container} text-xs`}>
                                       <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider inline-flex items-center gap-1 mb-1.5 ${preset.badge}`}>
                                         <SectionIcon className="w-3 h-3" />
                                         {preset.label}
                                       </span>
-                                      <HtmlRenderer html={sec.content} className="text-slate-700 font-bold font-sans" />
+                                      <HtmlRenderer html={secContent} className="text-slate-700 font-bold font-sans" />
                                     </div>
                                   );
                                 })}
@@ -660,7 +932,8 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                         </div>
                       </div>
                     </div>
-                  )}
+                    );
+                  })()}
                 </div>
               ))
             )}
@@ -779,11 +1052,15 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                   { key: 'errorPattern', labelAr: 'نمط الخطأ', labelEn: 'Error Pattern' },
                   { key: 'estimatedTime', labelAr: 'الوقت المقدر', labelEn: 'Estimated Time' },
                 ].map((field) => {
+                  const activeFieldKey = questionActiveLang === 'en' && ['domain', 'standard', 'learningOutcome', 'indicator', 'skill', 'subskill', 'microSkill', 'errorPattern'].includes(field.key)
+                    ? `${field.key}En`
+                    : field.key;
+
                   const currentVal = field.key === 'standard'
-                    ? (tempQuestion.standard || tempQuestion.learningOutcome || '')
+                    ? (questionActiveLang === 'en' ? (tempQuestion.standardEn || tempQuestion.learningOutcomeEn || '') : (tempQuestion.standard || tempQuestion.learningOutcome || ''))
                     : field.key === 'dok'
                     ? (normalizeDok(tempQuestion.dok) || tempQuestion.dok || '')
-                    : (tempQuestion[field.key] || field.defaultValue || '');
+                    : (tempQuestion[activeFieldKey] || (questionActiveLang === 'ar' ? field.defaultValue : '') || '');
 
                   return (
                     <div key={field.key} className="flex flex-col gap-2">
@@ -829,9 +1106,9 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                           value={currentVal}
                           onChange={(e) => {
                             const val = e.target.value;
-                            updateCurrentQuestionField(field.key, val);
+                            updateCurrentQuestionField(activeFieldKey, val);
                             if (field.key === 'standard') {
-                              updateCurrentQuestionField('learningOutcome', val);
+                              updateCurrentQuestionField(questionActiveLang === 'en' ? 'learningOutcomeEn' : 'learningOutcome', val);
                             }
                           }}
                         />
@@ -852,7 +1129,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? '⭐ نقاط XP' : '⭐ XP Points'}</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'نقاط XP' : 'XP Points'}</label>
                     <input 
                       type="number"
                       className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px]"
@@ -873,14 +1150,154 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                   </div>
                 </div>
               )}
+              {/* Question Image Attachment / URL Uploader */}
+              <div className="flex flex-col gap-3 p-5 bg-slate-50 border border-slate-200 rounded-2xl">
+                <div className="flex justify-between items-center flex-wrap gap-2">
+                  <label className="text-xs font-black text-slate-600 uppercase tracking-widest flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-indigo-600" />
+                    <span>{language === 'ar' ? 'صورة السؤال (تظهر في البطاقات والمعاينة وفي كل مكان)' : 'Question Image (Shows in Cards, Preview & Everywhere)'}</span>
+                  </label>
+                  {tempQuestion.imageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => updateCurrentQuestionField('imageUrl', '')}
+                      className="text-red-500 hover:text-red-700 text-xs font-bold flex items-center gap-1 cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      {language === 'ar' ? 'حذف الصورة' : 'Remove Image'}
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3 items-center">
+                  <div className="flex-1 w-full">
+                    <input
+                      type="url"
+                      placeholder={language === 'ar' ? 'أدخل رابط الصورة المباشر (URL)...' : 'Paste direct image URL...'}
+                      value={tempQuestion.imageUrl || ''}
+                      onChange={(e) => updateCurrentQuestionField('imageUrl', e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 outline-none focus:border-indigo-600"
+                    />
+                  </div>
+                  <label className="shrink-0 bg-white border border-indigo-200 hover:bg-indigo-50 text-indigo-600 px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 cursor-pointer transition-all">
+                    <Upload className="w-4 h-4" />
+                    <span>{language === 'ar' ? 'رفع صورة من الجهاز' : 'Upload Image'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            const result = event.target?.result as string;
+                            if (result) {
+                              updateCurrentQuestionField('imageUrl', result);
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+
+                {(() => {
+                  const img = extractFirstImage(tempQuestion);
+                  if (!img) return null;
+                  return (
+                    <div className="mt-2 p-3 bg-white border border-slate-200 rounded-xl flex items-center gap-4">
+                      <div className="w-20 h-20 rounded-lg overflow-hidden border border-slate-100 bg-slate-50 shrink-0 flex items-center justify-center">
+                        <img src={img} alt="Question Preview" className="w-full h-full object-contain" />
+                      </div>
+                      <div className="flex flex-col gap-1 text-xs">
+                        <span className="font-bold text-emerald-600 flex items-center gap-1">
+                          <CheckCircle2 className="w-4 h-4" />
+                          {language === 'ar' ? 'تم التعرف على صورة السؤال وتفعيلها' : 'Question image is active'}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-bold truncate max-w-xs sm:max-w-md">
+                          {img.startsWith('data:') ? (language === 'ar' ? 'صورة مرفوعة محلياً' : 'Locally uploaded image') : img}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Language Switcher Bar */}
+              <div className="flex items-center justify-between bg-slate-100 p-1.5 rounded-2xl border border-slate-200 flex-wrap gap-2">
+                <span className="text-xs font-black text-slate-600 px-3">
+                  {language === 'ar' ? 'لغة تحرير السؤال الحالي:' : 'Current Editing Language:'}
+                </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setQuestionActiveLang('ar')}
+                      className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${questionActiveLang === 'ar' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-white'}`}
+                    >
+                      العربية (Arabic)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setQuestionActiveLang('en')}
+                      className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${questionActiveLang === 'en' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-white'}`}
+                    >
+                      English (EN)
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={isTranslatingQuestion}
+                    onClick={handleAutoTranslateQuestion}
+                    className="px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-sm hover:opacity-90 disabled:opacity-50 cursor-pointer"
+                  >
+                    {isTranslatingQuestion ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Languages className="w-3.5 h-3.5" />
+                    )}
+                    <span>
+                      {isTranslatingQuestion
+                        ? (language === 'ar' ? 'جارٍ الترجمة...' : 'Translating...')
+                        : (questionActiveLang === 'ar'
+                            ? (language === 'ar' ? 'ترجمة فورية للإنجليزية' : 'Translate to English')
+                            : (language === 'ar' ? 'ترجمة فورية للعربية' : 'Translate to Arabic'))}
+                    </span>
+                  </button>
+                </div>
+              </div>
 
               {/* Rich Text Editor for Question Text */}
               <div className="flex flex-col gap-3">
-                <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'نص السؤال أو التكليف الرئيسي' : 'Question / Assignment Prompt'}</label>
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-black text-slate-600 uppercase tracking-widest flex items-center gap-2">
+                    <span>
+                      {questionActiveLang === 'ar'
+                        ? (language === 'ar' ? 'نص السؤال الرئيسي (بالعربية)' : 'Question Prompt (Arabic)')
+                        : (language === 'ar' ? 'نص السؤال بالإنجليزية (English Prompt)' : 'Question Prompt (English)')}
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-500">
+                      {questionActiveLang === 'ar' ? 'العربية' : 'English'}
+                    </span>
+                  </label>
+                  {questionActiveLang === 'ar' && tempQuestion.textEn && (
+                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      English version added
+                    </span>
+                  )}
+                  {questionActiveLang === 'en' && tempQuestion.text && (
+                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      تمت إضافة النسخة العربية
+                    </span>
+                  )}
+                </div>
                 <RichTextEditor
-                  value={tempQuestion.text || ""}
-                  onChange={(value) => updateCurrentQuestionField("text", value)}
-                  placeholder="Write the question prompt here..."
+                  value={(questionActiveLang === 'ar' ? tempQuestion.text : tempQuestion.textEn) || ""}
+                  onChange={(value) => updateCurrentQuestionField(questionActiveLang === 'ar' ? "text" : "textEn", value)}
+                  placeholder={questionActiveLang === 'ar' ? "اكتب نص السؤال بالعربية هنا..." : "Write the question prompt in English here..."}
                 />
               </div>
 
@@ -898,7 +1315,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
 
               {showQuestionSections && (
                 <div className="flex flex-col gap-5 border-t border-slate-100 pt-6 animate-in slide-in-from-top-2 duration-300">
-                  <div className="flex justify-between items-center">
+                  <div className="flex justify-between items-center flex-wrap gap-2">
                     <div>
                       <label className="text-xs font-black text-slate-500 uppercase tracking-widest block">{language === 'ar' ? 'تفسيرات الإجابة والكتل المساعدة' : 'Answer Explanations & Content Blocks'}</label>
                       <p className="text-slate-400 text-[10px] font-bold mt-0.5">{language === 'ar' ? 'أضف تلميحات أو ملاحظات أو تفسيرات تفصيلية لهذا السؤال' : 'Add hints, tips, or detailed explanations'}</p>
@@ -934,25 +1351,38 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                     {(tempQuestion.sections || []).map((sec: any, idx: number) => {
                       const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
                       const IconComponent = preset.icon;
+                      const secVal = questionActiveLang === 'ar'
+                        ? (sec.content || "")
+                        : (sec.contentEn ?? sec.content ?? "");
+
                       return (
                         <div key={idx} className={`p-6 rounded-3xl border-2 flex flex-col gap-4 relative group ${preset.container}`}>
                           <div className="flex justify-between items-center">
                             <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 ${preset.badge}`}>
                               <IconComponent className="w-3.5 h-3.5" />
-                              {preset.label}
+                              {language === 'ar' ? preset.label : (preset.labelEn || preset.label)}
                             </span>
                             <button 
                               type="button"
                               onClick={() => removeQuestionSection(idx)} 
-                              className="text-red-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
+                              className="text-red-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                           <RichTextEditor 
-                            value={sec.content || ""}
-                            onChange={(value) => updateQuestionSectionContent(idx, value)}
-                            placeholder="Write block content here..."
+                            value={secVal}
+                            onChange={(value) => {
+                              const sections = [...(tempQuestion.sections || [])];
+                              if (questionActiveLang === 'ar') {
+                                sections[idx] = { ...sections[idx], content: value };
+                                setTempQuestion((prev: any) => ({ ...prev, sections, explanation: value }));
+                              } else {
+                                sections[idx] = { ...sections[idx], contentEn: value };
+                                setTempQuestion((prev: any) => ({ ...prev, sections, explanationEn: value }));
+                              }
+                            }}
+                            placeholder={questionActiveLang === 'ar' ? "اكتب محتوى التفسير هنا..." : "Write explanation block content here..."}
                             className="!bg-white !border-slate-200"
                           />
                         </div>
@@ -960,7 +1390,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                     })}
                     {(tempQuestion.sections || []).length === 0 && (
                       <div className="bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-6 text-center text-slate-400 text-xs font-bold">
-                        {language === 'ar' ? 'لا يوجد أي شرائح تفسيرية مضافة بعد.' : 'No explanations or content blocks added yet.'}
+                        {language === 'ar' ? 'لا يوجد أي شرائح تفسيرية مضافة بعد. انقر على زر إضافة شريحة مساعدة لإضافة تفسير.' : 'No explanations or content blocks added yet. Click Add Block to add an explanation.'}
                       </div>
                     )}
                   </div>
@@ -971,55 +1401,122 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
               {tempQuestion.type !== "TEXT" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-slate-100 pt-6">
                   {tempQuestion.type === "TRUE_FALSE" ? (
-                    <>
-                      {["True", "False"].map((opt) => (
-                        <div key={opt} className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isQuestionCorrectAnswer(opt) ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
-                          <div 
-                            onClick={() => setTempQuestion({ ...tempQuestion, options: ["True", "False", "", ""], correctAnswer: opt })}
-                            className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isQuestionCorrectAnswer(opt) ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200'}`}
-                          >
-                            {isQuestionCorrectAnswer(opt) && <CheckCircle2 className="w-5 h-5 text-white" />}
-                          </div>
-                          <span className="font-bold text-slate-700">{opt}</span>
+                    <div className="grid grid-cols-2 gap-6 mt-4 col-span-2">
+                      <div className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isQuestionCorrectAnswer(language === 'ar' ? "صحيح" : "True") ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
+                        <div 
+                          className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isQuestionCorrectAnswer(language === 'ar' ? "صحيح" : "True") ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200 hover:border-slate-300'}`}
+                          onClick={() => updateCurrentQuestionField('correctAnswer', language === 'ar' ? "صحيح" : "True")}
+                        >
+                          {isQuestionCorrectAnswer(language === 'ar' ? "صحيح" : "True") && <CheckCircle2 className="w-5 h-5 text-white" />}
                         </div>
-                      ))}
-                    </>
+                        <span className="font-black text-xl text-slate-700">{questionActiveLang === 'ar' ? "صحيح" : "True"}</span>
+                      </div>
+
+                      <div className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isQuestionCorrectAnswer(language === 'ar' ? "خطأ" : "False") ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
+                        <div 
+                          className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isQuestionCorrectAnswer(language === 'ar' ? "خطأ" : "False") ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200 hover:border-slate-300'}`}
+                          onClick={() => updateCurrentQuestionField('correctAnswer', language === 'ar' ? "خطأ" : "False")}
+                        >
+                          {isQuestionCorrectAnswer(language === 'ar' ? "خطأ" : "False") && <CheckCircle2 className="w-5 h-5 text-white" />}
+                        </div>
+                        <span className="font-black text-xl text-slate-700">{questionActiveLang === 'ar' ? "خطأ" : "False"}</span>
+                      </div>
+                    </div>
                   ) : (
                     <>
-                      {(tempQuestion.options || ["", "", "", ""]).map((opt: string, oIndex: number) => (
-                        <div key={oIndex} className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isQuestionCorrectAnswer(opt) && opt !== "" ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
-                          <div 
-                            onClick={() => toggleQuestionCorrectAnswer(oIndex)}
-                            className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isQuestionCorrectAnswer(opt) && opt !== "" ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200'}`}
-                          >
-                            {isQuestionCorrectAnswer(opt) && opt !== "" && <CheckCircle2 className="w-5 h-5 text-white" />}
-                          </div>
-                          <span className="w-7 h-7 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-xs text-indigo-600 shrink-0 select-none">
-                            {getOptionLetter(oIndex, language)}
-                          </span>
-                          <MathInput 
-                            value={opt}
-                            onChange={(val) => updateQuestionOption(oIndex, val)}
-                            placeholder={language === 'ar' ? `الخيار ${oIndex + 1} (بدون أ، ب، ج)` : `Option ${oIndex + 1} (no A, B, C)`}
-                            className="bg-transparent flex-1 font-bold text-slate-700 placeholder:text-slate-300 text-sm"
-                          />
-                          {tempQuestion.options.length > 2 && (
-                            <button 
-                              type="button" 
-                              onClick={() => {
-                                const newOptions = [...tempQuestion.options];
-                                newOptions.splice(oIndex, 1);
-                                setTempQuestion({ ...tempQuestion, options: newOptions });
-                              }} 
-                              className="text-red-400 hover:text-red-600 transition-all"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-                      ))}
+                      {(() => {
+                        const baseLength = Math.max((tempQuestion.options || []).length, 4);
+                        const currentOptsAr = Array.from({ length: baseLength }, (_, i) => String(tempQuestion.options?.[i] || ''));
+                        const currentOptsEn = Array.from({ length: baseLength }, (_, i) => String(tempQuestion.optionsEn?.[i] || ''));
+                        const activeOpts = questionActiveLang === 'ar' ? currentOptsAr : currentOptsEn;
+
+                        return activeOpts.map((opt: string, oIndex: number) => {
+                          const arOpt = currentOptsAr[oIndex];
+                          const enOpt = currentOptsEn[oIndex];
+
+                          const isOptionCorrect = Boolean(
+                            (tempQuestion.correctAnswerIndex !== undefined && tempQuestion.correctAnswerIndex === oIndex) ||
+                            (tempQuestion.correctAnswerIndices && tempQuestion.correctAnswerIndices.includes(oIndex)) ||
+                            (tempQuestion.type === 'MULTI_SELECT' && (
+                              (opt && isQuestionCorrectAnswer(opt)) ||
+                              (arOpt && (tempQuestion.correctAnswers || []).includes(arOpt)) ||
+                              (enOpt && (tempQuestion.correctAnswers || []).includes(enOpt)) ||
+                              (enOpt && (tempQuestion.correctAnswersEn || []).includes(enOpt))
+                            )) ||
+                            (tempQuestion.type !== 'MULTI_SELECT' && Boolean(
+                              (opt && isQuestionCorrectAnswer(opt)) ||
+                              (arOpt && isQuestionCorrectAnswer(arOpt)) ||
+                              (enOpt && isQuestionCorrectAnswer(enOpt)) ||
+                              (tempQuestion.correctAnswer && (
+                                (arOpt && tempQuestion.correctAnswer.trim() === arOpt.trim()) ||
+                                (enOpt && tempQuestion.correctAnswer.trim() === enOpt.trim())
+                              )) ||
+                              (tempQuestion.correctAnswerEn && (
+                                (arOpt && tempQuestion.correctAnswerEn.trim() === arOpt.trim()) ||
+                                (enOpt && tempQuestion.correctAnswerEn.trim() === enOpt.trim())
+                              ))
+                            ))
+                          );
+
+                          return (
+                            <div key={oIndex} className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isOptionCorrect ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
+                              <div 
+                                onClick={() => toggleQuestionCorrectAnswer(oIndex)}
+                                className={`w-8 h-8 rounded-full border-4 cursor-pointer flex items-center justify-center transition-all ${isOptionCorrect ? 'bg-emerald-500 border-emerald-200 scale-110' : 'bg-white border-slate-200 hover:border-slate-300'}`}
+                              >
+                                {isOptionCorrect && <CheckCircle2 className="w-5 h-5 text-white" />}
+                              </div>
+                              <span 
+                                onClick={() => toggleQuestionCorrectAnswer(oIndex)}
+                                className="w-7 h-7 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-xs text-indigo-600 shrink-0 select-none cursor-pointer hover:bg-indigo-100 transition-colors"
+                              >
+                                {getOptionLetter(oIndex, questionActiveLang)}
+                              </span>
+                              <MathInput 
+                                value={opt}
+                                onChange={(val) => {
+                                  if (questionActiveLang === 'ar') {
+                                    updateQuestionOption(oIndex, val);
+                                  } else {
+                                    const updatedEn = [...currentOptsEn];
+                                    updatedEn[oIndex] = val;
+                                    updateCurrentQuestionField("optionsEn", updatedEn);
+                                    if (tempQuestion.correctAnswerIndex === oIndex || (!tempQuestion.correctAnswer && !currentOptsAr[oIndex])) {
+                                      updateCurrentQuestionField("correctAnswer", val);
+                                      updateCurrentQuestionField("correctAnswerEn", val);
+                                    } else if (tempQuestion.correctAnswerIndex === oIndex) {
+                                      updateCurrentQuestionField("correctAnswerEn", val);
+                                    }
+                                  }
+                                }}
+                                placeholder={questionActiveLang === 'ar' ? `الخيار ${oIndex + 1} (بدون أ، ب، ج)` : `Option ${oIndex + 1} in English (no A, B, C)`}
+                                className="bg-transparent flex-1 font-bold text-slate-700 placeholder:text-slate-300 text-sm"
+                              />
+                              {baseLength > 2 && (
+                                <button 
+                                  type="button" 
+                                  onClick={() => {
+                                    const newOptions = [...currentOptsAr];
+                                    newOptions.splice(oIndex, 1);
+                                    const newOptsEn = [...currentOptsEn];
+                                    newOptsEn.splice(oIndex, 1);
+                                    setTempQuestion({ ...tempQuestion, options: newOptions, optionsEn: newOptsEn });
+                                  }} 
+                                  className="text-red-400 hover:text-red-600 transition-all cursor-pointer"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          );
+                        });
+                      })()}
                       <div 
-                        onClick={() => setTempQuestion({ ...tempQuestion, options: [...tempQuestion.options, ""] })} 
+                        onClick={() => {
+                          const currentOptsAr = [...(tempQuestion.options || ["", "", "", ""]), ""];
+                          const currentOptsEn = [...(tempQuestion.optionsEn || Array((tempQuestion.options || []).length).fill("")), ""];
+                          setTempQuestion({ ...tempQuestion, options: currentOptsAr, optionsEn: currentOptsEn });
+                        }} 
                         className="flex items-center justify-center gap-2 p-5 rounded-[22px] border-2 border-dashed border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all cursor-pointer text-indigo-600 font-bold text-sm"
                       >
                         <Plus className="w-5 h-5" />

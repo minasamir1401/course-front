@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import { API_URL } from '@/lib/api';
 
+const getSuperToken = () => {
+  if (typeof window === 'undefined') return '';
+  return localStorage.getItem('super_admin_token') || localStorage.getItem('super_token') || '';
+};
+
 export const useLessons = (props: { clusterId: string | null; language: string; showToast: any }) => {
   const { clusterId, language, showToast } = props;
 
@@ -12,8 +17,8 @@ export const useLessons = (props: { clusterId: string | null; language: string; 
   const fetchLessons = async () => {
     if (!clusterId) return;
     try {
-      const token = localStorage.getItem('super_token');
-      const res = await fetch(`${API_URL}/clusters/${clusterId}/lessons`, {
+      const token = getSuperToken();
+      const res = await fetch(`${API_URL}/skills-hub/clusters/${clusterId}/lessons`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -26,7 +31,7 @@ export const useLessons = (props: { clusterId: string | null; language: string; 
   };
 
   const openAddLesson = () => {
-    setEditingLesson(null);
+    setEditingLesson({ name: '', description: '', order: lessons.length + 1 });
     setIsLessonModalOpen(true);
   };
 
@@ -35,18 +40,24 @@ export const useLessons = (props: { clusterId: string | null; language: string; 
     setIsLessonModalOpen(true);
   };
 
-  const handleSaveLesson = async (lessonData: any) => {
-    if (!lessonData.title || lessonData.skills.length === 0) {
-      showToast(language === 'ar' ? 'يرجى إكمال البيانات الأساسية للدرس' : 'Please complete basic lesson info', 'error');
+  const handleSaveLesson = async (lessonData?: any) => {
+    const data = (lessonData && typeof lessonData === 'object' && !('nativeEvent' in lessonData))
+      ? lessonData
+      : editingLesson;
+
+    const lessonName = (data?.name || data?.title || '').trim();
+    if (!lessonName) {
+      showToast(language === 'ar' ? 'يرجى إدخال اسم الدرس' : 'Please enter lesson name', 'error');
       return;
     }
 
     try {
-      const token = localStorage.getItem('super_token');
-      const url = editingLesson 
-        ? `${API_URL}/lessons/${editingLesson.id}` 
-        : `${API_URL}/clusters/${clusterId}/lessons`;
-      const method = editingLesson ? 'PUT' : 'POST';
+      const token = getSuperToken();
+      const isEdit = Boolean(editingLesson && editingLesson.id);
+      const url = isEdit 
+        ? `${API_URL}/skills-hub/lessons/${editingLesson.id}` 
+        : `${API_URL}/skills-hub/lessons`;
+      const method = isEdit ? 'PUT' : 'POST';
 
       const res = await fetch(url, {
         method,
@@ -55,16 +66,18 @@ export const useLessons = (props: { clusterId: string | null; language: string; 
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          title: lessonData.title,
-          description: lessonData.description,
-          skills: lessonData.skills,
-          metadata: lessonData.metadata
+          clusterId,
+          name: lessonName,
+          title: lessonName,
+          description: data?.description || '',
+          order: Number(data?.order) || 0
         })
       });
 
       if (res.ok) {
         showToast(language === 'ar' ? 'تم حفظ الدرس بنجاح' : 'Lesson saved', 'success');
         setIsLessonModalOpen(false);
+        setEditingLesson(null);
         fetchLessons();
       } else {
         const errData = await res.json().catch(() => ({}));
@@ -80,8 +93,8 @@ export const useLessons = (props: { clusterId: string | null; language: string; 
     if (!confirm(language === 'ar' ? 'هل أنت متأكد من حذف هذا الدرس؟' : 'Are you sure you want to delete this lesson?')) return;
     
     try {
-      const token = localStorage.getItem('super_token');
-      const res = await fetch(`${API_URL}/lessons/${id}`, {
+      const token = getSuperToken();
+      const res = await fetch(`${API_URL}/skills-hub/lessons/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -100,11 +113,11 @@ export const useLessons = (props: { clusterId: string | null; language: string; 
 
     setUploadingLessonId(targetLessonId);
     try {
-      const token = localStorage.getItem('super_token');
+      const token = getSuperToken();
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch(`${API_URL}/lessons/${targetLessonId}/upload-excel`, {
+      const res = await fetch(`${API_URL}/skills-hub/lessons/${targetLessonId}/upload-excel`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData
@@ -112,7 +125,6 @@ export const useLessons = (props: { clusterId: string | null; language: string; 
 
       if (res.ok) {
         showToast(language === 'ar' ? 'تم رفع الأنشطة بنجاح' : 'Activities uploaded successfully', 'success');
-        // Let the caller handle reloading activities if they are expanded
       } else {
         const err = await res.json();
         showToast(err.error || (language === 'ar' ? 'فشل رفع الملف' : 'Upload failed'), 'error');

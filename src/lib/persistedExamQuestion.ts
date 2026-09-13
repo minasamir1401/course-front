@@ -37,9 +37,13 @@ export function normalizeQuestionSections(explanation: unknown, existingSections
 
 export function normalizePersistedExamQuestion<T extends Record<string, unknown>>(question: T) {
   const sections = normalizeQuestionSections(question.explanation, (question as any).sections);
+  const qAny = question as any;
   return {
     ...question,
+    textEn: qAny.textEn || '',
     options: normalizeQuestionOptions(question.options, []),
+    optionsEn: qAny.optionsEn ? normalizeQuestionOptions(qAny.optionsEn, []) : [],
+    explanationEn: qAny.explanationEn || '',
     sections,
     explanation: question.explanation || (sections.length > 0 ? JSON.stringify(sections) : null),
   };

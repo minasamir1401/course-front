@@ -40,28 +40,101 @@ export const useActivities = (props: { clusterId: string | null; language: strin
   };
 
   const openAddActivity = (lessonId: string) => {
-    setEditingActivity({ lessonId, isNew: true });
+    setEditingActivity({
+      lessonId,
+      isNew: true,
+      title: '',
+      titleEn: '',
+      type: 'MCQ',
+      points: 10,
+      xpPoints: 10,
+      difficulty: 'On Level',
+      dok: '',
+      skill: '',
+      questionText: '',
+      questionTextEn: '',
+      options: { choices: ["", "", "", ""] },
+      optionsEn: null,
+      correctAnswer: "",
+      correctAnswerEn: null,
+      explanation: '',
+      explanationEn: '',
+      hint: '',
+      hintEn: '',
+      tip: '',
+      tipEn: '',
+      keyInsight: '',
+      keyInsightEn: ''
+    });
     setIsActivityModalOpen(true);
   };
 
   const openEditActivity = (activity: any) => {
-    setEditingActivity(activity);
+    setEditingActivity({
+      ...activity,
+      title: activity.title || '',
+      titleEn: activity.titleEn || '',
+      questionText: activity.questionText || '',
+      questionTextEn: activity.questionTextEn || '',
+      explanation: activity.explanation || '',
+      explanationEn: activity.explanationEn || '',
+      hint: activity.hint || '',
+      hintEn: activity.hintEn || '',
+      tip: activity.tip || '',
+      tipEn: activity.tipEn || '',
+      keyInsight: activity.keyInsight || '',
+      keyInsightEn: activity.keyInsightEn || ''
+    });
     setIsActivityModalOpen(true);
   };
 
-  const handleSaveActivity = async (activityData: any) => {
-    if (!activityData.title || !activityData.type || !activityData.skill) {
-      showToast(language === 'ar' ? 'يرجى إكمال البيانات الأساسية للنشاط' : 'Please complete basic activity info', 'error');
+  const handleSaveActivity = async (activityData?: any) => {
+    const data = (activityData && typeof activityData === 'object' && !('nativeEvent' in activityData))
+      ? activityData
+      : editingActivity;
+
+    if (!data?.title || !data?.type) {
+      showToast(language === 'ar' ? 'يرجى إدخال عنوان ونوع النشاط' : 'Please enter activity title and type', 'error');
       return;
     }
 
     try {
       const token = localStorage.getItem('school_admin_token');
-      const isNew = editingActivity?.isNew;
+      const isNew = Boolean(editingActivity?.isNew || !data.id);
       const url = isNew 
-        ? `${API_URL}/skills-hub/lessons/${editingActivity.lessonId}/activities`
-        : `${API_URL}/skills-hub/activities/${editingActivity.id}`;
+        ? `${API_URL}/skills-hub/activities`
+        : `${API_URL}/skills-hub/activities/${data.id}`;
       const method = isNew ? 'POST' : 'PUT';
+
+      const payload = {
+        lessonId: editingActivity?.lessonId || data.lessonId,
+        title: data.title,
+        titleEn: data.titleEn || null,
+        questionText: data.questionText || null,
+        questionTextEn: data.questionTextEn || null,
+        type: data.type,
+        options: typeof data.options === 'string' ? data.options : JSON.stringify(data.options || {}),
+        optionsEn: data.optionsEn !== undefined ? (typeof data.optionsEn === 'string' ? data.optionsEn : JSON.stringify(data.optionsEn)) : null,
+        correctAnswer: typeof data.correctAnswer === 'string' ? data.correctAnswer : JSON.stringify(data.correctAnswer || ''),
+        correctAnswerEn: data.correctAnswerEn !== undefined ? (typeof data.correctAnswerEn === 'string' ? data.correctAnswerEn : JSON.stringify(data.correctAnswerEn)) : null,
+        points: Number(data.points) || 10,
+        xpPoints: Number(data.xpPoints) || 10,
+        difficulty: data.difficulty || 'Medium',
+        dok: data.dok || null,
+        estimatedTime: Number(data.estimatedTime) || 60,
+        standard: data.standard || null,
+        indicator: data.indicator || null,
+        learningOutcome: data.learningOutcome || null,
+        skill: data.skill || null,
+        hint: data.hint || null,
+        hintEn: data.hintEn || null,
+        tip: data.tip || null,
+        tipEn: data.tipEn || null,
+        explanation: data.explanation || null,
+        explanationEn: data.explanationEn || null,
+        keyInsight: data.keyInsight || null,
+        keyInsightEn: data.keyInsightEn || null
+      };
 
       const res = await fetch(url, {
         method,
@@ -69,15 +142,14 @@ export const useActivities = (props: { clusterId: string | null; language: strin
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(activityData)
+        body: JSON.stringify(payload)
       });
 
       if (res.ok) {
         showToast(language === 'ar' ? 'تم حفظ النشاط بنجاح' : 'Activity saved successfully', 'success');
         setIsActivityModalOpen(false);
-        const lid = isNew ? editingActivity.lessonId : editingActivity.lessonId;
-        fetchActivities(lid);
-        // We should also update lesson count theoretically
+        const lid = editingActivity?.lessonId || data.lessonId;
+        if (lid) fetchActivities(lid);
         fetchLessons();
       } else {
         const errData = await res.json().catch(() => ({}));

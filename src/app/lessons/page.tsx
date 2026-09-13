@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import DashboardLayout from "@/components/DashboardLayout";
 import { PlaySquare, CheckCircle2, Clock, Calendar, Lock, Play, FileText, MessageSquare, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Maximize, Settings, Volume2, Info, MessageCircle, FileDown } from 'lucide-react';
 
@@ -312,7 +313,7 @@ export default function LessonPage() {
             <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm text-center">
               <h3 className="font-bold text-slate-800 mb-4 text-right">المعلم</h3>
               <div className="w-20 h-20 rounded-full bg-slate-200 overflow-hidden mx-auto mb-3 border-2 border-white shadow-md">
-                <img loading="lazy" decoding="async" src="https://i.pravatar.cc/150?img=11" alt="Teacher" className="w-full h-full object-cover" />
+                <Image src="https://i.pravatar.cc/150?img=11" alt="Teacher" width={80} height={80} className="w-full h-full object-cover" />
               </div>
               <h4 className="font-bold text-slate-800">أ. محمد إبراهيم</h4>
               <p className="text-xs text-slate-500 mb-2">معلم رياضيات</p>

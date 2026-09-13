@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Plus, Search, Book, ArrowUpRight, BookOpen, Layers, Edit2, Trash2, Monitor, GraduationCap, Sparkles, Filter, FileSpreadsheet, DownloadCloud, FileCode, Upload } from 'lucide-react';
 import Link from "next/link";
@@ -431,9 +432,16 @@ export default function SuperAdminCoursesPage() {
                       <div key={course.id} className="group bg-white rounded-[20px] sm:rounded-[30px] border border-slate-100 p-4 sm:p-6 hover:shadow-3xl hover:shadow-indigo-600/10 transition-all duration-500 relative overflow-hidden flex flex-col md:flex-row items-center gap-6">
                         <div className="absolute top-0 right-0 w-1.5 h-full bg-gradient-to-b from-indigo-500 to-blue-500 transform scale-y-0 group-hover:scale-y-100 transition-transform duration-500 origin-top"></div>
                         
-                        <div className="w-16 h-16 sm:w-20 sm:h-20 bg-indigo-50 rounded-lg sm:rounded-2xl flex items-center justify-center group-hover:scale-110 transition-all duration-500 overflow-hidden border border-slate-100 shrink-0">
+                        <div className="relative w-16 h-16 sm:w-20 sm:h-20 bg-indigo-50 rounded-lg sm:rounded-2xl flex items-center justify-center group-hover:scale-110 transition-all duration-500 overflow-hidden border border-slate-100 shrink-0">
                            {course.coverImage ? (
-                              <img loading="lazy" decoding="async" src={getFullImageUrl(course.coverImage) || ""} className="w-full h-full object-cover" alt="Cover" />
+                              <Image
+                                src={getFullImageUrl(course.coverImage) || ""}
+                                fill
+                                sizes="80px"
+                                className="object-cover"
+                                alt="Cover"
+                                unoptimized={Boolean(getFullImageUrl(course.coverImage)?.startsWith('data:'))}
+                              />
                            ) : (
                               <Layers className="w-8 h-8 text-indigo-600" />
                            )}

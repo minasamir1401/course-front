@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
+import Image from "next/image";
 import DashboardLayout from "@/components/DashboardLayout";
 import { BookOpen, Play, Clock, CheckCircle2, Sparkles, Search, Target, ArrowUpRight, Filter, ChevronRight, Layers, Flame, Star } from 'lucide-react';
 import { useRouter } from "next/navigation";
@@ -220,7 +221,14 @@ export default function CoursesPage() {
                 {/* Image Section (Poster) */}
                 <div className="relative w-full aspect-[4/3] bg-slate-100 overflow-hidden shrink-0">
                   {imageSrc ? (
-                    <img loading="lazy" decoding="async" src={imageSrc} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt={course.title} />
+                    <Image
+                      src={imageSrc}
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      className="object-cover transition-transform duration-700 group-hover:scale-110"
+                      alt={course.title || "Course Poster"}
+                      unoptimized={imageSrc.startsWith('data:')}
+                    />
                   ) : (
                     <div className={`w-full h-full flex items-center justify-center transition-transform duration-700 group-hover:scale-110 ${isFinished ? 'bg-emerald-50' : 'bg-gradient-to-br from-indigo-50 to-violet-100'}`}>
                       <BookOpen className={`w-16 h-16 ${isFinished ? 'text-emerald-200' : 'text-indigo-200'}`} />

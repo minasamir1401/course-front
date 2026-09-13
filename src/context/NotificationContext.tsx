@@ -20,8 +20,11 @@ interface NotificationContextType {
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 const queueFailedWrite = async (input: RequestInfo | URL, init: RequestInit | undefined, url: string, owner: OfflineOwner | null) => {
+  if (!owner || !owner.userId) return;
+
   const method = (init?.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
   if (!['POST', 'PUT', 'PATCH'].includes(method) || url.includes('/auth/')) return;
+  if (url.includes('/analytics') || url.includes('/health') || url.includes('/logs') || url.includes('/track')) return;
 
   let body = typeof init?.body === 'string' ? init.body : '';
   if (!body && input instanceof Request) {

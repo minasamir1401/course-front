@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { API_URL } from '@/lib/api';
+import { API_URL, apiFetch } from '@/lib/api';
 
 export const useClusterInfo = (props: { clusterId: string | null; language: string; showToast: any; router: any }) => {
   const { clusterId, language, showToast, router } = props;
@@ -17,14 +17,12 @@ export const useClusterInfo = (props: { clusterId: string | null; language: stri
     id: "", name: "", description: "", subject: "", isCentral: false
   });
 
-  const fetchSchools = async (token: string) => {
+  const fetchSchools = async () => {
     try {
-      const res = await fetch(`${API_URL}/schools`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const res = await apiFetch(`${API_URL}/admin/schools`);
       if (res.ok) {
         const data = await res.json();
-        setSchools(data || []);
+        setSchools(Array.isArray(data) ? data : (data.schools || []));
       }
     } catch (err) {
       console.error('Error fetching schools:', err);
@@ -33,22 +31,26 @@ export const useClusterInfo = (props: { clusterId: string | null; language: stri
 
   const fetchClusterData = async () => {
     try {
-      const token = localStorage.getItem('super_token');
-      if (!token) {
-        router.push('/login');
+      const userStr = typeof window !== 'undefined' ? localStorage.getItem('super_admin_user') : null;
+      if (!userStr) {
+        router.push('/super-admin/login');
         return;
       }
-      setIsSuperAdmin(true);
-      await fetchSchools(token);
+      try {
+        const user = JSON.parse(userStr);
+        setIsSuperAdmin(user.role === 'SUPER_ADMIN');
+      } catch {
+        setIsSuperAdmin(false);
+      }
+
+      await fetchSchools();
 
       if (!clusterId) {
         setIsLoading(false);
         return;
       }
 
-      const res = await fetch(`${API_URL}/clusters`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const res = await apiFetch(`${API_URL}/skills-hub/clusters`);
       if (res.ok) {
         const data = await res.json();
         const clusters = Array.isArray(data) ? data : data.clusters || [];
@@ -90,12 +92,10 @@ export const useClusterInfo = (props: { clusterId: string | null; language: stri
     
     setIsSaving(true);
     try {
-      const token = localStorage.getItem('super_token');
-      const res = await fetch(`${API_URL}/clusters/${clusterId}`, {
+      const res = await apiFetch(`${API_URL}/skills-hub/clusters/${clusterId}`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           name: clusterData.name,
