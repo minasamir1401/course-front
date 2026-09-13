@@ -357,11 +357,13 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
               ? (block.titleEn !== undefined && block.titleEn !== null && block.titleEn !== ''
                   ? block.titleEn
                   : (block.title && isEnglishOnly(block.title) ? block.title : ''))
-              : (block.title && hasArabicChars(block.title) && block.title !== 'محتوى جديد' && block.title !== 'سؤال جديد' ? block.title : '');
+              : (block.titleEn
+                  ? (block.title || '')
+                  : (block.title && hasArabicChars(block.title) && block.title !== 'محتوى جديد' && block.title !== 'سؤال جديد' ? block.title : ''));
 
             const resolvedContent = slideLang === 'en'
               ? (block.contentEn || block.textEn || (isSlideBodyEnglish ? (block.content || block.text) : ''))
-              : (hasArabicChars(block.content || block.text) ? (block.content || block.text) : '');
+              : (block.contentEn ? (block.content || block.text || '') : (hasArabicChars(block.content || block.text) ? (block.content || block.text) : ''));
 
             return (
               <React.Fragment key={block.id ?? sIdx}>
@@ -449,6 +451,7 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
                             )}
                           </select>
                           <input 
+                            key={`${sIdx}-${slideLang}`}
                             type="text"
                             value={resolvedTitle}
                             onChange={(e) => {
@@ -591,6 +594,7 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
                     {/* The primary editor must remain available when advanced settings are collapsed. */}
                     <div>
                       <RichTextEditor
+                        key={`${sIdx}-${slideLang}`}
                         value={resolvedContent}
                         onChange={(val) => {
                           if (slideLang === 'en') {
@@ -840,7 +844,9 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
                                 ? ((block.optionsEn && block.optionsEn.length > 0)
                                     ? block.optionsEn
                                     : (isEnOpts ? (block.options || []) : ["", "", "", ""]))
-                                : (block.options || []).map((o: string) => (/[\u0600-\u06FF]/.test(o) ? o : ''));
+                                : ((block.optionsEn && block.optionsEn.length > 0)
+                                    ? (block.options || ["", "", "", ""])
+                                    : (block.options || []).map((o: string) => (/[\u0600-\u06FF]/.test(o) ? o : '')));
                               const baseOpts = (block.options && block.options.length > 0) ? block.options : (block.optionsEn || ["", "", "", ""]);
                               const displayOpts = rawOpts.length > 0 ? rawOpts : ["", "", "", ""];
 
@@ -1022,6 +1028,7 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
                                   </button>
                                 </div>
                                 <RichTextEditor 
+                                  key={`${sIdx}-${secIdx}-${slideLang}`}
                                   value={secContent}
                                   onChange={(val) => {
                                     if (slideLang === 'en') {

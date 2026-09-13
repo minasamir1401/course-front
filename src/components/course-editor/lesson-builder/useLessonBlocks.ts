@@ -58,6 +58,7 @@ export function useLessonBlocks(setCurrentLesson: (lesson: any) => void) {
       const newSlides = [...(prev[source] || [])];
       const resolvedIndex = findBlockIndex(newSlides, index, blockRef);
       if (!newSlides[resolvedIndex]) return prev;
+      if (newSlides[resolvedIndex][field] === value) return prev;
       newSlides[resolvedIndex] = { ...newSlides[resolvedIndex], [field]: value };
       if (field === 'content') {
         newSlides[resolvedIndex].text = value;
@@ -168,6 +169,7 @@ export function useLessonBlocks(setCurrentLesson: (lesson: any) => void) {
         resolvedSectionIndex = byReference >= 0 ? byReference : (byId >= 0 ? byId : sectionIndex);
       }
       if (!sections[resolvedSectionIndex]) return prev;
+      if (sections[resolvedSectionIndex][field] === content) return prev;
 
       sections[resolvedSectionIndex] = { ...sections[resolvedSectionIndex], [field]: content };
       if (field === 'contentEn') {

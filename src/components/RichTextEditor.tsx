@@ -403,18 +403,17 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
   const handleInput = (immediate = false) => {
     if (editorRef.current) {
       const content = editorRef.current.innerHTML;
-      // Keep the owning form state in lockstep with the editable DOM. Delaying this
-      // callback used to leave a 500 ms window where Save, reorder, modal close, or
-      // navigation could serialize the previous value and permanently lose the last
-      // characters the user typed.
-      if (immediate || content !== value) onChange(content);
+      if (content !== value) onChange(content);
     }
   };
 
   const handleFocus = () => setIsFocused(true);
   const handleBlur = () => {
     setIsFocused(false);
-    handleInput(true);
+    if (editorRef.current) {
+      const content = editorRef.current.innerHTML;
+      if (content !== value) onChange(content);
+    }
   };
 
   const handlePaste = async (e: React.ClipboardEvent) => {
