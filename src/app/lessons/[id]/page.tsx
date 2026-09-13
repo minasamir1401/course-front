@@ -454,7 +454,7 @@ export default function LessonPlayerPage() {
                   )}
                   <div className={`w-full max-w-5xl mb-8 ${isQuestionLike(lesson.slides[currentSlideIndex]) ? 'question-frame' : 'text-frame'}`}>
                     <HtmlRenderer
-                      html={lesson.slides[currentSlideIndex].content}
+                      html={language === 'en' ? (lesson.slides[currentSlideIndex].contentEn || lesson.slides[currentSlideIndex].textEn || lesson.slides[currentSlideIndex].content || lesson.slides[currentSlideIndex].text) : (lesson.slides[currentSlideIndex].content || lesson.slides[currentSlideIndex].text)}
                       className="text-base md:text-xl text-slate-600 leading-[1.8] font-bold prose prose-indigo break-words w-full animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150 text-start"
                     />
                   </div>
@@ -626,26 +626,26 @@ export default function LessonPlayerPage() {
                     />
                   </div>
 
-                  {isQuestionLike(lesson.slides[currentSlideIndex]) && slideAnswers[currentSlideIndex] && lesson.slides[currentSlideIndex].hint && (
+                  {isQuestionLike(lesson.slides[currentSlideIndex]) && slideAnswers[currentSlideIndex] && (lesson.slides[currentSlideIndex].hint || lesson.slides[currentSlideIndex].hintEn) && (
                     <div className="w-full mt-6 p-5 bg-indigo-50 border-2 border-indigo-100 rounded-2xl text-indigo-900 animate-in slide-in-from-top-4 fade-in duration-500 text-start shadow-sm hidden">
                       <div className="flex items-center gap-2 mb-2 font-black text-indigo-700">
                         <HelpCircle className="w-5 h-5 shrink-0" />
                         {language === 'ar' ? 'تلميح' : 'Hint'}
                       </div>
                       <div className="text-sm md:text-base leading-relaxed break-words">
-                        <HtmlRenderer html={lesson.slides[currentSlideIndex].hint} />
+                        <HtmlRenderer html={language === 'en' ? (lesson.slides[currentSlideIndex].hintEn || lesson.slides[currentSlideIndex].hint) : lesson.slides[currentSlideIndex].hint} />
                       </div>
                     </div>
                   )}
 
-                  {isQuestionLike(lesson.slides[currentSlideIndex]) && slideSubmitted[currentSlideIndex] && lesson.slides[currentSlideIndex].explanation && (
+                  {isQuestionLike(lesson.slides[currentSlideIndex]) && slideSubmitted[currentSlideIndex] && (lesson.slides[currentSlideIndex].explanation || lesson.slides[currentSlideIndex].explanationEn) && (
                     <div className="w-full mt-4 p-5 bg-blue-50 border-2 border-blue-100 rounded-2xl text-blue-900 animate-in slide-in-from-top-4 fade-in duration-700 delay-200 text-start shadow-sm">
                       <div className="flex items-center gap-2 mb-2 font-black text-blue-700">
                         <Info className="w-5 h-5 shrink-0" />
                         {language === 'ar' ? 'التفسير' : 'Explanation'}
                       </div>
                       <div className="text-sm md:text-base leading-relaxed break-words">
-                        <HtmlRenderer html={lesson.slides[currentSlideIndex].explanation} />
+                        <HtmlRenderer html={language === 'en' ? (lesson.slides[currentSlideIndex].explanationEn || lesson.slides[currentSlideIndex].explanation) : lesson.slides[currentSlideIndex].explanation} />
                       </div>
                     </div>
                   )}

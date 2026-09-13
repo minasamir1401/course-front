@@ -68,6 +68,25 @@ export default function EditSchoolSkillClusterPage() {
   const [previewLang, setPreviewLang] = useState<'ar' | 'en'>('ar');
   const [isTranslatingActivity, setIsTranslatingActivity] = useState(false);
 
+  useEffect(() => {
+    if (!isActivityModalOpen || !editingActivity) return;
+    const hasAr = (str?: string) => /[\u0600-\u06FF]/.test(String(str || ''));
+    const hasEn = (str?: string) => /[a-zA-Z]/.test(String(str || ''));
+
+    if (editingActivity.titleEn || editingActivity.questionTextEn) {
+      setActivityActiveLang('en');
+    } else if (
+      (hasEn(editingActivity.title) && !hasAr(editingActivity.title)) ||
+      (hasEn(editingActivity.questionText) && !hasAr(editingActivity.questionText))
+    ) {
+      setActivityActiveLang('en');
+    } else if (language === 'en') {
+      setActivityActiveLang('en');
+    } else {
+      setActivityActiveLang('ar');
+    }
+  }, [isActivityModalOpen, editingActivity?.id]);
+
   const handleAutoTranslateActivity = async () => {
     if (!editingActivity) return;
     setIsTranslatingActivity(true);
@@ -774,18 +793,6 @@ export default function EditSchoolSkillClusterPage() {
                   <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-xl">
                     <button
                       type="button"
-                      onClick={() => setActivityActiveLang('ar')}
-                      className={`px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 ${
-                        activityActiveLang === 'ar'
-                          ? 'bg-indigo-600 text-white shadow-sm'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-                      }`}
-                    >
-                      <span>العربية (AR)</span>
-                      {editingActivity.title && <span className="w-2 h-2 rounded-full bg-emerald-400"></span>}
-                    </button>
-                    <button
-                      type="button"
                       onClick={() => setActivityActiveLang('en')}
                       className={`px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 ${
                         activityActiveLang === 'en'
@@ -795,6 +802,18 @@ export default function EditSchoolSkillClusterPage() {
                     >
                       <span>English (EN)</span>
                       {editingActivity.titleEn && <span className="w-2 h-2 rounded-full bg-emerald-400"></span>}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActivityActiveLang('ar')}
+                      className={`px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 ${
+                        activityActiveLang === 'ar'
+                          ? 'bg-indigo-600 text-white shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                      }`}
+                    >
+                      <span>العربية (AR)</span>
+                      {editingActivity.title && <span className="w-2 h-2 rounded-full bg-emerald-400"></span>}
                     </button>
                   </div>
 
@@ -828,7 +847,7 @@ export default function EditSchoolSkillClusterPage() {
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                       {activityActiveLang === 'ar'
                         ? (language === 'ar' ? 'عنوان السؤال (بالعربية)' : 'Question Title (Arabic)')
-                        : (language === 'ar' ? 'عنوان السؤال (بالإنجليزية)' : 'Question Title (English)')}
+                        : 'Question Title (English)'}
                       {activityActiveLang === 'ar' && <span className="text-red-500"> *</span>}
                     </label>
                     <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 uppercase">
@@ -846,8 +865,16 @@ export default function EditSchoolSkillClusterPage() {
                   ) : (
                     <input 
                       type="text" 
-                      value={editingActivity.titleEn || ''} 
-                      onChange={(e) => setEditingActivity({...editingActivity, titleEn: e.target.value})}
+                      value={editingActivity.titleEn !== undefined && editingActivity.titleEn !== null && editingActivity.titleEn !== '' ? editingActivity.titleEn : (editingActivity.title && !/[\u0600-\u06FF]/.test(editingActivity.title) ? editingActivity.title : '')} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const syncBase = !editingActivity.title || (!/[\u0600-\u06FF]/.test(editingActivity.title) && editingActivity.title === (editingActivity.titleEn || ''));
+                        setEditingActivity({
+                          ...editingActivity, 
+                          titleEn: val,
+                          ...(syncBase ? { title: val } : {})
+                        });
+                      }}
                       placeholder="e.g. Addition Question, Matching Shapes..."
                       className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none"
                     />
@@ -946,8 +973,15 @@ export default function EditSchoolSkillClusterPage() {
                     ) : (
                       <RichTextEditor 
                         key="en-school-qtext"
-                        value={editingActivity.questionTextEn || ""} 
-                        onChange={(val) => setEditingActivity({...editingActivity, questionTextEn: val})} 
+                        value={editingActivity.questionTextEn || (editingActivity.questionText && !/[\u0600-\u06FF]/.test(editingActivity.questionText) ? editingActivity.questionText : "")} 
+                        onChange={(val) => {
+                          const syncBase = !editingActivity.questionText || (!/[\u0600-\u06FF]/.test(editingActivity.questionText) && editingActivity.questionText === (editingActivity.questionTextEn || ''));
+                          setEditingActivity({
+                            ...editingActivity, 
+                            questionTextEn: val,
+                            ...(syncBase ? { questionText: val } : {})
+                          });
+                        }} 
                       />
                     )}
                   </div>
@@ -1223,7 +1257,7 @@ export default function EditSchoolSkillClusterPage() {
                     <label className="text-xs font-bold text-slate-600 block">
                       {activityActiveLang === 'ar'
                         ? (language === 'ar' ? "تلميح للطالب (بالعربية)" : "Student Hint (Arabic)")
-                        : (language === 'ar' ? "تلميح للطالب (بالإنجليزية)" : "Student Hint (English)")}
+                        : "Student Hint (English)"}
                     </label>
                     {activityActiveLang === 'ar' ? (
                       <textarea 
@@ -1234,8 +1268,16 @@ export default function EditSchoolSkillClusterPage() {
                       />
                     ) : (
                       <textarea 
-                        value={editingActivity.hintEn || ""} 
-                        onChange={(e) => setEditingActivity({...editingActivity, hintEn: e.target.value})}
+                        value={editingActivity.hintEn !== undefined && editingActivity.hintEn !== null && editingActivity.hintEn !== '' ? editingActivity.hintEn : (editingActivity.hint && !/[\u0600-\u06FF]/.test(editingActivity.hint) ? editingActivity.hint : '')} 
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const syncBase = !editingActivity.hint || (!/[\u0600-\u06FF]/.test(editingActivity.hint) && editingActivity.hint === (editingActivity.hintEn || ''));
+                          setEditingActivity({
+                            ...editingActivity, 
+                            hintEn: val,
+                            ...(syncBase ? { hint: val } : {})
+                          });
+                        }} 
                         rows={2} 
                         placeholder="Student hint in English..."
                         className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none resize-none"
@@ -1246,7 +1288,7 @@ export default function EditSchoolSkillClusterPage() {
                     <label className="text-xs font-bold text-slate-600 block">
                       {activityActiveLang === 'ar'
                         ? (language === 'ar' ? "نصيحة ذكية (بالعربية)" : "Smart Tip (Arabic)")
-                        : (language === 'ar' ? "نصيحة ذكية (بالإنجليزية)" : "Smart Tip (English)")}
+                        : "Smart Tip (English)"}
                     </label>
                     {activityActiveLang === 'ar' ? (
                       <textarea 
@@ -1257,8 +1299,16 @@ export default function EditSchoolSkillClusterPage() {
                       />
                     ) : (
                       <textarea 
-                        value={editingActivity.tipEn || ""} 
-                        onChange={(e) => setEditingActivity({...editingActivity, tipEn: e.target.value})}
+                        value={editingActivity.tipEn !== undefined && editingActivity.tipEn !== null && editingActivity.tipEn !== '' ? editingActivity.tipEn : (editingActivity.tip && !/[\u0600-\u06FF]/.test(editingActivity.tip) ? editingActivity.tip : '')} 
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const syncBase = !editingActivity.tip || (!/[\u0600-\u06FF]/.test(editingActivity.tip) && editingActivity.tip === (editingActivity.tipEn || ''));
+                          setEditingActivity({
+                            ...editingActivity, 
+                            tipEn: val,
+                            ...(syncBase ? { tip: val } : {})
+                          });
+                        }} 
                         rows={2} 
                         placeholder="Smart tip in English..."
                         className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none resize-none"
@@ -1269,7 +1319,7 @@ export default function EditSchoolSkillClusterPage() {
                     <label className="text-xs font-bold text-slate-600 block">
                       {activityActiveLang === 'ar'
                         ? (language === 'ar' ? "شرح الإجابة المفصل (بالعربية)" : "Detailed Explanation (Arabic)")
-                        : (language === 'ar' ? "شرح الإجابة المفصل (بالإنجليزية)" : "Detailed Explanation (English)")}
+                        : "Detailed Explanation (English)"}
                     </label>
                     {activityActiveLang === 'ar' ? (
                       <textarea 
@@ -1280,8 +1330,16 @@ export default function EditSchoolSkillClusterPage() {
                       />
                     ) : (
                       <textarea 
-                        value={editingActivity.explanationEn || ""} 
-                        onChange={(e) => setEditingActivity({...editingActivity, explanationEn: e.target.value})}
+                        value={editingActivity.explanationEn !== undefined && editingActivity.explanationEn !== null && editingActivity.explanationEn !== '' ? editingActivity.explanationEn : (editingActivity.explanation && !/[\u0600-\u06FF]/.test(editingActivity.explanation) ? editingActivity.explanation : '')} 
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const syncBase = !editingActivity.explanation || (!/[\u0600-\u06FF]/.test(editingActivity.explanation) && editingActivity.explanation === (editingActivity.explanationEn || ''));
+                          setEditingActivity({
+                            ...editingActivity, 
+                            explanationEn: val,
+                            ...(syncBase ? { explanation: val } : {})
+                          });
+                        }} 
                         rows={2} 
                         placeholder="Detailed explanation in English..."
                         className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none resize-none"
@@ -1292,7 +1350,7 @@ export default function EditSchoolSkillClusterPage() {
                     <label className="text-xs font-bold text-slate-600 block">
                       {activityActiveLang === 'ar'
                         ? (language === 'ar' ? "فكرة جوهرية (بالعربية)" : "Key Insight (Arabic)")
-                        : (language === 'ar' ? "فكرة جوهرية (بالإنجليزية)" : "Key Insight (English)")}
+                        : "Key Insight (English)"}
                     </label>
                     {activityActiveLang === 'ar' ? (
                       <textarea 
@@ -1303,8 +1361,16 @@ export default function EditSchoolSkillClusterPage() {
                       />
                     ) : (
                       <textarea 
-                        value={editingActivity.keyInsightEn || ""} 
-                        onChange={(e) => setEditingActivity({...editingActivity, keyInsightEn: e.target.value})}
+                        value={editingActivity.keyInsightEn !== undefined && editingActivity.keyInsightEn !== null && editingActivity.keyInsightEn !== '' ? editingActivity.keyInsightEn : (editingActivity.keyInsight && !/[\u0600-\u06FF]/.test(editingActivity.keyInsight) ? editingActivity.keyInsight : '')} 
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const syncBase = !editingActivity.keyInsight || (!/[\u0600-\u06FF]/.test(editingActivity.keyInsight) && editingActivity.keyInsight === (editingActivity.keyInsightEn || ''));
+                          setEditingActivity({
+                            ...editingActivity, 
+                            keyInsightEn: val,
+                            ...(syncBase ? { keyInsight: val } : {})
+                          });
+                        }} 
                         rows={2} 
                         placeholder="Key insight in English..."
                         className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none resize-none"
@@ -1318,10 +1384,12 @@ export default function EditSchoolSkillClusterPage() {
 
             {/* Modal Footer */}
             <div className="p-4 sm:p-6 border-t border-slate-100 flex justify-end gap-3 bg-white shrink-0">
-              <button onClick={() => setIsActivityModalOpen(false)} className="px-6 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition-all">{language === 'ar' ? "إلغاء" : "Cancel"}</button>
+              <button onClick={() => setIsActivityModalOpen(false)} className="px-6 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition-all">
+                {activityActiveLang === 'en' ? "Cancel" : (language === 'ar' ? "إلغاء" : "Cancel")}
+              </button>
               <button onClick={handleSaveActivity} className="px-8 py-3 rounded-xl font-black text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 flex items-center gap-2 transition-all">
                 <CheckCircle2 className="w-5 h-5" />
-                {language === 'ar' ? "حفظ النشاط" : "Save Activity"}
+                {activityActiveLang === 'en' ? "Save Activity" : (language === 'ar' ? "حفظ النشاط" : "Save Activity")}
               </button>
             </div>
           </div>

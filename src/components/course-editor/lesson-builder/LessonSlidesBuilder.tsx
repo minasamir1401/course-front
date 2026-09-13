@@ -3,7 +3,8 @@
 import React, { useState } from "react";
 import { 
   Plus, Trash2, ChevronDown, ChevronUp, CheckCircle2, 
-  HelpCircle, Upload, Download, Edit2, Play, Video, BookOpen, Lightbulb, TriangleAlert, Layout, FileText, Copy, Target
+  HelpCircle, Upload, Download, Edit2, Play, Video, BookOpen, Lightbulb, TriangleAlert, Layout, FileText, Copy, Target,
+  Languages, Loader2, Globe, Sparkles
 } from "lucide-react";
 import RichTextEditor from "@/components/RichTextEditor";
 import MathInput from "@/components/MathInput";
@@ -14,6 +15,8 @@ import { useLessonBlocks } from "./useLessonBlocks";
 import { getSectionStylePresets } from "./constants";
 import { useCourseEditor } from "../CourseEditorContext";
 import CopySlidesModal from "@/components/modals/CopySlidesModal";
+import { translateBatch } from "@/lib/translationService";
+import { useNotification } from "@/context/NotificationContext";
 
 interface LessonSlidesBuilderProps {
   source: 'slides' | 'assignments' | 'questions';
@@ -40,12 +43,15 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
   handleExcelUpload,
   downloadQuestionsTemplate
 }) => {
+  const { showToast } = useNotification();
   const [activeSlide, setActiveSlide] = useState<number | null>(null);
   const [slideTab, setSlideTab] = useState<'CONTENT' | 'EXPLANATION' | 'SECTIONS'>('CONTENT');
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
   const [openMetadataFor, setOpenMetadataFor] = useState<number | null>(null);
   const [openSectionsFor, setOpenSectionsFor] = useState<number | null>(null);
+  const [slideLanguages, setSlideLanguages] = useState<Record<number, 'ar' | 'en'>>({});
+  const [translatingSlide, setTranslatingSlide] = useState<Record<number, boolean>>({});
 
   const { role } = useCourseEditor();
   const isSuperAdmin = role === "SUPER_ADMIN";
@@ -105,6 +111,115 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
   const handleRemoveSlideSection = (slideIndex: number, sectionIndex: number) => removeSection(source, slideIndex, sectionIndex);
 
     const list = currentLesson[source] || [];
+
+    const detectSlideLanguage = (block: any): 'ar' | 'en' => {
+      const hasArabic = (text: string) => /[\u0600-\u06FF]/.test(text || "");
+      const hasEnglish = (text: string) => /[a-zA-Z]/.test(text || "");
+
+      if (block?.titleEn || block?.contentEn || block?.textEn) return 'en';
+      if (hasArabic(block?.title) || hasArabic(block?.content) || hasArabic(block?.text)) return 'ar';
+      if (hasEnglish(block?.title) || hasEnglish(block?.content) || hasEnglish(block?.text)) return 'en';
+      return language === 'en' ? 'en' : 'ar';
+    };
+
+    const getSlideLang = (block: any, sIdx: number): 'ar' | 'en' => {
+      return slideLanguages[sIdx] || detectSlideLanguage(block);
+    };
+
+    const setSlideLang = (sIdx: number, lang: 'ar' | 'en') => {
+      setSlideLanguages(prev => ({ ...prev, [sIdx]: lang }));
+    };
+
+    const handleAutoTranslateSlide = async (sIdx: number) => {
+      const block = list[sIdx];
+      if (!block) return;
+
+      const currentLang = getSlideLang(block, sIdx);
+      const from = currentLang;
+      const to = currentLang === 'ar' ? 'en' : 'ar';
+
+      setTranslatingSlide(prev => ({ ...prev, [sIdx]: true }));
+      try {
+        const srcTitle = from === 'ar' ? (block.title || '') : (block.titleEn || block.title || '');
+        const srcContent = from === 'ar' ? (block.content || block.text || '') : (block.contentEn || block.textEn || block.content || block.text || '');
+
+        let srcOpts: string[] = [];
+        if (block.type === 'QUESTION' && Array.isArray(block.options)) {
+          srcOpts = from === 'ar' ? block.options : (block.optionsEn || block.options || []);
+        }
+
+        const sectionsList = block.sections || [];
+        const srcSections = sectionsList.map((sec: any) => from === 'ar' ? (sec.content || '') : (sec.contentEn || sec.content || ''));
+
+        const textsToTranslate = [
+          srcTitle,
+          srcContent,
+          ...srcOpts,
+          ...srcSections
+        ];
+
+        const translations = await translateBatch(textsToTranslate, from, to);
+
+        let cursor = 0;
+        const trTitle = translations[cursor++] || '';
+        const trContent = translations[cursor++] || '';
+        const trOpts = translations.slice(cursor, cursor + srcOpts.length);
+        cursor += srcOpts.length;
+        const trSections = translations.slice(cursor, cursor + srcSections.length);
+
+        const updated = { ...block };
+        if (to === 'en') {
+          if (trTitle) updated.titleEn = trTitle;
+          if (trContent) {
+            updated.contentEn = trContent;
+            updated.textEn = trContent;
+          }
+          if (trOpts.length > 0) {
+            updated.optionsEn = trOpts;
+          }
+          if (sectionsList.length > 0) {
+            updated.sections = sectionsList.map((sec: any, i: number) => ({
+              ...sec,
+              contentEn: trSections[i] || sec.contentEn || sec.content || ''
+            }));
+          }
+          if (!updated.title && trTitle) updated.title = trTitle;
+          if (!updated.content && trContent) {
+            updated.content = trContent;
+            updated.text = trContent;
+          }
+        } else {
+          if (trTitle) updated.title = trTitle;
+          if (trContent) {
+            updated.content = trContent;
+            updated.text = trContent;
+          }
+          if (trOpts.length > 0) {
+            updated.options = trOpts;
+          }
+          if (sectionsList.length > 0) {
+            updated.sections = sectionsList.map((sec: any, i: number) => ({
+              ...sec,
+              content: trSections[i] || sec.content || ''
+            }));
+          }
+        }
+
+        setCurrentLesson((prev: any) => {
+          const newSlides = [...(prev[source] || [])];
+          newSlides[sIdx] = updated;
+          return { ...prev, [source]: newSlides };
+        });
+
+        setSlideLang(sIdx, to);
+        showToast(to === 'en' ? "Translated to English successfully" : "تمت الترجمة إلى العربية بنجاح", "success");
+      } catch (err: any) {
+        console.error("Translation error:", err);
+        showToast(language === 'ar' ? "فشلت الترجمة التلقائية" : "Auto translation failed", "error");
+      } finally {
+        setTranslatingSlide(prev => ({ ...prev, [sIdx]: false }));
+      }
+    };
     
     const headerLabel = source === 'slides' 
       ? (language === 'ar' ? 'شرائح الشرح والدرس' : 'Lesson Content & Slides') 
@@ -188,177 +303,267 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
         </div>
 
         <div className="space-y-4">
-          {list.map((block: any, sIdx: number) => (
-            <React.Fragment key={block.id ?? sIdx}>
-              {sIdx === 0 && (
-                <div className="group/divider relative py-2 flex items-center justify-center my-2">
-                  <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                    <div className="w-full border-t border-dashed border-slate-200 group-hover/divider:border-indigo-300 transition-colors"></div>
-                  </div>
-                  <div className="relative flex justify-center opacity-0 group-hover/divider:opacity-100 transition-all duration-300 scale-95 group-hover/divider:scale-100 gap-3 z-10">
-                    <button
-                      type="button"
-                      onClick={() => insertBlockAt(source, 0, 'TEXT')}
-                      className="bg-white border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 px-4 py-2 rounded-full text-xs font-black flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>{language === 'ar' ? '+ شريحة شرح' : '+ Explanation Slide'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => insertBlockAt(source, 0, 'QUESTION')}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full text-xs font-black flex items-center gap-1.5 shadow-md hover:shadow-indigo-900/10 transition-all cursor-pointer"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>{language === 'ar' ? '+ سؤال مدمج' : '+ Inline Question'}</span>
-                    </button>
-                  </div>
-                  <div className="relative w-6 h-6 bg-slate-100 border border-slate-200 text-slate-400 rounded-full flex items-center justify-center text-[10px] font-black group-hover/divider:hidden transition-all shadow-sm">
-                    +
-                  </div>
-                </div>
-              )}
+          {list.map((block: any, sIdx: number) => {
+            const slideLang = getSlideLang(block, sIdx);
+            const resolvedTitle = slideLang === 'en'
+              ? (block.titleEn !== undefined && block.titleEn !== null && block.titleEn !== ''
+                  ? block.titleEn
+                  : (block.title && /[a-zA-Z]/.test(block.title) && !/[\u0600-\u06FF]/.test(block.title) ? block.title : ''))
+              : (block.title || '');
 
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl sm:rounded-[30px] overflow-hidden group shadow-sm transition-all hover:shadow-md">
-                <div className={`p-3 sm:p-4 flex flex-col md:flex-row gap-3 sm:gap-4 justify-between items-stretch md:items-center border-b ${block.type === 'QUESTION' ? 'bg-indigo-50/50 border-indigo-100' : 'bg-white border-slate-100'}`}>
-                  <div className="flex items-center gap-2 sm:gap-4 w-full min-w-0 md:w-auto">
-                    <span
-                      dir="ltr"
-                      style={{ inlineSize: '40px', blockSize: '40px', minInlineSize: '40px', wordBreak: 'keep-all', overflowWrap: 'normal' }}
-                      className={`shrink-0 flex-none whitespace-nowrap tabular-nums rounded-xl flex items-center justify-center font-black text-white shadow-md ${block.type === 'QUESTION' ? 'bg-indigo-600' : 'bg-slate-800'}`}
-                    >
-                      {sIdx + 1}
-                    </span>
-                    <div className="flex flex-col gap-1 flex-1 min-w-0 md:w-auto">
-                      <div className="flex flex-col sm:flex-row gap-2 min-w-0">
-                        <select
-                          value={block.label}
-                          onChange={(e) => updateBlockTypeAndReset(source, sIdx, e.target.value)}
-                          className="w-full min-w-0 sm:w-auto bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-600 outline-none focus:border-indigo-600 px-2 py-1 uppercase"
-                        >
-                          {block.type === 'TEXT' ? (
-                            <>
-                              <option value="CONTENT">{language === 'ar' ? 'محتوى (Content)' : 'Content'}</option>
-                              <option value="EXAMPLE">{language === 'ar' ? 'مثال (Example)' : 'Example'}</option>
-                              <option value="SUMMARY">{language === 'ar' ? 'ملخص (Summary)' : 'Summary'}</option>
-                              <option value="HINT">{language === 'ar' ? 'ملاحظة (Note)' : 'Hint / Note'}</option>
-                              <option value="EXPLANATION">{language === 'ar' ? 'شرح (Explanation)' : 'Explanation'}</option>
-                            </>
-                          ) : (
-                            <>
-                              <option value="MCQ">{language === 'ar' ? 'اختيار من متعدد (MCQ)' : 'Multiple Choice (MCQ)'}</option>
-                              <option value="TRUE_FALSE">{language === 'ar' ? 'صح / خطأ (T/F)' : 'True / False (T/F)'}</option>
-                              <option value="MULTI_SELECT">{language === 'ar' ? 'اختيار متعدد (تحديد)' : 'Multi-select (Checkboxes)'}</option>
-                              <option value="MATCHING">{language === 'ar' ? 'سؤال التوصيل (Matching)' : 'Matching Elements'}</option>
-                              <option value="DRAG_DROP_FILL">{language === 'ar' ? 'سحب الفراغات (Drag & Drop Fill)' : 'Drag & Drop Fill'}</option>
-                              <option value="GROUP_SORTING">{language === 'ar' ? 'تصنيف المجموعات (Group Sorting)' : 'Group Sorting'}</option>
-                              <option value="NUMBER_LINE">{language === 'ar' ? 'خط الأعداد (Number Line)' : 'Number Line'}</option>
-                              <option value="CLOCK">{language === 'ar' ? 'عقارب الساعة (Clock)' : 'Interactive Clock'}</option>
-                              <option value="MIND_MAP">{language === 'ar' ? 'خريطة مفاهيم (Mind Map)' : 'Concept Mind Map'}</option>
-                              <option value="VIDEO_CHECKPOINT">{language === 'ar' ? 'فيديو تفاعلي (Video Checkpoint)' : 'Interactive Video'}</option>
-                              <option value="SWIPE_SORT">{language === 'ar' ? 'سحب سريع لليمين/اليسار (Swipe Sort)' : 'Swipe Sort'}</option>
-                              <option value="MAZE">{language === 'ar' ? 'المتاهة التعليمية (Maze)' : 'Educational Maze'}</option>
-                              <option value="WORD_SEARCH">{language === 'ar' ? 'البحث عن الكلمات (Word Search)' : 'Word Search'}</option>
-                              <option value="GEOGEBRA">{language === 'ar' ? 'جيوجيبرا (GeoGebra)' : 'GeoGebra Widget'}</option>
-                              <option value="FLASH_CARD">{language === 'ar' ? 'البطاقات التعليمية (Flash Cards)' : 'Flash Cards'}</option>
-                              <option value="MEMORY_GAME">{language === 'ar' ? 'لعبة الذاكرة (Memory Game)' : 'Memory Game'}</option>
-                              <option value="WORD_SCRAMBLE">{language === 'ar' ? 'ترتيب الحروف (Word Scramble)' : 'Word Scramble'}</option>
-                              <option value="SENTENCE_REORDER">{language === 'ar' ? 'ترتيب الجملة (Sentence Reorder)' : 'Sentence Reorder'}</option>
-                              <option value="MATH_EQUATION">{language === 'ar' ? 'معادلة حسابية (Math Equation)' : 'Math Equation'}</option>
-                              <option value="SEQUENCE_ORDER">{language === 'ar' ? 'ترتيب التسلسل (Sequence Order)' : 'Sequence Order'}</option>
-                              <option value="CROSSWORD">{language === 'ar' ? 'الكلمات المتقاطعة (Crossword)' : 'Crossword'}</option>
-                              <option value="COUNT_OBJECTS">{language === 'ar' ? 'عد العناصر (Count Objects)' : 'Count Objects'}</option>
-                              <option value="IMAGE_LABEL">{language === 'ar' ? 'تسمية الصورة (Image Labeling)' : 'Image Labeling'}</option>
-                              <option value="COLOR_MATCH">{language === 'ar' ? 'تطابق الألوان (Color Match)' : 'Color Match'}</option>
-                            </>
-                          )}
-                        </select>
-                        <input 
-                          type="text"
-                          value={block.title || ""}
-                          onChange={(e) => updateBlock(source, sIdx, 'title', e.target.value)}
-                          className="bg-transparent text-slate-900 font-black outline-none border-b border-transparent focus:border-indigo-600 px-2 py-1 w-full min-w-0 md:w-48 placeholder:text-slate-400"
-                          placeholder={block.type === 'TEXT' 
-                            ? (language === 'ar' ? "عنوان الوحدة (اختياري)" : "Unit Title (Optional)") 
-                            : (language === 'ar' ? "عنوان السؤال (اختياري)" : "Question Title (Optional)")}
-                        />
-                      </div>
+            const resolvedContent = slideLang === 'en'
+              ? (block.contentEn || block.textEn || (
+                  (block.content || block.text) && /[a-zA-Z]/.test(block.content || block.text) && !/[\u0600-\u06FF]/.test(block.content || block.text)
+                    ? (block.content || block.text)
+                    : ''
+                ))
+              : (block.content || block.text || '');
+
+            return (
+              <React.Fragment key={block.id ?? sIdx}>
+                {sIdx === 0 && (
+                  <div className="group/divider relative py-2 flex items-center justify-center my-2">
+                    <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                      <div className="w-full border-t border-dashed border-slate-200 group-hover/divider:border-indigo-300 transition-colors"></div>
+                    </div>
+                    <div className="relative flex justify-center opacity-0 group-hover/divider:opacity-100 transition-all duration-300 scale-95 group-hover/divider:scale-100 gap-3 z-10">
+                      <button
+                        type="button"
+                        onClick={() => insertBlockAt(source, 0, 'TEXT')}
+                        className="bg-white border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 px-4 py-2 rounded-full text-xs font-black flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>{language === 'ar' ? '+ شريحة شرح' : '+ Explanation Slide'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertBlockAt(source, 0, 'QUESTION')}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full text-xs font-black flex items-center gap-1.5 shadow-md hover:shadow-indigo-900/10 transition-all cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>{language === 'ar' ? '+ سؤال مدمج' : '+ Inline Question'}</span>
+                      </button>
+                    </div>
+                    <div className="relative w-6 h-6 bg-slate-100 border border-slate-200 text-slate-400 rounded-full flex items-center justify-center text-[10px] font-black group-hover/divider:hidden transition-all shadow-sm">
+                      +
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full md:w-auto self-auto md:self-auto">
-                    <div className="flex items-center bg-white border border-slate-200 rounded-xl p-0.5 shadow-sm ml-1">
-                      <button
-                        type="button"
-                        disabled={sIdx === 0}
-                        onClick={() => moveBlock(source, sIdx, 'UP')}
-                        className="p-2 text-slate-500 hover:text-indigo-600 disabled:text-slate-300 disabled:hover:text-slate-300 hover:bg-slate-50 rounded-lg transition-all"
-                        title={language === 'ar' ? "تحريك لأعلى" : "Move Up"}
+                )}
+
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl sm:rounded-[30px] overflow-hidden group shadow-sm transition-all hover:shadow-md">
+                  <div className={`p-3 sm:p-4 flex flex-col md:flex-row gap-3 sm:gap-4 justify-between items-stretch md:items-center border-b ${block.type === 'QUESTION' ? 'bg-indigo-50/50 border-indigo-100' : 'bg-white border-slate-100'}`}>
+                    <div className="flex items-center gap-2 sm:gap-4 w-full min-w-0 md:w-auto">
+                      <span
+                        dir="ltr"
+                        style={{ inlineSize: '40px', blockSize: '40px', minInlineSize: '40px', wordBreak: 'keep-all', overflowWrap: 'normal' }}
+                        className={`shrink-0 flex-none whitespace-nowrap tabular-nums rounded-xl flex items-center justify-center font-black text-white shadow-md ${block.type === 'QUESTION' ? 'bg-indigo-600' : 'bg-slate-800'}`}
                       >
-                        <ChevronUp className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        disabled={sIdx === list.length - 1}
-                        onClick={() => moveBlock(source, sIdx, 'DOWN')}
-                        className="p-2 text-slate-500 hover:text-indigo-600 disabled:text-slate-300 disabled:hover:text-slate-300 hover:bg-slate-50 rounded-lg transition-all"
-                        title={language === 'ar' ? "تحريك لأسفل" : "Move Down"}
-                      >
-                        <ChevronDown className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <div className="relative" data-dropdown-root="true" onClick={(e) => e.stopPropagation()}>
-                      <button 
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setOpenDropdownId(openDropdownId === `${source}-slide-${sIdx}` ? null : `${source}-slide-${sIdx}`);
-                        }}
-                        className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all cursor-pointer"
-                      >
-                        <Plus className="w-4 h-4" /> {language === 'ar' ? "إضافة قسم" : "Add Section"}
-                      </button>
-                      <div className={`absolute right-0 left-auto mt-2 w-56 bg-white border border-slate-100 rounded-xl shadow-xl p-2 z-50 ${openDropdownId === `${source}-slide-${sIdx}` ? "block" : "hidden"}`}>
-                        {['FEEDBACK', 'HINT', 'EXPLANATION', 'TIP', 'WARNING', 'KEY_INSIGHT'].map(secType => (
-                          <button
-                            key={secType}
-                            type="button"
-                            onClick={() => {
-                               addSection(source, sIdx, secType);
-                               setOpenDropdownId(null);
-                            }}
-                            className="w-full text-right px-3 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors flex items-center gap-2"
+                        {sIdx + 1}
+                      </span>
+                      <div className="flex flex-col gap-1 flex-1 min-w-0 md:w-auto">
+                        <div className="flex flex-col sm:flex-row gap-2 min-w-0">
+                          <select
+                            value={block.label}
+                            onChange={(e) => updateBlockTypeAndReset(source, sIdx, e.target.value)}
+                            className="w-full min-w-0 sm:w-auto bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-600 outline-none focus:border-indigo-600 px-2 py-1 uppercase"
                           >
-                            {React.createElement(SECTION_STYLE_PRESETS[secType]?.icon || FileText, { className: "w-4 h-4" })}
-                            <span>{SECTION_STYLE_PRESETS[secType]?.label || secType}</span>
-                          </button>
-                        ))}
+                            {block.type === 'TEXT' ? (
+                              <>
+                                <option value="CONTENT">{language === 'ar' ? 'محتوى (Content)' : 'Content'}</option>
+                                <option value="EXAMPLE">{language === 'ar' ? 'مثال (Example)' : 'Example'}</option>
+                                <option value="SUMMARY">{language === 'ar' ? 'ملخص (Summary)' : 'Summary'}</option>
+                                <option value="HINT">{language === 'ar' ? 'ملاحظة (Note)' : 'Hint / Note'}</option>
+                                <option value="EXPLANATION">{language === 'ar' ? 'شرح (Explanation)' : 'Explanation'}</option>
+                              </>
+                            ) : (
+                              <>
+                                <option value="MCQ">{language === 'ar' ? 'اختيار من متعدد (MCQ)' : 'Multiple Choice (MCQ)'}</option>
+                                <option value="TRUE_FALSE">{language === 'ar' ? 'صح / خطأ (T/F)' : 'True / False (T/F)'}</option>
+                                <option value="MULTI_SELECT">{language === 'ar' ? 'اختيار متعدد (تحديد)' : 'Multi-select (Checkboxes)'}</option>
+                                <option value="MATCHING">{language === 'ar' ? 'سؤال التوصيل (Matching)' : 'Matching Elements'}</option>
+                                <option value="DRAG_DROP_FILL">{language === 'ar' ? 'سحب الفراغات (Drag & Drop Fill)' : 'Drag & Drop Fill'}</option>
+                                <option value="GROUP_SORTING">{language === 'ar' ? 'تصنيف المجموعات (Group Sorting)' : 'Group Sorting'}</option>
+                                <option value="NUMBER_LINE">{language === 'ar' ? 'خط الأعداد (Number Line)' : 'Number Line'}</option>
+                                <option value="CLOCK">{language === 'ar' ? 'عقارب الساعة (Clock)' : 'Interactive Clock'}</option>
+                                <option value="MIND_MAP">{language === 'ar' ? 'خريطة مفاهيم (Mind Map)' : 'Concept Mind Map'}</option>
+                                <option value="VIDEO_CHECKPOINT">{language === 'ar' ? 'فيديو تفاعلي (Video Checkpoint)' : 'Interactive Video'}</option>
+                                <option value="SWIPE_SORT">{language === 'ar' ? 'سحب سريع لليمين/اليسار (Swipe Sort)' : 'Swipe Sort'}</option>
+                                <option value="MAZE">{language === 'ar' ? 'المتاهة التعليمية (Maze)' : 'Educational Maze'}</option>
+                                <option value="WORD_SEARCH">{language === 'ar' ? 'البحث عن الكلمات (Word Search)' : 'Word Search'}</option>
+                                <option value="GEOGEBRA">{language === 'ar' ? 'جيوجيبرا (GeoGebra)' : 'GeoGebra Widget'}</option>
+                                <option value="FLASH_CARD">{language === 'ar' ? 'البطاقات التعليمية (Flash Cards)' : 'Flash Cards'}</option>
+                                <option value="MEMORY_GAME">{language === 'ar' ? 'لعبة الذاكرة (Memory Game)' : 'Memory Game'}</option>
+                                <option value="WORD_SCRAMBLE">{language === 'ar' ? 'ترتيب الحروف (Word Scramble)' : 'Word Scramble'}</option>
+                                <option value="SENTENCE_REORDER">{language === 'ar' ? 'ترتيب الجملة (Sentence Reorder)' : 'Sentence Reorder'}</option>
+                                <option value="MATH_EQUATION">{language === 'ar' ? 'معادلة حسابية (Math Equation)' : 'Math Equation'}</option>
+                                <option value="SEQUENCE_ORDER">{language === 'ar' ? 'ترتيب التسلسل (Sequence Order)' : 'Sequence Order'}</option>
+                                <option value="CROSSWORD">{language === 'ar' ? 'الكلمات المتقاطعة (Crossword)' : 'Crossword'}</option>
+                                <option value="COUNT_OBJECTS">{language === 'ar' ? 'عد العناصر (Count Objects)' : 'Count Objects'}</option>
+                                <option value="IMAGE_LABEL">{language === 'ar' ? 'تسمية الصورة (Image Labeling)' : 'Image Labeling'}</option>
+                                <option value="COLOR_MATCH">{language === 'ar' ? 'تطابق الألوان (Color Match)' : 'Color Match'}</option>
+                              </>
+                            )}
+                          </select>
+                          <input 
+                            type="text"
+                            value={resolvedTitle}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (slideLang === 'en') {
+                                updateBlock(source, sIdx, 'titleEn', val, block);
+                                if (!block.title || (!/[\u0600-\u06FF]/.test(block.title) && block.title === (block.titleEn || ''))) {
+                                  updateBlock(source, sIdx, 'title', val, block);
+                                }
+                              } else {
+                                updateBlock(source, sIdx, 'title', val, block);
+                              }
+                            }}
+                            className="bg-transparent text-slate-900 font-black outline-none border-b border-transparent focus:border-indigo-600 px-2 py-1 w-full min-w-0 md:w-48 placeholder:text-slate-400"
+                            placeholder={block.type === 'TEXT' 
+                              ? (slideLang === 'en' ? "Unit Title (English)" : "عنوان الوحدة (اختياري)") 
+                              : (slideLang === 'en' ? "Question Title (English)" : "عنوان السؤال (اختياري)")}
+                          />
+                        </div>
                       </div>
                     </div>
-                    {isSuperAdmin && (
-                      <button 
-                        type="button"
-                        onClick={() => removeBlock(source, sIdx)}
-                        className="text-red-500 hover:text-red-600 p-2 hover:bg-red-500/10 rounded-xl transition-all bg-white cursor-pointer"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    )}
+                    <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full md:w-auto self-auto md:self-auto">
+                      <div className="flex items-center bg-white border border-slate-200 rounded-xl p-0.5 shadow-sm ml-1">
+                        <button
+                          type="button"
+                          disabled={sIdx === 0}
+                          onClick={() => moveBlock(source, sIdx, 'UP')}
+                          className="p-2 text-slate-500 hover:text-indigo-600 disabled:text-slate-300 disabled:hover:text-slate-300 hover:bg-slate-50 rounded-lg transition-all"
+                          title={language === 'ar' ? "تحريك لأعلى" : "Move Up"}
+                        >
+                          <ChevronUp className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={sIdx === list.length - 1}
+                          onClick={() => moveBlock(source, sIdx, 'DOWN')}
+                          className="p-2 text-slate-500 hover:text-indigo-600 disabled:text-slate-300 disabled:hover:text-slate-300 hover:bg-slate-50 rounded-lg transition-all"
+                          title={language === 'ar' ? "تحريك لأسفل" : "Move Down"}
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="relative" data-dropdown-root="true" onClick={(e) => e.stopPropagation()}>
+                        <button 
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setOpenDropdownId(openDropdownId === `${source}-slide-${sIdx}` ? null : `${source}-slide-${sIdx}`);
+                          }}
+                          className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all cursor-pointer"
+                        >
+                          <Plus className="w-4 h-4" /> {language === 'ar' ? "إضافة قسم" : "Add Section"}
+                        </button>
+                        <div className={`absolute right-0 left-auto mt-2 w-56 bg-white border border-slate-100 rounded-xl shadow-xl p-2 z-50 ${openDropdownId === `${source}-slide-${sIdx}` ? "block" : "hidden"}`}>
+                          {['FEEDBACK', 'HINT', 'EXPLANATION', 'TIP', 'WARNING', 'KEY_INSIGHT'].map(secType => (
+                            <button
+                              key={secType}
+                              type="button"
+                              onClick={() => {
+                                 addSection(source, sIdx, secType);
+                                 setOpenDropdownId(null);
+                              }}
+                              className="w-full text-right px-3 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors flex items-center gap-2"
+                            >
+                              {React.createElement(SECTION_STYLE_PRESETS[secType]?.icon || FileText, { className: "w-4 h-4" })}
+                              <span>{SECTION_STYLE_PRESETS[secType]?.label || secType}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      {isSuperAdmin && (
+                        <button 
+                          type="button"
+                          onClick={() => removeBlock(source, sIdx)}
+                          className="text-red-500 hover:text-red-600 p-2 hover:bg-red-500/10 rounded-xl transition-all bg-white cursor-pointer"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                <div className="p-3 sm:p-6 space-y-6">
-                  {/* The primary editor must remain available when advanced settings are collapsed. */}
-                  <div>
-                    <RichTextEditor
-                      value={block.content}
-                      onChange={(val) => updateBlock(source, sIdx, 'content', val, block)}
-                      placeholder={block.type === 'TEXT'
-                        ? (language === 'ar' ? 'اكتب محتوى الشرح هنا...' : 'Write explanation content here...')
-                        : (language === 'ar' ? 'اكتب نص السؤال هنا...' : 'Write question text here...')}
-                      className="!bg-white !border-slate-200"
-                    />
-                  </div>
+                  <div className="p-3 sm:p-6 space-y-6">
+                    {/* Language Switcher Bar: English First, Arabic Second */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-2.5 sm:p-3 rounded-2xl border border-slate-200/80 shadow-xs">
+                      <div className="flex items-center gap-2">
+                        <Languages className="w-4 h-4 text-indigo-600" />
+                        <span className="text-xs font-black text-slate-700">
+                          {slideLang === 'en' ? 'Slide Language / لغة الشريحة:' : 'لغة الشريحة / Slide Language:'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                          <button
+                            type="button"
+                            onClick={() => setSlideLang(sIdx, 'en')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                              slideLang === 'en'
+                                ? 'bg-indigo-600 text-white shadow-sm'
+                                : 'text-slate-600 hover:bg-white'
+                            }`}
+                          >
+                            <Globe className="w-3.5 h-3.5" />
+                            English (EN)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSlideLang(sIdx, 'ar')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                              slideLang === 'ar'
+                                ? 'bg-indigo-600 text-white shadow-sm'
+                                : 'text-slate-600 hover:bg-white'
+                            }`}
+                          >
+                            <Globe className="w-3.5 h-3.5" />
+                            العربية (Arabic)
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={translatingSlide[sIdx]}
+                          onClick={() => handleAutoTranslateSlide(sIdx)}
+                          className="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 px-3 py-1.5 rounded-xl font-black flex items-center gap-1.5 text-xs transition-all disabled:opacity-50 cursor-pointer shadow-xs"
+                        >
+                          {translatingSlide[sIdx] ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600" />
+                          ) : (
+                            <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                          )}
+                          <span>
+                            {translatingSlide[sIdx] 
+                              ? (language === 'ar' ? 'جارٍ الترجمة...' : 'Translating...') 
+                              : (slideLang === 'en' ? 'Translate to Arabic' : 'ترجمة للإنجليزية')}
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* The primary editor must remain available when advanced settings are collapsed. */}
+                    <div>
+                      <RichTextEditor
+                        value={resolvedContent}
+                        onChange={(val) => {
+                          if (slideLang === 'en') {
+                            updateBlock(source, sIdx, 'contentEn', val, block);
+                            if (!block.content || (!/[\u0600-\u06FF]/.test(block.content) && block.content === (block.contentEn || ''))) {
+                              updateBlock(source, sIdx, 'content', val, block);
+                            }
+                          } else {
+                            updateBlock(source, sIdx, 'content', val, block);
+                          }
+                        }}
+                        placeholder={block.type === 'TEXT'
+                          ? (slideLang === 'en' ? 'Write explanation content here (English)...' : 'اكتب محتوى الشرح هنا...')
+                          : (slideLang === 'en' ? 'Write question text here (English)...' : 'اكتب نص السؤال هنا...')}
+                        className="!bg-white !border-slate-200"
+                      />
+                    </div>
 
                   {/* Unified Metadata Toggle */}
                   <div 
@@ -543,7 +748,7 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
                       </div>
 
                       <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? '⭐ نقاط XP' : '⭐ XP Points'}</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'نقاط XP' : 'XP Points'}</label>
                         <input 
                           type="number"
                           className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
@@ -560,13 +765,22 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
                     <div className="bg-slate-100 p-3 sm:p-6 rounded-2xl border border-slate-200 space-y-4">
                       {['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(block.label || 'MCQ') ? (
                         <>
-                          <label className="text-xs font-black text-slate-500 uppercase tracking-widest block">{language === 'ar' ? "خيارات الإجابة والإجابة الصحيحة" : "Answer Options & Correct Answer"}</label>
+                          <label className="text-xs font-black text-slate-500 uppercase tracking-widest block">
+                            {slideLang === 'en' ? "Answer Options & Correct Answer" : "خيارات الإجابة والإجابة الصحيحة"}
+                          </label>
                           {block.label === 'TRUE_FALSE' ? (
                             <div className="grid grid-cols-2 gap-4">
                               {['True', 'False'].map((opt) => {
                                 const isSelected = normalizeAnswerGlobal(block.correctAnswer) === normalizeAnswerGlobal(opt);
                                 return (
-                                  <div key={opt} className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${isSelected ? 'bg-emerald-50 border-emerald-500' : 'bg-white border-transparent'}`} onClick={() => updateBlock(source, sIdx, 'correctAnswer', opt)}>
+                                  <div 
+                                    key={opt} 
+                                    className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${isSelected ? 'bg-emerald-50 border-emerald-500' : 'bg-white border-transparent'}`} 
+                                    onClick={() => {
+                                      updateBlock(source, sIdx, 'correctAnswer', opt);
+                                      updateBlock(source, sIdx, 'correctAnswerEn', opt);
+                                    }}
+                                  >
                                     <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${isSelected ? 'bg-emerald-500 border-emerald-200' : 'bg-slate-200 border-transparent'}`}>
                                       {isSelected && <CheckCircle2 className="w-4 h-4 text-white" />}
                                     </div>
@@ -576,81 +790,129 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
                               })}
                             </div>
                           ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {(block.options || []).map((opt: string, oIdx: number) => {
-                                const isSelected = block.label === 'MULTI_SELECT' 
-                                  ? (block.correctAnswers || []).includes(opt) 
-                                  : block.correctAnswer === opt;
-                                
-                                return (
-                                  <div key={oIdx} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${isSelected && opt ? 'bg-emerald-50 border-emerald-500' : 'bg-white border-transparent'}`}>
-                                    <div 
-                                      onClick={() => {
-                                        if (block.label === 'MULTI_SELECT') {
-                                          const answers = block.correctAnswers || [];
-                                          if (answers.includes(opt) && opt) updateBlock(source, sIdx, 'correctAnswers', answers.filter((a:string) => a !== opt));
-                                          else if (opt) updateBlock(source, sIdx, 'correctAnswers', [...answers, opt]);
-                                        } else {
-                                          updateBlock(source, sIdx, 'correctAnswer', opt);
-                                        }
-                                      }}
-                                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 cursor-pointer ${isSelected && opt ? 'bg-emerald-500 border-emerald-200' : 'bg-slate-200 border-transparent'}`}
-                                    >
-                                      {isSelected && opt && <CheckCircle2 className="w-4 h-4 text-white" />}
-                                    </div>
-                                    <span className="w-6 h-6 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-[11px] text-indigo-600 shrink-0 select-none">
-                                      {getOptionLetter(oIdx, language)}
-                                    </span>
-                                    <MathInput 
-                                      value={opt}
-                                      onChange={(val) => {
-                                        const newOpts = [...(block.options || [])];
-                                        const oldVal = newOpts[oIdx];
-                                        const newVal = val;
-                                        newOpts[oIdx] = newVal;
-                                        
-                                        const newBlock = { ...block, options: newOpts };
-                                        if (block.label === 'MULTI_SELECT' && (block.correctAnswers || []).includes(oldVal)) {
-                                          newBlock.correctAnswers = (block.correctAnswers || []).map((a: string) => a === oldVal ? newVal : a);
-                                        } else if (block.correctAnswer === oldVal) {
-                                          newBlock.correctAnswer = newVal;
-                                        }
-                                        
-                                        setCurrentLesson((prev: any) => {
-                                          const newSlides = [...(prev[source] || [])];
-                                          const resolvedIndex = newSlides.findIndex((candidate: any) => candidate === block || (block.id != null && candidate?.id === block.id));
-                                          if (resolvedIndex < 0) return prev;
-                                          newSlides[resolvedIndex] = newBlock;
-                                          return { ...prev, [source]: newSlides };
-                                        });
-                                      }}
-                                      placeholder={language === 'ar' ? `الخيار ${oIdx + 1}` : `Option ${oIdx + 1}`}
-                                      className="bg-transparent flex-1"
-                                    />
-                                    {block.options.length > 2 && (
-                                      <button type="button" onClick={() => {
-                                        const newOpts = [...block.options];
-                                        newOpts.splice(oIdx, 1);
-                                        updateBlock(source, sIdx, 'options', newOpts);
-                                      }} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                              <button 
-                                type="button"
-                                onClick={() => updateBlock(source, sIdx, 'options', [...(block.options||[]), ""])}
-                                className="flex justify-center items-center p-3 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-200 hover:border-slate-400 transition-all cursor-pointer"
-                              >
-                                <Plus className="w-5 h-5 ml-1" /> {language === 'ar' ? 'إضافة خيار' : 'Add Option'}
-                              </button>
-                            </div>
+                            (() => {
+                              const rawOpts = slideLang === 'en'
+                                ? ((block.optionsEn && block.optionsEn.length > 0)
+                                    ? block.optionsEn
+                                    : (block.options || []).map((o: string) => (/[a-zA-Z]/.test(o) && !/[\u0600-\u06FF]/.test(o) ? o : '')))
+                                : (block.options || []);
+                              const baseOpts = block.options || [];
+                              const displayOpts = rawOpts.length > 0 ? rawOpts : (baseOpts.length > 0 ? baseOpts : ["", "", "", ""]);
+
+                              return (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  {displayOpts.map((opt: string, oIdx: number) => {
+                                    const baseVal = baseOpts[oIdx] || opt;
+                                    const isSelected = block.label === 'MULTI_SELECT' 
+                                      ? (block.correctAnswers || []).includes(baseVal) || (block.correctAnswersEn || []).includes(opt)
+                                      : (block.correctAnswer === baseVal || block.correctAnswerEn === opt);
+
+                                    return (
+                                      <div key={oIdx} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${isSelected && opt ? 'bg-emerald-50 border-emerald-500' : 'bg-white border-transparent'}`}>
+                                        <div 
+                                          onClick={() => {
+                                            const baseTarget = baseOpts[oIdx] || opt;
+                                            if (block.label === 'MULTI_SELECT') {
+                                              const answers = block.correctAnswers || [];
+                                              if (answers.includes(baseTarget) && baseTarget) {
+                                                updateBlock(source, sIdx, 'correctAnswers', answers.filter((a:string) => a !== baseTarget));
+                                              } else if (baseTarget) {
+                                                updateBlock(source, sIdx, 'correctAnswers', [...answers, baseTarget]);
+                                              }
+                                            } else {
+                                              updateBlock(source, sIdx, 'correctAnswer', baseTarget);
+                                              if (slideLang === 'en') {
+                                                updateBlock(source, sIdx, 'correctAnswerEn', opt);
+                                              }
+                                            }
+                                          }}
+                                          className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 cursor-pointer ${isSelected && opt ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-200 border-transparent'}`}
+                                        >
+                                          {isSelected && opt && <CheckCircle2 className="w-4 h-4 text-white" />}
+                                        </div>
+                                        <span className="w-6 h-6 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-[11px] text-indigo-600 shrink-0 select-none">
+                                          {getOptionLetter(oIdx, slideLang)}
+                                        </span>
+                                        <MathInput 
+                                          value={opt}
+                                          onChange={(val) => {
+                                            if (slideLang === 'en') {
+                                              const newOptsEn = [...(block.optionsEn && block.optionsEn.length > 0 ? block.optionsEn : displayOpts)];
+                                              newOptsEn[oIdx] = val;
+                                              updateBlock(source, sIdx, 'optionsEn', newOptsEn);
+
+                                              const newOpts = [...(block.options || [])];
+                                              if (!newOpts[oIdx] || (!/[\u0600-\u06FF]/.test(newOpts[oIdx]) && newOpts[oIdx] === displayOpts[oIdx])) {
+                                                newOpts[oIdx] = val;
+                                                updateBlock(source, sIdx, 'options', newOpts);
+                                              }
+                                            } else {
+                                              const newOpts = [...(block.options || [])];
+                                              const oldVal = newOpts[oIdx];
+                                              newOpts[oIdx] = val;
+
+                                              const newBlock = { ...block, options: newOpts };
+                                              if (block.label === 'MULTI_SELECT' && (block.correctAnswers || []).includes(oldVal)) {
+                                                newBlock.correctAnswers = (block.correctAnswers || []).map((a: string) => a === oldVal ? val : a);
+                                              } else if (block.correctAnswer === oldVal) {
+                                                newBlock.correctAnswer = val;
+                                              }
+
+                                              setCurrentLesson((prev: any) => {
+                                                const newSlides = [...(prev[source] || [])];
+                                                const resolvedIndex = newSlides.findIndex((candidate: any) => candidate === block || (block.id != null && candidate?.id === block.id));
+                                                if (resolvedIndex < 0) return prev;
+                                                newSlides[resolvedIndex] = newBlock;
+                                                return { ...prev, [source]: newSlides };
+                                              });
+                                            }
+                                          }}
+                                          placeholder={slideLang === 'en' ? `Option ${oIdx + 1}` : `الخيار ${oIdx + 1}`}
+                                          className="bg-transparent flex-1"
+                                        />
+                                        {displayOpts.length > 2 && (
+                                          <button 
+                                            type="button" 
+                                            onClick={() => {
+                                              const newOpts = [...(block.options || [])];
+                                              newOpts.splice(oIdx, 1);
+                                              updateBlock(source, sIdx, 'options', newOpts);
+                                              if (block.optionsEn && block.optionsEn.length > 0) {
+                                                const newOptsEn = [...block.optionsEn];
+                                                newOptsEn.splice(oIdx, 1);
+                                                updateBlock(source, sIdx, 'optionsEn', newOptsEn);
+                                              }
+                                            }} 
+                                            className="text-red-400 hover:text-red-600"
+                                          >
+                                            <Trash2 className="w-4 h-4" />
+                                          </button>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                  <button 
+                                    type="button"
+                                    onClick={() => {
+                                      updateBlock(source, sIdx, 'options', [...(block.options || []), ""]);
+                                      if (block.optionsEn && block.optionsEn.length > 0) {
+                                        updateBlock(source, sIdx, 'optionsEn', [...block.optionsEn, ""]);
+                                      }
+                                    }}
+                                    className="flex justify-center items-center p-3 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 font-bold hover:bg-slate-200 hover:border-slate-400 transition-all cursor-pointer"
+                                  >
+                                    <Plus className="w-5 h-5 ml-1" /> {slideLang === 'en' ? 'Add Option' : 'إضافة خيار'}
+                                  </button>
+                                </div>
+                              );
+                            })()
                           )}
                         </>
                       ) : (
                         <InteractiveQuestionEditor
                           question={{
                             ...block,
+                            options: slideLang === 'en' && block.optionsEn && block.optionsEn.length > 0 ? block.optionsEn : block.options,
                             type: block.label || 'MCQ'
                           }}
                           onChange={(updatedQ) => {
@@ -661,7 +923,9 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
                               newSlides[resolvedIndex] = {
                                 ...newSlides[resolvedIndex],
                                 options: updatedQ.options,
+                                optionsEn: slideLang === 'en' ? updatedQ.options : newSlides[resolvedIndex].optionsEn,
                                 correctAnswer: updatedQ.correctAnswer,
+                                correctAnswerEn: slideLang === 'en' ? updatedQ.correctAnswer : newSlides[resolvedIndex].correctAnswerEn,
                                 ...(updatedQ.type === 'MULTI_SELECT' ? (() => {
                                   try {
                                     return { correctAnswers: JSON.parse(updatedQ.correctAnswer) };
@@ -673,7 +937,7 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
                               return { ...prev, [source]: newSlides };
                             });
                           }}
-                          language={language}
+                          language={slideLang}
                         />
                       )}
                     </div>
@@ -687,7 +951,7 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
                       >
                         <h5 className="text-sm font-black text-slate-700 flex items-center gap-2">
                           <FileText className="w-4 h-4 text-indigo-500" />
-                          {language === 'ar' ? 'أقسام إضافية ديناميكية (Dynamic Sections)' : 'Dynamic Sections'}
+                          {slideLang === 'en' ? 'Dynamic Sections' : 'أقسام إضافية ديناميكية (Dynamic Sections)'}
                         </h5>
                         {openSectionsFor === sIdx ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
                       </div>
@@ -697,25 +961,35 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
                           {(block.sections || []).map((sec: any, secIdx: number) => {
                             const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
                             const SectionIcon = preset.icon;
+                            const secContent = slideLang === 'en'
+                              ? (sec.contentEn || (sec.content && /[a-zA-Z]/.test(sec.content) && !/[\u0600-\u06FF]/.test(sec.content) ? sec.content : ''))
+                              : (sec.content || '');
                             return (
                               <div key={sec.id || secIdx} className={`p-4 rounded-2xl relative group/section border ${preset.container}`}>
                                 <div className="flex justify-between items-center mb-3">
                                   <span className={`text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1.5 ${preset.badge}`}>
                                     <SectionIcon className="w-3.5 h-3.5" />
                                     {preset.label}
+                                    {slideLang === 'en' && <span className="text-[9px] bg-white/40 px-1.5 py-0.5 rounded ml-1 font-bold">EN</span>}
                                   </span>
                                   <button type="button" onClick={() => removeSection(source, sIdx, secIdx)} className="text-red-400 hover:text-red-600 opacity-0 group-hover/section:opacity-100 transition-all cursor-pointer">
                                     <Trash2 className="w-4 h-4" />
                                   </button>
                                 </div>
                                 <RichTextEditor 
-                                  value={sec.content}
-                                  onChange={(val) => updateSection(source, sIdx, secIdx, val, block, sec)}
-                                  placeholder={language === 'ar' ? `محتوى الـ ${sec.type}...` : `${sec.type} content...`}
+                                  value={secContent}
+                                  onChange={(val) => {
+                                    if (slideLang === 'en') {
+                                      updateSection(source, sIdx, secIdx, val, block, sec, 'contentEn');
+                                    } else {
+                                      updateSection(source, sIdx, secIdx, val, block, sec, 'content');
+                                    }
+                                  }}
+                                  placeholder={slideLang === 'en' ? `${sec.type} content (English)...` : `محتوى الـ ${sec.type}...`}
                                   className="!bg-white"
                                 />
                               </div>
-                            )
+                            );
                           })}
                         </div>
                       )}
@@ -751,7 +1025,8 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
                 </div>
               </div>
             </React.Fragment>
-          ))}
+          );
+        })}
         </div>
 
         {source === 'slides' && currentLesson?.id && (

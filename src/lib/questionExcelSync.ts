@@ -127,6 +127,8 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
     if (textEnIndex >= 0) {
       const val = String(row[textEnIndex] ?? '').trim();
       q.textEn = val || null;
+    } else if (q.text && /[a-zA-Z]/.test(q.text) && !/[\u0600-\u06FF]/.test(q.text)) {
+      q.textEn = q.text;
     }
     const typeIndex = index('question type', 'type', 'نوع السؤال', 'النوع', 'type (mcq/true_false/text/multi_select)');
     let type = typeIndex < 0 ? (previous?.type === 'QUESTION' ? previous.label : previous?.type) || 'MCQ' : key(row[typeIndex]).toUpperCase();
@@ -155,6 +157,8 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
       if (q.optionsEn.length === 0) q.optionsEn = null;
     } else if (previous?.optionsEn) {
       q.optionsEn = array(previous.optionsEn);
+    } else if (q.options.some((o: any) => /[a-zA-Z]/.test(String(o || '')) && !/[\u0600-\u06FF]/.test(String(o || '')))) {
+      q.optionsEn = [...q.options];
     }
 
     const legacyAnswerIndex = index('correct answer (1-4 or comma separated for multi)');
@@ -206,6 +210,8 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
     if (expEnIndex >= 0) {
       const val = String(row[expEnIndex] ?? '').trim();
       q.explanationEn = val || null;
+    } else if (q.explanation && /[a-zA-Z]/.test(q.explanation) && !/[\u0600-\u06FF]/.test(q.explanation)) {
+      q.explanationEn = q.explanation;
     }
     if (['MCQ', 'MULTI_SELECT'].includes(type) && q.options.filter((o: any) => key(o)).length < 2) rowFail('At least two options are required.', 'مطلوب اختياران على الأقل.');
     if (type === 'MCQ' && !q.options.some((o: string, i: number) => isOptionMatch(q.correctAnswer, o, i))) rowFail('Correct answer must match an option.', 'الإجابة الصحيحة يجب أن تطابق أحد الاختيارات.');

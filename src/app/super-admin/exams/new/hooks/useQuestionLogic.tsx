@@ -143,6 +143,25 @@ export const useQuestionLogic = (props: any) => {
     item.learningOutcome = outcome;
     if (item.dok) item.dok = normalizeDok(item.dok) || item.dok;
 
+    const hasArabic = (str?: string | null) => /[\u0600-\u06FF]/.test(String(str || ''));
+    const hasEnglish = (str?: string | null) => /[a-zA-Z]/.test(String(str || ''));
+
+    if (!item.textEn && item.text && hasEnglish(item.text) && !hasArabic(item.text)) {
+      item.textEn = item.text;
+    }
+    if ((!item.optionsEn || item.optionsEn.length === 0) && Array.isArray(item.options) && item.options.some((o: any) => hasEnglish(o) && !hasArabic(o))) {
+      item.optionsEn = [...item.options];
+    }
+    if (!item.explanationEn && item.explanation && hasEnglish(item.explanation) && !hasArabic(item.explanation)) {
+      item.explanationEn = item.explanation;
+    }
+    if (Array.isArray(item.sections)) {
+      item.sections = item.sections.map((s: any) => ({
+        ...s,
+        contentEn: s.contentEn || (hasEnglish(s.content) && !hasArabic(s.content) ? s.content : '')
+      }));
+    }
+
     if (item.correctAnswerIndex === undefined || item.correctAnswerIndex === null) {
       if (item.correctAnswer) {
         const arIdx = item.options.findIndex((o: string) => String(o).trim() === String(item.correctAnswer).trim());
@@ -172,6 +191,16 @@ export const useQuestionLogic = (props: any) => {
 
   const handleSaveQuestionForSource = (source: 'assignments' | 'questions') => {
     const preparedQuestion = { ...tempQuestion };
+    if (!preparedQuestion.text && preparedQuestion.textEn) {
+      preparedQuestion.text = preparedQuestion.textEn;
+    }
+    if ((!preparedQuestion.options || preparedQuestion.options.length === 0 || preparedQuestion.options.every((o: any) => !o)) && preparedQuestion.optionsEn?.length) {
+      preparedQuestion.options = [...preparedQuestion.optionsEn];
+    }
+    if (!preparedQuestion.explanation && preparedQuestion.explanationEn) {
+      preparedQuestion.explanation = preparedQuestion.explanationEn;
+    }
+
     if (preparedQuestion.correctAnswerIndex !== undefined && preparedQuestion.correctAnswerIndex !== null) {
       const idx = preparedQuestion.correctAnswerIndex;
       const arOpt = (preparedQuestion.options || [])[idx];

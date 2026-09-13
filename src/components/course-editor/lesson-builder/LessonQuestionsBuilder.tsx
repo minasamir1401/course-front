@@ -83,6 +83,22 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
   const [cardPreviewLang, setCardPreviewLang] = useState<Record<number, 'ar' | 'en'>>({});
   const [isTranslatingQuestion, setIsTranslatingQuestion] = useState(false);
 
+  React.useEffect(() => {
+    if (!showQuestionForm || !tempQuestion) return;
+    const hasArabic = (str?: string | null) => /[\u0600-\u06FF]/.test(String(str || ''));
+    const hasEnglish = (str?: string | null) => /[a-zA-Z]/.test(String(str || ''));
+
+    if (tempQuestion.textEn && (!tempQuestion.text || tempQuestion.text === tempQuestion.textEn)) {
+      setQuestionActiveLang('en');
+    } else if (hasEnglish(tempQuestion.text) && !hasArabic(tempQuestion.text)) {
+      setQuestionActiveLang('en');
+    } else if (language === 'en') {
+      setQuestionActiveLang('en');
+    } else {
+      setQuestionActiveLang('ar');
+    }
+  }, [showQuestionForm, editingQuestionIndex]);
+
   const extractFirstImage = (question: any): string | null => {
     if (!question) return null;
     if (question.imageUrl && typeof question.imageUrl === 'string' && question.imageUrl.trim()) {
@@ -312,15 +328,53 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
     item.standard = outcome;
     item.learningOutcome = outcome;
     if (item.dok) item.dok = normalizeDok(item.dok) || item.dok;
+
+    const hasArabic = (str?: string | null) => /[\u0600-\u06FF]/.test(String(str || ''));
+    const hasEnglish = (str?: string | null) => /[a-zA-Z]/.test(String(str || ''));
+
+    if (!item.textEn && item.text && hasEnglish(item.text) && !hasArabic(item.text)) {
+      item.textEn = item.text;
+    }
+    if ((!item.optionsEn || item.optionsEn.length === 0) && Array.isArray(item.options) && item.options.some((o: any) => hasEnglish(o) && !hasArabic(o))) {
+      item.optionsEn = [...item.options];
+    }
+    if (!item.explanationEn && item.explanation && hasEnglish(item.explanation) && !hasArabic(item.explanation)) {
+      item.explanationEn = item.explanation;
+    }
+    if (Array.isArray(item.sections)) {
+      item.sections = item.sections.map((s: any) => ({
+        ...s,
+        contentEn: s.contentEn || (hasEnglish(s.content) && !hasArabic(s.content) ? s.content : '')
+      }));
+    }
+
     setTempQuestion(item);
     setEditingQuestionIndex(index);
     setQuestionSource(source);
     setShowQuestionMetadata(false);
     setShowQuestionSections(false);
+    const isEn = Boolean(item.textEn && (!item.text || item.text === item.textEn)) || (hasEnglish(item.text) && !hasArabic(item.text));
+    setQuestionActiveLang(isEn ? 'en' : 'ar');
     setShowQuestionForm(true);
   };
 
   const handleSaveQuestionForSource = (source: 'assignments' | 'questions') => {
+    if (!tempQuestion.text && tempQuestion.textEn) {
+      tempQuestion.text = tempQuestion.textEn;
+    }
+    if ((!tempQuestion.options || tempQuestion.options.length === 0 || tempQuestion.options.every((o: any) => !o)) && tempQuestion.optionsEn?.length) {
+      tempQuestion.options = [...tempQuestion.optionsEn];
+    }
+    if (!tempQuestion.explanation && tempQuestion.explanationEn) {
+      tempQuestion.explanation = tempQuestion.explanationEn;
+    }
+    if ((!tempQuestion.optionsEn || tempQuestion.optionsEn.length === 0) && tempQuestion.options?.length) {
+      tempQuestion.optionsEn = [...tempQuestion.options];
+    }
+    if (!tempQuestion.textEn && tempQuestion.text && /[a-zA-Z]/.test(tempQuestion.text) && !/[\u0600-\u06FF]/.test(tempQuestion.text)) {
+      tempQuestion.textEn = tempQuestion.text;
+    }
+
     if (!tempQuestion.text && !tempQuestion.textEn) {
       showToast(language === 'ar' ? "يرجى إدخال نص السؤال" : "Please enter question text", "error");
       return;
@@ -1295,8 +1349,22 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                   )}
                 </div>
                 <RichTextEditor
-                  value={(questionActiveLang === 'ar' ? tempQuestion.text : tempQuestion.textEn) || ""}
-                  onChange={(value) => updateCurrentQuestionField(questionActiveLang === 'ar' ? "text" : "textEn", value)}
+                  value={(questionActiveLang === 'ar' 
+                    ? tempQuestion.text 
+                    : (tempQuestion.textEn || (tempQuestion.text && /[a-zA-Z]/.test(tempQuestion.text) && !/[\u0600-\u06FF]/.test(tempQuestion.text) ? tempQuestion.text : ''))
+                  ) || ""}
+                  onChange={(value) => {
+                    if (questionActiveLang === 'ar') {
+                      updateCurrentQuestionField("text", value);
+                    } else {
+                      const syncBase = !tempQuestion.text || (!/[\u0600-\u06FF]/.test(tempQuestion.text) && tempQuestion.text === (tempQuestion.textEn || ''));
+                      setTempQuestion((prev: any) => ({
+                        ...prev,
+                        textEn: value,
+                        ...(syncBase ? { text: value } : {})
+                      }));
+                    }
+                  }}
                   placeholder={questionActiveLang === 'ar' ? "اكتب نص السؤال بالعربية هنا..." : "Write the question prompt in English here..."}
                 />
               </div>
@@ -1318,32 +1386,39 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                   <div className="flex justify-between items-center flex-wrap gap-2">
                     <div>
                       <label className="text-xs font-black text-slate-500 uppercase tracking-widest block">{language === 'ar' ? 'تفسيرات الإجابة والكتل المساعدة' : 'Answer Explanations & Content Blocks'}</label>
-                      <p className="text-slate-400 text-[10px] font-bold mt-0.5">{language === 'ar' ? 'أضف تلميحات أو ملاحظات أو تفسيرات تفصيلية لهذا السؤال' : 'Add hints, tips, or detailed explanations'}</p>
+                      <p className="text-xs text-slate-400 font-bold">{language === 'ar' ? 'تظهر للطالب بعد تسليم الإجابة أو عند طلب المساعدة وتدعم الشرح الإنجليزي والعربي' : 'Shown to students after submission or as hints'}</p>
                     </div>
-                    <div className="relative" data-dropdown-root="true">
-                      <button 
+                    <div className="relative">
+                      <button
                         type="button"
-                        onClick={() => setOpenDropdownId(openDropdownId === 'question-sections' ? null : 'question-sections')}
-                        className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all cursor-pointer border border-indigo-100"
+                        onClick={() => setOpenDropdownId(openDropdownId === 'new-q-sec' ? null : 'new-q-sec')}
+                        className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all cursor-pointer"
                       >
-                        <Plus className="w-4 h-4" /> {language === 'ar' ? 'إضافة شريحة مساعدة' : 'Add Block'}
+                        <Plus className="w-4 h-4" />
+                        <span>{language === 'ar' ? 'إضافة قسم / تفسير' : 'Add Section / Explanation'}</span>
                       </button>
-                      <div className={`absolute right-0 mt-2 w-56 bg-white border border-slate-100 rounded-xl shadow-xl p-2 z-50 ${openDropdownId === 'question-sections' ? "block" : "hidden"}`}>
-                        {['EXPLANATION'].map(secType => (
-                          <button
-                            key={secType}
-                            type="button"
-                            onClick={() => {
-                               addQuestionSection(secType);
-                               setOpenDropdownId(null);
-                            }}
-                            className="w-full text-right px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors flex items-center gap-2"
-                          >
-                            {React.createElement(SECTION_STYLE_PRESETS[secType]?.icon || FileText, { className: "w-4 h-4" })}
-                            <span>{SECTION_STYLE_PRESETS[secType]?.label || secType}</span>
-                          </button>
-                        ))}
-                      </div>
+                      {openDropdownId === 'new-q-sec' && (
+                        <div className="absolute left-0 mt-2 w-56 bg-white border border-slate-100 rounded-2xl shadow-xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                          {['FEEDBACK', 'HINT', 'EXPLANATION', 'TIP', 'WARNING', 'KEY_INSIGHT'].map(secType => {
+                            const preset = SECTION_STYLE_PRESETS[secType] || SECTION_STYLE_PRESETS.EXPLANATION;
+                            const IconComp = preset.icon;
+                            return (
+                              <button
+                                key={secType}
+                                type="button"
+                                onClick={() => {
+                                  addQuestionSection(secType);
+                                  setOpenDropdownId(null);
+                                }}
+                                className="w-full text-right px-3 py-2 text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-all flex items-center gap-2 cursor-pointer"
+                              >
+                                <IconComp className="w-4 h-4 text-slate-400" />
+                                <span>{language === 'ar' ? preset.label : (preset.labelEn || preset.label)}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1353,7 +1428,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                       const IconComponent = preset.icon;
                       const secVal = questionActiveLang === 'ar'
                         ? (sec.content || "")
-                        : (sec.contentEn ?? sec.content ?? "");
+                        : (sec.contentEn || (sec.content && /[a-zA-Z]/.test(sec.content) && !/[\u0600-\u06FF]/.test(sec.content) ? sec.content : "") || "");
 
                       return (
                         <div key={idx} className={`p-6 rounded-3xl border-2 flex flex-col gap-4 relative group ${preset.container}`}>
@@ -1378,8 +1453,18 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                                 sections[idx] = { ...sections[idx], content: value };
                                 setTempQuestion((prev: any) => ({ ...prev, sections, explanation: value }));
                               } else {
-                                sections[idx] = { ...sections[idx], contentEn: value };
-                                setTempQuestion((prev: any) => ({ ...prev, sections, explanationEn: value }));
+                                const syncBase = !sections[idx].content || (!/[\u0600-\u06FF]/.test(sections[idx].content) && sections[idx].content === (sections[idx].contentEn || ''));
+                                sections[idx] = { 
+                                  ...sections[idx], 
+                                  contentEn: value,
+                                  ...(syncBase ? { content: value } : {})
+                                };
+                                setTempQuestion((prev: any) => ({ 
+                                  ...prev, 
+                                  sections, 
+                                  explanationEn: value,
+                                  ...(syncBase ? { explanation: value } : {})
+                                }));
                               }
                             }}
                             placeholder={questionActiveLang === 'ar' ? "اكتب محتوى التفسير هنا..." : "Write explanation block content here..."}
@@ -1425,9 +1510,15 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                   ) : (
                     <>
                       {(() => {
-                        const baseLength = Math.max((tempQuestion.options || []).length, 4);
+                        const baseLength = Math.max((tempQuestion.options || []).length, (tempQuestion.optionsEn || []).length, 4);
                         const currentOptsAr = Array.from({ length: baseLength }, (_, i) => String(tempQuestion.options?.[i] || ''));
-                        const currentOptsEn = Array.from({ length: baseLength }, (_, i) => String(tempQuestion.optionsEn?.[i] || ''));
+                        const currentOptsEn = Array.from({ length: baseLength }, (_, i) => {
+                          const enVal = String(tempQuestion.optionsEn?.[i] || '');
+                          if (enVal) return enVal;
+                          const arVal = String(tempQuestion.options?.[i] || '');
+                          if (/[a-zA-Z]/.test(arVal) && !/[\u0600-\u06FF]/.test(arVal)) return arVal;
+                          return '';
+                        });
                         const activeOpts = questionActiveLang === 'ar' ? currentOptsAr : currentOptsEn;
 
                         return activeOpts.map((opt: string, oIndex: number) => {
@@ -1480,7 +1571,16 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                                   } else {
                                     const updatedEn = [...currentOptsEn];
                                     updatedEn[oIndex] = val;
-                                    updateCurrentQuestionField("optionsEn", updatedEn);
+                                    const updatedAr = [...currentOptsAr];
+                                    const syncBase = !updatedAr[oIndex] || (!/[\u0600-\u06FF]/.test(updatedAr[oIndex]) && updatedAr[oIndex] === (currentOptsEn[oIndex] || ''));
+                                    if (syncBase) {
+                                      updatedAr[oIndex] = val;
+                                    }
+                                    setTempQuestion((prev: any) => ({
+                                      ...prev,
+                                      optionsEn: updatedEn,
+                                      ...(syncBase ? { options: updatedAr } : {})
+                                    }));
                                     if (tempQuestion.correctAnswerIndex === oIndex || (!tempQuestion.correctAnswer && !currentOptsAr[oIndex])) {
                                       updateCurrentQuestionField("correctAnswer", val);
                                       updateCurrentQuestionField("correctAnswerEn", val);
@@ -1534,14 +1634,14 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                   onClick={() => setShowQuestionForm(false)}
                   className="px-8 py-4 rounded-2xl font-bold bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all whitespace-nowrap shrink-0 cursor-pointer"
                 >
-                  {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                  {questionActiveLang === 'en' ? 'Cancel' : (language === 'ar' ? 'إلغاء' : 'Cancel')}
                 </button>
                 <button 
                   type="button"
                   onClick={() => handleSaveQuestionForSource(source)}
                   className="px-10 py-4 rounded-2xl font-black bg-indigo-600 text-white shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 whitespace-nowrap shrink-0 cursor-pointer"
                 >
-                  <span>{language === 'ar' ? 'حفظ السؤال في القائمة' : 'Save Slide to List'}</span>
+                  <span>{questionActiveLang === 'en' ? 'Save Question to List' : (language === 'ar' ? 'حفظ السؤال في القائمة' : 'Save Question to List')}</span>
                   <Save className="w-5 h-5 shrink-0" />
                 </button>
               </div>

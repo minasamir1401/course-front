@@ -18,9 +18,48 @@ import { QuestionExcelExportButton } from '@/components/QuestionExcelExportButto
 export const QuestionsBuilder = (props: any) => {
   const { currentModule, setCurrentModule, activeSubExamIndex, source, language, assignmentsExcelRef, questionsExcelRef, handleAssignmentsExcelChange, handleQuestionsExcelChange, handleExcelUpload, downloadQuestionsTemplate, downloadAdvancedMetadataTemplate, handleAddQuestionForSource, showQuestionForm, setShowQuestionForm, list, moveQuestionForSource, expandedQuestionIndex, setExpandedQuestionIndex, handleEditQuestionForSource, removeQuestionForSource, tempQuestion, setTempQuestion, updateCurrentQuestionField, customSkills, setCustomSkills, allExistingSkills, availableMetadata, openDropdownId, setOpenDropdownId, addQuestionSection, updateQuestionSectionContent, removeQuestionSection, isQuestionCorrectAnswer, toggleQuestionCorrectAnswer, updateQuestionOption, handleSaveQuestionForSource, editingQuestionIndex, advancedMetadataExcelRef, handleAdvancedMetadataExcelChange } = props;
 
+  const hasArabicChars = (str?: string | null) => /[\u0600-\u06FF]/.test(String(str || ''));
+  const hasEnglishChars = (str?: string | null) => /[a-zA-Z]/.test(String(str || ''));
+
+  const isExamEnglish = React.useMemo(() => {
+    if (language === 'en') return true;
+    if (props.examData?.title && hasEnglishChars(props.examData.title) && !hasArabicChars(props.examData.title)) return true;
+    if (currentModule?.title && hasEnglishChars(currentModule.title) && !hasArabicChars(currentModule.title)) return true;
+    return false;
+  }, [language, props.examData?.title, currentModule?.title]);
+
+  const detectQuestionLanguage = (q: any): 'ar' | 'en' => {
+    if (!q) return isExamEnglish ? 'en' : 'ar';
+    const sampleText = [
+      q.text,
+      q.explanation,
+      ...(Array.isArray(q.options) ? q.options : []),
+      q.domain,
+      q.section,
+      q.course,
+      q.subskill,
+      q.microSkill,
+    ].filter(Boolean).join(' ');
+
+    const hasAr = hasArabicChars(sampleText);
+    const hasEn = hasEnglishChars(sampleText) || hasEnglishChars(q.textEn);
+
+    if (hasEn && !hasAr) return 'en';
+    if (hasAr && !hasEn) return 'ar';
+    if (q.textEn && !q.text) return 'en';
+    if (isExamEnglish) return 'en';
+    return 'ar';
+  };
+
   const [questionActiveLang, setQuestionActiveLang] = React.useState<'ar' | 'en'>('ar');
   const [cardPreviewLang, setCardPreviewLang] = React.useState<Record<number, 'ar' | 'en'>>({});
   const [isTranslatingQuestion, setIsTranslatingQuestion] = React.useState(false);
+
+  React.useEffect(() => {
+    if (showQuestionForm) {
+      setQuestionActiveLang(detectQuestionLanguage(tempQuestion));
+    }
+  }, [showQuestionForm, editingQuestionIndex, tempQuestion?.id, tempQuestion?.text, tempQuestion?.textEn, isExamEnglish]);
 
   const extractFirstImage = (text?: string, imageUrl?: string): string | null => {
     if (imageUrl && typeof imageUrl === 'string' && imageUrl.trim()) return imageUrl.trim();
@@ -36,13 +75,17 @@ export const QuestionsBuilder = (props: any) => {
       const from = questionActiveLang;
       const to = from === 'ar' ? 'en' : 'ar';
 
-      const srcText = from === 'ar' ? tempQuestion.text : tempQuestion.textEn;
-      const srcExplanation = from === 'ar' ? tempQuestion.explanation : tempQuestion.explanationEn;
+      const srcText = from === 'ar'
+        ? (tempQuestion.text || '')
+        : (tempQuestion.textEn || tempQuestion.text || '');
+      const srcExplanation = from === 'ar'
+        ? (tempQuestion.explanation || '')
+        : (tempQuestion.explanationEn || tempQuestion.explanation || '');
 
       const baseLength = Math.max((tempQuestion.options || []).length, (tempQuestion.optionsEn || []).length, 4);
       const srcOpts = from === 'ar'
         ? Array.from({ length: baseLength }, (_, i) => String(tempQuestion.options?.[i] || ''))
-        : Array.from({ length: baseLength }, (_, i) => String(tempQuestion.optionsEn?.[i] || ''));
+        : Array.from({ length: baseLength }, (_, i) => String(tempQuestion.optionsEn?.[i] || tempQuestion.options?.[i] || ''));
 
       const sectionsList = tempQuestion.sections || [];
       const srcSections = sectionsList.map((s: any) =>
@@ -478,8 +521,8 @@ export const QuestionsBuilder = (props: any) => {
               <h4 className="text-white font-black flex items-center gap-3">
                 <Plus className="w-5 h-5" />
                 {editingQuestionIndex !== null
-                  ? (language === 'ar' ? `تعديل السؤال #${editingQuestionIndex + 1}` : `Edit Question #${editingQuestionIndex + 1}`)
-                  : (language === 'ar' ? 'إضافة سؤال تفاعلي جديد' : 'Add New Question')}
+                  ? (questionActiveLang === 'en' ? `Edit Question #${editingQuestionIndex + 1}` : (language === 'ar' ? `تعديل السؤال #${editingQuestionIndex + 1}` : `Edit Question #${editingQuestionIndex + 1}`))
+                  : (questionActiveLang === 'en' ? 'Add New Question' : (language === 'ar' ? 'إضافة سؤال تفاعلي جديد' : 'Add New Question'))}
               </h4>
               <button
                 type="button"
@@ -494,7 +537,7 @@ export const QuestionsBuilder = (props: any) => {
               {/* Row 1: Question Type + Points + XP */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-6 bg-indigo-50 border border-indigo-100 rounded-[24px]">
                 <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-indigo-700 uppercase tracking-widest">{language === 'ar' ? 'نوع السؤال' : 'Question Type'} <span className="text-red-500">*</span></label>
+                  <label className="text-[10px] font-black text-indigo-700 uppercase tracking-widest">{questionActiveLang === 'en' ? 'Question Type' : (language === 'ar' ? 'نوع السؤال' : 'Question Type')} <span className="text-red-500">*</span></label>
                   <CustomSelect
                     className="bg-white border border-indigo-200 rounded-xl px-3 py-2 font-bold text-black text-xs outline-none min-h-[34px]"
                     value={tempQuestion.type}
@@ -502,8 +545,8 @@ export const QuestionsBuilder = (props: any) => {
                       const newType = val;
                       const updated = { ...tempQuestion, type: newType };
                       if (newType === "TRUE_FALSE") {
-                        updated.options = language === 'ar' ? ["صحيح", "خطأ", "", ""] : ["True", "False", "", ""];
-                        updated.correctAnswer = language === 'ar' ? "صحيح" : "True";
+                        updated.options = questionActiveLang === 'en' ? ["True", "False", "", ""] : (language === 'ar' ? ["صحيح", "خطأ", "", ""] : ["True", "False", "", ""]);
+                        updated.correctAnswer = questionActiveLang === 'en' ? "True" : (language === 'ar' ? "صحيح" : "True");
                       } else if (tempQuestion.type === "TRUE_FALSE") {
                         updated.options = ["", "", "", ""];
                         updated.correctAnswer = "";
@@ -511,12 +554,12 @@ export const QuestionsBuilder = (props: any) => {
                       setTempQuestion(updated);
                     }}
                     options={QUESTION_TYPES.map(type => ({ value: type.id, label: type.labelEn }))}
-                    placeholder={language === 'ar' ? 'اختر النوع...' : 'Select Type...'}
+                    placeholder={questionActiveLang === 'en' ? 'Select Type...' : (language === 'ar' ? 'اختر النوع...' : 'Select Type...')}
                   />
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'النقاط / الدرجة' : 'Points'}</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{questionActiveLang === 'en' ? 'Points / Grade' : (language === 'ar' ? 'النقاط / الدرجة' : 'Points')}</label>
                   <input
                     type="number"
                     className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px]"
@@ -526,7 +569,7 @@ export const QuestionsBuilder = (props: any) => {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? '⭐ نقاط XP' : '⭐ XP Points'}</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{questionActiveLang === 'en' ? '⭐ XP Points' : (language === 'ar' ? '⭐ نقاط XP' : '⭐ XP Points')}</label>
                   <input
                     type="number"
                     className="bg-white border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-700 text-xs outline-none min-h-[34px]"
@@ -541,9 +584,11 @@ export const QuestionsBuilder = (props: any) => {
                 <span className="text-[11.5px] font-bold text-indigo-700 flex items-center gap-1.5 bg-indigo-50/70 border border-indigo-100/80 px-3 py-1.5 rounded-xl">
                   <span>💡</span>
                   <span>
-                    {language === 'ar'
-                      ? 'توجيه المحتوى: يُنصح ألا تزيد البيانات الوصفية (Metadata) عن 8 عناصر للحفاظ على تناسق العرض وسرعة المراجعة.'
-                      : 'Content Guidance: Recommended maximum of 8 metadata tags for optimal 2-row presentation.'}
+                    {questionActiveLang === 'en'
+                      ? 'Content Guidance: Recommended maximum of 8 metadata tags for optimal presentation.'
+                      : (language === 'ar'
+                          ? 'توجيه المحتوى: يُنصح ألا تزيد البيانات الوصفية (Metadata) عن 8 عناصر للحفاظ على تناسق العرض وسرعة المراجعة.'
+                          : 'Content Guidance: Recommended maximum of 8 metadata tags for optimal presentation.')}
                   </span>
                 </span>
               </div>
@@ -578,14 +623,14 @@ export const QuestionsBuilder = (props: any) => {
 
                   return (
                     <div key={field.key} className="flex flex-col gap-2">
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{language === 'ar' ? field.labelAr : field.labelEn}</label>
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{questionActiveLang === 'en' ? field.labelEn : (language === 'ar' ? field.labelAr : field.labelEn)}</label>
                       {field.key === 'dok' ? (
                         <select
                           className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold appearance-none"
                           value={normalizeDok(tempQuestion.dok) || tempQuestion.dok || ""}
                           onChange={(e) => updateCurrentQuestionField('dok', normalizeDok(e.target.value) || e.target.value)}
                         >
-                          <option value="">{language === 'ar' ? 'اختر...' : 'Select...'}</option>
+                          <option value="">{questionActiveLang === 'en' ? 'Select...' : (language === 'ar' ? 'اختر...' : 'Select...')}</option>
                           <option value="DOK 1">DOK 1</option>
                           <option value="DOK 2">DOK 2</option>
                           <option value="DOK 3">DOK 3</option>
@@ -604,7 +649,7 @@ export const QuestionsBuilder = (props: any) => {
                           value={tempQuestion.cognitive || ""}
                           onChange={(e) => updateCurrentQuestionField('cognitive', e.target.value)}
                         >
-                          <option value="">{language === 'ar' ? 'اختر...' : 'Select...'}</option>
+                          <option value="">{questionActiveLang === 'en' ? 'Select...' : (language === 'ar' ? 'اختر...' : 'Select...')}</option>
                           <option value="Knowledge">Knowledge</option>
                           <option value="Application">Application</option>
                           <option value="Reasoning">Reasoning</option>
@@ -618,7 +663,7 @@ export const QuestionsBuilder = (props: any) => {
                           value={tempQuestion.level || ""}
                           onChange={(e) => updateCurrentQuestionField('level', e.target.value)}
                         >
-                          <option value="">{language === 'ar' ? 'اختر...' : 'Select...'}</option>
+                          <option value="">{questionActiveLang === 'en' ? 'Select...' : (language === 'ar' ? 'اختر...' : 'Select...')}</option>
                           <option value="Foundation">Foundation</option>
                           <option value="On_Level">On_Level</option>
                           <option value="Advanced">Advanced</option>
@@ -633,12 +678,18 @@ export const QuestionsBuilder = (props: any) => {
                           onChange={(e) => {
                             const val = e.target.value;
                             updateCurrentQuestionField(activeFieldKey, val);
+                            if (isEn && (!tempQuestion[field.key] || !hasArabicChars(tempQuestion[field.key]))) {
+                              updateCurrentQuestionField(field.key, val);
+                            }
                             if (field.key === 'standard') {
                               updateCurrentQuestionField(isEn ? 'learningOutcomeEn' : 'learningOutcome', val);
+                              if (isEn && (!tempQuestion.learningOutcome || !hasArabicChars(tempQuestion.learningOutcome))) {
+                                updateCurrentQuestionField('learningOutcome', val);
+                              }
                             }
                           }}
                         >
-                          <option value="">{language === 'ar' ? 'اختر...' : 'Select...'}</option>
+                          <option value="">{questionActiveLang === 'en' ? 'Select...' : (language === 'ar' ? 'اختر...' : 'Select...')}</option>
                           {(availableMetadata as any)[field.optionsKey].map((opt: string, i: number) => (
                             <option key={i} value={opt}>{opt}</option>
                           ))}
@@ -650,13 +701,19 @@ export const QuestionsBuilder = (props: any) => {
                         <input
                           type="text"
                           className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-900 text-xs outline-none focus:border-indigo-600 font-bold"
-                          placeholder={language === 'ar' ? field.labelAr : field.labelEn}
+                          placeholder={questionActiveLang === 'en' ? field.labelEn : (language === 'ar' ? field.labelAr : field.labelEn)}
                           value={currentVal}
                           onChange={(e) => {
                             const val = e.target.value;
                             updateCurrentQuestionField(activeFieldKey, val);
+                            if (isEn && (!tempQuestion[field.key] || !hasArabicChars(tempQuestion[field.key]))) {
+                              updateCurrentQuestionField(field.key, val);
+                            }
                             if (field.key === 'standard') {
                               updateCurrentQuestionField(isEn ? 'learningOutcomeEn' : 'learningOutcome', val);
+                              if (isEn && (!tempQuestion.learningOutcome || !hasArabicChars(tempQuestion.learningOutcome))) {
+                                updateCurrentQuestionField('learningOutcome', val);
+                              }
                             }
                           }}
                         />
@@ -736,8 +793,17 @@ export const QuestionsBuilder = (props: any) => {
                   )}
                 </div>
                 <RichTextEditor
-                  value={(questionActiveLang === 'ar' ? tempQuestion.text : tempQuestion.textEn) || ""}
-                  onChange={(value) => updateCurrentQuestionField(questionActiveLang === 'ar' ? "text" : "textEn", value)}
+                  value={(questionActiveLang === 'ar' ? tempQuestion.text : (tempQuestion.textEn || (!hasArabicChars(tempQuestion.text) ? tempQuestion.text : ''))) || ""}
+                  onChange={(value) => {
+                    if (questionActiveLang === 'en') {
+                      updateCurrentQuestionField("textEn", value);
+                      if (!tempQuestion.text || !hasArabicChars(tempQuestion.text)) {
+                        updateCurrentQuestionField("text", value);
+                      }
+                    } else {
+                      updateCurrentQuestionField("text", value);
+                    }
+                  }}
                   placeholder={questionActiveLang === 'ar' ? "اكتب نص السؤال بالعربية هنا..." : "Write the question prompt in English here..."}
                 />
               </div>
@@ -926,14 +992,18 @@ export const QuestionsBuilder = (props: any) => {
                   ) : (
                     <>
                       {(() => {
-                        const baseLength = Math.max((tempQuestion.options || []).length, 4);
+                        const baseLength = Math.max((tempQuestion.options || []).length, (tempQuestion.optionsEn || []).length, 4);
                         const currentOptsAr = Array.from({ length: baseLength }, (_, i) => String(tempQuestion.options?.[i] || ''));
                         const currentOptsEn = Array.from({ length: baseLength }, (_, i) => String(tempQuestion.optionsEn?.[i] || ''));
-                        const activeOpts = questionActiveLang === 'ar' ? currentOptsAr : currentOptsEn;
+                        const isArOptsEnglish = currentOptsAr.some(o => hasEnglishChars(o)) && !currentOptsAr.some(o => hasArabicChars(o));
+                        const resolvedOptsEn = currentOptsEn.some(o => o && o.trim())
+                          ? currentOptsEn
+                          : (isArOptsEnglish ? currentOptsAr : currentOptsEn);
+                        const activeOpts = questionActiveLang === 'ar' ? currentOptsAr : resolvedOptsEn;
 
                         return activeOpts.map((opt: string, oIndex: number) => {
                           const arOpt = currentOptsAr[oIndex];
-                          const enOpt = currentOptsEn[oIndex];
+                          const enOpt = resolvedOptsEn[oIndex];
 
                           const isOptionCorrect = 
                             tempQuestion.correctAnswerIndex === oIndex ||
@@ -979,9 +1049,14 @@ export const QuestionsBuilder = (props: any) => {
                                   if (questionActiveLang === 'ar') {
                                     updateQuestionOption(oIndex, val);
                                   } else {
-                                    const updatedEn = [...currentOptsEn];
+                                    const updatedEn = [...resolvedOptsEn];
                                     updatedEn[oIndex] = val;
                                     updateCurrentQuestionField("optionsEn", updatedEn);
+                                    if (isArOptsEnglish || !tempQuestion.options || !tempQuestion.options.some((o: string) => hasArabicChars(o))) {
+                                      const updatedAr = [...currentOptsAr];
+                                      updatedAr[oIndex] = val;
+                                      updateCurrentQuestionField("options", updatedAr);
+                                    }
                                     if (tempQuestion.correctAnswerIndex === oIndex || (!tempQuestion.correctAnswer && !currentOptsAr[oIndex])) {
                                       updateCurrentQuestionField("correctAnswer", val);
                                       updateCurrentQuestionField("correctAnswerEn", val);
@@ -997,7 +1072,7 @@ export const QuestionsBuilder = (props: any) => {
                                   onClick={() => {
                                     const newOpts = [...currentOptsAr];
                                     newOpts.splice(oIndex, 1);
-                                    const newOptsEn = [...currentOptsEn];
+                                    const newOptsEn = [...resolvedOptsEn];
                                     newOptsEn.splice(oIndex, 1);
                                     setTempQuestion({ ...tempQuestion, options: newOpts, optionsEn: newOptsEn });
                                   }}
@@ -1013,13 +1088,13 @@ export const QuestionsBuilder = (props: any) => {
                       <div
                         onClick={() => {
                           const currentOptsAr = [...(tempQuestion.options || ["", "", "", ""]), ""];
-                          const currentOptsEn = [...(tempQuestion.optionsEn || Array((tempQuestion.options || []).length).fill("")), ""];
+                          const currentOptsEn = [...(tempQuestion.optionsEn || (tempQuestion.options || ["", "", "", ""])), ""];
                           setTempQuestion({ ...tempQuestion, options: currentOptsAr, optionsEn: currentOptsEn });
                         }}
                         className="flex items-center justify-center gap-2 p-5 rounded-[22px] border-2 border-dashed border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all cursor-pointer text-indigo-600 font-bold text-sm"
                       >
                         <Plus className="w-5 h-5" />
-                        {language === 'ar' ? 'إضافة خيار' : 'Add Option'}
+                        {questionActiveLang === 'en' ? 'Add Option' : (language === 'ar' ? 'إضافة خيار' : 'Add Option')}
                       </div>
                     </>
                   )}
@@ -1033,14 +1108,14 @@ export const QuestionsBuilder = (props: any) => {
                   onClick={() => setShowQuestionForm(false)}
                   className="px-8 py-4 rounded-2xl font-bold bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all whitespace-nowrap shrink-0 cursor-pointer"
                 >
-                  {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                  {questionActiveLang === 'en' ? 'Cancel' : (language === 'ar' ? 'إلغاء' : 'Cancel')}
                 </button>
                 <button
                   type="button"
                   onClick={() => handleSaveQuestionForSource(source)}
                   className="px-10 py-4 rounded-2xl font-black bg-indigo-600 text-white shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 whitespace-nowrap shrink-0 cursor-pointer"
                 >
-                  <span>{language === 'ar' ? 'حفظ السؤال في القائمة' : 'Save Slide to List'}</span>
+                  <span>{questionActiveLang === 'en' ? 'Save Question to List' : (language === 'ar' ? 'حفظ السؤال في القائمة' : 'Save Question to List')}</span>
                   <Save className="w-5 h-5 shrink-0" />
                 </button>
               </div>

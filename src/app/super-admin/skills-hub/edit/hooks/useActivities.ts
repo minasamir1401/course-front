@@ -93,12 +93,14 @@ export const useActivities = (props: { clusterId: string | null; language: strin
     setIsActivityModalOpen(true);
   };
 
-  const handleSaveActivity = async (activityData?: any) => {
-    const data = (activityData && typeof activityData === 'object' && !('nativeEvent' in activityData))
-      ? activityData
-      : editingActivity;
+  const handleSaveActivity = async (data: any) => {
+    const hasAr = (str?: any) => /[\u0600-\u06FF]/.test(String(str || ''));
+    const hasEn = (str?: any) => /[a-zA-Z]/.test(String(str || ''));
 
-    if (!data?.title || !data?.type) {
+    const effectiveTitle = data?.title || data?.titleEn || '';
+    const effectiveTitleEn = data?.titleEn || (hasEn(data?.title) && !hasAr(data?.title) ? data.title : null);
+
+    if (!effectiveTitle || !data?.type) {
       showToast(language === 'ar' ? 'يرجى إدخال عنوان ونوع النشاط' : 'Please enter activity title and type', 'error');
       return;
     }
@@ -113,10 +115,10 @@ export const useActivities = (props: { clusterId: string | null; language: strin
 
       const payload = {
         lessonId: editingActivity?.lessonId || data.lessonId,
-        title: data.title,
-        titleEn: data.titleEn || null,
-        questionText: data.questionText || null,
-        questionTextEn: data.questionTextEn || null,
+        title: effectiveTitle,
+        titleEn: effectiveTitleEn,
+        questionText: data.questionText || data.questionTextEn || null,
+        questionTextEn: data.questionTextEn || (hasEn(data.questionText) && !hasAr(data.questionText) ? data.questionText : null),
         type: data.type,
         options: typeof data.options === 'string' ? data.options : JSON.stringify(data.options || {}),
         optionsEn: data.optionsEn !== undefined ? (typeof data.optionsEn === 'string' ? data.optionsEn : JSON.stringify(data.optionsEn)) : null,

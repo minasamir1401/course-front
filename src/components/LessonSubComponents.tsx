@@ -85,7 +85,9 @@ export const getQuestionOptions = (q: any, language: string) => {
   if (q.type === 'TRUE_FALSE' || q.label === 'TRUE_FALSE') {
     return ['True', 'False'];
   }
-  let options = q.options;
+  let options = (language === 'en' && Array.isArray(q.optionsEn) && q.optionsEn.filter(Boolean).length > 0)
+    ? q.optionsEn
+    : q.options;
   if (typeof options === 'string') {
     try {
       const parsed = JSON.parse(options);
@@ -141,7 +143,7 @@ export const SectionModalButton = ({ sec, preset, language }: { sec: any; preset
               {preset.label}
             </h4>
             <div className="text-slate-600 text-sm font-bold leading-relaxed max-h-[60vh] overflow-y-auto">
-              <HtmlRenderer html={sec.content} />
+              <HtmlRenderer html={(language === 'en' && sec.contentEn) ? sec.contentEn : sec.content} />
             </div>
             <div className="flex justify-end pt-2">
               <button
@@ -285,7 +287,7 @@ export const ItemSectionsBubbles = ({ item, isSubmitted, language, filterType = 
           <InteractiveTag 
             key={sec.id || idx}
             label={preset.label}
-            value={<HtmlRenderer html={sec.content} />}
+            value={<HtmlRenderer html={(language === 'en' && sec.contentEn) ? sec.contentEn : sec.content} />}
             icon={preset.icon}
             colorClass={`${preset.bg} ${preset.text} border ${preset.border} hover:scale-[1.02]`}
             bubbleTheme={`${preset.border} ${preset.text}`}

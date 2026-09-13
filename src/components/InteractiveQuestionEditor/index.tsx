@@ -132,7 +132,7 @@ export default function InteractiveQuestionEditor({ question, onChange, language
 
   return (
     <div className={`space-y-6 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
-      <GameGuide type={question.type} />
+      <GameGuide type={question.type} language={language} />
       <div className="pt-6 border-t border-slate-100">
         <div key={`${question.type}-${question.id || question.title || 'new'}`}>
           {renderEditor()}

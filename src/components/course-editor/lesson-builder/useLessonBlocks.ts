@@ -23,8 +23,8 @@ export function useLessonBlocks(setCurrentLesson: (lesson: any) => void) {
 
   const addBlock = (source: 'slides' | 'assignments' | 'questions' = 'slides', type: 'TEXT' | 'QUESTION') => {
     const newBlock = type === 'TEXT' 
-      ? { id: Date.now() + Math.random(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? `محتوى جديد` : `New Content`, content: "", text: "", videoUrl: "", sections: [] }
-      : { id: Date.now() + Math.random(), type: 'QUESTION', label: 'MCQ', title: language === 'ar' ? `سؤال جديد` : `New Question`, content: "", text: "", videoUrl: "", options: ["", "", "", ""], correctAnswer: "", sections: [] };
+      ? { id: Date.now() + Math.random(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? `محتوى جديد` : `New Content`, titleEn: language === 'en' ? `New Content` : '', content: "", contentEn: "", text: "", textEn: "", videoUrl: "", sections: [] }
+      : { id: Date.now() + Math.random(), type: 'QUESTION', label: 'MCQ', title: language === 'ar' ? `سؤال جديد` : `New Question`, titleEn: language === 'en' ? `New Question` : '', content: "", contentEn: "", text: "", textEn: "", videoUrl: "", options: ["", "", "", ""], optionsEn: ["", "", "", ""], correctAnswer: "", correctAnswerEn: "", sections: [] };
     setCurrentLesson((prev: any) => ({
       ...prev,
       [source]: [...(prev[source] || []), newBlock]
@@ -33,8 +33,8 @@ export function useLessonBlocks(setCurrentLesson: (lesson: any) => void) {
 
   const insertBlockAt = (source: 'slides' | 'assignments' | 'questions' = 'slides', index: number, type: 'TEXT' | 'QUESTION') => {
     const newBlock = type === 'TEXT' 
-      ? { id: Date.now() + Math.random(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? `محتوى جديد` : `New Content`, content: "", text: "", videoUrl: "", sections: [] }
-      : { id: Date.now() + Math.random(), type: 'QUESTION', label: 'MCQ', title: language === 'ar' ? `سؤال جديد` : `New Question`, content: "", text: "", videoUrl: "", options: ["", "", "", ""], correctAnswer: "", sections: [] };
+      ? { id: Date.now() + Math.random(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? `محتوى جديد` : `New Content`, titleEn: language === 'en' ? `New Content` : '', content: "", contentEn: "", text: "", textEn: "", videoUrl: "", sections: [] }
+      : { id: Date.now() + Math.random(), type: 'QUESTION', label: 'MCQ', title: language === 'ar' ? `سؤال جديد` : `New Question`, titleEn: language === 'en' ? `New Question` : '', content: "", contentEn: "", text: "", textEn: "", videoUrl: "", options: ["", "", "", ""], optionsEn: ["", "", "", ""], correctAnswer: "", correctAnswerEn: "", sections: [] };
     setCurrentLesson((prev: any) => {
       const newSlides = [...(prev[source] || [])];
       newSlides.splice(index, 0, newBlock);
@@ -63,6 +63,10 @@ export function useLessonBlocks(setCurrentLesson: (lesson: any) => void) {
         newSlides[resolvedIndex].text = value;
       } else if (field === 'text') {
         newSlides[resolvedIndex].content = value;
+      } else if (field === 'contentEn') {
+        newSlides[resolvedIndex].textEn = value;
+      } else if (field === 'textEn') {
+        newSlides[resolvedIndex].contentEn = value;
       }
       return { ...prev, [source]: newSlides };
     });
@@ -139,7 +143,15 @@ export function useLessonBlocks(setCurrentLesson: (lesson: any) => void) {
     });
   };
 
-  const updateSection = (source: 'slides' | 'assignments' | 'questions' = 'slides', blockIndex: number, sectionIndex: number, content: string, blockRef?: any, sectionRef?: any) => {
+  const updateSection = (
+    source: 'slides' | 'assignments' | 'questions' = 'slides', 
+    blockIndex: number, 
+    sectionIndex: number, 
+    content: string, 
+    blockRef?: any, 
+    sectionRef?: any,
+    field: 'content' | 'contentEn' = 'content'
+  ) => {
     setCurrentLesson((prev: any) => {
       const newSlides = [...(prev[source] || [])];
       const resolvedBlockIndex = findBlockIndex(newSlides, blockIndex, blockRef);
@@ -157,7 +169,13 @@ export function useLessonBlocks(setCurrentLesson: (lesson: any) => void) {
       }
       if (!sections[resolvedSectionIndex]) return prev;
 
-      sections[resolvedSectionIndex] = { ...sections[resolvedSectionIndex], content };
+      sections[resolvedSectionIndex] = { ...sections[resolvedSectionIndex], [field]: content };
+      if (field === 'contentEn') {
+        const currentAr = sections[resolvedSectionIndex].content;
+        if (!currentAr || (!/[\u0600-\u06FF]/.test(currentAr) && currentAr === (sections[resolvedSectionIndex].contentEn || ''))) {
+          sections[resolvedSectionIndex].content = content;
+        }
+      }
       newSlides[resolvedBlockIndex] = { ...block, sections };
       return { ...prev, [source]: newSlides };
     });
