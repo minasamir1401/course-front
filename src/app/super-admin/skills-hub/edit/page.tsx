@@ -67,16 +67,23 @@ export default function EditSkillClusterPage() {
 
   useEffect(() => {
     if (!isActivityModalOpen || !editingActivity) return;
-    const hasAr = (str?: string) => /[\u0600-\u06FF]/.test(String(str || ''));
-    const hasEn = (str?: string) => /[a-zA-Z]/.test(String(str || ''));
+    const clean = (str?: string) => String(str || '').replace(/<[^>]*>/g, '').trim();
+    const hasAr = (str?: string) => /[\u0600-\u06FF]/.test(clean(str));
+    const hasEn = (str?: string) => /[a-zA-Z]/.test(clean(str));
 
-    if (editingActivity.titleEn || editingActivity.questionTextEn) {
+    const qClean = clean(editingActivity.questionText);
+    const qEnClean = clean(editingActivity.questionTextEn);
+    const titleClean = clean(editingActivity.title);
+    const titleEnClean = clean(editingActivity.titleEn);
+
+    if (qEnClean || titleEnClean) {
       setActivityActiveLang('en');
-    } else if (
-      (hasEn(editingActivity.title) && !hasAr(editingActivity.title)) ||
-      (hasEn(editingActivity.questionText) && !hasAr(editingActivity.questionText))
-    ) {
+    } else if (hasEn(qClean) && !hasAr(qClean)) {
       setActivityActiveLang('en');
+    } else if (hasEn(titleClean) && !hasAr(titleClean)) {
+      setActivityActiveLang('en');
+    } else if (hasAr(qClean) || hasAr(titleClean)) {
+      setActivityActiveLang('ar');
     } else if (language === 'en') {
       setActivityActiveLang('en');
     } else {
@@ -91,12 +98,12 @@ export default function EditSkillClusterPage() {
       const from = activityActiveLang;
       const to = from === 'ar' ? 'en' : 'ar';
       
-      const srcTitle = from === 'ar' ? editingActivity.title : editingActivity.titleEn;
-      const srcPrompt = from === 'ar' ? editingActivity.questionText : editingActivity.questionTextEn;
-      const srcExplanation = from === 'ar' ? editingActivity.explanation : editingActivity.explanationEn;
-      const srcHint = from === 'ar' ? editingActivity.hint : editingActivity.hintEn;
-      const srcTip = from === 'ar' ? editingActivity.tip : editingActivity.tipEn;
-      const srcKeyInsight = from === 'ar' ? editingActivity.keyInsight : editingActivity.keyInsightEn;
+      const srcTitle = from === 'ar' ? editingActivity.title : (editingActivity.titleEn || editingActivity.title);
+      const srcPrompt = from === 'ar' ? editingActivity.questionText : (editingActivity.questionTextEn || editingActivity.questionText);
+      const srcExplanation = from === 'ar' ? editingActivity.explanation : (editingActivity.explanationEn || editingActivity.explanation);
+      const srcHint = from === 'ar' ? editingActivity.hint : (editingActivity.hintEn || editingActivity.hint);
+      const srcTip = from === 'ar' ? editingActivity.tip : (editingActivity.tipEn || editingActivity.tip);
+      const srcKeyInsight = from === 'ar' ? editingActivity.keyInsight : (editingActivity.keyInsightEn || editingActivity.keyInsight);
 
       const baseTexts = [
         srcTitle || '',
@@ -108,7 +115,7 @@ export default function EditSkillClusterPage() {
       ];
 
       let rawOpts: any = null;
-      const srcOpts = from === 'ar' ? editingActivity.options : editingActivity.optionsEn;
+      const srcOpts = from === 'ar' ? editingActivity.options : (editingActivity.optionsEn || editingActivity.options);
       try {
         rawOpts = typeof srcOpts === 'string' ? JSON.parse(srcOpts) : srcOpts;
       } catch {
@@ -149,6 +156,12 @@ export default function EditSkillClusterPage() {
         }
         setActivityActiveLang('en');
       } else {
+        if (!updated.titleEn && editingActivity.title && !/[\u0600-\u06FF]/.test(editingActivity.title)) updated.titleEn = editingActivity.title;
+        if (!updated.questionTextEn && editingActivity.questionText && !/[\u0600-\u06FF]/.test(editingActivity.questionText)) updated.questionTextEn = editingActivity.questionText;
+        if (!updated.optionsEn && editingActivity.options && !/[\u0600-\u06FF]/.test(typeof editingActivity.options === 'string' ? editingActivity.options : JSON.stringify(editingActivity.options))) {
+          updated.optionsEn = typeof editingActivity.options === 'string' ? editingActivity.options : JSON.stringify(editingActivity.options);
+        }
+
         if (trTitle) updated.title = trTitle;
         if (trPrompt) updated.questionText = trPrompt;
         if (trExplanation) updated.explanation = trExplanation;
@@ -801,7 +814,7 @@ export default function EditSkillClusterPage() {
                   {activityActiveLang === 'ar' ? (
                     <input 
                       type="text" 
-                      value={editingActivity.title || ''} 
+                      value={(editingActivity.title && /[\u0600-\u06FF]/.test(editingActivity.title)) ? editingActivity.title : ''} 
                       onChange={(e) => setEditingActivity({...editingActivity, title: e.target.value})}
                       placeholder={language === 'ar' ? "مثال: سؤال جمع، توصيل..." : "e.g. Addition Question..."}
                       className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none"
@@ -903,7 +916,7 @@ export default function EditSkillClusterPage() {
                     {activityActiveLang === 'ar' ? (
                       <RichTextEditor 
                         key="ar-qtext"
-                        value={editingActivity.questionText || ""} 
+                        value={(editingActivity.questionText && /[\u0600-\u06FF]/.test(editingActivity.questionText)) ? editingActivity.questionText : ""} 
                         onChange={(val) => setEditingActivity({...editingActivity, questionText: val})} 
                       />
                     ) : (
@@ -994,7 +1007,7 @@ export default function EditSkillClusterPage() {
                 </div>
                 {activityActiveLang === 'ar' ? (
                   <textarea 
-                    value={editingActivity.explanation || ""} 
+                    value={(editingActivity.explanation && /[\u0600-\u06FF]/.test(editingActivity.explanation)) ? editingActivity.explanation : ""} 
                     onChange={(e) => setEditingActivity({...editingActivity, explanation: e.target.value})}
                     rows={3}
                     placeholder={language === 'ar' ? "اكتب شرحاً يوضح سبب الإجابة الصحيحة للطالب..." : "Explain why the answer is correct..."}
@@ -1002,8 +1015,16 @@ export default function EditSkillClusterPage() {
                   />
                 ) : (
                   <textarea 
-                    value={editingActivity.explanationEn || ""} 
-                    onChange={(e) => setEditingActivity({...editingActivity, explanationEn: e.target.value})}
+                    value={editingActivity.explanationEn !== undefined && editingActivity.explanationEn !== null && editingActivity.explanationEn !== '' ? editingActivity.explanationEn : (editingActivity.explanation && !/[\u0600-\u06FF]/.test(editingActivity.explanation) ? editingActivity.explanation : '')} 
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const syncBase = !editingActivity.explanation || (!/[\u0600-\u06FF]/.test(editingActivity.explanation) && editingActivity.explanation === (editingActivity.explanationEn || ''));
+                      setEditingActivity({
+                        ...editingActivity, 
+                        explanationEn: val,
+                        ...(syncBase ? { explanation: val } : {})
+                      });
+                    }}
                     rows={3}
                     placeholder="Explain why the answer is correct in English..."
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none resize-none"
@@ -1158,7 +1179,7 @@ export default function EditSkillClusterPage() {
                     </div>
                     {activityActiveLang === 'ar' ? (
                       <textarea 
-                        value={editingActivity.hint || ""} 
+                        value={(editingActivity.hint && /[\u0600-\u06FF]/.test(editingActivity.hint)) ? editingActivity.hint : ""} 
                         onChange={(e) => setEditingActivity({...editingActivity, hint: e.target.value})}
                         rows={2}
                         placeholder={language === 'ar' ? "تلميح بسيط لمساعدة الطالب على الحل..." : "Simple hint to help the student..."}
@@ -1193,7 +1214,7 @@ export default function EditSkillClusterPage() {
                     </div>
                     {activityActiveLang === 'ar' ? (
                       <textarea 
-                        value={editingActivity.tip || ""} 
+                        value={(editingActivity.tip && /[\u0600-\u06FF]/.test(editingActivity.tip)) ? editingActivity.tip : ""} 
                         onChange={(e) => setEditingActivity({...editingActivity, tip: e.target.value})}
                         rows={2}
                         placeholder={language === 'ar' ? "نصيحة لتجنب الأخطاء الشائعة..." : "Tip to avoid common mistakes..."}
@@ -1228,7 +1249,7 @@ export default function EditSkillClusterPage() {
                     </div>
                     {activityActiveLang === 'ar' ? (
                       <textarea 
-                        value={editingActivity.keyInsight || ""} 
+                        value={(editingActivity.keyInsight && /[\u0600-\u06FF]/.test(editingActivity.keyInsight)) ? editingActivity.keyInsight : ""} 
                         onChange={(e) => setEditingActivity({...editingActivity, keyInsight: e.target.value})}
                         rows={2}
                         placeholder={language === 'ar' ? "الخلاصة أو الفكرة الكبرى من السؤال..." : "The big idea or summary behind the question..."}

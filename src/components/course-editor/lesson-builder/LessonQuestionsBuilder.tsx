@@ -85,13 +85,21 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
 
   React.useEffect(() => {
     if (!showQuestionForm || !tempQuestion) return;
-    const hasArabic = (str?: string | null) => /[\u0600-\u06FF]/.test(String(str || ''));
-    const hasEnglish = (str?: string | null) => /[a-zA-Z]/.test(String(str || ''));
+    const clean = (str?: string | null) => String(str || '').replace(/<[^>]*>/g, '').trim();
+    const hasArabic = (str?: string | null) => /[\u0600-\u06FF]/.test(clean(str));
+    const hasEnglish = (str?: string | null) => /[a-zA-Z]/.test(clean(str));
 
-    if (tempQuestion.textEn && (!tempQuestion.text || tempQuestion.text === tempQuestion.textEn)) {
+    const textClean = clean(tempQuestion.text);
+    const textEnClean = clean(tempQuestion.textEn);
+
+    if (textEnClean) {
       setQuestionActiveLang('en');
-    } else if (hasEnglish(tempQuestion.text) && !hasArabic(tempQuestion.text)) {
+    } else if (hasEnglish(textClean) && !hasArabic(textClean)) {
       setQuestionActiveLang('en');
+    } else if (Array.isArray(tempQuestion.options) && tempQuestion.options.some((o: string) => hasEnglish(o)) && !tempQuestion.options.some((o: string) => hasArabic(o))) {
+      setQuestionActiveLang('en');
+    } else if (hasArabic(textClean)) {
+      setQuestionActiveLang('ar');
     } else if (language === 'en') {
       setQuestionActiveLang('en');
     } else {
@@ -118,13 +126,18 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
       const from = questionActiveLang;
       const to = from === 'ar' ? 'en' : 'ar';
 
-      const srcText = from === 'ar' ? tempQuestion.text : tempQuestion.textEn;
-      const srcExplanation = from === 'ar' ? tempQuestion.explanation : tempQuestion.explanationEn;
+      const isBaseEnOnly = tempQuestion.text && /[a-zA-Z]/.test(tempQuestion.text) && !/[\u0600-\u06FF]/.test(tempQuestion.text);
+      const srcText = from === 'ar'
+        ? (tempQuestion.text || '')
+        : (tempQuestion.textEn || (isBaseEnOnly ? tempQuestion.text : ''));
+      const srcExplanation = from === 'ar'
+        ? (tempQuestion.explanation || '')
+        : (tempQuestion.explanationEn || tempQuestion.explanation || '');
 
       const baseLength = Math.max((tempQuestion.options || []).length, (tempQuestion.optionsEn || []).length, 4);
       const srcOpts = from === 'ar'
         ? Array.from({ length: baseLength }, (_, i) => String(tempQuestion.options?.[i] || ''))
-        : Array.from({ length: baseLength }, (_, i) => String(tempQuestion.optionsEn?.[i] || ''));
+        : Array.from({ length: baseLength }, (_, i) => String(tempQuestion.optionsEn?.[i] || tempQuestion.options?.[i] || ''));
 
       const sectionsList = tempQuestion.sections || [];
       const srcSections = sectionsList.map((sec: any) =>
@@ -1350,7 +1363,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                 </div>
                 <RichTextEditor
                   value={(questionActiveLang === 'ar' 
-                    ? tempQuestion.text 
+                    ? (tempQuestion.text && /[\u0600-\u06FF]/.test(tempQuestion.text) ? tempQuestion.text : '')
                     : (tempQuestion.textEn || (tempQuestion.text && /[a-zA-Z]/.test(tempQuestion.text) && !/[\u0600-\u06FF]/.test(tempQuestion.text) ? tempQuestion.text : ''))
                   ) || ""}
                   onChange={(value) => {
@@ -1511,12 +1524,16 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                     <>
                       {(() => {
                         const baseLength = Math.max((tempQuestion.options || []).length, (tempQuestion.optionsEn || []).length, 4);
-                        const currentOptsAr = Array.from({ length: baseLength }, (_, i) => String(tempQuestion.options?.[i] || ''));
+                        const isArOptsEnglish = (tempQuestion.options || []).some((o: string) => /[a-zA-Z]/.test(o)) && !(tempQuestion.options || []).some((o: string) => /[\u0600-\u06FF]/.test(o));
+                        const currentOptsAr = Array.from({ length: baseLength }, (_, i) => {
+                          const val = String(tempQuestion.options?.[i] || '');
+                          return /[\u0600-\u06FF]/.test(val) ? val : '';
+                        });
                         const currentOptsEn = Array.from({ length: baseLength }, (_, i) => {
                           const enVal = String(tempQuestion.optionsEn?.[i] || '');
                           if (enVal) return enVal;
                           const arVal = String(tempQuestion.options?.[i] || '');
-                          if (/[a-zA-Z]/.test(arVal) && !/[\u0600-\u06FF]/.test(arVal)) return arVal;
+                          if (isArOptsEnglish) return arVal;
                           return '';
                         });
                         const activeOpts = questionActiveLang === 'ar' ? currentOptsAr : currentOptsEn;

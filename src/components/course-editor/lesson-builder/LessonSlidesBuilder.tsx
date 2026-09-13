@@ -112,13 +112,40 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
 
     const list = currentLesson[source] || [];
 
-    const detectSlideLanguage = (block: any): 'ar' | 'en' => {
-      const hasArabic = (text: string) => /[\u0600-\u06FF]/.test(text || "");
-      const hasEnglish = (text: string) => /[a-zA-Z]/.test(text || "");
+    const cleanHtml = (str?: string) => String(str || '').replace(/<[^>]*>/g, '').trim();
 
-      if (block?.titleEn || block?.contentEn || block?.textEn) return 'en';
-      if (hasArabic(block?.title) || hasArabic(block?.content) || hasArabic(block?.text)) return 'ar';
-      if (hasEnglish(block?.title) || hasEnglish(block?.content) || hasEnglish(block?.text)) return 'en';
+    const isEnglishOnly = (str?: string) => {
+      const clean = cleanHtml(str);
+      return /[a-zA-Z]/.test(clean) && !/[\u0600-\u06FF]/.test(clean);
+    };
+
+    const hasArabicChars = (str?: string) => /[\u0600-\u06FF]/.test(cleanHtml(str));
+
+    const detectSlideLanguage = (block: any): 'ar' | 'en' => {
+      if (!block) return language === 'en' ? 'en' : 'ar';
+
+      const body = cleanHtml(block.content || block.text || '');
+      const bodyEn = cleanHtml(block.contentEn || block.textEn || '');
+      const titleClean = cleanHtml(block.title);
+      const titleEnClean = cleanHtml(block.titleEn);
+
+      if (bodyEn || titleEnClean) return 'en';
+
+      if (isEnglishOnly(body)) return 'en';
+      if (hasArabicChars(body)) return 'ar';
+
+      if (Array.isArray(block.options) && block.options.length > 0) {
+        const optsJoined = block.options.map(cleanHtml).join(' ');
+        if (isEnglishOnly(optsJoined)) return 'en';
+        if (hasArabicChars(optsJoined)) return 'ar';
+      }
+
+      const isDefaultTitle = !titleClean || titleClean === 'محتوى جديد' || titleClean === 'سؤال جديد' || titleClean === 'New Content' || titleClean === 'New Question';
+      if (!isDefaultTitle) {
+        if (isEnglishOnly(titleClean)) return 'en';
+        if (hasArabicChars(titleClean)) return 'ar';
+      }
+
       return language === 'en' ? 'en' : 'ar';
     };
 
@@ -140,16 +167,24 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
 
       setTranslatingSlide(prev => ({ ...prev, [sIdx]: true }));
       try {
-        const srcTitle = from === 'ar' ? (block.title || '') : (block.titleEn || block.title || '');
-        const srcContent = from === 'ar' ? (block.content || block.text || '') : (block.contentEn || block.textEn || block.content || block.text || '');
+        const srcTitle = from === 'ar'
+          ? (block.title || '')
+          : (block.titleEn || (isEnglishOnly(block.title) ? block.title : ''));
+        const srcContent = from === 'ar'
+          ? (block.content || block.text || '')
+          : (block.contentEn || block.textEn || (isEnglishOnly(block.content || block.text) ? (block.content || block.text) : ''));
 
         let srcOpts: string[] = [];
         if (block.type === 'QUESTION' && Array.isArray(block.options)) {
-          srcOpts = from === 'ar' ? block.options : (block.optionsEn || block.options || []);
+          srcOpts = from === 'ar'
+            ? block.options
+            : ((block.optionsEn && block.optionsEn.length > 0) ? block.optionsEn : block.options);
         }
 
         const sectionsList = block.sections || [];
-        const srcSections = sectionsList.map((sec: any) => from === 'ar' ? (sec.content || '') : (sec.contentEn || sec.content || ''));
+        const srcSections = sectionsList.map((sec: any) =>
+          from === 'ar' ? (sec.content || '') : (sec.contentEn || sec.content || '')
+        );
 
         const textsToTranslate = [
           srcTitle,
@@ -202,6 +237,14 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
               ...sec,
               content: trSections[i] || sec.content || ''
             }));
+          }
+          if (!updated.titleEn && srcTitle) updated.titleEn = srcTitle;
+          if (!updated.contentEn && srcContent) {
+            updated.contentEn = srcContent;
+            updated.textEn = srcContent;
+          }
+          if ((!updated.optionsEn || updated.optionsEn.length === 0) && srcOpts.length > 0) {
+            updated.optionsEn = srcOpts;
           }
         }
 
@@ -305,19 +348,17 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
         <div className="space-y-4">
           {list.map((block: any, sIdx: number) => {
             const slideLang = getSlideLang(block, sIdx);
+            const isSlideBodyEnglish = isEnglishOnly(block.content || block.text);
+
             const resolvedTitle = slideLang === 'en'
               ? (block.titleEn !== undefined && block.titleEn !== null && block.titleEn !== ''
                   ? block.titleEn
-                  : (block.title && /[a-zA-Z]/.test(block.title) && !/[\u0600-\u06FF]/.test(block.title) ? block.title : ''))
-              : (block.title || '');
+                  : (block.title && isEnglishOnly(block.title) ? block.title : ''))
+              : (block.title && hasArabicChars(block.title) && block.title !== 'محتوى جديد' && block.title !== 'سؤال جديد' ? block.title : '');
 
             const resolvedContent = slideLang === 'en'
-              ? (block.contentEn || block.textEn || (
-                  (block.content || block.text) && /[a-zA-Z]/.test(block.content || block.text) && !/[\u0600-\u06FF]/.test(block.content || block.text)
-                    ? (block.content || block.text)
-                    : ''
-                ))
-              : (block.content || block.text || '');
+              ? (block.contentEn || block.textEn || (isSlideBodyEnglish ? (block.content || block.text) : ''))
+              : (hasArabicChars(block.content || block.text) ? (block.content || block.text) : '');
 
             return (
               <React.Fragment key={block.id ?? sIdx}>
@@ -791,13 +832,14 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
                             </div>
                           ) : (
                             (() => {
+                              const isEnOpts = (block.options || []).some((o: string) => /[a-zA-Z]/.test(o)) && !(block.options || []).some((o: string) => /[\u0600-\u06FF]/.test(o));
                               const rawOpts = slideLang === 'en'
                                 ? ((block.optionsEn && block.optionsEn.length > 0)
                                     ? block.optionsEn
-                                    : (block.options || []).map((o: string) => (/[a-zA-Z]/.test(o) && !/[\u0600-\u06FF]/.test(o) ? o : '')))
-                                : (block.options || []);
-                              const baseOpts = block.options || [];
-                              const displayOpts = rawOpts.length > 0 ? rawOpts : (baseOpts.length > 0 ? baseOpts : ["", "", "", ""]);
+                                    : (isEnOpts ? (block.options || []) : ["", "", "", ""]))
+                                : (block.options || []).map((o: string) => (/[\u0600-\u06FF]/.test(o) ? o : ''));
+                              const baseOpts = (block.options && block.options.length > 0) ? block.options : (block.optionsEn || ["", "", "", ""]);
+                              const displayOpts = rawOpts.length > 0 ? rawOpts : ["", "", "", ""];
 
                               return (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

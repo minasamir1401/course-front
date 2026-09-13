@@ -33,23 +33,21 @@ export const QuestionsBuilder = (props: any) => {
 
   const detectQuestionLanguage = (q: any): 'ar' | 'en' => {
     if (!q) return isExamEnglish ? 'en' : 'ar';
-    const sampleText = [
-      q.text,
-      q.explanation,
-      ...(Array.isArray(q.options) ? q.options : []),
-      q.domain,
-      q.section,
-      q.course,
-      q.subskill,
-      q.microSkill,
-    ].filter(Boolean).join(' ');
+    const clean = (str?: string | null) => String(str || '').replace(/<[^>]*>/g, '').trim();
 
-    const hasAr = hasArabicChars(sampleText);
-    const hasEn = hasEnglishChars(sampleText) || hasEnglishChars(q.textEn);
+    const textClean = clean(q.text);
+    const textEnClean = clean(q.textEn);
 
-    if (hasEn && !hasAr) return 'en';
-    if (hasAr && !hasEn) return 'ar';
-    if (q.textEn && !q.text) return 'en';
+    if (textEnClean) return 'en';
+    if (hasEnglishChars(textClean) && !hasArabicChars(textClean)) return 'en';
+
+    if (Array.isArray(q.options) && q.options.length > 0) {
+      const optsClean = q.options.map(clean).join(' ');
+      if (hasEnglishChars(optsClean) && !hasArabicChars(optsClean)) return 'en';
+      if (hasArabicChars(optsClean)) return 'ar';
+    }
+
+    if (hasArabicChars(textClean)) return 'ar';
     if (isExamEnglish) return 'en';
     return 'ar';
   };
@@ -807,7 +805,7 @@ export const QuestionsBuilder = (props: any) => {
                   )}
                 </div>
                 <RichTextEditor
-                  value={(questionActiveLang === 'ar' ? tempQuestion.text : (tempQuestion.textEn || (!hasArabicChars(tempQuestion.text) ? tempQuestion.text : ''))) || ""}
+                  value={(questionActiveLang === 'ar' ? (hasArabicChars(tempQuestion.text) ? tempQuestion.text : '') : (tempQuestion.textEn || (hasEnglishChars(tempQuestion.text) && !hasArabicChars(tempQuestion.text) ? tempQuestion.text : ''))) || ""}
                   onChange={(value) => {
                     if (questionActiveLang === 'en') {
                       updateCurrentQuestionField("textEn", value);
@@ -1006,15 +1004,14 @@ export const QuestionsBuilder = (props: any) => {
                   ) : (
                     <>
                       {(() => {
-                        const baseLength = Math.max((tempQuestion.options || []).length, 4);
-                        const currentOptsAr = Array.from({ length: baseLength }, (_, i) => String(tempQuestion.options?.[i] || ''));
-                        const isArOptsEnglish = currentOptsAr.some((o: string) => hasEnglishChars(o)) && !currentOptsAr.some((o: string) => hasArabicChars(o));
-                        const currentOptsEnRaw = Array.from({ length: baseLength }, (_, i) => String(tempQuestion.optionsEn?.[i] || ''));
-                        const resolvedOptsEn = currentOptsEnRaw.map((enOpt, idx) => {
-                          if (enOpt && enOpt.trim()) return enOpt;
-                          if (isArOptsEnglish || isQuestionEnglish(tempQuestion)) return currentOptsAr[idx] || '';
-                          return '';
-                        });
+                        const baseLength = Math.max((tempQuestion.options || []).length, (tempQuestion.optionsEn || []).length, 4);
+                        const rawOptsAr = Array.from({ length: baseLength }, (_, i) => String(tempQuestion.options?.[i] || ''));
+                        const rawOptsEn = Array.from({ length: baseLength }, (_, i) => String(tempQuestion.optionsEn?.[i] || ''));
+                        const isArOptsEnglish = rawOptsAr.some(o => hasEnglishChars(o)) && !rawOptsAr.some(o => hasArabicChars(o));
+                        const currentOptsAr = rawOptsAr.map(o => hasArabicChars(o) ? o : '');
+                        const resolvedOptsEn = rawOptsEn.some(o => o && o.trim())
+                          ? rawOptsEn
+                          : (isArOptsEnglish ? rawOptsAr : rawOptsEn);
                         const activeOpts = questionActiveLang === 'ar' ? currentOptsAr : resolvedOptsEn;
 
                         return activeOpts.map((opt: string, oIndex: number) => {
