@@ -34,30 +34,40 @@ export const QuestionsBuilder = (props: any) => {
 
     const textClean = clean(q.text);
     const textEnClean = clean(q.textEn);
+    const optsClean = Array.isArray(q.options) ? q.options.map(clean).join(' ') : '';
+    const optsEnClean = Array.isArray(q.optionsEn) ? q.optionsEn.map(clean).join(' ') : '';
 
-    if (textEnClean) return 'en';
-    if (hasEnglishChars(textClean) && !hasArabicChars(textClean)) return 'en';
+    const allAr = `${textClean} ${optsClean}`;
+    const allEn = `${textEnClean} ${optsEnClean}`;
 
-    if (Array.isArray(q.options) && q.options.length > 0) {
-      const optsClean = q.options.map(clean).join(' ');
-      if (hasEnglishChars(optsClean) && !hasArabicChars(optsClean)) return 'en';
-      if (hasArabicChars(optsClean)) return 'ar';
-    }
+    const hasAr = hasArabicChars(allAr);
+    const hasEn = hasEnglishChars(allEn) || (hasEnglishChars(allAr) && !hasAr);
+
+    if (hasEn && !hasAr) return 'en';
+    if (hasAr && !hasEn) return 'ar';
 
     if (hasArabicChars(textClean)) return 'ar';
-    if (isExamEnglish) return 'en';
-    return 'ar';
+    if (hasEnglishChars(textClean) && !hasArabicChars(textClean)) return 'en';
+
+    return isExamEnglish ? 'en' : 'ar';
   };
 
   const [questionActiveLang, setQuestionActiveLang] = React.useState<'ar' | 'en'>('ar');
   const [cardPreviewLang, setCardPreviewLang] = React.useState<Record<number, 'ar' | 'en'>>({});
   const [isTranslatingQuestion, setIsTranslatingQuestion] = React.useState(false);
+  const lastActiveQKeyRef = React.useRef<any>(null);
 
   React.useEffect(() => {
     if (showQuestionForm) {
-      setQuestionActiveLang(detectQuestionLanguage(tempQuestion));
+      const qKey = `${editingQuestionIndex ?? 'new'}-${tempQuestion?.id ?? ''}`;
+      if (lastActiveQKeyRef.current !== qKey) {
+        lastActiveQKeyRef.current = qKey;
+        setQuestionActiveLang(detectQuestionLanguage(tempQuestion));
+      }
+    } else {
+      lastActiveQKeyRef.current = null;
     }
-  }, [showQuestionForm, editingQuestionIndex, tempQuestion?.id, tempQuestion?.text, tempQuestion?.textEn, isExamEnglish]);
+  }, [showQuestionForm, editingQuestionIndex, tempQuestion?.id, isExamEnglish]);
 
   const extractFirstImage = (text?: string, imageUrl?: string): string | null => {
     if (imageUrl && typeof imageUrl === 'string' && imageUrl.trim()) return imageUrl.trim();

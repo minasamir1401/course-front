@@ -83,29 +83,46 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
   const [cardPreviewLang, setCardPreviewLang] = useState<Record<number, 'ar' | 'en'>>({});
   const [isTranslatingQuestion, setIsTranslatingQuestion] = useState(false);
 
+  const lastActiveQKeyRef = React.useRef<any>(null);
+
   React.useEffect(() => {
-    if (!showQuestionForm || !tempQuestion) return;
+    if (!showQuestionForm || !tempQuestion) {
+      lastActiveQKeyRef.current = null;
+      return;
+    }
+    const qKey = `${editingQuestionIndex ?? 'new'}-${tempQuestion?.id ?? ''}`;
+    if (lastActiveQKeyRef.current === qKey) return;
+    lastActiveQKeyRef.current = qKey;
+
     const clean = (str?: string | null) => String(str || '').replace(/<[^>]*>/g, '').trim();
     const hasArabic = (str?: string | null) => /[\u0600-\u06FF]/.test(clean(str));
     const hasEnglish = (str?: string | null) => /[a-zA-Z]/.test(clean(str));
 
     const textClean = clean(tempQuestion.text);
     const textEnClean = clean(tempQuestion.textEn);
+    const optsClean = Array.isArray(tempQuestion.options) ? tempQuestion.options.map(clean).join(' ') : '';
+    const optsEnClean = Array.isArray(tempQuestion.optionsEn) ? tempQuestion.optionsEn.map(clean).join(' ') : '';
 
-    if (textEnClean) {
+    const allAr = `${textClean} ${optsClean}`;
+    const allEn = `${textEnClean} ${optsEnClean}`;
+
+    const hasAr = hasArabic(allAr);
+    const hasEn = hasEnglish(allEn) || (hasEnglish(allAr) && !hasAr);
+
+    if (hasEn && !hasAr) {
       setQuestionActiveLang('en');
-    } else if (hasEnglish(textClean) && !hasArabic(textClean)) {
-      setQuestionActiveLang('en');
-    } else if (Array.isArray(tempQuestion.options) && tempQuestion.options.some((o: string) => hasEnglish(o)) && !tempQuestion.options.some((o: string) => hasArabic(o))) {
-      setQuestionActiveLang('en');
+    } else if (hasAr && !hasEn) {
+      setQuestionActiveLang('ar');
     } else if (hasArabic(textClean)) {
       setQuestionActiveLang('ar');
+    } else if (hasEnglish(textClean) && !hasArabic(textClean)) {
+      setQuestionActiveLang('en');
     } else if (language === 'en') {
       setQuestionActiveLang('en');
     } else {
       setQuestionActiveLang('ar');
     }
-  }, [showQuestionForm, editingQuestionIndex]);
+  }, [showQuestionForm, editingQuestionIndex, tempQuestion?.id, language]);
 
   const extractFirstImage = (question: any): string | null => {
     if (!question) return null;

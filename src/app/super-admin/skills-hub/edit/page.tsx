@@ -76,14 +76,20 @@ export default function EditSkillClusterPage() {
     const titleClean = clean(editingActivity.title);
     const titleEnClean = clean(editingActivity.titleEn);
 
-    if (qEnClean || titleEnClean) {
+    const allAr = `${qClean} ${titleClean}`;
+    const allEn = `${qEnClean} ${titleEnClean}`;
+
+    const hasArContent = hasAr(allAr);
+    const hasEnContent = hasEn(allEn) || (hasEn(allAr) && !hasArContent);
+
+    if (hasEnContent && !hasArContent) {
       setActivityActiveLang('en');
-    } else if (hasEn(qClean) && !hasAr(qClean)) {
-      setActivityActiveLang('en');
-    } else if (hasEn(titleClean) && !hasAr(titleClean)) {
-      setActivityActiveLang('en');
+    } else if (hasArContent && !hasEnContent) {
+      setActivityActiveLang('ar');
     } else if (hasAr(qClean) || hasAr(titleClean)) {
       setActivityActiveLang('ar');
+    } else if (hasEn(qClean) || hasEn(titleClean)) {
+      setActivityActiveLang('en');
     } else if (language === 'en') {
       setActivityActiveLang('en');
     } else {

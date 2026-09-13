@@ -128,22 +128,25 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
       const bodyEn = cleanHtml(block.contentEn || block.textEn || '');
       const titleClean = cleanHtml(block.title);
       const titleEnClean = cleanHtml(block.titleEn);
+      const optsJoined = Array.isArray(block.options) ? block.options.map(cleanHtml).join(' ') : '';
+      const optsEnJoined = Array.isArray(block.optionsEn) ? block.optionsEn.map(cleanHtml).join(' ') : '';
 
-      if (bodyEn || titleEnClean) return 'en';
+      const allAr = `${body} ${titleClean} ${optsJoined}`;
+      const allEn = `${bodyEn} ${titleEnClean} ${optsEnJoined}`;
 
-      if (isEnglishOnly(body)) return 'en';
+      const hasAr = hasArabicChars(allAr);
+      const hasEn = isEnglishOnly(allEn) || (isEnglishOnly(allAr) && !hasAr);
+
+      if (hasEn && !hasAr) return 'en';
+      if (hasAr && !hasEn) return 'ar';
+
       if (hasArabicChars(body)) return 'ar';
-
-      if (Array.isArray(block.options) && block.options.length > 0) {
-        const optsJoined = block.options.map(cleanHtml).join(' ');
-        if (isEnglishOnly(optsJoined)) return 'en';
-        if (hasArabicChars(optsJoined)) return 'ar';
-      }
+      if (isEnglishOnly(body)) return 'en';
 
       const isDefaultTitle = !titleClean || titleClean === 'محتوى جديد' || titleClean === 'سؤال جديد' || titleClean === 'New Content' || titleClean === 'New Question';
       if (!isDefaultTitle) {
-        if (isEnglishOnly(titleClean)) return 'en';
         if (hasArabicChars(titleClean)) return 'ar';
+        if (isEnglishOnly(titleClean)) return 'en';
       }
 
       return language === 'en' ? 'en' : 'ar';
