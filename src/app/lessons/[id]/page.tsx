@@ -12,7 +12,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 
 const VideoPlayer = dynamic(() => import('@/components/VideoPlayer'), { ssr: false });
 const Confetti = dynamic(() => import('react-confetti'), { ssr: false });
-const InteractiveQuestionRenderer = dynamic(() => import('@/components/InteractiveQuestionRenderer'), { ssr: false });
+import InteractiveQuestionRenderer from '@/components/InteractiveQuestionRenderer';
 import HtmlRenderer from '@/components/HtmlRenderer';
 import { getOptionLetter, cleanOptionText } from '@/lib/utils';
 import AnimatedFeedback from "@/components/AnimatedFeedback";

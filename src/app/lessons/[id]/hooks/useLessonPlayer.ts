@@ -434,22 +434,28 @@ export function useLessonPlayer() {
           setTotalLessonXP(data.xpData.totalLessonXP || 0);
         }
 
+        setIsLoading(false);
+
         const finalCourseId = data.courseId || courseId;
         if (finalCourseId) {
-          const cRes = await apiFetch(`${API_URL}/courses/${finalCourseId}`);
-          if (cRes.ok) {
-            const courseData = await cRes.json();
-            setCourse(courseData);
-            if (Array.isArray(courseData.lessons)) {
-              const sorted = [...courseData.lessons].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-              setCourseLessons(sorted);
-            }
-          }
+          apiFetch(`${API_URL}/courses/${finalCourseId}?summary=true`)
+            .then((cRes) => (cRes.ok ? cRes.json() : null))
+            .then((courseData) => {
+              if (courseData) {
+                setCourse(courseData);
+                if (Array.isArray(courseData.lessons)) {
+                  const sorted = [...courseData.lessons].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+                  setCourseLessons(sorted);
+                }
+              }
+            })
+            .catch((err) => console.error("Failed to fetch sibling lessons:", err));
         }
+      } else {
+        setIsLoading(false);
       }
     } catch (error) {
       console.error("Failed to fetch lesson data:", error);
-    } finally {
       setIsLoading(false);
     }
   };

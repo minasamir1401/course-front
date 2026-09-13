@@ -117,17 +117,32 @@ function processHtml(html: string): string {
   return result;
 }
 
+const htmlProcessCache = new Map<string, string>();
+const MAX_HTML_CACHE_SIZE = 2000;
+
+function getCachedProcessedHtml(rawHtml: string): string {
+  if (!rawHtml || typeof rawHtml !== "string") return "";
+  const cached = htmlProcessCache.get(rawHtml);
+  if (cached !== undefined) return cached;
+
+  const clean = sanitizeHtml(rawHtml);
+  const processed = processHtml(clean);
+
+  if (htmlProcessCache.size >= MAX_HTML_CACHE_SIZE) {
+    const firstKey = htmlProcessCache.keys().next().value;
+    if (firstKey) htmlProcessCache.delete(firstKey);
+  }
+  htmlProcessCache.set(rawHtml, processed);
+  return processed;
+}
+
 function HtmlRenderer({ html, className = "", tag: Tag = "div" }: HtmlRendererProps) {
   const combinedClassName = className.includes("prose") ? className : `prose ${className}`.trim();
   
-  // Memoize the expensive KaTeX processing so it only runs when the HTML string actually changes,
-  // preventing massive lag when only the className changes (e.g. selecting an option).
   const processedHtml = React.useMemo(() => {
-    const clean = sanitizeHtml(html || "");
-    return processHtml(clean);
+    return getCachedProcessedHtml(html || "");
   }, [html]);
 
-  // Check if the processed HTML contains KaTeX-rendered math (to avoid dir=auto reversing < > signs)
   const hasMath = processedHtml.includes('katex') || processedHtml.includes('\\(') || processedHtml.includes('\\[');
 
   return (

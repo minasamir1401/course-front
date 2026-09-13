@@ -16,10 +16,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { getOptionLetter, cleanOptionText } from "@/lib/utils";
 import { ItemSectionsBubbles, MetadataModalButton } from '@/components/LessonSubComponents';
 import { InteractiveTag } from '@/components/InteractiveTag';
-import dynamic from 'next/dynamic';
 import { getAnswerStatusLabel, getInExamQuestionTypeLabel, getSafeCurrentQuestion, resolveTakeExamQuestions, toggleReviewFlag } from '@/lib/takeExamUi';
-
-const InteractiveQuestionRenderer = dynamic(() => import('@/components/InteractiveQuestionRenderer'), { ssr: false });
+import InteractiveQuestionRenderer from '@/components/InteractiveQuestionRenderer';
 
 export default function TakeExamPage() {
   return (
@@ -78,6 +76,75 @@ const parseQuestionChoices = (options: any): string[] => {
   }
   return [];
 };
+
+interface ExamOptionButtonProps {
+  option: string;
+  index: number;
+  isSelected: boolean;
+  isOptionCorrectInPreview: boolean;
+  showPreviewAnswers: boolean;
+  isPreviewMode: boolean;
+  isMultiSelect: boolean;
+  activeExamLang: 'ar' | 'en';
+  isEn: boolean;
+  onSelect: (option: string) => void;
+}
+
+const ExamOptionButton = React.memo(function ExamOptionButton({
+  option,
+  index,
+  isSelected,
+  isOptionCorrectInPreview,
+  showPreviewAnswers,
+  isPreviewMode,
+  isMultiSelect,
+  activeExamLang,
+  isEn,
+  onSelect,
+}: ExamOptionButtonProps) {
+  return (
+    <button
+      type="button"
+      dir={isEn ? 'ltr' : 'rtl'}
+      onClick={() => onSelect(option)}
+      className={`w-full text-start p-5 rounded-2xl border-2 transition-all flex items-center justify-between gap-4 group ${
+        showPreviewAnswers && isPreviewMode && isOptionCorrectInPreview
+          ? "bg-emerald-50 border-emerald-500 shadow-md shadow-emerald-100"
+          : showPreviewAnswers && isPreviewMode && isSelected && !isOptionCorrectInPreview
+          ? "bg-rose-50 border-rose-500 shadow-md shadow-rose-100"
+          : isSelected
+          ? "bg-indigo-50 border-indigo-600 shadow-md shadow-indigo-100"
+          : "bg-white border-slate-100 hover:border-slate-300 hover:bg-slate-50"
+      }`}
+    >
+      <div className="flex items-center gap-3.5 flex-1 text-start">
+        <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 transition-colors ${
+          isSelected
+            ? "bg-indigo-600 text-white shadow-sm"
+            : "bg-slate-100 text-slate-600 group-hover:bg-slate-200"
+        }`}>
+          {getOptionLetter(index, activeExamLang)}
+        </span>
+        <span className={`text-lg font-bold ${isSelected ? "text-indigo-900" : "text-slate-700"}`}>
+          <HtmlRenderer html={cleanOptionText(option)} tag="span" />
+        </span>
+      </div>
+      <div
+        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ms-3 ${
+          isSelected
+            ? "bg-indigo-600 border-indigo-600"
+            : "border-slate-300 group-hover:border-indigo-400"
+        }`}
+      >
+        {isSelected && (
+          isMultiSelect 
+            ? <CheckCircle2 className="w-4 h-4 text-white" />
+            : <div className="w-2 h-2 bg-white rounded-full"></div>
+        )}
+      </div>
+    </button>
+  );
+});
 
 function TakeExamPageContent() {
   const { id } = useParams();
@@ -329,44 +396,51 @@ function TakeExamPageContent() {
     }
   };
 
-  const handleSelectAnswer = (selectedAnswer: string) => {
-    const newAnswers = [...answers];
-    const question = getSafeCurrentQuestion(examQuestions, currentQuestion);
-    if (!question) return;
-    const questionId = question.id;
-    const existingIndex = newAnswers.findIndex((a) => a.questionId === questionId);
+  const handleSelectAnswer = React.useCallback((selectedAnswer: string) => {
+    setAnswers((prevAnswers) => {
+      const newAnswers = [...prevAnswers];
+      const question = getSafeCurrentQuestion(examQuestions, currentQuestion);
+      if (!question) return prevAnswers;
+      const questionId = question.id;
+      const existingIndex = newAnswers.findIndex((a) => a.questionId === questionId);
 
-    if (question.type === "MULTI_SELECT") {
-      let currentSelected: string[] = [];
-      if (existingIndex > -1) {
-        currentSelected = Array.isArray(newAnswers[existingIndex].selectedAnswers) 
-          ? newAnswers[existingIndex].selectedAnswers 
-          : [newAnswers[existingIndex].selectedAnswer].filter(Boolean);
-        
-        if (currentSelected.includes(selectedAnswer)) {
-          currentSelected = currentSelected.filter(s => s !== selectedAnswer);
+      if (question.type === "MULTI_SELECT") {
+        let currentSelected: string[] = [];
+        if (existingIndex > -1) {
+          currentSelected = Array.isArray(newAnswers[existingIndex].selectedAnswers) 
+            ? newAnswers[existingIndex].selectedAnswers 
+            : [newAnswers[existingIndex].selectedAnswer].filter(Boolean);
+          
+          if (currentSelected.includes(selectedAnswer)) {
+            currentSelected = currentSelected.filter(s => s !== selectedAnswer);
+          } else {
+            currentSelected.push(selectedAnswer);
+          }
+          newAnswers[existingIndex] = {
+            ...newAnswers[existingIndex],
+            selectedAnswers: currentSelected,
+            selectedAnswer: JSON.stringify(currentSelected)
+          };
         } else {
-          currentSelected.push(selectedAnswer);
+          newAnswers.push({ questionId, selectedAnswers: [selectedAnswer], selectedAnswer: JSON.stringify([selectedAnswer]) });
         }
-        newAnswers[existingIndex].selectedAnswers = currentSelected;
-        // Keep selectedAnswer for backward compatibility or simple check
-        newAnswers[existingIndex].selectedAnswer = JSON.stringify(currentSelected);
       } else {
-        newAnswers.push({ questionId, selectedAnswers: [selectedAnswer], selectedAnswer: JSON.stringify([selectedAnswer]) });
+        if (existingIndex > -1) {
+          newAnswers[existingIndex] = {
+            ...newAnswers[existingIndex],
+            selectedAnswer
+          };
+        } else {
+          newAnswers.push({ questionId, selectedAnswer });
+        }
       }
-    } else {
-      if (existingIndex > -1) {
-        newAnswers[existingIndex].selectedAnswer = selectedAnswer;
-      } else {
-        newAnswers.push({ questionId, selectedAnswer });
+      if (!isPreviewMode) {
+        try { localStorage.setItem(`exam_${id}_${subExamId || "root"}_answers`, JSON.stringify(newAnswers)); }
+        catch { /* Keep in-memory answer usable */ }
       }
-    }
-    setAnswers(newAnswers);
-    if (!isPreviewMode) {
-      try { localStorage.setItem(`exam_${id}_${subExamId || "root"}_answers`, JSON.stringify(newAnswers)); }
-      catch { /* Keep the in-memory answer usable if browser storage is unavailable. */ }
-    }
-  };
+      return newAnswers;
+    });
+  }, [examQuestions, currentQuestion, isPreviewMode, id, subExamId]);
 
   const handleSubmit = async () => {
     if (submitting) return;
@@ -836,46 +910,19 @@ function TakeExamPageContent() {
                             : (question.correctAnswer === option || (arOpt && question.correctAnswer === arOpt));
 
                           return (
-                            <button
+                            <ExamOptionButton
                               key={i}
-                              dir={isEn ? 'ltr' : 'rtl'}
-                              onClick={() => handleSelectAnswer(option)}
-                              className={`w-full text-start p-5 rounded-2xl border-2 transition-all flex items-center justify-between gap-4 group ${
-                                showPreviewAnswers && isPreviewMode && isOptionCorrectInPreview
-                                  ? "bg-emerald-50 border-emerald-500 shadow-md shadow-emerald-100"
-                                  : showPreviewAnswers && isPreviewMode && isSelected && !isOptionCorrectInPreview
-                                  ? "bg-rose-50 border-rose-500 shadow-md shadow-rose-100"
-                                  : isSelected
-                                  ? "bg-indigo-50 border-indigo-600 shadow-md shadow-indigo-100"
-                                  : "bg-white border-slate-100 hover:border-slate-300 hover:bg-slate-50"
-                              }`}
-                            >
-                              <div className="flex items-center gap-3.5 flex-1 text-start">
-                                <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 transition-colors ${
-                                  isSelected
-                                    ? "bg-indigo-600 text-white shadow-sm"
-                                    : "bg-slate-100 text-slate-600 group-hover:bg-slate-200"
-                                }`}>
-                                  {getOptionLetter(i, activeExamLang)}
-                                </span>
-                                <span className={`text-lg font-bold ${isSelected ? "text-indigo-900" : "text-slate-700"}`}>
-                                  <HtmlRenderer html={cleanOptionText(option)} tag="span" />
-                                </span>
-                              </div>
-                              <div
-                                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ms-3 ${
-                                  isSelected
-                                    ? "bg-indigo-600 border-indigo-600"
-                                    : "border-slate-300 group-hover:border-indigo-400"
-                                }`}
-                              >
-                                {isSelected && (
-                                  question.type === "MULTI_SELECT" 
-                                    ? <CheckCircle2 className="w-4 h-4 text-white" />
-                                    : <div className="w-2 h-2 bg-white rounded-full"></div>
-                                )}
-                              </div>
-                            </button>
+                              option={option}
+                              index={i}
+                              isSelected={Boolean(isSelected)}
+                              isOptionCorrectInPreview={Boolean(isOptionCorrectInPreview)}
+                              showPreviewAnswers={showPreviewAnswers}
+                              isPreviewMode={isPreviewMode}
+                              isMultiSelect={question.type === "MULTI_SELECT"}
+                              activeExamLang={activeExamLang}
+                              isEn={isEn}
+                              onSelect={handleSelectAnswer}
+                            />
                           );
                         })}
                       </div>
