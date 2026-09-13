@@ -177,7 +177,7 @@ const openAddModuleModal = () => {
       list = currentModule[source] || [];
     }
     const wsData = [];
-    const headersAr = ['Question ID', 'Question Text', 'الاختبار', 'القسم', 'المجال', 'نواتج التعلم', 'المؤشرات', 'المهارة', 'المهارة الفرعية', 'المهارة الدقيقة', 'الصعوبة', 'عمق المعرفة (DOK)', 'المستوى المعرفي', 'نمط الخطأ', 'Estimated Time'];
+    const headersAr = ['Question ID', 'Question Text', 'الاختبار', 'القسم', 'المجال', 'نواتج التعلم', 'المؤشرات', 'المهارة', 'المهارة الفرعية', 'المهارة الدقيقة', 'الصعوبة', 'عمق المعرفة (DOK)', 'المستوى المعرفي', 'نمط الخطأ', 'الوقت التقديري'];
     const headersEn = ['Question ID', 'Question Text', 'Exam', 'Section', 'Domain', 'Learning Outcomes', 'Indicators', 'Skill', 'Subskill', 'Micro Skill', 'Difficulty', 'DOK', 'Cognitive', 'Error Pattern', 'Estimated Time'];
     wsData.push(language === 'ar' ? headersAr : headersEn);
     
@@ -348,7 +348,11 @@ const openAddModuleModal = () => {
   };
 
   const downloadQuestionsTemplate = (type: 'questions' | 'assignments') => {
-    XLSX.writeFile(buildQuestionWorkbook(null, language), type === 'assignments' ? 'assignments_template.xlsx' : 'practice_questions_template.xlsx');
+    const filename = language === 'ar'
+      ? (type === 'assignments' ? 'قالب_التكليفات_ثنائي_اللغة.xlsx' : 'قالب_الأسئلة_ثنائي_اللغة.xlsx')
+      : (type === 'assignments' ? 'assignments_bilingual_template.xlsx' : 'bilingual_questions_template.xlsx');
+    XLSX.writeFile(buildQuestionWorkbook(null, language), filename);
+    showToast(language === 'ar' ? 'تم تحميل القالب ثنائي اللغة بنجاح' : 'Bilingual template downloaded successfully', 'success');
   };
   const addBlock = (source: 'slides' | 'assignments' | 'questions' = 'slides', type: 'TEXT' | 'QUESTION') => {
     const newBlock = type === 'TEXT' 

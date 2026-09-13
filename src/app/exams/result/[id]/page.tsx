@@ -193,21 +193,7 @@ export default function ExamResultPage() {
   const [watermarkText, setWatermarkText] = useState("");
 
   useEffect(() => {
-    try {
-      const userStr = localStorage.getItem("lms_user");
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        let text = user.name || user.email || "Student";
-        if (user.schoolName) text += " - " + user.schoolName;
-        else if (user.schoolId) text += " - School: " + user.schoolId;
-        text += " - KLEVRO";
-        setWatermarkText(text);
-      } else {
-        setWatermarkText("KLEVRO");
-      }
-    } catch {
-      setWatermarkText("KLEVRO");
-    }
+    setWatermarkText("Klevro");
   }, []);
 
   const translateTrueFalse = (opt: string) => {
@@ -671,6 +657,7 @@ export default function ExamResultPage() {
                         <img
                           src={answer.question.imageUrl}
                           alt="Question"
+                          loading="lazy"
                           className="max-w-full rounded-2xl border border-slate-100 shadow-sm mx-auto"
                         />
                       )}

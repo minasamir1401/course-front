@@ -16,6 +16,8 @@ import { InteractiveTag } from "@/components/InteractiveTag";
 import HtmlRenderer from "@/components/HtmlRenderer";
 import VideoPlayer from "@/components/VideoPlayer";
 import RichTextEditor from "@/components/RichTextEditor";
+import QuestionImageGallery from "@/components/QuestionImageGallery";
+import { extractImageUrls } from "@/lib/image-utils";
 import { translateBatch } from "@/lib/translationService";
 
 
@@ -970,6 +972,27 @@ export default function EditSchoolSkillClusterPage() {
                   </select>
                 </div>
 
+                {/* Question Images & Cross-Language Media Tray */}
+                <div className="md:col-span-3">
+                  <QuestionImageGallery
+                    language={language}
+                    activeLang={activityActiveLang}
+                    tempQuestion={editingActivity}
+                    allQuestions={expandedLessonId && activitiesData[expandedLessonId] ? activitiesData[expandedLessonId] : []}
+                    onUpdateQuestion={(field, val) => {
+                      setEditingActivity((prev: any) => ({
+                        ...prev,
+                        [field]: val,
+                        ...(field === 'questionTextEn' && (!prev?.questionText || !/[\u0600-\u06FF]/.test(prev?.questionText)) ? { questionText: val } : {})
+                      }));
+                    }}
+                    showToast={showToast}
+                    textField="questionText"
+                    textFieldEn="questionTextEn"
+                    imageField="image"
+                  />
+                </div>
+
                 {/* Question Rich Text */}
                 <div className="space-y-2 md:col-span-3">
                   <div className="flex items-center justify-between">
@@ -988,6 +1011,15 @@ export default function EditSchoolSkillClusterPage() {
                         key="ar-school-qtext"
                         value={(editingActivity.questionText && /[\u0600-\u06FF]/.test(editingActivity.questionText)) ? editingActivity.questionText : ""} 
                         onChange={(val) => setEditingActivity({...editingActivity, questionText: val})} 
+                        availableImages={extractImageUrls([
+                          editingActivity.questionText,
+                          editingActivity.questionTextEn,
+                          editingActivity.image,
+                          editingActivity.explanation,
+                          editingActivity.explanationEn,
+                          typeof editingActivity.options === 'string' ? editingActivity.options : JSON.stringify(editingActivity.options || ''),
+                          typeof editingActivity.optionsEn === 'string' ? editingActivity.optionsEn : JSON.stringify(editingActivity.optionsEn || '')
+                        ].filter(Boolean).join(' '))}
                       />
                     ) : (
                       <RichTextEditor 
@@ -1001,6 +1033,15 @@ export default function EditSchoolSkillClusterPage() {
                             ...(syncBase ? { questionText: val } : {})
                           });
                         }} 
+                        availableImages={extractImageUrls([
+                          editingActivity.questionText,
+                          editingActivity.questionTextEn,
+                          editingActivity.image,
+                          editingActivity.explanation,
+                          editingActivity.explanationEn,
+                          typeof editingActivity.options === 'string' ? editingActivity.options : JSON.stringify(editingActivity.options || ''),
+                          typeof editingActivity.optionsEn === 'string' ? editingActivity.optionsEn : JSON.stringify(editingActivity.optionsEn || '')
+                        ].filter(Boolean).join(' '))}
                       />
                     )}
                   </div>

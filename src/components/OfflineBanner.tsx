@@ -6,12 +6,31 @@ import { WifiOff, Loader2, AlertTriangle, X } from "lucide-react";
 
 interface OfflineBannerProps { language?: string }
 
+const SESSION_DISMISS_KEY = "lms_offline_banner_dismissed";
+
 export const OfflineBanner: React.FC<OfflineBannerProps> = ({ language = "ar" }) => {
   const [state, setState] = useState<OfflineSyncState>(() => offlineSync.getState());
   const [exportError, setExportError] = useState(false);
-  const [isDismissed, setIsDismissed] = useState(false);
+  const [isDismissed, setIsDismissed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return sessionStorage.getItem(SESSION_DISMISS_KEY) === "true";
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => offlineSync.subscribe(setState), []);
+
+  useEffect(() => {
+    if (!state.isOnline) {
+      setIsDismissed(false);
+      try {
+        sessionStorage.removeItem(SESSION_DISMISS_KEY);
+      } catch {}
+    }
+  }, [state.isOnline]);
+
   const arabic = language === "ar";
 
   const exportPending = () => {
@@ -26,19 +45,79 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({ language = "ar" })
       anchor.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       setExportError(false);
-    } catch { setExportError(true); }
+    } catch {
+      setExportError(true);
+    }
   };
 
-  if (isDismissed || (state.isOnline && state.pendingCount === 0 && !state.isSyncing && !state.lastError && !exportError)) return null;
+  const handleDismiss = () => {
+    setIsDismissed(true);
+    try {
+      sessionStorage.setItem(SESSION_DISMISS_KEY, "true");
+    } catch {}
+  };
+
+  const handleDiscard = async () => {
+    await offlineSync.clearAll();
+    setIsDismissed(true);
+    try {
+      sessionStorage.setItem(SESSION_DISMISS_KEY, "true");
+    } catch {}
+  };
+
+  // If online, no pending changes, and not actively syncing, never show banner
+  if (isDismissed || (state.isOnline && state.pendingCount === 0 && !state.isSyncing)) {
+    return null;
+  }
 
   return (
-    <div role="status" className="fixed top-0 left-0 right-0 z-[9999] flex flex-wrap items-center justify-center gap-3 px-4 py-2.5 text-sm font-bold shadow-lg bg-slate-900 text-slate-100" dir={arabic ? "rtl" : "ltr"}>
-      {!state.isOnline ? <WifiOff className="w-4 h-4 text-rose-400 shrink-0" /> : state.isSyncing ? <Loader2 className="w-4 h-4 animate-spin text-blue-300" /> : <AlertTriangle className="w-4 h-4 text-amber-300" />}
-      <span>{!state.isOnline ? (arabic ? "لا يوجد اتصال بالإنترنت" : "No internet connection") : state.isSyncing ? (arabic ? "جارٍ إرسال التغييرات ومزامنتها..." : "Syncing pending changes...") : (arabic ? "تغييرات معلقة تحتاج متابعة" : "Pending changes need attention")}</span>
-      {state.pendingCount > 0 && <span>{arabic ? `(${state.pendingCount} تغيير معلق)` : `(${state.pendingCount} pending)`}</span>}
-      {state.lastError && <span className="text-amber-200 font-normal text-xs">{state.lastError}</span>}
-      {exportError && <span role="alert" className="text-rose-300 text-xs">{arabic ? "تعذر تنزيل النسخة." : "Download failed."}</span>}
-      {state.pendingCount > 0 && <button type="button" onClick={exportPending} className="rounded-full border border-amber-400 px-3 py-1 text-xs text-amber-200 hover:bg-amber-950/40 transition-colors">{arabic ? "تنزيل نسخة" : "Download changes"}</button>}
+    <div
+      role="status"
+      className="fixed top-0 left-0 right-0 z-[9999] flex flex-wrap items-center justify-center gap-3 px-4 py-2.5 text-sm font-bold shadow-lg bg-slate-900 text-slate-100"
+      dir={arabic ? "rtl" : "ltr"}
+    >
+      {!state.isOnline ? (
+        <WifiOff className="w-4 h-4 text-rose-400 shrink-0" />
+      ) : state.isSyncing ? (
+        <Loader2 className="w-4 h-4 animate-spin text-blue-300" />
+      ) : (
+        <AlertTriangle className="w-4 h-4 text-amber-300" />
+      )}
+
+      <span>
+        {!state.isOnline
+          ? (arabic ? "لا يوجد اتصال بالإنترنت" : "No internet connection")
+          : state.isSyncing
+          ? (arabic ? "جارٍ إرسال التغييرات ومزامنتها..." : "Syncing pending changes...")
+          : (arabic ? "تغييرات معلقة تحتاج متابعة" : "Pending changes need attention")}
+      </span>
+
+      {state.pendingCount > 0 && (
+        <span>{arabic ? `(${state.pendingCount} تغيير معلق)` : `(${state.pendingCount} pending)`}</span>
+      )}
+
+      {state.lastError && (
+        <span className="text-amber-200 font-normal text-xs max-w-md truncate" title={state.lastError}>
+          {state.lastError}
+        </span>
+      )}
+
+      {exportError && (
+        <span role="alert" className="text-rose-300 text-xs">
+          {arabic ? "تعذر تنزيل النسخة." : "Download failed."}
+        </span>
+      )}
+
+      {state.pendingCount > 0 && (
+        <button
+          type="button"
+          onClick={exportPending}
+          className="rounded-full border border-amber-400 px-3 py-1 text-xs text-amber-200 hover:bg-amber-950/40 transition-colors"
+        >
+          {arabic ? "تنزيل نسخة" : "Download changes"}
+        </button>
+      )}
+
       {state.isOnline && state.pendingCount > 0 && (
         <button
           type="button"
@@ -49,22 +128,20 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({ language = "ar" })
           {arabic ? "إعادة إرسال التغييرات" : "Retry pending changes"}
         </button>
       )}
+
       {state.pendingCount > 0 && (
         <button
           type="button"
-          onClick={() => {
-            if (window.confirm(arabic ? "هل أنت متأكد من تجاهل ومسح كافة التغييرات المعلقة؟" : "Are you sure you want to discard all pending changes?")) {
-              void offlineSync.clearAll();
-            }
-          }}
+          onClick={() => void handleDiscard()}
           className="rounded-full border border-rose-400/60 bg-rose-950/40 px-3 py-1 text-xs text-rose-300 hover:bg-rose-900/60 transition-colors"
         >
           {arabic ? "تجاهل ومسح" : "Discard"}
         </button>
       )}
+
       <button
         type="button"
-        onClick={() => setIsDismissed(true)}
+        onClick={handleDismiss}
         className="p-1 text-slate-400 hover:text-slate-100 rounded-full hover:bg-slate-800 transition-colors"
         title={arabic ? "إخفاء التنبيه" : "Dismiss banner"}
         aria-label={arabic ? "إخفاء التنبيه" : "Dismiss banner"}

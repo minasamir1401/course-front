@@ -142,10 +142,19 @@ class OfflineSyncManager {
   }
   async clearAll(): Promise<void> {
     await this.ready;
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = null;
+    }
     const ids = this.queue.map(entry => entry.id);
     await this.persistMutation([], ids);
-    this.queue = this.queue.filter(entry => !ids.includes(entry.id));
+    this.queue = [];
     this.lastError = null;
+    if (typeof localStorage !== "undefined") {
+      try {
+        localStorage.removeItem(LEGACY_QUEUE_STORAGE_KEY);
+      } catch {}
+    }
     this.notify();
   }
   subscribe(listener: Listener): () => void {
@@ -191,14 +200,59 @@ class OfflineSyncManager {
       if (database) saved = await requestResult(database.transaction(QUEUE_STORE, "readonly").objectStore(QUEUE_STORE).getAll());
       const records = new Map(saved.map(entry => [entry.id, entry]));
       for (const entry of legacy) if (!records.has(entry.id)) records.set(entry.id, entry);
-      this.queue = Array.from(records.values()).map(entry => ({ ...entry, headers: safeHeaders(entry.headers || {}) })).sort((a, b) => (Date.parse(a.enqueuedAt) || 0) - (Date.parse(b.enqueuedAt) || 0));
-      if (database && legacy.length > 0) {
-        const transaction = database.transaction(QUEUE_STORE, "readwrite"); const done = transactionDone(transaction);
+
+      const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+      const validItems: PendingSave[] = [];
+      const staleIds: string[] = [];
+      const ephemeralPatterns = [
+        '/translate',
+        '/notifications',
+        '/ai',
+        '/chat',
+        '/media',
+        '/upload',
+        '/export',
+        '/import',
+        '/search',
+        '/session',
+        '/stats',
+        '/health',
+        '/analytics',
+      ];
+
+      for (const entry of records.values()) {
+        const enqueuedTime = Date.parse(entry.enqueuedAt) || 0;
+        const isExpired = enqueuedTime > 0 && enqueuedTime < oneDayAgo;
+        const hasTooManyAttempts = (entry.attempts || 0) >= 3;
+        const isEphemeralUrl = ephemeralPatterns.some((pattern) => entry.url?.includes(pattern));
+
+        if (isExpired || hasTooManyAttempts || isEphemeralUrl) {
+          staleIds.push(entry.id);
+        } else {
+          validItems.push({ ...entry, headers: safeHeaders(entry.headers || {}) });
+        }
+      }
+
+      this.queue = validItems.sort((a, b) => (Date.parse(a.enqueuedAt) || 0) - (Date.parse(b.enqueuedAt) || 0));
+
+      if (staleIds.length > 0) {
+        await this.persistMutation([], staleIds);
+      }
+      if (typeof localStorage !== "undefined") {
+        try {
+          localStorage.removeItem(LEGACY_QUEUE_STORAGE_KEY);
+        } catch {}
+      }
+      if (database && this.queue.length > 0) {
+        const transaction = database.transaction(QUEUE_STORE, "readwrite");
+        const done = transactionDone(transaction);
         for (const entry of this.queue) transaction.objectStore(QUEUE_STORE).put(entry);
-        await done; localStorage.removeItem(LEGACY_QUEUE_STORAGE_KEY);
+        await done;
       }
       if (this.isOnline && this.queue.length) this.scheduleFlush(2000);
-    } catch { this.storageError(); }
+    } catch {
+      this.storageError();
+    }
     this.notify();
   }
   private persistMutation(upserts: PendingSave[], deletes: string[]): Promise<void> {
@@ -259,8 +313,11 @@ class OfflineSyncManager {
         if (target.origin !== window.location.origin || !target.pathname.startsWith("/api/")) {
           this.lastError = "مسار حفظ غير معتمد؛ تم الاحتفاظ بالتغييرات للمراجعة."; continue;
         }
-        if (!forceAll && !["PUT"].includes(item.method)) {
-          this.lastError = "عمليات إنشاء أو تعديل جزئي تحتاج مراجعة قبل إعادة الإرسال لتجنب التكرار. نزّل التغييرات المحفوظة."; continue;
+        if (!forceAll && !["PUT", "PATCH"].includes(item.method)) {
+          if (!this.lastError && this.queue.some(e => e.method === 'POST')) {
+            this.lastError = "عمليات إنشاء أو تعديل جزئي تحتاج مراجعة قبل إعادة الإرسال لتجنب التكرار. نزّل التغييرات المحفوظة.";
+          }
+          continue;
         }
         const currentOwner = captureOfflineOwner();
         if (!sameOwner(item.owner, currentOwner) && !forceAll) {
@@ -290,6 +347,17 @@ class OfflineSyncManager {
         } else {
           const current = this.queue.find(entry => entry.id === item.id);
           if (current) { current.attempts += 1; await this.persistMutation([current], []); }
+
+          const isUnrecoverable =
+            response.status === 409 ||
+            response.status === 404 ||
+            ((response.status === 400 || response.status === 422) && (current?.attempts || 0) >= 2);
+
+          if (isUnrecoverable) {
+            await this.dequeue(item.id);
+            continue;
+          }
+
           this.lastError = `تعذر مزامنة التغييرات (${response.status}). تم الاحتفاظ بها للمراجعة وإعادة المحاولة.`;
           if (response.status >= 500 || response.status === 408 || response.status === 429) {
             const value = response.headers.get("Retry-After");
@@ -297,7 +365,7 @@ class OfflineSyncManager {
             retryAfter = Math.max(30000, Math.min(Number.isFinite(wait) ? wait : 30000, 24 * 60 * 60 * 1000));
             break;
           }
-          break; // Later sparse updates must not overtake an unresolved write.
+          break;
         }
       }
     } catch {
@@ -305,6 +373,9 @@ class OfflineSyncManager {
       retryAfter = 30000;
     } finally {
       this.isSyncing = false;
+      if (this.queue.length === 0) {
+        this.lastError = null;
+      }
       if (retryAfter !== null && this.queue.length) this.scheduleFlush(retryAfter);
       this.notify();
     }

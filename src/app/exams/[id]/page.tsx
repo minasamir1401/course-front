@@ -89,14 +89,14 @@ function TakeExamPageContent() {
   const { showToast } = useNotification();
   const { language } = useLanguage();
 
-  const SECTION_STYLE_PRESETS: Record<string, any> = {
-    HINT: { icon: HelpCircle, bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", label: "Hint" },
-    TIP: { icon: Info, bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200", label: "Tip" },
-    WARNING: { icon: AlertCircle, bg: "bg-red-50", text: "text-red-700", border: "border-red-200", label: "Warning" },
-    KEY_INSIGHT: { icon: Sparkles, bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200", label: "Key Insight" },
-    FEEDBACK: { icon: MessageSquare, bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", label: "Feedback" },
-    EXPLANATION: { icon: BookOpen, bg: "bg-indigo-50", text: "text-indigo-700", border: "border-indigo-200", label: "Explanation" }
-  };
+  const getSectionStylePresets = (en: boolean): Record<string, any> => ({
+    HINT: { icon: HelpCircle, bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", label: en ? "Hint" : "تلميح" },
+    TIP: { icon: Info, bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200", label: en ? "Tip" : "نصيحة" },
+    WARNING: { icon: AlertCircle, bg: "bg-red-50", text: "text-red-700", border: "border-red-200", label: en ? "Warning" : "تحذير" },
+    KEY_INSIGHT: { icon: Sparkles, bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200", label: en ? "Key Insight" : "نقطة هامة" },
+    FEEDBACK: { icon: MessageSquare, bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", label: en ? "Feedback" : "ملاحظات" },
+    EXPLANATION: { icon: BookOpen, bg: "bg-indigo-50", text: "text-indigo-700", border: "border-indigo-200", label: en ? "Explanation" : "شرح مفصل" }
+  });
 
   // Exam data
   const [exam, setExam] = useState<any>(null);
@@ -134,23 +134,7 @@ function TakeExamPageContent() {
   }, [isPreviewMode]);
 
   useEffect(() => {
-    try {
-      const userStr = isPreviewMode
-        ? (localStorage.getItem("super_admin_user") || localStorage.getItem("school_admin_user") || localStorage.getItem("lms_user"))
-        : (localStorage.getItem("lms_user") || localStorage.getItem("school_admin_user") || localStorage.getItem("super_admin_user"));
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        let text = user.name || user.email || (isPreviewMode ? "Preview Mode" : "Student");
-        if (user.schoolName) text += " - " + user.schoolName;
-        else if (user.schoolId) text += " - School: " + user.schoolId;
-        text += " - KLEVRO";
-        setWatermarkText(text);
-      } else {
-        setWatermarkText(isPreviewMode ? "Preview Mode - KLEVRO" : "KLEVRO");
-      }
-    } catch (e) {
-      setWatermarkText(isPreviewMode ? "Preview Mode - KLEVRO" : "KLEVRO");
-    }
+    setWatermarkText(isPreviewMode ? "Preview Mode - Klevro" : "Klevro");
   }, [isPreviewMode]);
 
   useEffect(() => {
@@ -706,28 +690,6 @@ function TakeExamPageContent() {
             </div>
           </div>
           <div className="flex items-center gap-3 sm:gap-6">
-            {/* Top Bar Language Switcher */}
-            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
-              <button
-                type="button"
-                onClick={() => setStudentQuestionLang('ar')}
-                className={`px-3 py-1 rounded-lg text-xs font-black transition-all ${
-                  !isEn ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white'
-                }`}
-              >
-                العربية
-              </button>
-              <button
-                type="button"
-                onClick={() => setStudentQuestionLang('en')}
-                className={`px-3 py-1 rounded-lg text-xs font-black transition-all ${
-                  isEn ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white'
-                }`}
-              >
-                English
-              </button>
-            </div>
-
             <ExamCountdown
               initialSeconds={timeLeft}
               storageKey={isPreviewMode ? null : `exam_${id}_${subExamId || "root"}_time`}
@@ -807,26 +769,6 @@ function TakeExamPageContent() {
                   {getInExamQuestionTypeLabel(question, activeExamLang)}
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => setStudentQuestionLang('ar')}
-                  className={`px-3 py-1 rounded-lg text-xs font-black transition-all ${
-                    !isEn ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white'
-                  }`}
-                >
-                  العربية
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStudentQuestionLang('en')}
-                  className={`px-3 py-1 rounded-lg text-xs font-black transition-all ${
-                    isEn ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-white'
-                  }`}
-                >
-                  English
-                </button>
-              </div>
             </div>
             <div dir={isEn ? 'ltr' : 'rtl'}>
               <HtmlRenderer 
@@ -839,6 +781,7 @@ function TakeExamPageContent() {
               <img
                 src={question.imageUrl}
                 alt="Question"
+                loading="lazy"
                 className="max-w-full rounded-2xl mb-8 border border-slate-200 shadow-sm mx-auto"
               />
             )}
@@ -985,6 +928,7 @@ function TakeExamPageContent() {
               question.sections && question.sections.length > 0 && (
                 <div className="mt-8 space-y-4 animate-in fade-in duration-700">
                   {question.sections.map((sec: any, sIdx: number) => {
+                    const SECTION_STYLE_PRESETS = getSectionStylePresets(isEn);
                     const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
                     const Icon = preset.icon;
                     const content = (isEn && (sec.contentEn || sec.textEn)) ? (sec.contentEn || sec.textEn) : sec.content;

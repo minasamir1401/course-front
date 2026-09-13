@@ -17,9 +17,12 @@ export function exportQuestionsToExcel(questions: any[], filename = 'questions_e
   }
 }
 
-export function downloadQuestionsTemplate(type: 'questions' | 'assignments', language: string, showToast: Toast) {
-  XLSX.writeFile(buildQuestionWorkbook(null, language), type === 'assignments' ? 'assignments_template.xlsx' : 'practice_questions_template.xlsx');
-  showToast(language === 'ar' ? 'تم تحميل القالب الجديد مع التعليمات والأمثلة' : 'Template downloaded with instructions and examples', 'success');
+export function downloadQuestionsTemplate(type: 'questions' | 'assignments', language: string = 'ar', showToast: Toast) {
+  const filename = language === 'ar'
+    ? (type === 'assignments' ? 'قالب_التكليفات_ثنائي_اللغة.xlsx' : 'قالب_الأسئلة_ثنائي_اللغة.xlsx')
+    : (type === 'assignments' ? 'assignments_bilingual_template.xlsx' : 'bilingual_questions_template.xlsx');
+  XLSX.writeFile(buildQuestionWorkbook(null, language), filename);
+  showToast(language === 'ar' ? 'تم تحميل القالب ثنائي اللغة مع التعليمات والأمثلة' : 'Bilingual template downloaded with instructions and examples', 'success');
 }
 
 // Legacy callers can still parse addition-only sheets. IDs must belong to current.

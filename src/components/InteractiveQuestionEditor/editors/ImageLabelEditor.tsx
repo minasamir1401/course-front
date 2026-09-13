@@ -1,10 +1,8 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { Plus, Trash2, HelpCircle, Sparkles, Info, X } from 'lucide-react';
-import GeoGebraWidget from "../../GeoGebraWidget";
-import MathInput from "../../MathInput";
-import { getOptionLetter } from "@/lib/utils";
+import React, { useState } from "react";
+import { Trash2 } from 'lucide-react';
 import { parseJson } from "../utils";
+import { extractImageUrls } from "@/lib/image-utils";
 
 export default function ImageLabelEditor({ question, updateQuestionData, language }: { question: any; updateQuestionData: any; language: string }) {
   const opts = parseJson(question.options, { imageUrl: "", labels: [] });
@@ -12,6 +10,14 @@ export default function ImageLabelEditor({ question, updateQuestionData, languag
   const [label, setLabel] = useState("");
   const [xPercent, setXPercent] = useState("50");
   const [yPercent, setYPercent] = useState("50");
+
+  const availableImages = Array.from(new Set([
+    ...(question.image ? [String(question.image).trim()] : []),
+    ...(question.imageUrl ? [String(question.imageUrl).trim()] : []),
+    ...extractImageUrls(question.text || question.questionText || question.content || ''),
+    ...extractImageUrls(question.textEn || question.questionTextEn || question.contentEn || ''),
+    ...extractImageUrls(question.explanation || question.explanationEn || '')
+  ])).filter(Boolean);
 
   const addLabel = () => {
     if (!label.trim()) return;
@@ -38,6 +44,26 @@ export default function ImageLabelEditor({ question, updateQuestionData, languag
             onChange={(e) => updateQuestionData({ imageUrl: e.target.value, labels }, labels)}
             placeholder="https://example.com/anatomy.jpg"
           />
+          {availableImages.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              <span className="text-[10px] text-slate-400 font-bold">{language === 'ar' ? 'الصور المتوفرة في السؤال:' : 'Available in question:'}</span>
+              {availableImages.map((imgUrl, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => updateQuestionData({ imageUrl: imgUrl, labels }, labels)}
+                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-all flex items-center gap-1 cursor-pointer ${
+                    opts.imageUrl === imgUrl
+                      ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
+                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  <img src={imgUrl} alt="" className="w-3.5 h-3.5 object-cover rounded" />
+                  <span>{language === 'ar' ? `صورة ${i + 1}` : `Image ${i + 1}`}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="bg-slate-50 p-3.5 border border-slate-150 rounded-xl space-y-3 w-full">
@@ -78,8 +104,8 @@ export default function ImageLabelEditor({ question, updateQuestionData, languag
           {labels.map((item: any, idx: number) => (
             <div key={idx} className="p-2.5 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center text-xs gap-2 min-w-0">
               <span className="font-bold text-slate-700 truncate min-w-0">{item.text} (X: {item.x}%, Y: {item.y}%)</span>
-              <button type="button" onClick={() => removeLabel(idx)} className="text-rose-500 hover:text-rose-700">
-                <Trash2 className="w-4.5 h-4.5" />
+              <button type="button" onClick={() => removeLabel(idx)} className="text-rose-500 hover:text-rose-700 cursor-pointer">
+                <Trash2 className="w-4 h-4" />
               </button>
             </div>
           ))}
@@ -88,6 +114,3 @@ export default function ImageLabelEditor({ question, updateQuestionData, languag
     </div>
   );
 }
-
-// -------------------------------------------------------------
-// 🎨 24. COLOR_MATCH (تطابق الألوان)

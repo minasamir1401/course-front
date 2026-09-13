@@ -20,6 +20,8 @@ import { useCourseEditor } from "../CourseEditorContext";
 import * as XLSX from "xlsx";
 import { QuestionExcelExportButton } from '@/components/QuestionExcelExportButton';
 import { translateBatch } from '@/lib/translationService';
+import QuestionImageGallery from '@/components/QuestionImageGallery';
+import { extractImageUrls } from '@/lib/image-utils';
 interface LessonQuestionsBuilderProps {
   source: 'assignments' | 'questions';
   currentLesson: any;
@@ -79,7 +81,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
   const isSuperAdmin = adminRole === 'SUPER_ADMIN';
 
   const [customSkills, setCustomSkills] = useState<string[]>([]);
-  const [questionActiveLang, setQuestionActiveLang] = useState<'ar' | 'en'>('ar');
+  const [questionActiveLang, setQuestionActiveLang] = useState<'ar' | 'en'>('en');
   const [cardPreviewLang, setCardPreviewLang] = useState<Record<number, 'ar' | 'en'>>({});
   const [isTranslatingQuestion, setIsTranslatingQuestion] = useState(false);
 
@@ -113,14 +115,13 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
       setQuestionActiveLang('en');
     } else if (hasAr && !hasEn) {
       setQuestionActiveLang('ar');
-    } else if (hasArabic(textClean)) {
-      setQuestionActiveLang('ar');
     } else if (hasEnglish(textClean) && !hasArabic(textClean)) {
       setQuestionActiveLang('en');
-    } else if (language === 'en') {
-      setQuestionActiveLang('en');
-    } else {
+    } else if (hasArabic(textClean)) {
       setQuestionActiveLang('ar');
+    } else {
+      // Default to English for new questions
+      setQuestionActiveLang('en');
     }
   }, [showQuestionForm, editingQuestionIndex, tempQuestion?.id, language]);
 
@@ -186,8 +187,17 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
       const translations = await translateBatch(textsToTranslate, from, to);
 
       let cursor = 0;
-      const trText = translations[cursor++] || '';
+      let trText = translations[cursor++] || '';
       const trExplanation = translations[cursor++] || '';
+
+      const srcImgs = extractImageUrls(to === 'en' ? tempQuestion.text : tempQuestion.textEn);
+      if (srcImgs.length > 0 && trText) {
+        const missing = srcImgs.filter((u: string) => !trText.includes(u));
+        if (missing.length > 0) {
+          const tags = missing.map((u: string) => `<p><img loading="lazy" decoding="async" src="${u}" data-align="center" style="max-width: 100%; height: auto; border-radius: 12px; margin: 10px auto; display: block;" /></p>`).join('');
+          trText = `${tags}\n${trText}`;
+        }
+      }
 
       const trOpts = translations.slice(cursor, cursor + srcOpts.length);
       cursor += srcOpts.length;
@@ -1252,6 +1262,12 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                     </button>
                   )}
                 </div>
+                {/* Shared image notice */}
+                <p className="text-[10px] text-slate-400 font-bold">
+                  {language === 'ar'
+                    ? 'الصورة مشتركة بين اللغتين — ما ترفعه هنا يظهر تلقائياً في العربي والإنجليزي.'
+                    : 'Image is shared between both languages — uploaded here appears in both AR and EN.'}
+                </p>
 
                 <div className="flex flex-col sm:flex-row gap-3 items-center">
                   <div className="flex-1 w-full">
@@ -1354,6 +1370,16 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                 </div>
               </div>
 
+              {/* Question Images & Cross-Language Media Tray */}
+              <QuestionImageGallery
+                language={language}
+                activeLang={questionActiveLang}
+                tempQuestion={tempQuestion}
+                allQuestions={currentLesson?.questions || []}
+                onUpdateQuestion={(field, val) => updateCurrentQuestionField(field, val)}
+                showToast={showToast}
+              />
+
               {/* Rich Text Editor for Question Text */}
               <div className="flex flex-col gap-3">
                 <div className="flex justify-between items-center">
@@ -1380,8 +1406,8 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                 </div>
                 <RichTextEditor
                   value={(questionActiveLang === 'ar' 
-                    ? (tempQuestion.text && /[\u0600-\u06FF]/.test(tempQuestion.text) ? tempQuestion.text : '')
-                    : (tempQuestion.textEn || (tempQuestion.text && /[a-zA-Z]/.test(tempQuestion.text) && !/[\u0600-\u06FF]/.test(tempQuestion.text) ? tempQuestion.text : ''))
+                    ? (tempQuestion.text || '')
+                    : (tempQuestion.textEn || (tempQuestion.text && !/[\u0600-\u06FF]/.test(tempQuestion.text) ? tempQuestion.text : ''))
                   ) || ""}
                   onChange={(value) => {
                     if (questionActiveLang === 'ar') {
@@ -1395,6 +1421,12 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                       }));
                     }
                   }}
+                  availableImages={extractImageUrls([
+                    tempQuestion.text,
+                    tempQuestion.textEn,
+                    tempQuestion.imageUrl,
+                    ...(Array.isArray(tempQuestion.sections) ? tempQuestion.sections.map((s: any) => s.content) : [])
+                  ].filter(Boolean).join(' '))}
                   placeholder={questionActiveLang === 'ar' ? "اكتب نص السؤال بالعربية هنا..." : "Write the question prompt in English here..."}
                 />
               </div>

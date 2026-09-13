@@ -21,7 +21,7 @@ export function buildAdvancedMetadataTemplateRows(language: string, list: any[])
     language === 'ar' ? 'عمق المعرفة (DOK)' : 'DOK',
     language === 'ar' ? 'المستوى المعرفي' : 'Cognitive',
     language === 'ar' ? 'نمط الخطأ' : 'Error Pattern',
-    'Estimated Time',
+    language === 'ar' ? 'الوقت التقديري' : 'Estimated Time',
   ]];
 
   if (!Array.isArray(list) || list.length === 0) {

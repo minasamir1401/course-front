@@ -323,7 +323,11 @@ const openAddModuleModal = () => {
   };
 
   const downloadQuestionsTemplate = (type: 'questions' | 'assignments') => {
-    XLSX.writeFile(buildQuestionWorkbook(null, language), type === 'assignments' ? 'assignments_template.xlsx' : 'practice_questions_template.xlsx');
+    const filename = language === 'ar'
+      ? (type === 'assignments' ? 'قالب_التكليفات_ثنائي_اللغة.xlsx' : 'قالب_الأسئلة_ثنائي_اللغة.xlsx')
+      : (type === 'assignments' ? 'assignments_bilingual_template.xlsx' : 'bilingual_questions_template.xlsx');
+    XLSX.writeFile(buildQuestionWorkbook(null, language), filename);
+    showToast(language === 'ar' ? 'تم تحميل القالب ثنائي اللغة بنجاح' : 'Bilingual template downloaded successfully', 'success');
   };
   const addBlock = (source: 'slides' | 'assignments' | 'questions' = 'slides', type: 'TEXT' | 'QUESTION') => {
     const newBlock = type === 'TEXT' 

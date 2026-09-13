@@ -2,6 +2,7 @@
 import React from 'react';
 import { ChevronUp, ChevronDown, CheckCircle2, Edit2, Trash2, Plus, FileText, Settings, Activity, MoveUp, MoveDown, Mic, Video, Image as ImageIcon, Layout, Check, Upload, Download } from 'lucide-react';
 import RichTextEditor from '@/components/RichTextEditor';
+import { extractImageUrls } from '@/lib/image-utils';
 import { getOptionLetter } from '@/lib/utils';
 import MathInput from '@/components/MathInput';
 import InteractiveQuestionEditor from '@/components/InteractiveQuestionEditor';
@@ -255,6 +256,7 @@ import { SECTION_STYLE_PRESETS } from '../constants';
                     <RichTextEditor 
                       value={block.content}
                       onChange={(val: any) => updateBlock(source, sIdx, 'content', val, block)}
+                      availableImages={extractImageUrls([block.content, block.image, ...(Array.isArray(block.sections) ? block.sections.map((s: any) => s.content) : [])].filter(Boolean).join(' '))}
                       placeholder={block.type === 'TEXT' ? (language === 'ar' ? "اكتب محتوى شرح الدرس هنا..." : "Write lecture explanation content here...") : (language === 'ar' ? "اكتب نص السؤال هنا..." : "Write question prompt here...")}
                       className="!bg-white !border-slate-200"
                     />
@@ -501,6 +503,7 @@ import { SECTION_STYLE_PRESETS } from '../constants';
                             <RichTextEditor 
                               value={sec.content}
                               onChange={(val: any) => updateSection(source, sIdx, secIdx, val, block, sec)}
+                              availableImages={extractImageUrls([block.content, block.image, ...(Array.isArray(block.sections) ? block.sections.map((s: any) => s.content) : [])].filter(Boolean).join(' '))}
                               placeholder={language === 'ar' ? `اكتب محتوى الـ ${preset.label} هنا...` : `Write ${preset.label} content here...`}
                               className="!bg-white"
                             />

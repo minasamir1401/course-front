@@ -19,12 +19,59 @@ interface NotificationContextType {
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
+const NON_QUEUEABLE_SUBSTRINGS = [
+  '/auth/',
+  '/analytics',
+  '/health',
+  '/logs',
+  '/track',
+  '/translate',
+  '/notifications',
+  '/ai',
+  '/chat',
+  '/media',
+  '/upload',
+  '/export',
+  '/import',
+  '/search',
+  '/session',
+  '/stats',
+  '/ping',
+];
+
+const QUEUEABLE_PREFIXES = [
+  '/api/courses',
+  '/api/lessons',
+  '/api/exams',
+  '/api/questions',
+  '/api/drafts',
+  '/api/quizzes',
+  '/api/assignments',
+];
+
+const isQueueableRequest = (url: string, method: string): boolean => {
+  if (!['POST', 'PUT', 'PATCH'].includes(method)) return false;
+
+  try {
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost';
+    const parsed = new URL(url, origin);
+    const pathname = parsed.pathname;
+
+    for (const ignored of NON_QUEUEABLE_SUBSTRINGS) {
+      if (pathname.includes(ignored)) return false;
+    }
+
+    return QUEUEABLE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  } catch {
+    return false;
+  }
+};
+
 const queueFailedWrite = async (input: RequestInfo | URL, init: RequestInit | undefined, url: string, owner: OfflineOwner | null) => {
   if (!owner || !owner.userId) return;
 
   const method = (init?.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
-  if (!['POST', 'PUT', 'PATCH'].includes(method) || url.includes('/auth/')) return;
-  if (url.includes('/analytics') || url.includes('/health') || url.includes('/logs') || url.includes('/track')) return;
+  if (!isQueueableRequest(url, method)) return;
 
   let body = typeof init?.body === 'string' ? init.body : '';
   if (!body && input instanceof Request) {
@@ -196,15 +243,15 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             void offlineSync.flush();
           }
           // Successful API call → reset backend-down state
-          if (consecutive502Ref.current > 0) {
+          if (consecutive502Ref.current > 0 || backendDownRef.current) {
             consecutive502Ref.current = 0;
             if (backendDownRef.current) {
               backendDownRef.current = false;
               setIsBackendDown(false);
               showToast(
                 localStorage.getItem('language') === 'en'
-                  ? 'Server connection restored ✅'
-                  : 'تم استعادة الاتصال بالخادم بنجاح ✅',
+                  ? 'Server connection restored'
+                  : 'تم استعادة الاتصال بالخادم بنجاح',
                 'success'
               );
             }
@@ -261,9 +308,37 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     };
   }, [showToast]);
 
+  // Periodic health check probe when backend is reported down to auto-recover immediately
+  useEffect(() => {
+    if (!isBackendDown) return;
+
+    let isCancelled = false;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/health', { cache: 'no-store' });
+        if (res.ok && !isCancelled) {
+          setIsBackendDown(false);
+          backendDownRef.current = false;
+          consecutive502Ref.current = 0;
+          showToast(
+            localStorage.getItem('language') === 'en'
+              ? 'Server connection restored'
+              : 'تم استعادة الاتصال بالخادم بنجاح',
+            'success'
+          );
+        }
+      } catch {}
+    }, 3000);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
+  }, [isBackendDown, showToast]);
+
   return (
     <NotificationContext.Provider value={{ showToast, confirm }}>
-      {/* 🔴 Backend Down Banner */}
+      {/* Backend Down Banner */}
       {isBackendDown && (
         <div className="fixed top-0 left-0 right-0 z-[10002] bg-gradient-to-r from-red-700/98 via-rose-700/98 to-red-700/98 backdrop-blur-md text-white shadow-2xl border-b border-red-400/20 animate-in slide-in-from-top duration-300">
           <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4" dir="rtl">
@@ -275,8 +350,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
               <ServerCrash className="w-5 h-5 flex-shrink-0" />
               <p className="font-bold text-sm md:text-base leading-relaxed">
                 {typeof window !== 'undefined' && localStorage.getItem('language') === 'en'
-                  ? '🔴 Backend server is down or unreachable. Some features may not work. Please wait or contact support.'
-                  : '🔴 خادم المنصة لا يستجيب حالياً. بعض الميزات قد لا تعمل. يرجى الانتظار أو التواصل مع الدعم.'}
+                  ? 'Backend server is down or unreachable. Some features may not work. Please wait or contact support.'
+                  : 'خادم المنصة لا يستجيب حالياً. بعض الميزات قد لا تعمل. يرجى الانتظار أو التواصل مع الدعم.'}
               </p>
             </div>
             <button

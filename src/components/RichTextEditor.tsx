@@ -1,19 +1,18 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Type, Eraser, Palette, Heading1, Heading2, ChevronDown, Image as ImageIcon, Table, Sigma, X, Highlighter, Trash2 } from 'lucide-react';
+import { Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Type, Eraser, Palette, Heading1, Heading2, ChevronDown, Image as ImageIcon, Table, Sigma, X, Highlighter, Trash2, Upload } from 'lucide-react';
 import { uploadFileToServer } from "@/lib/image-utils";
 import { buildRichTextImageHtml, getRichTextImageStyles } from "@/lib/richTextImage";
 import { convertPlainTextToHtml, shouldPreferPlainTextPaste } from "@/lib/richTextPaste";
 import { useLanguage } from "@/contexts/LanguageContext";
-import katex from "katex";
-import "katex/dist/katex.min.css";
 
 interface RichTextEditorProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  availableImages?: string[];
 }
 
 function cleanWordPaste(html: string): string {
@@ -104,7 +103,49 @@ function cleanWordPaste(html: string): string {
 }
 
 
-export default function RichTextEditor({ value, onChange, placeholder = "", className = "" }: RichTextEditorProps) {
+const COLORS = [
+  { name: 'Default', color: '#000000' },
+  { name: 'Blue', color: '#2563eb' },
+  { name: 'Red', color: '#dc2626' },
+  { name: 'Green', color: '#16a34a' },
+  { name: 'Purple', color: '#9333ea' },
+  { name: 'Indigo', color: '#6366f1' },
+  { name: 'Rose', color: '#f43f5e' },
+  { name: 'Emerald', color: '#10b981' },
+  { name: 'Amber', color: '#f59e0b' },
+];
+
+const ToolButton = React.memo(({
+  onClick,
+  icon: Icon,
+  title,
+  active = false,
+  className = ""
+}: {
+  onClick: () => void;
+  icon: any;
+  title: string;
+  active?: boolean;
+  className?: string;
+}) => (
+  <button
+    type="button"
+    onMouseDown={(e) => {
+      e.preventDefault();
+      onClick();
+    }}
+    className={`p-2 rounded-xl transition-all duration-200 flex items-center justify-center hover:scale-110 active:scale-95 ${active
+        ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200"
+        : "text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-sm"
+      } ${className}`}
+    title={title}
+  >
+    <Icon className="w-4 h-4" />
+  </button>
+));
+ToolButton.displayName = 'ToolButton';
+
+export default function RichTextEditor({ value, onChange, placeholder = "", className = "", availableImages = [] }: RichTextEditorProps) {
   const { language } = useLanguage();
   const editorRef = useRef<HTMLDivElement>(null);
   const [isFocused, setIsFocused] = useState(false);
@@ -123,18 +164,6 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
       savedSelectionRef.current = selection.getRangeAt(0).cloneRange();
     }
   };
-
-  const COLORS = [
-    { name: 'Default', color: '#000000' },
-    { name: 'Blue', color: '#2563eb' },
-    { name: 'Red', color: '#dc2626' },
-    { name: 'Green', color: '#16a34a' },
-    { name: 'Purple', color: '#9333ea' },
-    { name: 'Indigo', color: '#6366f1' },
-    { name: 'Rose', color: '#f43f5e' },
-    { name: 'Emerald', color: '#10b981' },
-    { name: 'Amber', color: '#f59e0b' },
-  ];
 
   // Initialize and keep in sync
   useEffect(() => {
@@ -232,12 +261,12 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
   };
 
 
-  const insertImage = () => {
+  const triggerFileUpload = () => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
     input.onchange = async (e: any) => {
-      const file = e.target.files[0];
+      const file = e.target.files?.[0];
       if (file) {
         try {
           const uploadedUrl = await uploadFileToServer(file);
@@ -246,11 +275,21 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
           setActiveModal('image');
         } catch (error) {
           console.error("Upload failed:", error);
-          alert("Failed to upload image. Please try again.");
+          alert(language === 'ar' ? "فشل رفع الصورة. يرجى المحاولة مرة أخرى." : "Failed to upload image. Please try again.");
         }
       }
     };
     input.click();
+  };
+
+  const insertImage = () => {
+    if (availableImages && availableImages.length > 0) {
+      setImageSettings({ src: availableImages[0], width: "100", align: "center" });
+      setEditingImage(null);
+      setActiveModal('image');
+    } else {
+      triggerFileUpload();
+    }
   };
 
   const handleInsertImage = () => {
@@ -355,9 +394,11 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
     setActiveModal(null);
   };
 
-  const handleInsertMath = () => {
+  const handleInsertMath = async () => {
     if (mathFormula) {
       try {
+        const katexModule: any = await import("katex");
+        const katex = katexModule.default || katexModule;
         const renderedMath = katex.renderToString(mathFormula, { throwOnError: false });
         const mathHtml = `<span class="math-tex inline-block mx-1 align-middle" contenteditable="false" data-latex="${mathFormula.replace(/"/g, '&quot;')}">${renderedMath}</span>&nbsp;`;
         execCommand('insertHTML', mathHtml, true);
@@ -529,35 +570,6 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
     }
   };
 
-  const ToolButton = ({
-    onClick,
-    icon: Icon,
-    title,
-    active = false,
-    className = ""
-  }: {
-    onClick: () => void;
-    icon: any;
-    title: string;
-    active?: boolean;
-    className?: string;
-  }) => (
-    <button
-      type="button"
-      onMouseDown={(e) => {
-        e.preventDefault();
-        onClick();
-      }}
-      className={`p-2 rounded-xl transition-all duration-200 flex items-center justify-center hover:scale-110 active:scale-95 ${active
-          ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200"
-          : "text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-sm"
-        } ${className}`}
-      title={title}
-    >
-      <Icon className="w-4 h-4" />
-    </button>
-  );
-
   return (
     <div className={`w-full max-w-full flex flex-col border-2 rounded-[30px] transition-all duration-300 bg-white ${isFocused
         ? 'border-indigo-500 ring-8 ring-indigo-500/5 shadow-2xl'
@@ -721,6 +733,44 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
           </h3>
             <button type="button" onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
           </div>
+
+          {availableImages && availableImages.length > 0 && !editingImage && (
+            <div className="mb-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
+                  {language === 'ar' ? 'الصور المتاحة في السؤال:' : 'Available in question:'}
+                </span>
+                <button
+                  type="button"
+                  onClick={triggerFileUpload}
+                  className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
+                >
+                  <Upload className="w-3 h-3" />
+                  <span>{language === 'ar' ? 'رفع ملف آخر' : 'Upload other'}</span>
+                </button>
+              </div>
+              <div className="grid grid-cols-3 gap-2 max-h-28 overflow-y-auto custom-scrollbar p-1">
+                {availableImages.map((imgUrl, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setImageSettings(prev => ({ ...prev, src: imgUrl }))}
+                    className={`h-16 rounded-lg overflow-hidden border-2 bg-white flex items-center justify-center p-1 transition-all cursor-pointer ${
+                      imageSettings.src === imgUrl ? 'border-indigo-600 ring-2 ring-indigo-200' : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <img src={imgUrl} alt="Choice" className="w-full h-full object-contain" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {imageSettings.src && (
+            <div className="mb-3 p-2 bg-slate-100/70 rounded-xl border border-slate-200 flex items-center justify-center max-h-36 overflow-hidden">
+              <img src={imageSettings.src} alt="Preview" className="max-h-32 object-contain rounded-lg" />
+            </div>
+          )}
           
           <div className="space-y-3 mb-4">
             <div className="flex flex-col gap-2">

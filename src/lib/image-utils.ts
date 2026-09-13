@@ -76,3 +76,43 @@ export async function uploadFileToServer(file: File): Promise<string> {
   const data = await res.json();
   return data.url;
 }
+
+/**
+ * Extracts all unique image URLs from an HTML string.
+ */
+export function extractImageUrls(html?: string | null): string[] {
+  if (!html) return [];
+  const urls: string[] = [];
+  const regex = /<img[^>]+src=["']([^"']+)["']/gi;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(html)) !== null) {
+    const src = match[1]?.trim();
+    if (src && !urls.includes(src)) {
+      urls.push(src);
+    }
+  }
+  return urls;
+}
+
+/**
+ * Inserts an image into an HTML string if not already present.
+ */
+export function insertImageIntoHtml(html: string | undefined | null, imgUrl: string): string {
+  const current = String(html || '').trim();
+  if (current.includes(imgUrl)) return current;
+  const imgTag = `<p><img loading="lazy" decoding="async" src="${imgUrl}" data-align="center" style="max-width: 100%; height: auto; border-radius: 12px; margin: 10px auto; display: block;" /></p>`;
+  if (!current || current === '<p><br></p>' || current === '<p></p>') {
+    return imgTag;
+  }
+  return `${imgTag}\n${current}`;
+}
+
+/**
+ * Removes an image by its URL from an HTML string.
+ */
+export function removeImageFromHtml(html: string | undefined | null, imgUrl: string): string {
+  if (!html) return '';
+  const escaped = imgUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const imgRegex = new RegExp(`<p>\\s*<img[^>]+src=["']${escaped}["'][^>]*>\\s*</p>|<img[^>]+src=["']${escaped}["'][^>]*>`, 'gi');
+  return html.replace(imgRegex, '').trim();
+}

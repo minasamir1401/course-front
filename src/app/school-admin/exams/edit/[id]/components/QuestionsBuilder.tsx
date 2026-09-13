@@ -14,6 +14,8 @@ import { translateBatch } from '@/lib/translationService';
 import InteractiveQuestionEditor from '@/components/InteractiveQuestionEditor';
 import * as XLSX from "xlsx";
 import { QuestionExcelExportButton } from '@/components/QuestionExcelExportButton';
+import QuestionImageGallery from '@/components/QuestionImageGallery';
+import { extractImageUrls } from '@/lib/image-utils';
 
 
 export const QuestionsBuilder = (props: any) => {
@@ -30,7 +32,7 @@ export const QuestionsBuilder = (props: any) => {
   }, [language, props.examData?.title, currentModule?.title]);
 
   const detectQuestionLanguage = (q: any): 'ar' | 'en' => {
-    if (!q) return isExamEnglish ? 'en' : 'ar';
+    if (!q) return 'en';
     const clean = (str?: string | null) => String(str || '').replace(/<[^>]*>/g, '').trim();
 
     const textClean = clean(q.text);
@@ -50,10 +52,10 @@ export const QuestionsBuilder = (props: any) => {
     if (hasArabicChars(textClean)) return 'ar';
     if (hasEnglishChars(textClean) && !hasArabicChars(textClean)) return 'en';
 
-    return isExamEnglish ? 'en' : 'ar';
+    return 'en';
   };
 
-  const [questionActiveLang, setQuestionActiveLang] = React.useState<'ar' | 'en'>('ar');
+  const [questionActiveLang, setQuestionActiveLang] = React.useState<'ar' | 'en'>('en');
   const [cardPreviewLang, setCardPreviewLang] = React.useState<Record<number, 'ar' | 'en'>>({});
   const [isTranslatingQuestion, setIsTranslatingQuestion] = React.useState(false);
   const lastActiveQKeyRef = React.useRef<any>(null);
@@ -127,9 +129,18 @@ export const QuestionsBuilder = (props: any) => {
 
       const translations = await translateBatch(textsToTranslate, from, to);
 
-      const trText = translations[0] || '';
+      let trText = translations[0] || '';
       const trExplanation = translations[1] || '';
       let cursor = 2;
+
+      const srcImgs = extractImageUrls(to === 'en' ? tempQuestion.text : tempQuestion.textEn);
+      if (srcImgs.length > 0 && trText) {
+        const missing = srcImgs.filter((u: string) => !trText.includes(u));
+        if (missing.length > 0) {
+          const tags = missing.map((u: string) => `<p><img loading="lazy" decoding="async" src="${u}" data-align="center" style="max-width: 100%; height: auto; border-radius: 12px; margin: 10px auto; display: block;" /></p>`).join('');
+          trText = `${tags}\n${trText}`;
+        }
+      }
 
       const trOpts = translations.slice(cursor, cursor + srcOpts.length);
       cursor += srcOpts.length;
@@ -635,7 +646,7 @@ export const QuestionsBuilder = (props: any) => {
                   { key: 'dok', labelAr: 'عمق المعرفة (DOK)', labelEn: 'DOK' },
                   { key: 'cognitive', labelAr: 'المستوى المعرفي', labelEn: 'Cognitive' },
                   { key: 'errorPattern', labelAr: 'نمط الخطأ', labelEn: 'Error Pattern', translatable: true },
-                  { key: 'estimatedTime', labelAr: 'Estimated Time', labelEn: 'Estimated Time' },
+                  { key: 'estimatedTime', labelAr: 'الوقت التقديري', labelEn: 'Estimated Time' },
                 ].map((field: any) => {
                   const isEn = questionActiveLang === 'en';
                   const activeFieldKey = isEn && field.translatable ? `${field.key}En` : field.key;
@@ -796,6 +807,16 @@ export const QuestionsBuilder = (props: any) => {
                 </div>
               </div>
 
+              {/* Question Images & Cross-Language Media Tray */}
+              <QuestionImageGallery
+                language={language}
+                activeLang={questionActiveLang}
+                tempQuestion={tempQuestion}
+                allQuestions={list || []}
+                onUpdateQuestion={(field, val) => updateCurrentQuestionField(field, val)}
+                showToast={props.showToast}
+              />
+
               {/* Rich Text Editor for Question Text */}
               <div className="flex flex-col gap-3">
                 <div className="flex justify-between items-center">
@@ -821,7 +842,7 @@ export const QuestionsBuilder = (props: any) => {
                   )}
                 </div>
                 <RichTextEditor
-                  value={(questionActiveLang === 'ar' ? (hasArabicChars(tempQuestion.text) ? tempQuestion.text : '') : (tempQuestion.textEn || (hasEnglishChars(tempQuestion.text) && !hasArabicChars(tempQuestion.text) ? tempQuestion.text : ''))) || ""}
+                  value={(questionActiveLang === 'ar' ? (tempQuestion.text || '') : (tempQuestion.textEn || (tempQuestion.text && !hasArabicChars(tempQuestion.text) ? tempQuestion.text : ''))) || ""}
                   onChange={(value) => {
                     if (questionActiveLang === 'en') {
                       updateCurrentQuestionField("textEn", value);
@@ -832,6 +853,12 @@ export const QuestionsBuilder = (props: any) => {
                       updateCurrentQuestionField("text", value);
                     }
                   }}
+                  availableImages={extractImageUrls([
+                    tempQuestion.text,
+                    tempQuestion.textEn,
+                    tempQuestion.imageUrl,
+                    ...(Array.isArray(tempQuestion.sections) ? tempQuestion.sections.map((s: any) => s.content) : [])
+                  ].filter(Boolean).join(' '))}
                   placeholder={questionActiveLang === 'ar' ? "اكتب نص السؤال بالعربية هنا..." : "Write the question prompt in English here..."}
                 />
               </div>
@@ -856,6 +883,12 @@ export const QuestionsBuilder = (props: any) => {
                     </button>
                   )}
                 </div>
+
+                <p className="text-[10px] text-slate-400 font-bold">
+                  {language === 'ar'
+                    ? 'الصورة مشتركة بين اللغتين — ما ترفعه هنا يظهر تلقائياً في العربي والإنجليزي.'
+                    : 'Image is shared between both languages — uploaded here appears in both AR and EN.'}
+                </p>
 
                 {tempQuestion.imageUrl ? (
                   <div className="relative group rounded-xl overflow-hidden border border-slate-200 max-w-sm bg-white">
@@ -925,20 +958,24 @@ export const QuestionsBuilder = (props: any) => {
                       <Plus className="w-4 h-4" /> {language === 'ar' ? 'إضافة شريحة مساعدة' : 'Add Block'}
                     </button>
                     <div className={`absolute right-0 mt-2 w-56 bg-white border border-slate-100 rounded-xl shadow-xl p-2 z-50 ${openDropdownId === 'question-sections' ? "block" : "hidden"}`}>
-                      {['EXPLANATION'].map(secType => (
-                        <button
-                          key={secType}
-                          type="button"
-                          onClick={() => {
-                            addQuestionSection(secType);
-                            setOpenDropdownId(null);
-                          }}
-                          className="w-full text-right px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
-                        >
-                          {React.createElement(SECTION_STYLE_PRESETS[secType]?.icon || FileText, { className: "w-4 h-4" })}
-                          <span>{SECTION_STYLE_PRESETS[secType]?.labelEn || secType}</span>
-                        </button>
-                      ))}
+                      {['FEEDBACK', 'HINT', 'EXPLANATION', 'TIP', 'WARNING', 'KEY_INSIGHT'].map(secType => {
+                        const preset = SECTION_STYLE_PRESETS[secType] || SECTION_STYLE_PRESETS.EXPLANATION;
+                        const label = language === 'ar' ? (preset?.labelAr || secType) : (preset?.labelEn || secType);
+                        return (
+                          <button
+                            key={secType}
+                            type="button"
+                            onClick={() => {
+                              addQuestionSection(secType);
+                              setOpenDropdownId(null);
+                            }}
+                            className="w-full text-right px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
+                          >
+                            {React.createElement(preset?.icon || FileText, { className: "w-4 h-4" })}
+                            <span>{label || secType}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -956,7 +993,7 @@ export const QuestionsBuilder = (props: any) => {
                         <div className="flex justify-between items-center">
                           <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 ${preset.badge}`}>
                             <IconComponent className="w-3.5 h-3.5" />
-                            {preset.labelEn}
+                            {language === 'ar' ? (preset?.labelAr || sec.type) : (preset?.labelEn || sec.type)}
                           </span>
                           <button
                             type="button"

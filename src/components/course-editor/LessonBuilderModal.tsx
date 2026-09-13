@@ -31,8 +31,8 @@ export const LessonBuilderModal: React.FC = () => {
     role,
     currentLesson,
     setCurrentLesson,
-    activeTab,
-    setActiveTab,
+    activeTab: contextActiveTab,
+    setActiveTab: setContextActiveTab,
     isLessonModalOpen,
     isLessonContentLoading,
     setIsLessonModalOpen,
@@ -51,6 +51,14 @@ export const LessonBuilderModal: React.FC = () => {
     setOpenDropdownId,
   } = useCourseEditor();
 
+  const [activeTab, setActiveTab] = useState<'info' | 'slides' | 'exercises' | 'assignments' | 'attachments' | 'scheduling'>(contextActiveTab || 'info');
+
+  useEffect(() => {
+    if (isLessonModalOpen) {
+      setActiveTab('info');
+    }
+  }, [isLessonModalOpen, currentLesson?.id]);
+
   const handleExcelUpload = (type: 'questions' | 'metadata' | 'assignments') => {
     if (type === 'metadata' && metadataExcelRef.current) metadataExcelRef.current.click();
     else if (type === 'questions' && questionsExcelRef.current) questionsExcelRef.current.click();
@@ -60,14 +68,18 @@ export const LessonBuilderModal: React.FC = () => {
   const excelContext = useRef<any>(null);
   useEffect(() => {
     excelContext.current = { currentModule: currentLesson, setCurrentModule: setCurrentLesson, language, showToast, isLoadingQuestions: isLessonContentLoading };
-  });
+  }, [currentLesson, setCurrentLesson, language, showToast, isLessonContentLoading]);
   const handleQuestionsExcelChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     importModuleQuestions(e, null, 'questions', () => excelContext.current, role === 'SUPER_ADMIN');
   const handleAssignmentsExcelChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     importModuleQuestions(e, null, 'assignments', () => excelContext.current, role === 'SUPER_ADMIN');
 
   const downloadQuestionsTemplate = (type: 'questions' | 'assignments') => {
-    XLSX.writeFile(buildQuestionWorkbook(null, language), type === 'assignments' ? 'assignments_template.xlsx' : 'questions_template.xlsx');
+    const filename = language === 'ar'
+      ? (type === 'assignments' ? 'قالب_التكليفات_ثنائي_اللغة.xlsx' : 'قالب_الأسئلة_ثنائي_اللغة.xlsx')
+      : (type === 'assignments' ? 'assignments_bilingual_template.xlsx' : 'bilingual_questions_template.xlsx');
+    XLSX.writeFile(buildQuestionWorkbook(null, language), filename);
+    showToast(language === 'ar' ? 'تم تحميل القالب ثنائي اللغة بنجاح' : 'Bilingual template downloaded successfully', 'success');
   };
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 

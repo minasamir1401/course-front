@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNotification } from "@/context/NotificationContext";
 
@@ -21,7 +22,7 @@ export function useLessonBlocks(setCurrentLesson: (lesson: any) => void) {
     return -1;
   };
 
-  const addBlock = (source: 'slides' | 'assignments' | 'questions' = 'slides', type: 'TEXT' | 'QUESTION') => {
+  const addBlock = useCallback((source: 'slides' | 'assignments' | 'questions' = 'slides', type: 'TEXT' | 'QUESTION') => {
     const newBlock = type === 'TEXT' 
       ? { id: Date.now() + Math.random(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? `محتوى جديد` : `New Content`, titleEn: language === 'en' ? `New Content` : '', content: "", contentEn: "", text: "", textEn: "", videoUrl: "", sections: [] }
       : { id: Date.now() + Math.random(), type: 'QUESTION', label: 'MCQ', title: language === 'ar' ? `سؤال جديد` : `New Question`, titleEn: language === 'en' ? `New Question` : '', content: "", contentEn: "", text: "", textEn: "", videoUrl: "", options: ["", "", "", ""], optionsEn: ["", "", "", ""], correctAnswer: "", correctAnswerEn: "", sections: [] };
@@ -29,9 +30,9 @@ export function useLessonBlocks(setCurrentLesson: (lesson: any) => void) {
       ...prev,
       [source]: [...(prev[source] || []), newBlock]
     }));
-  };
+  }, [language, setCurrentLesson]);
 
-  const insertBlockAt = (source: 'slides' | 'assignments' | 'questions' = 'slides', index: number, type: 'TEXT' | 'QUESTION') => {
+  const insertBlockAt = useCallback((source: 'slides' | 'assignments' | 'questions' = 'slides', index: number, type: 'TEXT' | 'QUESTION') => {
     const newBlock = type === 'TEXT' 
       ? { id: Date.now() + Math.random(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? `محتوى جديد` : `New Content`, titleEn: language === 'en' ? `New Content` : '', content: "", contentEn: "", text: "", textEn: "", videoUrl: "", sections: [] }
       : { id: Date.now() + Math.random(), type: 'QUESTION', label: 'MCQ', title: language === 'ar' ? `سؤال جديد` : `New Question`, titleEn: language === 'en' ? `New Question` : '', content: "", contentEn: "", text: "", textEn: "", videoUrl: "", options: ["", "", "", ""], optionsEn: ["", "", "", ""], correctAnswer: "", correctAnswerEn: "", sections: [] };
@@ -41,9 +42,9 @@ export function useLessonBlocks(setCurrentLesson: (lesson: any) => void) {
       return { ...prev, [source]: newSlides };
     });
     showToast(language === 'ar' ? "تم إدراج الشريحة بنجاح" : "Slide inserted successfully", "success");
-  };
+  }, [language, setCurrentLesson, showToast]);
 
-  const moveBlock = (source: 'slides' | 'assignments' | 'questions' = 'slides', index: number, direction: 'UP' | 'DOWN') => {
+  const moveBlock = useCallback((source: 'slides' | 'assignments' | 'questions' = 'slides', index: number, direction: 'UP' | 'DOWN') => {
     setCurrentLesson((prev: any) => {
       const newSlides = [...(prev[source] || [])];
       const targetIndex = direction === 'UP' ? index - 1 : index + 1;
@@ -51,9 +52,9 @@ export function useLessonBlocks(setCurrentLesson: (lesson: any) => void) {
       [newSlides[index], newSlides[targetIndex]] = [newSlides[targetIndex], newSlides[index]];
       return { ...prev, [source]: newSlides };
     });
-  };
+  }, [setCurrentLesson]);
 
-  const updateBlock = (source: 'slides' | 'assignments' | 'questions' = 'slides', index: number, field: string, value: any, blockRef?: any) => {
+  const updateBlock = useCallback((source: 'slides' | 'assignments' | 'questions' = 'slides', index: number, field: string, value: any, blockRef?: any) => {
     setCurrentLesson((prev: any) => {
       const newSlides = [...(prev[source] || [])];
       const resolvedIndex = findBlockIndex(newSlides, index, blockRef);
@@ -71,9 +72,33 @@ export function useLessonBlocks(setCurrentLesson: (lesson: any) => void) {
       }
       return { ...prev, [source]: newSlides };
     });
-  };
+  }, [setCurrentLesson]);
 
-  const updateBlockTypeAndReset = (source: 'slides' | 'assignments' | 'questions', index: number, newType: string) => {
+  const updateBlockFields = useCallback((source: 'slides' | 'assignments' | 'questions' = 'slides', index: number, updates: Record<string, any>, blockRef?: any) => {
+    setCurrentLesson((prev: any) => {
+      const newSlides = [...(prev[source] || [])];
+      const resolvedIndex = findBlockIndex(newSlides, index, blockRef);
+      if (!newSlides[resolvedIndex]) return prev;
+
+      let changed = false;
+      const target = { ...newSlides[resolvedIndex] };
+      for (const [field, value] of Object.entries(updates)) {
+        if (target[field] !== value) {
+          target[field] = value;
+          changed = true;
+          if (field === 'content') target.text = value;
+          else if (field === 'text') target.content = value;
+          else if (field === 'contentEn') target.textEn = value;
+          else if (field === 'textEn') target.contentEn = value;
+        }
+      }
+      if (!changed) return prev;
+      newSlides[resolvedIndex] = target;
+      return { ...prev, [source]: newSlides };
+    });
+  }, [setCurrentLesson]);
+
+  const updateBlockTypeAndReset = useCallback((source: 'slides' | 'assignments' | 'questions', index: number, newType: string) => {
     const isOldSimple = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(newType);
     let defaultOptions: any = ["", "", "", ""];
     let defaultCorrect = "";
@@ -123,18 +148,18 @@ export function useLessonBlocks(setCurrentLesson: (lesson: any) => void) {
       };
       return { ...prev, [source]: newSlides };
     });
-  };
+  }, [setCurrentLesson]);
 
-  const removeBlock = (source: 'slides' | 'assignments' | 'questions' = 'slides', index: number) => {
+  const removeBlock = useCallback((source: 'slides' | 'assignments' | 'questions' = 'slides', index: number) => {
     if (!confirm(language === 'ar' ? "هل أنت متأكد من حذف هذه الشريحة/السؤال؟" : "Are you sure you want to delete this slide/question?")) return;
     setCurrentLesson((prev: any) => {
       const newSlides = [...(prev[source] || [])];
       newSlides.splice(index, 1);
       return { ...prev, [source]: newSlides };
     });
-  };
+  }, [language, setCurrentLesson]);
 
-  const addSection = (source: 'slides' | 'assignments' | 'questions' = 'slides', blockIndex: number, type: string) => {
+  const addSection = useCallback((source: 'slides' | 'assignments' | 'questions' = 'slides', blockIndex: number, type: string) => {
     setCurrentLesson((prev: any) => {
       const newSlides = [...(prev[source] || [])];
       if (!newSlides[blockIndex]) return prev;
@@ -142,9 +167,9 @@ export function useLessonBlocks(setCurrentLesson: (lesson: any) => void) {
       newSlides[blockIndex] = { ...newSlides[blockIndex], sections };
       return { ...prev, [source]: newSlides };
     });
-  };
+  }, [setCurrentLesson]);
 
-  const updateSection = (
+  const updateSection = useCallback((
     source: 'slides' | 'assignments' | 'questions' = 'slides', 
     blockIndex: number, 
     sectionIndex: number, 
@@ -181,9 +206,9 @@ export function useLessonBlocks(setCurrentLesson: (lesson: any) => void) {
       newSlides[resolvedBlockIndex] = { ...block, sections };
       return { ...prev, [source]: newSlides };
     });
-  };
+  }, [setCurrentLesson]);
 
-  const removeSection = (source: 'slides' | 'assignments' | 'questions' = 'slides', blockIndex: number, sectionIndex: number) => {
+  const removeSection = useCallback((source: 'slides' | 'assignments' | 'questions' = 'slides', blockIndex: number, sectionIndex: number) => {
     if (!confirm(language === 'ar' ? "هل أنت متأكد من حذف هذا القسم؟" : "Are you sure you want to delete this section?")) return;
     setCurrentLesson((prev: any) => {
       const newSlides = [...(prev[source] || [])];
@@ -193,14 +218,14 @@ export function useLessonBlocks(setCurrentLesson: (lesson: any) => void) {
       newSlides[blockIndex] = { ...newSlides[blockIndex], sections };
       return { ...prev, [source]: newSlides };
     });
-  };
-
+  }, [language, setCurrentLesson]);
 
   return {
     addBlock,
     insertBlockAt,
     moveBlock,
     updateBlock,
+    updateBlockFields,
     updateBlockTypeAndReset,
     removeBlock,
     addSection,
