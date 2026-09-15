@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Edit2, Plus, Trash2, FileJson, Upload, Download, Search, ChevronDown, Target, BookOpen, Video } from "lucide-react";
 import * as XLSX from "xlsx";
+import { buildCourseMetadataTemplateRows } from '@/lib/examExcelTemplates';
 import { useCourseEditor } from "../CourseEditorContext";
 
 interface LessonInfoTabProps {
@@ -47,10 +48,24 @@ export const LessonInfoTab: React.FC<LessonInfoTabProps> = ({
 
         const headers = (rows[0] as string[]).map((h) => String(h).trim().toLowerCase());
 
+        const stdArIdx = headers.findIndex(h => (h.includes("standard") || h.includes("معيار") || h.includes("المعايير")) && (h.includes("ar") || h.includes("عرب")));
+        const stdEnIdx = headers.findIndex(h => (h.includes("standard") || h.includes("معيار") || h.includes("المعايير")) && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
         const stdIdx = headers.findIndex(h => h.includes("standard") || h.includes("معيار") || h.includes("المعايير"));
+
+        const indArIdx = headers.findIndex(h => (h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشرات")) && (h.includes("ar") || h.includes("عرب")));
+        const indEnIdx = headers.findIndex(h => (h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشرات")) && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
         const indIdx = headers.findIndex(h => h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشرات"));
+
+        const loArIdx = headers.findIndex(h => (h.includes("outcome") || h.includes("ناتج") || h.includes("مخرج") || h.includes("النواتج") || h.includes("المخرجات")) && (h.includes("ar") || h.includes("عرب")));
+        const loEnIdx = headers.findIndex(h => (h.includes("outcome") || h.includes("ناتج") || h.includes("مخرج") || h.includes("النواتج") || h.includes("المخرجات")) && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
         const loIdx = headers.findIndex(h => h.includes("outcome") || h.includes("ناتج") || h.includes("مخرج") || h.includes("النواتج") || h.includes("المخرجات"));
+
+        const domainArIdx = headers.findIndex(h => (h.includes("domain") || h.includes("مجال") || h.includes("المجال")) && (h.includes("ar") || h.includes("عرب")));
+        const domainEnIdx = headers.findIndex(h => (h.includes("domain") || h.includes("مجال") || h.includes("المجال")) && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
         const domainIdx = headers.findIndex(h => h.includes("domain") || h.includes("مجال") || h.includes("المجال"));
+
+        const lessonArIdx = headers.findIndex(h => (h.includes("lesson") || h.includes("درس") || h.includes("الدرس")) && (h.includes("ar") || h.includes("عرب")));
+        const lessonEnIdx = headers.findIndex(h => (h.includes("lesson") || h.includes("درس") || h.includes("الدرس")) && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
         const lessonIdx = headers.findIndex(h => h.includes("lesson") || h.includes("درس") || h.includes("الدرس"));
 
         if (stdIdx === -1 && indIdx === -1 && loIdx === -1 && domainIdx === -1) {
@@ -66,11 +81,15 @@ export const LessonInfoTab: React.FC<LessonInfoTabProps> = ({
         const dataRows = rows.slice(1).filter(r => r.some(c => String(c).trim() !== ""));
 
         let filteredRows = dataRows;
-        if (lessonIdx >= 0 && currentLesson.title) {
+        if (currentLesson.title) {
           const currentLessonTitleLower = currentLesson.title.trim().toLowerCase();
           const matchingRows = dataRows.filter(r => {
-            const rowLesson = String(r[lessonIdx] ?? "").trim().toLowerCase();
-            return rowLesson && (currentLessonTitleLower.includes(rowLesson) || rowLesson.includes(currentLessonTitleLower));
+            const rowLessonAr = lessonArIdx >= 0 ? String(r[lessonArIdx] ?? "").trim().toLowerCase() : "";
+            const rowLessonEn = lessonEnIdx >= 0 ? String(r[lessonEnIdx] ?? "").trim().toLowerCase() : "";
+            const rowLesson = lessonIdx >= 0 ? String(r[lessonIdx] ?? "").trim().toLowerCase() : "";
+            return (rowLessonAr && (currentLessonTitleLower.includes(rowLessonAr) || rowLessonAr.includes(currentLessonTitleLower))) ||
+              (rowLessonEn && (currentLessonTitleLower.includes(rowLessonEn) || rowLessonEn.includes(currentLessonTitleLower))) ||
+              (rowLesson && (currentLessonTitleLower.includes(rowLesson) || rowLesson.includes(currentLessonTitleLower)));
           });
           if (matchingRows.length > 0) {
             filteredRows = matchingRows;
@@ -78,10 +97,20 @@ export const LessonInfoTab: React.FC<LessonInfoTabProps> = ({
         }
 
         if (filteredRows.length > 0) {
-          const standardsList = filteredRows.map(r => stdIdx >= 0 ? String(r[stdIdx] ?? "").trim() : "").filter(Boolean);
-          const indicatorsList = filteredRows.map(r => indIdx >= 0 ? String(r[indIdx] ?? "").trim() : "").filter(Boolean);
-          const outcomesList = filteredRows.map(r => loIdx >= 0 ? String(r[loIdx] ?? "").trim() : "").filter(Boolean);
-          const domainList = filteredRows.map(r => domainIdx >= 0 ? String(r[domainIdx] ?? "").trim() : "").filter(Boolean);
+          const pickVal = (r: any[], arIdx: number, enIdx: number, fallbackIdx: number) => {
+            const arVal = arIdx >= 0 ? String(r[arIdx] ?? "").trim() : "";
+            const enVal = enIdx >= 0 ? String(r[enIdx] ?? "").trim() : "";
+            const fbVal = fallbackIdx >= 0 ? String(r[fallbackIdx] ?? "").trim() : "";
+            if (language === 'en') {
+              return enVal || arVal || fbVal;
+            }
+            return arVal || enVal || fbVal;
+          };
+
+          const standardsList = filteredRows.map(r => pickVal(r, stdArIdx, stdEnIdx, stdIdx)).filter(Boolean);
+          const indicatorsList = filteredRows.map(r => pickVal(r, indArIdx, indEnIdx, indIdx)).filter(Boolean);
+          const outcomesList = filteredRows.map(r => pickVal(r, loArIdx, loEnIdx, loIdx)).filter(Boolean);
+          const domainList = filteredRows.map(r => pickVal(r, domainArIdx, domainEnIdx, domainIdx)).filter(Boolean);
 
           standardVal = standardsList.join("\n");
           indicatorVal = indicatorsList.join("\n");
@@ -108,12 +137,7 @@ export const LessonInfoTab: React.FC<LessonInfoTabProps> = ({
   };
 
   const downloadMetadataTemplate = () => {
-    const wsData = [
-      ["Lesson Title", "Standard", "Indicator", "Outcome", "Domain"],
-      ["مقدمة في الفيزياء", "Standard 1: Understanding & Comprehension", "Indicator 1: Identifies Basic Concepts", "Outcome 1: Student will be able to...", "الفيزياء"],
-      ["مقدمة في الفيزياء", "Standard 2: Application & Analysis", "Indicator 2: Applies Mathematical Laws", "Outcome 2: Student will distinguish between...", "الفيزياء"],
-      ["الحركة الموجية", "Standard 3: Critical Thinking", "Indicator 3: Infers Relationships", "Outcome 3: Student will analyze...", "الفيزياء"]
-    ];
+    const wsData = buildCourseMetadataTemplateRows(language);
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Metadata Template");

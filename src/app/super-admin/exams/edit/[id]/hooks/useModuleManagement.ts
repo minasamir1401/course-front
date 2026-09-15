@@ -6,6 +6,7 @@ import * as XLSX from "xlsx";
 import { useRef, useEffect } from "react";
 import {
   buildAdvancedMetadataTemplateRows,
+  buildCourseMetadataTemplateRows,
   buildQuestionExportRows,
   buildQuestionTemplateRows,
 } from '@/lib/examExcelTemplates';
@@ -99,10 +100,24 @@ const openAddModuleModal = () => {
         const headers = (rows[0] as string[]).map((h) => String(h).trim().toLowerCase());
           const idIdx = headers.findIndex(h => h.includes("id") || h.includes("معرف"));
         
+        const stdArIdx = headers.findIndex(h => (h.includes("standard") || h.includes("معيار") || h.includes("المعايير")) && (h.includes("ar") || h.includes("عرب")));
+        const stdEnIdx = headers.findIndex(h => (h.includes("standard") || h.includes("معيار") || h.includes("المعايير")) && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
         const stdIdx = headers.findIndex(h => h.includes("standard") || h.includes("معيار") || h.includes("المعايير"));
+
+        const indArIdx = headers.findIndex(h => (h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشرات")) && (h.includes("ar") || h.includes("عرب")));
+        const indEnIdx = headers.findIndex(h => (h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشرات")) && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
         const indIdx = headers.findIndex(h => h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشرات"));
+
+        const loArIdx = headers.findIndex(h => (h.includes("outcome") || h.includes("ناتج") || h.includes("مخرج") || h.includes("النواتج") || h.includes("المخرجات")) && (h.includes("ar") || h.includes("عرب")));
+        const loEnIdx = headers.findIndex(h => (h.includes("outcome") || h.includes("ناتج") || h.includes("مخرج") || h.includes("النواتج") || h.includes("المخرجات")) && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
         const loIdx = headers.findIndex(h => h.includes("outcome") || h.includes("ناتج") || h.includes("مخرج") || h.includes("النواتج") || h.includes("المخرجات") || h.includes("learning") || h.includes("standard") || h.includes("معيار") || h.includes("المعايير"));
+
+        const domainArIdx = headers.findIndex(h => (h.includes("domain") || h.includes("مجال") || h.includes("الماجال")) && (h.includes("ar") || h.includes("عرب")));
+        const domainEnIdx = headers.findIndex(h => (h.includes("domain") || h.includes("مجال") || h.includes("الماجال")) && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
         const domainIdx = headers.findIndex(h => h.includes("domain") || h.includes("مجال") || h.includes("الماجال"));
+
+        const lessonArIdx = headers.findIndex(h => (h.includes("lesson") || h.includes("درس") || h.includes("الدرس")) && (h.includes("ar") || h.includes("عرب")));
+        const lessonEnIdx = headers.findIndex(h => (h.includes("lesson") || h.includes("درس") || h.includes("الدرس")) && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
         const lessonIdx = headers.findIndex(h => h.includes("lesson") || h.includes("درس") || h.includes("الدرس"));
 
         if (stdIdx === -1 && indIdx === -1 && loIdx === -1 && domainIdx === -1) {
@@ -110,19 +125,18 @@ const openAddModuleModal = () => {
           return;
         }
 
-        const standardVal = "";
-        const indicatorVal = "";
-        const outcomeVal = "";
-        const domainVal = "";
-
         const dataRows = rows.slice(1).filter(r => r.some(c => String(c).trim() !== ""));
         
         let filteredRows = dataRows;
-        if (lessonIdx >= 0 && currentModule.title) {
+        if (currentModule.title) {
           const currentModuleTitleLower = currentModule.title.trim().toLowerCase();
           const matchingRows = dataRows.filter(r => {
-            const rowLesson = String(r[lessonIdx] ?? "").trim().toLowerCase();
-            return rowLesson && (currentModuleTitleLower.includes(rowLesson) || rowLesson.includes(currentModuleTitleLower));
+            const rowLessonAr = lessonArIdx >= 0 ? String(r[lessonArIdx] ?? "").trim().toLowerCase() : "";
+            const rowLessonEn = lessonEnIdx >= 0 ? String(r[lessonEnIdx] ?? "").trim().toLowerCase() : "";
+            const rowLesson = lessonIdx >= 0 ? String(r[lessonIdx] ?? "").trim().toLowerCase() : "";
+            return (rowLessonAr && (currentModuleTitleLower.includes(rowLessonAr) || rowLessonAr.includes(currentModuleTitleLower))) ||
+              (rowLessonEn && (currentModuleTitleLower.includes(rowLessonEn) || rowLessonEn.includes(currentModuleTitleLower))) ||
+              (rowLesson && (currentModuleTitleLower.includes(rowLesson) || rowLesson.includes(currentModuleTitleLower)));
           });
           if (matchingRows.length > 0) {
             filteredRows = matchingRows;
@@ -130,10 +144,20 @@ const openAddModuleModal = () => {
         }
 
         if (filteredRows.length > 0) {
-          const standardsList = filteredRows.map(r => stdIdx >= 0 ? String(r[stdIdx] ?? "").trim() : "").filter(Boolean);
-          const indicatorsList = filteredRows.map(r => indIdx >= 0 ? String(r[indIdx] ?? "").trim() : "").filter(Boolean);
-          const outcomesList = filteredRows.map(r => loIdx >= 0 ? String(r[loIdx] ?? "").trim() : "").filter(Boolean);
-          const domainList = filteredRows.map(r => domainIdx >= 0 ? String(r[domainIdx] ?? "").trim() : "").filter(Boolean);
+          const pickVal = (r: any[], arIdx: number, enIdx: number, fallbackIdx: number) => {
+            const arVal = arIdx >= 0 ? String(r[arIdx] ?? "").trim() : "";
+            const enVal = enIdx >= 0 ? String(r[enIdx] ?? "").trim() : "";
+            const fbVal = fallbackIdx >= 0 ? String(r[fallbackIdx] ?? "").trim() : "";
+            if (language === 'en') {
+              return enVal || arVal || fbVal;
+            }
+            return arVal || enVal || fbVal;
+          };
+
+          const standardsList = filteredRows.map(r => pickVal(r, stdArIdx, stdEnIdx, stdIdx)).filter(Boolean);
+          const indicatorsList = filteredRows.map(r => pickVal(r, indArIdx, indEnIdx, indIdx)).filter(Boolean);
+          const outcomesList = filteredRows.map(r => pickVal(r, loArIdx, loEnIdx, loIdx)).filter(Boolean);
+          const domainList = filteredRows.map(r => pickVal(r, domainArIdx, domainEnIdx, domainIdx)).filter(Boolean);
 
           setAvailableMetadata((prev: any) => mergeAvailableMetadata(prev, {
             domains: Array.from(new Set(domainList)),
@@ -183,12 +207,7 @@ const openAddModuleModal = () => {
   };
 
   const downloadMetadataTemplate = () => {
-    const wsData = [
-      ["Module Title", "Standard", "Indicator", "Outcome", "Domain"],
-      ["مقدمة في الفيزياء", "Standard 1: Understanding & Comprehension", "Indicator 1: Identifies Basic Concepts", "Outcome 1: Student will be able to...", "الفيزياء"],
-      ["مقدمة في الفيزياء", "Standard 2: Application & Analysis", "Indicator 2: Applies Mathematical Laws", "Outcome 2: Student will distinguish between...", "الفيزياء"],
-      ["الحركة الموجية", "Standard 3: Critical Thinking", "Indicator 3: Infers Relationships", "Outcome 3: Student will analyze...", "الفيزياء"]
-    ];
+    const wsData = buildCourseMetadataTemplateRows(language);
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Metadata Template");
@@ -227,20 +246,48 @@ const openAddModuleModal = () => {
         if (rows.length < 2) { showToast(language === 'ar' ? "ملف Excel فارغ أو لا يحتوي على بيانات" : "Excel file is empty or does not contain data rows", "error"); resolve([]); return; }
 
         const headers = (rows[0] as string[]).map((h) => String(h).trim().toLowerCase());
-          const idIdx = headers.findIndex(h => h.includes("id") || h.includes("معرف"));
-        
-        const courseIdx = headers.findIndex(h => h.includes("exam") || h.includes("course") || h.includes("اختبار") || h.includes("الاختبار"));
-        const sectionIdx = headers.findIndex(h => h.includes("section") || h.includes("قسم") || h.includes("القسم"));
-        const domainIdx = headers.findIndex(h => h.includes("domain") || h.includes("مجال") || h.includes("المجال"));
-        const loIdx = headers.findIndex(h => h.includes("outcome") || h.includes("ناتج") || h.includes("مخرج") || h.includes("النواتج"));
-        const indIdx = headers.findIndex(h => h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشرات"));
-        const skillIdx = headers.findIndex(h => (h.includes("skill") || h.includes("مهارة") || h.includes("المهارة")) && !h.includes("sub") && !h.includes("micro") && !h.includes("فرعية") && !h.includes("دقيقة"));
+        const idIdx = headers.findIndex(h => h.includes("id") || h.includes("معرف"));
+
+        const courseArIdx = headers.findIndex(h => (h.includes("exam") || h.includes("course") || h.includes("اختبار")) && (h.includes("ar") || h.includes("عرب")));
+        const courseEnIdx = headers.findIndex(h => (h.includes("exam") || h.includes("course") || h.includes("اختبار")) && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
+        const courseIdx = headers.findIndex(h => h.includes("exam") || h.includes("course") || h.includes("اختبار"));
+
+        const sectionArIdx = headers.findIndex(h => (h.includes("section") || h.includes("قسم")) && (h.includes("ar") || h.includes("عرب")));
+        const sectionEnIdx = headers.findIndex(h => (h.includes("section") || h.includes("قسم")) && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
+        const sectionIdx = headers.findIndex(h => h.includes("section") || h.includes("قسم"));
+
+        const domainArIdx = headers.findIndex(h => (h.includes("domain") || h.includes("مجال")) && (h.includes("ar") || h.includes("عرب")));
+        const domainEnIdx = headers.findIndex(h => (h.includes("domain") || h.includes("مجال")) && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
+        const domainIdx = headers.findIndex(h => h.includes("domain") || h.includes("مجال"));
+
+        const loArIdx = headers.findIndex(h => (h.includes("outcome") || h.includes("ناتج") || h.includes("مخرج") || h.includes("standard") || h.includes("معيار")) && (h.includes("ar") || h.includes("عرب")));
+        const loEnIdx = headers.findIndex(h => (h.includes("outcome") || h.includes("ناتج") || h.includes("مخرج") || h.includes("standard") || h.includes("معيار")) && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
+        const loIdx = headers.findIndex(h => h.includes("outcome") || h.includes("ناتج") || h.includes("مخرج") || h.includes("learning") || h.includes("standard") || h.includes("معيار"));
+
+        const indArIdx = headers.findIndex(h => (h.includes("indicator") || h.includes("مؤشر")) && (h.includes("ar") || h.includes("عرب")));
+        const indEnIdx = headers.findIndex(h => (h.includes("indicator") || h.includes("مؤشر")) && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
+        const indIdx = headers.findIndex(h => h.includes("indicator") || h.includes("مؤشر"));
+
+        const skillArIdx = headers.findIndex(h => (h.includes("skill") || h.includes("مهارة")) && !h.includes("sub") && !h.includes("micro") && !h.includes("فرعية") && !h.includes("دقيقة") && (h.includes("ar") || h.includes("عرب")));
+        const skillEnIdx = headers.findIndex(h => (h.includes("skill") || h.includes("مهارة")) && !h.includes("sub") && !h.includes("micro") && !h.includes("فرعية") && !h.includes("دقيقة") && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
+        const skillIdx = headers.findIndex(h => (h.includes("skill") || h.includes("مهارة")) && !h.includes("sub") && !h.includes("micro") && !h.includes("فرعية") && !h.includes("دقيقة"));
+
+        const subskillArIdx = headers.findIndex(h => (h.includes("subskill") || h.includes("فرعية")) && (h.includes("ar") || h.includes("عرب")));
+        const subskillEnIdx = headers.findIndex(h => (h.includes("subskill") || h.includes("فرعية")) && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
         const subskillIdx = headers.findIndex(h => h.includes("subskill") || h.includes("فرعية"));
+
+        const microSkillArIdx = headers.findIndex(h => (h.includes("micro") || h.includes("دقيقة")) && (h.includes("ar") || h.includes("عرب")));
+        const microSkillEnIdx = headers.findIndex(h => (h.includes("micro") || h.includes("دقيقة")) && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
         const microSkillIdx = headers.findIndex(h => h.includes("micro") || h.includes("دقيقة"));
-        const levelIdx = headers.findIndex(h => h.includes("difficulty") || h.includes("صعوبة"));
-        const dokIdx = headers.findIndex(h => h.includes("dok") || h.includes("عمق"));
+
+        const levelIdx = headers.findIndex(h => h.includes("difficulty") || h.includes("صعوبة") || h.includes("level"));
+        const dokIdx = headers.findIndex(h => h.includes("dok") || h.includes("عمق") || h.includes("depth"));
         const cognitiveIdx = headers.findIndex(h => h.includes("cognitive") || h.includes("معرفي"));
+
+        const errorPatternArIdx = headers.findIndex(h => (h.includes("error") || h.includes("خطأ")) && (h.includes("ar") || h.includes("عرب")));
+        const errorPatternEnIdx = headers.findIndex(h => (h.includes("error") || h.includes("خطأ")) && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
         const errorPatternIdx = headers.findIndex(h => h.includes("error") || h.includes("خطأ"));
+
         const timeIdx = headers.findIndex(h => h.includes("time") || h.includes("وقت"));
         let finalTargetList: any[] = [];
 
@@ -262,38 +309,85 @@ const openAddModuleModal = () => {
             if (!row || row.every(c => String(c).trim() === "")) continue;
             
             let qIndex = -1;
-              if (idIdx >= 0 && row[idIdx]) {
-                const rowId = String(row[idIdx]).trim();
-                qIndex = targetList.findIndex((q: any) => q.id === rowId || String(q.id) === rowId);
-              }
-              if (qIndex === -1) {
-                qIndex = mappedCount;
-              }
-              let q: any;
-              if (qIndex < targetList.length) {
-                q = { ...targetList[qIndex] };
-              } else {
-                // Do not create empty questions from metadata excel if there is no question at this index
-                continue;
-              }
-
-            if (courseIdx >= 0) q.course = String(row[courseIdx]).trim();
-            if (sectionIdx >= 0) q.section = String(row[sectionIdx]).trim();
-            if (domainIdx >= 0) q.domain = String(row[domainIdx]).trim();
-            if (loIdx >= 0) {
-              const loVal = String(row[loIdx]).trim();
-              q.learningOutcome = loVal;
-              q.standard = loVal;
+            if (idIdx >= 0 && row[idIdx]) {
+              const rowId = String(row[idIdx]).trim();
+              qIndex = targetList.findIndex((q: any) => q.id === rowId || String(q.id) === rowId);
             }
-            if (indIdx >= 0) q.indicator = String(row[indIdx]).trim();
-            if (skillIdx >= 0) q.skill = String(row[skillIdx]).trim();
-            if (subskillIdx >= 0) q.subskill = String(row[subskillIdx]).trim();
-            if (microSkillIdx >= 0) q.microSkill = String(row[microSkillIdx]).trim();
-            if (levelIdx >= 0) q.level = String(row[levelIdx]).trim();
-            if (dokIdx >= 0) q.dok = normalizeDok(row[dokIdx]) || String(row[dokIdx]).trim();
-            if (cognitiveIdx >= 0) q.cognitive = String(row[cognitiveIdx]).trim();
-            if (errorPatternIdx >= 0) q.errorPattern = String(row[errorPatternIdx]).trim();
-            if (timeIdx >= 0) q.estimatedTime = String(row[timeIdx]).trim();
+            if (qIndex === -1) {
+              qIndex = mappedCount;
+            }
+            let q: any;
+            if (qIndex < targetList.length) {
+              q = { ...targetList[qIndex] };
+            } else {
+              continue;
+            }
+
+            const readVal = (idx: number) => idx >= 0 && row[idx] !== undefined && row[idx] !== null ? String(row[idx]).trim() : '';
+
+            const courseAr = readVal(courseArIdx) || readVal(courseIdx);
+            const courseEn = readVal(courseEnIdx);
+            if (courseAr) q.course = courseAr;
+            if (courseEn) q.courseEn = courseEn;
+
+            const sectionAr = readVal(sectionArIdx) || readVal(sectionIdx);
+            const sectionEn = readVal(sectionEnIdx);
+            if (sectionAr) q.section = sectionAr;
+            if (sectionEn) q.sectionEn = sectionEn;
+
+            const domainAr = readVal(domainArIdx) || readVal(domainIdx);
+            const domainEn = readVal(domainEnIdx);
+            if (domainAr) q.domain = domainAr;
+            if (domainEn) q.domainEn = domainEn;
+            if (!q.domain && domainEn) q.domain = domainEn;
+
+            const loAr = readVal(loArIdx) || readVal(loIdx);
+            const loEn = readVal(loEnIdx);
+            if (loAr) { q.learningOutcome = loAr; q.standard = loAr; }
+            if (loEn) { q.learningOutcomeEn = loEn; q.standardEn = loEn; }
+            if (!q.learningOutcome && loEn) { q.learningOutcome = loEn; q.standard = loEn; }
+
+            const indAr = readVal(indArIdx) || readVal(indIdx);
+            const indEn = readVal(indEnIdx);
+            if (indAr) q.indicator = indAr;
+            if (indEn) q.indicatorEn = indEn;
+            if (!q.indicator && indEn) q.indicator = indEn;
+
+            const skillAr = readVal(skillArIdx) || readVal(skillIdx);
+            const skillEn = readVal(skillEnIdx);
+            if (skillAr) q.skill = skillAr;
+            if (skillEn) q.skillEn = skillEn;
+            if (!q.skill && skillEn) q.skill = skillEn;
+
+            const subskillAr = readVal(subskillArIdx) || readVal(subskillIdx);
+            const subskillEn = readVal(subskillEnIdx);
+            if (subskillAr) q.subskill = subskillAr;
+            if (subskillEn) q.subskillEn = subskillEn;
+            if (!q.subskill && subskillEn) q.subskill = subskillEn;
+
+            const microAr = readVal(microSkillArIdx) || readVal(microSkillIdx);
+            const microEn = readVal(microSkillEnIdx);
+            if (microAr) q.microSkill = microAr;
+            if (microEn) q.microSkillEn = microEn;
+            if (!q.microSkill && microEn) q.microSkill = microEn;
+
+            const lvl = readVal(levelIdx);
+            if (lvl) q.level = lvl;
+
+            const dokVal = readVal(dokIdx);
+            if (dokVal) q.dok = normalizeDok(dokVal) || dokVal;
+
+            const cog = readVal(cognitiveIdx);
+            if (cog) q.cognitive = cog;
+
+            const epAr = readVal(errorPatternArIdx) || readVal(errorPatternIdx);
+            const epEn = readVal(errorPatternEnIdx);
+            if (epAr) q.errorPattern = epAr;
+            if (epEn) q.errorPatternEn = epEn;
+            if (!q.errorPattern && epEn) q.errorPattern = epEn;
+
+            const tVal = readVal(timeIdx);
+            if (tVal) q.estimatedTime = tVal;
             
             targetList[qIndex] = q;
             mappedCount++;

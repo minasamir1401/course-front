@@ -1,4 +1,5 @@
 import { isOptionMatch } from './answerEvaluation';
+import { normalizeDok } from './examQuestionMetadata';
 
 type Question = Record<string, any>;
 
@@ -458,18 +459,33 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
     if (videoIndex >= 0) q.videoUrl = String(row[videoIndex] ?? '');
 
     const metadataFields: Record<string, string[]> = {
+      domain: ['domain', 'المجال'],
+      domainEn: ['domain en', 'المجال بالانجليزي', 'المجال بالإنجليزي'],
       skill: ['skill', 'المهارة'],
+      skillEn: ['skill en', 'المهارة بالانجليزي', 'المهارة بالإنجليزي'],
+      subskill: ['subskill', 'sub skill', 'المهارة الفرعية'],
+      subskillEn: ['subskill en', 'المهارة الفرعية بالانجليزي', 'المهارة الفرعية بالإنجليزي'],
+      microSkill: ['microskill', 'micro skill', 'المهارة الدقيقة'],
+      microSkillEn: ['microskill en', 'المهارة الدقيقة بالانجليزي', 'المهارة الدقيقة بالإنجليزي'],
       standard: ['standard', 'المعيار'],
+      standardEn: ['standard en', 'المعيار بالانجليزي', 'المعيار بالإنجليزي'],
       learningOutcome: ['learning outcome', 'learning outcomes', 'نواتج التعلم'],
+      learningOutcomeEn: ['learning outcome en', 'نواتج التعلم بالانجليزي', 'نواتج التعلم بالإنجليزي'],
       indicator: ['indicator', 'indicators', 'المؤشر', 'المؤشرات'],
-      level: ['difficulty', 'difficulty level', 'الصعوبة'],
+      indicatorEn: ['indicator en', 'المؤشر بالانجليزي', 'المؤشر بالإنجليزي'],
+      level: ['difficulty', 'difficulty level', 'الصعوبة', 'المستوى'],
       dok: ['dok', 'عمق المعرفة'],
+      cognitive: ['cognitive', 'المستوى المعرفي'],
+      errorPattern: ['error pattern', 'نمط الخطأ'],
+      errorPatternEn: ['error pattern en', 'نمط الخطأ بالانجليزي', 'نمط الخطأ بالإنجليزي'],
+      estimatedTime: ['estimated time', 'الوقت التقديري'],
     };
     let metadataChanged = false;
     for (const [field, names] of Object.entries(metadataFields)) {
       const i = findCol(h => names.some(n => h.includes(normalize(n))));
       if (i >= 0) {
-        q[field] = String(row[i] ?? '');
+        const val = String(row[i] ?? '').trim();
+        q[field] = field === 'dok' ? (normalizeDok(val) || val) : val;
         if (q[field] !== previous?.[field]) metadataChanged = true;
       }
     }
@@ -478,6 +494,8 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
     } else if (findCol(h => ['standard', 'المعيار'].some(n => h.includes(normalize(n)))) >= 0) {
       q.learningOutcome = q.standard;
     }
+    if (q.learningOutcomeEn && !q.standardEn) q.standardEn = q.learningOutcomeEn;
+    if (q.standardEn && !q.learningOutcomeEn) q.learningOutcomeEn = q.standardEn;
 
     if (expIndex >= 0) {
       q.explanation = String(row[expIndex] ?? '').trim();

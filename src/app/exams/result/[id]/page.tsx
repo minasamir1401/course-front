@@ -29,6 +29,23 @@ const stripHtmlAndNormalize = (str: any) => {
     .toLowerCase();
 };
 
+const normalizeArabicLetters = (str: string) => {
+  if (!str) return '';
+  return str
+    .replace(/[أإآٱ]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي')
+    .replace(/[\u064B-\u065F\u0670]/g, '');
+};
+
+const stripOptionPrefix = (str: string) => {
+  if (!str) return '';
+  return str
+    .replace(/^\((?:[a-zA-Z\u0621-\u064A0-9])\)\s*/, '')
+    .replace(/^[a-zA-Z\u0621-\u064A0-9]\s*[\.\:\-\)]\s*/, '')
+    .trim();
+};
+
 const isOptionMatch = (targetVal: any, optText: string, optIndex: number = -1) => {
   if (targetVal === null || targetVal === undefined || optText === null || optText === undefined) return false;
   const rawTarget = String(targetVal).trim();
@@ -40,6 +57,20 @@ const isOptionMatch = (targetVal: any, optText: string, optIndex: number = -1) =
   // 1. Direct exact normalized string match
   if (normTarget === normOpt) return true;
 
+  // 1b. Arabic letter normalization match
+  const arNormTarget = normalizeArabicLetters(normTarget);
+  const arNormOpt = normalizeArabicLetters(normOpt);
+  if (arNormTarget === arNormOpt) return true;
+
+  // 1c. Match after stripping option prefix like "A.", "B:", "أ)", "1 - "
+  const strippedTarget = stripOptionPrefix(normTarget);
+  const strippedOpt = stripOptionPrefix(normOpt);
+  if (strippedTarget && strippedOpt && strippedTarget === strippedOpt) return true;
+
+  const strippedArTarget = stripOptionPrefix(arNormTarget);
+  const strippedArOpt = stripOptionPrefix(arNormOpt);
+  if (strippedArTarget && strippedArOpt && strippedArTarget === strippedArOpt) return true;
+
   // 2. True / False / Correct / Incorrect normalization check
   const tfTarget = normalizeAnswerGlobal(rawTarget);
   const tfOpt = normalizeAnswerGlobal(optText);
@@ -49,11 +80,25 @@ const isOptionMatch = (targetVal: any, optText: string, optIndex: number = -1) =
     return tfTarget === tfOpt;
   }
 
-  // 3. Option letter/index check (e.g. target is "A", "B", "C", "D" or "0", "1", "2", "3")
+  // 3. Option letter/index check (e.g. target is "A", "B", "C", "D" or "0", "1", "2", "3" or "أ", "ب", "ج", "د")
   if (optIndex >= 0) {
     const letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-    const targetClean = rawTarget.toLowerCase().replace(/[^a-z0-9]/g, '');
-    if (targetClean === letters[optIndex] || targetClean === String(optIndex)) return true;
+    const arLetters = ['ا', 'ب', 'ج', 'د', 'ه', 'و', 'ز', 'ح'];
+    const targetClean = normalizeArabicLetters(rawTarget.toLowerCase().replace(/[^a-z0-9\u0621-\u064A]/g, ''));
+    if (
+      targetClean === letters[optIndex] ||
+      targetClean === arLetters[optIndex] ||
+      targetClean === String(optIndex) ||
+      targetClean === String(optIndex + 1)
+    ) return true;
+
+    const optClean = normalizeArabicLetters(normOpt.toLowerCase().replace(/[^a-z0-9\u0621-\u064A]/g, ''));
+    if (
+      optClean === letters[optIndex] ||
+      optClean === arLetters[optIndex] ||
+      optClean === String(optIndex) ||
+      optClean === String(optIndex + 1)
+    ) return true;
   }
 
   // 4. Multi-word string containment (only for long strings with multiple words)
@@ -405,8 +450,46 @@ export default function ExamResultPage() {
             </div>
 
             {submission.answers.map((answer: any, index: number) => {
-              const isQuestionCorrect = answer.isCorrect || (
-                !!answer.question.correctAnswer && isOptionMatch(answer.question.correctAnswer, answer.selectedAnswer, -1)
+              let optionsArr: any[] = [];
+              try {
+                optionsArr = typeof answer.question.options === 'string'
+                  ? JSON.parse(answer.question.options || '[]')
+                  : (Array.isArray(answer.question.options) ? answer.question.options : []);
+              } catch { optionsArr = []; }
+
+              let optionsEnArr: any[] = [];
+              try {
+                optionsEnArr = typeof answer.question.optionsEn === 'string'
+                  ? JSON.parse(answer.question.optionsEn || '[]')
+                  : (Array.isArray(answer.question.optionsEn) ? answer.question.optionsEn : []);
+              } catch { optionsEnArr = []; }
+
+              const hasAnswered = answer.selectedAnswer !== null &&
+                answer.selectedAnswer !== undefined &&
+                (typeof answer.selectedAnswer === 'string' ? answer.selectedAnswer.trim() !== '' : true);
+
+              const maxOpts = Math.max(optionsArr.length, optionsEnArr.length);
+              let optionBasedCorrect = false;
+              if (maxOpts > 0 && hasAnswered) {
+                for (let i = 0; i < maxOpts; i++) {
+                  const optAr = optionsArr[i];
+                  const optEn = optionsEnArr[i];
+                  const matchesStudent = (optAr && isOptionMatch(answer.selectedAnswer, optAr, i)) || (optEn && isOptionMatch(answer.selectedAnswer, optEn, i));
+                  const matchesCorrect = (optAr && isOptionMatch(answer.question.correctAnswer, optAr, i)) ||
+                    (optEn && isOptionMatch(answer.question.correctAnswer, optEn, i)) ||
+                    (answer.question.correctAnswerEn && ((optAr && isOptionMatch(answer.question.correctAnswerEn, optAr, i)) || (optEn && isOptionMatch(answer.question.correctAnswerEn, optEn, i))));
+                  if (matchesStudent && matchesCorrect) {
+                    optionBasedCorrect = true;
+                    break;
+                  }
+                }
+              }
+
+              const isQuestionCorrect = answer.isCorrect || optionBasedCorrect || (
+                hasAnswered && !!answer.question.correctAnswer && (
+                  isOptionMatch(answer.question.correctAnswer, answer.selectedAnswer, -1) ||
+                  (answer.question.correctAnswerEn && isOptionMatch(answer.question.correctAnswerEn, answer.selectedAnswer, -1))
+                )
               );
               const questionTags = [
                 answer.question.domain && {
@@ -555,11 +638,30 @@ export default function ExamResultPage() {
                           </div>
                         </div>
                       </div>
-                      {/* Auto-fit Right Badge: never wrap text, keep Wrong and Correct intact */}
-
-                      <div className={`shrink-0 whitespace-nowrap self-start px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl font-black text-xs sm:text-sm flex items-center gap-1.5 border shadow-2xs ${isQuestionCorrect ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-rose-50 text-rose-600 border-rose-100"}`}>
-                        {isQuestionCorrect ? <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" /> : <XCircle className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />}
-                        <span>{isQuestionCorrect ? `+${answer.question.points} ${lang === 'ar' ? 'درجة' : 'pts'}` : t('wrong', lang)}</span>
+                      {/* Auto-fit Right Badge: never wrap text, keep Wrong, Correct, and Unanswered intact */}
+                      <div className={`shrink-0 whitespace-nowrap self-start px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl font-black text-xs sm:text-sm flex items-center gap-1.5 border shadow-2xs ${
+                        !hasAnswered
+                          ? "bg-slate-100 text-slate-600 border-slate-200"
+                          : isQuestionCorrect
+                            ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                            : "bg-rose-50 text-rose-600 border-rose-100"
+                      }`}>
+                        {!hasAnswered ? (
+                          <>
+                            <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 text-slate-400" />
+                            <span>{lang === 'ar' ? 'لم يتم الحل' : 'Unanswered'}</span>
+                          </>
+                        ) : isQuestionCorrect ? (
+                          <>
+                            <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 text-emerald-600" />
+                            <span>{`+${answer.question.points} ${lang === 'ar' ? 'درجة' : 'pts'}`}</span>
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 text-rose-600" />
+                            <span>{t('wrong', lang)}</span>
+                          </>
+                        )}
                       </div>
                     </div>
 
@@ -583,72 +685,134 @@ export default function ExamResultPage() {
                           language={lang}
                         />
                       </div>
-                    ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                      {(answer.question.type === 'TRUE_FALSE' ? ["True", "False"] : (typeof answer.question.options === 'string' ? JSON.parse(answer.question.options) : (Array.isArray(answer.question.options) ? answer.question.options : [])))
-                        .filter((opt: string) => opt && opt.trim() !== "")
-                        .map((opt: string, oIdx: number) => {
-                          let correctAnswers = [answer.question.correctAnswer];
-                          let selectedAnswers = [answer.selectedAnswer];
-
-                          if (answer.question.type === 'MULTI_SELECT') {
-                            try {
-                              correctAnswers = typeof answer.question.correctAnswer === 'string' && (answer.question.correctAnswer.startsWith('[') || answer.question.correctAnswer.startsWith('{')) ? JSON.parse(answer.question.correctAnswer) : (answer.question.correctAnswer || "").split(",");
-                            } catch {
-                              correctAnswers = (answer.question.correctAnswer || "").split(",");
-                            }
-                            try {
-                              selectedAnswers = typeof answer.selectedAnswer === 'string' && (answer.selectedAnswer.startsWith('[') || answer.selectedAnswer.startsWith('{')) ? JSON.parse(answer.selectedAnswer) : (answer.selectedAnswer || "").split(",");
-                            } catch {
-                              selectedAnswers = (answer.selectedAnswer || "").split(",");
-                            }
-                          }
-
-                          const isCorrectOption = correctAnswers.some((c: any) => isOptionMatch(c, opt, oIdx));
-                          const isSelectedOption = selectedAnswers.some((s: any) => isOptionMatch(s, opt, oIdx));
-
-                          let bgClass = "bg-slate-50 border-transparent";
-                          let textClass = "text-slate-600";
-                          let icon = null;
-
-                          const shouldShowCorrect = (visibility === "SHOW_ANSWERS" || visibility === "SHOW_ALL" || isAdmin);
-                          const shouldShowMark = (visibility === "SHOW_MARK_ONLY" || visibility === "SHOW_ANSWERS" || visibility === "SHOW_ALL" || isAdmin);
-
-                          if (shouldShowCorrect && isCorrectOption) {
-                            bgClass = "bg-emerald-50 border-emerald-500 shadow-sm";
-                            textClass = "text-emerald-700";
-                            icon = <CheckCircle2 className="w-5 h-5 text-emerald-500" />;
-                          } else if (shouldShowMark && isSelectedOption) {
-                            if (isCorrectOption) {
-                              bgClass = "bg-emerald-50 border-emerald-500 shadow-sm";
-                              textClass = "text-emerald-700";
-                              icon = <CheckCircle2 className="w-5 h-5 text-emerald-500" />;
-                            } else {
-                              bgClass = "bg-rose-50 border-rose-500 shadow-sm";
-                              textClass = "text-rose-700";
-                              icon = <XCircle className="w-5 h-5 text-rose-500" />;
-                            }
-                          }
-
-                        return (
-                          <div key={oIdx} className={`p-5 rounded-2xl border-2 transition-all flex items-center justify-between ${bgClass}`}>
-                            <div className="flex items-center gap-3.5 flex-1 text-start">
-                              <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 transition-colors ${
-                                bgClass.includes('emerald') ? "bg-emerald-600 text-white shadow-sm"
-                                  : bgClass.includes('rose') ? "bg-rose-600 text-white shadow-sm"
-                                  : "bg-slate-100 text-slate-600"
-                              }`}>
-                                {getOptionLetter(oIdx, lang)}
-                              </span>
-                              <span className={`font-bold flex-1 ${textClass}`}>
-                                <HtmlRenderer html={answer.question.type === 'TRUE_FALSE' ? translateTrueFalse(opt) : cleanOptionText(opt)} tag="span" />
-                              </span>
-                            </div>
-                            {icon}
+                    ) : answer.question.type === 'TEXT' ? (
+                      <div className="space-y-3 mb-8">
+                        <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50">
+                          <div className="text-xs font-black text-slate-400 uppercase mb-1">
+                            {lang === 'ar' ? 'إجابتك:' : 'Your Answer:'}
                           </div>
-                        );
-                      })}
-                  </div>
+                          <div className="text-base font-bold text-slate-800">
+                            {hasAnswered ? answer.selectedAnswer : <span className="text-slate-400 italic">{lang === 'ar' ? 'لم يتم الحل' : 'Unanswered'}</span>}
+                          </div>
+                        </div>
+                        {(visibility === "SHOW_ANSWERS" || visibility === "SHOW_ALL" || isAdmin) && answer.question.correctAnswer && (
+                          <div className="p-4 rounded-2xl border border-emerald-200 bg-emerald-50">
+                            <div className="text-xs font-black text-emerald-600 uppercase mb-1">
+                              {lang === 'ar' ? 'الإجابة النموذجية:' : 'Model Answer:'}
+                            </div>
+                            <div className="text-base font-bold text-emerald-900">
+                              {answer.question.correctAnswer}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                    <div className="space-y-3 mb-8">
+                      {!hasAnswered && (
+                        <div className="p-3.5 bg-slate-100/90 border border-slate-200 rounded-2xl flex items-center gap-2.5 text-slate-600 text-xs sm:text-sm font-bold">
+                          <AlertCircle className="w-4 h-4 shrink-0 text-slate-400" />
+                          <span>{lang === 'ar' ? 'لم تقم بالإجابة على هذا السؤال أثناء الاختبار.' : 'You did not answer this question during the exam.'}</span>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {(answer.question.type === 'TRUE_FALSE' ? ["True", "False"] : (optionsArr.length > 0 ? optionsArr : []))
+                          .filter((opt: string) => opt && opt.trim() !== "")
+                          .map((opt: string, oIdx: number) => {
+                            let correctAnswers = [answer.question.correctAnswer];
+                            if (answer.question.correctAnswerEn) {
+                              correctAnswers.push(answer.question.correctAnswerEn);
+                            }
+                            let selectedAnswers = [answer.selectedAnswer];
+
+                            if (answer.question.type === 'MULTI_SELECT') {
+                              try {
+                                correctAnswers = typeof answer.question.correctAnswer === 'string' && (answer.question.correctAnswer.startsWith('[') || answer.question.correctAnswer.startsWith('{')) ? JSON.parse(answer.question.correctAnswer) : (answer.question.correctAnswer || "").split(",");
+                              } catch {
+                                correctAnswers = (answer.question.correctAnswer || "").split(",");
+                              }
+                              if (answer.question.correctAnswerEn) {
+                                try {
+                                  const enArr = typeof answer.question.correctAnswerEn === 'string' && (answer.question.correctAnswerEn.startsWith('[') || answer.question.correctAnswerEn.startsWith('{')) ? JSON.parse(answer.question.correctAnswerEn) : (answer.question.correctAnswerEn || "").split(",");
+                                  correctAnswers = [...correctAnswers, ...enArr];
+                                } catch {}
+                              }
+                              try {
+                                selectedAnswers = typeof answer.selectedAnswer === 'string' && (answer.selectedAnswer.startsWith('[') || answer.selectedAnswer.startsWith('{')) ? JSON.parse(answer.selectedAnswer) : (answer.selectedAnswer || "").split(",");
+                              } catch {
+                                selectedAnswers = (answer.selectedAnswer || "").split(",");
+                              }
+                            }
+
+                            const optEn = optionsEnArr[oIdx];
+
+                            const isCorrectOption = correctAnswers.some((c: any) =>
+                              isOptionMatch(c, opt, oIdx) || (optEn && isOptionMatch(c, optEn, oIdx))
+                            );
+                            const isSelectedOption = hasAnswered && selectedAnswers.some((s: any) =>
+                              isOptionMatch(s, opt, oIdx) || (optEn && isOptionMatch(s, optEn, oIdx))
+                            );
+
+                            const shouldShowCorrect = (visibility === "SHOW_ANSWERS" || visibility === "SHOW_ALL" || isAdmin);
+
+                            let bgClass = "bg-slate-50 border-slate-200/60";
+                            let textClass = "text-slate-600";
+                            let badgeEl = null;
+                            let icon = null;
+
+                            if (isSelectedOption && isCorrectOption) {
+                              bgClass = "bg-emerald-50/80 border-emerald-500 shadow-sm";
+                              textClass = "text-emerald-900 font-bold";
+                              icon = <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />;
+                              badgeEl = (
+                                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-black border border-emerald-200 shrink-0">
+                                  {lang === 'ar' ? 'إجابتك الصحيحة' : 'Your Answer (Correct)'}
+                                </span>
+                              );
+                            } else if (isSelectedOption && !isCorrectOption) {
+                              bgClass = "bg-rose-50/80 border-rose-500 shadow-sm";
+                              textClass = "text-rose-900 font-bold";
+                              icon = <XCircle className="w-5 h-5 text-rose-600 shrink-0" />;
+                              badgeEl = (
+                                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 font-black border border-rose-200 shrink-0">
+                                  {lang === 'ar' ? 'إجابتك' : 'Your Answer'}
+                                </span>
+                              );
+                            } else if (isCorrectOption && shouldShowCorrect) {
+                              bgClass = "bg-emerald-50/40 border-emerald-400 border-dashed shadow-2xs";
+                              textClass = "text-emerald-900 font-semibold";
+                              icon = <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />;
+                              badgeEl = (
+                                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-black border border-emerald-300 shrink-0">
+                                  {lang === 'ar' ? 'الإجابة النموذجية' : 'Model Answer'}
+                                </span>
+                              );
+                            }
+
+                            return (
+                              <div key={oIdx} className={`p-4 sm:p-5 rounded-2xl border-2 transition-all flex items-center justify-between gap-3 ${bgClass}`}>
+                                <div className="flex items-center gap-3.5 flex-1 text-start min-w-0">
+                                  <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 transition-colors ${
+                                    isSelectedOption && isCorrectOption ? "bg-emerald-600 text-white shadow-sm"
+                                      : isSelectedOption && !isCorrectOption ? "bg-rose-600 text-white shadow-sm"
+                                      : isCorrectOption && shouldShowCorrect ? "bg-emerald-100 text-emerald-800 border border-emerald-300 font-black"
+                                      : "bg-slate-100 text-slate-600"
+                                  }`}>
+                                    {getOptionLetter(oIdx, lang)}
+                                  </span>
+                                  <span className={`font-bold flex-1 break-words ${textClass}`}>
+                                    <HtmlRenderer html={answer.question.type === 'TRUE_FALSE' ? translateTrueFalse(opt) : cleanOptionText(opt)} tag="span" />
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {badgeEl}
+                                  {icon}
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    </div>
                     )}
 
                   {(answer.question.explanation || answer.question.imageUrl) && (
