@@ -1575,8 +1575,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                         const baseLength = Math.max((tempQuestion.options || []).length, (tempQuestion.optionsEn || []).length, 4);
                         const isArOptsEnglish = (tempQuestion.options || []).some((o: string) => /[a-zA-Z]/.test(o)) && !(tempQuestion.options || []).some((o: string) => /[\u0600-\u06FF]/.test(o));
                         const currentOptsAr = Array.from({ length: baseLength }, (_, i) => {
-                          const val = String(tempQuestion.options?.[i] || '');
-                          return /[\u0600-\u06FF]/.test(val) ? val : '';
+                          return String(tempQuestion.options?.[i] || '');
                         });
                         const currentOptsEn = Array.from({ length: baseLength }, (_, i) => {
                           const enVal = String(tempQuestion.optionsEn?.[i] || '');

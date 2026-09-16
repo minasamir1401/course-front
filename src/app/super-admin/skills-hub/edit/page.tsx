@@ -822,7 +822,7 @@ export default function EditSkillClusterPage() {
                   {activityActiveLang === 'ar' ? (
                     <input 
                       type="text" 
-                      value={(editingActivity.title && /[\u0600-\u06FF]/.test(editingActivity.title)) ? editingActivity.title : ''} 
+                      value={(editingActivity.title ) ? editingActivity.title : ''} 
                       onChange={(e) => setEditingActivity({...editingActivity, title: e.target.value})}
                       placeholder={language === 'ar' ? "مثال: سؤال جمع، توصيل..." : "e.g. Addition Question..."}
                       className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none"
@@ -945,7 +945,7 @@ export default function EditSkillClusterPage() {
                     {activityActiveLang === 'ar' ? (
                       <RichTextEditor 
                         key="ar-qtext"
-                        value={(editingActivity.questionText && /[\u0600-\u06FF]/.test(editingActivity.questionText)) ? editingActivity.questionText : ""} 
+                        value={(editingActivity.questionText ) ? editingActivity.questionText : ""} 
                         onChange={(val) => setEditingActivity({...editingActivity, questionText: val})} 
                         availableImages={extractImageUrls([
                           editingActivity.questionText,
@@ -1054,7 +1054,7 @@ export default function EditSkillClusterPage() {
                 </div>
                 {activityActiveLang === 'ar' ? (
                   <textarea 
-                    value={(editingActivity.explanation && /[\u0600-\u06FF]/.test(editingActivity.explanation)) ? editingActivity.explanation : ""} 
+                    value={(editingActivity.explanation ) ? editingActivity.explanation : ""} 
                     onChange={(e) => setEditingActivity({...editingActivity, explanation: e.target.value})}
                     rows={3}
                     placeholder={language === 'ar' ? "اكتب شرحاً يوضح سبب الإجابة الصحيحة للطالب..." : "Explain why the answer is correct..."}
@@ -1226,7 +1226,7 @@ export default function EditSkillClusterPage() {
                     </div>
                     {activityActiveLang === 'ar' ? (
                       <textarea 
-                        value={(editingActivity.hint && /[\u0600-\u06FF]/.test(editingActivity.hint)) ? editingActivity.hint : ""} 
+                        value={(editingActivity.hint ) ? editingActivity.hint : ""} 
                         onChange={(e) => setEditingActivity({...editingActivity, hint: e.target.value})}
                         rows={2}
                         placeholder={language === 'ar' ? "تلميح بسيط لمساعدة الطالب على الحل..." : "Simple hint to help the student..."}
@@ -1261,7 +1261,7 @@ export default function EditSkillClusterPage() {
                     </div>
                     {activityActiveLang === 'ar' ? (
                       <textarea 
-                        value={(editingActivity.tip && /[\u0600-\u06FF]/.test(editingActivity.tip)) ? editingActivity.tip : ""} 
+                        value={(editingActivity.tip ) ? editingActivity.tip : ""} 
                         onChange={(e) => setEditingActivity({...editingActivity, tip: e.target.value})}
                         rows={2}
                         placeholder={language === 'ar' ? "نصيحة لتجنب الأخطاء الشائعة..." : "Tip to avoid common mistakes..."}
@@ -1296,7 +1296,7 @@ export default function EditSkillClusterPage() {
                     </div>
                     {activityActiveLang === 'ar' ? (
                       <textarea 
-                        value={(editingActivity.keyInsight && /[\u0600-\u06FF]/.test(editingActivity.keyInsight)) ? editingActivity.keyInsight : ""} 
+                        value={(editingActivity.keyInsight ) ? editingActivity.keyInsight : ""} 
                         onChange={(e) => setEditingActivity({...editingActivity, keyInsight: e.target.value})}
                         rows={2}
                         placeholder={language === 'ar' ? "الخلاصة أو الفكرة الكبرى من السؤال..." : "The big idea or summary behind the question..."}

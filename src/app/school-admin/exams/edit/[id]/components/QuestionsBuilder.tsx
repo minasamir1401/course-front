@@ -493,7 +493,7 @@ export const QuestionsBuilder = (props: any) => {
                                         <span className="w-5 h-5 rounded-md bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-[10px] text-indigo-600 shrink-0">
                                           {getOptionLetter(oIdx, qPreviewLang)}
                                         </span>
-                                        <span>{cleanOptionText(opt)}</span>
+                                        <HtmlRenderer html={cleanOptionText(opt)} tag="span" />
                                       </div>
                                     );
                                   })}
@@ -1061,7 +1061,7 @@ export const QuestionsBuilder = (props: any) => {
                         const rawOptsAr = Array.from({ length: baseLength }, (_, i) => String(tempQuestion.options?.[i] || ''));
                         const rawOptsEn = Array.from({ length: baseLength }, (_, i) => String(tempQuestion.optionsEn?.[i] || ''));
                         const isArOptsEnglish = rawOptsAr.some(o => hasEnglishChars(o)) && !rawOptsAr.some(o => hasArabicChars(o));
-                        const currentOptsAr = rawOptsAr.map(o => hasArabicChars(o) ? o : '');
+                        const currentOptsAr = rawOptsAr.map(o => o);
                         const resolvedOptsEn = rawOptsEn.some(o => o && o.trim())
                           ? rawOptsEn
                           : (isArOptsEnglish ? rawOptsAr : rawOptsEn);
