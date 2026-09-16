@@ -55,7 +55,17 @@ export default function InteractiveQuestionRenderer({ question, value, onChange,
         keyInsight: question?.keyInsightEn || question?.keyInsight,
       };
     }
-    return question;
+    // Arabic: if AR options are empty, fall back to EN options (e.g. electron configs stored only in optionsEn)
+    const arOpts = question?.options;
+    const enOpts = question?.optionsEn;
+    const arOptsEmpty =
+      !arOpts ||
+      (Array.isArray(arOpts) && arOpts.filter(Boolean).length === 0) ||
+      (typeof arOpts === 'string' && arOpts.trim().length === 0);
+    return {
+      ...question,
+      options: arOptsEmpty ? (enOpts ?? arOpts) : arOpts,
+    };
   }, [question, language]);
 
   // Render individual component based on type

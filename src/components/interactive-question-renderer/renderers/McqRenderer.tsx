@@ -9,7 +9,12 @@ import { parseJson, translateText } from "../utils";
 
 export default function McqRenderer({ question, value, onChange, language }: any) {
   const opts = parseJson(question.options, { choices: [] });
-  const choices = Array.isArray(opts?.choices) ? opts.choices : [];
+  // opts can be either {choices:[...]} or a plain array depending on DB storage format
+  const choices = Array.isArray(opts?.choices)
+    ? opts.choices
+    : Array.isArray(opts)
+    ? opts
+    : [];
   const isShort = choices.every((c: any) => (typeof c === 'string' ? c.length : 0) <= 60);
 
   return (
