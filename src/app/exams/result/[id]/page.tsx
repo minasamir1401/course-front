@@ -241,6 +241,11 @@ export default function ExamResultPage() {
     setWatermarkText("Klevro");
   }, []);
 
+  // Keep lang in sync with the global language context
+  useEffect(() => {
+    if (ctxLang === 'ar' || ctxLang === 'en') setLang(ctxLang);
+  }, [ctxLang]);
+
   const translateTrueFalse = (opt: string) => {
     const norm = normalizeAnswerGlobal(opt);
     if (norm === 'true') return lang === 'ar' ? 'صح' : 'True';
@@ -464,6 +469,11 @@ export default function ExamResultPage() {
                   : (Array.isArray(answer.question.optionsEn) ? answer.question.optionsEn : []);
               } catch { optionsEnArr = []; }
 
+              // Display options in the active language, with fallback
+              const displayOptionsArr = (lang === 'en' && optionsEnArr.length > 0) ? optionsEnArr
+                : (optionsArr.length > 0 ? optionsArr
+                : optionsEnArr);
+
               const hasAnswered = answer.selectedAnswer !== null &&
                 answer.selectedAnswer !== undefined &&
                 (typeof answer.selectedAnswer === 'string' ? answer.selectedAnswer.trim() !== '' : true);
@@ -667,7 +677,7 @@ export default function ExamResultPage() {
 
 
                     <HtmlRenderer
-                      html={answer.question.text}
+                      html={lang === 'en' ? (answer.question.textEn || answer.question.text) : answer.question.text}
                       tag="h4"
                       className="text-xl font-bold text-slate-800 mb-8 leading-relaxed"
                     />
@@ -716,7 +726,7 @@ export default function ExamResultPage() {
                       )}
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {(answer.question.type === 'TRUE_FALSE' ? ["True", "False"] : (optionsArr.length > 0 ? optionsArr : []))
+                        {(answer.question.type === 'TRUE_FALSE' ? ["True", "False"] : displayOptionsArr)
                           .filter((opt: string) => opt && opt.trim() !== "")
                           .map((opt: string, oIdx: number) => {
                             let correctAnswers = [answer.question.correctAnswer];
@@ -744,14 +754,27 @@ export default function ExamResultPage() {
                               }
                             }
 
-                            const optEn = optionsEnArr[oIdx];
+                            // Resolve correct/selected option indices using the full options pool (AR+EN)
+                            // This prevents false positives from text containment matching
+                            const resolveOptionIndex = (val: any) => {
+                              for (let i = 0; i < Math.max(optionsArr.length, optionsEnArr.length); i++) {
+                                const ar = optionsArr[i];
+                                const en = optionsEnArr[i];
+                                if ((ar && isOptionMatch(val, ar, i)) || (en && isOptionMatch(val, en, i))) return i;
+                              }
+                              return -1;
+                            };
 
-                            const isCorrectOption = correctAnswers.some((c: any) =>
-                              isOptionMatch(c, opt, oIdx) || (optEn && isOptionMatch(c, optEn, oIdx))
-                            );
-                            const isSelectedOption = hasAnswered && selectedAnswers.some((s: any) =>
-                              isOptionMatch(s, opt, oIdx) || (optEn && isOptionMatch(s, optEn, oIdx))
-                            );
+                            const correctIndices = correctAnswers
+                              .map((c: any) => resolveOptionIndex(c))
+                              .filter((i: number) => i >= 0);
+
+                            const selectedIndices = selectedAnswers
+                              .map((s: any) => resolveOptionIndex(s))
+                              .filter((i: number) => i >= 0);
+
+                            const isCorrectOption = correctIndices.includes(oIdx);
+                            const isSelectedOption = hasAnswered && selectedIndices.includes(oIdx);
 
                             const shouldShowCorrect = (visibility === "SHOW_ANSWERS" || visibility === "SHOW_ALL" || isAdmin);
 
