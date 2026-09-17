@@ -1573,16 +1573,22 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                     <>
                       {(() => {
                         const baseLength = Math.max((tempQuestion.options || []).length, (tempQuestion.optionsEn || []).length, 4);
-                        const isArOptsEnglish = (tempQuestion.options || []).some((o: string) => /[a-zA-Z]/.test(o)) && !(tempQuestion.options || []).some((o: string) => /[\u0600-\u06FF]/.test(o));
-                        const currentOptsAr = Array.from({ length: baseLength }, (_, i) => {
-                          return String(tempQuestion.options?.[i] || '');
+                        const rawOptsAr = Array.from({ length: baseLength }, (_, i) => String(tempQuestion.options?.[i] || ''));
+                        const rawOptsEn = Array.from({ length: baseLength }, (_, i) => String(tempQuestion.optionsEn?.[i] || ''));
+                        const hasArInText = /[\u0600-\u06FF]/.test(tempQuestion.text || '');
+                        const hasArInOpts = rawOptsAr.some(o => /[\u0600-\u06FF]/.test(o));
+                        const isArOptsEnglish = (rawOptsAr.some(o => /[a-zA-Z]/.test(o)) && !hasArInOpts) || (!hasArInText && !hasArInOpts);
+                        const currentOptsEn = rawOptsAr.map((arVal, idx) => {
+                          const enVal = rawOptsEn[idx];
+                          if (enVal && enVal.trim()) return enVal;
+                          if (arVal && (!/[\u0600-\u06FF]/.test(arVal) || isArOptsEnglish)) return arVal;
+                          return enVal || '';
                         });
-                        const currentOptsEn = Array.from({ length: baseLength }, (_, i) => {
-                          const enVal = String(tempQuestion.optionsEn?.[i] || '');
-                          if (enVal) return enVal;
-                          const arVal = String(tempQuestion.options?.[i] || '');
-                          if (isArOptsEnglish) return arVal;
-                          return '';
+                        const currentOptsAr = rawOptsEn.map((enVal, idx) => {
+                          const arVal = rawOptsAr[idx];
+                          if (arVal && arVal.trim()) return arVal;
+                          if (enVal && !/[a-zA-Z]/.test(enVal)) return enVal;
+                          return arVal || '';
                         });
                         const activeOpts = questionActiveLang === 'ar' ? currentOptsAr : currentOptsEn;
 

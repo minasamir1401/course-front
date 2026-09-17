@@ -1044,11 +1044,21 @@ export const QuestionsBuilder = (props: any) => {
                         const baseLength = Math.max((tempQuestion.options || []).length, (tempQuestion.optionsEn || []).length, 4);
                         const rawOptsAr = Array.from({ length: baseLength }, (_, i) => String(tempQuestion.options?.[i] || ''));
                         const rawOptsEn = Array.from({ length: baseLength }, (_, i) => String(tempQuestion.optionsEn?.[i] || ''));
-                        const isArOptsEnglish = rawOptsAr.some(o => hasEnglishChars(o)) && !rawOptsAr.some(o => hasArabicChars(o));
-                        const currentOptsAr = rawOptsAr.map(o => o);
-                        const resolvedOptsEn = rawOptsEn.some(o => o && o.trim())
-                          ? rawOptsEn
-                          : (isArOptsEnglish ? rawOptsAr : rawOptsEn);
+                        const isQuestionEnglish = !hasArabicChars(tempQuestion.text || '');
+                        const hasArInOpts = rawOptsAr.some(o => hasArabicChars(o));
+                        const isArOptsEnglish = (rawOptsAr.some(o => hasEnglishChars(o)) && !hasArInOpts) || (isQuestionEnglish && !hasArInOpts);
+                        const resolvedOptsEn = rawOptsAr.map((arVal, idx) => {
+                          const enVal = rawOptsEn[idx];
+                          if (enVal && enVal.trim()) return enVal;
+                          if (arVal && (!hasArabicChars(arVal) || isArOptsEnglish)) return arVal;
+                          return enVal || '';
+                        });
+                        const currentOptsAr = rawOptsEn.map((enVal, idx) => {
+                          const arVal = rawOptsAr[idx];
+                          if (arVal && arVal.trim()) return arVal;
+                          if (enVal && !hasEnglishChars(enVal)) return enVal;
+                          return arVal || '';
+                        });
                         const activeOpts = questionActiveLang === 'ar' ? currentOptsAr : resolvedOptsEn;
 
                         return activeOpts.map((opt: string, oIndex: number) => {
