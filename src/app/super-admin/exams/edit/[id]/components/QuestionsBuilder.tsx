@@ -1,5 +1,6 @@
 // @ts-nocheck
 import React from 'react';
+import NextImage from 'next/image';
 import { getUniqueListKey } from '@/lib/uniqueListKey';
 import HtmlRenderer from '@/components/HtmlRenderer';
 import RichTextEditor from '@/components/RichTextEditor';
@@ -360,8 +361,8 @@ export const QuestionsBuilder = (props: any) => {
                             <button type="button" onClick={() => moveQuestionForSource(source, index, 'DOWN')} disabled={index === list.length - 1} className="text-slate-300 hover:text-indigo-600 disabled:opacity-20 transition-colors"><ChevronDown className="w-4 h-4" /></button>
                           </div>
                           {qImg && (
-                            <div className="w-12 h-12 rounded-xl overflow-hidden border border-slate-200 shrink-0 bg-slate-50 flex items-center justify-center">
-                              <img src={qImg} alt="Thumbnail" className="w-full h-full object-cover" />
+                            <div className="w-12 h-12 rounded-xl overflow-hidden border border-slate-200 shrink-0 bg-slate-50 flex items-center justify-center relative">
+                              <NextImage src={qImg} alt="Thumbnail" width={48} height={48} className="w-full h-full object-cover" unoptimized={Boolean(qImg.startsWith('data:'))} />
                             </div>
                           )}
                           <div className="flex flex-col flex-1 overflow-hidden">
@@ -453,7 +454,7 @@ export const QuestionsBuilder = (props: any) => {
 
                               {qImg && (
                                 <div className="rounded-2xl overflow-hidden border border-slate-200 max-w-sm bg-white p-2">
-                                  <img src={qImg} alt="Question Attachment" className="w-full h-48 object-contain rounded-lg" />
+                                  <NextImage src={qImg} alt="Question Attachment" width={360} height={192} className="w-full h-48 object-contain rounded-lg" unoptimized={Boolean(qImg.startsWith('data:'))} />
                                 </div>
                               )}
 
@@ -886,10 +887,13 @@ export const QuestionsBuilder = (props: any) => {
 
                 {tempQuestion.imageUrl ? (
                   <div className="relative group rounded-xl overflow-hidden border border-slate-200 max-w-sm bg-white">
-                    <img
+                    <NextImage
                       src={tempQuestion.imageUrl}
                       alt="Question attachment preview"
+                      width={360}
+                      height={176}
                       className="w-full h-44 object-contain p-2"
+                      unoptimized={Boolean(tempQuestion.imageUrl.startsWith('data:'))}
                     />
                     <div className="p-2 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-bold truncate">
                       <span className="truncate flex-1 px-1">{tempQuestion.imageUrl}</span>

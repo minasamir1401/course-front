@@ -3,7 +3,12 @@ import { normalizeQuestionOptions } from './questionOptions.ts';
 
 export function normalizeQuestionSections(explanation: unknown, existingSections?: unknown): any[] {
   if (Array.isArray(existingSections) && existingSections.length > 0) {
-    return existingSections;
+    return existingSections.map((item: any, idx: number) => ({
+      id: item?.id || Date.now() + idx,
+      type: item?.type || 'EXPLANATION',
+      content: item?.content || item?.text || '',
+      contentEn: item?.contentEn || item?.textEn || '',
+    }));
   }
   if (!explanation) return [];
   if (typeof explanation === 'string') {
@@ -16,20 +21,22 @@ export function normalizeQuestionSections(explanation: unknown, existingSections
         const parsed = JSON.parse(trimmed);
         if (Array.isArray(parsed) && parsed.length > 0) {
           return parsed.map((item: any, idx: number) => ({
-            id: item.id || Date.now() + idx,
-            type: item.type || 'EXPLANATION',
-            content: item.content || item.text || '',
+            id: item?.id || Date.now() + idx,
+            type: item?.type || 'EXPLANATION',
+            content: item?.content || item?.text || '',
+            contentEn: item?.contentEn || item?.textEn || '',
           }));
         }
       } catch (e) {}
     }
-    return [{ id: Date.now(), type: 'EXPLANATION', content: trimmed }];
+    return [{ id: Date.now(), type: 'EXPLANATION', content: trimmed, contentEn: '' }];
   }
   if (Array.isArray(explanation) && explanation.length > 0) {
     return explanation.map((item: any, idx: number) => ({
-      id: item.id || Date.now() + idx,
-      type: item.type || 'EXPLANATION',
-      content: item.content || item.text || '',
+      id: item?.id || Date.now() + idx,
+      type: item?.type || 'EXPLANATION',
+      content: item?.content || item?.text || '',
+      contentEn: item?.contentEn || item?.textEn || '',
     }));
   }
   return [];

@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { API_URL } from "@/lib/api";
 import { CheckCircle2, XCircle, ChevronRight, ChevronLeft, LayoutDashboard, RefreshCw, Award, Target, MessageCircle, Lock, EyeOff, HelpCircle, Info, AlertCircle, Sparkles, BookOpen, MessageSquare, Star, ListOrdered, TrendingUp, Globe } from 'lucide-react';
 import Link from "next/link";
+import Image from "next/image";
 import { useNotification } from "@/context/NotificationContext";
 import HtmlRenderer from "@/components/HtmlRenderer";
 import Watermark from "@/components/Watermark";
@@ -88,16 +89,7 @@ const isOptionMatch = (targetVal: any, optText: string, optIndex: number = -1) =
     if (
       targetClean === letters[optIndex] ||
       targetClean === arLetters[optIndex] ||
-      targetClean === String(optIndex) ||
-      targetClean === String(optIndex + 1)
-    ) return true;
-
-    const optClean = normalizeArabicLetters(normOpt.toLowerCase().replace(/[^a-z0-9\u0621-\u064A]/g, ''));
-    if (
-      optClean === letters[optIndex] ||
-      optClean === arLetters[optIndex] ||
-      optClean === String(optIndex) ||
-      optClean === String(optIndex + 1)
+      targetClean === String(optIndex)
     ) return true;
   }
 
@@ -163,23 +155,31 @@ const t = (key: string, lang: 'ar' | 'en') => {
   return translations[key]?.[lang] ?? key;
 };
 
-const renderExplanation = (explanationString: string, lang: 'ar' | 'en') => {
-  if (!explanationString || explanationString === "[]" || explanationString === '""' || explanationString.trim() === "") return null;
+const renderExplanation = (
+  explanation: string | null | undefined,
+  explanationEn: string | null | undefined,
+  lang: 'ar' | 'en'
+) => {
+  const cleanExp = explanation && typeof explanation === 'string' && explanation.trim() !== '[]' && explanation.trim() !== '""' ? explanation.trim() : '';
+  const cleanExpEn = explanationEn && typeof explanationEn === 'string' && explanationEn.trim() !== '[]' && explanationEn.trim() !== '""' ? explanationEn.trim() : '';
 
-  let sections: any[] = [];
-  let isJson = false;
-  try {
-    const parsed = JSON.parse(explanationString);
-    if (Array.isArray(parsed)) {
-      sections = parsed
-        .map((item: any) => {
-          if (typeof item === 'string') return { type: 'EXPLANATION', content: item };
-          return item;
-        })
-        .filter((item: any) => item.content && String(item.content).trim() !== '');
-      isJson = true;
-    }
-  } catch (e) {}
+  if (!cleanExp && !cleanExpEn) return null;
+
+  const parseSections = (raw: string) => {
+    if (!raw) return [];
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map((item: any) => (typeof item === 'string' ? { type: 'EXPLANATION', content: item, contentEn: '' } : item))
+          .filter((item: any) => (item?.content && String(item.content).trim() !== '') || (item?.contentEn && String(item.contentEn).trim() !== '') || (item?.textEn && String(item.textEn).trim() !== ''));
+      }
+    } catch {}
+    return [];
+  };
+
+  const sectionsFromAr = parseSections(cleanExp);
+  const sectionsFromEn = parseSections(cleanExpEn);
 
   const SECTION_STYLE_PRESETS: Record<string, any> = {
     HINT: { icon: HelpCircle, bg: "bg-amber-50/70", text: "text-amber-700", border: "border-amber-200", label: lang === 'ar' ? 'تلميح للمساعدة' : 'Hint' },
@@ -190,11 +190,68 @@ const renderExplanation = (explanationString: string, lang: 'ar' | 'en') => {
     EXPLANATION: { icon: BookOpen, bg: "bg-indigo-50/70", text: "text-indigo-700", border: "border-indigo-200", label: lang === 'ar' ? 'الشرح والتوضيح' : 'Explanation' }
   };
 
-  if (isJson && sections.length === 0) {
-    return null;
-  }
+  if (lang === 'en') {
+    if (sectionsFromEn.length > 0) {
+      return (
+        <div className="space-y-3">
+          {sectionsFromEn.map((sec: any, i: number) => {
+            const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
+            const Icon = preset.icon;
+            const secContent = sec.contentEn || sec.textEn || sec.content || sec.text || '';
+            return (
+              <div key={i} className={`${preset.bg} rounded-2xl p-5 border ${preset.border} flex gap-4 items-start`}>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${preset.text} bg-white/60 shadow-2xs`}>
+                  <Icon className="w-5 h-5 shrink-0" />
+                </div>
+                <div className="flex-1 space-y-1">
+                  <span className={`text-xs font-black uppercase tracking-wider block ${preset.text}`}>{preset.label}</span>
+                  <HtmlRenderer html={secContent} className={`prose prose-sm max-w-none ${preset.text}`} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
 
-  if (!isJson || sections.length === 0) {
+    const hasEnSectionContent = sectionsFromAr.some((s: any) => (s.contentEn && String(s.contentEn).trim() !== '') || (s.textEn && String(s.textEn).trim() !== ''));
+    if (hasEnSectionContent) {
+      return (
+        <div className="space-y-3">
+          {sectionsFromAr.map((sec: any, i: number) => {
+            const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
+            const Icon = preset.icon;
+            const secContent = sec.contentEn || sec.textEn || sec.content || sec.text || '';
+            return (
+              <div key={i} className={`${preset.bg} rounded-2xl p-5 border ${preset.border} flex gap-4 items-start`}>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${preset.text} bg-white/60 shadow-2xs`}>
+                  <Icon className="w-5 h-5 shrink-0" />
+                </div>
+                <div className="flex-1 space-y-1">
+                  <span className={`text-xs font-black uppercase tracking-wider block ${preset.text}`}>{preset.label}</span>
+                  <HtmlRenderer html={secContent} className={`prose prose-sm max-w-none ${preset.text}`} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    if (cleanExpEn && !cleanExpEn.startsWith('[') && !cleanExpEn.startsWith('{')) {
+      return (
+        <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 flex gap-5">
+          <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-slate-400 shrink-0">
+            <MessageCircle className="w-5 h-5" />
+          </div>
+          <div className="flex-1">
+            <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-widest">{t('explanationLabel', lang)}</p>
+            <HtmlRenderer html={cleanExpEn} className="text-slate-600 leading-relaxed font-medium prose prose-sm max-w-none" />
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 flex gap-5">
         <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-slate-400 shrink-0">
@@ -202,29 +259,45 @@ const renderExplanation = (explanationString: string, lang: 'ar' | 'en') => {
         </div>
         <div className="flex-1">
           <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-widest">{t('explanationLabel', lang)}</p>
-          <HtmlRenderer html={explanationString} className="text-slate-600 leading-relaxed font-medium prose prose-sm max-w-none" />
+          <p className="text-slate-600 leading-relaxed font-medium">English explanation is not available for this question yet.</p>
         </div>
       </div>
     );
   }
 
+  if (sectionsFromAr.length > 0) {
+    return (
+      <div className="space-y-3">
+        {sectionsFromAr.map((sec: any, i: number) => {
+          const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
+          const Icon = preset.icon;
+          const secContent = sec.content || sec.text || sec.contentEn || '';
+          return (
+            <div key={i} className={`${preset.bg} rounded-2xl p-5 border ${preset.border} flex gap-4 items-start`}>
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${preset.text} bg-white/60 shadow-2xs`}>
+                <Icon className="w-5 h-5 shrink-0" />
+              </div>
+              <div className="flex-1 space-y-1">
+                <span className={`text-xs font-black uppercase tracking-wider block ${preset.text}`}>{preset.label}</span>
+                <HtmlRenderer html={secContent} className={`prose prose-sm max-w-none ${preset.text}`} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  const targetText = cleanExp || cleanExpEn;
   return (
-    <div className="space-y-3">
-      {sections.map((sec: any, i: number) => {
-        const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
-        const Icon = preset.icon;
-        return (
-          <div key={i} className={`${preset.bg} rounded-2xl p-5 border ${preset.border} flex gap-4 items-start`}>
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${preset.text} bg-white/60 shadow-2xs`}>
-              <Icon className="w-5 h-5 shrink-0" />
-            </div>
-            <div className="flex-1 space-y-1">
-              <span className={`text-xs font-black uppercase tracking-wider block ${preset.text}`}>{preset.label}</span>
-              <HtmlRenderer html={sec.content} className={`prose prose-sm max-w-none ${preset.text}`} />
-            </div>
-          </div>
-        );
-      })}
+    <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 flex gap-5">
+      <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-slate-400 shrink-0">
+        <MessageCircle className="w-5 h-5" />
+      </div>
+      <div className="flex-1">
+        <p className="text-xs font-black text-slate-400 mb-1 uppercase tracking-widest">{t('explanationLabel', lang)}</p>
+        <HtmlRenderer html={targetText} className="text-slate-600 leading-relaxed font-medium prose prose-sm max-w-none" />
+      </div>
     </div>
   );
 };
@@ -233,7 +306,7 @@ export default function ExamResultPage() {
   const { id } = useParams();
   const router = useRouter();
   const { showToast } = useNotification();
-  const { language: ctxLang } = useLanguage();
+  const { language: ctxLang, setLanguage } = useLanguage();
   const [lang, setLang] = useState<'ar' | 'en'>(ctxLang as 'ar' | 'en' || 'ar');
   const [watermarkText, setWatermarkText] = useState("");
 
@@ -241,10 +314,27 @@ export default function ExamResultPage() {
     setWatermarkText("Klevro");
   }, []);
 
-  // Keep lang in sync with the global language context
+  // Keep lang in sync with the global language context and local storage
   useEffect(() => {
-    if (ctxLang === 'ar' || ctxLang === 'en') setLang(ctxLang);
+    const stored = typeof window !== 'undefined' ? (localStorage.getItem('lms_lang') as 'ar' | 'en') : null;
+    const initialLang = (stored === 'ar' || stored === 'en') ? stored : (ctxLang === 'ar' || ctxLang === 'en' ? ctxLang : 'ar');
+    setLang(initialLang);
+    if (typeof window !== 'undefined') {
+      document.documentElement.dir = initialLang === 'ar' ? 'rtl' : 'ltr';
+      document.documentElement.lang = initialLang;
+    }
   }, [ctxLang]);
+
+  const toggleLang = () => {
+    const nextLang = lang === 'ar' ? 'en' : 'ar';
+    setLang(nextLang);
+    setLanguage(nextLang);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('lms_lang', nextLang);
+      document.documentElement.dir = nextLang === 'ar' ? 'rtl' : 'ltr';
+      document.documentElement.lang = nextLang;
+    }
+  };
 
   const translateTrueFalse = (opt: string) => {
     const norm = normalizeAnswerGlobal(opt);
@@ -293,6 +383,90 @@ export default function ExamResultPage() {
     }
   };
 
+  const evalAnswerCorrect = (ans: any): boolean => {
+    if (!ans) return false;
+    if (ans.isCorrect) return true;
+    const q = ans.question;
+    if (!q) return false;
+
+    const hasAns = ans.selectedAnswer !== null &&
+      ans.selectedAnswer !== undefined &&
+      (typeof ans.selectedAnswer === 'string' ? ans.selectedAnswer.trim() !== '' : true);
+    if (!hasAns) return false;
+
+    if (q.type === 'TRUE_FALSE') {
+      return normalizeAnswerGlobal(ans.selectedAnswer) === normalizeAnswerGlobal(q.correctAnswer);
+    }
+
+    if (isOptionMatch(q.correctAnswer, ans.selectedAnswer, -1)) return true;
+    if (q.correctAnswerEn && isOptionMatch(q.correctAnswerEn, ans.selectedAnswer, -1)) return true;
+
+    let optsAr: any[] = [];
+    try { optsAr = typeof q.options === 'string' ? JSON.parse(q.options || '[]') : (Array.isArray(q.options) ? q.options : []); } catch {}
+    let optsEn: any[] = [];
+    try { optsEn = typeof q.optionsEn === 'string' ? JSON.parse(q.optionsEn || '[]') : (Array.isArray(q.optionsEn) ? q.optionsEn : []); } catch {}
+    const maxO = Math.max(optsAr.length, optsEn.length);
+    for (let i = 0; i < maxO; i++) {
+      const ar = optsAr[i];
+      const en = optsEn[i];
+      const sMatch = (ar && isOptionMatch(ans.selectedAnswer, ar, i)) || (en && isOptionMatch(ans.selectedAnswer, en, i));
+      const cMatch = (ar && isOptionMatch(q.correctAnswer, ar, i)) || (en && isOptionMatch(q.correctAnswer, en, i)) ||
+        (q.correctAnswerEn && ((ar && isOptionMatch(q.correctAnswerEn, ar, i)) || (en && isOptionMatch(q.correctAnswerEn, en, i))));
+      if (sMatch && cMatch) return true;
+    }
+
+    return false;
+  };
+
+  const isAdmin = !!(typeof window !== 'undefined' && (localStorage.getItem("school_admin_token") || localStorage.getItem("super_admin_token")));
+  const visibility = submission?.exam?.resultVisibility || "SHOW_SCORE";
+  const dir = lang === 'ar' ? 'rtl' : 'ltr';
+
+  const submissionTotalPoints = getSubmissionTotalPoints(submission);
+
+  const evaluatedStats = React.useMemo(() => {
+    if (!submission?.answers || !Array.isArray(submission.answers) || submission.answers.length === 0) {
+      const fallbackTotal = Number(submission?.totalScore) || 0;
+      const fallbackPoints = submissionTotalPoints || 1;
+      const fallbackPct = typeof submission?.percentage === 'number'
+        ? submission.percentage
+        : (fallbackPoints > 0 ? (fallbackTotal / fallbackPoints) * 100 : 0);
+      return { totalScore: fallbackTotal, totalPoints: fallbackPoints, percentage: fallbackPct };
+    }
+
+    let earned = 0;
+    let maxPts = 0;
+    for (const ans of submission.answers) {
+      const qPts = Number(ans.question?.points) || 1;
+      maxPts += qPts;
+      if (evalAnswerCorrect(ans)) {
+        earned += qPts;
+      }
+    }
+    const maxSafe = maxPts > 0 ? maxPts : (submissionTotalPoints || 1);
+    const pct = (earned / maxSafe) * 100;
+    return {
+      totalScore: earned,
+      totalPoints: maxSafe,
+      percentage: pct
+    };
+  }, [submission, submissionTotalPoints]);
+
+  const examTitle = (lang === 'en' && (submission?.subExam?.titleEn || submission?.exam?.titleEn))
+    ? (submission?.subExam?.titleEn || submission?.exam?.titleEn)
+    : (submission?.subExam?.title || submission?.exam?.title || t('result', lang));
+
+  // Language Toggle Button
+  const LangToggle = () => (
+    <button
+      onClick={toggleLang}
+      className="fixed top-4 left-4 z-50 flex items-center gap-2 bg-white/90 backdrop-blur-md border border-slate-200 shadow-lg px-4 py-2 rounded-full font-black text-sm text-slate-700 hover:bg-slate-50 transition-all hover:scale-105 active:scale-95"
+    >
+      <Globe className="w-4 h-4 text-indigo-500" />
+      {lang === 'ar' ? 'English' : 'عربي'}
+    </button>
+  );
+
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-6">
@@ -312,23 +486,6 @@ export default function ExamResultPage() {
     );
   }
 
-  const isAdmin = !!(localStorage.getItem("school_admin_token") || localStorage.getItem("super_admin_token"));
-  const visibility = submission.exam.resultVisibility || "SHOW_SCORE";
-  const dir = lang === 'ar' ? 'rtl' : 'ltr';
-
-  const submissionTotalPoints = getSubmissionTotalPoints(submission);
-
-  // Language Toggle Button
-  const LangToggle = () => (
-    <button
-      onClick={() => setLang(l => l === 'ar' ? 'en' : 'ar')}
-      className="fixed top-4 left-4 z-50 flex items-center gap-2 bg-white/90 backdrop-blur-md border border-slate-200 shadow-lg px-4 py-2 rounded-full font-black text-sm text-slate-700 hover:bg-slate-50 transition-all hover:scale-105 active:scale-95"
-    >
-      <Globe className="w-4 h-4 text-indigo-500" />
-      {lang === 'ar' ? 'English' : 'عربي'}
-    </button>
-  );
-
   // HIDE_ALL STATE
   if (visibility === "HIDE_ALL" && !isAdmin) {
     return (
@@ -341,7 +498,7 @@ export default function ExamResultPage() {
           <h1 className="text-3xl font-black text-slate-800 mb-4">{t('resultsHidden', lang)}</h1>
           <p className="text-slate-500 mb-10 leading-relaxed text-lg">{t('resultsHiddenMsg', lang)}</p>
           <div className="bg-slate-50 p-6 rounded-2xl mb-10 text-right border border-slate-100">
-            <h4 className="font-black text-slate-700 mb-1">{submission.subExam?.title || submission.exam.title}</h4>
+            <h4 className="font-black text-slate-700 mb-1">{examTitle}</h4>
             <p className="text-sm text-slate-400">{t('submittedOn', lang)} {new Date(submission.createdAt).toLocaleDateString(lang === 'ar' ? "ar-EG" : "en-GB")}</p>
           </div>
           <Link href="/exams" className="w-full bg-indigo-600 text-white py-5 rounded-2xl font-black text-xl shadow-xl shadow-indigo-100 hover:scale-[1.02] transition-all flex items-center justify-center gap-3">
@@ -370,7 +527,7 @@ export default function ExamResultPage() {
           <h1 className="text-3xl md:text-5xl font-black mb-3 drop-shadow-sm">
             {t('result', lang)}
           </h1>
-          <p className="text-white/80 text-lg font-bold">{submission.subExam?.title || submission.exam.title}</p>
+          <p className="text-white/80 text-lg font-bold">{examTitle}</p>
           <div className="flex justify-center gap-3 mt-4">
             <span className="bg-white/10 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-black border border-white/20">
               {submission.exam.skill || t('general', lang)}
@@ -394,13 +551,13 @@ export default function ExamResultPage() {
               <circle
                 cx="96" cy="96" r="86" stroke="currentColor" strokeWidth="14" fill="transparent"
                 strokeDasharray={540}
-                strokeDashoffset={540 - (540 * submission.percentage) / 100}
+                strokeDashoffset={540 - (540 * evaluatedStats.percentage) / 100}
                 strokeLinecap="round"
                 className="text-indigo-500 transition-all duration-1000"
               />
             </svg>
             <div className="absolute flex flex-col items-center">
-              <span className="text-5xl font-black text-slate-800">{Math.round(submission.percentage)}%</span>
+              <span className="text-5xl font-black text-slate-800">{Math.round(evaluatedStats.percentage)}%</span>
               <span className="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">{t('finalGrade', lang)}</span>
             </div>
           </div>
@@ -409,10 +566,10 @@ export default function ExamResultPage() {
             <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100">
               <p className="text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">{t('pointsEarned', lang)}</p>
               <h4 className="text-3xl font-black text-slate-800">
-                {submission.totalScore}
+                {evaluatedStats.totalScore}
                 <span className="text-lg font-bold text-slate-300 mx-2">/</span>
                 <span className="text-lg font-bold text-slate-400">
-                  {submissionTotalPoints}
+                  {evaluatedStats.totalPoints}
                 </span>
               </h4>
             </div>
@@ -420,7 +577,7 @@ export default function ExamResultPage() {
               <div className="col-span-full bg-indigo-50/50 p-6 rounded-3xl border border-indigo-100 flex flex-col items-center justify-center">
                 <p className="text-[10px] font-black text-indigo-400 mb-2 uppercase tracking-widest">{t('xpEarned', lang)}</p>
                 <h4 className="text-3xl font-black text-amber-500 flex items-center gap-2">
-                  <span>⭐</span>
+                  <Sparkles className="w-5 h-5 text-amber-500 shrink-0" />
                   <span>+{submission.earnedXP}</span>
                   <span className="text-xl">XP</span>
                 </h4>
@@ -478,29 +635,7 @@ export default function ExamResultPage() {
                 answer.selectedAnswer !== undefined &&
                 (typeof answer.selectedAnswer === 'string' ? answer.selectedAnswer.trim() !== '' : true);
 
-              const maxOpts = Math.max(optionsArr.length, optionsEnArr.length);
-              let optionBasedCorrect = false;
-              if (maxOpts > 0 && hasAnswered) {
-                for (let i = 0; i < maxOpts; i++) {
-                  const optAr = optionsArr[i];
-                  const optEn = optionsEnArr[i];
-                  const matchesStudent = (optAr && isOptionMatch(answer.selectedAnswer, optAr, i)) || (optEn && isOptionMatch(answer.selectedAnswer, optEn, i));
-                  const matchesCorrect = (optAr && isOptionMatch(answer.question.correctAnswer, optAr, i)) ||
-                    (optEn && isOptionMatch(answer.question.correctAnswer, optEn, i)) ||
-                    (answer.question.correctAnswerEn && ((optAr && isOptionMatch(answer.question.correctAnswerEn, optAr, i)) || (optEn && isOptionMatch(answer.question.correctAnswerEn, optEn, i))));
-                  if (matchesStudent && matchesCorrect) {
-                    optionBasedCorrect = true;
-                    break;
-                  }
-                }
-              }
-
-              const isQuestionCorrect = answer.isCorrect || optionBasedCorrect || (
-                hasAnswered && !!answer.question.correctAnswer && (
-                  isOptionMatch(answer.question.correctAnswer, answer.selectedAnswer, -1) ||
-                  (answer.question.correctAnswerEn && isOptionMatch(answer.question.correctAnswerEn, answer.selectedAnswer, -1))
-                )
-              );
+              const isQuestionCorrect = evalAnswerCorrect(answer);
               const questionTags = [
                 answer.question.domain && {
                   key: 'domain',
@@ -705,13 +840,13 @@ export default function ExamResultPage() {
                             {hasAnswered ? answer.selectedAnswer : <span className="text-slate-400 italic">{lang === 'ar' ? 'لم يتم الحل' : 'Unanswered'}</span>}
                           </div>
                         </div>
-                        {(visibility === "SHOW_ANSWERS" || visibility === "SHOW_ALL" || isAdmin) && answer.question.correctAnswer && (
+                        {(visibility === "SHOW_ANSWERS" || visibility === "SHOW_ALL" || isAdmin) && (answer.question.correctAnswer || answer.question.correctAnswerEn) && (
                           <div className="p-4 rounded-2xl border border-emerald-200 bg-emerald-50">
                             <div className="text-xs font-black text-emerald-600 uppercase mb-1">
                               {lang === 'ar' ? 'الإجابة النموذجية:' : 'Model Answer:'}
                             </div>
                             <div className="text-base font-bold text-emerald-900">
-                              {answer.question.correctAnswer}
+                              {lang === 'en' ? (answer.question.correctAnswerEn || answer.question.correctAnswer) : answer.question.correctAnswer}
                             </div>
                           </div>
                         )}
@@ -725,130 +860,159 @@ export default function ExamResultPage() {
                         </div>
                       )}
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {(answer.question.type === 'TRUE_FALSE' ? ["True", "False"] : displayOptionsArr)
-                          .filter((opt: string) => opt && opt.trim() !== "")
-                          .map((opt: string, oIdx: number) => {
-                            let correctAnswers = [answer.question.correctAnswer];
-                            if (answer.question.correctAnswerEn) {
-                              correctAnswers.push(answer.question.correctAnswerEn);
+                      {(() => {
+                        const isMultiSelect = answer.question.type === 'MULTI_SELECT';
+                        const isTrueFalse = answer.question.type === 'TRUE_FALSE';
+                        const optionsList = (isTrueFalse ? ["True", "False"] : displayOptionsArr)
+                          .filter((opt: string) => opt && opt.trim() !== "");
+
+                        const resolveOptionIndex = (val: any): number => {
+                          if (val === null || val === undefined || val === '') return -1;
+                          if (isTrueFalse) {
+                            const normVal = normalizeAnswerGlobal(val);
+                            if (normVal === 'true') return 0;
+                            if (normVal === 'false') return 1;
+                            return -1;
+                          }
+                          for (let i = 0; i < optionsList.length; i++) {
+                            if (isOptionMatch(val, optionsList[i], i)) return i;
+                          }
+                          for (let i = 0; i < Math.max(optionsArr.length, optionsEnArr.length); i++) {
+                            const ar = optionsArr[i];
+                            const en = optionsEnArr[i];
+                            if ((ar && isOptionMatch(val, ar, i)) || (en && isOptionMatch(val, en, i))) {
+                              return i < optionsList.length ? i : -1;
                             }
-                            let selectedAnswers = [answer.selectedAnswer];
+                          }
+                          return -1;
+                        };
 
-                            if (answer.question.type === 'MULTI_SELECT') {
-                              try {
-                                correctAnswers = typeof answer.question.correctAnswer === 'string' && (answer.question.correctAnswer.startsWith('[') || answer.question.correctAnswer.startsWith('{')) ? JSON.parse(answer.question.correctAnswer) : (answer.question.correctAnswer || "").split(",");
-                              } catch {
-                                correctAnswers = (answer.question.correctAnswer || "").split(",");
-                              }
-                              if (answer.question.correctAnswerEn) {
-                                try {
-                                  const enArr = typeof answer.question.correctAnswerEn === 'string' && (answer.question.correctAnswerEn.startsWith('[') || answer.question.correctAnswerEn.startsWith('{')) ? JSON.parse(answer.question.correctAnswerEn) : (answer.question.correctAnswerEn || "").split(",");
-                                  correctAnswers = [...correctAnswers, ...enArr];
-                                } catch {}
-                              }
-                              try {
-                                selectedAnswers = typeof answer.selectedAnswer === 'string' && (answer.selectedAnswer.startsWith('[') || answer.selectedAnswer.startsWith('{')) ? JSON.parse(answer.selectedAnswer) : (answer.selectedAnswer || "").split(",");
-                              } catch {
-                                selectedAnswers = (answer.selectedAnswer || "").split(",");
-                              }
-                            }
+                        let correctIndices: number[] = [];
+                        let selectedIndices: number[] = [];
 
-                            // Resolve correct/selected option indices using the full options pool (AR+EN)
-                            // This prevents false positives from text containment matching
-                            const resolveOptionIndex = (val: any) => {
-                              for (let i = 0; i < Math.max(optionsArr.length, optionsEnArr.length); i++) {
-                                const ar = optionsArr[i];
-                                const en = optionsEnArr[i];
-                                if ((ar && isOptionMatch(val, ar, i)) || (en && isOptionMatch(val, en, i))) return i;
-                              }
-                              return -1;
-                            };
+                        if (isMultiSelect) {
+                          let cAnswers: any[] = [];
+                          try {
+                            cAnswers = typeof answer.question.correctAnswer === 'string' && (answer.question.correctAnswer.startsWith('[') || answer.question.correctAnswer.startsWith('{'))
+                              ? JSON.parse(answer.question.correctAnswer)
+                              : (answer.question.correctAnswer || '').split(',');
+                          } catch {
+                            cAnswers = (answer.question.correctAnswer || '').split(',');
+                          }
+                          correctIndices = Array.from(new Set(
+                            cAnswers.map((c: any) => resolveOptionIndex(c)).filter((i: number) => i >= 0)
+                          ));
 
-                            const correctIndices = correctAnswers
-                              .map((c: any) => resolveOptionIndex(c))
-                              .filter((i: number) => i >= 0);
+                          let sAnswers: any[] = [];
+                          try {
+                            sAnswers = typeof answer.selectedAnswer === 'string' && (answer.selectedAnswer.startsWith('[') || answer.selectedAnswer.startsWith('{'))
+                              ? JSON.parse(answer.selectedAnswer)
+                              : (answer.selectedAnswer || '').split(',');
+                          } catch {
+                            sAnswers = (answer.selectedAnswer || '').split(',');
+                          }
+                          selectedIndices = Array.from(new Set(
+                            sAnswers.map((s: any) => resolveOptionIndex(s)).filter((i: number) => i >= 0)
+                          ));
+                        } else {
+                          let cIdx = resolveOptionIndex(answer.question.correctAnswer);
+                          if (cIdx < 0 && answer.question.correctAnswerEn) {
+                            cIdx = resolveOptionIndex(answer.question.correctAnswerEn);
+                          }
+                          if (cIdx >= 0) correctIndices = [cIdx];
 
-                            const selectedIndices = selectedAnswers
-                              .map((s: any) => resolveOptionIndex(s))
-                              .filter((i: number) => i >= 0);
+                          if (hasAnswered) {
+                            const sIdx = resolveOptionIndex(answer.selectedAnswer);
+                            if (sIdx >= 0) selectedIndices = [sIdx];
+                          }
+                        }
 
-                            const isCorrectOption = correctIndices.includes(oIdx);
-                            const isSelectedOption = hasAnswered && selectedIndices.includes(oIdx);
+                        return (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {optionsList.map((opt: string, oIdx: number) => {
+                              const isCorrectOption = correctIndices.includes(oIdx);
+                              const isSelectedOption = hasAnswered && selectedIndices.includes(oIdx);
+                              const shouldShowCorrect = (visibility === "SHOW_ANSWERS" || visibility === "SHOW_ALL" || isAdmin);
 
-                            const shouldShowCorrect = (visibility === "SHOW_ANSWERS" || visibility === "SHOW_ALL" || isAdmin);
+                              let bgClass = "bg-slate-50 border-slate-200/60";
+                              let textClass = "text-slate-600";
+                              let badgeEl = null;
+                              let icon = null;
 
-                            let bgClass = "bg-slate-50 border-slate-200/60";
-                            let textClass = "text-slate-600";
-                            let badgeEl = null;
-                            let icon = null;
-
-                            if (isSelectedOption && isCorrectOption) {
-                              bgClass = "bg-emerald-50/80 border-emerald-500 shadow-sm";
-                              textClass = "text-emerald-900 font-bold";
-                              icon = <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />;
-                              badgeEl = (
-                                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-black border border-emerald-200 shrink-0">
-                                  {lang === 'ar' ? 'إجابتك الصحيحة' : 'Your Answer (Correct)'}
-                                </span>
-                              );
-                            } else if (isSelectedOption && !isCorrectOption) {
-                              bgClass = "bg-rose-50/80 border-rose-500 shadow-sm";
-                              textClass = "text-rose-900 font-bold";
-                              icon = <XCircle className="w-5 h-5 text-rose-600 shrink-0" />;
-                              badgeEl = (
-                                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 font-black border border-rose-200 shrink-0">
-                                  {lang === 'ar' ? 'إجابتك' : 'Your Answer'}
-                                </span>
-                              );
-                            } else if (isCorrectOption && shouldShowCorrect) {
-                              bgClass = "bg-emerald-50/40 border-emerald-400 border-dashed shadow-2xs";
-                              textClass = "text-emerald-900 font-semibold";
-                              icon = <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />;
-                              badgeEl = (
-                                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-black border border-emerald-300 shrink-0">
-                                  {lang === 'ar' ? 'الإجابة النموذجية' : 'Model Answer'}
-                                </span>
-                              );
-                            }
-
-                            return (
-                              <div key={oIdx} className={`p-4 sm:p-5 rounded-2xl border-2 transition-all flex items-center justify-between gap-3 ${bgClass}`}>
-                                <div className="flex items-center gap-3.5 flex-1 text-start min-w-0">
-                                  <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 transition-colors ${
-                                    isSelectedOption && isCorrectOption ? "bg-emerald-600 text-white shadow-sm"
-                                      : isSelectedOption && !isCorrectOption ? "bg-rose-600 text-white shadow-sm"
-                                      : isCorrectOption && shouldShowCorrect ? "bg-emerald-100 text-emerald-800 border border-emerald-300 font-black"
-                                      : "bg-slate-100 text-slate-600"
-                                  }`}>
-                                    {getOptionLetter(oIdx, lang)}
+                              if (isSelectedOption && isCorrectOption) {
+                                bgClass = "bg-emerald-50/80 border-emerald-500 shadow-sm";
+                                textClass = "text-emerald-900 font-bold";
+                                icon = <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />;
+                                badgeEl = (
+                                  <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-black border border-emerald-200 shrink-0">
+                                    {lang === 'ar' ? 'إجابتك الصحيحة' : 'Your Answer (Correct)'}
                                   </span>
-                                  <span className={`font-bold flex-1 break-words ${textClass}`}>
-                                    <HtmlRenderer html={answer.question.type === 'TRUE_FALSE' ? translateTrueFalse(opt) : cleanOptionText(opt)} tag="span" />
+                                );
+                              } else if (isSelectedOption && !isCorrectOption) {
+                                bgClass = "bg-rose-50/80 border-rose-500 shadow-sm";
+                                textClass = "text-rose-900 font-bold";
+                                icon = <XCircle className="w-5 h-5 text-rose-600 shrink-0" />;
+                                badgeEl = (
+                                  <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 font-black border border-rose-200 shrink-0">
+                                    {lang === 'ar' ? 'إجابتك' : 'Your Answer'}
                                   </span>
+                                );
+                              } else if (isCorrectOption && shouldShowCorrect) {
+                                bgClass = "bg-emerald-50/40 border-emerald-400 border-dashed shadow-2xs";
+                                textClass = "text-emerald-900 font-semibold";
+                                icon = <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />;
+                                badgeEl = (
+                                  <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-black border border-emerald-300 shrink-0">
+                                    {lang === 'ar' ? 'الإجابة النموذجية' : 'Model Answer'}
+                                  </span>
+                                );
+                              }
+
+                              return (
+                                <div key={oIdx} className={`p-4 sm:p-5 rounded-2xl border-2 transition-all flex items-center justify-between gap-3 ${bgClass}`}>
+                                  <div className="flex items-center gap-3.5 flex-1 text-start min-w-0">
+                                    <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 transition-colors ${
+                                      isSelectedOption && isCorrectOption ? "bg-emerald-600 text-white shadow-sm"
+                                        : isSelectedOption && !isCorrectOption ? "bg-rose-600 text-white shadow-sm"
+                                        : isCorrectOption && shouldShowCorrect ? "bg-emerald-100 text-emerald-800 border border-emerald-300 font-black"
+                                        : "bg-slate-100 text-slate-600"
+                                    }`}>
+                                      {getOptionLetter(oIdx, lang)}
+                                    </span>
+                                    <span className={`font-bold flex-1 break-words ${textClass}`}>
+                                      <HtmlRenderer html={isTrueFalse ? translateTrueFalse(opt) : cleanOptionText(opt)} tag="span" />
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    {badgeEl}
+                                    {icon}
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-2 shrink-0">
-                                  {badgeEl}
-                                  {icon}
-                                </div>
-                              </div>
-                            );
-                          })}
-                      </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
                     </div>
                     )}
 
-                  {(answer.question.explanation || answer.question.imageUrl) && (
+                  {(answer.question.explanation || answer.question.explanationEn || answer.question.imageUrl) && (
                     <div className="space-y-4">
                       {answer.question.imageUrl && (
-                        <img
+                        <Image
                           src={answer.question.imageUrl}
                           alt="Question"
-                          loading="lazy"
-                          className="max-w-full rounded-2xl border border-slate-100 shadow-sm mx-auto"
+                          width={700}
+                          height={400}
+                          className="max-w-full h-auto rounded-2xl border border-slate-100 shadow-sm mx-auto object-contain"
+                          unoptimized={Boolean(answer.question.imageUrl?.startsWith('data:'))}
                         />
                       )}
-                      {answer.question.explanation && (visibility === "SHOW_ANSWERS" || visibility === "SHOW_ALL" || isAdmin) && renderExplanation(answer.question.explanation, lang)}
+                      {(answer.question.explanation || answer.question.explanationEn) && (visibility === "SHOW_ANSWERS" || visibility === "SHOW_ALL" || isAdmin) && renderExplanation(
+                        answer.question.explanation,
+                        answer.question.explanationEn,
+                        lang
+                      )}
                     </div>
                   )}
                 </div>

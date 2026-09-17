@@ -17,6 +17,17 @@ export const useQuestionLogic = (props: any) => {
     if (!questionId) return;
     setDeletedQuestionIds?.((prev: string[]) => prev.includes(questionId) ? prev : [...prev, questionId]);
   };
+  const isPersistedQuestion = (question: any) => typeof question?.id === 'string' && question.id.trim().length > 0;
+  const rejectPersistedDelete = (question: any) => {
+    if (!isPersistedQuestion(question)) return false;
+    showToast(
+      language === 'ar'
+        ? 'حذف الأسئلة المحفوظة متاح للسوبر أدمن فقط.'
+        : 'Only Super Admin can delete saved questions.',
+      'error'
+    );
+    return true;
+  };
 
   const handleAddStandaloneQuestion = () => {
     setTempQuestion({
@@ -93,6 +104,7 @@ export const useQuestionLogic = (props: any) => {
   };
 
   const removeStandaloneQuestion = (index: number) => {
+    if (rejectPersistedDelete(standaloneQuestions[index])) return;
     if (!confirm(language === 'ar' ? "هل أنت متأكد من حذف هذا السؤال؟" : "Are you sure you want to delete this question?")) return;
     trackDeletedQuestionId(standaloneQuestions[index]);
     setStandaloneQuestions((prev: any) => {
@@ -253,6 +265,10 @@ export const useQuestionLogic = (props: any) => {
   };
 
   const removeQuestionForSource = (source: 'assignments' | 'questions', index: number) => {
+    const targetList = source === 'questions' && activeSubExamIndex !== null
+      ? (currentModule.subExams?.[activeSubExamIndex]?.questions || [])
+      : (currentModule[source] || []);
+    if (rejectPersistedDelete(targetList[index])) return;
     if (!confirm(language === 'ar' ? "هل أنت متأكد من حذف هذا السؤال؟" : "Are you sure you want to delete this question?")) return;
     setCurrentModule((prev: any) => {
       if (source === 'questions' && activeSubExamIndex !== null && prev.subExams && prev.subExams[activeSubExamIndex]) {

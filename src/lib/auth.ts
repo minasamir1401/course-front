@@ -79,7 +79,11 @@ export const logout = (router: any, currentPath: string = "") => {
   }
 };
 
-export const startImpersonation = (_targetToken: string, targetUser: any, targetRole: string) => {
+export const startImpersonation = (targetUserOrLegacyToken: any, targetRoleOrUser: any, legacyRole?: string) => {
+  // The third-argument form is accepted temporarily for old compiled/source backups,
+  // but the legacy token is deliberately ignored and never persisted.
+  const targetUser = legacyRole ? targetRoleOrUser : targetUserOrLegacyToken;
+  const targetRole = legacyRole || targetRoleOrUser;
   // 1. Capture current admin display data (no raw JWT)
   const adminUser = localStorage.getItem(AUTH_KEYS.SUPER_ADMIN.USER) || localStorage.getItem(AUTH_KEYS.SCHOOL_ADMIN.USER);
   const adminType = localStorage.getItem(AUTH_KEYS.SUPER_ADMIN.USER) ? 'SUPER' : 'SCHOOL';

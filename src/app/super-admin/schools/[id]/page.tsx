@@ -5,6 +5,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Users, GraduationCap, Building2, ClipboardList, Shield, Search, Plus, Filter, MoreVertical, Edit2, Trash2, Key, X, Building, Users2, Heart, UserCheck, Activity, BarChart3, ArrowLeft, ChevronRight, Sparkles, Phone, Mail, MapPin, CheckCircle2, AlertCircle, Clock, BookOpen } from 'lucide-react';
 import Link from "next/link";
+import Image from "next/image";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useNotification } from "@/context/NotificationContext";
 import { startImpersonation } from '@/lib/auth';
@@ -232,7 +233,7 @@ export default function SchoolManagementPage() {
         const data = await res.json();
         
         // Use the centralized helper
-        startImpersonation(data.token, data.user, user.role);
+        startImpersonation(data.user, user.role);
         
         // Redirect
         if (user.role === 'STUDENT') {
@@ -605,10 +606,19 @@ export default function SchoolManagementPage() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-4">
                         <div className="relative">
-                          <img loading="lazy" decoding="async" src={user.avatar || `https://ui-avatars.com/api/?name=${user.name}&background=6366f1&color=fff`} 
-                            className="w-12 h-12 rounded-2xl object-cover ring-2 ring-slate-100 group-hover:ring-indigo-500/50 transition-all"
-                            alt=""
-                          />
+                          {(() => {
+                            const avatarSrc = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&background=6366f1&color=fff`;
+                            return (
+                              <Image
+                                src={avatarSrc}
+                                width={48}
+                                height={48}
+                                className="w-12 h-12 rounded-2xl object-cover ring-2 ring-slate-100 group-hover:ring-indigo-500/50 transition-all"
+                                alt={user.name || "User avatar"}
+                                unoptimized={Boolean(avatarSrc.startsWith('data:'))}
+                              />
+                            );
+                          })()}
                           <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${user.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-400'}`}></div>
                         </div>
                         <div>

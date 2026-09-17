@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import ExamCountdown from "@/components/ExamCountdown";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { API_URL, apiFetch } from "@/lib/api";
 import { getStudentExamDuration } from "@/lib/examModuleView";
 import { sanitizeHtml } from "@/lib/sanitize";
@@ -852,11 +853,13 @@ function TakeExamPageContent() {
               />
             </div>
             {question.imageUrl && (
-              <img
+              <Image
                 src={question.imageUrl}
                 alt="Question"
-                loading="lazy"
-                className="max-w-full rounded-2xl mb-8 border border-slate-200 shadow-sm mx-auto"
+                width={700}
+                height={400}
+                className="max-w-full h-auto rounded-2xl mb-8 border border-slate-200 shadow-sm mx-auto object-contain"
+                unoptimized={Boolean(question.imageUrl?.startsWith('data:'))}
               />
             )}
             

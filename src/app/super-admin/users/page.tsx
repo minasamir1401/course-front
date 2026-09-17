@@ -269,7 +269,7 @@ function UsersManagementContent() {
         const data = await res.json();
         
         // Use the centralized helper to handle token switching
-        startImpersonation(data.token, data.user, user.role);
+        startImpersonation(data.user, user.role);
         
         // Show success toast with dynamic template
         showToast(

@@ -13,6 +13,7 @@ const { buildQuestionWorkbook, readQuestionImport, importModuleQuestions } = req
 const q = (id = 'q1') => ({ id, text: '<b>5 + 5?</b>', type: 'MCQ', options: ['8', '10'],
   correctAnswer: '10', points: 1, skill: 'Algebra', explanation: 'Explanation', moduleId: 'm1', subExamId: 's1' });
 const opts = { canDelete: true, language: 'en' };
+const column = (rows, name) => rows[0].indexOf(name);
 for (const lang of ['ar', 'en']) {
   test('workbook roundtrip preserves identity, rich text and metadata: ' + lang, () => {
     const current = [q()];
@@ -64,9 +65,9 @@ test('missing ID column in sync export is rejected', () => {
   assert.throws(() => planQuestionImport(rows, [q()], { ...opts, exportedIds: ['q1'] }), /Question ID column/);
 });
 test('malformed rows report their number and never partially apply', () => {
-  const rows = questionExportRows([q()], 'en'); rows[1][11] = -1;
+  const rows = questionExportRows([q()], 'en'); rows[1][column(rows, 'Points')] = -1;
   assert.throws(() => planQuestionImport(rows, [q()], opts), /Row 2/);
-  rows[1][11] = 1; rows[1][9] = 'not an option';
+  rows[1][column(rows, 'Points')] = 1; rows[1][column(rows, 'Correct Answer (Ar)')] = 'not an option';
   assert.throws(() => planQuestionImport(rows, [q()], opts), /Correct answer/);
 });
 test('multi select answers containing commas survive export', () => {
@@ -75,7 +76,7 @@ test('multi select answers containing commas survive export', () => {
   assert.equal(plan.unchanged, 1);
 });
 test('empty explanation is an explicit clear; hidden fields remain', () => {
-  const rows = questionExportRows([q()], 'en'); rows[1][13] = '';
+  const rows = questionExportRows([q()], 'en'); rows[1][column(rows, 'Explanation (Ar)')] = '';
   const plan = planQuestionImport(rows, [q()], opts);
   assert.equal(plan.questions[0].clearExplanation, true);
   assert.deepEqual(plan.questions[0].sections, []);
@@ -117,7 +118,9 @@ test('legacy lesson template uses one-based answers and supports TEXT', () => {
 });
 test('changing MULTI_SELECT to MCQ clears old multiple answers', () => {
   const current = [{ ...q(), type: 'MULTI_SELECT', correctAnswers: ['8', '10'] }];
-  const rows = questionExportRows(current, 'en'); rows[1][3] = 'MCQ'; rows[1][9] = '10';
+  const rows = questionExportRows(current, 'en');
+  rows[1][column(rows, 'Question Type')] = 'MCQ';
+  rows[1][column(rows, 'Correct Answer (Ar)')] = '10';
   const plan = planQuestionImport(rows, current, opts);
   assert.deepEqual(plan.questions[0].correctAnswers, []);
   assert.equal(plan.questions[0].correctAnswer, '10');
@@ -129,7 +132,7 @@ test('existing letter answers are accepted', () => {
 test('changing only points preserves custom title and explanation section formatting', () => {
   const sections = [{ type: 'EXPLANATION', content: 'Explanation', style: 'custom' }];
   const current = [{ ...q(), title: 'Custom title', sections }];
-  const rows = questionExportRows(current, 'en'); rows[1][11] = 4;
+  const rows = questionExportRows(current, 'en'); rows[1][column(rows, 'Points')] = 4;
   const plan = planQuestionImport(rows, current, opts);
   assert.equal(plan.questions[0].title, 'Custom title');
   assert.strictEqual(plan.questions[0].sections, sections);

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { useCourseEditor } from "./CourseEditorContext";
 import { Settings, Edit2, CheckCircle2, Trash2, Upload, Layers, EyeOff } from "lucide-react";
 import { getFullImageUrl } from "@/lib/api";
@@ -137,8 +138,14 @@ export const CourseSettingsForm: React.FC = () => {
       {collapsed ? (
         <div className="px-6 py-4 space-y-4">
           {courseData.coverImage && (
-            <div className="aspect-video w-full rounded-2xl overflow-hidden border border-slate-100 mb-2">
-              <img loading="lazy" decoding="async" src={getFullImageUrl(courseData.coverImage) || ""} className="w-full h-full object-cover" alt="Cover" />
+            <div className="aspect-video w-full rounded-2xl overflow-hidden border border-slate-100 mb-2 relative">
+              <Image
+                src={getFullImageUrl(courseData.coverImage) || "/logo.jpeg"}
+                alt="Cover"
+                fill
+                className="object-cover"
+                unoptimized={Boolean(getFullImageUrl(courseData.coverImage)?.startsWith('data:'))}
+              />
             </div>
           )}
           <div className="flex flex-col gap-1.5">
@@ -167,8 +174,14 @@ export const CourseSettingsForm: React.FC = () => {
             <div className="relative group cursor-pointer">
               {courseData.coverImage ? (
                 <div className="relative aspect-video w-full rounded-2xl overflow-hidden border-2 border-slate-100 group-hover:border-indigo-400 transition-all">
-                  <img loading="lazy" decoding="async" src={getFullImageUrl(courseData.coverImage) || ""} className="w-full h-full object-cover" alt="Cover" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-3">
+                  <Image
+                    src={getFullImageUrl(courseData.coverImage) || "/logo.jpeg"}
+                    alt="Cover"
+                    fill
+                    className="object-cover"
+                    unoptimized={Boolean(getFullImageUrl(courseData.coverImage)?.startsWith('data:'))}
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-3 z-10">
                     <button
                       type="button"
                       onClick={() => setCourseData({ ...courseData, coverImage: "" })}

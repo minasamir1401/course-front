@@ -1,6 +1,7 @@
 import { normalizeDok } from '@/lib/examQuestionMetadata';
 // @ts-nocheck
 import React from 'react';
+import NextImage from 'next/image';
 import HtmlRenderer from '@/components/HtmlRenderer';
 import RichTextEditor from '@/components/RichTextEditor';
 import MathInput from '@/components/MathInput';
@@ -391,7 +392,7 @@ export const QuestionsBuilder = (props: any) => {
                             if (!img) return null;
                             return (
                               <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-slate-200 shrink-0 bg-slate-50">
-                                <img src={img} alt="Question" className="w-full h-full object-cover" />
+                                <NextImage src={img} alt="Question" width={48} height={48} className="w-full h-full object-cover" unoptimized={Boolean(img.startsWith('data:'))} />
                               </div>
                             );
                           })()}
@@ -468,7 +469,7 @@ export const QuestionsBuilder = (props: any) => {
                             if (!img) return null;
                             return (
                               <div className="rounded-2xl overflow-hidden border border-slate-200 bg-white p-2 shadow-sm max-w-sm">
-                                <img src={img} alt="Question attachment" className="w-full h-auto max-h-60 object-contain rounded-xl" />
+                                <NextImage src={img} alt="Question attachment" width={360} height={240} className="w-full h-auto max-h-60 object-contain rounded-xl" unoptimized={Boolean(img.startsWith('data:'))} />
                               </div>
                             );
                           })()}
@@ -892,10 +893,13 @@ export const QuestionsBuilder = (props: any) => {
 
                 {tempQuestion.imageUrl ? (
                   <div className="relative group rounded-xl overflow-hidden border border-slate-200 max-w-sm bg-white">
-                    <img
+                    <NextImage
                       src={tempQuestion.imageUrl}
                       alt="Question attachment preview"
+                      width={360}
+                      height={176}
                       className="w-full h-44 object-contain p-2"
+                      unoptimized={Boolean(tempQuestion.imageUrl.startsWith('data:'))}
                     />
                     <div className="p-2 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-bold truncate">
                       <span className="truncate flex-1 px-1">{tempQuestion.imageUrl}</span>

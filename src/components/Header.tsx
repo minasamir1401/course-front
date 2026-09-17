@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Search, Bell, Menu, ChevronDown, LogOut, Settings, User, ArrowLeftCircle, Sparkles, Globe, Zap, Building2 } from 'lucide-react';
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { logout, stopImpersonation } from "@/lib/auth";
 import { LucideIcon } from 'lucide-react';
@@ -175,8 +176,8 @@ export default function Header({
                 </button>
               )}
               <div className="flex items-center gap-2 sm:gap-3">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl overflow-hidden shadow-lg shadow-indigo-100 flex items-center justify-center transform group-hover:scale-105 transition-transform bg-white border border-slate-100">
-                  <img src="/logo.jpeg" alt="Logo" className="w-full h-full object-cover" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl overflow-hidden shadow-lg shadow-indigo-100 flex items-center justify-center transform group-hover:scale-105 transition-transform bg-white border border-slate-100 relative">
+                  <Image src="/logo.jpeg" alt="Logo" width={48} height={48} priority className="w-full h-full object-cover" />
                 </div>
 
               </div>

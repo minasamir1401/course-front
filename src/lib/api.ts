@@ -28,7 +28,7 @@ export const getFullImageUrl = (path: string | null | undefined) => {
 // ==========================================
 const TOKEN_EXPIRY_BUFFER_MS = 30 * 60 * 1000; // refresh if < 30 min left
 let _isRefreshing = false;
-let _refreshPromise: Promise<string | null> | null = null;
+let _refreshPromise: Promise<boolean> | null = null;
 
 const TOKEN_CONFIG: Record<string, { token: string; user: string; loginPath: string }> = {
   'super-admin': { token: 'super_admin_token', user: 'super_admin_user', loginPath: '/super-admin/login' },
@@ -54,12 +54,11 @@ export const getActiveToken = (): string | null => {
 };
 
 /** Track token expiry time for proactive refresh — token itself is NOT stored (httpOnly cookie handles auth) */
-const persistToken = (_token: string) => {
+const persistSessionExpiry = (expiresAt?: number) => {
   if (typeof window === 'undefined') return;
   const key = getActiveTokenKey();
-  const expiresAt = Date.now() + (8 * 60 * 60 * 1000); // 8h
   // Store only the expiry time — NOT the token itself
-  localStorage.setItem(`${key}_expires_at`, String(expiresAt));
+  localStorage.setItem(`${key}_expires_at`, String(expiresAt || Date.now() + (8 * 60 * 60 * 1000)));
 };
 
 /** Check if current token needs proactive refresh (< 30 min left) */
@@ -72,8 +71,8 @@ const shouldProactivelyRefresh = (): boolean => {
 };
 
 /** Silently refresh token in the background */
-const silentRefresh = async (): Promise<string | null> => {
-  if (_isRefreshing) return _refreshPromise;
+const silentRefresh = async (): Promise<boolean> => {
+  if (_isRefreshing && _refreshPromise) return _refreshPromise;
   _isRefreshing = true;
   _refreshPromise = (async () => {
     try {
@@ -83,10 +82,10 @@ const silentRefresh = async (): Promise<string | null> => {
         credentials: 'include', // send httpOnly cookie
         headers: currentToken ? { Authorization: `Bearer ${currentToken}` } : {}
       });
-      if (!res.ok) return null;
+      if (!res.ok) return false;
       const data = await res.json();
-      if (data.token) {
-        persistToken(data.token);
+      if (data.refreshed === true) {
+        persistSessionExpiry(Number(data.expiresAt) || undefined);
         // Also update user object if provided
         if (data.user) {
           const userKey = getActiveUserKey();
@@ -95,11 +94,11 @@ const silentRefresh = async (): Promise<string | null> => {
           localStorage.setItem(userKey, JSON.stringify(merged));
         }
         console.log('🔄 Token silently refreshed.');
-        return data.token;
+        return true;
       }
-      return null;
+      return false;
     } catch {
-      return null;
+      return false;
     } finally {
       _isRefreshing = false;
       _refreshPromise = null;
@@ -172,11 +171,11 @@ export const apiFetch = async (
 
       if (isTokenExpired) {
         // Try one silent refresh
-        const newToken = await silentRefresh();
-        if (newToken) {
-          // Retry the original request with the new token
+        const refreshed = await silentRefresh();
+        if (refreshed) {
+          // Retry with the refreshed httpOnly cookie. Drop any stale bearer value.
           const retryHeaders = new Headers(init?.headers || {});
-          retryHeaders.set('Authorization', `Bearer ${newToken}`);
+          retryHeaders.delete('Authorization');
           res = await fetch(input, { ...init, headers: retryHeaders, credentials: 'include' });
           if (!res.ok && res.status === 401) {
             clearSessionAndRedirect();

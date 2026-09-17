@@ -233,7 +233,7 @@ export default function SchoolsManagement() {
         const data = await res.json();
         
         // Use the centralized helper
-        startImpersonation(data.token, data.user, 'SCHOOL_ADMIN');
+        startImpersonation(data.user, 'SCHOOL_ADMIN');
         
         router.push("/school-admin");
         showToast((t('superAdmin.schoolsPage.impersonateSuccess') || 'Logged in as school admin').replace('{name}', school.name), 'success');

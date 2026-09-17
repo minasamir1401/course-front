@@ -943,26 +943,26 @@ export default function LessonPlayerPage() {
                           />
                         </div>
 
-                        {assignmentAnswers[currentAssignmentIndex] && lesson.assignments[currentAssignmentIndex].hint && (
+                        {assignmentAnswers[currentAssignmentIndex] && (lesson.assignments[currentAssignmentIndex].hint || lesson.assignments[currentAssignmentIndex].hintEn) && (
                           <div className="w-full mb-6 mt-4 p-5 bg-indigo-50 border-2 border-indigo-100 rounded-2xl text-indigo-900 animate-in slide-in-from-top-4 fade-in duration-500 text-start shadow-sm">
                             <div className="flex items-center gap-2 mb-2 font-black text-indigo-700">
                               <HelpCircle className="w-5 h-5 shrink-0" />
                               {language === 'ar' ? 'تلميح' : 'Hint'}
                             </div>
                             <div className="text-sm md:text-base leading-relaxed break-words">
-                              <HtmlRenderer html={lesson.assignments[currentAssignmentIndex].hint} />
+                              <HtmlRenderer html={language === 'en' ? (lesson.assignments[currentAssignmentIndex].hintEn || lesson.assignments[currentAssignmentIndex].hint) : lesson.assignments[currentAssignmentIndex].hint} />
                             </div>
                           </div>
                         )}
 
-                        {assignmentSubmitted[currentAssignmentIndex] && lesson.assignments[currentAssignmentIndex].explanation && (
+                        {assignmentSubmitted[currentAssignmentIndex] && (lesson.assignments[currentAssignmentIndex].explanation || lesson.assignments[currentAssignmentIndex].explanationEn) && (
                           <div className="w-full mb-6 mt-2 p-5 bg-blue-50 border-2 border-blue-100 rounded-2xl text-blue-900 animate-in slide-in-from-top-4 fade-in duration-700 delay-200 text-start shadow-sm">
                             <div className="flex items-center gap-2 mb-2 font-black text-blue-700">
                               <Info className="w-5 h-5 shrink-0" />
                               {language === 'ar' ? 'التفسير' : 'Explanation'}
                             </div>
                             <div className="text-sm md:text-base leading-relaxed break-words">
-                              <HtmlRenderer html={lesson.assignments[currentAssignmentIndex].explanation} />
+                              <HtmlRenderer html={language === 'en' ? (lesson.assignments[currentAssignmentIndex].explanationEn || lesson.assignments[currentAssignmentIndex].explanation) : lesson.assignments[currentAssignmentIndex].explanation} />
                             </div>
                           </div>
                         )}
@@ -1278,26 +1278,26 @@ export default function LessonPlayerPage() {
                           />
                         </div>
 
-                        {answers[currentQuestionIndex] && lesson.questions[currentQuestionIndex].hint && (
+                        {answers[currentQuestionIndex] && (lesson.questions[currentQuestionIndex].hint || lesson.questions[currentQuestionIndex].hintEn) && (
                           <div className="w-full mb-6 mt-4 p-5 bg-indigo-50 border-2 border-indigo-100 rounded-2xl text-indigo-900 animate-in slide-in-from-top-4 fade-in duration-500 text-start shadow-sm">
                             <div className="flex items-center gap-2 mb-2 font-black text-indigo-700">
                               <HelpCircle className="w-5 h-5 shrink-0" />
                               {language === 'ar' ? 'تلميح' : 'Hint'}
                             </div>
                             <div className="text-sm md:text-base leading-relaxed break-words">
-                              <HtmlRenderer html={lesson.questions[currentQuestionIndex].hint} />
+                              <HtmlRenderer html={language === 'en' ? (lesson.questions[currentQuestionIndex].hintEn || lesson.questions[currentQuestionIndex].hint) : lesson.questions[currentQuestionIndex].hint} />
                             </div>
                           </div>
                         )}
 
-                        {quizSubmitted[currentQuestionIndex] && lesson.questions[currentQuestionIndex].explanation && (
+                        {quizSubmitted[currentQuestionIndex] && (lesson.questions[currentQuestionIndex].explanation || lesson.questions[currentQuestionIndex].explanationEn) && (
                           <div className="w-full mb-6 mt-2 p-5 bg-blue-50 border-2 border-blue-100 rounded-2xl text-blue-900 animate-in slide-in-from-top-4 fade-in duration-700 delay-200 text-start shadow-sm">
                             <div className="flex items-center gap-2 mb-2 font-black text-blue-700">
                               <Info className="w-5 h-5 shrink-0" />
                               {language === 'ar' ? 'التفسير' : 'Explanation'}
                             </div>
                             <div className="text-sm md:text-base leading-relaxed break-words">
-                              <HtmlRenderer html={lesson.questions[currentQuestionIndex].explanation} />
+                              <HtmlRenderer html={language === 'en' ? (lesson.questions[currentQuestionIndex].explanationEn || lesson.questions[currentQuestionIndex].explanation) : lesson.questions[currentQuestionIndex].explanation} />
                             </div>
                           </div>
                         )}

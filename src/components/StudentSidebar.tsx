@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, BookOpen, ClipboardList, BarChart3, Settings, LogOut, GraduationCap, ChevronLeft, Calendar, MessageSquare, Award } from 'lucide-react';
 
@@ -27,8 +28,8 @@ export default function StudentSidebar() {
     <aside className="fixed right-0 top-0 h-screen w-64 bg-white border-l border-slate-100 z-50 hidden lg:flex flex-col shadow-2xl shadow-indigo-100/20" dir="rtl">
       {/* Brand Section */}
       <div className="p-8 border-b border-slate-50 flex items-center gap-3 group cursor-pointer">
-        <div className="w-12 h-12 rounded-2xl overflow-hidden shadow-lg shadow-indigo-100 transition-transform group-hover:scale-105 bg-white border border-slate-100 flex items-center justify-center">
-          <img src="/logo.jpeg" alt="Logo" className="w-full h-full object-cover" />
+        <div className="w-12 h-12 rounded-2xl overflow-hidden shadow-lg shadow-indigo-100 transition-transform group-hover:scale-105 bg-white border border-slate-100 flex items-center justify-center relative">
+          <Image src="/logo.jpeg" alt="Logo" width={48} height={48} priority className="w-full h-full object-cover" />
         </div>
 
       </div>

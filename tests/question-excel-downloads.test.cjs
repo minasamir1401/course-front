@@ -25,7 +25,10 @@ for (const role of ['super-admin', 'school-admin']) {
             api.downloadQuestionsTemplate(kind, language, () => {});
             const { wb, name } = downloads.at(-1);
             assert.ok(wb.Sheets.Instructions);
-            assert.ok(name.includes(kind === 'questions' ? 'questions' : 'assignments'));
+            const expectedName = language === 'ar'
+              ? (kind === 'questions' ? 'الأسئلة' : 'التكليفات')
+              : (kind === 'questions' ? 'questions' : 'assignments');
+            assert.ok(name.includes(expectedName));
             const plan = readQuestionImport(wb, [], false, language);
             assert.equal(plan.added, 4);
             assert.deepEqual(plan.questions.map(q => q.type), ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT', 'TEXT']);

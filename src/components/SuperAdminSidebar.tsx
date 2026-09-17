@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { LayoutDashboard, Building2, Users, GraduationCap, Settings, LogOut, Menu, X, ClipboardList, BookOpen, UserCheck, Shield, Plus, PieChart, Layers, Database, Activity, Trash2 } from 'lucide-react';
 import { logout } from "@/lib/auth";
@@ -67,8 +68,8 @@ export default function SuperAdminSidebar({
         {/* Brand Logo */}
         <div className="px-6 py-8 border-b border-slate-100">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white rounded-xl shadow-sm border border-slate-200 flex items-center justify-center p-2">
-              <img src="/logo.jpeg" alt="Logo" className="w-full h-full object-contain" />
+            <div className="w-12 h-12 bg-white rounded-xl shadow-sm border border-slate-200 flex items-center justify-center p-2 relative">
+              <Image src="/logo.jpeg" alt="Logo" width={48} height={48} priority className="w-full h-full object-contain" />
             </div>
           </div>
         </div>

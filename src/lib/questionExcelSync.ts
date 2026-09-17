@@ -216,7 +216,7 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
   const effectiveTextIndex = textIndex >= 0 ? textIndex : textEnIndex;
   if (effectiveTextIndex < 0) fail('Missing Question Text column.', 'عمود نص السؤال غير موجود.');
 
-  const typeIndex = findCol(h => h.includes('question type') || h.includes('نوع السؤال') || h.includes('النوع') || h === 'type');
+  const typeIndex = findCol(h => h.includes('question type') || h.includes('نوع السؤال') || h.includes('النوع') || h === 'type' || h.startsWith('type '));
 
   const optionEnIndices = [1, 2, 3, 4, 5].map(num => findCol(h => {
     const hasNum = h.includes(String(num));
@@ -233,14 +233,14 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
 
   const correctEnIndex = findCol(h => {
     const isCorrect = h.includes('correct answer') || h.includes('الإجابة الصحيحة') || h.includes('الاجابة الصحيحة') || h.includes('الاجابه الصحيحه');
-    const isMulti = h.includes('answers') || h.includes('متعددة') || h.includes('multi');
+    const isMulti = h.includes('correct answers') || h.includes('الإجابات المتعددة') || h.includes('الإجابات الصحيحة المتعددة') || h.includes('الاجابات المتعددة');
     return isCorrect && isEnHeader(h) && !isMulti;
   });
 
   const correctIndex = findCol((h, _, colIdx) => {
     if (colIdx === correctEnIndex) return false;
     const isCorrect = h.includes('correct answer') || h.includes('الإجابة الصحيحة') || h.includes('الاجابة الصحيحة') || h.includes('الاجابه الصحيحه');
-    const isMulti = h.includes('answers') || h.includes('متعددة') || h.includes('multi');
+    const isMulti = h.includes('correct answers') || h.includes('الإجابات المتعددة') || h.includes('الإجابات الصحيحة المتعددة') || h.includes('الاجابات المتعددة');
     return isCorrect && !isMulti;
   });
 
@@ -343,7 +343,7 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
     if (!arOptions.length && enOptions.length) {
       arOptions = [...enOptions];
     }
-    if (!enOptions.length && arOptions.some(o => /[a-zA-Z]/.test(o) && !/[\u0600-\u06FF]/.test(o))) {
+    if (!previous && !enOptions.length && arOptions.some(o => /[a-zA-Z]/.test(o) && !/[\u0600-\u06FF]/.test(o))) {
       enOptions = [...arOptions];
     }
 
@@ -372,16 +372,24 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
     };
 
     if (type === 'MCQ') {
-      let matchedIndex = -1;
-      if (rawCorrectAr) matchedIndex = resolveOptIndex(rawCorrectAr);
-      if (matchedIndex < 0 && rawCorrectEn) matchedIndex = resolveOptIndex(rawCorrectEn);
-
-      if (matchedIndex >= 0) {
-        q.correctAnswer = q.options[matchedIndex] ?? rawCorrectAr;
-        q.correctAnswerEn = q.optionsEn?.[matchedIndex] ?? (rawCorrectEn || null);
+      const answerCellsUnchanged = previous
+        && rawCorrectAr === key(previous.correctAnswer)
+        && rawCorrectEn === key(previous.correctAnswerEn);
+      if (answerCellsUnchanged) {
+        q.correctAnswer = previous.correctAnswer;
+        q.correctAnswerEn = previous.correctAnswerEn ?? null;
       } else {
-        q.correctAnswer = rawCorrectAr || rawCorrectEn;
-        q.correctAnswerEn = rawCorrectEn || (rawCorrectAr && /[a-zA-Z]/.test(rawCorrectAr) ? rawCorrectAr : null);
+        let matchedIndex = -1;
+        if (rawCorrectAr) matchedIndex = resolveOptIndex(rawCorrectAr);
+        if (matchedIndex < 0 && rawCorrectEn) matchedIndex = resolveOptIndex(rawCorrectEn);
+
+        if (matchedIndex >= 0) {
+          q.correctAnswer = q.options[matchedIndex] ?? rawCorrectAr;
+          q.correctAnswerEn = q.optionsEn?.[matchedIndex] ?? (rawCorrectEn || null);
+        } else {
+          q.correctAnswer = rawCorrectAr || rawCorrectEn;
+          q.correctAnswerEn = rawCorrectEn || (rawCorrectAr && /[a-zA-Z]/.test(rawCorrectAr) ? rawCorrectAr : null);
+        }
       }
     } else if (type === 'TRUE_FALSE') {
       const ansStr = (rawCorrectAr || rawCorrectEn).toLowerCase();
@@ -498,10 +506,14 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
     if (q.standardEn && !q.learningOutcomeEn) q.learningOutcomeEn = q.standardEn;
 
     if (expIndex >= 0) {
+      const previousExplanation = previous?.explanation
+        ?? (previous?.sections?.length ? JSON.stringify(previous.sections) : '');
       q.explanation = String(row[expIndex] ?? '').trim();
       q.clearExplanation = q.explanation === '';
-      q.sections = array(q.explanation);
-      if (!q.sections.length && q.explanation) q.sections = [{ type: 'EXPLANATION', content: q.explanation }];
+      if (!previous || q.explanation !== String(previousExplanation ?? '').trim()) {
+        q.sections = array(q.explanation);
+        if (!q.sections.length && q.explanation) q.sections = [{ type: 'EXPLANATION', content: q.explanation }];
+      }
     }
     if (expEnIndex >= 0) {
       const val = String(row[expEnIndex] ?? '').trim();
@@ -558,7 +570,7 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
     if (!seen.has(id)) deleted.add(id);
   }
 
-  if (deleted.size && !options.canDelete) fail('Only Super Admin can delete saved questions. Restore removed rows or ask Super Admin.', 'حذف الأسئلة المحفوظة متاح للسوبر أدمن فقط. أعد الصفوف المحذوفة أو اطلب منه تنفيذ الاستيراد.');
+  if (deleted.size && !options.canDelete) fail('Only Super Admin can delete saved questions. Restore removed rows or ask Super Admin.', 'حذف الأسئلة المحفوظة متاح للسوبر أدمن فقط (Super Admin). أعد الصفوف المحذوفة أو اطلب منه تنفيذ الاستيراد.');
   if (!seen.size && !added.length && !deleted.size) fail('No questions found.', 'لم يتم العثور على أسئلة.');
 
   return {
