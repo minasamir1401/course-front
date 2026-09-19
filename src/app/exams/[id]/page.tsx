@@ -7,7 +7,7 @@ import Image from "next/image";
 import { API_URL, apiFetch } from "@/lib/api";
 import { getStudentExamDuration } from "@/lib/examModuleView";
 import { sanitizeHtml } from "@/lib/sanitize";
-import { Clock, ChevronRight, ChevronLeft, Send, AlertCircle, HelpCircle, Lock, Play, Calendar, ShieldCheck, CheckCircle2, Target, Info, Sparkles, BookOpen, MessageSquare, Star, ListOrdered, Award, TrendingUp, Flag } from 'lucide-react';
+import { Clock, ChevronRight, ChevronLeft, Send, AlertCircle, HelpCircle, Lock, Play, Calendar, ShieldCheck, CheckCircle2, Target, Info, Sparkles, BookOpen, MessageSquare, Star, ListOrdered, Award, TrendingUp, Flag, Lightbulb } from 'lucide-react';
 import { useNotification } from "@/context/NotificationContext";
 import VideoPlayer from "@/components/VideoPlayer";
 import HtmlRenderer from "@/components/HtmlRenderer";
@@ -186,6 +186,7 @@ function TakeExamPageContent() {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showPreviewAnswers, setShowPreviewAnswers] = useState(false);
   const [reviewFlags, setReviewFlags] = useState<string[]>([]);
+  const [revealedHints, setRevealedHints] = useState<Record<string, boolean>>({});
   const hasAutoSubmitted = React.useRef(false);
   const [watermarkText, setWatermarkText] = useState("");
   const [studentQuestionLang, setStudentQuestionLang] = useState<'ar' | 'en'>(language === 'en' ? 'en' : 'ar');
@@ -284,21 +285,23 @@ function TakeExamPageContent() {
       }
 
       const mappedQuestions = filteredQuestions.map((q: any) => {
-        let parsedSections = [];
-        try {
-          const parsed = typeof q.explanation === 'string' ? JSON.parse(q.explanation) : [];
-          if (Array.isArray(parsed)) {
-            parsedSections = parsed.map((item: any) => {
-              if (typeof item === 'string') {
-                return { type: 'EXPLANATION', content: item };
-              }
-              return item;
-            });
-          } else {
+        let parsedSections = Array.isArray(q.sections) && q.sections.length > 0 ? q.sections : [];
+        if (parsedSections.length === 0 && q.explanation) {
+          try {
+            const parsed = typeof q.explanation === 'string' ? JSON.parse(q.explanation) : [];
+            if (Array.isArray(parsed)) {
+              parsedSections = parsed.map((item: any) => {
+                if (typeof item === 'string') {
+                  return { type: 'EXPLANATION', content: item };
+                }
+                return item;
+              });
+            } else {
+              parsedSections = [{ type: 'EXPLANATION', content: q.explanation || "" }];
+            }
+          } catch (e) {
             parsedSections = [{ type: 'EXPLANATION', content: q.explanation || "" }];
           }
-        } catch (e) {
-          parsedSections = [{ type: 'EXPLANATION', content: q.explanation || "" }];
         }
 
         let correctAnswers: string[] = [];
@@ -319,6 +322,8 @@ function TakeExamPageContent() {
           optionsEn: parseQuestionChoices(q.optionsEn),
           textEn: q.textEn || null,
           explanationEn: q.explanationEn || null,
+          hint: q.hint || null,
+          hintEn: q.hintEn || null,
           correctAnswers: q.type === 'MULTI_SELECT' ? correctAnswers : [],
           sections: parsedSections
         };
@@ -835,6 +840,33 @@ function TakeExamPageContent() {
                 <ItemSectionsBubbles item={{sections: question.sections}} isSubmitted={false} language={activeExamLang} filterType="HINT_ONLY" />
               </div>
             )}
+            {(() => {
+              const activeHint = (isEn && question.hintEn) ? question.hintEn : (question.hint || question.hintEn || '');
+              if (!activeHint) return null;
+              const isRevealed = Boolean(revealedHints[question.id]);
+              return (
+                <div className="mb-6 p-4 rounded-2xl bg-amber-50/80 border border-amber-200/80 transition-all">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-amber-800 text-xs font-black">
+                      <Lightbulb className="w-4 h-4 text-amber-500" />
+                      <span>{isEn ? 'Solving Helper Tool' : 'أداة مساعدة للحل'}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setRevealedHints(prev => ({ ...prev, [question.id]: !prev[question.id] }))}
+                      className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all cursor-pointer shadow-xs"
+                    >
+                      {isRevealed ? (isEn ? 'Hide Hint' : 'إخفاء التلميح') : (isEn ? 'Show Hint' : 'إظهار التلميح')}
+                    </button>
+                  </div>
+                  {isRevealed && (
+                    <div className="mt-3 pt-3 border-t border-amber-200/60 text-amber-950 text-sm leading-relaxed animate-in slide-in-from-top-2 duration-200">
+                      <HtmlRenderer html={sanitizeHtml(activeHint)} />
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
             <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600">

@@ -51,6 +51,8 @@ export function normalizePersistedExamQuestion<T extends Record<string, unknown>
     options: normalizeQuestionOptions(question.options, []),
     optionsEn: qAny.optionsEn ? normalizeQuestionOptions(qAny.optionsEn, []) : [],
     explanationEn: qAny.explanationEn || '',
+    hint: qAny.hint || '',
+    hintEn: qAny.hintEn || '',
     sections,
     explanation: question.explanation || (sections.length > 0 ? JSON.stringify(sections) : null),
   };

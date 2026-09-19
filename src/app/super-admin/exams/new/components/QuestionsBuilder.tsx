@@ -9,7 +9,7 @@ import { getOptionLetter, cleanOptionText } from '@/lib/utils';
 import { QUESTION_TYPES, SECTION_STYLE_PRESETS } from '../constants';
 import { parseJson } from '../utils/examUtils';
 import { sanitizeHtml } from '@/lib/sanitize';
-import { ChevronUp, ChevronDown, CheckCircle2, Edit2, Trash2, Plus, FileText, Settings, Activity, MoveUp, MoveDown, Mic, Video, Image as ImageIcon, Layout, Check, HelpCircle, Upload, Download, Target, X, Save, Languages, Loader2 } from 'lucide-react';
+import { ChevronUp, ChevronDown, CheckCircle2, Edit2, Trash2, Plus, FileText, Settings, Activity, MoveUp, MoveDown, Mic, Video, Image as ImageIcon, Layout, Check, HelpCircle, Upload, Download, Target, X, Save, Languages, Loader2, Lightbulb } from 'lucide-react';
 import { CustomSelect } from '@/components/ui/CustomSelect';
 import { normalizeDok } from '@/lib/examQuestionMetadata';
 import { translateBatch } from '@/lib/translationService';
@@ -95,6 +95,9 @@ export const QuestionsBuilder = (props: any) => {
       const srcExplanation = from === 'ar'
         ? (tempQuestion.explanation || '')
         : (tempQuestion.explanationEn || tempQuestion.explanation || '');
+      const srcHint = from === 'ar'
+        ? (tempQuestion.hint || '')
+        : (tempQuestion.hintEn || tempQuestion.hint || '');
 
       const baseLength = Math.max((tempQuestion.options || []).length, (tempQuestion.optionsEn || []).length, 4);
       const srcOpts = from === 'ar'
@@ -119,6 +122,7 @@ export const QuestionsBuilder = (props: any) => {
       const textsToTranslate = [
         srcText || '',
         srcExplanation || '',
+        srcHint || '',
         ...srcOpts,
         ...srcSections,
         srcDomain || '',
@@ -132,11 +136,13 @@ export const QuestionsBuilder = (props: any) => {
 
       const translations = await translateBatch(textsToTranslate, from, to);
 
-      let [trText, trExplanation] = translations.slice(0, 2);
-      const trOpts = translations.slice(2, 2 + baseLength);
-      const trSections = translations.slice(2 + baseLength, 2 + baseLength + sectionsList.length);
+      let trText = translations[0] || '';
+      const trExplanation = translations[1] || '';
+      const trHint = translations[2] || '';
+      const trOpts = translations.slice(3, 3 + baseLength);
+      const trSections = translations.slice(3 + baseLength, 3 + baseLength + sectionsList.length);
       const [trDomain, trOutcome, trIndicator, trSkill, trSubskill, trMicroSkill, trErrorPattern] = 
-        translations.slice(2 + baseLength + sectionsList.length);
+        translations.slice(3 + baseLength + sectionsList.length);
 
       const srcImgs = extractImageUrls(to === 'en' ? tempQuestion.text : tempQuestion.textEn);
       if (srcImgs.length > 0 && trText) {
@@ -151,6 +157,7 @@ export const QuestionsBuilder = (props: any) => {
       if (to === 'en') {
         if (trText) updated.textEn = trText;
         if (trExplanation) updated.explanationEn = trExplanation;
+        if (trHint) updated.hintEn = trHint;
         updated.optionsEn = trOpts;
 
         if (sectionsList.length > 0) {
@@ -192,6 +199,7 @@ export const QuestionsBuilder = (props: any) => {
       } else {
         if (trText) updated.text = trText;
         if (trExplanation) updated.explanation = trExplanation;
+        if (trHint) updated.hint = trHint;
         updated.options = trOpts;
 
         if (sectionsList.length > 0) {
@@ -503,6 +511,16 @@ export const QuestionsBuilder = (props: any) => {
                                     </div>
                                   )}
                                 </>
+                              )}
+
+                              {(q.hint || q.hintEn) && (
+                                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs space-y-1 font-bold">
+                                  <div className="flex items-center gap-1.5 text-amber-700 font-black">
+                                    <Lightbulb className="w-3.5 h-3.5" />
+                                    <span>{isCardEn ? 'In-Exam Solving Hint:' : 'تلميح مساعد للحل أثناء الاختبار:'}</span>
+                                  </div>
+                                  <p className="text-slate-700">{isCardEn ? (q.hintEn || q.hint) : (q.hint || q.hintEn)}</p>
+                                </div>
                               )}
 
                           {((q.sections && q.sections.length > 0) || (q.explanation && String(q.explanation).trim() !== '' && q.explanation !== '[]' && q.explanation !== '""')) && (
@@ -934,17 +952,54 @@ export const QuestionsBuilder = (props: any) => {
                 )}
               </div>
 
+              {/* Question Solving Hint / تلميح مساعد للحل أثناء الاختبار */}
+              <div className="bg-amber-50/60 border border-amber-200/80 rounded-2xl p-4 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Lightbulb className="w-4 h-4 text-amber-600" />
+                    <span className="text-xs font-black text-slate-800">
+                      {language === 'ar' ? 'تلميح مساعد للحل (يظهر للطالب أثناء حل الاختبار)' : 'Solving Hint (Appears to student during exam)'}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800">
+                    {questionActiveLang === 'ar' ? 'العربية' : 'English'}
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-500 font-bold">
+                  {language === 'ar'
+                    ? 'أداة مساعدة اختيارية تظهر للطالب في واجهة الاختبار كزر تلميح لمساعدته في التفكير والوصول للإجابة الصحيحة أثناء الحل.'
+                    : 'Optional assistance tool shown as an in-exam hint button to guide the student towards the answer without revealing it.'}
+                </p>
+                <input
+                  type="text"
+                  placeholder={questionActiveLang === 'ar' ? 'اكتب تلميحاً لمساعدة الطالب في الحل هنا...' : 'Write an in-exam solving hint here...'}
+                  value={(questionActiveLang === 'ar' ? tempQuestion.hint : (tempQuestion.hintEn || tempQuestion.hint)) || ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (questionActiveLang === 'ar') {
+                      updateCurrentQuestionField('hint', val);
+                    } else {
+                      updateCurrentQuestionField('hintEn', val);
+                      if (!tempQuestion.hint) {
+                        updateCurrentQuestionField('hint', val);
+                      }
+                    }
+                  }}
+                  className="w-full bg-white border border-amber-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-700 outline-none focus:border-amber-500"
+                />
+              </div>
+
               {/* Explanations & dynamic blocks inside form */}
               <div className="flex flex-col gap-5 border-t border-slate-100 pt-6">
                 <div className="flex justify-between items-center">
                   <div>
                     <label className="text-xs font-black text-slate-500 uppercase tracking-widest block">
                       {questionActiveLang === 'ar'
-                        ? (language === 'ar' ? 'تفسيرات الإجابة والكتل المساعدة (بالعربية)' : 'Answer Explanations (Arabic)')
-                        : (language === 'ar' ? 'تفسيرات الإجابة والكتل المساعدة (بالإنجليزية)' : 'Answer Explanations (English)')}
+                        ? (language === 'ar' ? 'تفسيرات الإجابة والشروحات (تظهر بعد الاختبار بالتقرير)' : 'Answer Explanations (Arabic - Post Exam)')
+                        : (language === 'ar' ? 'تفسيرات الإجابة والشروحات بالإنجليزية (Post Exam)' : 'Answer Explanations (English - Post Exam)')}
                     </label>
                     <p className="text-slate-400 text-[10px] font-bold mt-0.5">
-                      {language === 'ar' ? 'أضف تلميحات أو ملاحظات أو تفسيرات تفصيلية لهذا السؤال' : 'Add hints, tips, or detailed explanations'}
+                      {language === 'ar' ? 'أضف تفسيرات تفصيلية للإجابة النموذجية تظهر للطالب بعد تسليم الاختبار في تقرير النتائج' : 'Add detailed explanations that appear to the student in the results report after submission'}
                     </p>
                   </div>
                   <div className="relative" data-dropdown-root="true">

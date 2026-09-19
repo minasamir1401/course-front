@@ -184,6 +184,7 @@ export default function SuperAdminEditExamPage() {
     <QuestionsBuilder  
       source={source}  
       {...state}
+      examId={examId}
       currentModule={effectiveWorkflowView === "sub-exam-editor" ? synchronizedEditorModule : state.currentModule}
       activeSubExamIndex={effectiveWorkflowView === "sub-exam-editor" ? editableSubExamIndex : state.activeSubExamIndex}
       {...questionLogic}

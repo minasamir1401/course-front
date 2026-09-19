@@ -58,6 +58,7 @@ const pushError = (entry: Omit<FrontendErrorEntry, "id" | "timestamp">) => {
     fetch('/api/admin/log-error', {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      keepalive: true,
       body: JSON.stringify({
         level: "error",
         message: newEntry.message,
