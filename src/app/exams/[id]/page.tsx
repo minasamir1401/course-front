@@ -835,13 +835,10 @@ function TakeExamPageContent() {
 
         <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden mb-8">
           <div className="p-8">
-            {question.sections && question.sections.length > 0 && (
-              <div className="flex flex-wrap gap-2 justify-end mb-4">
-                <ItemSectionsBubbles item={{sections: question.sections}} isSubmitted={false} language={activeExamLang} filterType="HINT_ONLY" />
-              </div>
-            )}
             {(() => {
-              const activeHint = (isEn && question.hintEn) ? question.hintEn : (question.hint || question.hintEn || '');
+              const legacyHint = question.sections?.find((s: any) => s.type === 'HINT');
+              const legacyHintContent = (isEn && legacyHint?.contentEn) ? legacyHint.contentEn : (legacyHint?.content || legacyHint?.contentEn || '');
+              const activeHint = (isEn && question.hintEn) ? question.hintEn : (question.hint || question.hintEn || legacyHintContent || '');
               if (!activeHint) return null;
               const isRevealed = Boolean(revealedHints[question.id]);
               return (
@@ -1009,7 +1006,7 @@ function TakeExamPageContent() {
             ) : (
               question.sections && question.sections.length > 0 && (
                 <div className="mt-8 space-y-4 animate-in fade-in duration-700">
-                  {question.sections.map((sec: any, sIdx: number) => {
+                  {question.sections.filter((s: any) => s.type !== 'EXPLANATION').map((sec: any, sIdx: number) => {
                     const SECTION_STYLE_PRESETS = getSectionStylePresets(isEn);
                     const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
                     const Icon = preset.icon;

@@ -9,7 +9,7 @@ import { getOptionLetter, cleanOptionText } from '@/lib/utils';
 import { QUESTION_TYPES, SECTION_STYLE_PRESETS } from '../constants';
 import { parseJson } from '../utils/examUtils';
 import { sanitizeHtml } from '@/lib/sanitize';
-import { ChevronUp, ChevronDown, CheckCircle2, Edit2, Trash2, Plus, FileText, Settings, Activity, MoveUp, MoveDown, Mic, Video, Image as ImageIcon, Layout, Check, HelpCircle, Upload, Download, Target, X, Save, Loader2, Sparkles, Languages, ArrowRightLeft, Lightbulb } from 'lucide-react';
+import { ChevronUp, ChevronDown, CheckCircle2, Edit2, Trash2, Plus, FileText, Settings, Activity, MoveUp, MoveDown, Mic, Video, Image as ImageIcon, Layout, Check, HelpCircle, Upload, Download, Target, X, Save, Loader2, Sparkles, Languages, ArrowRightLeft, Lightbulb, BookOpen } from 'lucide-react';
 import MoveQuestionModal from '@/components/modals/MoveQuestionModal';
 import { CustomSelect } from '@/components/ui/CustomSelect';
 import { translateBatch } from '@/lib/translationService';
@@ -552,28 +552,26 @@ export const QuestionsBuilder = (props: any) => {
 
                           {((q.sections && q.sections.length > 0) || (q.explanation && String(q.explanation).trim() !== '' && q.explanation !== '[]' && q.explanation !== '""')) && (
                             <div className="space-y-3 pt-2">
-                              <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{isCardEn ? 'Explanations & Notes:' : 'تفسيرات وملاحظات إضافية:'}</h5>
+                              <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{isCardEn ? 'Post-Exam Explanation:' : 'الشرح والتفسير (يظهر بعد التسليم):'}</h5>
                               <div className="space-y-2">
                                 {q.sections && q.sections.length > 0 ? (
                                   q.sections.map((sec: any, secIdx: number) => {
-                                    const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
-                                    const SectionIcon = preset.icon;
                                     const secContent = isCardEn ? (sec.contentEn || sec.textEn || sec.content) : (sec.content || sec.textEn);
                                     return (
-                                      <div key={secIdx} className={`p-4 rounded-xl border ${preset.container} text-xs`}>
-                                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider inline-flex items-center gap-1 mb-1.5 ${preset.badge}`}>
-                                          <SectionIcon className="w-3 h-3" />
-                                          {isCardEn ? preset.labelEn : (preset.labelAr || preset.labelEn)}
+                                      <div key={secIdx} className="p-4 rounded-xl border border-indigo-100 bg-indigo-50/40 text-xs">
+                                        <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider inline-flex items-center gap-1 mb-1.5 bg-indigo-100 text-indigo-700">
+                                          <BookOpen className="w-3 h-3" />
+                                          {isCardEn ? 'Explanation' : 'الشرح والتوضيح'}
                                         </span>
                                         <HtmlRenderer html={secContent} className="text-slate-700 font-bold font-sans" />
                                       </div>
                                     );
                                   })
                                 ) : (
-                                  <div className="p-4 rounded-xl border bg-amber-50/60 border-amber-200/60 text-xs">
-                                    <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider inline-flex items-center gap-1 mb-1.5 bg-amber-100 text-amber-800">
-                                      <FileText className="w-3 h-3" />
-                                      {isCardEn ? 'Explanation' : 'تفسير الإجابة'}
+                                  <div className="p-4 rounded-xl border border-indigo-100 bg-indigo-50/40 text-xs">
+                                    <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider inline-flex items-center gap-1 mb-1.5 bg-indigo-100 text-indigo-700">
+                                      <BookOpen className="w-3 h-3" />
+                                      {isCardEn ? 'Explanation' : 'الشرح والتوضيح'}
                                     </span>
                                     <HtmlRenderer html={isCardEn ? (q.explanationEn || q.explanation) : String(q.explanation)} className="text-slate-700 font-bold font-sans" />
                                   </div>
@@ -1027,51 +1025,29 @@ export const QuestionsBuilder = (props: any) => {
                       {language === 'ar' ? 'أضف تفسيرات تفصيلية للإجابة النموذجية تظهر للطالب بعد تسليم الاختبار في تقرير النتائج' : 'Add detailed explanations that appear to the student in the results report after submission'}
                     </p>
                   </div>
-                  <div className="relative" data-dropdown-root="true">
-                    <button
-                      type="button"
-                      onClick={() => setOpenDropdownId(openDropdownId === 'question-sections' ? null : 'question-sections')}
-                      className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all cursor-pointer border border-indigo-100"
-                    >
-                      <Plus className="w-4 h-4" /> {language === 'ar' ? 'إضافة شريحة مساعدة' : 'Add Block'}
-                    </button>
-                    <div className={`absolute right-0 mt-2 w-56 bg-white border border-slate-100 rounded-xl shadow-xl p-2 z-50 ${openDropdownId === 'question-sections' ? "block" : "hidden"}`}>
-                      {['FEEDBACK', 'HINT', 'EXPLANATION', 'TIP', 'WARNING', 'KEY_INSIGHT'].map(secType => {
-                        const preset = SECTION_STYLE_PRESETS[secType] || SECTION_STYLE_PRESETS.EXPLANATION;
-                        const label = language === 'ar' ? (preset?.labelAr || secType) : (preset?.labelEn || secType);
-                        return (
-                          <button
-                            key={secType}
-                            type="button"
-                            onClick={() => {
-                              addQuestionSection(secType);
-                              setOpenDropdownId(null);
-                            }}
-                            className="w-full text-right px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
-                          >
-                            {React.createElement(preset?.icon || FileText, { className: "w-4 h-4" })}
-                            <span>{label || secType}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => addQuestionSection('EXPLANATION')}
+                    className="text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 transition-all cursor-pointer border border-indigo-100 shadow-2xs"
+                  >
+                    <Plus className="w-4 h-4" /> {language === 'ar' ? 'إضافة شرح وتفسير' : 'Add Explanation'}
+                  </button>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4">
                   {(tempQuestion.sections || []).map((sec: any, idx: number) => {
                     const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
-                    const IconComponent = preset.icon;
+                    const IconComponent = preset.icon || BookOpen;
                     const secVal = questionActiveLang === 'ar'
                       ? (sec.content || "")
                       : (sec.contentEn ?? sec.content ?? "");
 
                     return (
-                      <div key={idx} className={`p-6 rounded-3xl border-2 flex flex-col gap-4 relative group ${preset.container}`}>
+                      <div key={idx} className={`p-6 rounded-3xl border-2 flex flex-col gap-4 relative group ${preset.container || 'border-indigo-100 bg-indigo-50/20'}`}>
                         <div className="flex justify-between items-center">
-                          <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 ${preset.badge}`}>
+                          <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 ${preset.badge || 'bg-indigo-100 text-indigo-700'}`}>
                             <IconComponent className="w-3.5 h-3.5" />
-                            {language === 'ar' ? (preset?.labelAr || sec.type) : (preset?.labelEn || sec.type)}
+                            {language === 'ar' ? 'الشرح والتوضيح' : 'Explanation'}
                           </span>
                           <button
                             type="button"
@@ -1086,14 +1062,14 @@ export const QuestionsBuilder = (props: any) => {
                           onChange={(value) => {
                             const sections = [...(tempQuestion.sections || [])];
                             if (questionActiveLang === 'ar') {
-                              sections[idx] = { ...sections[idx], content: value };
+                              sections[idx] = { ...sections[idx], type: 'EXPLANATION', content: value };
                               setTempQuestion((prev: any) => ({ ...prev, sections, explanation: value }));
                             } else {
-                              sections[idx] = { ...sections[idx], contentEn: value };
+                              sections[idx] = { ...sections[idx], type: 'EXPLANATION', contentEn: value };
                               setTempQuestion((prev: any) => ({ ...prev, sections, explanationEn: value }));
                             }
                           }}
-                          placeholder={questionActiveLang === 'ar' ? "اكتب محتوى التفسير هنا..." : "Write explanation block content here..."}
+                          placeholder={questionActiveLang === 'ar' ? "اكتب محتوى الشرح والتفسير هنا..." : "Write explanation content here..."}
                           className="!bg-white !border-slate-200"
                         />
                       </div>
@@ -1101,7 +1077,7 @@ export const QuestionsBuilder = (props: any) => {
                   })}
                   {(tempQuestion.sections || []).length === 0 && (
                     <div className="bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-6 text-center text-slate-400 text-xs font-bold">
-                      {language === 'ar' ? 'لا يوجد أي شرائح تفسيرية مضافة بعد. انقر على زر إضافة شريحة مساعدة لإضافة تفسير.' : 'No explanations or content blocks added yet. Click Add Block to add an explanation.'}
+                      {language === 'ar' ? 'لا يوجد أي شرح وتفسير مضاف بعد. انقر على زر إضافة شرح وتفسير لإضافة توضيح للإجابة.' : 'No explanations added yet. Click Add Explanation to add a model answer explanation.'}
                     </div>
                   )}
                 </div>

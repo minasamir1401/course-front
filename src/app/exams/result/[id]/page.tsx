@@ -172,6 +172,7 @@ const renderExplanation = (
       if (Array.isArray(parsed)) {
         return parsed
           .map((item: any) => (typeof item === 'string' ? { type: 'EXPLANATION', content: item, contentEn: '' } : item))
+          .filter((item: any) => item && item.type !== 'HINT')
           .filter((item: any) => (item?.content && String(item.content).trim() !== '') || (item?.contentEn && String(item.contentEn).trim() !== '') || (item?.textEn && String(item.textEn).trim() !== ''));
       }
     } catch {}
@@ -181,13 +182,12 @@ const renderExplanation = (
   const sectionsFromAr = parseSections(cleanExp);
   const sectionsFromEn = parseSections(cleanExpEn);
 
-  const SECTION_STYLE_PRESETS: Record<string, any> = {
-    HINT: { icon: HelpCircle, bg: "bg-amber-50/70", text: "text-amber-700", border: "border-amber-200", label: lang === 'ar' ? 'تلميح للمساعدة' : 'Hint' },
-    TIP: { icon: Info, bg: "bg-blue-50/70", text: "text-blue-700", border: "border-blue-200", label: lang === 'ar' ? 'نصيحة ذكية' : 'Smart Tip' },
-    WARNING: { icon: AlertCircle, bg: "bg-red-50/70", text: "text-red-700", border: "border-red-200", label: lang === 'ar' ? 'تحذير' : 'Warning' },
-    KEY_INSIGHT: { icon: Sparkles, bg: "bg-purple-50/70", text: "text-purple-700", border: "border-purple-200", label: lang === 'ar' ? 'فكرة جوهرية' : 'Key Insight' },
-    FEEDBACK: { icon: MessageSquare, bg: "bg-emerald-50/70", text: "text-emerald-700", border: "border-emerald-200", label: lang === 'ar' ? 'ملاحظات' : 'Feedback' },
-    EXPLANATION: { icon: BookOpen, bg: "bg-indigo-50/70", text: "text-indigo-700", border: "border-indigo-200", label: lang === 'ar' ? 'الشرح والتوضيح' : 'Explanation' }
+  const explanationPreset = {
+    icon: BookOpen,
+    bg: "bg-indigo-50/70",
+    text: "text-indigo-700",
+    border: "border-indigo-200",
+    label: lang === 'ar' ? 'الشرح والتوضيح' : 'Explanation'
   };
 
   if (lang === 'en') {
@@ -195,17 +195,16 @@ const renderExplanation = (
       return (
         <div className="space-y-3">
           {sectionsFromEn.map((sec: any, i: number) => {
-            const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
-            const Icon = preset.icon;
+            const Icon = explanationPreset.icon;
             const secContent = sec.contentEn || sec.textEn || sec.content || sec.text || '';
             return (
-              <div key={i} className={`${preset.bg} rounded-2xl p-5 border ${preset.border} flex gap-4 items-start`}>
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${preset.text} bg-white/60 shadow-2xs`}>
+              <div key={i} className={`${explanationPreset.bg} rounded-2xl p-5 border ${explanationPreset.border} flex gap-4 items-start`}>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${explanationPreset.text} bg-white/60 shadow-2xs`}>
                   <Icon className="w-5 h-5 shrink-0" />
                 </div>
                 <div className="flex-1 space-y-1">
-                  <span className={`text-xs font-black uppercase tracking-wider block ${preset.text}`}>{preset.label}</span>
-                  <HtmlRenderer html={secContent} className={`prose prose-sm max-w-none ${preset.text}`} />
+                  <span className={`text-xs font-black uppercase tracking-wider block ${explanationPreset.text}`}>{explanationPreset.label}</span>
+                  <HtmlRenderer html={secContent} className={`prose prose-sm max-w-none ${explanationPreset.text}`} />
                 </div>
               </div>
             );
@@ -219,17 +218,16 @@ const renderExplanation = (
       return (
         <div className="space-y-3">
           {sectionsFromAr.map((sec: any, i: number) => {
-            const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
-            const Icon = preset.icon;
+            const Icon = explanationPreset.icon;
             const secContent = sec.contentEn || sec.textEn || sec.content || sec.text || '';
             return (
-              <div key={i} className={`${preset.bg} rounded-2xl p-5 border ${preset.border} flex gap-4 items-start`}>
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${preset.text} bg-white/60 shadow-2xs`}>
+              <div key={i} className={`${explanationPreset.bg} rounded-2xl p-5 border ${explanationPreset.border} flex gap-4 items-start`}>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${explanationPreset.text} bg-white/60 shadow-2xs`}>
                   <Icon className="w-5 h-5 shrink-0" />
                 </div>
                 <div className="flex-1 space-y-1">
-                  <span className={`text-xs font-black uppercase tracking-wider block ${preset.text}`}>{preset.label}</span>
-                  <HtmlRenderer html={secContent} className={`prose prose-sm max-w-none ${preset.text}`} />
+                  <span className={`text-xs font-black uppercase tracking-wider block ${explanationPreset.text}`}>{explanationPreset.label}</span>
+                  <HtmlRenderer html={secContent} className={`prose prose-sm max-w-none ${explanationPreset.text}`} />
                 </div>
               </div>
             );
@@ -269,17 +267,16 @@ const renderExplanation = (
     return (
       <div className="space-y-3">
         {sectionsFromAr.map((sec: any, i: number) => {
-          const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
-          const Icon = preset.icon;
+          const Icon = explanationPreset.icon;
           const secContent = sec.content || sec.text || sec.contentEn || '';
           return (
-            <div key={i} className={`${preset.bg} rounded-2xl p-5 border ${preset.border} flex gap-4 items-start`}>
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${preset.text} bg-white/60 shadow-2xs`}>
+            <div key={i} className={`${explanationPreset.bg} rounded-2xl p-5 border ${explanationPreset.border} flex gap-4 items-start`}>
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${explanationPreset.text} bg-white/60 shadow-2xs`}>
                 <Icon className="w-5 h-5 shrink-0" />
               </div>
               <div className="flex-1 space-y-1">
-                <span className={`text-xs font-black uppercase tracking-wider block ${preset.text}`}>{preset.label}</span>
-                <HtmlRenderer html={secContent} className={`prose prose-sm max-w-none ${preset.text}`} />
+                <span className={`text-xs font-black uppercase tracking-wider block ${explanationPreset.text}`}>{explanationPreset.label}</span>
+                <HtmlRenderer html={secContent} className={`prose prose-sm max-w-none ${explanationPreset.text}`} />
               </div>
             </div>
           );
