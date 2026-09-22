@@ -62,6 +62,7 @@ export const QuestionsBuilder = (props: any) => {
   const [questionActiveLang, setQuestionActiveLang] = React.useState<'ar' | 'en'>('en');
   const [cardPreviewLang, setCardPreviewLang] = React.useState<Record<number, 'ar' | 'en'>>({});
   const [isTranslatingQuestion, setIsTranslatingQuestion] = React.useState(false);
+  const [isUploadingImage, setIsUploadingImage] = React.useState(false);
   const [movingQuestion, setMovingQuestion] = React.useState<any | null>(null);
   const lastActiveQKeyRef = React.useRef<any>(null);
 
@@ -928,22 +929,28 @@ export const QuestionsBuilder = (props: any) => {
                   </div>
                 ) : (
                   <div className="flex flex-col sm:flex-row items-center gap-3">
-                    <label className="flex items-center gap-2 px-4 py-2 bg-white border border-indigo-200 hover:border-indigo-400 text-indigo-600 rounded-xl text-xs font-black cursor-pointer shadow-sm transition-all hover:bg-indigo-50/50">
-                      <Upload className="w-4 h-4" />
-                      <span>{language === 'ar' ? 'رفع صورة من جهازك' : 'Upload Image'}</span>
+                    <label className={`flex items-center gap-2 px-4 py-2 bg-white border border-indigo-200 hover:border-indigo-400 text-indigo-600 rounded-xl text-xs font-black cursor-pointer shadow-sm transition-all hover:bg-indigo-50/50 ${isUploadingImage ? 'opacity-60 pointer-events-none' : ''}`}>
+                      {isUploadingImage ? <Loader2 className="w-4 h-4 animate-spin text-indigo-600" /> : <Upload className="w-4 h-4" />}
+                      <span>{isUploadingImage ? (language === 'ar' ? 'جارٍ رفع الصورة...' : 'Uploading Image...') : (language === 'ar' ? 'رفع صورة من جهازك' : 'Upload Image')}</span>
                       <input
                         type="file"
-                        accept="image/*"
+                        accept="image/*,.heic,.heif"
+                        disabled={isUploadingImage}
                         className="hidden"
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (file) {
+                            setIsUploadingImage(true);
                             try {
                               const { uploadFileToServer } = await import('@/lib/image-utils');
                               const url = await uploadFileToServer(file);
                               updateCurrentQuestionField('imageUrl', url);
                             } catch (err: any) {
                               console.error('Failed to upload image:', err);
+                              alert(err?.message || (language === 'ar' ? 'فشل رفع الصورة. يرجى التأكد من صيغة وحجم الصورة.' : 'Failed to upload image. Please check file format and size.'));
+                            } finally {
+                              setIsUploadingImage(false);
+                              e.target.value = '';
                             }
                           }
                         }}

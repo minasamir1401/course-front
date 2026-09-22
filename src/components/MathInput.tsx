@@ -228,7 +228,7 @@ export default function MathInput({ value, onChange, placeholder, className = ""
         ref={fileInputRef} 
         onChange={handleFileSelect} 
         className="hidden" 
-        accept="image/png, image/jpeg, image/jpg, image/webp, image/gif" 
+        accept="image/*,.heic,.heif" 
       />
       <button
         type="button"

@@ -49,7 +49,7 @@ function getUploadEndpoint(): string {
 
 export default function FileUpload({
   onUploadSuccess,
-  accept = "image/*,application/pdf,.pptx,.ppt,.docx,.doc,.zip,.xlsx",
+  accept = "image/*,.heic,.heif,application/pdf,.pptx,.ppt,.docx,.doc,.zip,.xlsx",
   label,
   value,
   tokenKey = "super_admin_token",
@@ -153,10 +153,13 @@ export default function FileUpload({
         return true;
       };
 
-      const token =
+      const rawToken =
         localStorage.getItem(tokenKey) ||
+        localStorage.getItem("super_admin_token") ||
+        localStorage.getItem("school_admin_token") ||
         localStorage.getItem("lms_token") ||
         "";
+      const token = rawToken && rawToken !== "cookie_auth" ? rawToken : "";
 
       const formData = new FormData();
       formData.append("file", file);
@@ -166,7 +169,10 @@ export default function FileUpload({
       // Use XMLHttpRequest so we can track upload progress
       const xhr = new XMLHttpRequest();
       xhr.open("POST", uploadUrl);
-      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+      xhr.withCredentials = true;
+      if (token) {
+        xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+      }
 
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) {

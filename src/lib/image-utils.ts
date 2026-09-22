@@ -55,22 +55,105 @@ export async function compressImage(file: File, maxWidth = 1200, maxHeight = 120
   });
 }
 
+export async function compressImageToFile(
+  file: File,
+  maxWidth = 1920,
+  maxHeight = 1080,
+  quality = 0.8
+): Promise<File> {
+  return new Promise((resolve) => {
+    if (!file.type.startsWith("image/") || file.type.includes("svg") || file.type.includes("gif")) {
+      return resolve(file);
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return resolve(file);
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const newName = file.name.replace(/\.[^/.]+$/, ".webp");
+              resolve(new File([blob], newName, { type: "image/webp", lastModified: Date.now() }));
+            } else {
+              resolve(file);
+            }
+          },
+          "image/webp",
+          quality
+        );
+      };
+      img.onerror = () => resolve(file);
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
+}
+
 /**
  * Uploads a file to the server and returns its URL.
- * Auth is handled via the httpOnly cookie (credentials: 'include').
+ * Supports cookies and optional bearer token, with automatic image compression.
  */
 export async function uploadFileToServer(file: File): Promise<string> {
+  let fileToUpload = file;
+  if (file.type.startsWith("image/") && !file.type.includes("svg") && !file.type.includes("gif")) {
+    try {
+      fileToUpload = await compressImageToFile(file);
+    } catch {
+      fileToUpload = file;
+    }
+  }
+
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("file", fileToUpload);
+
+  const rawToken =
+    typeof window !== "undefined"
+      ? localStorage.getItem("super_admin_token") ||
+        localStorage.getItem("school_admin_token") ||
+        localStorage.getItem("lms_token") ||
+        ""
+      : "";
+  const token = rawToken && rawToken !== "cookie_auth" ? rawToken : "";
+
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
 
   const res = await fetch(`${API_URL}/upload`, {
     method: "POST",
-    credentials: 'include', // httpOnly auth_token cookie sent automatically
+    credentials: "include", // httpOnly auth_token cookie sent automatically
+    headers,
     body: formData,
   });
 
   if (!res.ok) {
-    throw new Error("Failed to upload file to server");
+    let errorDetails = "Failed to upload file to server";
+    try {
+      const errData = await res.json();
+      errorDetails = errData.details || errData.error || errorDetails;
+    } catch {}
+    throw new Error(errorDetails);
   }
 
   const data = await res.json();

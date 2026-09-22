@@ -194,7 +194,7 @@ export default function QuestionImageGallery({
       handleInsertIntoActive(url);
     } catch (err: any) {
       console.error(err);
-      showToast(isArUi ? 'فشل رفع الصورة' : 'Failed to upload image', 'error');
+      showToast(err?.message || (isArUi ? 'فشل رفع الصورة' : 'Failed to upload image'), 'error');
     } finally {
       setIsUploading(false);
     }
@@ -256,7 +256,7 @@ export default function QuestionImageGallery({
             <input
               id={fileInputId}
               type="file"
-              accept="image/*"
+              accept="image/*,.heic,.heif"
               className="hidden"
               disabled={isUploading}
               onChange={handleUploadNew}

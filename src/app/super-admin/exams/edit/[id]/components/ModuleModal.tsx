@@ -487,7 +487,7 @@ export const ModuleModal = (props: any) => {
                                     <input 
                                       type="file" 
                                       className="hidden" 
-                                      accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,image/*" 
+                                      accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,image/*,.heic,.heif" 
                                       onChange={async (e: any) => {
                                         const file = e.target.files?.[0];
                                         if (file) {
@@ -503,9 +503,11 @@ export const ModuleModal = (props: any) => {
                                             else if (file.name.match(/\.(xls|xlsx)$/i)) atts[attIdx].type = 'XLS';
                                             else if (file.type.startsWith('image/')) atts[attIdx].type = 'IMAGE';
                                             setCurrentModule({...currentModule, attachments: atts});
-                                            showToast(language === 'ar' ? "تم رفع الملف بنجاح ✅" : "File uploaded successfully ✅", "success");
-                                          } catch (error) {
-                                            showToast(language === 'ar' ? "فشل رفع الملف ❌" : "File upload failed ❌", "error");
+                                            showToast(language === 'ar' ? "تم رفع الملف بنجاح" : "File uploaded successfully", "success");
+                                          } catch (error: any) {
+                                            showToast(error?.message || (language === 'ar' ? "فشل رفع الملف" : "File upload failed"), "error");
+                                          } finally {
+                                            e.target.value = '';
                                           }
                                         }
                                       }} 

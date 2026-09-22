@@ -194,7 +194,7 @@ export const CourseSettingsForm: React.FC = () => {
                       <input
                         type="file"
                         className="hidden"
-                        accept="image/*"
+                        accept="image/*,.heic,.heif"
                         onChange={async (e: any) => {
                           const file = e.target.files?.[0];
                           if (file) {
@@ -205,9 +205,11 @@ export const CourseSettingsForm: React.FC = () => {
                                 setCourseData({ ...courseData, coverImage: url });
                                 showToast(language === "ar" ? "تم تحديث صورة الغلاف بنجاح" : "Cover image updated successfully", "success");
                               }
-                            } catch (error) {
+                            } catch (error: any) {
                               console.error("Upload error:", error);
-                              showToast(language === "ar" ? "فشل رفع الصورة، حاول مرة أخرى" : "Failed to upload image, please try again", "error");
+                              showToast(error?.message || (language === "ar" ? "فشل رفع الصورة، حاول مرة أخرى" : "Failed to upload image, please try again"), "error");
+                            } finally {
+                              e.target.value = '';
                             }
                           }
                         }}
@@ -226,7 +228,7 @@ export const CourseSettingsForm: React.FC = () => {
                   <input
                     type="file"
                     className="hidden"
-                    accept="image/*"
+                    accept="image/*,.heic,.heif"
                     onChange={async (e: any) => {
                       const file = e.target.files?.[0];
                       if (file) {
@@ -237,9 +239,11 @@ export const CourseSettingsForm: React.FC = () => {
                             setCourseData({ ...courseData, coverImage: url });
                             showToast(language === "ar" ? "تم تحديث صورة الغلاف بنجاح" : "Cover image updated successfully", "success");
                           }
-                        } catch (error) {
+                        } catch (error: any) {
                           console.error("Upload error:", error);
-                          showToast(language === "ar" ? "فشل رفع الصورة، حاول مرة أخرى" : "Failed to upload image, please try again", "error");
+                          showToast(error?.message || (language === "ar" ? "فشل رفع الصورة، حاول مرة أخرى" : "Failed to upload image, please try again"), "error");
+                        } finally {
+                          e.target.value = '';
                         }
                       }
                     }}
