@@ -127,7 +127,7 @@ export default function SuperAdminSidebar({
           {/* SETTINGS */}
           <div className="space-y-1">
             <p className="px-3 py-1 text-[10px] font-black text-slate-400 uppercase tracking-[2px]">{language === 'ar' ? 'الإعدادات' : 'Settings'}</p>
-            <SidebarLink href="/super-admin/settings" icon={Settings} label={language === 'ar' ? "تغيير كلمة المرور" : "Change Password"} active={isActive('/super-admin/settings')} />
+            <SidebarLink href="/super-admin/settings" icon={Settings} label={language === 'ar' ? "الإعدادات" : "Settings"} active={isActive('/super-admin/settings')} />
           </div>
 
         </nav>
