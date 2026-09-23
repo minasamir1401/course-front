@@ -184,16 +184,24 @@ export function deduplicateSubmissionQuestions(questions: any[]) {
     if (rawText.length < 2 && rawTextEn.length < 2 && !hasMedia) continue;
 
     const id = q.id && typeof q.id === 'string' && q.id.length > 20 ? q.id : null;
-    if (id && seenIds.has(id)) continue;
+    if (id) {
+      if (seenIds.has(id)) continue;
+      seenIds.add(id);
+      result.push(q);
+      continue;
+    }
 
-    const combinedText = rawText || rawTextEn;
-    const alpha = combinedText.replace(/[^a-z0-9\u0600-\u06FF]/gi, '');
-    const sig = alpha.length >= 15 ? alpha.substring(0, 35) : combinedText;
-    const scopeKey = `${q.moduleId || 'none'}:${q.subExamId || 'none'}:${sig}`;
-    if (sig.length >= 5 && seenSignatures.has(scopeKey)) continue;
+    const combinedText = (rawText || rawTextEn).trim();
+    const mediaKey = String(q.imageUrl || q.videoUrl || '').trim();
+    const optionsKey = Array.isArray(q.options)
+      ? q.options.map((opt: any) => String(opt || '').trim().toLowerCase()).sort().join('|')
+      : String(q.options || '').trim().toLowerCase();
 
-    if (id) seenIds.add(id);
-    if (sig.length >= 5) seenSignatures.add(scopeKey);
+    const fullContentSig = `${combinedText}##${optionsKey}##${mediaKey}`;
+    const scopeKey = `${q.moduleId || 'none'}:${q.subExamId || 'none'}:${fullContentSig}`;
+    if (seenSignatures.has(scopeKey)) continue;
+
+    seenSignatures.add(scopeKey);
     result.push(q);
   }
 
