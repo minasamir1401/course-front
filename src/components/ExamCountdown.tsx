@@ -8,7 +8,9 @@ type Props = { initialSeconds: number; storageKey: string | null; onTick: (secon
 export default function ExamCountdown({ initialSeconds, storageKey, onTick, onExpire }: Props) {
   const [seconds, setSeconds] = useState(initialSeconds);
   const callbacks = useRef({ onTick, onExpire });
-  callbacks.current = { onTick, onExpire };
+  useEffect(() => {
+    callbacks.current = { onTick, onExpire };
+  }, [onTick, onExpire]);
   useEffect(() => {
     const deadline = Date.now() + Math.max(0, initialSeconds) * 1000;
     let expired = false;

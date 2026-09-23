@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import Image from "next/image";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -340,4 +338,3 @@ export default function LessonPage() {
     </DashboardLayout>
   );
 }
-
