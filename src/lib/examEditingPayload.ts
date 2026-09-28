@@ -198,10 +198,12 @@ export function deduplicateSubmissionQuestions(questions: any[]) {
       : String(q.options || '').trim().toLowerCase();
 
     const fullContentSig = `${combinedText}##${optionsKey}##${mediaKey}`;
-    const scopeKey = `${q.moduleId || 'none'}:${q.subExamId || 'none'}:${fullContentSig}`;
-    if (seenSignatures.has(scopeKey)) continue;
+    // Do not include moduleId/subExamId in the dedup key: those can be client-side
+    // timestamps on one autosave pass and real UUIDs on another, causing the same
+    // question to appear twice with different scope keys.
+    if (seenSignatures.has(fullContentSig)) continue;
 
-    seenSignatures.add(scopeKey);
+    seenSignatures.add(fullContentSig);
     result.push(q);
   }
 
