@@ -1101,6 +1101,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                 <button 
                   onClick={() => {
                     const metadataMap = [
+                      { key: 'id', labelAr: 'معرف السؤال', labelEn: 'Question ID' },
                       { key: 'course', labelAr: 'الدرس', labelEn: 'Lesson' },
                       { key: 'section', labelAr: 'القسم', labelEn: 'Section' },
                       { key: 'domain', labelAr: 'المجال', labelEn: 'Domain' },

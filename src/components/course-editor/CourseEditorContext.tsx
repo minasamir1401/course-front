@@ -7,6 +7,7 @@ import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { offlineSync, captureOfflineOwner } from "@/lib/offlineSync";
 import { buildCourseLessonSummary } from "@/lib/courseLessonSummary";
+import { useDeletionPolicy } from "@/hooks/useDeletionPolicy";
 
 export interface CourseData {
   title: string;
@@ -117,6 +118,7 @@ interface CourseEditorContextType {
   clearDraft: () => void;
   isSettingsHidden: boolean;
   setIsSettingsHidden: React.Dispatch<React.SetStateAction<boolean>>;
+  allowContentDeletion: boolean;
 }
 
 const CourseEditorContext = createContext<CourseEditorContextType | undefined>(undefined);
@@ -131,6 +133,7 @@ export const CourseEditorProvider: React.FC<{
   const { language } = useLanguage();
   const courseId = searchParams.get("id");
   const schoolIdParam = searchParams.get("schoolId");
+  const allowContentDeletion = useDeletionPolicy(role);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -233,6 +236,7 @@ export const CourseEditorProvider: React.FC<{
   const justRestoredRef = useRef(false);
   const isSavingRef = useRef(false);
   const draftStorageWarningShownRef = useRef(false);
+
 
   const acquireSaveLock = async (waitForExistingSave: boolean) => {
     while (isSavingRef.current) {
@@ -866,22 +870,15 @@ export const CourseEditorProvider: React.FC<{
       .filter((s: any): s is string => Boolean(s && typeof s === "string" && s !== "null" && s !== "undefined" && s.trim() !== ""))
       .map((s: string) => s.trim());
 
-    const fallbackSchoolId = (schoolIdParam && schoolIdParam !== "null" && schoolIdParam !== "undefined" ? schoolIdParam.trim() : null)
-      || (courseData.schoolId && courseData.schoolId !== "null" && courseData.schoolId !== "undefined" ? courseData.schoolId.trim() : null);
+    if (role === "SUPER_ADMIN") {
+      return {
+        isCentral: sanitizedTargetSchoolIds.length === 0,
+        schoolId: sanitizedTargetSchoolIds.length > 0 ? sanitizedTargetSchoolIds[0] : null,
+        schoolIds: sanitizedTargetSchoolIds,
+      };
+    }
 
-    const resolvedSchoolId = role === "SUPER_ADMIN"
-      ? (sanitizedTargetSchoolIds.length > 0 ? sanitizedTargetSchoolIds[0] : null)
-      : fallbackSchoolId;
-
-    const resolvedSchoolIds = role === "SUPER_ADMIN"
-      ? sanitizedTargetSchoolIds
-      : (fallbackSchoolId ? [fallbackSchoolId] : []);
-
-    return {
-      isCentral: role === "SUPER_ADMIN" ? sanitizedTargetSchoolIds.length === 0 : false,
-      schoolId: resolvedSchoolId,
-      schoolIds: resolvedSchoolIds,
-    };
+    return {};
   };
 
   const saveLesson = async () => {
@@ -1599,6 +1596,7 @@ export const CourseEditorProvider: React.FC<{
         setAvailableMetadata,
         isSettingsHidden,
         setIsSettingsHidden,
+        allowContentDeletion,
       }}
     >
       {children}

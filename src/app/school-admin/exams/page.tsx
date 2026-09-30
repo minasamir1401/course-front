@@ -447,6 +447,7 @@ export default function SchoolAdminExamsPage() {
               const isStandaloneOwnerCard = isSyntheticModuleCard || String(module.id) === String(firstModuleId);
               const canMoveStandaloneQuestions = hasStandaloneQuestions && isStandaloneOwnerCard;
               const cardQuestionCounts = getModuleQuestionCardCounts(module.questionsCount, sourceStandaloneQuestionsCount);
+              const isCentralExam = Boolean(exam.isCentral);
               const audienceLabel = getExamAudienceLabel(exam, language);
               const createdAtLabel = getCreatedAtLabel(module.createdAt || actualModule?.createdAt || exam.createdAt, language);
               const creatorLabel = getCreatorLabel(exam.creator?.name, language === 'ar' ? 'ar' : 'en');
@@ -458,7 +459,7 @@ export default function SchoolAdminExamsPage() {
                       <BookOpen className="w-8 h-8" />
                     </div>
                     <div className="flex items-center gap-2">
-                      {!isSyntheticModuleCard && (
+                      {!isSyntheticModuleCard && !isCentralExam && (
                         <button
                           type="button"
                           onClick={() => openMoveModuleModal(exam, actualModule || module)}
@@ -468,15 +469,17 @@ export default function SchoolAdminExamsPage() {
                           <ArrowRightLeft className="w-5 h-5" />
                         </button>
                       )}
-                      <Link
-                        href={moduleSettingsHref || `/school-admin/exams/edit/${module.parentExamId}?view=editor`}
-                        className="w-11 h-11 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
-                        title={isSyntheticModuleCard
-                          ? (language === 'ar' ? 'تعديل الامتحان' : 'Edit exam')
-                          : (language === 'ar' ? 'فتح بوابة الـ Module' : 'Open module portal')}
-                      >
-                        <Settings className="w-5 h-5" />
-                      </Link>
+                      {!isCentralExam && (
+                        <Link
+                          href={moduleSettingsHref || `/school-admin/exams/edit/${module.parentExamId}?view=editor`}
+                          className="w-11 h-11 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                          title={isSyntheticModuleCard
+                            ? (language === 'ar' ? 'تعديل الامتحان' : 'Edit exam')
+                            : (language === 'ar' ? 'فتح بوابة الـ Module' : 'Open module portal')}
+                        >
+                          <Settings className="w-5 h-5" />
+                        </Link>
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2 mb-3">

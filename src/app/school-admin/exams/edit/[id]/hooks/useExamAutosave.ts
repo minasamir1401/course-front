@@ -64,11 +64,19 @@ export const useExamAutosave = (props: any) => {
           } catch {}
         }
         const isCentral = false;
+        const schoolPayload = activeExamId ? {} : {
+          isCentral,
+          schoolId: targetSchoolIds.length > 0 ? targetSchoolIds[0] : null,
+          schoolIds: targetSchoolIds,
+        };
 
-        const { modulesPayload, allQuestions } = buildExamSubmissionPayload({
+        const { modulesPayload, allQuestions, cleanedStandaloneQuestions } = buildExamSubmissionPayload({
           modules: finalModules,
           standaloneQuestions,
         });
+        if (cleanedStandaloneQuestions && cleanedStandaloneQuestions.length < (standaloneQuestions?.length || 0)) {
+          setStandaloneQuestions?.(cleanedStandaloneQuestions);
+        }
         const submittedDeletedQuestionIds = [...(deletedQuestionIds || [])];
         const payload = buildExamSavePayload({
           title: examData.title || (language === 'ar' ? "مسودة امتحان بدون عنوان" : "Untitled Exam Draft"),
@@ -77,9 +85,7 @@ export const useExamAutosave = (props: any) => {
           grades: examData.grades,
           subjects: examData.subjects || [],
           country: examData.country,
-          isCentral,
-          schoolId: targetSchoolIds.length > 0 ? targetSchoolIds[0] : null,
-          schoolIds: targetSchoolIds,
+          ...schoolPayload,
           duration: examData.duration || 60,
           passingScore: examData.passingScore || 50,
           password: examData.password || null,

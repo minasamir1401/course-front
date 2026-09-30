@@ -1,6 +1,8 @@
-const isPersistedId = (id: unknown) => typeof id === 'string' && id.length > 0;
+// A persisted ID is a UUID/CUID - long strings from the server (length > 20).
+// Short strings (timestamps, numeric strings) are treated as transient.
+export const isPersistedId = (id: unknown): id is string => typeof id === 'string' && id.length > 20;
 
-const containsTransientQuestionId = (questions: unknown) =>
+export const containsTransientQuestionId = (questions: unknown) =>
   Array.isArray(questions) && questions.some((question) => !isPersistedId(question?.id));
 
 export function requiresExamAutosaveIdSync(localModules: unknown, serverModules: unknown) {

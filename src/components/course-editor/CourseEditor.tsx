@@ -41,7 +41,8 @@ const InnerCourseEditor: React.FC = () => {
     restoreFromDraft,
     clearDraft,
     isSettingsHidden,
-  } = useCourseEditor();
+    allowContentDeletion,
+  } = useCourseEditor() as any;
 
   // Save shortly after the user pauses. handleSubmit safely merges an open lesson
   // into the course payload, so slides, questions, and lesson metadata are covered too.
@@ -143,7 +144,7 @@ const InnerCourseEditor: React.FC = () => {
                   <CourseSettingsForm />
 
                   {/* Danger Zone */}
-                  {adminRole === 'SUPER_ADMIN' && (
+                  {(adminRole === 'SUPER_ADMIN' || allowContentDeletion) && (
                     <div className="bg-red-50/50 rounded-[28px] border border-red-100 p-6 flex flex-col items-center justify-center gap-3">
                       <p className="text-xs font-bold text-red-500 text-center">{language === "ar" ? "منطقة الخطر" : "Danger Zone"}</p>
                       <button

@@ -364,9 +364,9 @@ export const QuestionsBuilder = (props: any) => {
                 const qImg = extractFirstImage(q);
                 return (
                   <div key={q.id ?? index} className="bg-white rounded-[30px] border border-slate-100 shadow-sm overflow-hidden group hover:shadow-md transition-all duration-300">
-                      <div className="px-6 py-4 flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-4 flex-1 overflow-hidden">
-                          <div className="flex flex-col items-center gap-1">
+                      <div className="px-4 py-3 sm:px-6 sm:py-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
+                        <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                          <div className="flex flex-col items-center gap-1 shrink-0">
                             <button type="button" onClick={() => moveQuestionForSource(source, index, 'UP')} disabled={index === 0} className="text-slate-300 hover:text-indigo-600 disabled:opacity-20 transition-colors"><ChevronUp className="w-4 h-4" /></button>
                             <span className="w-8 h-8 min-w-8 shrink-0 whitespace-nowrap tabular-nums bg-slate-900 text-white rounded-lg flex items-center justify-center font-black text-xs">{index + 1}</span>
                             <button type="button" onClick={() => moveQuestionForSource(source, index, 'DOWN')} disabled={index === list.length - 1} className="text-slate-300 hover:text-indigo-600 disabled:opacity-20 transition-colors"><ChevronDown className="w-4 h-4" /></button>
@@ -376,58 +376,58 @@ export const QuestionsBuilder = (props: any) => {
                               <NextImage src={qImg} alt="Thumbnail" width={48} height={48} className="w-full h-full object-cover" unoptimized={Boolean(qImg.startsWith('data:'))} />
                             </div>
                           )}
-                          <div className="flex flex-col flex-1 overflow-hidden">
+                          <div className="flex flex-col flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded uppercase">
+                              <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded uppercase whitespace-nowrap shrink-0">
                                 {QUESTION_TYPES.find(t => t.id === q.type)?.labelEn || q.type}
                               </span>
-                              <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded uppercase">
+                              <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded uppercase whitespace-nowrap shrink-0">
                                 {q.points || 1} {language === 'ar' ? 'درجة' : 'pts'} • {q.xpPoints || 10} XP
                               </span>
-                              {q.domain && <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{q.domain}</span>}
-                              {q.skill && <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded">{q.skill}</span>}
+                              {q.domain && <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded whitespace-nowrap shrink-0">{q.domain}</span>}
+                              {q.skill && <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded whitespace-nowrap shrink-0">{q.skill}</span>}
                             </div>
                             <div
-                              className="text-slate-700 font-bold truncate text-sm"
+                              className="text-slate-700 font-bold truncate text-sm flex-1 min-w-0"
                               dangerouslySetInnerHTML={{ __html: sanitizeHtml((q.text || '').substring(0, 120)) }}
                             />
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-end gap-1.5 sm:gap-2 shrink-0 pt-2 sm:pt-0 border-t border-slate-50 sm:border-t-0">
                           <button
                             type="button"
                             onClick={() => setExpandedQuestionIndex(expandedQuestionIndex === index ? null : index)}
-                            className="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center hover:bg-slate-100 hover:text-indigo-600 transition-all"
+                            className="w-8 h-8 sm:w-10 sm:h-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center hover:bg-slate-100 hover:text-indigo-600 transition-all shrink-0"
                             title="Expand"
                           >
-                            {expandedQuestionIndex === index ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                            {expandedQuestionIndex === index ? <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5" /> : <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5" />}
                           </button>
                           <button
                             type="button"
                             onClick={() => handleEditQuestionForSource(source, index)}
-                            className="w-10 h-10 bg-blue-50 text-blue-400 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"
+                            className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-50 text-blue-400 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shrink-0"
                             title="Edit"
                           >
-                            <Edit2 className="w-5 h-5" />
+                            <Edit2 className="w-4 h-4 sm:w-5 sm:h-5" />
                           </button>
                           {q.id && typeof q.id === 'string' && isNaN(Number(q.id)) && (
                             <button
                               type="button"
                               onClick={() => setMovingQuestion(q)}
-                              className="w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center hover:bg-amber-600 hover:text-white transition-all cursor-pointer"
+                              className="w-8 h-8 sm:w-10 sm:h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center hover:bg-amber-600 hover:text-white transition-all cursor-pointer shrink-0"
                               title={language === 'ar' ? 'نقل السؤال لاختبار آخر' : 'Move question to another exam'}
                             >
-                              <ArrowRightLeft className="w-5 h-5" />
+                              <ArrowRightLeft className="w-4 h-4 sm:w-5 sm:h-5" />
                             </button>
                           )}
                           <button
                             type="button"
                             onClick={() => removeQuestionForSource(source, index)}
-                            className="w-10 h-10 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all"
+                            className="w-8 h-8 sm:w-10 sm:h-10 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shrink-0"
                             title="Delete"
                           >
-                            <Trash2 className="w-5 h-5" />
+                            <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
                           </button>
                         </div>
                       </div>

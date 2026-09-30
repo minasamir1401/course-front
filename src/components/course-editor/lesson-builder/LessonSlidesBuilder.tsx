@@ -47,7 +47,9 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
   }));
 
   const { role } = useCourseEditor();
+  const { allowContentDeletion } = useCourseEditor() as any;
   const isSuperAdmin = role === "SUPER_ADMIN";
+  const canDeleteContent = isSuperAdmin || allowContentDeletion;
 
   const [customSkills, setCustomSkills] = useState<string[]>([]);
 
@@ -411,7 +413,7 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
             language={language}
             slideLang={getSlideLang(block, sIdx)}
             setSlideLang={setSlideLang}
-            isSuperAdmin={isSuperAdmin}
+            isSuperAdmin={canDeleteContent}
             isExpanded={isSlideExpanded(block, sIdx)}
             onToggleExpand={() => toggleSlideExpand(block, sIdx)}
             onDuplicate={duplicateSlide}

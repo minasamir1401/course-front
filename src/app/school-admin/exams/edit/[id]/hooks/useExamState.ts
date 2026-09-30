@@ -240,6 +240,15 @@ export const useExamState = (schoolIdParam: string | null, examId: string, selec
         if (generation !== loadGenerationRef.current) return;
         const exam = data.data || data;
         if (exam) {
+          // Central exams with no school assignments cannot be modified by school admins.
+          // Central exams that include specific schools ARE editable by those school admins.
+          const hasCentralSchoolAssignments = Boolean(
+            exam.schoolId || (exam.schools || []).length > 0
+          );
+          if (exam.isCentral && !hasCentralSchoolAssignments) {
+            router.replace('/school-admin/exams');
+            return;
+          }
           const resolvedScope = resolveExamEditScope(exam, schoolIdParam);
           setExamData({
             title: exam.title || "",

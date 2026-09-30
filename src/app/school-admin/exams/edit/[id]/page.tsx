@@ -96,10 +96,13 @@ export default function SchoolAdminEditExamPage() {
   const hasMatchingModule = Boolean(
     moduleId && (modules || []).some((module: any) => String(module?.id || "") === String(moduleId))
   );
+  // Only fall back to full-editor after loading completes AND modules are confirmed loaded.
+  // If modules is still empty during initial load, keep the module-portal view.
   const shouldFallbackToFullEditor = Boolean(
     workflowView === "module-portal" &&
     moduleId &&
     !isLoading &&
+    !state.isInitialLoad &&
     (String(moduleId) === String(examId) || !hasMatchingModule)
   );
   const effectiveWorkflowView = shouldFallbackToFullEditor ? "full-editor" : workflowView;
@@ -203,6 +206,9 @@ export default function SchoolAdminEditExamPage() {
     moduleManagement.openEditModuleModal(moduleIndex);
   }, [editModuleId, effectiveWorkflowView, examId, moduleManagement, modules]);
 
+  /* 
+  // Disabled automatic redirection to module portal because it prevents users
+  // from accessing the full editor to edit exam metadata or see all modules.
   React.useEffect(() => {
     if (
       view === "editor"
@@ -220,6 +226,8 @@ export default function SchoolAdminEditExamPage() {
     didRedirectToModulePortalRef.current = true;
     router.replace(primaryModulePortalHref);
   }, [createModule, editModuleId, isLoading, moduleId, primaryModulePortalHref, router, subExamId, view]);
+  */
+
 
   React.useEffect(() => {
     if (effectiveWorkflowView !== "sub-exam-editor" || !editableModule) return;

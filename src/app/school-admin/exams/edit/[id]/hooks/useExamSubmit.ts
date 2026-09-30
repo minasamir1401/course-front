@@ -47,10 +47,13 @@ export const useExamSubmit = (props: any) => {
       }
       const isCentral = false;
 
-      const { modulesPayload, allQuestions } = buildExamSubmissionPayload({
+      const { modulesPayload, allQuestions, cleanedStandaloneQuestions } = buildExamSubmissionPayload({
         modules: finalModules,
         standaloneQuestions,
       });
+      if (cleanedStandaloneQuestions && cleanedStandaloneQuestions.length < (standaloneQuestions?.length || 0)) {
+        setStandaloneQuestions?.(cleanedStandaloneQuestions);
+      }
       const submittedDeletedQuestionIds = [...(deletedQuestionIds || [])];
       const childExamSave = isChildExamSave({ moduleId, subExamId });
 

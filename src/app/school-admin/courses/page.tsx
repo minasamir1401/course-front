@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import DashboardLayout from "@/components/DashboardLayout";
 import { BookOpen, Video, Plus, Search, Layers, Edit2, Trash2, Monitor, HelpCircle, FileText, ChevronLeft, Settings, Layout, Target, CheckCircle2, X, Save, ArrowRight, Activity, Calendar, Download, MoreVertical, GraduationCap, ArrowUpRight } from 'lucide-react';
 import { useRouter } from "next/navigation";
-import { API_URL } from "@/lib/api";
+import { API_URL, getFullImageUrl } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -44,6 +45,28 @@ export default function SchoolAdminCoursesPage() {
       console.error("Failed to fetch courses");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm(t('coursesPage.deleteConfirm') || "Are you sure you want to delete this course?")) return;
+    try {
+      const token = localStorage.getItem("school_admin_token");
+      const res = await fetch(`${API_URL}/school/courses/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        showToast(t('coursesPage.deleteSuccess') || "Deleted successfully", "success");
+        setCourses(prev => prev.filter(c => c.id !== id));
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        showToast(errorData.error || t('coursesPage.deleteFail') || "Failed to delete", "error");
+      }
+    } catch (error) {
+      showToast(t('coursesPage.deleteFail') || "Failed to delete", "error");
     }
   };
 
@@ -158,8 +181,19 @@ export default function SchoolAdminCoursesPage() {
                {filteredCourses.map((course) => (
                  <div key={course.id} className="bg-white rounded-[40px] border border-slate-100 p-8 hover:border-indigo-500/50 transition-all group shadow-sm hover:shadow-2xl hover:shadow-indigo-500/10 relative overflow-hidden">
                     <div className="flex justify-between items-start mb-6">
-                       <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-110 transition-all">
-                          <BookOpen className="w-8 h-8" />
+                       <div className="relative w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-110 transition-all overflow-hidden border border-slate-100 shrink-0">
+                         {course.coverImage ? (
+                           <Image
+                             src={getFullImageUrl(course.coverImage) || ""}
+                             fill
+                             sizes="64px"
+                             className="object-cover"
+                             alt={course.title || "Course Cover"}
+                             unoptimized={Boolean(getFullImageUrl(course.coverImage)?.startsWith('data:'))}
+                           />
+                         ) : (
+                           <BookOpen className="w-8 h-8" />
+                         )}
                        </div>
                        <div className="flex gap-2">
                          <button 
@@ -167,6 +201,12 @@ export default function SchoolAdminCoursesPage() {
                            className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-all border border-slate-100"
                          >
                            <Edit2 className="w-5 h-5" />
+                         </button>
+                         <button 
+                           onClick={() => handleDelete(course.id)}
+                           className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center hover:bg-red-600 hover:text-white transition-all shadow-sm border border-slate-100"
+                         >
+                           <Trash2 className="w-5 h-5" />
                          </button>
                        </div>
                     </div>

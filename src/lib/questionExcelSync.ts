@@ -279,19 +279,28 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
   for (const [offset, row] of rows.slice(1).entries()) {
     if (!row.some(c => key(c))) continue;
     const rowFail = (en: string, arabic: string): never => fail(`Row ${offset + 2}: ${en}`, `الصف ${offset + 2}: ${arabic}`);
-    const id = idIndex < 0 ? '' : key(row[idIndex]);
+    const rawId = idIndex < 0 ? '' : key(row[idIndex]);
     const action = actionIndex < 0 ? '' : key(row[actionIndex]).toUpperCase();
     if (!['', 'ADD', 'UPDATE', 'DELETE', 'إضافة', 'تعديل', 'حذف'].includes(action)) rowFail('Invalid Action.', 'الإجراء غير صحيح.');
-    if (id && seen.has(id)) rowFail('Duplicate Question ID.', 'رقم السؤال مكرر.');
-    if (id && !currentById.has(id)) rowFail('Question ID is not in this list. Export again.', 'رقم السؤال لا ينتمي للقائمة الحالية. أعد التصدير.');
-    if (id) seen.add(id);
-    if (['DELETE', 'حذف'].includes(action)) {
-      if (!id) rowFail('Deletion requires Question ID.', 'الحذف يحتاج رقم السؤال.');
-      deleted.add(id);
+    if (rawId && seen.has(rawId)) rowFail('Duplicate Question ID.', 'رقم السؤال مكرر.');
+
+    const isDelete = ['DELETE', 'حذف'].includes(action);
+    if (isDelete) {
+      if (!rawId) rowFail('Deletion requires Question ID.', 'الحذف يحتاج رقم السؤال.');
+      deleted.add(rawId);
       continue;
     }
-    if (id && ['ADD', 'إضافة'].includes(action)) rowFail('Leave Question ID blank for additions.', 'اترك رقم السؤال فارغًا عند الإضافة.');
-    if (!id && ['UPDATE', 'تعديل'].includes(action)) rowFail('Update requires Question ID.', 'التعديل يحتاج رقم السؤال.');
+
+    const isExplicitAdd = ['ADD', 'إضافة'].includes(action);
+    const isExplicitUpdate = ['UPDATE', 'تعديل'].includes(action);
+
+    const isAddition = !rawId || isExplicitAdd || (!isExplicitUpdate && !currentById.has(rawId));
+    const id = isAddition ? '' : rawId;
+
+    if (!isAddition && id && !currentById.has(id)) {
+      rowFail('Question ID is not in this list. Export again.', 'رقم السؤال لا ينتمي للقائمة الحالية. أعد التصدير.');
+    }
+    if (id) seen.add(id);
 
     const previous = id ? currentById.get(id)! : undefined;
     const q: Question = { ...(previous || { points: 1, skill: 'General', options: [], correctAnswer: '', correctAnswers: [] }) };

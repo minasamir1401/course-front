@@ -1,3 +1,35 @@
+const isPersistedId = (id: unknown): id is string => typeof id === 'string' && id.length > 20;
+
+function normalizeQuestionText(text: unknown): string {
+  if (!text) return '';
+  return String(text)
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/[−–—]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+    .replace(/^(question|سؤال|q)\s*\d+(\s*\([^)]*\))?[:.\s-]*/i, '')
+    .trim();
+}
+
+function normalizeQuestionOptions(options: unknown): string {
+  if (!options) return '';
+  if (Array.isArray(options)) {
+    return options
+      .map((opt) => {
+        if (typeof opt === 'object' && opt !== null) {
+          return normalizeQuestionText(opt.text || opt.title || opt.content || '');
+        }
+        return normalizeQuestionText(opt);
+      })
+      .filter(Boolean)
+      .sort()
+      .join('|');
+  }
+  return normalizeQuestionText(options);
+}
+
 type BuildDraftModulesArgs = {
   modules: any[];
   currentModule: any;
@@ -152,58 +184,97 @@ export function buildModulesSubmissionPayload(modules: any[]) {
   return { modulesPayload, allQuestions };
 }
 
+export function getQuestionContentSignature(q: any): string {
+  if (!q) return '';
+  const rawText = normalizeQuestionText(q.text || q.content || '');
+  const rawTextEn = normalizeQuestionText(q.textEn || '');
+  const combinedText = (rawText || rawTextEn).trim();
+  const mediaKey = String(q.imageUrl || q.videoUrl || '').trim();
+  const optionsKey = normalizeQuestionOptions(q.options);
+  return `${combinedText}##${optionsKey}##${mediaKey}`;
+}
+
+export function pruneDuplicateStandaloneQuestions(
+  standaloneQuestions: any[],
+  moduleQuestions: any[],
+): any[] {
+  const moduleSigs = new Set<string>();
+  const moduleIds = new Set<string>();
+
+  for (const q of (Array.isArray(moduleQuestions) ? moduleQuestions : [])) {
+    if (!q) continue;
+    if (isPersistedId(q.id)) moduleIds.add(q.id);
+    const sig = getQuestionContentSignature(q);
+    if (sig && sig !== '##') moduleSigs.add(sig);
+  }
+
+  const seenStandaloneSigs = new Set<string>();
+  const result: any[] = [];
+
+  for (const sq of (Array.isArray(standaloneQuestions) ? standaloneQuestions : [])) {
+    if (!sq) continue;
+    if (isPersistedId(sq.id) && moduleIds.has(sq.id)) continue;
+    const sig = getQuestionContentSignature(sq);
+
+    // Drop standalone copy if identical question exists in any module
+    if (sig && sig !== '##' && moduleSigs.has(sig)) continue;
+    // Deduplicate within standalone itself
+    if (sig && sig !== '##' && seenStandaloneSigs.has(sig)) continue;
+
+    if (sig && sig !== '##') seenStandaloneSigs.add(sig);
+    result.push(sq);
+  }
+
+  return result;
+}
+
 export function deduplicateSubmissionQuestions(questions: any[]) {
   const seenIds = new Set<string>();
-  const seenSignatures = new Set<string>();
+  const seenModuleSignatures = new Set<string>();
+  const seenScopeKeys = new Set<string>();
   const result: any[] = [];
 
   for (const q of (Array.isArray(questions) ? questions : [])) {
     if (!q) continue;
-    const rawText = String(q.text || q.content || '')
-      .replace(/<[^>]*>/g, ' ')
-      .replace(/&nbsp;/gi, ' ')
-      .replace(/[−–—]/g, '-')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .toLowerCase()
-      .replace(/^(question|سؤال|q)\s*\d+(\s*\([^)]*\))?[:.\s-]*/i, '')
-      .trim();
-
-    const rawTextEn = String(q.textEn || '')
-      .replace(/<[^>]*>/g, ' ')
-      .replace(/&nbsp;/gi, ' ')
-      .replace(/[−–—]/g, '-')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .toLowerCase()
-      .replace(/^(question|q)\s*\d+(\s*\([^)]*\))?[:.\s-]*/i, '')
-      .trim();
-
+    const rawText = normalizeQuestionText(q.text || q.content || '');
+    const rawTextEn = normalizeQuestionText(q.textEn || '');
     const hasMedia = Boolean((q.imageUrl && String(q.imageUrl).trim()) || (q.videoUrl && String(q.videoUrl).trim()));
-    // Skip empty questions only when neither Arabic nor English text is provided and no media exists
+
+    // Skip empty items with neither text nor media
     if (rawText.length < 2 && rawTextEn.length < 2 && !hasMedia) continue;
 
-    const id = q.id && typeof q.id === 'string' && q.id.length > 20 ? q.id : null;
+    const fullContentSig = getQuestionContentSignature(q);
+    const isStandalone = !q.moduleId && !q.subExamId;
+    const scopeKey = `${q.moduleId || 'standalone'}:${q.subExamId || 'none'}:${fullContentSig}`;
+
+    const id = isPersistedId(q.id) ? q.id : null;
     if (id) {
       if (seenIds.has(id)) continue;
       seenIds.add(id);
+
+      if (!isStandalone && fullContentSig) {
+        seenModuleSignatures.add(fullContentSig);
+      }
+      seenScopeKeys.add(scopeKey);
       result.push(q);
       continue;
     }
 
-    const combinedText = (rawText || rawTextEn).trim();
-    const mediaKey = String(q.imageUrl || q.videoUrl || '').trim();
-    const optionsKey = Array.isArray(q.options)
-      ? q.options.map((opt: any) => String(opt || '').trim().toLowerCase()).sort().join('|')
-      : String(q.options || '').trim().toLowerCase();
+    // For non-persisted questions:
+    // Standalone vs Module: Drop standalone question if its content exists in a module
+    if (isStandalone && fullContentSig && seenModuleSignatures.has(fullContentSig)) {
+      continue;
+    }
 
-    const fullContentSig = `${combinedText}##${optionsKey}##${mediaKey}`;
-    // Do not include moduleId/subExamId in the dedup key: those can be client-side
-    // timestamps on one autosave pass and real UUIDs on another, causing the same
-    // question to appear twice with different scope keys.
-    if (seenSignatures.has(fullContentSig)) continue;
+    // Deduplicate within the same module/scope (keeps different modules separate)
+    if (seenScopeKeys.has(scopeKey)) {
+      continue;
+    }
 
-    seenSignatures.add(fullContentSig);
+    if (!isStandalone && fullContentSig) {
+      seenModuleSignatures.add(fullContentSig);
+    }
+    seenScopeKeys.add(scopeKey);
     result.push(q);
   }
 
@@ -215,7 +286,8 @@ export function buildExamSubmissionPayload({
   standaloneQuestions = [],
 }: BuildExamSubmissionPayloadArgs) {
   const { modulesPayload, allQuestions } = buildModulesSubmissionPayload(modules);
-  const standalonePayload = (Array.isArray(standaloneQuestions) ? standaloneQuestions : []).map((question: any) => ({
+  const cleanedStandalone = pruneDuplicateStandaloneQuestions(standaloneQuestions, allQuestions);
+  const standalonePayload = cleanedStandalone.map((question: any) => ({
     ...question,
     moduleId: null,
     subExamId: null,
@@ -226,5 +298,6 @@ export function buildExamSubmissionPayload({
   return {
     modulesPayload,
     allQuestions: deduplicateSubmissionQuestions(rawCombined),
+    cleanedStandaloneQuestions: cleanedStandalone,
   };
 }

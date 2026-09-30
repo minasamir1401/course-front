@@ -27,7 +27,7 @@ export function buildQuestionWorkbook(questions: any[] | null, language: string 
     ['3. الإجابة الصحيحة: يمكنك كتابة نص الإجابة مباشرة، أو كتابة رقم الخيار (1 أو 2 أو 3 أو 4) وسيقوم النظام بمطابقة اللغتين تلقائياً.'],
     ['4. صح وخطأ (TRUE_FALSE): اكتب صحيح أو خطأ (أو True / False) في عمود الإجابة الصحيحة.'],
     ['5. اختيارات متعددة (MULTI_SELECT): اكتب الإجابات في عمود الإجابات المتعددة مثل: ["خيار 1", "خيار 2"] أو أرقام الخيارات 1, 3.'],
-    ['6. إضافة أو تعديل: لإضافة أسئلة جديدة اترك Question ID فارغاً واكتب ADD في Action. لتعديل أسئلة حافظ على الـ Question ID.'],
+    ['6. إضافة أو تعديل: لإضافة أسئلة جديدة اترك Question ID فارغاً (أو اتركه دون تعديل مع Action: ADD). لتعديل أسئلة سابقة حافظ على الـ Question ID الأصلي.'],
     ['7. حذف سؤال: اكتب DELETE في عمود Action لحذف السؤال عند إعادة الرفع.'],
     ['8. الميتا داتا والتصنيفات: يدعم النظام إضافة أعمدة الميتا داتا (المجال، المهارة، المؤشر، عمق المعرفة DOK، الصعوبة) بالعربية أو الإنجليزية في نفس الملف، أو استخدام نموذج الميتا داتا المتقدم ثنائي اللغة.']
   ] : [
@@ -37,7 +37,7 @@ export function buildQuestionWorkbook(questions: any[] | null, language: string 
     ['3. Correct Answer: You can write the answer text or the option number (1, 2, 3, 4) and both languages will be matched automatically.'],
     ['4. TRUE_FALSE: Write True or False (or صحيح / خطأ) in the Correct Answer column.'],
     ['5. MULTI_SELECT: Write the answers in Correct Answers column e.g. ["Option 1", "Option 2"] or option numbers: 1, 3.'],
-    ['6. Add or Update: Leave Question ID blank and set Action to ADD for new questions. Keep Question ID when updating.'],
+    ['6. Add or Update: Leave Question ID blank (or set Action to ADD) for new questions. Keep Question ID when updating existing questions.'],
     ['7. Delete: Set Action to DELETE to remove a question upon import.'],
     ['8. Metadata & Taxonomies: You can optionally add metadata columns (Domain, Skill, Indicator, DOK, Difficulty) in Arabic or English directly in this sheet, or use the dedicated Advanced Metadata Template.']
   ];

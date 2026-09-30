@@ -46,10 +46,13 @@ export const useExamAutosave = (props: any) => {
         const targetSchoolIds = (examData.schoolIds || []).filter(Boolean);
         const isCentral = targetSchoolIds.length > 0 ? false : !!examData.isCentral;
 
-        const { modulesPayload, allQuestions } = buildExamSubmissionPayload({
+        const { modulesPayload, allQuestions, cleanedStandaloneQuestions } = buildExamSubmissionPayload({
           modules: finalModules,
           standaloneQuestions,
         });
+        if (cleanedStandaloneQuestions && cleanedStandaloneQuestions.length < (standaloneQuestions?.length || 0)) {
+          setStandaloneQuestions?.(cleanedStandaloneQuestions);
+        }
         const submittedDeletedQuestionIds = [...(deletedQuestionIds || [])];
         
         const payload = buildExamSavePayload({

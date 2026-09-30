@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Users, Plus, Search, Trash2, Edit2, Shield, X, Mail, Phone, BookOpen, GraduationCap } from 'lucide-react';
-import { API_URL } from "@/lib/api";
+import { API_URL, getFullImageUrl } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -174,8 +175,19 @@ export default function SchoolAdminTeachersPage() {
               ) : filtered.map((teacher) => (
                 <div key={teacher.id} className="bg-white rounded-[35px] border border-slate-100 p-6 shadow-sm hover:shadow-md transition-all group">
                    <div className="flex items-center gap-4 mb-6">
-                      <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center font-black text-xl">
-                         {teacher.name.charAt(0)}
+                      <div className="relative w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center font-black text-xl overflow-hidden border border-slate-100 shrink-0">
+                         {teacher.avatar ? (
+                           <Image
+                             src={getFullImageUrl(teacher.avatar) || ""}
+                             fill
+                             sizes="56px"
+                             className="object-cover"
+                             alt={teacher.name || "Teacher Avatar"}
+                             unoptimized={Boolean(getFullImageUrl(teacher.avatar)?.startsWith('data:'))}
+                           />
+                         ) : (
+                           teacher.name?.charAt(0) || "T"
+                         )}
                       </div>
                       <div>
                          <h4 className="font-black text-slate-800">{teacher.name}</h4>

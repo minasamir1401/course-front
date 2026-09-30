@@ -154,3 +154,19 @@ test('confirmed child import tracks deletions and preserves sibling object', asy
   assert.deepEqual(ctx.deleted, ['q2']);
   assert.equal(current.subExams[0].questions.length, 2);
 });
+test('template or addition rows without ID or with dummy sequence ID succeed without requiring ID', () => {
+  const current = [q('q1')];
+  // Case 1: User fills template row, leaves ID blank, and Action is UPDATE or empty
+  const templateRow = questionTemplateRows('en')[1];
+  templateRow[1] = 'UPDATE'; // Accidental UPDATE action by user
+  const plan1 = planQuestionImport([questionTemplateRows('en')[0], templateRow], current, opts);
+  assert.equal(plan1.added, 1);
+
+  // Case 2: User typed sequence number 1 in ID column with ADD action
+  const addWithDummyId = [...templateRow];
+  addWithDummyId[0] = '1';
+  addWithDummyId[1] = 'ADD';
+  const plan2 = planQuestionImport([questionTemplateRows('en')[0], addWithDummyId], current, opts);
+  assert.equal(plan2.added, 1);
+});
+

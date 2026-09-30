@@ -110,10 +110,12 @@ export default function SuperAdminEditExamPage() {
   const hasMatchingModule = Boolean(
     moduleId && (modules || []).some((module: any) => String(module?.id || "") === String(moduleId))
   );
+  // Only fall back to full-editor after loading completes AND modules are confirmed loaded.
   const shouldFallbackToFullEditor = Boolean(
     workflowView === "module-portal" &&
     moduleId &&
     !isLoading &&
+    !state.isInitialLoad &&
     (String(moduleId) === String(examId) || !hasMatchingModule)
   );
   const effectiveWorkflowView = shouldFallbackToFullEditor ? "full-editor" : workflowView;
@@ -135,6 +137,9 @@ export default function SuperAdminEditExamPage() {
     router.replace(roleFallbackHref);
   }, [roleFallbackHref, router]);
 
+  /*
+  // Disabled automatic redirection to module portal because it prevents users
+  // from accessing the full editor to edit exam metadata or see all modules.
   React.useEffect(() => {
     if (
       view === "editor"
@@ -152,6 +157,7 @@ export default function SuperAdminEditExamPage() {
     didRedirectToModulePortalRef.current = true;
     router.replace(primaryModulePortalHref);
   }, [createModule, editModuleId, isLoading, moduleId, primaryModulePortalHref, router, subExamId, view]);
+  */
 
   React.useEffect(() => {
     if (effectiveWorkflowView !== "sub-exam-editor") return;

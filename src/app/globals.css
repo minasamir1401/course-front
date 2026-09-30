@@ -611,3 +611,19 @@ math-field::part(virtual-keyboard-toggle) {
   }
 }
 
+@media print {
+  html, body {
+    direction: rtl !important;
+    font-family: Arial, Tahoma, "Segoe UI", sans-serif !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  * {
+    font-family: Arial, Tahoma, "Segoe UI", sans-serif !important;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+}
