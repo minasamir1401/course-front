@@ -1188,30 +1188,30 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
             );
 
             return (
-              <div key={sm.id} className="rounded-3xl border border-indigo-50 bg-slate-50/70 p-5 shadow-xs hover:border-indigo-200 transition-all">
+              <div key={sm.id} className="rounded-3xl border border-indigo-50 bg-slate-50/70 p-5 shadow-xs hover:border-indigo-200 transition-all overflow-hidden">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-100/70 text-indigo-600 flex items-center justify-center">
-                    <FolderTree className="w-6 h-6" />
+                  <div className="w-11 h-11 rounded-2xl bg-indigo-100/70 text-indigo-600 flex items-center justify-center shrink-0">
+                    <FolderTree className="w-5 h-5" />
                   </div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <button
                       type="button"
                       onClick={() => {
                         fetchAvailableDestinations(state.createdIdRef.current || state.createdId);
                         setSubModuleToMove(sm);
                       }}
-                      className="w-9 h-9 rounded-xl bg-white text-slate-400 hover:text-purple-600 hover:bg-purple-50 transition-all flex items-center justify-center shadow-xs"
+                      className="w-8 h-8 rounded-xl bg-white text-slate-400 hover:text-purple-600 hover:bg-purple-50 transition-all flex items-center justify-center shadow-xs border border-slate-100"
                       title={language === "ar" ? "نقل الموديول الفرعي" : "Move sub-module"}
                     >
-                      <ArrowRightLeft className="w-4 h-4" />
+                      <ArrowRightLeft className="w-3.5 h-3.5" />
                     </button>
                     <button
                       type="button"
                       onClick={() => deleteSubModule(sm.id)}
-                      className="w-9 h-9 rounded-xl bg-white text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all flex items-center justify-center shadow-xs"
+                      className="w-8 h-8 rounded-xl bg-white text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all flex items-center justify-center shadow-xs border border-slate-100"
                       title={language === "ar" ? "حذف الموديول الفرعي" : "Delete sub-module"}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
@@ -1255,50 +1255,74 @@ export default function ExamModulePortal({ state, moduleId, language, role }: an
           const examTitle = exam.title || (language === "ar" ? "اختبار بدون عنوان" : "Untitled Exam");
 
           return (
-            <div key={exam.id || index} className="rounded-3xl border border-slate-100 bg-slate-50 p-5 shadow-sm">
-              <div className="flex items-start justify-between gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-white text-indigo-600 flex items-center justify-center">
-                  <BookOpen className="w-6 h-6" />
+            <div key={exam.id || index} className="rounded-3xl border border-slate-100 bg-slate-50 p-5 shadow-sm overflow-hidden flex flex-col justify-between">
+              <div>
+                <div className="flex items-start justify-between gap-2.5">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-white text-indigo-600 flex items-center justify-center shrink-0 shadow-xs border border-slate-100">
+                    <BookOpen className="w-5 h-5" />
+                  </div>
+                  <div className="flex flex-wrap items-center justify-end gap-1.5 flex-1 min-w-0">
+                    <Link
+                      href={previewHref}
+                      target="_blank"
+                      className="w-8 h-8 rounded-xl bg-white text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all flex items-center justify-center shadow-xs border border-slate-100 shrink-0"
+                      title={language === "ar" ? "معاينة الاختبار" : "Preview Exam"}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => exportExamData(exam)}
+                      className="w-8 h-8 rounded-xl bg-white text-slate-400 hover:text-sky-600 hover:bg-sky-50 transition-all flex items-center justify-center shadow-xs border border-slate-100 shrink-0"
+                      title={language === "ar" ? "تصدير البيانات" : "Export Data"}
+                    >
+                      <Download className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => exportExamJson(exam.id)}
+                      className="w-8 h-8 rounded-xl bg-white text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all flex items-center justify-center shadow-xs border border-slate-100 shrink-0"
+                      title={language === "ar" ? "تصدير JSON" : "Export JSON"}
+                    >
+                      <FileCode className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openMoveModal(exam)}
+                      className="w-8 h-8 rounded-xl bg-white text-slate-400 hover:text-purple-600 hover:bg-purple-50 transition-all flex items-center justify-center shadow-xs border border-slate-100 shrink-0"
+                      title={language === "ar" ? "نقل الاختبار بأسئلته إلى موديول آخر" : "Move exam to another module"}
+                    >
+                      <ArrowRightLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (editHref) {
+                          router.push(editHref);
+                        }
+                      }}
+                      className="w-8 h-8 rounded-xl bg-white text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all flex items-center justify-center shadow-xs border border-slate-100 shrink-0"
+                      title={language === "ar" ? "تعديل الاختبار" : "Edit Exam"}
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteExam(exam.id)}
+                      className="w-8 h-8 rounded-xl bg-white text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all flex items-center justify-center shadow-xs border border-slate-100 shrink-0"
+                      title={language === "ar" ? "حذف الاختبار" : "Delete Exam"}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Link href={previewHref} target="_blank" className="w-10 h-10 rounded-xl bg-white text-slate-400 hover:text-emerald-600 flex items-center justify-center">
-                    <Eye className="w-4 h-4" />
-                  </Link>
-                  <button onClick={() => exportExamData(exam)} className="w-10 h-10 rounded-xl bg-white text-slate-400 hover:text-sky-600 flex items-center justify-center">
-                    <Download className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => exportExamJson(exam.id)} className="w-10 h-10 rounded-xl bg-white text-slate-400 hover:text-emerald-600 flex items-center justify-center" title={language === "ar" ? "تصدير JSON" : "Export JSON"}>
-                    <FileCode className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openMoveModal(exam)}
-                    className="w-10 h-10 rounded-xl bg-white text-slate-400 hover:text-purple-600 hover:bg-purple-50 transition-all flex items-center justify-center shadow-xs"
-                    title={language === "ar" ? "نقل الاختبار بأسئلته إلى موديول آخر" : "Move exam to another module"}
-                  >
-                    <ArrowRightLeft className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (editHref) {
-                        router.push(editHref);
-                      }
-                    }}
-                    className="w-10 h-10 rounded-xl bg-white text-slate-400 hover:text-indigo-600 flex items-center justify-center"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => deleteExam(exam.id)} className="w-10 h-10 rounded-xl bg-white text-slate-400 hover:text-red-600 flex items-center justify-center">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+
+                <h3 className="mt-4 text-xl font-black text-slate-900 truncate" title={examTitle}>{examTitle}</h3>
+
+                <div className="mt-2.5 flex items-center gap-2 text-xs font-black text-slate-400">
+                  <HelpCircle className="w-4 h-4 text-amber-500 shrink-0" />
+                  <span>{questionCount} {language === "ar" ? "سؤال" : "questions"}</span>
                 </div>
-              </div>
-
-              <h3 className="mt-5 text-xl font-black text-slate-900 truncate">{examTitle}</h3>
-
-              <div className="mt-3 flex items-center gap-2 text-xs font-black text-slate-400">
-                <HelpCircle className="w-4 h-4 text-amber-500" />
-                {questionCount} {language === "ar" ? "سؤال" : "questions"}
               </div>
 
               {(directQuestions.length > 0 || standaloneQuestions.length > 0) && (

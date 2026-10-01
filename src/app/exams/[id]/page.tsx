@@ -839,41 +839,40 @@ function TakeExamPageContent() {
               const legacyHint = question.sections?.find((s: any) => s.type === 'HINT');
               const legacyHintContent = (isEn && legacyHint?.contentEn) ? legacyHint.contentEn : (legacyHint?.content || legacyHint?.contentEn || '');
               const activeHint = (isEn && question.hintEn) ? question.hintEn : (question.hint || question.hintEn || legacyHintContent || '');
-              if (!activeHint) return null;
               const isRevealed = Boolean(revealedHints[question.id]);
+
               return (
-                <div className="mb-6 p-4 rounded-2xl bg-amber-50/80 border border-amber-200/80 transition-all">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 text-amber-800 text-xs font-black">
-                      <Lightbulb className="w-4 h-4 text-amber-500" />
-                      <span>{isEn ? 'Solving Helper Tool' : 'أداة مساعدة للحل'}</span>
+                <>
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600">
+                        <HelpCircle className="w-6 h-6" />
+                      </div>
+                      <span className="bg-indigo-600 text-white px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-sm shadow-indigo-200">
+                        {getInExamQuestionTypeLabel(question, activeExamLang)}
+                      </span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setRevealedHints(prev => ({ ...prev, [question.id]: !prev[question.id] }))}
-                      className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all cursor-pointer shadow-xs"
-                    >
-                      {isRevealed ? (isEn ? 'Hide Hint' : 'إخفاء التلميح') : (isEn ? 'Show Hint' : 'إظهار التلميح')}
-                    </button>
+
+                    {activeHint && (
+                      <button
+                        type="button"
+                        onClick={() => setRevealedHints(prev => ({ ...prev, [question.id]: !prev[question.id] }))}
+                        className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all cursor-pointer shadow-xs"
+                      >
+                        <Lightbulb className="w-3.5 h-3.5" />
+                        <span>{isRevealed ? (isEn ? 'Hide Hint' : 'إخفاء التلميح') : (isEn ? 'Show Hint' : 'إظهار التلميح')}</span>
+                      </button>
+                    )}
                   </div>
-                  {isRevealed && (
-                    <div className="mt-3 pt-3 border-t border-amber-200/60 text-amber-950 text-sm leading-relaxed animate-in slide-in-from-top-2 duration-200">
+
+                  {activeHint && isRevealed && (
+                    <div className="mb-6 p-4 rounded-2xl bg-amber-50/80 border border-amber-200/80 text-amber-950 text-sm leading-relaxed animate-in slide-in-from-top-2 duration-200">
                       <HtmlRenderer html={sanitizeHtml(activeHint)} />
                     </div>
                   )}
-                </div>
+                </>
               );
             })()}
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600">
-                  <HelpCircle className="w-6 h-6" />
-                </div>
-                <span className="bg-indigo-600 text-white px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider shadow-sm shadow-indigo-200">
-                  {getInExamQuestionTypeLabel(question, activeExamLang)}
-                </span>
-              </div>
-            </div>
             <div dir={isEn ? 'ltr' : 'rtl'}>
               <HtmlRenderer 
                 html={sanitizeHtml((isEn && question.textEn) ? question.textEn : (question.text || question.textEn || ''))}
