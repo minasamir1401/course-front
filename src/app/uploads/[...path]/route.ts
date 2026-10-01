@@ -61,7 +61,7 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
       headers,
       body: bodyData,
       redirect: 'follow',
-      cache: req.method === 'GET' || req.method === 'HEAD' ? 'force-cache' : 'no-store',
+      cache: 'no-store',
     };
 
     if (isStream) {
