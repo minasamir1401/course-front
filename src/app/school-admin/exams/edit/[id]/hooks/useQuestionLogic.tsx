@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { useDeletionPolicy } from '@/hooks/useDeletionPolicy';
 import { normalizeDok } from '@/lib/examQuestionMetadata';
 
 import { ChevronDown, Edit2, Trash2, Plus } from 'lucide-react';
@@ -8,6 +9,7 @@ import { normalizeQuestionOptions } from '@/lib/questionOptions';
 import { normalizeQuestionSections } from '@/lib/persistedExamQuestion';
 
 export const useQuestionLogic = (props: any) => {
+  const canDelete = useDeletionPolicy('SCHOOL_ADMIN');
   const { currentModule, activeSubExamIndex, setCurrentModule, standaloneQuestions, setStandaloneQuestions, setDeletedQuestionIds, tempQuestion, setTempQuestion, setQuestionSource, setShowQuestionForm, showToast, language, editingQuestionIndex, setEditingQuestionIndex } = props;
 
 // Advanced Question Logic
@@ -20,11 +22,11 @@ export const useQuestionLogic = (props: any) => {
   };
   const isPersistedQuestion = (question: any) => typeof question?.id === 'string' && question.id.trim().length > 0;
   const rejectPersistedDelete = (question: any) => {
-    if (!isPersistedQuestion(question)) return false;
+    if (!isPersistedQuestion(question) || canDelete) return false;
     showToast(
       language === 'ar'
-        ? 'حذف الأسئلة المحفوظة متاح للسوبر أدمن فقط.'
-        : 'Only Super Admin can delete saved questions.',
+        ? 'الحذف مقفل حالياً. اطلب من السوبر أدمن تفعيل سياسة حذف المحتوى.'
+        : 'Deletion is locked. Ask Super Admin to enable content deletion.',
       'error'
     );
     return true;

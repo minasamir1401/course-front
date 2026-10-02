@@ -33,6 +33,16 @@ const context = { params: Promise.resolve({ path: ['test'] }) };
 const bytes = (s) => new TextEncoder().encode(s);
 const chunks = (...values) => new ReadableStream({ start(c) { values.forEach(v => c.enqueue(bytes(v))); c.close(); } });
 
+test('proxy forwards access and refresh cookies as separate Set-Cookie headers', async () => {
+  const headers = new Headers();
+  headers.append('set-cookie', 'auth_token=access; HttpOnly; Path=/; Expires=Thu, 01 Oct 2026 12:00:00 GMT');
+  headers.append('set-cookie', 'auth_refresh=refresh; HttpOnly; Path=/');
+  const route = loadRoute(async () => new Response('{}', { headers }));
+  const response = await route.POST(req('POST'), context);
+  assert.deepEqual(response.headers.getSetCookie(), headers.getSetCookie());
+  await response.text();
+});
+
 test('route returns response headers and first bytes before upstream ends', async () => {
   let controller;
   const upstream = new Response(new ReadableStream({ start(c) { controller = c; c.enqueue(bytes('first')); } }), {

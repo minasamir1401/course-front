@@ -6,7 +6,7 @@ import { Trash2, RefreshCw, BookOpen, Layers, CheckCircle2, AlertTriangle, Arrow
 import { useRouter } from "next/navigation";
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { API_URL } from "@/lib/api";
+import { apiFetch, API_URL } from "@/lib/api";
 import { sanitizeHtml } from "@/lib/sanitize";
 import DeduplicatorModal from "@/components/DeduplicatorModal";
 
@@ -74,7 +74,7 @@ export default function TrashPage() {
       const token = localStorage.getItem("super_admin_token");
       if (!token) return router.push("/super-admin/login");
 
-      const res = await fetch(`${API_URL}/admin/trash?page=${page}&limit=${LIMIT}`, {
+      const res = await apiFetch(`${API_URL}/admin/trash?page=${page}&limit=${LIMIT}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -103,7 +103,7 @@ export default function TrashPage() {
       else if (type === 'question') url = `${API_URL}/admin/questions/${id}/restore`;
       else if (type === 'user') {
         // We can use bulk restore API to restore a single user since there's no specific route
-        const res = await fetch(`${API_URL}/admin/trash/bulk-restore`, {
+        const res = await apiFetch(`${API_URL}/admin/trash/bulk-restore`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
           body: JSON.stringify({ items: [{ id, type }] })
@@ -117,7 +117,7 @@ export default function TrashPage() {
         return;
       }
 
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -143,7 +143,7 @@ export default function TrashPage() {
     setIsBulkRestoring(true);
     try {
       const token = localStorage.getItem("super_admin_token");
-      const res = await fetch(`${API_URL}/admin/trash/bulk-restore`, {
+      const res = await apiFetch(`${API_URL}/admin/trash/bulk-restore`, {
         method: "POST",
         headers: { 
           Authorization: `Bearer ${token}`,
@@ -174,7 +174,7 @@ export default function TrashPage() {
     setDeletingId(id);
     try {
       const token = localStorage.getItem("super_admin_token");
-      const res = await fetch(`${API_URL}/admin/trash/item/${type}/${id}`, {
+      const res = await apiFetch(`${API_URL}/admin/trash/item/${type}/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -202,7 +202,7 @@ export default function TrashPage() {
     setIsBulkDeleting(true);
     try {
       const token = localStorage.getItem("super_admin_token");
-      const res = await fetch(`${API_URL}/admin/trash/bulk-delete`, {
+      const res = await apiFetch(`${API_URL}/admin/trash/bulk-delete`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -233,7 +233,7 @@ export default function TrashPage() {
         ? `${API_URL}/admin/trash/empty` 
         : `${API_URL}/admin/trash/empty?type=${activeTab}`;
         
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }
       });

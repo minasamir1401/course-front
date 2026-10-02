@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { API_URL } from "@/lib/api";
+import { apiFetch, API_URL } from "@/lib/api";
 import { Plus, Search, Filter, BookOpen, Clock, Building2, Globe, GraduationCap, ArrowUpRight, TrendingUp, BarChart3, Settings, Shield, ChevronLeft, Trash2, Hash, Eye, FolderOutput, X, FileText, Layers, HelpCircle, ArrowRightLeft, FolderInput } from 'lucide-react';
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -71,7 +71,7 @@ export default function SchoolAdminExamsPage() {
         url += (url.includes("?") ? "&" : "") + `grade=${filterType}`;
       }
 
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -92,7 +92,7 @@ export default function SchoolAdminExamsPage() {
 
     try {
       const token = localStorage.getItem("school_admin_token");
-      const res = await fetch(`${API_URL}/exams/${id}`, {
+      const res = await apiFetch(`${API_URL}/exams/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -119,7 +119,7 @@ export default function SchoolAdminExamsPage() {
 
     try {
       const token = localStorage.getItem('school_admin_token');
-      const res = await fetch(`${API_URL}/exams/${parentExamId}/modules/${moduleId}`, {
+      const res = await apiFetch(`${API_URL}/exams/${parentExamId}/modules/${moduleId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -146,7 +146,7 @@ export default function SchoolAdminExamsPage() {
     setIsMoving(true);
     try {
       const token = localStorage.getItem("school_admin_token") || null;
-      const res = await fetch(`${API_URL}/exams/${examToMove.id}/move-to-module`, {
+      const res = await apiFetch(`${API_URL}/exams/${examToMove.id}/move-to-module`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -223,7 +223,7 @@ export default function SchoolAdminExamsPage() {
     setIsMovingStandalone(true);
     try {
       const token = localStorage.getItem("school_admin_token") || null;
-      const res = await fetch(`${API_URL}/exams/${standaloneMoveContext.examId}/move-standalone-questions`, {
+      const res = await apiFetch(`${API_URL}/exams/${standaloneMoveContext.examId}/move-standalone-questions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -294,7 +294,7 @@ export default function SchoolAdminExamsPage() {
       const token = localStorage.getItem("school_admin_token");
       const exam = exams.find(e => e.id === examId);
       if (!exam) return;
-      const res = await fetch(`${API_URL}/exams/${examId}`, {
+      const res = await apiFetch(`${API_URL}/exams/${examId}`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ ...exam, attemptsAllowed: nextAttempts, questions: exam.questions || [] })

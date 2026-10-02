@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Users, School, GraduationCap, Layout, ArrowUpRight, ClipboardList, Activity, ChevronRight, Plus, TrendingUp, Download, Search, Calendar, Bell } from 'lucide-react';
 import Link from "next/link";
-import { API_URL } from "@/lib/api";
+import { apiFetch, API_URL } from "@/lib/api";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
@@ -67,7 +67,7 @@ export default function SchoolAdminPage() {
         if (!sId) return;
 
         // Fetch Stats
-        const statsRes = await fetch(`${API_URL}/reports/school?schoolId=${sId}`, {
+        const statsRes = await apiFetch(`${API_URL}/reports/school?schoolId=${sId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
 
@@ -83,7 +83,7 @@ export default function SchoolAdminPage() {
         }
 
         // Fetch Recent Students
-        const studentsRes = await fetch(`${API_URL}/admin/users?schoolId=${sId}&role=STUDENT`, {
+        const studentsRes = await apiFetch(`${API_URL}/admin/users?schoolId=${sId}&role=STUDENT`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (studentsRes.ok) {

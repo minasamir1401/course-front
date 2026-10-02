@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useParams, useRouter } from "next/navigation";
-import { API_URL } from "@/lib/api";
+import { apiFetch, API_URL } from "@/lib/api";
 import { BarChart3, Users, Clock, ArrowRight, Download, Globe, Building2, ChevronDown, ChevronUp, FileText } from 'lucide-react';
 import { useLanguage } from "@/contexts/LanguageContext";
 import Link from "next/link";
@@ -31,7 +31,7 @@ export default function SuperAdminExamResultsPage() {
   const fetchData = async () => {
     try {
       const token = localStorage.getItem("super_admin_token");
-      const res = await fetch(`${API_URL}/exams/${id}/submissions`, {
+      const res = await apiFetch(`${API_URL}/exams/${id}/submissions`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();

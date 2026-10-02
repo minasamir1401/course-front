@@ -29,6 +29,7 @@ export const LessonBuilderModal: React.FC = () => {
   const { showToast } = useNotification();
   const {
     role,
+    allowContentDeletion,
     currentLesson,
     setCurrentLesson,
     activeTab: contextActiveTab,
@@ -70,9 +71,9 @@ export const LessonBuilderModal: React.FC = () => {
     excelContext.current = { currentModule: currentLesson, setCurrentModule: setCurrentLesson, language, showToast, isLoadingQuestions: isLessonContentLoading };
   }, [currentLesson, setCurrentLesson, language, showToast, isLessonContentLoading]);
   const handleQuestionsExcelChange = (e: React.ChangeEvent<HTMLInputElement>) =>
-    importModuleQuestions(e, null, 'questions', () => excelContext.current, role === 'SUPER_ADMIN');
+    importModuleQuestions(e, null, 'questions', () => excelContext.current, allowContentDeletion);
   const handleAssignmentsExcelChange = (e: React.ChangeEvent<HTMLInputElement>) =>
-    importModuleQuestions(e, null, 'assignments', () => excelContext.current, role === 'SUPER_ADMIN');
+    importModuleQuestions(e, null, 'assignments', () => excelContext.current, allowContentDeletion);
 
   const downloadQuestionsTemplate = (type: 'questions' | 'assignments') => {
     const filename = language === 'ar'

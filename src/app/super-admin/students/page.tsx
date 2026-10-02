@@ -1,6 +1,6 @@
 "use client";
 
-import { API_URL } from '@/lib/api';
+import { apiFetch, API_URL } from '@/lib/api';
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Users, Plus, Search, Shield, User, Mail, ChevronRight, MoreVertical, Edit2, Trash2, Key, X, Building2, GraduationCap, Sparkles, FileSpreadsheet } from 'lucide-react';
@@ -55,8 +55,8 @@ export default function StudentsManagement() {
     const token = localStorage.getItem("super_admin_token");
     try {
       const [usersRes, schoolsRes] = await Promise.all([
-        fetch(API_URL + "/admin/users", { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch(API_URL + "/admin/schools", { headers: { "Authorization": `Bearer ${token}` } })
+        apiFetch(API_URL + "/admin/users", { headers: { "Authorization": `Bearer ${token}` } }),
+        apiFetch(API_URL + "/admin/schools", { headers: { "Authorization": `Bearer ${token}` } })
       ]);
       
       if (usersRes.ok) {
@@ -126,7 +126,7 @@ export default function StudentsManagement() {
       const url = isEditMode ? `${API_URL}/admin/users/${editingStudentId}` : `${API_URL}/admin/users`;
       const method = isEditMode ? "PUT" : "POST";
       
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method: method,
         headers: { 
           "Content-Type": "application/json",
@@ -160,7 +160,7 @@ export default function StudentsManagement() {
 
     const token = localStorage.getItem("super_admin_token");
     try {
-      const res = await fetch(API_URL + `/admin/users/${id}`, {
+      const res = await apiFetch(API_URL + `/admin/users/${id}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${token}` }
       });

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Users, Plus, Search, Trash2, Edit2, Shield, X, Mail, Phone, BookOpen, GraduationCap } from 'lucide-react';
-import { API_URL, getFullImageUrl } from "@/lib/api";
+import { apiFetch, API_URL, getFullImageUrl } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -47,7 +47,7 @@ export default function SchoolAdminTeachersPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem("school_admin_token");
-      const res = await fetch(`${API_URL}/admin/users?schoolId=${sId}&role=TEACHER`, {
+      const res = await apiFetch(`${API_URL}/admin/users?schoolId=${sId}&role=TEACHER`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -71,7 +71,7 @@ export default function SchoolAdminTeachersPage() {
     }
 
     try {
-      const res = await fetch(`${API_URL}/admin/users`, {
+      const res = await apiFetch(`${API_URL}/admin/users`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ 
@@ -104,7 +104,7 @@ export default function SchoolAdminTeachersPage() {
 
     try {
       const token = localStorage.getItem("school_admin_token");
-      const res = await fetch(`${API_URL}/admin/users/${id}`, {
+      const res = await apiFetch(`${API_URL}/admin/users/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }
       });

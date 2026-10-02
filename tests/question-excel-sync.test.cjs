@@ -43,10 +43,31 @@ test('exported row deletion affects only exported IDs, preserves newer questions
   assert.deepEqual(plan.deletedIds, ['q2']);
   assert.deepEqual(plan.questions.map(q => q.id), ['q1', 'newer']);
 });
-test('school admin deletion fails atomically', () => {
+test('locked deletion policy rejects Excel deletion atomically', () => {
   const rows = questionExportRows([q()], 'en'); rows[1][1] = 'DELETE';
-  assert.throws(() => planQuestionImport(rows, [q()], { canDelete: false }), /Super Admin/);
-  assert.throws(() => planQuestionImport([rows[0]], [q()], { canDelete: false, exportedIds: ['q1'] }), /Super Admin/);
+  assert.throws(() => planQuestionImport(rows, [q()], { canDelete: false }), /الحذف مقفل/);
+  assert.throws(() => planQuestionImport([rows[0]], [q()], { canDelete: false, exportedIds: ['q1'] }), /الحذف مقفل/);
+});
+
+test('open policy permits explicit and missing-row deletions for any authorized editor', () => {
+  const rows = questionExportRows([q()], 'en'); rows[1][1] = 'DELETE';
+  assert.deepEqual(planQuestionImport(rows, [q()], opts).deletedIds, ['q1']);
+  assert.deepEqual(planQuestionImport([rows[0]], [q()], { ...opts, exportedIds: ['q1'] }).deletedIds, ['q1']);
+});
+
+test('copy mode creates new question IDs while preserving all existing questions', () => {
+  const current = [q('existing')];
+  const plan = readQuestionImport(buildQuestionWorkbook([q('foreign')], 'en'), current, false, 'en', true);
+  assert.equal(plan.added, 1);
+  assert.equal(plan.updated, 0);
+  assert.deepEqual(plan.deletedIds, []);
+  assert.strictEqual(plan.questions[0], current[0]);
+  assert.notEqual(plan.questions[1].id, 'foreign');
+});
+
+test('copy mode never turns DELETE rows into deletions of another list', () => {
+  const rows = questionExportRows([q('foreign')], 'en'); rows[1][1] = 'DELETE';
+  assert.throws(() => planQuestionImport(rows, [q()], { ...opts, importAsNew: true }), /DELETE/);
 });
 test('old templates add; partial old exports never delete missing questions', () => {
   const rows = [['Question', 'Option 1', 'Option 2', 'Correct Answer', 'Points'], ['New?', 'A', 'B', 'B', 1]];
@@ -170,3 +191,31 @@ test('template or addition rows without ID or with dummy sequence ID succeed wit
   assert.equal(plan2.added, 1);
 });
 
+test('adding a copy of an exported ID never deletes the original question', () => {
+  const rows = questionExportRows([q()], 'en'); rows[1][1] = 'ADD';
+  const plan = planQuestionImport(rows, [q()], { ...opts, exportedIds: ['q1'] });
+  assert.equal(plan.added, 1);
+  assert.deepEqual(plan.deletedIds, []);
+  assert.equal(plan.questions[0].id, 'q1');
+});
+
+test('foreign exported workbook previews copying and applies new IDs only after confirmation', async t => {
+  const originalWindow = global.window; t.after(() => { global.window = originalWindow; });
+  const wb = buildQuestionWorkbook([q('foreign')], 'en');
+  const bytes = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+  const current = { questions: [q('existing')] };
+  let preview = ''; let error;
+  const ctx = { currentModule: current, language: 'en', showToast(message, type) { if (type === 'error') error = message; },
+    setCurrentModule(fn) { this.currentModule = fn(this.currentModule); } };
+  const input = () => ({ target: { files: [{ arrayBuffer: async () => bytes }], value: 'x' } });
+  global.window = { confirm: message => { preview = message; return false; } };
+  await importModuleQuestions(input(), null, 'questions', () => ctx, false);
+  assert.match(preview, /new copies with new IDs/);
+  assert.strictEqual(ctx.currentModule, current);
+  global.window.confirm = () => true;
+  await importModuleQuestions(input(), null, 'questions', () => ctx, false);
+  assert.equal(error, undefined);
+  assert.equal(ctx.currentModule.questions.length, 2);
+  assert.equal(ctx.currentModule.questions[0].id, 'existing');
+  assert.notEqual(ctx.currentModule.questions[1].id, 'foreign');
+});

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { API_URL } from "@/lib/api";
+import { apiFetch, API_URL } from "@/lib/api";
 import DashboardLayout from "@/components/DashboardLayout";
 import { ChevronRight, LayoutDashboard, RefreshCw, Award, Target, Clock, User, Mail, ArrowRight, FileText, BarChart3, HelpCircle, Layers } from 'lucide-react';
 import Image from 'next/image';
@@ -116,7 +116,7 @@ export default function SchoolAdminSubmissionDetailsPage() {
   const fetchResult = async () => {
     try {
       const token = localStorage.getItem("school_admin_token");
-      const res = await fetch(`${API_URL}/exams/submissions/${id}`, {
+      const res = await apiFetch(`${API_URL}/exams/submissions/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();

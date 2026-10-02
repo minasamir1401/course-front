@@ -2,7 +2,7 @@
 import React from 'react';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { API_URL } from '@/lib/api';
+import { apiFetch, API_URL } from '@/lib/api';
 import { findSelectedSubExamLocation } from '@/lib/selectedSubExam';
 import { attachQuestionsToModules } from '@/lib/examModuleQuestions';
 import { normalizePersistedExamQuestions } from '@/lib/persistedExamQuestion';
@@ -138,7 +138,7 @@ export const useExamState = (schoolIdParam: string | null, examId: string, selec
 
   const fetchSchools = async (token: string) => {
     try {
-      const res = await fetch(`${API_URL}/admin/schools?limit=100`, {
+      const res = await apiFetch(`${API_URL}/admin/schools?limit=100`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -154,13 +154,13 @@ export const useExamState = (schoolIdParam: string | null, examId: string, selec
   const fetchQuestions = async (token: string, eId: string, generation: number, href: string) => {
     try {
       setIsLoadingQuestions(true);
-      let qRes = await fetch(`${API_URL}/exams/${eId}/questions${selectedSubExamId ? `?subExamId=${encodeURIComponent(selectedSubExamId)}` : ''}`, {
+      let qRes = await apiFetch(`${API_URL}/exams/${eId}/questions${selectedSubExamId ? `?subExamId=${encodeURIComponent(selectedSubExamId)}` : ''}`, {
         headers: { Authorization: `Bearer ${token}` },
         cache: 'no-store'
       });
       if (qRes.status === 404) {
         // Fallback for servers where /questions is not yet deployed
-        qRes = await fetch(`${API_URL}/exams/${eId}?onlyQuestions=true${selectedSubExamId ? `&subExamId=${encodeURIComponent(selectedSubExamId)}` : ''}`, {
+        qRes = await apiFetch(`${API_URL}/exams/${eId}?onlyQuestions=true${selectedSubExamId ? `&subExamId=${encodeURIComponent(selectedSubExamId)}` : ''}`, {
           headers: { Authorization: `Bearer ${token}` },
           cache: 'no-store'
         });
@@ -233,7 +233,7 @@ export const useExamState = (schoolIdParam: string | null, examId: string, selec
       autoSaveGenerationRef.current += 1;
       setIsLoadingQuestions(true);
       // Phase 1: Fetch exam structure and modules without questions for instant display
-      const res = await fetch(`${API_URL}/exams/${eId}?includeQuestions=false`, {
+      const res = await apiFetch(`${API_URL}/exams/${eId}?includeQuestions=false`, {
         headers: { Authorization: `Bearer ${token}` },
         cache: 'no-store'
       });

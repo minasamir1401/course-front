@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { API_URL } from "@/lib/api";
+import { apiFetch, API_URL } from "@/lib/api";
 import DashboardLayout from "@/components/DashboardLayout";
 import { CheckCircle2, XCircle, ChevronRight, LayoutDashboard, RefreshCw, Award, Target, Clock, User, Mail, ArrowRight, FileText, BarChart3, HelpCircle, Layers, Building2, Users } from 'lucide-react';
 import Image from 'next/image';
@@ -24,7 +24,7 @@ export default function ExamAnalyticsPage() {
   const fetchAnalytics = async () => {
     try {
       const token = localStorage.getItem("school_admin_token") || localStorage.getItem("lms_token") || localStorage.getItem("token");
-      const res = await fetch(`${API_URL}/exams/${id}/analytics`, {
+      const res = await apiFetch(`${API_URL}/exams/${id}/analytics`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const json = await res.json();

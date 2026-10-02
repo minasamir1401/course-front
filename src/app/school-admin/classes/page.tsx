@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Layout, Plus, Search, Trash2, Users, GraduationCap, BookOpen, X, ChevronDown, CheckCircle2, Edit2 } from 'lucide-react';
-import { API_URL } from "@/lib/api";
+import { apiFetch, API_URL } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -57,7 +57,7 @@ export default function SchoolAdminClassesPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem("school_admin_token");
-      const res = await fetch(`${API_URL}/classes?schoolId=${sId}`, {
+      const res = await apiFetch(`${API_URL}/classes?schoolId=${sId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -75,7 +75,7 @@ export default function SchoolAdminClassesPage() {
   const fetchTeachers = async (sId: string) => {
     try {
       const token = localStorage.getItem("school_admin_token");
-      const res = await fetch(`${API_URL}/admin/users?schoolId=${sId}&role=TEACHER`, {
+      const res = await apiFetch(`${API_URL}/admin/users?schoolId=${sId}&role=TEACHER`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -99,7 +99,7 @@ export default function SchoolAdminClassesPage() {
       const url = isEditMode ? `${API_URL}/classes/${editingClassId}` : `${API_URL}/classes`;
       const method = isEditMode ? "PUT" : "POST";
       
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method,
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ ...formData, schoolId })
@@ -137,7 +137,7 @@ export default function SchoolAdminClassesPage() {
 
     try {
       const token = localStorage.getItem("school_admin_token");
-      const res = await fetch(`${API_URL}/classes/${id}`, {
+      const res = await apiFetch(`${API_URL}/classes/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }
       });

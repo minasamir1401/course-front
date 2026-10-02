@@ -5,7 +5,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Plus, Search, Book, ArrowUpRight, BookOpen, Layers, Edit2, Trash2, Monitor, GraduationCap, Sparkles, Filter, BrainCircuit } from 'lucide-react';
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { API_URL, getFullImageUrl } from "@/lib/api";
+import { apiFetch, API_URL, getFullImageUrl } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -38,7 +38,7 @@ export default function SuperAdminSkillsHubPage() {
       const token = localStorage.getItem("super_admin_token");
       const url = new URL(`${API_URL}/skills-hub/clusters`);
       
-      const res = await fetch(url.toString(), {
+      const res = await apiFetch(url.toString(), {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -122,7 +122,7 @@ export default function SuperAdminSkillsHubPage() {
     if (!window.confirm(language === 'ar' ? "هل أنت متأكد من حذف هذا المحور بالكامل؟" : "Are you sure you want to delete this cluster?")) return;
     try {
       const token = localStorage.getItem("super_admin_token");
-      const res = await fetch(`${API_URL}/skills-hub/clusters/${id}`, {
+      const res = await apiFetch(`${API_URL}/skills-hub/clusters/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

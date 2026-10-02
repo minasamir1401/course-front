@@ -1,6 +1,6 @@
 "use client";
 
-import { API_URL } from '@/lib/api';
+import { apiFetch, API_URL } from '@/lib/api';
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Users, Plus, Search, Shield, User, ChevronRight, Trash2, Key, X, GraduationCap, School, Sparkles, Edit } from 'lucide-react';
@@ -79,8 +79,8 @@ function UsersManagementContent() {
     const token = localStorage.getItem("super_admin_token");
     try {
       const [usersRes, schoolsRes] = await Promise.all([
-        fetch(API_URL + "/admin/users?limit=10000", { headers: { "Authorization": `Bearer ${token}` } }),
-        fetch(API_URL + "/admin/schools?limit=10000", { headers: { "Authorization": `Bearer ${token}` } })
+        apiFetch(API_URL + "/admin/users?limit=10000", { headers: { "Authorization": `Bearer ${token}` } }),
+        apiFetch(API_URL + "/admin/schools?limit=10000", { headers: { "Authorization": `Bearer ${token}` } })
       ]);
 
       if (usersRes.ok) {
@@ -108,7 +108,7 @@ function UsersManagementContent() {
     setIsSubmitting(true);
     const token = localStorage.getItem("super_admin_token");
     try {
-      const res = await fetch(API_URL + "/admin/users", {
+      const res = await apiFetch(API_URL + "/admin/users", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -163,7 +163,7 @@ function UsersManagementContent() {
       const payload: any = { ...formData };
       if (!payload.password) delete payload.password; // Don't send empty password
 
-      const res = await fetch(`${API_URL}/admin/users/${selectedUser.id}`, {
+      const res = await apiFetch(`${API_URL}/admin/users/${selectedUser.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -212,7 +212,7 @@ function UsersManagementContent() {
     const token = localStorage.getItem("super_admin_token");
     try {
       await Promise.all(selectedUsers.map(id => 
-        fetch(`${API_URL}/admin/users/${id}`, {
+        apiFetch(`${API_URL}/admin/users/${id}`, {
           method: "DELETE",
           headers: { "Authorization": `Bearer ${token}` }
         })
@@ -236,7 +236,7 @@ function UsersManagementContent() {
 
     const token = localStorage.getItem("super_admin_token");
     try {
-      const res = await fetch(`${API_URL}/admin/users/${id}`, {
+      const res = await apiFetch(`${API_URL}/admin/users/${id}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -257,7 +257,7 @@ function UsersManagementContent() {
     const token = localStorage.getItem("super_admin_token");
     
     try {
-      const res = await fetch(`${API_URL}/admin/impersonate/${user.id}`, {
+      const res = await apiFetch(`${API_URL}/admin/impersonate/${user.id}`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,

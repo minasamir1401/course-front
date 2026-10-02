@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useEffect } from 'react';
-import { API_URL } from '@/lib/api';
+import { apiFetch, API_URL } from '@/lib/api';
 import { canRunExamAutosave } from '@/lib/examAutosavePolicy';
 import { buildDraftModules } from '@/lib/examEditingPayload';
 
@@ -117,7 +117,7 @@ export const useExamAutosave = (props: any) => {
           ? `${API_URL}/exams/${activeExamId}?compact=true`
           : `${API_URL}/exams`;
 
-        const res = await fetch(url, {
+        const res = await apiFetch(url, {
           method,
           headers: {
             Authorization: `Bearer ${token}`,

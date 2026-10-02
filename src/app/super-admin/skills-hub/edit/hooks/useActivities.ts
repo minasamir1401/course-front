@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { API_URL } from '@/lib/api';
+import { apiFetch, API_URL } from '@/lib/api';
 
 const getSuperToken = () => {
   if (typeof window === 'undefined') return '';
@@ -18,7 +18,7 @@ export const useActivities = (props: { clusterId: string | null; language: strin
   const fetchActivities = async (lessonId: string) => {
     try {
       const token = getSuperToken();
-      const res = await fetch(`${API_URL}/skills-hub/lessons/${lessonId}/activities`, {
+      const res = await apiFetch(`${API_URL}/skills-hub/lessons/${lessonId}/activities`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -143,7 +143,7 @@ export const useActivities = (props: { clusterId: string | null; language: strin
         keyInsightEn: data.keyInsightEn || null
       };
 
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
@@ -173,7 +173,7 @@ export const useActivities = (props: { clusterId: string | null; language: strin
     
     try {
       const token = getSuperToken();
-      const res = await fetch(`${API_URL}/skills-hub/activities/${id}`, {
+      const res = await apiFetch(`${API_URL}/skills-hub/activities/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

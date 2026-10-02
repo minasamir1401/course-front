@@ -5,7 +5,7 @@ import Image from "next/image";
 import DashboardLayout from "@/components/DashboardLayout";
 import { BookOpen, Video, Plus, Search, Layers, Edit2, Trash2, Monitor, HelpCircle, FileText, ChevronLeft, Settings, Layout, Target, CheckCircle2, X, Save, ArrowRight, Activity, Calendar, Download, MoreVertical, GraduationCap, ArrowUpRight } from 'lucide-react';
 import { useRouter } from "next/navigation";
-import { API_URL, getFullImageUrl } from "@/lib/api";
+import { apiFetch, API_URL, getFullImageUrl } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -34,7 +34,7 @@ export default function SchoolAdminCoursesPage() {
 
   const fetchCourses = async (token: string, sId: string) => {
     try {
-      const res = await fetch(`${API_URL}/courses?schoolId=${sId}`, {
+      const res = await apiFetch(`${API_URL}/courses?schoolId=${sId}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -52,7 +52,7 @@ export default function SchoolAdminCoursesPage() {
     if (!window.confirm(t('coursesPage.deleteConfirm') || "Are you sure you want to delete this course?")) return;
     try {
       const token = localStorage.getItem("school_admin_token");
-      const res = await fetch(`${API_URL}/school/courses/${id}`, {
+      const res = await apiFetch(`${API_URL}/school/courses/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

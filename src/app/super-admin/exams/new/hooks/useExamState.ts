@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useState, useRef, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { API_URL } from '@/lib/api';
+import { apiFetch, API_URL } from '@/lib/api';
 import { ExamData, ModuleData, Question } from '../types';
 import { INITIAL_AVAILABLE_METADATA } from '@/lib/examQuestionMetadata';
 
@@ -121,7 +121,7 @@ export const useExamState = (schoolIdParam: string | null) => {
 
   const fetchSchools = async (token: string) => {
     try {
-      const res = await fetch(`${API_URL}/admin/schools?limit=100`, {
+      const res = await apiFetch(`${API_URL}/admin/schools?limit=100`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { API_URL } from '@/lib/api';
+import { apiFetch, API_URL } from '@/lib/api';
 import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Users, GraduationCap, Building2, ClipboardList, Shield, Search, Plus, Filter, MoreVertical, Edit2, Trash2, Key, X, Building, Users2, Heart, UserCheck, Activity, BarChart3, ArrowLeft, ChevronRight, Sparkles, Phone, Mail, MapPin, CheckCircle2, AlertCircle, Clock, BookOpen } from 'lucide-react';
@@ -60,7 +60,7 @@ export default function SchoolManagementPage() {
     const token = localStorage.getItem("super_admin_token");
     try {
       // Fetch School Info
-      const schoolRes = await fetch(`${API_URL}/admin/schools`, {
+      const schoolRes = await apiFetch(`${API_URL}/admin/schools`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (schoolRes.ok) {
@@ -71,7 +71,7 @@ export default function SchoolManagementPage() {
       }
 
       // Fetch School Stats
-      const statsRes = await fetch(`${API_URL}/admin/schools/${id}/stats`, {
+      const statsRes = await apiFetch(`${API_URL}/admin/schools/${id}/stats`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (statsRes.ok) setSchoolStats(await statsRes.json());
@@ -85,7 +85,7 @@ export default function SchoolManagementPage() {
       };
 
       if (activeTab === 'COURSES') {
-        const coursesRes = await fetch(`${API_URL}/courses?schoolId=${id}`, {
+        const coursesRes = await apiFetch(`${API_URL}/courses?schoolId=${id}`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (coursesRes.ok) {
@@ -93,7 +93,7 @@ export default function SchoolManagementPage() {
           setCourses(Array.isArray(data.courses) ? data.courses : (Array.isArray(data) ? data : []));
         }
       } else {
-        const usersRes = await fetch(`${API_URL}/admin/users?schoolId=${id}&role=${roleMap[activeTab]}`, {
+        const usersRes = await apiFetch(`${API_URL}/admin/users?schoolId=${id}&role=${roleMap[activeTab]}`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (usersRes.ok) {
@@ -152,7 +152,7 @@ export default function SchoolManagementPage() {
 
       const body = { ...cleanData, schoolId: id, role: roleMap[activeTab] };
 
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method: method,
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -185,7 +185,7 @@ export default function SchoolManagementPage() {
     const endpoint = '/admin/users';
 
     try {
-      const res = await fetch(`${API_URL}${endpoint}/${userId}`, {
+      const res = await apiFetch(`${API_URL}${endpoint}/${userId}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -221,7 +221,7 @@ export default function SchoolManagementPage() {
     const token = localStorage.getItem("super_admin_token");
     
     try {
-      const res = await fetch(`${API_URL}/admin/impersonate/${user.id}`, {
+      const res = await apiFetch(`${API_URL}/admin/impersonate/${user.id}`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,

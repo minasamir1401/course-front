@@ -4,7 +4,7 @@ import { buildCourseMetadataTemplateRows } from '@/lib/examExcelTemplates';
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { API_URL } from '@/lib/api';
+import { apiFetch, API_URL } from '@/lib/api';
 import { normalizeDok } from '@/lib/examQuestionMetadata';
 import { useNotification } from "@/context/NotificationContext";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -382,7 +382,7 @@ export default function CreateCoursePage() {
 
   const fetchSchools = async (token: string) => {
     try {
-      const res = await fetch(`${API_URL}/admin/schools`, {
+      const res = await apiFetch(`${API_URL}/admin/schools`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -400,7 +400,7 @@ export default function CreateCoursePage() {
       if (!confirm(language === 'ar' ? "هل أنت متأكد من حذف هذا الدرس نهائياً؟" : "Are you sure you want to permanently delete this lesson?")) return;
       try {
         const token = localStorage.getItem("super_admin_token");
-        const res = await fetch(`${API_URL}/lessons/${lesson.id}`, {
+        const res = await apiFetch(`${API_URL}/lessons/${lesson.id}`, {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` }
         });

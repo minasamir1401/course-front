@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { useDeletionPolicy } from '@/hooks/useDeletionPolicy';
 import { buildQuestionWorkbook, importModuleQuestions } from '@/lib/questionExcelWorkbook';
 import { planQuestionImport } from '@/lib/questionExcelSync';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -14,6 +15,7 @@ import { collectMetadataFromQuestions, mergeAvailableMetadata, normalizeDok } fr
 import { canCreateModule } from '@/lib/moduleCreationPolicy';
 export const useModuleManagement = (
   props: any) => {
+  const canDelete = useDeletionPolicy('SCHOOL_ADMIN');
   const { t } = props;
   const { currentModule, setCurrentModule, modules, setModules, setIsModuleModalOpen, setEditingModuleIndex, setActiveTab, setAvailableMetadata, showToast, language, editingModuleIndex } = props;
 
@@ -190,9 +192,9 @@ const openAddModuleModal = () => {
     excelContext.current = props;
   });
   const handleQuestionsExcelChange = (e: React.ChangeEvent<HTMLInputElement>, activeSubExamIndex: number | null) =>
-    importModuleQuestions(e, activeSubExamIndex, 'questions', () => excelContext.current, false);
+    importModuleQuestions(e, activeSubExamIndex, 'questions', () => excelContext.current, canDelete);
   const handleAssignmentsExcelChange = (e: React.ChangeEvent<HTMLInputElement>, activeSubExamIndex: number | null) =>
-    importModuleQuestions(e, activeSubExamIndex, 'assignments', () => excelContext.current, false);
+    importModuleQuestions(e, activeSubExamIndex, 'assignments', () => excelContext.current, canDelete);
 
   const handleExcelUpload = (type: 'questions' | 'metadata' | 'assignments' | 'advancedMetadata') => {
     if (type === 'metadata') {

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { API_URL } from '@/lib/api';
+import { apiFetch, API_URL } from '@/lib/api';
 import { buildCreatedModulePortalHref } from '@/lib/moduleCreationWorkflow';
 import { buildDraftModules } from '@/lib/examEditingPayload';
 
@@ -107,7 +107,7 @@ export const useExamSubmit = (props: any) => {
         ? `${API_URL}/exams/${activeExamId}?compact=true`
         : `${API_URL}/exams`;
 
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method,
         headers: {
           Authorization: `Bearer ${token}`,

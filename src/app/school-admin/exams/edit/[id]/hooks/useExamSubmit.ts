@@ -1,4 +1,4 @@
-import { API_URL } from '@/lib/api';
+import { apiFetch, API_URL } from '@/lib/api';
 import { buildDraftModules, buildExamSubmissionPayload } from '@/lib/examEditingPayload';
 import { buildExamSavePayload, isChildExamSave } from '@/lib/examSaveScope';
 import { getStandaloneExamQuestions } from '@/lib/examModuleQuestions';
@@ -61,7 +61,7 @@ export const useExamSubmit = (props: any) => {
         const activeSubExam = (currentModule?.subExams || []).find((subExam: any) => String(subExam?.id || '') === String(subExamId));
         if (!activeSubExam) throw new Error(language === 'ar' ? 'الاختبار غير موجود' : 'Exam not found');
 
-        const childRes = await fetch(`${API_URL}/exams/${createdIdRef.current}/modules/${moduleId}/exams/${subExamId}`, {
+        const childRes = await apiFetch(`${API_URL}/exams/${createdIdRef.current}/modules/${moduleId}/exams/${subExamId}`, {
           method: 'PUT',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -87,7 +87,7 @@ export const useExamSubmit = (props: any) => {
         ? `${API_URL}/exams/${activeExamId}?compact=true`
         : `${API_URL}/exams`;
 
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method,
         headers: {
           Authorization: `Bearer ${token}`,

@@ -6,7 +6,7 @@ import { Database, Plus, Trash2, Download, Upload, RefreshCw, Calendar, HardDriv
 import { useRouter } from "next/navigation";
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { API_URL } from "@/lib/api";
+import { apiFetch, API_URL } from "@/lib/api";
 import BackupExplorerModal from "@/components/modals/BackupExplorerModal";
 
 interface BackupFile {
@@ -68,7 +68,7 @@ export default function BackupsPage() {
   const fetchLiveCourses = async () => {
     try {
       const token = localStorage.getItem("super_admin_token") || localStorage.getItem("token");
-      const res = await fetch(`${API_URL}/courses`, {
+      const res = await apiFetch(`${API_URL}/courses`, {
         headers: {
           "Authorization": `Bearer ${token}`
         }
@@ -112,7 +112,7 @@ export default function BackupsPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem("super_admin_token") || localStorage.getItem("token");
-      const res = await fetch(`${API_URL}/admin/backup/list`, {
+      const res = await apiFetch(`${API_URL}/admin/backup/list`, {
         headers: {
           "Authorization": `Bearer ${token}`
         }
@@ -150,7 +150,7 @@ export default function BackupsPage() {
     setCreating(true);
     try {
       const token = localStorage.getItem("super_admin_token") || localStorage.getItem("token");
-      const res = await fetch(`${API_URL}/admin/backup/create`, {
+      const res = await apiFetch(`${API_URL}/admin/backup/create`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`
@@ -254,7 +254,7 @@ export default function BackupsPage() {
     try {
       const token = localStorage.getItem("super_admin_token") || localStorage.getItem("token");
       showToast(language === 'ar' ? "جاري قراءة محتويات النسخة..." : "Reading backup contents...", "success");
-      const res = await fetch(`${API_URL}/admin/backup/explore`, {
+      const res = await apiFetch(`${API_URL}/admin/backup/explore`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({ filename, source })
@@ -277,7 +277,7 @@ export default function BackupsPage() {
   const handleSelectiveRestore = async (selections: any[]) => {
     try {
       const token = localStorage.getItem("super_admin_token") || localStorage.getItem("token");
-      const res = await fetch(`${API_URL}/admin/backup/selective-restore`, {
+      const res = await apiFetch(`${API_URL}/admin/backup/selective-restore`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({ filename: explorerFilename, source: explorerSource, selections })
@@ -310,7 +310,7 @@ export default function BackupsPage() {
 
     try {
       const token = localStorage.getItem("super_admin_token") || localStorage.getItem("token");
-      const res = await fetch(`${API_URL}/admin/backup/upload`, {
+      const res = await apiFetch(`${API_URL}/admin/backup/upload`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`
@@ -343,7 +343,7 @@ export default function BackupsPage() {
     setCreating(true);
     try {
       const token = localStorage.getItem("super_admin_token") || localStorage.getItem("token");
-      const res = await fetch(`${API_URL}/admin/backup/bundle-manual`, {
+      const res = await apiFetch(`${API_URL}/admin/backup/bundle-manual`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -392,7 +392,7 @@ export default function BackupsPage() {
     
     try {
       await Promise.all(selectedBackups.map(async (filename) => {
-        const res = await fetch(`${API_URL}/admin/backup/${encodeURIComponent(filename)}`, {
+        const res = await apiFetch(`${API_URL}/admin/backup/${encodeURIComponent(filename)}`, {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -413,7 +413,7 @@ export default function BackupsPage() {
     
     try {
       const token = localStorage.getItem("super_admin_token") || localStorage.getItem("token");
-      const res = await fetch(`${API_URL}/admin/backup/${encodeURIComponent(filename)}`, {
+      const res = await apiFetch(`${API_URL}/admin/backup/${encodeURIComponent(filename)}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -453,7 +453,7 @@ export default function BackupsPage() {
 
     try {
       const token = localStorage.getItem("super_admin_token") || localStorage.getItem("token");
-      const res = await fetch(`${API_URL}/admin/backup/restore`, {
+      const res = await apiFetch(`${API_URL}/admin/backup/restore`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,

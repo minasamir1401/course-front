@@ -17,11 +17,6 @@ interface CourseEditorProps {
 const InnerCourseEditor: React.FC = () => {
   const router = useRouter();
   const { language } = useLanguage();
-  const [adminRole, setAdminRole] = React.useState<string | null>(null);
-
-  useEffect(() => {
-    setAdminRole(localStorage.getItem('admin_role'));
-  }, []);
   const {
     isLoading,
     isSubmitting,
@@ -144,7 +139,7 @@ const InnerCourseEditor: React.FC = () => {
                   <CourseSettingsForm />
 
                   {/* Danger Zone */}
-                  {(adminRole === 'SUPER_ADMIN' || allowContentDeletion) && (
+                  {allowContentDeletion && (
                     <div className="bg-red-50/50 rounded-[28px] border border-red-100 p-6 flex flex-col items-center justify-center gap-3">
                       <p className="text-xs font-bold text-red-500 text-center">{language === "ar" ? "منطقة الخطر" : "Danger Zone"}</p>
                       <button

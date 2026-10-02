@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { API_URL } from "@/lib/api";
+import { apiFetch, API_URL } from "@/lib/api";
 import { CheckCircle2, XCircle, Search, Filter, Loader2, Download, Building2, GraduationCap, ClipboardList } from 'lucide-react';
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -67,7 +67,7 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
   const fetchSchools = async () => {
     try {
       const token = getToken();
-      const res = await fetch(`${API_URL}/admin/schools`, {
+      const res = await apiFetch(`${API_URL}/admin/schools`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -84,7 +84,7 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
   const fetchExams = async () => {
     try {
       const token = getToken();
-      const res = await fetch(`${API_URL}/exams?schoolId=${selectedSchool}&grade=${selectedGrade}`, {
+      const res = await apiFetch(`${API_URL}/exams?schoolId=${selectedSchool}&grade=${selectedGrade}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -106,7 +106,7 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
     setError("");
     try {
       const token = getToken();
-      const res = await fetch(`${API_URL}/reports/exam-attendance?schoolId=${selectedSchool}&grade=${selectedGrade}&examId=${selectedExam}`, {
+      const res = await apiFetch(`${API_URL}/reports/exam-attendance?schoolId=${selectedSchool}&grade=${selectedGrade}&examId=${selectedExam}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();

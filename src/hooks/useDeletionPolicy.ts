@@ -1,53 +1,59 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { API_URL } from "@/lib/api";
+import { useEffect, useState } from 'react';
+import { API_URL, apiFetch } from '@/lib/api';
 
-let cachedPolicy: boolean | null = null;
+const POLICY_EVENT = 'content-deletion-policy-changed';
 let fetchPromise: Promise<boolean> | null = null;
 
-export const useDeletionPolicy = (role: string) => {
-  const [allowDeletion, setAllowDeletion] = useState<boolean>(
-    role === "SUPER_ADMIN" ? true : cachedPolicy ?? false
-  );
+export function notifyDeletionPolicyChanged() {
+  window.dispatchEvent(new Event(POLICY_EVENT));
+  localStorage.setItem(POLICY_EVENT, String(Date.now()));
+}
 
+// Deduplicate simultaneous readers without keeping stale permissions for a session.
+async function loadPolicy() {
+  if (!fetchPromise) {
+    fetchPromise = apiFetch(`${API_URL}/system/settings/deletion-policy`, { cache: 'no-store' })
+      .then(async res => {
+        if (!res.ok) throw new Error('Unable to load deletion policy');
+        return (await res.json()).allowContentDeletion === true;
+      })
+      .finally(() => { fetchPromise = null; });
+  }
+  return fetchPromise;
+}
+
+export const useDeletionPolicy = (role: string) => {
+  const [allowDeletion, setAllowDeletion] = useState(role === 'SUPER_ADMIN');
   useEffect(() => {
-    if (role === "SUPER_ADMIN") {
+    if (role === 'SUPER_ADMIN') {
       setAllowDeletion(true);
       return;
     }
-    
-    if (cachedPolicy !== null) {
-      setAllowDeletion(cachedPolicy);
-      return;
-    }
-
-    if (!fetchPromise) {
-      fetchPromise = (async () => {
-        try {
-          const token = localStorage.getItem("school_admin_token") || localStorage.getItem("token") || "";
-          const res = await fetch(`${API_URL}/system/settings/deletion-policy`, {
-            method: "GET",
-            headers: { Authorization: `Bearer ${token}` },
-            credentials: "include"
-          });
-          if (res.ok) {
-            const data = await res.json();
-            return Boolean(data.allowContentDeletion);
-          }
-          return false;
-        } catch (err) {
-          console.error("Failed to fetch deletion policy:", err);
-          return false;
-        }
-      })();
-    }
-
-    fetchPromise.then(policy => {
-      cachedPolicy = policy;
-      setAllowDeletion(policy);
-    });
+    setAllowDeletion(false);
+    if (!['SCHOOL_ADMIN', 'TEACHER'].includes(role)) return;
+    let active = true;
+    const refresh = () => {
+      if (document.visibilityState === 'hidden') return;
+      void loadPolicy().then(policy => { if (active) setAllowDeletion(policy); })
+        .catch(() => { if (active) setAllowDeletion(false); });
+    };
+    const onStorage = (event: StorageEvent) => { if (event.key === POLICY_EVENT) refresh(); };
+    refresh();
+    const timer = window.setInterval(refresh, 30_000);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    window.addEventListener(POLICY_EVENT, refresh);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+      window.removeEventListener(POLICY_EVENT, refresh);
+      window.removeEventListener('storage', onStorage);
+    };
   }, [role]);
-
-  return allowDeletion;
+  return role === 'SUPER_ADMIN' || allowDeletion;
 };

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { API_URL } from '@/lib/api';
+import { apiFetch, API_URL } from '@/lib/api';
 import { useNotification } from "@/context/NotificationContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -218,7 +218,7 @@ export default function EditSchoolSkillClusterPage() {
 
     const updatedDescription = JSON.stringify(updatedMetadata);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/skills-hub/lessons/${lessonId}`, {
+      const res = await apiFetch(`${API_URL}/skills-hub/lessons/${lessonId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ name: lesson.name, description: updatedDescription, order: lesson.order })

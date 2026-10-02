@@ -4,6 +4,8 @@
  * Authentication uses httpOnly cookies ('auth_token') sent automatically via credentials: 'include'.
  * The TOKEN keys below only store the UI marker string 'cookie_auth' for client-side route guards.
  */
+import { apiFetch } from './api';
+
 export const AUTH_KEYS = {
   SUPER_ADMIN: {
     TOKEN: "super_admin_token",
@@ -27,7 +29,7 @@ export const AUTH_KEYS = {
 
 export const checkAuthSession = async (): Promise<{ authenticated: boolean; user: any | null }> => {
   try {
-    const res = await fetch('/api/auth/me', { credentials: 'include' });
+    const res = await apiFetch('/api/auth/me');
     if (!res.ok) return { authenticated: false, user: null };
     const data = await res.json();
     return { authenticated: Boolean(data.authenticated), user: data.user || null };

@@ -64,7 +64,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
   setOpenDropdownId
 }) => {
   const { showToast } = useNotification();
-  const { availableMetadata } = useCourseEditor() as any;
+  const { availableMetadata, allowContentDeletion, role, lessons } = useCourseEditor() as any;
   const [expandedQuestionIndex, setExpandedQuestionIndex] = useState<number | null>(null);
   const [isQuestionStandardOpen, setIsQuestionStandardOpen] = useState(false);
   const [isQuestionIndicatorOpen, setIsQuestionIndicatorOpen] = useState(false);
@@ -74,11 +74,8 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
   const [questionSource, setQuestionSource] = useState<'assignments' | 'questions'>(source);
   const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
   
-  const [adminRole, setAdminRole] = useState<string | null>(null);
-  React.useEffect(() => {
-    setAdminRole(localStorage.getItem('admin_role'));
-  }, []);
-  const isSuperAdmin = adminRole === 'SUPER_ADMIN';
+  const isSuperAdmin = role === 'SUPER_ADMIN';
+  const canDeleteContent = allowContentDeletion;
 
   const [customSkills, setCustomSkills] = useState<string[]>([]);
   const [questionActiveLang, setQuestionActiveLang] = useState<'ar' | 'en'>('en');
@@ -468,6 +465,13 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
   };
 
   const removeQuestionForSource = (source: 'assignments' | 'questions', index: number) => {
+    const question = currentLesson[source]?.[index];
+    const savedLesson = lessons?.find((lesson: any) => lesson.id === currentLesson.id);
+    const savedQuestion = savedLesson?.[source]?.some((saved: any) => String(saved.id) === String(question?.id));
+    if (savedQuestion && !canDeleteContent) {
+      showToast(language === 'ar' ? 'الحذف مقفل حالياً من السوبر أدمن.' : 'Deletion is currently locked by Super Admin.', 'error');
+      return;
+    }
     if (!confirm(language === 'ar' ? "هل أنت متأكد من حذف هذا السؤال؟" : "Are you sure you want to delete this question?")) return;
     setCurrentLesson((prev: any) => {
       const newList = [...(prev[source] || [])];

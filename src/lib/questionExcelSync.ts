@@ -167,7 +167,7 @@ export function questionTemplateRows(language: string): any[][] {
 }
 
 export function planQuestionImport(rows: any[][], current: Question[], options: {
-  canDelete: boolean; exportedIds?: string[]; language?: string;
+  canDelete: boolean; exportedIds?: string[]; language?: string; importAsNew?: boolean;
 }) {
   const ar = options.language !== 'en';
   const fail = (en: string, arabic: string): never => { throw new Error(ar ? arabic : en); };
@@ -279,14 +279,17 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
   for (const [offset, row] of rows.slice(1).entries()) {
     if (!row.some(c => key(c))) continue;
     const rowFail = (en: string, arabic: string): never => fail(`Row ${offset + 2}: ${en}`, `الصف ${offset + 2}: ${arabic}`);
-    const rawId = idIndex < 0 ? '' : key(row[idIndex]);
+    const rawId = options.importAsNew || idIndex < 0 ? '' : key(row[idIndex]);
     const action = actionIndex < 0 ? '' : key(row[actionIndex]).toUpperCase();
     if (!['', 'ADD', 'UPDATE', 'DELETE', 'إضافة', 'تعديل', 'حذف'].includes(action)) rowFail('Invalid Action.', 'الإجراء غير صحيح.');
     if (rawId && seen.has(rawId)) rowFail('Duplicate Question ID.', 'رقم السؤال مكرر.');
 
     const isDelete = ['DELETE', 'حذف'].includes(action);
     if (isDelete) {
+      if (options.importAsNew) rowFail('Cannot copy a workbook containing DELETE rows.', 'لا يمكن نسخ ملف يحتوي على صفوف DELETE.');
       if (!rawId) rowFail('Deletion requires Question ID.', 'الحذف يحتاج رقم السؤال.');
+      if (!currentById.has(rawId)) rowFail('Question ID is not in this list. Export again.', 'رقم السؤال لا ينتمي للقائمة الحالية. أعد التصدير.');
+      seen.add(rawId);
       deleted.add(rawId);
       continue;
     }
@@ -300,7 +303,7 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
     if (!isAddition && id && !currentById.has(id)) {
       rowFail('Question ID is not in this list. Export again.', 'رقم السؤال لا ينتمي للقائمة الحالية. أعد التصدير.');
     }
-    if (id) seen.add(id);
+    if (rawId) seen.add(rawId);
 
     const previous = id ? currentById.get(id)! : undefined;
     const q: Question = { ...(previous || { points: 1, skill: 'General', options: [], correctAnswer: '', correctAnswers: [] }) };
@@ -579,7 +582,7 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
     if (!seen.has(id)) deleted.add(id);
   }
 
-  if (deleted.size && !options.canDelete) fail('Only Super Admin can delete saved questions. Restore removed rows or ask Super Admin.', 'حذف الأسئلة المحفوظة متاح للسوبر أدمن فقط (Super Admin). أعد الصفوف المحذوفة أو اطلب منه تنفيذ الاستيراد.');
+  if (deleted.size && !options.canDelete) fail('Deletion is locked by Super Admin. Enable content deletion or restore removed rows.', 'الحذف مقفل من السوبر أدمن. فعّل سياسة حذف المحتوى أو أعد الصفوف المحذوفة.');
   if (!seen.size && !added.length && !deleted.size) fail('No questions found.', 'لم يتم العثور على أسئلة.');
 
   return {

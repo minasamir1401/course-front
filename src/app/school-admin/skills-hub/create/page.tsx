@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { API_URL } from '@/lib/api';
+import { apiFetch, API_URL } from '@/lib/api';
 import { useNotification } from "@/context/NotificationContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -90,7 +90,7 @@ export default function CreateSchoolSkillClusterPage() {
     try {
       setIsLoading(true);
       const token = localStorage.getItem("school_admin_token");
-      const res = await fetch(`${API_URL}/skills-hub/clusters`, {
+      const res = await apiFetch(`${API_URL}/skills-hub/clusters`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

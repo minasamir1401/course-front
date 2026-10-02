@@ -6,7 +6,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Plus, Search, Book, ArrowUpRight, BookOpen, Layers, Edit2, Trash2, Monitor, GraduationCap, Sparkles, Filter, FileSpreadsheet, DownloadCloud, FileCode, Upload } from 'lucide-react';
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { API_URL, getFullImageUrl } from "@/lib/api";
+import { apiFetch, API_URL, getFullImageUrl } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import ImportExcelModal from "@/components/modals/ImportExcelModal";
@@ -78,7 +78,7 @@ export default function SuperAdminCoursesPage() {
         url.searchParams.append("search", debouncedSearch);
       }
 
-      const res = await fetch(url.toString(), {
+      const res = await apiFetch(url.toString(), {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -103,7 +103,7 @@ export default function SuperAdminCoursesPage() {
         url.searchParams.append("search", debouncedSearch);
       }
 
-      const res = await fetch(url.toString(), {
+      const res = await apiFetch(url.toString(), {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -142,7 +142,7 @@ export default function SuperAdminCoursesPage() {
       url.searchParams.append("page", "1");
       url.searchParams.append("limit", "100");
 
-      const res = await fetch(url.toString(), {
+      const res = await apiFetch(url.toString(), {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -226,7 +226,7 @@ export default function SuperAdminCoursesPage() {
     if (!window.confirm(t('coursesPage.deleteConfirm'))) return;
     try {
       const token = localStorage.getItem("super_admin_token");
-      const res = await fetch(`${API_URL}/school/courses/${id}`, {
+      const res = await apiFetch(`${API_URL}/school/courses/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -253,7 +253,7 @@ export default function SuperAdminCoursesPage() {
       formData.append("file", file);
 
       showToast(language === "ar" ? "جاري استعادة الكورس من ملف JSON..." : "Restoring course from JSON...", "info");
-      const res = await fetch(`${API_URL}/school/import/json/course`, {
+      const res = await apiFetch(`${API_URL}/school/import/json/course`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData
@@ -275,7 +275,7 @@ export default function SuperAdminCoursesPage() {
     try {
       const token = localStorage.getItem("super_admin_token");
       showToast(language === "ar" ? "جاري استرجاع الكورسات والدروس من السحابة..." : "Restoring courses & lessons from cloud...", "info");
-      const res = await fetch(`${API_URL}/admin/backup/restore-from-cloud`, {
+      const res = await apiFetch(`${API_URL}/admin/backup/restore-from-cloud`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -486,7 +486,7 @@ export default function SuperAdminCoursesPage() {
                                 onClick={async () => {
                                   try {
                                     const token = localStorage.getItem("super_admin_token") || localStorage.getItem("school_admin_token");
-                                    const res = await fetch(`${API_URL}/school/export/course/${course.id}`, {
+                                    const res = await apiFetch(`${API_URL}/school/export/course/${course.id}`, {
                                       headers: { Authorization: `Bearer ${token}` }
                                     });
                                     if (!res.ok) throw new Error("Failed to export course");
@@ -513,7 +513,7 @@ export default function SuperAdminCoursesPage() {
                                 onClick={async () => {
                                   try {
                                     const token = localStorage.getItem("super_admin_token") || localStorage.getItem("school_admin_token");
-                                    const res = await fetch(`${API_URL}/school/export/json/course/${course.id}`, {
+                                    const res = await apiFetch(`${API_URL}/school/export/json/course/${course.id}`, {
                                       headers: { Authorization: `Bearer ${token}` }
                                     });
                                     if (!res.ok) throw new Error("Failed to export JSON");

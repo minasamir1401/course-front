@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
+import { notifyDeletionPolicyChanged } from '@/hooks/useDeletionPolicy';
 import { Shield, Sparkles, Key, Eye, EyeOff, Settings, Lock, Unlock, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
-import { API_URL } from "@/lib/api";
+import { apiFetch, API_URL } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -69,7 +70,7 @@ export default function SuperAdminSettingsPage() {
         if (token && token !== "cookie_auth") {
           headers["Authorization"] = `Bearer ${token}`;
         }
-        const res = await fetch(`${API_URL}/system/settings/deletion-policy`, {
+        const res = await apiFetch(`${API_URL}/system/settings/deletion-policy`, {
           method: "GET",
           headers,
           credentials: "include"
@@ -123,7 +124,7 @@ export default function SuperAdminSettingsPage() {
         payload.password = securityData.password;
       }
 
-      const res = await fetch(`${API_URL}/admin/users/${user.id}`, {
+      const res = await apiFetch(`${API_URL}/admin/users/${user.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -178,7 +179,7 @@ export default function SuperAdminSettingsPage() {
         headers["Authorization"] = `Bearer ${token}`;
       }
 
-      const res = await fetch(`${API_URL}/system/settings/deletion-policy`, {
+      const res = await apiFetch(`${API_URL}/system/settings/deletion-policy`, {
         method: "PUT",
         headers,
         credentials: "include",
@@ -188,6 +189,7 @@ export default function SuperAdminSettingsPage() {
       if (res.ok) {
         const data = await res.json();
         setAllowContentDeletion(Boolean(data.allowContentDeletion));
+        notifyDeletionPolicyChanged();
         showToast(
           language === 'ar'
             ? (newValue

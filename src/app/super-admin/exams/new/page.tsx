@@ -25,7 +25,7 @@ import { QuestionsBuilder } from "./components/QuestionsBuilder";
 import { getGradeName, getSubjectName, parseJson } from "./utils/examUtils";
 import { getModuleCreationView } from "@/lib/moduleCreationWorkflow";
 import { buildDraftModules } from "@/lib/examEditingPayload";
-import { API_URL } from "@/lib/api";
+import { apiFetch, API_URL } from "@/lib/api";
 import { Edit2, PlusCircle } from "lucide-react";
 
 export default function SuperAdminNewExamPage() {
@@ -277,7 +277,7 @@ export default function SuperAdminNewExamPage() {
 
         const token = localStorage.getItem("super_admin_token");
         const activeExamId = createdIdRef.current;
-        const res = await fetch(
+        const res = await apiFetch(
           activeExamId ? `${API_URL}/exams/${activeExamId}` : `${API_URL}/exams`,
           {
             method: activeExamId ? "PUT" : "POST",
@@ -320,7 +320,7 @@ export default function SuperAdminNewExamPage() {
 
         let resolvedExamDetails = savedExam;
         if (!Array.isArray(resolvedExamDetails?.modules) || !resolvedExamDetails.modules[0]?.subExams) {
-          const detailRes = await fetch(`${API_URL}/exams/${savedExamId}`, {
+          const detailRes = await apiFetch(`${API_URL}/exams/${savedExamId}`, {
             headers: {
               Authorization: `Bearer ${token}`
             }

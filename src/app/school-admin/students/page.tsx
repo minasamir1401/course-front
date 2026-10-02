@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Users, Search, CheckCircle2, GraduationCap, Shield, Info, RefreshCw, Key, Edit, X } from 'lucide-react';
-import { API_URL } from "@/lib/api";
+import { apiFetch, API_URL } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNotification } from "@/context/NotificationContext";
 
@@ -32,7 +32,7 @@ export default function SchoolAdminStudentsPage() {
   const fetchClassrooms = async (sId: string) => {
     try {
       const token = localStorage.getItem("school_admin_token");
-      const res = await fetch(`${API_URL}/classes?schoolId=${sId}`, {
+      const res = await apiFetch(`${API_URL}/classes?schoolId=${sId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -70,7 +70,7 @@ export default function SchoolAdminStudentsPage() {
     const timeoutId = setTimeout(() => controller.abort(), 8000);
 
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `${API_URL}/admin/users?schoolId=${sId}&role=STUDENT`,
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -111,7 +111,7 @@ export default function SchoolAdminStudentsPage() {
         payload.password = formData.password;
       }
 
-      const res = await fetch(`${API_URL}/admin/users/${selectedStudent.id}`, {
+      const res = await apiFetch(`${API_URL}/admin/users/${selectedStudent.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

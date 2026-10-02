@@ -28,7 +28,7 @@ export const getFullImageUrl = (path: string | null | undefined) => {
 // ==========================================
 const TOKEN_EXPIRY_BUFFER_MS = 30 * 60 * 1000; // refresh if < 30 min left
 let _isRefreshing = false;
-let _refreshPromise: Promise<boolean> | null = null;
+let _refreshPromise: Promise<boolean | null> | null = null;
 
 const TOKEN_CONFIG: Record<string, { token: string; user: string; loginPath: string }> = {
   'super-admin': { token: 'super_admin_token', user: 'super_admin_user', loginPath: '/super-admin/login' },
@@ -71,18 +71,18 @@ const shouldProactivelyRefresh = (): boolean => {
 };
 
 /** Silently refresh token in the background */
-const silentRefresh = async (): Promise<boolean> => {
+const silentRefresh = async (explicitToken?: string | null): Promise<boolean | null> => {
   if (_isRefreshing && _refreshPromise) return _refreshPromise;
   _isRefreshing = true;
   _refreshPromise = (async () => {
     try {
-      const currentToken = getActiveToken();
+      const currentToken = explicitToken || getActiveToken();
       const res = await fetch(`${API_URL}/auth/refresh-token`, {
         method: 'POST',
         credentials: 'include', // send httpOnly cookie
         headers: currentToken ? { Authorization: `Bearer ${currentToken}` } : {}
       });
-      if (!res.ok) return false;
+      if (!res.ok) return res.status === 401 || res.status === 403 ? false : null;
       const data = await res.json();
       if (data.refreshed === true) {
         persistSessionExpiry(Number(data.expiresAt) || undefined);
@@ -93,12 +93,11 @@ const silentRefresh = async (): Promise<boolean> => {
           const merged = existingUser ? { ...JSON.parse(existingUser), ...data.user } : data.user;
           localStorage.setItem(userKey, JSON.stringify(merged));
         }
-        console.log('🔄 Token silently refreshed.');
         return true;
       }
       return false;
     } catch {
-      return false;
+      return null;
     } finally {
       _isRefreshing = false;
       _refreshPromise = null;
@@ -137,7 +136,11 @@ export const apiFetch = async (
   init?: RequestInit
 ): Promise<Response> => {
   // Proactive refresh before the request if token is expiring soon
-  if (typeof window !== 'undefined' && shouldProactivelyRefresh()) {
+  const suppliedHeaders = new Headers(init?.headers || (input instanceof Request ? input.headers : {}));
+  const suppliedAuthorization = suppliedHeaders.get('Authorization');
+  const explicitToken = suppliedAuthorization && suppliedAuthorization !== 'Bearer cookie_auth'
+    ? suppliedAuthorization.replace(/^Bearer\s+/i, '') : null;
+  if (typeof window !== 'undefined' && !explicitToken && shouldProactivelyRefresh()) {
     await silentRefresh();
   }
 
@@ -146,7 +149,7 @@ export const apiFetch = async (
 
   // Inject Authorization header if not already present and token exists
   let finalInit = init;
-  const headers = new Headers(init?.headers || {});
+  const headers = suppliedHeaders;
   // Always include credentials so the httpOnly auth_token cookie is sent automatically
   if (token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`);
@@ -165,23 +168,24 @@ export const apiFetch = async (
     try {
       const json = await cloned.json();
       const isTokenExpired =
+        (!explicitToken && json?.error === 'Access denied. No token provided.') ||
         json?.code === 'TOKEN_EXPIRED' ||
         json?.error?.includes('انتهت صلاحية الجلسة') ||
         json?.error === 'Invalid token.';
 
       if (isTokenExpired) {
         // Try one silent refresh
-        const refreshed = await silentRefresh();
+        const refreshed = await silentRefresh(explicitToken);
         if (refreshed) {
           // Retry with the refreshed httpOnly cookie. Drop any stale bearer value.
-          const retryHeaders = new Headers(init?.headers || {});
+          const retryHeaders = new Headers(headers);
           retryHeaders.delete('Authorization');
           res = await fetch(input, { ...init, headers: retryHeaders, credentials: 'include' });
           if (!res.ok && res.status === 401) {
             clearSessionAndRedirect();
           }
           return res;
-        } else {
+        } else if (refreshed === false) {
           clearSessionAndRedirect();
         }
       }

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { API_URL } from '@/lib/api';
+import { apiFetch, API_URL } from '@/lib/api';
 import { useNotification } from "@/context/NotificationContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -214,7 +214,7 @@ export default function EditSkillClusterPage() {
       const token = localStorage.getItem('super_admin_token') || localStorage.getItem('super_token');
       const updatedDescription = JSON.stringify(newMetadata);
 
-      const res = await fetch(`${API_URL}/skills-hub/lessons/${lessonId}`, {
+      const res = await apiFetch(`${API_URL}/skills-hub/lessons/${lessonId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ 

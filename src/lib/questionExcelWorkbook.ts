@@ -58,11 +58,11 @@ export function buildQuestionWorkbook(questions: any[] | null, language: string 
   return wb;
 }
 
-export function readQuestionImport(wb: XLSX.WorkBook, current: any[], canDelete: boolean, language: string) {
+export function readQuestionImport(wb: XLSX.WorkBook, current: any[], canDelete: boolean, language: string, importAsNew = false) {
   const sheet = wb.Sheets.Questions || wb.Sheets[wb.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: '' });
   let exportedIds: string[] | undefined;
-  if (wb.Sheets['Sync IDs']) {
+  if (wb.Sheets['Sync IDs'] && !importAsNew) {
     const manifest = XLSX.utils.sheet_to_json<any[]>(wb.Sheets['Sync IDs'], { header: 1, defval: '' });
     if (manifest[0]?.[0] !== 'Question Sync v1' || manifest[1]?.[0] !== 'Question ID') {
       throw new Error(language === 'ar' ? 'ورقة Sync IDs غير صالحة. أعد التصدير.' : 'Invalid Sync IDs sheet. Export again.');
@@ -70,7 +70,19 @@ export function readQuestionImport(wb: XLSX.WorkBook, current: any[], canDelete:
     exportedIds = manifest.slice(2).map(r => String(r[0] ?? '').trim()).filter(Boolean);
     if (new Set(exportedIds).size !== exportedIds.length) throw new Error('Duplicate Sync IDs / أرقام مزامنة مكررة');
   }
-  return planQuestionImport(rows, current, { canDelete, exportedIds, language });
+  return planQuestionImport(rows, current, { canDelete, exportedIds, language, importAsNew });
+}
+
+// A workbook exported elsewhere can be copied, but a partially matching or stale
+// export must stay strict so existing questions cannot be duplicated accidentally.
+export function isForeignQuestionWorkbook(wb: XLSX.WorkBook, current: any[]) {
+  const sheet = wb.Sheets.Questions || wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, defval: '' });
+  const idIndex = (rows[0] || []).findIndex(value => /question[\s_]*id|معرف|رقم السؤال|^id$/i.test(String(value).trim()));
+  if (idIndex < 0) return false;
+  const ids = rows.slice(1).map(row => String(row[idIndex] ?? '').trim()).filter(Boolean);
+  const currentIds = new Set(current.map(question => String(question.id ?? '').trim()).filter(Boolean));
+  return ids.length > 0 && ids.every(id => !currentIds.has(id));
 }
 
 export async function importModuleQuestions(
@@ -97,10 +109,23 @@ export async function importModuleQuestions(
     const child = source === 'questions' && subIndex != null;
     const target = child ? ctx.currentModule.subExams?.[subIndex] : ctx.currentModule;
     if (!target) throw new Error(language === 'ar' ? 'الاختبار المحدد غير موجود.' : 'Selected exam no longer exists.');
-    const plan = readQuestionImport(wb, target[source] || [], canDelete, language);
-    const summary = language === 'ar'
+    let copied = false;
+    let plan;
+    try {
+      plan = readQuestionImport(wb, target[source] || [], canDelete, language);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      if (!/not in this list|from another list|لا ينتمي للقائمة|لقائمة أخرى/.test(message) ||
+          !isForeignQuestionWorkbook(wb, target[source] || [])) throw error;
+      plan = readQuestionImport(wb, target[source] || [], canDelete, language, true);
+      copied = true;
+    }
+    const copyNotice = copied ? (language === 'ar'
+      ? 'الملف من قائمة أخرى. ستُضاف الأسئلة كنسخ جديدة بأرقام جديدة دون تعديل أو حذف الأسئلة الحالية.\n'
+      : 'This workbook belongs to another list. Questions will be added as new copies with new IDs; existing questions are preserved.\n') : '';
+    const summary = copyNotice + (language === 'ar'
       ? `مراجعة الاستيراد: إضافة ${plan.added}، تعديل ${plan.updated}، حذف ${plan.deletedIds.length}، بدون تغيير ${plan.unchanged}.\nهل تريد تطبيق هذه التغييرات؟`
-      : `Import preview: ${plan.added} added, ${plan.updated} updated, ${plan.deletedIds.length} deleted, ${plan.unchanged} unchanged.\nApply these changes?`;
+      : `Import preview: ${plan.added} added, ${plan.updated} updated, ${plan.deletedIds.length} deleted, ${plan.unchanged} unchanged.\nApply these changes?`);
     if (!window.confirm(summary)) return;
     ctx.setCurrentModule((prev: any) => child
       ? { ...prev, subExams: prev.subExams.map((s: any, i: number) => i === subIndex ? { ...s, [source]: plan.questions } : s) }

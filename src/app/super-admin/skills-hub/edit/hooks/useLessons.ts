@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { API_URL } from '@/lib/api';
+import { apiFetch, API_URL } from '@/lib/api';
 
 const getSuperToken = () => {
   if (typeof window === 'undefined') return '';
@@ -18,7 +18,7 @@ export const useLessons = (props: { clusterId: string | null; language: string; 
     if (!clusterId) return;
     try {
       const token = getSuperToken();
-      const res = await fetch(`${API_URL}/skills-hub/clusters/${clusterId}/lessons`, {
+      const res = await apiFetch(`${API_URL}/skills-hub/clusters/${clusterId}/lessons`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -59,7 +59,7 @@ export const useLessons = (props: { clusterId: string | null; language: string; 
         : `${API_URL}/skills-hub/lessons`;
       const method = isEdit ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
@@ -94,7 +94,7 @@ export const useLessons = (props: { clusterId: string | null; language: string; 
     
     try {
       const token = getSuperToken();
-      const res = await fetch(`${API_URL}/skills-hub/lessons/${id}`, {
+      const res = await apiFetch(`${API_URL}/skills-hub/lessons/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -117,7 +117,7 @@ export const useLessons = (props: { clusterId: string | null; language: string; 
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch(`${API_URL}/skills-hub/lessons/${targetLessonId}/upload-excel`, {
+      const res = await apiFetch(`${API_URL}/skills-hub/lessons/${targetLessonId}/upload-excel`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData

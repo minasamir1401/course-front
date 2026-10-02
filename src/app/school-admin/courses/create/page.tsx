@@ -1,10 +1,11 @@
 "use client";
+import { useDeletionPolicy } from '@/hooks/useDeletionPolicy';
 import { buildQuestionWorkbook, importModuleQuestions } from '@/lib/questionExcelWorkbook';
 import { buildCourseMetadataTemplateRows } from '@/lib/examExcelTemplates';
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { API_URL } from '@/lib/api';
+import { apiFetch, API_URL } from '@/lib/api';
 import { normalizeDok } from '@/lib/examQuestionMetadata';
 import { useNotification } from "@/context/NotificationContext";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -53,6 +54,7 @@ const parseJson = (str: any, fallback: any = {}) => {
 };
 
 export default function CreateCoursePage() {
+  const canDelete = useDeletionPolicy('SCHOOL_ADMIN');
   const { t, language } = useLanguage();
   const SECTION_STYLE_PRESETS: Record<string, {
     icon: any;
@@ -382,7 +384,7 @@ export default function CreateCoursePage() {
 
   const fetchSchools = async (token: string) => {
     try {
-      const res = await fetch(`${API_URL}/admin/schools`, {
+      const res = await apiFetch(`${API_URL}/admin/schools`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -400,7 +402,7 @@ export default function CreateCoursePage() {
       if (!confirm(language === 'ar' ? "هل أنت متأكد من حذف هذا الدرس نهائياً؟" : "Are you sure you want to permanently delete this lesson?")) return;
       try {
         const token = localStorage.getItem("school_admin_token");
-        const res = await fetch(`${API_URL}/lessons/${lesson.id}`, {
+        const res = await apiFetch(`${API_URL}/lessons/${lesson.id}`, {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -684,9 +686,9 @@ export default function CreateCoursePage() {
     excelContext.current = { currentModule: currentLesson, setCurrentModule: setCurrentLesson, language, showToast };
   });
   const handleQuestionsExcelChange = (e: React.ChangeEvent<HTMLInputElement>) =>
-    importModuleQuestions(e, null, 'questions', () => excelContext.current, false);
+    importModuleQuestions(e, null, 'questions', () => excelContext.current, canDelete);
   const handleAssignmentsExcelChange = (e: React.ChangeEvent<HTMLInputElement>) =>
-    importModuleQuestions(e, null, 'assignments', () => excelContext.current, false);
+    importModuleQuestions(e, null, 'assignments', () => excelContext.current, canDelete);
 
   const handleExcelUpload = (type: 'questions' | 'metadata' | 'assignments') => {
     if (type === 'metadata') {

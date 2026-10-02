@@ -4,7 +4,7 @@ import React, { useState, useRef } from "react";
 import { useCourseEditor } from "./CourseEditorContext";
 import { Layers, Plus, BookOpen, Eye, Clock, Monitor, Edit2, Trash2, X, DownloadCloud, FileSpreadsheet, FileCode, Upload, ArrowUp, ArrowDown, Copy } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { API_URL } from "@/lib/api";
+import { apiFetch, API_URL } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";
 import ImportExcelModal from "@/components/modals/ImportExcelModal";
 import CopyLessonModal from "@/components/modals/CopyLessonModal";
@@ -43,7 +43,7 @@ export const LessonList: React.FC = () => {
       showToast(language === 'ar' ? "جاري حفظ التعديلات وتصدير الكورس..." : "Saving changes & exporting course...", "info");
       if (handleSubmit) await handleSubmit(undefined, false);
       const token = localStorage.getItem("super_admin_token") || localStorage.getItem("school_admin_token");
-      const res = await fetch(`${API_URL}/school/export/course/${courseId}`, {
+      const res = await apiFetch(`${API_URL}/school/export/course/${courseId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) throw new Error("Export failed");
@@ -68,7 +68,7 @@ export const LessonList: React.FC = () => {
     try {
       if (handleSubmit) await handleSubmit(undefined, false);
       const token = localStorage.getItem("super_admin_token") || localStorage.getItem("school_admin_token");
-      const res = await fetch(`${API_URL}/school/export/lesson/${lessonId}`, {
+      const res = await apiFetch(`${API_URL}/school/export/lesson/${lessonId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) throw new Error("Export failed");
@@ -96,7 +96,7 @@ export const LessonList: React.FC = () => {
       showToast(language === 'ar' ? "جاري حفظ التعديلات وتصدير نسخة JSON..." : "Saving & exporting JSON backup...", "info");
       if (handleSubmit) await handleSubmit(undefined, false);
       const token = localStorage.getItem("super_admin_token") || localStorage.getItem("school_admin_token");
-      const res = await fetch(`${API_URL}/school/export/json/course/${courseId}`, {
+      const res = await apiFetch(`${API_URL}/school/export/json/course/${courseId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) throw new Error("Export JSON failed");
@@ -125,7 +125,7 @@ export const LessonList: React.FC = () => {
       formData.append("file", file);
 
       showToast(language === "ar" ? "جاري استعادة الكورس من ملف JSON..." : "Restoring course from JSON...", "info");
-      const res = await fetch(`${API_URL}/school/import/json/course`, {
+      const res = await apiFetch(`${API_URL}/school/import/json/course`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData

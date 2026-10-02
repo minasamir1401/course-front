@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
-import { API_URL } from "@/lib/api";
+import { apiFetch, API_URL } from "@/lib/api";
 import { Users, Search, ArrowRight, UserCheck, BarChart3, TrendingUp } from 'lucide-react';
 import Link from "next/link";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -26,14 +26,14 @@ export default function ExamResultsPage() {
       const token = localStorage.getItem("school_admin_token");
       
       // Fetch exam info
-      const examRes = await fetch(`${API_URL}/exams/${id}`, {
+      const examRes = await apiFetch(`${API_URL}/exams/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const examData = await examRes.json();
       setExam(examData);
 
       // Fetch submissions
-      const res = await fetch(`${API_URL}/exams/${id}/submissions`, {
+      const res = await apiFetch(`${API_URL}/exams/${id}/submissions`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();

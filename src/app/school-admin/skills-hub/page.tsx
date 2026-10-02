@@ -5,7 +5,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Plus, Search, Book, BookOpen, Layers, Edit2, Trash2, Monitor, Filter, BrainCircuit } from 'lucide-react';
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { API_URL } from "@/lib/api";
+import { apiFetch, API_URL } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -55,7 +55,7 @@ export default function SchoolAdminSkillsHubPage() {
       }
       
       const url = new URL(`${API_URL}/skills-hub/clusters`);
-      const res = await fetch(url.toString(), {
+      const res = await apiFetch(url.toString(), {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -139,7 +139,7 @@ export default function SchoolAdminSkillsHubPage() {
     if (!window.confirm(language === 'ar' ? "هل أنت متأكد من حذف هذا المحور بالكامل؟" : "Are you sure you want to delete this cluster?")) return;
     try {
       const token = localStorage.getItem("school_admin_token");
-      const res = await fetch(`${API_URL}/skills-hub/clusters/${id}`, {
+      const res = await apiFetch(`${API_URL}/skills-hub/clusters/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

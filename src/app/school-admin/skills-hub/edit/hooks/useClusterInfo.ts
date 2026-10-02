@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { API_URL } from '@/lib/api';
+import { apiFetch, API_URL } from '@/lib/api';
 
 export const useClusterInfo = (props: { clusterId: string | null; language: string; showToast: any; router: any }) => {
   const { clusterId, language, showToast, router } = props;
@@ -19,7 +19,7 @@ export const useClusterInfo = (props: { clusterId: string | null; language: stri
 
   const fetchSchools = async (token: string) => {
     try {
-      const res = await fetch(`${API_URL}/schools`, {
+      const res = await apiFetch(`${API_URL}/schools`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -46,7 +46,7 @@ export const useClusterInfo = (props: { clusterId: string | null; language: stri
         return;
       }
 
-      const res = await fetch(`${API_URL}/skills-hub/clusters`, {
+      const res = await apiFetch(`${API_URL}/skills-hub/clusters`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -91,7 +91,7 @@ export const useClusterInfo = (props: { clusterId: string | null; language: stri
     setIsSaving(true);
     try {
       const token = localStorage.getItem('school_admin_token');
-      const res = await fetch(`${API_URL}/skills-hub/clusters/${clusterId}`, {
+      const res = await apiFetch(`${API_URL}/skills-hub/clusters/${clusterId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

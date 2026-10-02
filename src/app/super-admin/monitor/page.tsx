@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import DashboardLayout from "@/components/DashboardLayout";
-import { API_URL } from "@/lib/api";
+import { apiFetch, API_URL } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Activity, AlertTriangle, Bell, BookOpen, Building2, ChevronRight, Code2, Database, Layers, ShieldAlert, Server, Table2, Users, ClipboardList, FileText, Bug, RefreshCw, Search, CheckCircle2, RotateCcw } from 'lucide-react';
 
@@ -76,7 +76,7 @@ export default function SuperAdminMonitorPage() {
     setRestoreMessage("");
     try {
       const authToken = localStorage.getItem("super_admin_token");
-      const res = await fetch(`${API_URL}/admin/backup/search-lesson?query=${encodeURIComponent(searchQuery)}`, {
+      const res = await apiFetch(`${API_URL}/admin/backup/search-lesson?query=${encodeURIComponent(searchQuery)}`, {
         headers: { Authorization: `Bearer ${authToken}` },
       });
       const json = await res.json();
@@ -102,7 +102,7 @@ export default function SuperAdminMonitorPage() {
       const authToken = localStorage.getItem("super_admin_token");
       const controller = new AbortController();
       const timeoutId = window.setTimeout(() => controller.abort(), 30000); // 30s timeout
-      const res = await fetch(`${API_URL}/admin/backup/restore-lesson`, {
+      const res = await apiFetch(`${API_URL}/admin/backup/restore-lesson`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -150,7 +150,7 @@ export default function SuperAdminMonitorPage() {
     try {
       const controller = new AbortController();
       const timeoutId = window.setTimeout(() => controller.abort(), 15000); // 15s timeout
-      const res = await fetch(`${API_URL}/admin/diagnostics?limit=50`, {
+      const res = await apiFetch(`${API_URL}/admin/diagnostics?limit=50`, {
         headers: { Authorization: `Bearer ${authToken}` },
         signal: controller.signal,
       });

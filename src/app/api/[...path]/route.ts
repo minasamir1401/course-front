@@ -159,10 +159,14 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
       'keep-alive'
     ]);
     backendResponse.headers.forEach((value, key) => {
-      if (!HEADERS_TO_SKIP.has(key.toLowerCase())) {
+      if (key.toLowerCase() !== 'set-cookie' && !HEADERS_TO_SKIP.has(key.toLowerCase())) {
         responseHeaders.set(key, value);
       }
     });
+    // Preserve independent session cookies; combining Set-Cookie loses credentials.
+    for (const cookie of backendResponse.headers.getSetCookie()) {
+      responseHeaders.append('set-cookie', cookie);
+    }
 
     const noBody = req.method === 'HEAD' || [204, 205, 304].includes(backendResponse.status) || !backendResponse.body;
     if (noBody) {
