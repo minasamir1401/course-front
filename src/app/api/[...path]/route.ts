@@ -192,7 +192,9 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
 
     if (isClientDisconnect) {
       // Client closed tab, reloaded, or navigated away before response completed
-      console.warn('[API Proxy Client Disconnect]', targetUrl);
+      if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_PROXY) {
+        console.warn('[API Proxy Client Disconnect]', targetUrl);
+      }
       return new NextResponse(null, { status: 499 });
     }
 
