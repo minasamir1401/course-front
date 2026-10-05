@@ -627,3 +627,19 @@ math-field::part(virtual-keyboard-toggle) {
     display: none !important;
   }
 }
+
+/* Keep long formulas inside the option, preventing awkward line-breaking after relation signs */
+.exam-option-content > .prose {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+.exam-option-content .katex {
+  white-space: nowrap;
+}
+.exam-option-content .katex-display {
+  margin: .25em 0;
+}
+.exam-question-media[aria-busy="true"] img { visibility: hidden; }

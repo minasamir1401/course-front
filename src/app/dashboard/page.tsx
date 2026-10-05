@@ -6,7 +6,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { BookOpen, Clock, TrendingUp, Award, Play, ArrowUpRight, FileText, Sparkles, Zap, ListOrdered, GraduationCap, Target, Calendar, ArrowLeft, ChevronLeft } from 'lucide-react';
 import { useRouter } from "next/navigation";
 import { fetchStudentStats } from "@/lib/student-stats";
-import { API_URL } from "@/lib/api";
+import { API_URL, apiFetch } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
@@ -24,6 +24,8 @@ export default function StudentDashboard() {
   const router = useRouter();
   const [stats, setStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [retryCount, setRetryCount] = useState(0);
   const [userRole, setUserRole] = useState<string>("STUDENT");
   const [calendarDate, setCalendarDate] = useState<Date>(new Date());
   const [upcomingTasks, setUpcomingTasks] = useState<any[]>([]);
@@ -31,6 +33,7 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     const fetchStats = async () => {
+      setLoadError("");
       try {
         const token = localStorage.getItem("lms_token") || 
                       localStorage.getItem("school_admin_token") || 
@@ -58,7 +61,7 @@ export default function StudentDashboard() {
 
         // Fetch real exams & upcoming tasks for student
         try {
-          const examsRes = await fetch(`${API_URL}/exams`, {
+          const examsRes = await apiFetch(`${API_URL}/exams`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           const mappedTasks: any[] = [];
@@ -105,6 +108,7 @@ export default function StudentDashboard() {
           console.error("Error fetching student tasks:", taskErr);
         }
       } catch (error) {
+        setLoadError(language === "ar" ? "تعذر تحميل بيانات الطالب. أعد المحاولة." : "Could not load student data. Please retry.");
         console.error("Failed to fetch dashboard data:", error);
       } finally {
         setIsLoading(false);
@@ -112,8 +116,9 @@ export default function StudentDashboard() {
     };
 
     fetchStats();
-  }, [router, language]);
+  }, [router, language, retryCount]);
 
+  if (loadError) return <DashboardLayout><div role="alert" className="p-8 text-red-700">{loadError}<button className="block underline mt-4" onClick={() => setRetryCount(count => count + 1)}>{language === "ar" ? "إعادة المحاولة" : "Retry"}</button></div></DashboardLayout>;
   if (isLoading) {
     return (
       <DashboardLayout>

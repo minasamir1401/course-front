@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { apiFetch, API_URL } from '@/lib/api';
 import { buildCreatedModulePortalHref } from '@/lib/moduleCreationWorkflow';
-import { buildDraftModules } from '@/lib/examEditingPayload';
+import { buildDraftModules, buildExamSubmissionPayload } from '@/lib/examEditingPayload';
 
 export const useExamSubmit = (props: any) => {
   const { examData, modules, isModuleModalOpen, currentModule, editingModuleIndex, manualSubmitRef, autoSaveGenerationRef, autoSaveTimerRef, setIsLoading, autoSaveWriteQueueRef, createdIdRef, standaloneQuestions, deletedQuestionIds, setDeletedQuestionIds, showToast, language, router, t, isLoading, moduleMode } = props;
@@ -42,48 +42,7 @@ export const useExamSubmit = (props: any) => {
       }
       const isCentral = false;
 
-      const allQuestions: any[] = [];
-      const modulesPayload = finalModules.map((m, index) => {
-         const mId = m.id || String(Date.now() + index);
-         
-         const mSubExams = (m.subExams || []).map((s: any, sIdx: number) => {
-             const sId = s.id || String(Date.now() + index * 1000 + sIdx);
-             const sQuestions = (s.questions || []).map((q: any) => ({
-                 ...q,
-                 moduleId: mId,
-                 subExamId: sId
-             }));
-             allQuestions.push(...sQuestions);
-             return {
-                 id: sId,
-                 title: s.title,
-                 duration: s.duration || null,
-                 passingScore: s.passingScore || null,
-                 attemptsAllowed: s.attemptsAllowed === "" || s.attemptsAllowed === undefined || s.attemptsAllowed === null ? 999 : Number(s.attemptsAllowed),
-                 publishDate: s.publishDate || null,
-                 cutOffDate: s.cutOffDate || null,
-                 order: sIdx
-             };
-         });
-         
-         const mQuestions = (m.questions || []).map((q: any) => ({
-             ...q,
-             moduleId: mId
-         }));
-         allQuestions.push(...mQuestions);
-
-         return {
-            id: mId,
-            title: m.title,
-            description: m.content || null,
-            duration: m.duration || null,
-            passingScore: m.passingScore || null,
-            publishDate: m.publishDate || null,
-            cutOffDate: m.cutOffDate || null,
-            order: index,
-            subExams: mSubExams
-         };
-      });
+      const { modulesPayload, allQuestions } = buildExamSubmissionPayload({ modules: finalModules, standaloneQuestions });
 
       if (moduleMode && modulesPayload.length === 0) {
         showToast(language === 'ar' ? 'أضف الموديول أولًا ثم احفظ' : 'Add the module first, then save', 'error');
@@ -125,7 +84,7 @@ export const useExamSubmit = (props: any) => {
           schoolId: targetSchoolIds.length > 0 ? targetSchoolIds[0] : null,
           schoolIds: targetSchoolIds,
           duration: examData.duration || 60,
-          passingScore: examData.passingScore || 50,
+          passingScore: examData.passingScore ?? 50,
           password: examData.password || null,
           resultVisibility: examData.resultVisibility || "SHOW_SCORE",
           attemptsAllowed: examData.attemptsAllowed === "" || examData.attemptsAllowed === undefined || examData.attemptsAllowed === null ? 999 : Number(examData.attemptsAllowed),

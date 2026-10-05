@@ -1,3 +1,4 @@
+import { parseSelection } from '@/lib/skillSelections';
 import { useState } from 'react';
 import { API_URL, apiFetch } from '@/lib/api';
 
@@ -65,12 +66,8 @@ export const useClusterInfo = (props: { clusterId: string | null; language: stri
             isCentral: current.isCentral || false
           });
           
-          if (current.grades && Array.isArray(current.grades)) {
-            setSelectedGrades(current.grades);
-          }
-          if (current.schoolIds && Array.isArray(current.schoolIds)) {
-            setSelectedSchoolIds(current.schoolIds);
-          }
+          setSelectedGrades(parseSelection(current.grades ?? current.grade));
+          setSelectedSchoolIds(parseSelection(current.schoolIds ?? current.schoolId));
         } else {
           showToast(language === 'ar' ? 'المسار غير موجود' : 'Cluster not found', 'error');
           router.push('/super-admin/skills-hub');

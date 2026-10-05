@@ -29,8 +29,8 @@ export default function CrosswordRenderer({ question, value, onChange, language 
                 className="w-full sm:w-44 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-center font-bold text-xs uppercase"
                 value={typedVal}
                 onChange={(e) => handleInputChange(idx, e.target.value)}
-                maxLength={item.word ? item.word.length : 15}
-                placeholder={language === "ar" ? `حروف الكلمة (${item.word ? item.word.length : ""} حروف)` : `Word (${item.word ? item.word.length : ""} chars)`}
+                maxLength={item.length || (item.word ? item.word.length : 15)}
+                placeholder={language === "ar" ? `حروف الكلمة (${item.length || (item.word ? item.word.length : "")} حروف)` : `Word (${item.length || (item.word ? item.word.length : "")} chars)`}
               />
             </div>
           );

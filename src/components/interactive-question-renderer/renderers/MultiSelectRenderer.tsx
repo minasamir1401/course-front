@@ -15,7 +15,11 @@ export default function MultiSelectRenderer({ question, value, onChange, languag
     : Array.isArray(opts)
     ? opts
     : [];
-  const isShort = choices.every((c: any) => (typeof c === 'string' ? c.length : 0) <= 60);
+  const isShort = choices.every((c: any) => {
+    if (typeof c !== 'string') return true;
+    const clean = cleanOptionText(c).replace(/<[^>]+>/g, '').trim();
+    return clean.length <= 25 && !clean.includes('\\') && !clean.includes('$') && !clean.includes('=') && !clean.includes('^');
+  });
   const selectedList = parseJson(value, []);
 
   const handleToggle = (choice: string) => {

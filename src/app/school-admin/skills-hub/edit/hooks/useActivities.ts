@@ -1,7 +1,9 @@
+import { useDeletionPolicy } from '@/hooks/useDeletionPolicy';
 import { useState } from 'react';
 import { apiFetch, API_URL } from '@/lib/api';
 
 export const useActivities = (props: { clusterId: string | null; language: string; showToast: any; fetchLessons: any }) => {
+  const canDelete = useDeletionPolicy('SCHOOL_ADMIN');
   const { clusterId, language, showToast, fetchLessons } = props;
 
   const [expandedLessonId, setExpandedLessonId] = useState<string | null>(null);
@@ -164,6 +166,7 @@ export const useActivities = (props: { clusterId: string | null; language: strin
   };
 
   const handleDeleteActivity = async (id: string, lessonId: string) => {
+    if (!canDelete) { showToast(language === "ar" ? "الحذف محمي بقرار السوبر أدمن" : "Deletion is protected by Super Admin", "error"); return; }
     if (!confirm(language === 'ar' ? 'هل أنت متأكد من حذف هذا النشاط؟' : 'Are you sure you want to delete this activity?')) return;
     
     try {
@@ -176,7 +179,7 @@ export const useActivities = (props: { clusterId: string | null; language: strin
         showToast(language === 'ar' ? 'تم حذف النشاط' : 'Activity deleted', 'success');
         fetchActivities(lessonId);
         fetchLessons();
-      }
+      } else { showToast((await res.json()).error || "Deletion failed", "error"); }
     } catch (err) {
       console.error('Error deleting activity:', err);
     }

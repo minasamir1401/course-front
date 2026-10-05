@@ -1,4 +1,5 @@
 "use client";
+import { fetchAllPages } from "@/lib/paginatedFetch";
 
 import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -70,21 +71,9 @@ export default function SchoolAdminStudentsPage() {
     const timeoutId = setTimeout(() => controller.abort(), 8000);
 
     try {
-      const res = await apiFetch(
-        `${API_URL}/admin/users?schoolId=${sId}&role=STUDENT`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          signal: controller.signal,
-        }
-      );
+      const rows = await fetchAllPages(`${API_URL}/admin/users?schoolId=${sId}&role=STUDENT`, 'users', { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal });
+      setStudents(rows);
       clearTimeout(timeoutId);
-
-      if (res.ok) {
-        const data = await res.json();
-        setStudents(Array.isArray(data) ? data : (data.users || []));
-      } else {
-        setError(t('schoolAdmin.studentsPage.fetchFail') || 'Failed to fetch students');
-      }
     } catch (e: any) {
       clearTimeout(timeoutId);
       setError(t('schoolAdmin.studentsPage.connError') || 'Connection error');

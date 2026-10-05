@@ -15,12 +15,16 @@ export default function McqRenderer({ question, value, onChange, language }: any
     : Array.isArray(opts)
     ? opts
     : [];
-  const isShort = choices.every((c: any) => (typeof c === 'string' ? c.length : 0) <= 60);
+  const isShort = choices.every((c: any) => {
+    if (typeof c !== 'string') return true;
+    const clean = cleanOptionText(c).replace(/<[^>]+>/g, '').trim();
+    return clean.length <= 25 && !clean.includes('\\') && !clean.includes('$') && !clean.includes('=') && !clean.includes('^');
+  });
 
   return (
     <div className={`space-y-4 w-full max-w-full ${language === 'ar' ? 'text-right' : 'text-left'}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
       <QuestionHeader question={question} language={language} opts={opts} />
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" dir="ltr">
+      <div className={isShort ? "grid grid-cols-1 sm:grid-cols-2 gap-3" : "flex flex-col gap-3"} dir="ltr">
         {choices.map((choice: any, idx: number) => {
           const isSelected = value === choice;
           return (

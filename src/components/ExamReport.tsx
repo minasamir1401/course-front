@@ -14,7 +14,7 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
   const [selectedGrade, setSelectedGrade] = useState<string>("");
   const [selectedExam, setSelectedExam] = useState<string>("");
   
-  const [reportData, setReportData] = useState<{attended: any[], missed: any[], total: number} | null>(null);
+  const [reportData, setReportData] = useState<{attended: any[], missed: any[], total: number; attendedCount: number; missedCount: number; pagination: {page: number; pages: number}} | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -55,6 +55,8 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
   }, [role]);
 
   useEffect(() => {
+    setSelectedExam("");
+    setReportData(null);
     if (selectedSchool && selectedGrade) {
       fetchExams();
     } else {
@@ -63,6 +65,8 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
       setReportData(null);
     }
   }, [selectedSchool, selectedGrade]);
+
+  useEffect(() => { setReportData(null); }, [selectedExam]);
 
   const fetchSchools = async () => {
     try {
@@ -96,7 +100,7 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
     }
   };
 
-  const generateReport = async () => {
+  const generateReport = async (page = 1) => {
     if (!selectedSchool || !selectedGrade || !selectedExam) {
       setError(language === 'ar' ? "الرجاء اختيار المدرسة والصف والامتحان" : "Please select school, grade, and exam");
       return;
@@ -106,7 +110,7 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
     setError("");
     try {
       const token = getToken();
-      const res = await apiFetch(`${API_URL}/reports/exam-attendance?schoolId=${selectedSchool}&grade=${selectedGrade}&examId=${selectedExam}`, {
+      const res = await apiFetch(`${API_URL}/reports/exam-attendance?schoolId=${selectedSchool}&grade=${selectedGrade}&examId=${selectedExam}&page=${page}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -188,7 +192,7 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
 
         <div className="mt-8 flex justify-end">
           <button 
-            onClick={generateReport}
+            onClick={() => generateReport()}
             disabled={loading || !selectedExam}
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-md flex items-center gap-2 disabled:opacity-50"
           >
@@ -204,10 +208,10 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
             <h2 className="text-2xl font-black text-slate-800">{language === 'ar' ? "نتائج التقرير" : "Report Results"}</h2>
             <div className="flex gap-4">
               <div className="px-4 py-2 bg-green-50 text-green-700 rounded-lg font-bold text-sm">
-                {language === 'ar' ? "امتحنوا" : "Attended"}: {reportData.attended.length}
+                {language === 'ar' ? "امتحنوا" : "Attended"}: {reportData.attendedCount}
               </div>
               <div className="px-4 py-2 bg-red-50 text-red-700 rounded-lg font-bold text-sm">
-                {language === 'ar' ? "لم يمتحنوا" : "Missed"}: {reportData.missed.length}
+                {language === 'ar' ? "لم يمتحنوا" : "Missed"}: {reportData.missedCount}
               </div>
               <div className="px-4 py-2 bg-slate-50 text-slate-700 rounded-lg font-bold text-sm">
                 {language === 'ar' ? "الإجمالي" : "Total"}: {reportData.total}
@@ -215,6 +219,11 @@ export default function ExamAttendanceReport({ role }: { role: "SUPER_ADMIN" | "
             </div>
           </div>
 
+          <div className="flex justify-center gap-4 mb-6">
+            <button disabled={loading || reportData.pagination.page <= 1} onClick={() => generateReport(reportData.pagination.page - 1)} className="disabled:opacity-40">{language === 'ar' ? 'السابق' : 'Previous'}</button>
+            <span>{reportData.pagination.page} / {Math.max(1, reportData.pagination.pages)}</span>
+            <button disabled={loading || reportData.pagination.page >= reportData.pagination.pages} onClick={() => generateReport(reportData.pagination.page + 1)} className="disabled:opacity-40">{language === 'ar' ? 'التالي' : 'Next'}</button>
+          </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Attended List */}
             <div>

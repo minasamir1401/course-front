@@ -1,7 +1,9 @@
+import { useDeletionPolicy } from '@/hooks/useDeletionPolicy';
 import { useState } from 'react';
 import { apiFetch, API_URL } from '@/lib/api';
 
 export const useLessons = (props: { clusterId: string | null; language: string; showToast: any }) => {
+  const canDelete = useDeletionPolicy('SCHOOL_ADMIN');
   const { clusterId, language, showToast } = props;
 
   const [lessons, setLessons] = useState<any[]>([]);
@@ -85,6 +87,7 @@ export const useLessons = (props: { clusterId: string | null; language: string; 
   };
 
   const handleDeleteLesson = async (id: string) => {
+    if (!canDelete) { showToast(language === 'ar' ? 'الحذف محمي بقرار السوبر أدمن' : 'Deletion is protected by Super Admin', 'error'); return; }
     if (!confirm(language === 'ar' ? 'هل أنت متأكد من حذف هذا الدرس؟' : 'Are you sure you want to delete this lesson?')) return;
     
     try {
@@ -96,7 +99,7 @@ export const useLessons = (props: { clusterId: string | null; language: string; 
       if (res.ok) {
         showToast(language === 'ar' ? 'تم حذف الدرس' : 'Lesson deleted', 'success');
         fetchLessons();
-      }
+      } else { showToast((await res.json()).error || 'Deletion failed', 'error'); }
     } catch (err) {
       console.error('Error deleting lesson:', err);
     }

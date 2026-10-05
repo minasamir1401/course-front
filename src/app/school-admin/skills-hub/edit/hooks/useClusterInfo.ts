@@ -1,3 +1,4 @@
+import { parseSelection } from '@/lib/skillSelections';
 import { useState } from 'react';
 import { apiFetch, API_URL } from '@/lib/api';
 
@@ -17,29 +18,14 @@ export const useClusterInfo = (props: { clusterId: string | null; language: stri
     id: "", name: "", description: "", subject: "", isCentral: false
   });
 
-  const fetchSchools = async (token: string) => {
-    try {
-      const res = await apiFetch(`${API_URL}/schools`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setSchools(data || []);
-      }
-    } catch (err) {
-      console.error('Error fetching schools:', err);
-    }
-  };
-
   const fetchClusterData = async () => {
     try {
       const token = localStorage.getItem('school_admin_token');
       if (!token) {
-        router.push('/login');
+        router.push('/school-admin/login');
         return;
       }
-      setIsSuperAdmin(true);
-      await fetchSchools(token);
+      setIsSuperAdmin(false);
 
       if (!clusterId) {
         setIsLoading(false);
@@ -63,15 +49,11 @@ export const useClusterInfo = (props: { clusterId: string | null; language: stri
             isCentral: current.isCentral || false
           });
           
-          if (current.grades && Array.isArray(current.grades)) {
-            setSelectedGrades(current.grades);
-          }
-          if (current.schoolIds && Array.isArray(current.schoolIds)) {
-            setSelectedSchoolIds(current.schoolIds);
-          }
+          setSelectedGrades(parseSelection(current.grades ?? current.grade));
+          setSelectedSchoolIds(parseSelection(current.schoolIds ?? current.schoolId));
         } else {
           showToast(language === 'ar' ? 'المسار غير موجود' : 'Cluster not found', 'error');
-          router.push('/super-admin/skills-hub');
+          router.push('/school-admin/skills-hub');
         }
       }
     } catch (err) {

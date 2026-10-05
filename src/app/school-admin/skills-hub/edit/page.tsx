@@ -1,4 +1,5 @@
 "use client";
+import { downloadSkillTemplate, downloadSkillMetadataTemplate, readSkillMetadata } from '@/lib/skillExcel';
 
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -46,9 +47,11 @@ export default function EditSchoolSkillClusterPage() {
   }, [clusterId]);
 
   
+  const importLessonRef = React.useRef<string | null>(null);
+  const metadataLessonRef = React.useRef<string | null>(null);
   const excelInputRef = React.useRef<HTMLInputElement>(null);
   const metadataExcelRef = React.useRef<HTMLInputElement>(null);
-  const downloadMetadataTemplate = (e?: any) => {};
+  const downloadMetadataTemplate = downloadSkillMetadataTemplate;
 
 
   const { isLoading, isSaving, schools, isSuperAdmin, activeTab, setActiveTab, selectedGrades, setSelectedGrades, selectedSchoolIds, setSelectedSchoolIds, clusterData, setClusterData, handleUpdateCluster } = clusterInfo;
@@ -56,8 +59,8 @@ export default function EditSchoolSkillClusterPage() {
   const { lessons, setLessons, isLessonModalOpen, setIsLessonModalOpen, editingLesson, setEditingLesson, openAddLesson, openEditLesson, handleSaveLesson, handleDeleteLesson, uploadingLessonId } = lessonsMgr;
   
   const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (uploadingLessonId) {
-      lessonsMgr.handleExcelUpload(e, uploadingLessonId);
+    if (importLessonRef.current) {
+      void lessonsMgr.handleExcelUpload(e, importLessonRef.current).then(() => activitiesMgr.fetchActivities(importLessonRef.current!));
     }
   };
 
@@ -252,7 +255,7 @@ export default function EditSchoolSkillClusterPage() {
   const submitPreviewAnswer = handlePreviewSubmit;
   const currentPreviewIdx = previewActivity ? previewActivitiesList.findIndex((a:any) => a.id === previewActivity.id) : 0;
   
-  const downloadTemplate = () => {};
+  const downloadTemplate = downloadSkillTemplate;
 
   const getGradeDisplay = (g: any) => (GRADE_LABELS as any)[g]?.[language === 'ar' ? 'ar' : 'en'] || g;
   
@@ -334,10 +337,15 @@ export default function EditSchoolSkillClusterPage() {
     showToast(language === 'ar' ? "تم حذف المهارة بنجاح" : "Skill deleted successfully", "success");
   };
 
-  const handleMetadataExcelChange = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: string) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    // this logic is complex, we just leave it empty for now, it's a minor detail
+  const handleMetadataExcelChange = async (e: React.ChangeEvent<HTMLInputElement>, lesson: any) => {
+    const file = e.target.files?.[0]; if (!file || !lesson) return;
+    try {
+      const metadata = { ...getLessonMetadata(lesson), ...await readSkillMetadata(file) };
+      const res = await apiFetch(`${API_URL}/skills-hub/lessons/${lesson.id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({metadata})});
+      if (!res.ok) throw new Error((await res.json()).error || 'Import failed');
+      await lessonsMgr.fetchLessons();
+      showToast(language === 'ar' ? 'تم استيراد المعايير' : 'Standards imported', 'success');
+    } catch (error: any) { showToast(error.message, 'error'); } finally { e.target.value = ''; }
   };
 
   if (isLoading) {
@@ -370,7 +378,7 @@ export default function EditSchoolSkillClusterPage() {
         style={{ display: "none" }}
         accept=".xlsx,.xls"
         onChange={(e) => {
-          const lesson = lessons.find(l => l.id === uploadingLessonId);
+          const lesson = lessons.find(l => l.id === metadataLessonRef.current);
           handleMetadataExcelChange(e, lesson);
         }}
       />
@@ -628,7 +636,8 @@ export default function EditSchoolSkillClusterPage() {
                                     <button 
                                       onClick={() => {
                                         
-                                        excelInputRef.current?.click();
+                                        importLessonRef.current = lesson.id;
+                                    excelInputRef.current?.click();
                                       }}
                                       className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-4 py-2 rounded-lg font-black text-xs flex items-center gap-1.5 shadow-sm transition-all"
                                     >
@@ -645,6 +654,7 @@ export default function EditSchoolSkillClusterPage() {
                                     <button
                                       onClick={() => {
                                         
+                                        metadataLessonRef.current = lesson.id;
                                         metadataExcelRef.current?.click();
                                       }}
                                       className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-4 py-2 rounded-lg font-black text-xs flex items-center gap-1.5 shadow-sm transition-all"
@@ -653,7 +663,7 @@ export default function EditSchoolSkillClusterPage() {
                                       {language === 'ar' ? 'استيراد معايير Excel' : 'Import Standards'}
                                     </button>
                                     <button
-                                      onClick={() => downloadMetadataTemplate(lesson)}
+                                      onClick={downloadMetadataTemplate}
                                       className="bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 px-4 py-2 rounded-lg font-black text-xs flex items-center gap-1.5 shadow-sm transition-all"
                                     >
                                       <Download className="w-4 h-4" />

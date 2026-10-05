@@ -24,13 +24,7 @@ export default function SuperAdminDashboard() {
 
   const schoolPerformanceData = stats?.schoolPerformanceData || [];
 
-  const examsActivityData = [
-    { day: 'الأحد', exams: 12, submissions: 450 },
-    { day: 'الاثنين', exams: 18, submissions: 620 },
-    { day: 'الثلاثاء', exams: 15, submissions: 580 },
-    { day: 'الأربعاء', exams: 25, submissions: 890 },
-    { day: 'الخميس', exams: 22, submissions: 760 },
-  ];
+  const examsActivityData = (stats?.examsActivityData || []).map((entry: any) => ({...entry,day:new Date(entry.date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-GB',{weekday:'short',timeZone:'UTC'})}));
 
   useEffect(() => {
     const token = localStorage.getItem("super_admin_token");

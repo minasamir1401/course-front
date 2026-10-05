@@ -12,11 +12,12 @@ export default function WordScrambleRenderer({ question, value, onChange, langua
   const [typedLetters, setTypedLetters] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!word) return;
-    const shuffled = word.split("").sort(() => Math.random() - 0.5);
+    const source = Array.isArray(opts.letters) ? opts.letters : word.split("");
+    if (!source.length) return;
+    const shuffled = [...source].sort(() => Math.random() - 0.5);
     setLetters(shuffled);
     setTypedLetters([]);
-  }, [word]);
+  }, [word, question.options]);
 
   const selectLetter = (l: string, idx: number) => {
     const nextTyped = [...typedLetters, l];

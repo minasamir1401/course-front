@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { API_URL } from "@/lib/api";
+import { API_URL, apiFetch } from "@/lib/api";
 import { CheckCircle2, XCircle, ChevronRight, ChevronLeft, LayoutDashboard, RefreshCw, Award, Target, MessageCircle, Lock, EyeOff, HelpCircle, Info, AlertCircle, Sparkles, BookOpen, MessageSquare, Star, ListOrdered, TrendingUp, Globe } from 'lucide-react';
 import Link from "next/link";
 import Image from "next/image";
@@ -363,7 +363,7 @@ export default function ExamResultPage() {
         router.push("/login");
         return;
       }
-      const res = await fetch(`${API_URL}/exams/submissions/${id}`, {
+      const res = await apiFetch(`${API_URL}/exams/submissions/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -924,8 +924,13 @@ export default function ExamResultPage() {
                           }
                         }
 
+                        const hasLongChoices = optionsList.some((opt: string) => {
+                          const clean = cleanOptionText(opt).replace(/<[^>]+>/g, '').trim();
+                          return clean.length > 25 || clean.includes('\\') || clean.includes('$') || clean.includes('=') || clean.includes('^') || opt.includes('<img');
+                        });
+
                         return (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className={`grid gap-4 ${hasLongChoices ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"}`}>
                             {optionsList.map((opt: string, oIdx: number) => {
                               const isCorrectOption = correctIndices.includes(oIdx);
                               const isSelectedOption = hasAnswered && selectedIndices.includes(oIdx);

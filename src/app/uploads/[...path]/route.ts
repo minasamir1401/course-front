@@ -1,3 +1,4 @@
+import { proxyLifetime, proxyResponseBody, readProxyBody, proxyBodyLimit, ProxyBodyTooLargeError } from '@/lib/apiProxy';
 import { NextRequest, NextResponse } from 'next/server';
 
 // Runtime proxy: forwards all /uploads/* requests to the backend uploads folder
@@ -39,6 +40,7 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
     }
   });
 
+  const lifetime = proxyLifetime(req.signal, BACKEND_REQUEST_TIMEOUT_MS);
   try {
     let bodyData: any = undefined;
     let isStream = false;
@@ -49,7 +51,7 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
         bodyData = req.body;
         isStream = true;
       } else {
-        const arrayBuffer = await req.arrayBuffer();
+        const arrayBuffer = await readProxyBody(req.body, proxyBodyLimit(), lifetime.signal);
         if (arrayBuffer.byteLength > 0) {
           bodyData = arrayBuffer;
         }
@@ -70,7 +72,7 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
 
     const backendResponse = await fetch(targetUrl, {
       ...requestInit,
-      signal: AbortSignal.timeout(BACKEND_REQUEST_TIMEOUT_MS),
+      signal: lifetime.signal,
     });
 
     const responseHeaders = new Headers();
@@ -86,16 +88,20 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
         responseHeaders.set(key, value);
       }
     });
-    if (req.method === 'GET' || req.method === 'HEAD') {
-      responseHeaders.set('Cache-Control', 'public, max-age=2592000, immutable');
-    }
-
-    const responseBody = await backendResponse.arrayBuffer();
+    const readOnly = req.method === 'GET' || req.method === 'HEAD';
+    if (readOnly && (backendResponse.ok || backendResponse.status === 304)) {
+      if (!responseHeaders.has('Cache-Control')) responseHeaders.set('Cache-Control', 'public, max-age=3600');
+    } else { responseHeaders.set('Cache-Control', 'no-store'); }
+    const bodyless = req.method === 'HEAD' || [204, 205, 304].includes(backendResponse.status);
+    const responseBody = !bodyless && backendResponse.body ? proxyResponseBody(backendResponse.body, lifetime) : null;
+    if (!responseBody) { await backendResponse.body?.cancel(); lifetime.dispose(); }
     return new NextResponse(responseBody, {
       status: backendResponse.status,
       headers: responseHeaders,
     });
   } catch (error: any) {
+    lifetime.dispose();
+    if (error instanceof ProxyBodyTooLargeError) return NextResponse.json({ error: error.message }, { status: 413 });
     console.error('[Upload Proxy Error]', targetUrl, error?.message);
     return NextResponse.json(
       {
@@ -113,3 +119,5 @@ export const PUT = handler;
 export const DELETE = handler;
 export const PATCH = handler;
 export const OPTIONS = handler;
+
+export const HEAD = handler;

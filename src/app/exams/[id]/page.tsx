@@ -4,6 +4,8 @@ import React, { useState, useEffect, Suspense } from "react";
 import ExamCountdown from "@/components/ExamCountdown";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
+import { useExamMedia } from "@/hooks/useExamMedia";
+import { resolveMediaUrl } from "@/lib/utils";
 import { API_URL, apiFetch } from "@/lib/api";
 import { getStudentExamDuration } from "@/lib/examModuleView";
 import { sanitizeHtml } from "@/lib/sanitize";
@@ -118,7 +120,7 @@ const ExamOptionButton = React.memo(function ExamOptionButton({
           : "bg-white border-slate-100 hover:border-slate-300 hover:bg-slate-50"
       }`}
     >
-      <div className="flex items-center gap-3.5 flex-1 text-start">
+      <div className="flex items-center gap-3.5 flex-1 min-w-0 text-start">
         <span className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-sm shrink-0 transition-colors ${
           isSelected
             ? "bg-indigo-600 text-white shadow-sm"
@@ -126,8 +128,8 @@ const ExamOptionButton = React.memo(function ExamOptionButton({
         }`}>
           {getOptionLetter(index, activeExamLang)}
         </span>
-        <span className={`text-lg font-bold ${isSelected ? "text-indigo-900" : "text-slate-700"}`}>
-          <HtmlRenderer html={cleanOptionText(option)} tag="span" />
+        <span className={`exam-option-content flex-1 min-w-0 overflow-x-auto py-1 text-base sm:text-lg font-bold ${isSelected ? "text-indigo-900" : "text-slate-700"}`}>
+          <HtmlRenderer html={cleanOptionText(option)} tag="span" imageLoading="eager" />
         </span>
       </div>
       <div
@@ -190,6 +192,11 @@ function TakeExamPageContent() {
   const hasAutoSubmitted = React.useRef(false);
   const [watermarkText, setWatermarkText] = useState("");
   const [studentQuestionLang, setStudentQuestionLang] = useState<'ar' | 'en'>(language === 'en' ? 'en' : 'ar');
+
+  const questionWorkspaceRef = React.useRef<HTMLDivElement>(null);
+  const mediaQuestion = getSafeCurrentQuestion(examQuestions, currentQuestion);
+  const mediaKey = String(mediaQuestion?.id || currentQuestion) + ':' + studentQuestionLang;
+  const questionMedia = useExamMedia(questionWorkspaceRef, mediaKey, started && !loading && !!mediaQuestion, examQuestions[currentQuestion + 1]);
 
   const getAuthHeaders = React.useCallback((): HeadersInit => {
     const candidateToken = isPreviewMode
@@ -772,6 +779,7 @@ function TakeExamPageContent() {
           <div className="flex items-center gap-3 sm:gap-6">
             <ExamCountdown
               initialSeconds={timeLeft}
+              paused={!questionMedia.ready}
               storageKey={isPreviewMode ? null : `exam_${id}_${subExamId || "root"}_time`}
               onTick={seconds => { remainingTimeRef.current = seconds; }}
               onExpire={() => {
@@ -833,7 +841,11 @@ function TakeExamPageContent() {
           </div>
         </div>
 
-        <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden mb-8">
+        {!questionMedia.ready && <div role="status" className="mb-4 p-4 bg-indigo-50 text-indigo-800 rounded-xl">
+          {questionMedia.failed ? (isEn ? 'An image could not load. Retry before continuing.' : 'تعذر تحميل إحدى الصور. أعد المحاولة قبل المتابعة.') : (isEn ? 'Preparing question images… Timer paused.' : 'جاري تجهيز صور السؤال… الوقت متوقف أثناء التحميل.')}
+          {questionMedia.failed && <button type="button" onClick={questionMedia.retry} className="underline ms-3">{isEn ? 'Retry' : 'إعادة المحاولة'}</button>}
+        </div>}
+        <div ref={questionWorkspaceRef} aria-busy={!questionMedia.ready} className="exam-question-media bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden mb-8">
           <div className="p-8">
             {(() => {
               const legacyHint = question.sections?.find((s: any) => s.type === 'HINT');
@@ -875,6 +887,7 @@ function TakeExamPageContent() {
             })()}
             <div dir={isEn ? 'ltr' : 'rtl'}>
               <HtmlRenderer 
+                imageLoading="eager"
                 html={sanitizeHtml((isEn && question.textEn) ? question.textEn : (question.text || question.textEn || ''))}
                 tag="h2"
                 className="text-2xl font-bold text-slate-800 mb-8 leading-relaxed animate-in fade-in duration-500"
@@ -882,7 +895,10 @@ function TakeExamPageContent() {
             </div>
             {question.imageUrl && (
               <Image
-                src={question.imageUrl}
+                src={resolveMediaUrl(question.imageUrl)}
+                loading="eager"
+                fetchPriority="high"
+                sizes="(max-width: 768px) 100vw, 700px"
                 alt="Question"
                 width={700}
                 height={400}
@@ -927,8 +943,13 @@ function TakeExamPageContent() {
                         </div>
                       );
                     }
+                    const hasLongChoices = choices.some((opt: string) => {
+                      const clean = cleanOptionText(opt).replace(/<[^>]+>/g, '').trim();
+                      return clean.length > 25 || clean.includes('\\') || clean.includes('$') || clean.includes('=') || clean.includes('^') || opt.includes('<img');
+                    });
+
                     return (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className={`grid gap-4 ${hasLongChoices ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"}`}>
                         {choices.map((option: string, i: number) => {
                           const arOpt = rawArChoices[i];
                           const enOpt = rawEnChoices[i];

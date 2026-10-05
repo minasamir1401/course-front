@@ -26,31 +26,9 @@ export default function SchoolAdminPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
 
-  const months: Record<string, Record<string, string>> = {
-    ar: { jan: 'يناير', feb: 'فبراير', mar: 'مارس', apr: 'أبريل', may: 'مايو' },
-    en: { jan: 'Jan', feb: 'Feb', mar: 'Mar', apr: 'Apr', may: 'May' }
-  };
-
-  const performanceData = [
-    { month: months[language]?.jan || 'يناير', score: 75 },
-    { month: months[language]?.feb || 'فبراير', score: 82 },
-    { month: months[language]?.mar || 'مارس', score: 78 },
-    { month: months[language]?.apr || 'أبريل', score: 85 },
-    { month: months[language]?.may || 'مايو', score: 91 },
-  ];
-
-  const activities: Record<string, Array<{title: string, date: string, type: string, color: string}>> = {
-    ar: [
-      { title: 'اختبار الرياضيات الشهري', date: 'غداً، 09:00 ص', type: 'امتحان', color: 'blue' },
-      { title: 'اجتماع أولياء الأمور', date: '12 مايو، 04:00 م', type: 'اجتماع', color: 'amber' },
-      { title: 'تسليم أبحاث العلوم', date: '15 مايو، 12:00 م', type: 'موعد', color: 'emerald' },
-    ],
-    en: [
-      { title: 'Monthly Math Exam', date: 'Tomorrow, 09:00 AM', type: 'Exam', color: 'blue' },
-      { title: 'Parents Meeting', date: '12 May, 04:00 PM', type: 'Meeting', color: 'amber' },
-      { title: 'Science Research Submission', date: '15 May, 12:00 PM', type: 'Deadline', color: 'emerald' },
-    ]
-  };
+  const [performanceSeries, setPerformanceSeries] = useState<any[]>([]);
+  const [upcomingExams, setUpcomingExams] = useState<any[]>([]);
+  const performanceData = performanceSeries.map(entry => ({...entry,month:new Date(entry.date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-GB',{month:'short',year:'numeric',timeZone:'UTC'})}));
 
   useEffect(() => {
     const fetchData = async () => {
@@ -73,6 +51,8 @@ export default function SchoolAdminPage() {
 
         if (statsRes.ok) {
           const statsData = await statsRes.json();
+          setPerformanceSeries(statsData.performanceData || []);
+          setUpcomingExams(statsData.upcomingExams || []);
           setStats({
             students: statsData.studentsCount || 0,
             teachers: statsData.teachersCount || 0,
@@ -103,7 +83,7 @@ export default function SchoolAdminPage() {
     setMounted(true);
   }, [router]);
 
-  const activeActivities = activities[language] || activities.ar;
+  const activeActivities = upcomingExams.map(exam => ({title:exam.title,date:new Date(exam.startDate).toLocaleString(language === 'ar' ? 'ar-EG' : 'en-GB'),type:language === 'ar' ? 'اختبار' : 'Exam',color:'blue'}));
 
   return (
     <DashboardLayout>

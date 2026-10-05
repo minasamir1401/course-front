@@ -1,4 +1,5 @@
 "use client";
+import { fetchAllPages } from "@/lib/paginatedFetch";
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
@@ -34,13 +35,9 @@ export default function SchoolAdminCoursesPage() {
 
   const fetchCourses = async (token: string, sId: string) => {
     try {
-      const res = await apiFetch(`${API_URL}/courses?schoolId=${sId}`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setCourses(Array.isArray(data) ? data : (data.courses || []));
-      }
+      const rows = await fetchAllPages(`${API_URL}/courses?schoolId=${sId}`, 'courses', { headers: { Authorization: `Bearer ${token}` } });
+      setCourses(rows);
+      
     } catch (error) {
       console.error("Failed to fetch courses");
     } finally {

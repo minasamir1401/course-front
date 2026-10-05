@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Sparkles, Award, Trophy, Play, CheckCircle2, AlertCircle, HelpCircle, Info, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, BookOpen, Clock, Target, X, XCircle, Lock, RefreshCw, Star, StarOff, BrainCircuit, ArrowLeft, ArrowRight, ListOrdered, TrendingUp, Layers, GraduationCap, Zap } from 'lucide-react';
 import { useRouter } from "next/navigation";
-import { API_URL } from "@/lib/api";
+import { API_URL, apiFetch } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import InteractiveQuestionRenderer from "@/components/InteractiveQuestionRenderer";
 import AnimatedFeedback from "@/components/AnimatedFeedback";
@@ -42,7 +42,8 @@ export default function ActivitiesPage() {
   const [userGrade, setUserGrade] = useState<string>("");
   
   // Data States
-  const [subject, setSubject] = useState<string>("الرياضيات"); // Default subject
+  const [subject, setSubject] = useState<string>(""); // Default subject
+  const [loadError, setLoadError] = useState("");
   const [progressData, setProgressData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedClusters, setExpandedClusters] = useState<Record<string, boolean>>({});
@@ -132,12 +133,14 @@ export default function ActivitiesPage() {
 
   const fetchProgress = async (authToken: string, currentSubject: string) => {
     setIsLoading(true);
+    setLoadError("");
     try {
-      const res = await fetch(`${API_URL}/skills-hub/progress?subject=${encodeURIComponent(currentSubject)}`, {
+      const res = await apiFetch(`${API_URL}/skills-hub/progress?subject=${encodeURIComponent(currentSubject)}`, {
         headers: {
           Authorization: `Bearer ${authToken}`
         }
       });
+      if (!res.ok) throw new Error("Failed to load activities");
       if (res.ok) {
         const data = await res.json();
         setProgressData(data);
@@ -152,6 +155,7 @@ export default function ActivitiesPage() {
         }
       }
     } catch (error) {
+      setLoadError(language === "ar" ? "تعذر تحميل الأنشطة. أعد المحاولة." : "Could not load activities. Please retry.");
       console.error("Error fetching progress data:", error);
     } finally {
       setIsLoading(false);
@@ -170,7 +174,7 @@ export default function ActivitiesPage() {
     if (!token) return;
     try {
       setIsLoading(true);
-      const res = await fetch(`${API_URL}/skills-hub/activities/${activityId}`, {
+      const res = await apiFetch(`${API_URL}/skills-hub/activities/${activityId}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -201,7 +205,7 @@ export default function ActivitiesPage() {
     const answer = overrideAnswer !== undefined ? overrideAnswer : currentAnswer;
     
     try {
-      const res = await fetch(`${API_URL}/skills-hub/activities/${activeActivity.id}/attempt`, {
+      const res = await apiFetch(`${API_URL}/skills-hub/activities/${activeActivity.id}/attempt`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -467,7 +471,7 @@ export default function ActivitiesPage() {
             
             {/* Subject Tabs */}
             <div className="flex gap-3 bg-black/15 p-2 rounded-2xl border border-white/10 shrink-0">
-              {["الرياضيات", "القراءة", "العلوم"]
+              {["", ...(progressData?.subjects || [])]
                 .filter((subj) => !(subj === "العلوم" && isStudentGrade123))
                 .map((subj) => (
                   <button
@@ -479,17 +483,14 @@ export default function ActivitiesPage() {
                         : "text-white/70 hover:text-white hover:bg-white/5"
                     }`}
                   >
-                    {subj === "الرياضيات" 
-                      ? (language === 'ar' ? "📐 الرياضيات" : "📐 Mathematics") 
-                      : subj === "القراءة"
-                      ? (language === 'ar' ? "📚 القراءة" : "📚 Reading")
-                      : (language === 'ar' ? "🔬 العلوم" : "🔬 Science")}
+                    {subj || (language === 'ar' ? 'كل المواد' : 'All subjects')}
                   </button>
                 ))}
             </div>
           </div>
         </div>
 
+        {loadError && <div role="alert" className="p-4 bg-red-50 text-red-700 rounded-xl">{loadError} <button onClick={() => token && fetchProgress(token, subject)} className="underline">{language === 'ar' ? 'إعادة المحاولة' : 'Retry'}</button></div>}
         {/* ── METRICS SUMMARY BAR ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           

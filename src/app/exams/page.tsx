@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { AlertCircle, Award, Trophy, Flame, Medal, Layers, Sparkles, ChevronDown } from 'lucide-react';
 import Link from "next/link";
-import { API_URL } from "@/lib/api";
+import { API_URL, apiFetch } from "@/lib/api";
 import { getStudentExamTitle } from "@/lib/examModuleView";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -29,6 +29,8 @@ export default function ExamsPage() {
   }, []);
 
   const fetchData = async () => {
+    setLoading(true);
+    setError("");
     try {
       const token = localStorage.getItem("lms_token") ||
         localStorage.getItem("school_admin_token") ||
@@ -40,10 +42,11 @@ export default function ExamsPage() {
       }
 
       const [modulesRes, portfolioRes] = await Promise.all([
-        fetch(`${API_URL}/exams`, { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API_URL}/progress/portfolio`, { headers: { Authorization: `Bearer ${token}` } })
+        apiFetch(`${API_URL}/exams`, { headers: { Authorization: `Bearer ${token}` } }),
+        apiFetch(`${API_URL}/progress/portfolio`, { headers: { Authorization: `Bearer ${token}` } })
       ]);
 
+      if (!modulesRes.ok || !portfolioRes.ok) throw new Error("Content request failed");
       if (modulesRes.ok) {
         const modulesData = await modulesRes.json();
         setModules(Array.isArray(modulesData) ? modulesData : []);
@@ -98,9 +101,9 @@ export default function ExamsPage() {
             ) : error ? (
               <div className="py-24 text-center bg-rose-50 rounded-[32px] border border-rose-100 shadow-sm">
                 <AlertCircle className="w-12 h-12 text-rose-500 mx-auto mb-4" />
-                <p className="text-rose-600 font-black text-xl">{error}</p>
+                <p className="text-rose-600 font-black text-xl">{error}</p><button onClick={fetchData} className="mt-4 font-bold">{language === "ar" ? "إعادة المحاولة" : "Retry"}</button>
               </div>
-            ) : modules.filter((m) => (m.modules || []).filter((x: any) => !x.parentModuleId).length > 0).length === 0 ? (
+            ) : modules.length === 0 ? (
               <div className="py-32 text-center bg-white rounded-[40px] border border-slate-100 shadow-sm group">
                 <div className="w-24 h-24 bg-slate-50 border-2 border-slate-100 rounded-[28px] flex items-center justify-center mx-auto mb-8 text-slate-300">
                   <Layers className="w-12 h-12" />
@@ -112,11 +115,11 @@ export default function ExamsPage() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {modules
-                  .filter((m) => (m.modules || []).filter((x: any) => !x.parentModuleId).length > 0)
+                  
                   .map((module, index) => {
                     const rootSectionsCount = (module.modules || []).filter((m: any) => !m.parentModuleId).length;
                     return (
-                      <Link href={`/exams/${module.id}/details`} key={`${module.id ?? 'module'}-${index}`} className="block bg-white rounded-3xl p-6 border-2 transition-all duration-300 cursor-pointer shadow-sm group relative overflow-hidden border-slate-100 hover:border-indigo-300 hover:shadow-lg">
+                      <Link href={(module.modules || []).length ? `/exams/${module.id}/details` : `/exams/${module.id}`} key={`${module.id ?? 'module'}-${index}`} className="block bg-white rounded-3xl p-6 border-2 transition-all duration-300 cursor-pointer shadow-sm group relative overflow-hidden border-slate-100 hover:border-indigo-300 hover:shadow-lg">
                         <div className="flex justify-between items-start mb-4">
                           <div className="w-14 h-14 rounded-2xl flex items-center justify-center transition-colors bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white">
                             <Layers className="w-7 h-7" />

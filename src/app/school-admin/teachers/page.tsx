@@ -1,4 +1,5 @@
 "use client";
+import { fetchAllPages } from "@/lib/paginatedFetch";
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
@@ -39,6 +40,7 @@ export default function SchoolAdminTeachersPage() {
         }
       }
     } catch (e) {
+      showToast(language === 'ar' ? 'تعذر تحميل القائمة كاملة. أعد المحاولة.' : 'Could not load the full list. Please retry.', 'error');
       console.error(e);
     }
   }, []);
@@ -47,13 +49,9 @@ export default function SchoolAdminTeachersPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem("school_admin_token");
-      const res = await apiFetch(`${API_URL}/admin/users?schoolId=${sId}&role=TEACHER`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setTeachers(Array.isArray(data) ? data : (data.users || []));
-      }
+      const rows = await fetchAllPages(`${API_URL}/admin/users?schoolId=${sId}&role=TEACHER`, 'users', { headers: { Authorization: `Bearer ${token}` } });
+      setTeachers(rows);
+      
     } catch (e) {
       console.error(e);
     } finally {

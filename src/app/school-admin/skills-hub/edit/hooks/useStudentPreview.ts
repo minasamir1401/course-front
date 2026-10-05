@@ -58,7 +58,7 @@ export const useStudentPreview = (props: { language: string }) => {
     
     // Set timer based on difficulty
     const diff = activity.difficulty?.toLowerCase() || 'medium';
-    setPreviewTimeLeft(diff === 'hard' ? 300 : diff === 'medium' ? 180 : 120);
+    setPreviewTimeLeft(Number(activity.estimatedTime) > 0 ? Number(activity.estimatedTime) : null);
   };
 
   const closePreview = () => {
@@ -95,11 +95,9 @@ export const useStudentPreview = (props: { language: string }) => {
     setPreviewIsSubmitting(true);
     
     try {
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 800));
       
       const timeTaken = Math.floor((Date.now() - previewStartTime) / 1000);
-      const isCorrect = isAnswerCorrect(previewAnswer, previewActivity.data.correctAnswer);
+      const isCorrect = isAnswerCorrect(previewActivity, previewAnswer);
       
       setPreviewResult({
         isCorrect,
@@ -107,8 +105,8 @@ export const useStudentPreview = (props: { language: string }) => {
         timeTaken,
         hintsUsed: previewHintsUsed,
         attemptCount: previewAttemptCount,
-        correctAnswer: previewActivity.data.correctAnswer,
-        explanation: previewActivity.data.explanation
+        correctAnswer: previewActivity.correctAnswer,
+        explanation: previewActivity.explanation
       });
       
     } catch (err) {

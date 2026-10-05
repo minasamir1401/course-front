@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useParams, useRouter } from "next/navigation";
-import { API_URL, getFullImageUrl } from '@/lib/api';
+import { API_URL, getFullImageUrl, apiFetch } from '@/lib/api';
 import { fetchStudentStats, readCachedStudentStats } from "@/lib/student-stats";
 import { PlaySquare, FileText, HelpCircle, ChevronLeft, ChevronRight, BookOpen, Clock, CheckCircle2, List, Bookmark, MessageSquare, Download, Share2, Paperclip, Check, Lock, Play, Sparkles, Calendar, ArrowRight } from 'lucide-react';
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -30,7 +30,7 @@ export default function CourseDetailsPage() {
           return;
         }
 
-        const res = await fetch(`${API_URL}/courses/${courseId}`, {
+        const res = await apiFetch(`${API_URL}/courses/${courseId}`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
 

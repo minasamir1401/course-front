@@ -13,12 +13,15 @@ export default function CoursesPage() {
   const router = useRouter();
   const [courses, setCourses] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [reload, setReload] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const { t, language } = useLanguage();
 
   useEffect(() => {
     const fetchCourses = async () => {
+      setLoadError("");
       try {
         const token = localStorage.getItem("lms_token") ||
                       localStorage.getItem("school_admin_token") ||
@@ -38,6 +41,7 @@ export default function CoursesPage() {
         const statsData = await fetchStudentStats(token);
         setCourses(statsData.courseProgresses || []);
       } catch (error) {
+        setLoadError(language === "ar" ? "تعذر تحميل الكورسات. أعد المحاولة." : "Could not load courses. Please retry.");
         console.error("Failed to fetch courses:", error);
       } finally {
         setIsLoading(false);
@@ -45,7 +49,7 @@ export default function CoursesPage() {
     };
 
     fetchCourses();
-  }, [router]);
+  }, [router, reload]);
 
   const toNumber = (value: any) => {
     const n = Number(value);
@@ -92,6 +96,7 @@ export default function CoursesPage() {
   const totalCompleted = courses.filter(c => c.progressPercent === 100).length;
   const inProgress = courses.filter(c => c.progressPercent > 0 && c.progressPercent < 100).length;
 
+  if (loadError) return <DashboardLayout><div role="alert" className="p-8 text-red-700">{loadError}<button onClick={() => setReload(v => v + 1)} className="block underline mt-4">{language === 'ar' ? 'إعادة المحاولة' : 'Retry'}</button></div></DashboardLayout>;
   if (isLoading) {
     return (
       <DashboardLayout>

@@ -526,9 +526,15 @@ export default function LessonPlayerPage() {
                           ? lesson.slides[currentSlideIndex].label
                           : lesson.slides[currentSlideIndex].type) || 'MCQ'
                       ) ? (
-                        getQuestionOptions(lesson.slides[currentSlideIndex], language).length > 0 && (
-                          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-4xl">
-                            {getQuestionOptions(lesson.slides[currentSlideIndex], language).map((opt: string, oIdx: number) => {
+                        getQuestionOptions(lesson.slides[currentSlideIndex], language).length > 0 && (() => {
+                          const slideOpts = getQuestionOptions(lesson.slides[currentSlideIndex], language);
+                          const hasLongSlideOpts = slideOpts.some((opt: string) => {
+                            const clean = cleanOptionText(opt).replace(/<[^>]+>/g, '').trim();
+                            return clean.length > 25 || clean.includes('\\') || clean.includes('$') || clean.includes('=') || clean.includes('^') || opt.includes('<img');
+                          });
+                          return (
+                            <div className={`mt-8 grid gap-4 w-full max-w-4xl ${hasLongSlideOpts ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"}`}>
+                              {slideOpts.map((opt: string, oIdx: number) => {
                               const isMulti = lesson.slides[currentSlideIndex].label === 'MULTI_SELECT';
                               const isSelected = isMulti ? (slideAnswers[currentSlideIndex] || []).includes(opt) : slideAnswers[currentSlideIndex] === opt;
                               const isSubmitted = slideSubmitted[currentSlideIndex];
@@ -571,7 +577,8 @@ export default function LessonPlayerPage() {
                               );
                             })}
                           </div>
-                        )
+                        );
+                      })()
                       ) : (
                         <div className="mt-8 w-full max-w-4xl text-start bg-slate-50 p-6 rounded-3xl border border-slate-200">
                           <InteractiveQuestionRenderer
@@ -838,8 +845,15 @@ export default function LessonPlayerPage() {
                                 ? lesson.assignments[currentAssignmentIndex].label
                                 : lesson.assignments[currentAssignmentIndex].type) || 'MCQ'
                             ) ? (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 w-full">
-                                {getQuestionOptions(lesson.assignments[currentAssignmentIndex], language).map((opt: string, oIdx: number) => {
+                              (() => {
+                                const assignOpts = getQuestionOptions(lesson.assignments[currentAssignmentIndex], language);
+                                const hasLongAssignOpts = assignOpts.some((opt: string) => {
+                                  const clean = cleanOptionText(opt).replace(/<[^>]+>/g, '').trim();
+                                  return clean.length > 25 || clean.includes('\\') || clean.includes('$') || clean.includes('=') || clean.includes('^') || opt.includes('<img');
+                                });
+                                return (
+                                  <div className={`grid gap-4 mb-6 w-full ${hasLongAssignOpts ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"}`}>
+                                    {assignOpts.map((opt: string, oIdx: number) => {
                                   const isMulti = lesson.assignments[currentAssignmentIndex].type === 'MULTI_SELECT' || lesson.assignments[currentAssignmentIndex].label === 'MULTI_SELECT';
                                   const isSelected = isMulti ? (assignmentAnswers[currentAssignmentIndex] || []).includes(opt) : assignmentAnswers[currentAssignmentIndex] === opt;
                                   const isSubmitted = assignmentSubmitted[currentAssignmentIndex];
@@ -889,6 +903,8 @@ export default function LessonPlayerPage() {
                                   );
                                 })}
                               </div>
+                            );
+                          })()
                             ) : (
                               <div className="w-full text-start bg-slate-50 p-6 rounded-3xl border border-slate-200 mb-6">
                                 <InteractiveQuestionRenderer

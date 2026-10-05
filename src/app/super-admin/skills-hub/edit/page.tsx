@@ -1,4 +1,5 @@
 "use client";
+import { downloadSkillTemplate, downloadSkillMetadataTemplate, readSkillMetadata } from '@/lib/skillExcel';
 
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -46,6 +47,8 @@ export default function EditSkillClusterPage() {
   }, [clusterId]);
 
   // EXCEL FILE INPUT REF
+  const importLessonRef = React.useRef<string | null>(null);
+  const metadataLessonRef = React.useRef<string | null>(null);
   const excelInputRef = React.useRef<HTMLInputElement>(null);
 
   // Destructure for JSX compatibility
@@ -53,8 +56,8 @@ export default function EditSkillClusterPage() {
   const { lessons, setLessons, isLessonModalOpen, setIsLessonModalOpen, editingLesson, setEditingLesson, openAddLesson, openEditLesson, handleSaveLesson, handleDeleteLesson, uploadingLessonId } = lessonsMgr;
   
   const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (uploadingLessonId) {
-      lessonsMgr.handleExcelUpload(e, uploadingLessonId);
+    if (importLessonRef.current) {
+      void lessonsMgr.handleExcelUpload(e, importLessonRef.current).then(() => activitiesMgr.fetchActivities(importLessonRef.current!));
     }
   };
 
@@ -253,7 +256,7 @@ export default function EditSkillClusterPage() {
   const submitPreviewAnswer = handlePreviewSubmit;
   const currentPreviewIdx = previewActivity ? previewActivitiesList.findIndex((a:any) => a.id === previewActivity.id) : 0;
   
-  const downloadTemplate = () => {};
+  const downloadTemplate = downloadSkillTemplate;
 
   const getGradeDisplay = (g: any) => (GRADE_LABELS as any)[g]?.[language === 'ar' ? 'ar' : 'en'] || g;
   
@@ -597,6 +600,7 @@ export default function EditSkillClusterPage() {
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     // uploadingLessonId is handled by the hook, we can just trigger click
+                                    importLessonRef.current = lesson.id;
                                     excelInputRef.current?.click();
                                   }}
                                   disabled={uploadingLessonId === lesson.id}
