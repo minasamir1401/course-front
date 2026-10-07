@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useId, useMemo } from 'react';
+import NextImage from 'next/image';
 import {
   Image as ImageIcon,
   Plus,
@@ -326,11 +327,14 @@ export default function QuestionImageGallery({
                 }`}
               >
                 <div className="relative w-full h-32 bg-slate-100 rounded-xl overflow-hidden mb-2 border border-slate-100 flex items-center justify-center">
-                  <img
+                  <NextImage
                     src={url}
                     alt="Detected media"
-                    className="w-full h-full object-contain p-1"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 250px"
+                    className="object-contain p-1"
                     loading="lazy"
+                    unoptimized
                   />
                   <button
                     type="button"
@@ -441,7 +445,14 @@ export default function QuestionImageGallery({
             className="relative bg-white rounded-2xl p-2 max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl flex flex-col items-center"
             onClick={e => e.stopPropagation()}
           >
-            <img src={previewImage} alt="Full preview" className="max-h-[75vh] object-contain rounded-xl" />
+            <NextImage
+              src={previewImage}
+              alt="Full preview"
+              width={800}
+              height={600}
+              className="max-h-[75vh] w-auto object-contain rounded-xl"
+              unoptimized
+            />
             <div className="w-full flex items-center justify-between pt-2 px-2 text-xs font-bold text-slate-600">
               <span className="truncate max-w-md">{previewImage}</span>
               <button

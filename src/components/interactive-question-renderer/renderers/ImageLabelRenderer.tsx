@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { parseJson } from "../utils";
 
 export default function ImageLabelRenderer({ question, value, onChange, language }: any) {
@@ -23,7 +24,15 @@ export default function ImageLabelRenderer({ question, value, onChange, language
       
       {imageUrl && (
         <div className="relative w-full max-w-md mx-auto aspect-square rounded-2xl overflow-hidden border border-slate-200 shadow-lg bg-white">
-          <img loading="lazy" decoding="async" src={imageUrl} alt="Background" className="w-full h-full object-cover" />
+          <Image
+            src={imageUrl}
+            alt="Background"
+            fill
+            sizes="(max-width: 768px) 100vw, 448px"
+            className="object-cover"
+            loading="lazy"
+            unoptimized
+          />
           {labels.map((item: any, idx: number) => (
             <div
               key={idx}

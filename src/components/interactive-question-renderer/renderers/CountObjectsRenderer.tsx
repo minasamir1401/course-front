@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { parseJson, translateText } from "../utils";
 
 export default function CountObjectsRenderer({ question, value, onChange, language }: any) {
@@ -18,11 +19,15 @@ export default function CountObjectsRenderer({ question, value, onChange, langua
       
       <div className="flex flex-wrap gap-3 justify-center py-6 bg-slate-50 rounded-3xl border border-slate-150">
         {Array.from({ length: itemCount }).map((_, i) => (
-          <img loading="lazy" decoding="async" key={i}
+          <Image
+            key={i}
             src={itemImage}
             alt={itemName}
+            width={80}
+            height={80}
             className="w-20 h-20 object-cover rounded-xl border-2 border-white shadow-md animate-gravity"
             style={{ animationDelay: `${i * 100}ms` }}
+            loading="lazy"
           />
         ))}
       </div>

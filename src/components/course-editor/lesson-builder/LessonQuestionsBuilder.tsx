@@ -2,6 +2,7 @@
 
 import { normalizeDok } from '@/lib/examQuestionMetadata';
 import React, { useState } from "react";
+import Image from "next/image";
 import { 
   Plus, Trash2, HelpCircle, Upload, Download, Edit2, CheckCircle2, 
   Lightbulb, TriangleAlert, ChevronDown, ChevronUp, Save, X, BookOpen, Target, FileText, Copy, Languages, Loader2,
@@ -854,8 +855,8 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                         const img = extractFirstImage(q);
                         if (!img) return null;
                         return (
-                          <div className="w-14 h-14 rounded-xl border border-slate-200 overflow-hidden bg-slate-50 shrink-0 flex items-center justify-center">
-                            <img src={img} alt="Question image" className="w-full h-full object-cover" />
+                          <div className="w-14 h-14 rounded-xl border border-slate-200 overflow-hidden bg-slate-50 shrink-0 flex items-center justify-center relative">
+                            <Image src={img} alt="Question image" fill sizes="56px" className="object-cover" unoptimized />
                           </div>
                         );
                       })()}
@@ -952,7 +953,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                               <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-2">
                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{isCardEn ? 'Question Image:' : 'الصورة المرفقة بالسؤال:'}</span>
                                 <div className="rounded-xl overflow-hidden border border-slate-100 max-h-60 flex items-center justify-center bg-slate-50">
-                                  <img src={img} alt="Question preview" className="max-h-60 w-auto object-contain" />
+                                  <Image src={img} alt="Question preview" width={400} height={240} className="max-h-60 w-auto object-contain" unoptimized />
                                 </div>
                               </div>
                             );
@@ -1313,8 +1314,8 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                   if (!img) return null;
                   return (
                     <div className="mt-2 p-3 bg-white border border-slate-200 rounded-xl flex items-center gap-4">
-                      <div className="w-20 h-20 rounded-lg overflow-hidden border border-slate-100 bg-slate-50 shrink-0 flex items-center justify-center">
-                        <img src={img} alt="Question Preview" className="w-full h-full object-contain" />
+                      <div className="w-20 h-20 rounded-lg overflow-hidden border border-slate-100 bg-slate-50 shrink-0 flex items-center justify-center relative">
+                        <Image src={img} alt="Question Preview" fill sizes="80px" className="object-contain" unoptimized />
                       </div>
                       <div className="flex flex-col gap-1 text-xs">
                         <span className="font-bold text-emerald-600 flex items-center gap-1">
