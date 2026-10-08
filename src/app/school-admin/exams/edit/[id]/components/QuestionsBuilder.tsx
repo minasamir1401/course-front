@@ -547,7 +547,9 @@ export const QuestionsBuilder = (props: any) => {
                                 <Lightbulb className="w-3.5 h-3.5" />
                                 <span>{isCardEn ? 'In-Exam Solving Hint:' : 'تلميح مساعد للحل أثناء الاختبار:'}</span>
                               </div>
-                              <p className="text-slate-700">{isCardEn ? (q.hintEn || q.hint) : (q.hint || q.hintEn)}</p>
+                              <div className="text-slate-700 font-bold font-sans">
+                                <HtmlRenderer html={isCardEn ? (q.hintEn || q.hint) : (q.hint || q.hintEn)} />
+                              </div>
                             </div>
                           )}
 
@@ -1000,12 +1002,9 @@ export const QuestionsBuilder = (props: any) => {
                     ? 'أداة مساعدة اختيارية تظهر للطالب في واجهة الاختبار كزر تلميح لمساعدته في التفكير والوصول للإجابة الصحيحة أثناء الحل.'
                     : 'Optional assistance tool shown as an in-exam hint button to guide the student towards the answer without revealing it.'}
                 </p>
-                <input
-                  type="text"
-                  placeholder={questionActiveLang === 'ar' ? 'اكتب تلميحاً لمساعدة الطالب في الحل هنا...' : 'Write an in-exam solving hint here...'}
+                <RichTextEditor
                   value={(questionActiveLang === 'ar' ? tempQuestion.hint : (tempQuestion.hintEn || tempQuestion.hint)) || ''}
-                  onChange={(e) => {
-                    const val = e.target.value;
+                  onChange={(val) => {
                     if (questionActiveLang === 'ar') {
                       updateCurrentQuestionField('hint', val);
                     } else {
@@ -1015,7 +1014,7 @@ export const QuestionsBuilder = (props: any) => {
                       }
                     }
                   }}
-                  className="w-full bg-white border border-amber-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-700 outline-none focus:border-amber-500"
+                  placeholder={questionActiveLang === 'ar' ? 'اكتب تلميحاً لمساعدة الطالب في الحل هنا...' : 'Write an in-exam solving hint here...'}
                 />
               </div>
 

@@ -166,15 +166,6 @@ export default function Header({
           {/* Brand / Title Section */}
           {!isFullscreen && (
             <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
-              {!isStudent && (
-                <button
-                  onClick={onMenuClick}
-                  className="px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl sm:rounded-2xl bg-white/50 hover:bg-white text-slate-600 transition-all border border-slate-200/40 flex items-center gap-1.5 sm:gap-2 shadow-sm"
-                >
-                  <Menu className="w-5 h-5" />
-                  <span className="hidden md:inline font-bold text-xs">{language === 'ar' ? 'القائمة' : 'Menu'}</span>
-                </button>
-              )}
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl overflow-hidden shadow-lg shadow-indigo-100 flex items-center justify-center transform group-hover:scale-105 transition-transform bg-white border border-slate-100 relative">
                   <Image src="/logo.jpeg" alt="Logo" width={48} height={48} priority className="w-full h-full object-cover" />
@@ -437,6 +428,16 @@ export default function Header({
               </>
             )}
           </div>
+          )}
+
+          {!isStudent && !isFullscreen && (
+            <button
+              onClick={onMenuClick}
+              className="px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl sm:rounded-2xl bg-white/50 hover:bg-white text-slate-600 transition-all border border-slate-200/40 flex items-center gap-1.5 sm:gap-2 shadow-sm"
+            >
+              <Menu className="w-5 h-5" />
+              <span className="hidden md:inline font-bold text-xs">{language === 'ar' ? 'القائمة' : 'Menu'}</span>
+            </button>
           )}
         </div>
       </div>

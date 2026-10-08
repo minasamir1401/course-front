@@ -145,6 +145,14 @@ const ToolButton = React.memo(({
 ));
 ToolButton.displayName = 'ToolButton';
 
+const MATH_SIZES = [
+  { id: 'normal', labelAr: 'عادي (100%)', labelEn: 'Normal (100%)', scale: '1em' },
+  { id: 'medium', labelAr: 'متوسط (125%)', labelEn: 'Medium (125%)', scale: '1.25em' },
+  { id: 'large', labelAr: 'كبير (150%)', labelEn: 'Large (150%)', scale: '1.5em' },
+  { id: 'xlarge', labelAr: 'كبير جداً (175%)', labelEn: 'X-Large (175%)', scale: '1.75em' },
+  { id: 'huge', labelAr: 'ضخم (200%)', labelEn: 'Huge (200%)', scale: '2em' },
+];
+
 export default function RichTextEditor({ value, onChange, placeholder = "", className = "", availableImages = [] }: RichTextEditorProps) {
   const { language } = useLanguage();
   const editorRef = useRef<HTMLDivElement>(null);
@@ -152,6 +160,9 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
   const [activeModal, setActiveModal] = useState<'table' | 'math' | 'image' | null>(null);
   const [tableConfig, setTableConfig] = useState({ rows: "3", cols: "3" });
   const [mathFormula, setMathFormula] = useState("x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}");
+  const [mathSize, setMathSize] = useState<string>('large');
+  const [mathDisplayMode, setMathDisplayMode] = useState<boolean>(false);
+  const [editingMathElement, setEditingMathElement] = useState<HTMLElement | null>(null);
   const [imageSettings, setImageSettings] = useState({ src: "", width: "100", align: "center" as 'left' | 'center' | 'right' });
   const [editingImage, setEditingImage] = useState<HTMLImageElement | null>(null);
   const [imageRect, setImageRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
@@ -199,7 +210,8 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
             mf.style.minHeight = '84px';
             mf.style.maxHeight = '180px';
             mf.style.overflowY = 'auto';
-            mf.style.fontSize = 'clamp(18px, 5vw, 24px)';
+            const currentSize = MATH_SIZES.find(s => s.id === mathSize) || MATH_SIZES[2];
+            mf.style.fontSize = currentSize.scale;
             mf.mathVirtualKeyboardPolicy = 'manual';
             
             mf.mathVirtualKeyboardPolicy = 'manual';
@@ -322,17 +334,32 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
 
   useEffect(() => {
     const handleEditorClick = (e: MouseEvent) => {
-      if ((e.target as HTMLElement).tagName === 'IMG') {
-        const img = e.target as HTMLImageElement;
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'IMG') {
+        const img = target as HTMLImageElement;
         setEditingImage(img);
         setImageSettings({
           src: img.src,
           width: img.style.width.replace('%', '') || "100",
           align: (img.dataset.align as any) || 'center'
         });
+        setEditingMathElement(null);
         setActiveModal('image');
-      } else {
-        setEditingImage(null);
+        return;
+      }
+      setEditingImage(null);
+
+      const mathEl = target.closest('.math-tex') as HTMLElement | null;
+      if (mathEl) {
+        setEditingMathElement(mathEl);
+        const latex = mathEl.getAttribute('data-latex') || '';
+        const size = mathEl.getAttribute('data-size') || 'large';
+        const isDisplay = mathEl.getAttribute('data-display') === 'true' || mathEl.classList.contains('block');
+        setMathFormula(latex);
+        setMathSize(size);
+        setMathDisplayMode(isDisplay);
+        setActiveModal('math');
+        return;
       }
     };
 
@@ -396,18 +423,56 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
 
   const handleInsertMath = async () => {
     if (mathFormula) {
+      const sizeObj = MATH_SIZES.find(s => s.id === mathSize) || MATH_SIZES[2];
+      const fontSize = sizeObj.scale;
+      const displayClass = mathDisplayMode ? 'block my-3 text-center' : 'inline-block mx-1 align-middle';
+
       try {
         const katexModule: any = await import("katex");
         const katex = katexModule.default || katexModule;
-        const renderedMath = katex.renderToString(mathFormula, { throwOnError: false });
-        const mathHtml = `<span class="math-tex inline-block mx-1 align-middle" contenteditable="false" data-latex="${mathFormula.replace(/"/g, '&quot;')}">${renderedMath}</span>&nbsp;`;
-        execCommand('insertHTML', mathHtml, true);
+        const renderedMath = katex.renderToString(mathFormula, {
+          throwOnError: false,
+          displayMode: mathDisplayMode
+        });
+        const mathHtml = `<span class="math-tex ${displayClass} cursor-pointer hover:ring-2 hover:ring-indigo-400 rounded px-1 transition-all" contenteditable="false" data-latex="${mathFormula.replace(/"/g, '&quot;')}" data-size="${mathSize}" data-display="${mathDisplayMode ? 'true' : 'false'}" style="font-size: ${fontSize};">${renderedMath}</span>${mathDisplayMode ? '' : '&nbsp;'}`;
+
+        if (editingMathElement && editingMathElement.parentNode) {
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = mathHtml;
+          const newSpan = tempDiv.firstChild;
+          if (newSpan) {
+            editingMathElement.parentNode.replaceChild(newSpan, editingMathElement);
+            handleInput(true);
+          }
+        } else {
+          execCommand('insertHTML', mathHtml, true);
+        }
       } catch (err) {
         console.error("KaTeX rendering error", err);
-        const mathHtml = `<span class="math-tex" style="font-family: 'Times New Roman', serif; font-style: italic; background: #f8fafc; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">\\( ${mathFormula} \\)</span>&nbsp;`;
-        execCommand('insertHTML', mathHtml, true);
+        const mathHtml = `<span class="math-tex ${displayClass} cursor-pointer hover:ring-2 hover:ring-indigo-400 rounded px-1 transition-all" contenteditable="false" data-latex="${mathFormula.replace(/"/g, '&quot;')}" data-size="${mathSize}" data-display="${mathDisplayMode ? 'true' : 'false'}" style="font-size: ${fontSize}; font-family: 'Times New Roman', serif; font-style: italic; background: #f8fafc; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">\\( ${mathFormula} \\)</span>${mathDisplayMode ? '' : '&nbsp;'}`;
+        if (editingMathElement && editingMathElement.parentNode) {
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = mathHtml;
+          const newSpan = tempDiv.firstChild;
+          if (newSpan) {
+            editingMathElement.parentNode.replaceChild(newSpan, editingMathElement);
+            handleInput(true);
+          }
+        } else {
+          execCommand('insertHTML', mathHtml, true);
+        }
       }
     }
+    setEditingMathElement(null);
+    setActiveModal(null);
+  };
+
+  const handleDeleteMath = () => {
+    if (editingMathElement && editingMathElement.parentNode) {
+      editingMathElement.remove();
+      handleInput(true);
+    }
+    setEditingMathElement(null);
     setActiveModal(null);
   };
 
@@ -627,7 +692,18 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
           />
         )}
         <ToolButton onClick={() => { saveSelection(); setActiveModal('table'); }} icon={Table} title={language === 'ar' ? "إدراج جدول" : "Insert Table"} />
-        <ToolButton onClick={() => { saveSelection(); setActiveModal('math'); }} icon={Sigma} title={language === 'ar' ? "إدراج معادلة" : "Insert Math"} />
+        <ToolButton
+          onClick={() => {
+            saveSelection();
+            setEditingMathElement(null);
+            setMathFormula("x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}");
+            setMathSize("large");
+            setMathDisplayMode(false);
+            setActiveModal('math');
+          }}
+          icon={Sigma}
+          title={language === 'ar' ? "إدراج معادلة رياضية" : "Insert Math"}
+        />
         <div className="w-px h-6 bg-slate-200 mx-1" />
 
         <div className="flex flex-wrap items-center justify-center gap-1.5 px-2 bg-slate-100/50 rounded-2xl py-1.5 min-w-[140px]">
@@ -832,12 +908,14 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
         </div>
       )}
       {activeModal === 'math' && (
-        <div className="fixed inset-0 z-[10000] bg-slate-900/40 backdrop-blur-[2px] p-3 sm:p-6 overflow-y-auto custom-scrollbar" onClick={() => setActiveModal(null)}>
-        <div className="relative mx-auto my-3 sm:my-8 bg-white border border-slate-200 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-[400px] max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-4rem)] overflow-y-auto custom-scrollbar animate-in zoom-in-95 duration-200 rtl" dir="rtl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[10000] bg-slate-900/40 backdrop-blur-[2px] p-3 sm:p-6 overflow-y-auto custom-scrollbar" onClick={() => { setActiveModal(null); setEditingMathElement(null); }}>
+        <div className="relative mx-auto my-3 sm:my-8 bg-white border border-slate-200 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-[460px] max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-4rem)] overflow-y-auto custom-scrollbar animate-in zoom-in-95 duration-200 rtl" dir="rtl" onClick={(e) => e.stopPropagation()}>
           <div className="flex justify-between items-center mb-4">
             <h4 className="font-black text-slate-800 flex items-center gap-2">
               <Sigma className="w-5 h-5 text-indigo-600" />
-              {language === 'ar' ? "إدراج معادلة رياضية" : "Insert Math Equation"}
+              {editingMathElement
+                ? (language === 'ar' ? "تعديل المعادلة الرياضية وحجمها" : "Edit Math Equation & Size")
+                : (language === 'ar' ? "إدراج معادلة رياضية" : "Insert Math Equation")}
             </h4>
             <div className="flex items-center gap-2">
               <button 
@@ -859,9 +937,56 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
                   <path d="M528 64H48C21.49 64 0 85.49 0 112v288c0 26.51 21.49 48 48 48h480c26.51 0 48-21.49 48-48V112c0-26.51-21.49-48-48-48zm16 336c0 8.823-7.177 16-16 16H48c-8.823 0-16-7.177-16-16V112c0-8.823 7.177-16 16-16h480c8.823 0 16 7.177 16 16v288zM168 268v-24c0-6.627-5.373-12-12-12h-24c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm96 0v-24c0-6.627-5.373-12-12-12h-24c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm96 0v-24c0-6.627-5.373-12-12-12h-24c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm96 0v-24c0-6.627-5.373-12-12-12h-24c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm-336 80v-24c0-6.627-5.373-12-12-12H84c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm384 0v-24c0-6.627-5.373-12-12-12h-24c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zM120 188v-24c0-6.627-5.373-12-12-12H84c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm96 0v-24c0-6.627-5.373-12-12-12h-24c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm96 0v-24c0-6.627-5.373-12-12-12h-24c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm96 0v-24c0-6.627-5.373-12-12-12h-24c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm96 0v-24c0-6.627-5.373-12-12-12h-24c-6.627 0-12 5.373-12 12v24c0 6.627 5.373 12 12 12h24c6.627 0 12-5.373 12-12zm-96 152v-8c0-6.627-5.373-12-12-12H180c-6.627 0-12 5.373-12 12v8c0 6.627 5.373 12 12 12h216c6.627 0 12-5.373 12-12z"></path>
                 </svg>
               </button>
-              <button type="button" onClick={() => setActiveModal(null)} className="text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 p-1.5 rounded-lg transition-all"><X className="w-5 h-5" /></button>
+              <button type="button" onClick={() => { setActiveModal(null); setEditingMathElement(null); }} className="text-slate-400 hover:text-slate-600 bg-slate-50 hover:bg-slate-100 p-1.5 rounded-lg transition-all"><X className="w-5 h-5" /></button>
             </div>
           </div>
+
+          {/* Equation Font Size & Display Mode Controls */}
+          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 mb-4 flex flex-col gap-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-black text-slate-600">
+                {language === 'ar' ? "حجم خط المعادلة:" : "Equation Font Size:"}
+              </span>
+              <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
+                {MATH_SIZES.find(s => s.id === mathSize)?.[language === 'ar' ? 'labelAr' : 'labelEn']}
+              </span>
+            </div>
+            <div className="grid grid-cols-5 gap-1">
+              {MATH_SIZES.map(sz => (
+                <button
+                  key={sz.id}
+                  type="button"
+                  onClick={() => {
+                    setMathSize(sz.id);
+                    const mf = mathContainerRef.current?.querySelector('math-field') as any || mathContainerRef.current?.firstChild as any;
+                    if (mf) {
+                      mf.style.fontSize = sz.scale;
+                    }
+                  }}
+                  className={`py-1.5 rounded-lg text-xs font-black transition-all ${
+                    mathSize === sz.id
+                      ? "bg-indigo-600 text-white shadow-sm shadow-indigo-200 scale-105"
+                      : "bg-white hover:bg-slate-100 text-slate-700 border border-slate-200"
+                  }`}
+                >
+                  {language === 'ar' ? sz.labelAr.split(' ')[0] : sz.labelEn.split(' ')[0]}
+                </button>
+              ))}
+            </div>
+
+            <label className="flex items-center justify-between pt-2 border-t border-slate-200/60 cursor-pointer select-none">
+              <span className="text-xs font-bold text-slate-700">
+                {language === 'ar' ? "معادلة بارزة في سطر مستقل (Display Mode)" : "Standalone block equation"}
+              </span>
+              <input
+                type="checkbox"
+                checked={mathDisplayMode}
+                onChange={(e) => setMathDisplayMode(e.target.checked)}
+                className="w-4 h-4 text-indigo-600 rounded cursor-pointer accent-indigo-600"
+              />
+            </label>
+          </div>
+
           <div className="flex flex-col gap-3 mb-6">
             {/* Custom Embedded Keypad */}
             <div className="bg-slate-100 p-2 sm:p-3 rounded-2xl shadow-inner flex flex-col gap-2">
@@ -903,13 +1028,34 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
 
             <div ref={mathContainerRef} className="w-full mt-2" dir="ltr" />
           </div>
-          <button
-            type="button"
-            onClick={handleInsertMath}
-            className="w-full bg-indigo-600 text-white py-3 rounded-xl font-black shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
-          >
-            إدراج المعادلة
-          </button>
+
+          {editingMathElement ? (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleDeleteMath}
+                className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 py-3 rounded-xl font-black transition-all flex items-center justify-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                {language === 'ar' ? "حذف المعادلة" : "Delete"}
+              </button>
+              <button
+                type="button"
+                onClick={handleInsertMath}
+                className="flex-[2] bg-indigo-600 text-white py-3 rounded-xl font-black shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center justify-center gap-1.5"
+              >
+                {language === 'ar' ? "تحديث المعادلة" : "Update Equation"}
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleInsertMath}
+              className="w-full bg-indigo-600 text-white py-3 rounded-xl font-black shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all"
+            >
+              {language === 'ar' ? "إدراج المعادلة" : "Insert Equation"}
+            </button>
+          )}
         </div>
         </div>
       )}

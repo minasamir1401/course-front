@@ -415,12 +415,45 @@ math-field::part(virtual-keyboard-toggle) {
   60% { transform: scale(1) translateZ(0); }
   100% { transform: scale(1) translateY(-10px) translateZ(10px); opacity: 1; }
 }
-/* Allow horizontal scrolling for display (block) math equations if they are too long */
+/* KaTeX and mathematical formulas legibility and size control */
+.katex {
+  font-size: 1.15em;
+  text-rendering: optimizeLegibility;
+}
+
 .katex-display { 
   overflow-x: auto; 
   overflow-y: hidden; 
   padding-bottom: 0.5rem; 
+  font-size: 1.25em;
 }
+
+/* Ensure fraction dividing lines are sharp and visible */
+.katex .frac-line {
+  border-bottom-width: 1.5px !important;
+}
+
+/* Prevent sub-elements and superscripts from shrinking into unreadable sizes */
+.katex .sizing.reset-size5.size3,
+.katex .sizing.reset-size6.size3 {
+  font-size: 0.85em !important;
+}
+
+/* RichTextEditor math formula size tokens */
+.math-tex {
+  display: inline-block;
+  vertical-align: middle;
+  line-height: normal;
+}
+.math-tex:not([style*="font-size"]) {
+  font-size: 1.25em;
+}
+.math-tex[data-size="normal"] { font-size: 1em; }
+.math-tex[data-size="medium"] { font-size: 1.25em; }
+.math-tex[data-size="large"] { font-size: 1.5em; }
+.math-tex[data-size="xlarge"] { font-size: 1.75em; }
+.math-tex[data-size="huge"] { font-size: 2em; }
+
 
 /* =========================================
    Interactive Question Renderer Animations
@@ -638,8 +671,10 @@ math-field::part(virtual-keyboard-toggle) {
 }
 .exam-option-content .katex {
   white-space: nowrap;
+  font-size: 1.2em;
 }
 .exam-option-content .katex-display {
   margin: .25em 0;
+  font-size: 1.25em;
 }
 .exam-question-media[aria-busy="true"] img { visibility: hidden; }

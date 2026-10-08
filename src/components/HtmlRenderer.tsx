@@ -21,7 +21,8 @@ const KNOWN_LATEX_COMMANDS = new Set([
   'sinh', 'cosh', 'tanh', 'coth', 'ln', 'log', 'exp', 'lim', 'limsup', 'liminf',
   'max', 'min', 'sup', 'inf', 'det', 'dim', 'ker', 'deg', 'gcd', 'hom', 'sum', 'prod', 'int', 'oint',
   'partial', 'infty', 'text', 'mathrm', 'mathbf', 'mathit', 'mathbb', 'mathcal',
-  'displaystyle', 'textstyle', 'quad', 'qquad', 'space', 'newline', 'approx', 'sim', 'equiv', 'le', 'ge', 'neq'
+  'displaystyle', 'textstyle', 'quad', 'qquad', 'space', 'newline', 'approx', 'sim', 'equiv', 'le', 'ge', 'neq',
+  'tiny', 'small', 'normalsize', 'large', 'Large', 'LARGE', 'huge', 'Huge'
 ]);
 
 function sanitizeMathInner(math: string): string {

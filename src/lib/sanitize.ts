@@ -34,6 +34,7 @@ export const sanitizeHtml = (input: string): string => {
 
   return DOMPurify.sanitize(decoded, {
     ADD_TAGS: ["font", "mark"],
-    ADD_ATTR: ["color", "size", "face", "style"]
+    ADD_ATTR: ["color", "size", "face", "style"],
+    ALLOW_DATA_ATTR: true
   });
 };

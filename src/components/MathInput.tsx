@@ -17,6 +17,7 @@ interface MathInputProps {
 export default function MathInput({ value, onChange, placeholder, className = "" }: MathInputProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [mathFormula, setMathFormula] = useState("");
+  const [formulaSize, setFormulaSize] = useState<'normal' | 'large' | 'huge' | 'display'>('large');
   const [isRawView, setIsRawView] = useState(false);
   const mathContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -159,7 +160,14 @@ export default function MathInput({ value, onChange, placeholder, className = ""
     e.preventDefault();
     e.stopPropagation();
     if (mathFormula) {
-      const formulaText = `\\(${mathFormula}\\)`;
+      let formulaText = `\\(${mathFormula}\\)`;
+      if (formulaSize === 'large') {
+        formulaText = `\\({\\Large ${mathFormula}}\\textstyle\\)`;
+      } else if (formulaSize === 'huge') {
+        formulaText = `\\({\\huge ${mathFormula}}\\textstyle\\)`;
+      } else if (formulaSize === 'display') {
+        formulaText = `\\(\\displaystyle ${mathFormula}\\)`;
+      }
       if (isRawView) {
         if (selectionStart !== null && selectionEnd !== null) {
           const before = value.substring(0, selectionStart);
@@ -315,6 +323,38 @@ export default function MathInput({ value, onChange, placeholder, className = ""
               </button>
             </div>
             <div className="flex flex-col gap-3">
+              {/* Formula Size Selector */}
+              <div className="flex items-center justify-between gap-1 bg-slate-50 border border-slate-200/80 rounded-xl p-1.5">
+                <span className="text-[10px] font-black text-slate-500 mr-1">حجم المعادلة:</span>
+                <div className="flex gap-1 flex-1 justify-end">
+                  {[
+                    { id: 'normal', label: 'عادي' },
+                    { id: 'large', label: 'كبير (واضح)' },
+                    { id: 'huge', label: 'ضخم' },
+                    { id: 'display', label: 'بارز' },
+                  ].map(opt => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => {
+                        setFormulaSize(opt.id as any);
+                        const mf = mathContainerRef.current?.firstChild as any;
+                        if (mf) {
+                          mf.style.fontSize = opt.id === 'huge' ? '24px' : opt.id === 'large' ? '20px' : opt.id === 'display' ? '22px' : '16px';
+                        }
+                      }}
+                      className={`px-2 py-1 rounded-lg text-[10px] font-black transition-all ${
+                        formulaSize === opt.id
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Custom Keypad */}
               <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 flex flex-col gap-1.5 scale-95 origin-top">
                 {/* Arrows & Backspace */}
