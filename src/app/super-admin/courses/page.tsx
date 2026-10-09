@@ -1,5 +1,6 @@
 "use client";
 
+import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -440,7 +441,7 @@ export default function SuperAdminCoursesPage() {
                                 sizes="80px"
                                 className="object-cover"
                                 alt="Cover"
-                                unoptimized={Boolean(getFullImageUrl(course.coverImage)?.startsWith('data:'))}
+                                unoptimized={shouldSkipImageOptimization(getFullImageUrl(course.coverImage) || "")}
                               />
                            ) : (
                               <Layers className="w-8 h-8 text-indigo-600" />

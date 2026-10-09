@@ -69,7 +69,7 @@ export default function SuperAdminSidebar({
         <div className="px-6 py-8 border-b border-slate-100">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-white rounded-xl shadow-sm border border-slate-200 flex items-center justify-center p-2 relative">
-              <Image src="/logo.jpeg" alt="Logo" width={48} height={48} priority className="w-full h-full object-contain" />
+              <Image src="/logo.jpeg" alt="Logo" width={48} sizes="48px" height={48} priority className="w-full h-full object-contain" />
             </div>
           </div>
         </div>

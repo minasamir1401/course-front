@@ -1,4 +1,5 @@
 "use client";
+import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
 import React, { useState } from "react";
 import Image from "next/image";
 import { Trash2 } from 'lucide-react';
@@ -59,7 +60,7 @@ export default function ImageLabelEditor({ question, updateQuestionData, languag
                       : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                   }`}
                 >
-                  <Image src={imgUrl} alt="" width={14} height={14} className="w-3.5 h-3.5 object-cover rounded" unoptimized />
+                  <Image src={imgUrl} alt="" width={14} sizes="14px" height={14} className="w-3.5 h-3.5 object-cover rounded" unoptimized={shouldSkipImageOptimization(imgUrl)} />
                   <span>{language === 'ar' ? `صورة ${i + 1}` : `Image ${i + 1}`}</span>
                 </button>
               ))}

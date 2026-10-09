@@ -176,7 +176,7 @@ export function processHtml(html: string, imageLoading: "lazy" | "eager" = "lazy
     const resolvedSrc = resolveMediaUrl(src);
     let attributes = (before + ' ' + after).replace(/\s*(loading|decoding|srcset|sizes)=["'][^"']*["']/gi, '');
     let imageSrc = resolvedSrc;
-    if (imageLoading === 'eager' && (resolvedSrc.startsWith('/uploads/') || resolvedSrc.startsWith('https://'))) {
+    if (resolvedSrc.startsWith('/uploads/') || resolvedSrc.startsWith('https://')) {
       try {
         const props = getImageProps({src:resolvedSrc,alt:'',width:700,height:400,sizes:'(max-width: 768px) 100vw, 700px'}).props;
         imageSrc = props.src;

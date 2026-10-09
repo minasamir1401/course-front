@@ -168,7 +168,7 @@ export default function Header({
             <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
               <div className="flex items-center gap-2 sm:gap-3">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl overflow-hidden shadow-lg shadow-indigo-100 flex items-center justify-center transform group-hover:scale-105 transition-transform bg-white border border-slate-100 relative">
-                  <Image src="/logo.jpeg" alt="Logo" width={48} height={48} priority className="w-full h-full object-cover" />
+                  <Image src="/logo.jpeg" alt="Logo" width={48} sizes="48px" height={48} priority className="w-full h-full object-cover" />
                 </div>
 
               </div>

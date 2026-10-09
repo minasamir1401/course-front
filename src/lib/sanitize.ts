@@ -4,6 +4,9 @@ import DOMPurify from "dompurify";
 
 export const decodeHtmlEntities = (input: string): string => {
   if (!input || typeof input !== 'string') return input || '';
+  // Entities inside real HTML are escaped text/attributes (including data-latex).
+  // Only decode legacy content whose entire markup was stored entity-encoded.
+  if (/<\/?[a-z][^>]*>/i.test(input)) return input;
   if (input.includes('&lt;') || input.includes('&gt;')) {
     return input
       .replace(/&lt;/gi, '<')

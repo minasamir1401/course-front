@@ -16,7 +16,7 @@ export default function Navbar() {
             <Image
               src="/logo.jpeg"
               alt="Klevro"
-              width={160}
+              width={160} sizes="160px"
               height={60}
               priority
               className="h-full w-auto object-contain"

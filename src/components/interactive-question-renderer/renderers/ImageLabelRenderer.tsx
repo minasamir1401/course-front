@@ -1,5 +1,6 @@
 "use client";
 
+import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
 import React from "react";
 import Image from "next/image";
 import { parseJson } from "../utils";
@@ -31,7 +32,7 @@ export default function ImageLabelRenderer({ question, value, onChange, language
             sizes="(max-width: 768px) 100vw, 448px"
             className="object-cover"
             loading="lazy"
-            unoptimized
+            unoptimized={shouldSkipImageOptimization(imageUrl)}
           />
           {labels.map((item: any, idx: number) => (
             <div

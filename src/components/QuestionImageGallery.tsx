@@ -1,5 +1,6 @@
 'use client';
 
+import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
 import React, { useState, useId, useMemo } from 'react';
 import NextImage from 'next/image';
 import {
@@ -257,7 +258,7 @@ export default function QuestionImageGallery({
             <input
               id={fileInputId}
               type="file"
-              accept="image/*,.heic,.heif"
+              accept="image/*"
               className="hidden"
               disabled={isUploading}
               onChange={handleUploadNew}
@@ -334,7 +335,7 @@ export default function QuestionImageGallery({
                     sizes="(max-width: 768px) 100vw, 250px"
                     className="object-contain p-1"
                     loading="lazy"
-                    unoptimized
+                    unoptimized={shouldSkipImageOptimization(url)}
                   />
                   <button
                     type="button"
@@ -448,10 +449,10 @@ export default function QuestionImageGallery({
             <NextImage
               src={previewImage}
               alt="Full preview"
-              width={800}
+              width={800} sizes="(max-width: 768px) 100vw, 800px"
               height={600}
               className="max-h-[75vh] w-auto object-contain rounded-xl"
-              unoptimized
+              unoptimized={shouldSkipImageOptimization(previewImage)}
             />
             <div className="w-full flex items-center justify-between pt-2 px-2 text-xs font-bold text-slate-600">
               <span className="truncate max-w-md">{previewImage}</span>

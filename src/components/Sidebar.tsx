@@ -96,7 +96,7 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose, onToggle, rol
         <div className="p-8 mb-4 border-b border-slate-50">
           <div className="flex items-center gap-4 group">
             <div className="w-10 h-10 bg-white rounded-xl shadow-sm border border-slate-200 flex items-center justify-center p-2 relative">
-              <Image src="/logo.jpeg" alt="Logo" width={40} height={40} priority className="w-full h-full object-contain" />
+              <Image src="/logo.jpeg" alt="Logo" width={40} sizes="40px" height={40} priority className="w-full h-full object-contain" />
             </div>
             <div className="min-w-0">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">

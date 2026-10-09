@@ -223,7 +223,7 @@ export default function StudentDashboard() {
              <Image
                src="https://cdn3d.iconscout.com/3d/premium/thumb/graduation-cap-and-books-5358784-4487403.png" 
                alt="Graduation Books" 
-               width={256}
+               width={256} sizes="256px"
                height={256}
                className="w-48 h-48 md:w-64 md:h-64 object-contain drop-shadow-2xl" 
                priority

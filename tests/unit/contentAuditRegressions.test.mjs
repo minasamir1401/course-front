@@ -14,6 +14,17 @@ function load(file,mocks={}) {
   return module.exports;
 }
 const {processHtml}=load('../../src/components/HtmlRenderer.tsx',{'../lib/sanitize':{sanitizeHtml:x=>x},'../lib/utils':{resolveMediaUrl:x=>x}});
+test('lazy HTML images use responsive optimization while preserving content layout', () => {
+ const rendered = processHtml('<img src="/uploads/example.webp" alt="Diagram" data-align="center" style="width:50%;height:auto" />');
+ assert.match(rendered, /srcset="[^"]*_next\/image/);
+ assert.match(rendered, /loading="lazy"/);
+ assert.match(rendered, /sizes="\(max-width: 768px\) 100vw, 700px"/);
+ assert.match(rendered, /style="width:50%;height:auto"/);
+ assert.match(rendered, /data-align="center"/);
+ const offline = processHtml('<img src="data:image/webp;base64,AAAA" />');
+ assert.match(offline, /src="data:image\/webp;base64,AAAA"/);
+ assert.doesNotMatch(offline, /_next\/image/);
+});
 test('fractions inside explicit math render once with no nested delimiters or KaTeX error',()=>{
  for(const html of [
    String.raw`\(x=\ln(18/5)\)`,

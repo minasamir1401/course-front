@@ -520,7 +520,7 @@ export const ModuleModal = (props: any) => {
                               <input
                                 type="file"
                                 className="hidden"
-                                accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,image/*,.heic,.heif"
+                                accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,image/*"
                                 onChange={async (e: any) => {
                                   const file = e.target.files?.[0];
                                   if (file) {

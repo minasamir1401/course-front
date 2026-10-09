@@ -1,4 +1,5 @@
 import { API_URL } from "./api";
+import { assertSupportedImageUpload } from "./imageUploadPolicy";
 
 /**
  * Compresses an image file using Canvas.
@@ -9,6 +10,7 @@ import { API_URL } from "./api";
  * @returns A promise that resolves to the compressed image as a base64 string.
  */
 export async function compressImage(file: File, maxWidth = 1200, maxHeight = 1200, quality = 0.7): Promise<string> {
+  assertSupportedImageUpload(file);
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -61,6 +63,7 @@ export async function compressImageToFile(
   maxHeight = 1080,
   quality = 0.8
 ): Promise<File> {
+  assertSupportedImageUpload(file);
   return new Promise((resolve) => {
     if (!file.type.startsWith("image/") || file.type.includes("svg") || file.type.includes("gif")) {
       return resolve(file);
@@ -114,6 +117,7 @@ export async function compressImageToFile(
  * Supports cookies and optional bearer token, with automatic image compression.
  */
 export async function uploadFileToServer(file: File): Promise<string> {
+  assertSupportedImageUpload(file);
   let fileToUpload = file;
   if (file.type.startsWith("image/") && !file.type.includes("svg") && !file.type.includes("gif")) {
     try {

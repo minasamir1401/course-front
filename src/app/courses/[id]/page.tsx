@@ -1,5 +1,6 @@
 "use client";
 
+import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -168,7 +169,7 @@ export default function CourseDetailsPage() {
                   className="object-cover"
                   alt={course.title || "Course Cover"}
                   priority
-                  unoptimized={getFullImageUrl(course.coverImage)?.startsWith('data:')}
+                  unoptimized={shouldSkipImageOptimization(getFullImageUrl(course.coverImage)!)}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent"></div>
               </div>

@@ -82,7 +82,7 @@ export default function LandingPage() {
               <Image 
                 src="/dashboard-mockup.png"
                 alt="Dashboard Illustration" 
-                width={650}
+                width={650} sizes="(max-width: 768px) 100vw, 650px"
                 height={650}
                 priority
                 className="w-full h-auto object-cover transform hover:scale-105 transition-transform duration-700"
@@ -218,7 +218,7 @@ export default function LandingPage() {
             <div className="flex flex-col items-center md:items-start gap-4">
               <div className="flex items-center gap-3 relative z-10 group cursor-pointer">
                 <div className="w-12 h-12 rounded-2xl bg-white shadow-[0_0_20px_rgba(79,70,229,0.15)] border border-indigo-100 flex items-center justify-center p-2.5 overflow-hidden group-hover:shadow-[0_0_30px_rgba(79,70,229,0.25)] transition-all duration-300 transform group-hover:scale-105">
-                  <Image src="/logo.jpeg" alt="Logo" width={48} height={48} className="h-full object-contain" />
+                  <Image src="/logo.jpeg" alt="Logo" width={48} sizes="48px" height={48} className="h-full object-contain" />
                 </div>
                 <div className="flex flex-col">
                   <span className="text-xl font-black bg-gradient-to-r from-slate-900 to-indigo-900 bg-clip-text text-transparent">

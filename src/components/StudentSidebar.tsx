@@ -29,7 +29,7 @@ export default function StudentSidebar() {
       {/* Brand Section */}
       <div className="p-8 border-b border-slate-50 flex items-center gap-3 group cursor-pointer">
         <div className="w-12 h-12 rounded-2xl overflow-hidden shadow-lg shadow-indigo-100 transition-transform group-hover:scale-105 bg-white border border-slate-100 flex items-center justify-center relative">
-          <Image src="/logo.jpeg" alt="Logo" width={48} height={48} priority className="w-full h-full object-cover" />
+          <Image src="/logo.jpeg" alt="Logo" width={48} sizes="48px" height={48} priority className="w-full h-full object-cover" />
         </div>
 
       </div>

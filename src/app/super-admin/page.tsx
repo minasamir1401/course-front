@@ -1,5 +1,6 @@
 "use client";
 
+import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
 import { API_URL, apiFetch } from '@/lib/api';
 
 import React, { useState, useEffect } from "react";
@@ -75,7 +76,7 @@ export default function SuperAdminDashboard() {
               <div className="flex -space-x-4 space-x-reverse items-center ml-4">
                 {[1, 2, 3, 4].map(i => (
                   <div key={i} className="w-10 h-10 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold overflow-hidden shadow-sm">
-                    <Image src={`https://i.pravatar.cc/100?u=${i}`} alt="User" width={40} height={40} className="w-full h-full object-cover" />
+                    <Image src={`https://i.pravatar.cc/100?u=${i}`} unoptimized={shouldSkipImageOptimization(`https://i.pravatar.cc/100?u=${i}`)} alt="User" width={40} sizes="40px" height={40} className="w-full h-full object-cover" />
                   </div>
                 ))}
                 <div className="w-10 h-10 rounded-full border-2 border-white bg-indigo-600 flex items-center justify-center text-[10px] font-bold text-white shadow-sm">+12</div>

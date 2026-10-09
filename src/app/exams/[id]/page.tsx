@@ -1,5 +1,6 @@
 "use client";
 
+import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
 import React, { useState, useEffect, Suspense } from "react";
 import ExamCountdown from "@/components/ExamCountdown";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -903,7 +904,7 @@ function TakeExamPageContent() {
                 width={700}
                 height={400}
                 className="max-w-full h-auto rounded-2xl mb-8 border border-slate-200 shadow-sm mx-auto object-contain"
-                unoptimized={Boolean(question.imageUrl?.startsWith('data:'))}
+                unoptimized={shouldSkipImageOptimization(resolveMediaUrl(question.imageUrl))}
               />
             )}
             

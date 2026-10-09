@@ -1,5 +1,6 @@
 "use client";
 
+import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { API_URL, apiFetch } from "@/lib/api";
@@ -1004,10 +1005,10 @@ export default function ExamResultPage() {
                         <Image
                           src={answer.question.imageUrl}
                           alt="Question"
-                          width={700}
+                          width={700} sizes="(max-width: 768px) 100vw, 700px"
                           height={400}
                           className="max-w-full h-auto rounded-2xl border border-slate-100 shadow-sm mx-auto object-contain"
-                          unoptimized={Boolean(answer.question.imageUrl?.startsWith('data:'))}
+                          unoptimized={shouldSkipImageOptimization(answer.question.imageUrl)}
                         />
                       )}
                       {(answer.question.explanation || answer.question.explanationEn) && (visibility === "SHOW_ANSWERS" || visibility === "SHOW_ALL" || isAdmin) && renderExplanation(

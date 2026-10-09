@@ -8,6 +8,7 @@
     "start:standalone": "node scripts/run-standalone.js",
     "start": "npx pm2-runtime start server.js -i max --max-memory-restart 512M",
     "lint": "eslint src/app src/components src/contexts src/lib",
+    "audit:rendering": "node scripts/audit-rendering.mjs",
     "test:e2e": "playwright test",
     "test:a11y": "playwright test tests/accessibility",
     "test:report": "playwright show-report ../artifacts/quality-report/playwright"

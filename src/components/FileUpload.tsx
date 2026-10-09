@@ -1,7 +1,10 @@
 "use client";
 
+import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
 import React, { useRef, useState, useCallback } from "react";
 import { Upload, X, FileText, Image, Film, FileArchive, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import NextImage from "next/image";
+import { compressImageToFile } from "@/lib/image-utils";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface FileUploadProps {
@@ -40,7 +43,7 @@ function getUploadEndpoint(): string {
 
 export default function FileUpload({
   onUploadSuccess,
-  accept = "image/*,.heic,.heif,application/pdf,.pptx,.ppt,.docx,.doc,.zip,.xlsx",
+  accept = "image/*,application/pdf,.pptx,.ppt,.docx,.doc,.zip,.xlsx",
   label,
   value,
   tokenKey = "super_admin_token",
@@ -57,57 +60,6 @@ export default function FileUpload({
   const [fileSize, setFileSize] = useState<string>("");
   const [fileMime, setFileMime] = useState<string>("");
 
-  const compressImage = async (file: File): Promise<File> => {
-    return new Promise((resolve) => {
-      if (!file.type.startsWith("image/") || file.type.includes("svg") || file.type.includes("gif")) {
-        return resolve(file);
-      }
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new window.Image();
-        img.onload = () => {
-          const canvas = document.createElement("canvas");
-          let width = img.width;
-          let height = img.height;
-          const MAX_WIDTH = 1920;
-          const MAX_HEIGHT = 1080;
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width;
-              width = MAX_WIDTH;
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height;
-              height = MAX_HEIGHT;
-            }
-          }
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext("2d");
-          if (!ctx) return resolve(file);
-          ctx.drawImage(img, 0, 0, width, height);
-          canvas.toBlob(
-            (blob) => {
-              if (blob) {
-                const newName = file.name.replace(/\.[^/.]+$/, ".webp");
-                resolve(new File([blob], newName, { type: "image/webp", lastModified: Date.now() }));
-              } else {
-                resolve(file);
-              }
-            },
-            "image/webp",
-            0.8
-          );
-        };
-        img.onerror = () => resolve(file);
-        img.src = e.target?.result as string;
-      };
-      reader.onerror = () => resolve(file);
-      reader.readAsDataURL(file);
-    });
-  };
-
   const uploadFile = useCallback(
     async (rawFile: File) => {
       setUploadState("uploading");
@@ -115,7 +67,14 @@ export default function FileUpload({
       setErrorMsg("");
       
       // Compress file if it's an image
-      const file = await compressImage(rawFile);
+      let file: File;
+      try {
+        file = await compressImageToFile(rawFile);
+      } catch (error) {
+        setUploadState("error");
+        setErrorMsg(error instanceof Error ? error.message : "Failed to prepare image");
+        return;
+      }
       
       setFileName(file.name);
       setFileSize(formatBytes(file.size));
@@ -190,7 +149,7 @@ export default function FileUpload({
           setUploadState("error");
           try {
             const data = JSON.parse(xhr.responseText);
-            setErrorMsg(data.error || "Upload failed");
+            setErrorMsg(data.details || data.error || "Upload failed");
           } catch {
             setErrorMsg("Upload failed");
           }
@@ -312,7 +271,7 @@ export default function FileUpload({
           {/* Image preview or icon */}
           {previewUrl && (fileMime.startsWith("image/") || previewUrl.match(/\.(jpg|jpeg|png|webp|gif|svg)(\?|$)/i)) ? (
             <div className="w-16 h-16 rounded-xl overflow-hidden border border-emerald-200 shrink-0 shadow-sm">
-              <img loading="lazy" decoding="async" src={previewUrl} alt="preview" className="w-full h-full object-cover" />
+              <NextImage src={previewUrl} unoptimized={shouldSkipImageOptimization(previewUrl)} alt="preview" width={96} height={96} sizes="96px" className="w-full h-full object-cover" />
             </div>
           ) : (
             <div className="w-16 h-16 rounded-xl bg-emerald-100 border border-emerald-200 flex items-center justify-center shrink-0">

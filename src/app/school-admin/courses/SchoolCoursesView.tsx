@@ -1,5 +1,6 @@
 "use client";
 
+import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
 import { fetchAllPages } from "@/lib/paginatedFetch";
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
@@ -183,7 +184,7 @@ export default function SchoolCoursesView() {
                              sizes="64px"
                              className="object-cover"
                              alt={course.title || "Course Cover"}
-                             unoptimized={Boolean(getFullImageUrl(course.coverImage)?.startsWith('data:'))}
+                             unoptimized={shouldSkipImageOptimization(getFullImageUrl(course.coverImage) || "")}
                            />
                          ) : (
                            <BookOpen className="w-8 h-8" />

@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
 import React from 'react';
 import NextImage from 'next/image';
 import HtmlRenderer from '@/components/HtmlRenderer';
@@ -389,7 +390,7 @@ export const QuestionsBuilder = (props: any) => {
                             if (!img) return null;
                             return (
                               <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-slate-200 shrink-0 bg-slate-50">
-                                <NextImage src={img} alt="Question" width={48} height={48} className="w-full h-full object-cover" unoptimized={Boolean(img.startsWith('data:'))} />
+                                <NextImage src={img} alt="Question" width={48} sizes="48px" height={48} className="w-full h-full object-cover" unoptimized={shouldSkipImageOptimization(img)} />
                               </div>
                             );
                           })()}
@@ -466,7 +467,7 @@ export const QuestionsBuilder = (props: any) => {
                             if (!img) return null;
                             return (
                               <div className="rounded-2xl overflow-hidden border border-slate-200 bg-white p-2 shadow-sm max-w-sm">
-                                <NextImage src={img} alt="Question attachment" width={360} height={240} className="w-full h-auto max-h-60 object-contain rounded-xl" unoptimized={Boolean(img.startsWith('data:'))} />
+                                <NextImage src={img} alt="Question attachment" width={360} sizes="(max-width: 768px) 100vw, 360px" height={240} className="w-full h-auto max-h-60 object-contain rounded-xl" unoptimized={shouldSkipImageOptimization(img)} />
                               </div>
                             );
                           })()}
@@ -904,10 +905,10 @@ export const QuestionsBuilder = (props: any) => {
                     <NextImage
                       src={tempQuestion.imageUrl}
                       alt="Question attachment preview"
-                      width={360}
+                      width={360} sizes="(max-width: 768px) 100vw, 360px"
                       height={176}
                       className="w-full h-44 object-contain p-2"
-                      unoptimized={Boolean(tempQuestion.imageUrl.startsWith('data:'))}
+                      unoptimized={shouldSkipImageOptimization(tempQuestion.imageUrl)}
                     />
                     <div className="p-2 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-bold truncate">
                       <span className="truncate flex-1 px-1">{tempQuestion.imageUrl}</span>
@@ -920,7 +921,7 @@ export const QuestionsBuilder = (props: any) => {
                       <span>{isUploadingImage ? (language === 'ar' ? 'جارٍ رفع الصورة...' : 'Uploading Image...') : (language === 'ar' ? 'رفع صورة من جهازك' : 'Upload Image')}</span>
                       <input
                         type="file"
-                        accept="image/*,.heic,.heif"
+                        accept="image/*"
                         disabled={isUploadingImage}
                         className="hidden"
                         onChange={async (e) => {

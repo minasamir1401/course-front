@@ -1,5 +1,6 @@
 "use client";
 
+import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
 import { fetchAllPages } from "@/lib/paginatedFetch";
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
@@ -180,7 +181,7 @@ export default function SchoolTeachersView() {
                              sizes="56px"
                              className="object-cover"
                              alt={teacher.name || "Teacher Avatar"}
-                             unoptimized={Boolean(getFullImageUrl(teacher.avatar)?.startsWith('data:'))}
+                             unoptimized={shouldSkipImageOptimization(getFullImageUrl(teacher.avatar) || "")}
                            />
                          ) : (
                            teacher.name?.charAt(0) || "T"

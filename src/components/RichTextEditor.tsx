@@ -1,10 +1,14 @@
 "use client";
 
+import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
 import React, { useState, useEffect, useRef } from "react";
 import { Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Type, Eraser, Palette, Heading1, Heading2, ChevronDown, Image as ImageIcon, Table, Sigma, X, Highlighter, Trash2, Upload } from 'lucide-react';
 import { uploadFileToServer } from "@/lib/image-utils";
 import { buildRichTextImageHtml, getRichTextImageStyles } from "@/lib/richTextImage";
 import { convertPlainTextToHtml, shouldPreferPlainTextPaste } from "@/lib/richTextPaste";
+import { buildRichTextMathHtml } from "@/lib/richTextMath";
+import NextImage from "next/image";
+import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface RichTextEditorProps {
@@ -155,6 +159,7 @@ const MATH_SIZES = [
 
 export default function RichTextEditor({ value, onChange, placeholder = "", className = "", availableImages = [] }: RichTextEditorProps) {
   const { language } = useLanguage();
+  const { showToast } = useNotification();
   const editorRef = useRef<HTMLDivElement>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [activeModal, setActiveModal] = useState<'table' | 'math' | 'image' | null>(null);
@@ -425,42 +430,28 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
     if (mathFormula) {
       const sizeObj = MATH_SIZES.find(s => s.id === mathSize) || MATH_SIZES[2];
       const fontSize = sizeObj.scale;
-      const displayClass = mathDisplayMode ? 'block my-3 text-center' : 'inline-block mx-1 align-middle';
-
+      let renderedMath: string | undefined;
       try {
-        const katexModule: any = await import("katex");
+        const katexModule = await import("katex");
         const katex = katexModule.default || katexModule;
-        const renderedMath = katex.renderToString(mathFormula, {
+        renderedMath = katex.renderToString(mathFormula, {
           throwOnError: false,
-          displayMode: mathDisplayMode
+          displayMode: mathDisplayMode,
         });
-        const mathHtml = `<span class="math-tex ${displayClass} cursor-pointer hover:ring-2 hover:ring-indigo-400 rounded px-1 transition-all" contenteditable="false" data-latex="${mathFormula.replace(/"/g, '&quot;')}" data-size="${mathSize}" data-display="${mathDisplayMode ? 'true' : 'false'}" style="font-size: ${fontSize};">${renderedMath}</span>${mathDisplayMode ? '' : '&nbsp;'}`;
-
-        if (editingMathElement && editingMathElement.parentNode) {
-          const tempDiv = document.createElement('div');
-          tempDiv.innerHTML = mathHtml;
-          const newSpan = tempDiv.firstChild;
-          if (newSpan) {
-            editingMathElement.parentNode.replaceChild(newSpan, editingMathElement);
-            handleInput(true);
-          }
-        } else {
-          execCommand('insertHTML', mathHtml, true);
-        }
       } catch (err) {
         console.error("KaTeX rendering error", err);
-        const mathHtml = `<span class="math-tex ${displayClass} cursor-pointer hover:ring-2 hover:ring-indigo-400 rounded px-1 transition-all" contenteditable="false" data-latex="${mathFormula.replace(/"/g, '&quot;')}" data-size="${mathSize}" data-display="${mathDisplayMode ? 'true' : 'false'}" style="font-size: ${fontSize}; font-family: 'Times New Roman', serif; font-style: italic; background: #f8fafc; padding: 2px 6px; border-radius: 4px; border: 1px solid #e2e8f0;">\\( ${mathFormula} \\)</span>${mathDisplayMode ? '' : '&nbsp;'}`;
-        if (editingMathElement && editingMathElement.parentNode) {
-          const tempDiv = document.createElement('div');
-          tempDiv.innerHTML = mathHtml;
-          const newSpan = tempDiv.firstChild;
-          if (newSpan) {
-            editingMathElement.parentNode.replaceChild(newSpan, editingMathElement);
-            handleInput(true);
-          }
-        } else {
-          execCommand('insertHTML', mathHtml, true);
+      }
+      const mathHtml = buildRichTextMathHtml(mathFormula, mathSize, fontSize, mathDisplayMode, renderedMath);
+      if (editingMathElement && editingMathElement.parentNode) {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = mathHtml;
+        const newSpan = tempDiv.firstChild;
+        if (newSpan) {
+          editingMathElement.parentNode.replaceChild(newSpan, editingMathElement);
+          handleInput(true);
         }
+      } else {
+        execCommand('insertHTML', mathHtml, true);
       }
     }
     setEditingMathElement(null);
@@ -539,6 +530,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
           execCommand('insertHTML', `<img loading="lazy" decoding="async" src="${uploadedUrl}" style="max-width: 100%; height: auto; border-radius: 12px; margin: 10px auto; display: block;" />&nbsp;`);
         } catch (err) {
           console.error("Failed to upload pasted image:", err);
+          showToast(err instanceof Error ? err.message : "Failed to upload image", "error");
         }
       }
     }
@@ -629,6 +621,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
             execCommand('insertHTML', `<img loading="lazy" decoding="async" src="${uploadedUrl}" style="max-width: 100%; height: auto; border-radius: 12px; margin: 10px auto; display: block;" />&nbsp;`);
           } catch (err) {
             console.error("Failed to upload dropped image:", err);
+            showToast(err instanceof Error ? err.message : "Failed to upload image", "error");
           }
         }
       }
@@ -835,7 +828,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
                       imageSettings.src === imgUrl ? 'border-indigo-600 ring-2 ring-indigo-200' : 'border-slate-200 hover:border-slate-300'
                     }`}
                   >
-                    <img src={imgUrl} alt="Choice" className="w-full h-full object-contain" />
+                    <NextImage src={imgUrl} unoptimized={shouldSkipImageOptimization(imgUrl)} alt="Choice" width={80} height={80} sizes="80px" className="w-full h-full object-contain" />
                   </button>
                 ))}
               </div>
@@ -844,7 +837,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
 
           {imageSettings.src && (
             <div className="mb-3 p-2 bg-slate-100/70 rounded-xl border border-slate-200 flex items-center justify-center max-h-36 overflow-hidden">
-              <img src={imageSettings.src} alt="Preview" className="max-h-32 object-contain rounded-lg" />
+              <NextImage src={imageSettings.src} unoptimized={shouldSkipImageOptimization(imageSettings.src)} alt="Preview" width={320} height={128} sizes="320px" className="max-h-32 w-auto object-contain rounded-lg" />
             </div>
           )}
           

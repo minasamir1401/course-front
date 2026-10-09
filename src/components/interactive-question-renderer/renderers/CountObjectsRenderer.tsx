@@ -1,5 +1,6 @@
 "use client";
 
+import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
 import React from "react";
 import Image from "next/image";
 import { parseJson, translateText } from "../utils";
@@ -21,9 +22,9 @@ export default function CountObjectsRenderer({ question, value, onChange, langua
         {Array.from({ length: itemCount }).map((_, i) => (
           <Image
             key={i}
-            src={itemImage}
+            src={itemImage} unoptimized={shouldSkipImageOptimization(itemImage)}
             alt={itemName}
-            width={80}
+            width={80} sizes="80px"
             height={80}
             className="w-20 h-20 object-cover rounded-xl border-2 border-white shadow-md animate-gravity"
             style={{ animationDelay: `${i * 100}ms` }}

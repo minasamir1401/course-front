@@ -1,5 +1,6 @@
 "use client";
 
+import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
 import React from "react";
 import Image from "next/image";
 import { useCourseEditor } from "./CourseEditorContext";
@@ -144,7 +145,7 @@ export const CourseSettingsForm: React.FC = () => {
                 alt="Cover"
                 fill
                 className="object-cover"
-                unoptimized={Boolean(getFullImageUrl(courseData.coverImage)?.startsWith('data:'))}
+                unoptimized={shouldSkipImageOptimization(getFullImageUrl(courseData.coverImage) || "/logo.jpeg")}
               />
             </div>
           )}
@@ -179,7 +180,7 @@ export const CourseSettingsForm: React.FC = () => {
                     alt="Cover"
                     fill
                     className="object-cover"
-                    unoptimized={Boolean(getFullImageUrl(courseData.coverImage)?.startsWith('data:'))}
+                    unoptimized={shouldSkipImageOptimization(getFullImageUrl(courseData.coverImage) || "/logo.jpeg")}
                   />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-3 z-10">
                     <button
@@ -194,7 +195,7 @@ export const CourseSettingsForm: React.FC = () => {
                       <input
                         type="file"
                         className="hidden"
-                        accept="image/*,.heic,.heif"
+                        accept="image/*"
                         onChange={async (e: any) => {
                           const file = e.target.files?.[0];
                           if (file) {
@@ -228,7 +229,7 @@ export const CourseSettingsForm: React.FC = () => {
                   <input
                     type="file"
                     className="hidden"
-                    accept="image/*,.heic,.heif"
+                    accept="image/*"
                     onChange={async (e: any) => {
                       const file = e.target.files?.[0];
                       if (file) {

@@ -1,5 +1,6 @@
 "use client";
 
+import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
 import { apiFetch, API_URL } from '@/lib/api';
 import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
@@ -611,11 +612,11 @@ export default function SchoolManagementPage() {
                             return (
                               <Image
                                 src={avatarSrc}
-                                width={48}
+                                width={48} sizes="48px"
                                 height={48}
                                 className="w-12 h-12 rounded-2xl object-cover ring-2 ring-slate-100 group-hover:ring-indigo-500/50 transition-all"
                                 alt={user.name || "User avatar"}
-                                unoptimized={Boolean(avatarSrc.startsWith('data:'))}
+                                unoptimized={shouldSkipImageOptimization(avatarSrc)}
                               />
                             );
                           })()}

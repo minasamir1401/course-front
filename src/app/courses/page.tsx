@@ -1,5 +1,6 @@
 "use client";
 
+import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
 import React, { useEffect, useState, useMemo } from "react";
 import Image from "next/image";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -232,7 +233,7 @@ export default function CoursesPage() {
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       className="object-cover transition-transform duration-700 group-hover:scale-110"
                       alt={course.title || "Course Poster"}
-                      unoptimized={imageSrc.startsWith('data:')}
+                      unoptimized={shouldSkipImageOptimization(imageSrc)}
                     />
                   ) : (
                     <div className={`w-full h-full flex items-center justify-center transition-transform duration-700 group-hover:scale-110 ${isFinished ? 'bg-emerald-50' : 'bg-gradient-to-br from-indigo-50 to-violet-100'}`}>
