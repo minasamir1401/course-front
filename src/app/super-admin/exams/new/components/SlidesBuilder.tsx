@@ -1,5 +1,7 @@
 // @ts-nocheck
+import BilingualMetadataEditor from '@/components/BilingualMetadataEditor';
 import React from 'react';
+import SlideKeyboardRegion from '@/components/SlideKeyboardRegion';
 import { ChevronUp, ChevronDown, CheckCircle2, Edit2, Trash2, Plus, FileText, Settings, Activity, MoveUp, MoveDown, Mic, Video, Image as ImageIcon, Layout, Check, Upload, Download } from 'lucide-react';
 import RichTextEditor from '@/components/RichTextEditor';
 import { extractImageUrls } from '@/lib/image-utils';
@@ -31,7 +33,7 @@ import { SECTION_STYLE_PRESETS } from '../constants';
         : (language === 'ar' ? 'إضافة أسئلة تدريبية تفاعلية لاختبار فهم الطلاب' : 'Add interactive practice questions to test student understanding');
 
     return (
-      <div className="space-y-8">
+      <SlideKeyboardRegion language={language}>
         {source !== 'slides' && (
           <input 
             type="file" 
@@ -91,7 +93,8 @@ import { SECTION_STYLE_PRESETS } from '../constants';
 
         <div className="space-y-4">
           {list.map((block: any, sIdx: number) => (
-            <React.Fragment key={block.id ?? sIdx}>
+            <div key={block.id ?? sIdx} data-slide-card={sIdx} tabIndex={-1}>
+              <BilingualMetadataEditor value={block} language={language} onChange={patch => setCurrentModule((prev: any) => ({ ...prev, [source]: prev[source].map((item: any, index: number) => index === sIdx ? { ...item, ...patch } : item) }))} />
               {sIdx === 0 && (
                 <div className="group/divider relative py-2 flex items-center justify-center my-2">
                   <div className="absolute inset-0 flex items-center" aria-hidden="true">
@@ -541,9 +544,9 @@ import { SECTION_STYLE_PRESETS } from '../constants';
                   +
                 </div>
               </div>
-            </React.Fragment>
+            </div>
           ))}
         </div>
-      </div>
+      </SlideKeyboardRegion>
     );
   };

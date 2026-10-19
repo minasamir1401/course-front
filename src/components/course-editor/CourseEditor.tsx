@@ -116,7 +116,7 @@ const InnerCourseEditor: React.FC = () => {
 
                 {lastAutoSave && (
                   <span className="text-xs text-slate-400 font-bold hidden xl:inline-block font-sans whitespace-nowrap">
-                    {language === "ar" ? "آخر حفظ تلقائي:" : "Last auto-save:"} {lastAutoSave.toLocaleTimeString()}
+                    {language === "ar" ? "آخر حفظ تلقائي:" : "Last auto-save:"} {lastAutoSave.toLocaleTimeString(undefined, { timeZone: 'Africa/Cairo' })}
                   </span>
                 )}
 

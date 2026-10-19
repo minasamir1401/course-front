@@ -1,4 +1,5 @@
 "use client";
+import { parseLessonMetadataRows } from "@/lib/lessonMetadataExcel";
 import { buildQuestionWorkbook, importModuleQuestions } from '@/lib/questionExcelWorkbook';
 import { buildCourseMetadataTemplateRows } from '@/lib/examExcelTemplates';
 
@@ -589,85 +590,8 @@ export default function CreateCoursePage() {
           return;
         }
 
-        const headers = (rows[0] as string[]).map((h) => String(h).trim().toLowerCase());
-
-        const stdArIdx = headers.findIndex(h => (h.includes("standard") || h.includes("معيار") || h.includes("المعايير")) && (h.includes("ar") || h.includes("عرب")));
-        const stdEnIdx = headers.findIndex(h => (h.includes("standard") || h.includes("معيار") || h.includes("المعايير")) && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
-        const stdIdx = headers.findIndex(h => h.includes("standard") || h.includes("معيار") || h.includes("المعايير"));
-
-        const indArIdx = headers.findIndex(h => (h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشرات")) && (h.includes("ar") || h.includes("عرب")));
-        const indEnIdx = headers.findIndex(h => (h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشرات")) && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
-        const indIdx = headers.findIndex(h => h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشرات"));
-
-        const loArIdx = headers.findIndex(h => (h.includes("outcome") || h.includes("ناتج") || h.includes("مخرج") || h.includes("النواتج") || h.includes("المخرجات")) && (h.includes("ar") || h.includes("عرب")));
-        const loEnIdx = headers.findIndex(h => (h.includes("outcome") || h.includes("ناتج") || h.includes("مخرج") || h.includes("النواتج") || h.includes("المخرجات")) && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
-        const loIdx = headers.findIndex(h => h.includes("outcome") || h.includes("ناتج") || h.includes("مخرج") || h.includes("النواتج") || h.includes("المخرجات"));
-
-        const domainArIdx = headers.findIndex(h => (h.includes("domain") || h.includes("مجال") || h.includes("المجال")) && (h.includes("ar") || h.includes("عرب")));
-        const domainEnIdx = headers.findIndex(h => (h.includes("domain") || h.includes("مجال") || h.includes("المجال")) && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
-        const domainIdx = headers.findIndex(h => h.includes("domain") || h.includes("مجال") || h.includes("المجال"));
-
-        const lessonArIdx = headers.findIndex(h => (h.includes("lesson") || h.includes("درس") || h.includes("الدرس")) && (h.includes("ar") || h.includes("عرب")));
-        const lessonEnIdx = headers.findIndex(h => (h.includes("lesson") || h.includes("درس") || h.includes("الدرس")) && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
-        const lessonIdx = headers.findIndex(h => h.includes("lesson") || h.includes("درس") || h.includes("الدرس"));
-
-        if (stdIdx === -1 && indIdx === -1 && loIdx === -1 && domainIdx === -1) {
-          showToast(t('courseCreate.excelNoHeaderError') || "Could not find matching columns (Standards, Indicators, Outcomes, Domain)", "error");
-          return;
-        }
-
-        let standardVal = "";
-        let indicatorVal = "";
-        let outcomeVal = "";
-        let domainVal = "";
-
-        const dataRows = rows.slice(1).filter(r => r.some(c => String(c).trim() !== ""));
-
-        let filteredRows = dataRows;
-        if (currentLesson.title) {
-          const currentLessonTitleLower = currentLesson.title.trim().toLowerCase();
-          const matchingRows = dataRows.filter(r => {
-            const rowLessonAr = lessonArIdx >= 0 ? String(r[lessonArIdx] ?? "").trim().toLowerCase() : "";
-            const rowLessonEn = lessonEnIdx >= 0 ? String(r[lessonEnIdx] ?? "").trim().toLowerCase() : "";
-            const rowLesson = lessonIdx >= 0 ? String(r[lessonIdx] ?? "").trim().toLowerCase() : "";
-            return (rowLessonAr && (currentLessonTitleLower.includes(rowLessonAr) || rowLessonAr.includes(currentLessonTitleLower))) ||
-              (rowLessonEn && (currentLessonTitleLower.includes(rowLessonEn) || rowLessonEn.includes(currentLessonTitleLower))) ||
-              (rowLesson && (currentLessonTitleLower.includes(rowLesson) || rowLesson.includes(currentLessonTitleLower)));
-          });
-          if (matchingRows.length > 0) {
-            filteredRows = matchingRows;
-          }
-        }
-
-        if (filteredRows.length > 0) {
-          const pickVal = (r: any[], arIdx: number, enIdx: number, fallbackIdx: number) => {
-            const arVal = arIdx >= 0 ? String(r[arIdx] ?? "").trim() : "";
-            const enVal = enIdx >= 0 ? String(r[enIdx] ?? "").trim() : "";
-            const fbVal = fallbackIdx >= 0 ? String(r[fallbackIdx] ?? "").trim() : "";
-            if (language === 'en') {
-              return enVal || arVal || fbVal;
-            }
-            return arVal || enVal || fbVal;
-          };
-
-          const standardsList = filteredRows.map(r => pickVal(r, stdArIdx, stdEnIdx, stdIdx)).filter(Boolean);
-          const indicatorsList = filteredRows.map(r => pickVal(r, indArIdx, indEnIdx, indIdx)).filter(Boolean);
-          const outcomesList = filteredRows.map(r => pickVal(r, loArIdx, loEnIdx, loIdx)).filter(Boolean);
-          const domainList = filteredRows.map(r => pickVal(r, domainArIdx, domainEnIdx, domainIdx)).filter(Boolean);
-
-          standardVal = standardsList.join("\n");
-          indicatorVal = indicatorsList.join("\n");
-          outcomeVal = outcomesList.join("\n");
-          domainVal = domainList[0] || "";
-        }
-
-        setCurrentLesson((prev: any) => ({
-          ...prev,
-          standards: standardVal || prev.standards,
-          indicators: indicatorVal || prev.indicators,
-          learningOutcomes: outcomeVal || prev.learningOutcomes,
-          domain: domainVal || prev.domain
-        }));
+        const metadata = parseLessonMetadataRows(rows, currentLesson.title);
+        setCurrentLesson((prev: any) => ({ ...prev, ...metadata }));
 
         showToast(t('courseCreate.excelMetadataSuccess') || "Standards, indicator and domain successfully imported from Excel", "success");
       } catch (err) {

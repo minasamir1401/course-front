@@ -3,6 +3,10 @@ import assert from "node:assert/strict";
 
 import { getSubmissionTotalPoints } from "../../src/lib/examResult.ts";
 
+test("unknown historical total stays unavailable even when current questions have points", () => {
+  assert.equal(getSubmissionTotalPoints({ exam: { totalPoints: null }, answers: [{ question: { points: 100 } }] }), null);
+});
+
 test("getSubmissionTotalPoints falls back to answered question points when the admin payload omits exam.totalPoints", () => {
   const total = getSubmissionTotalPoints({
     exam: {},

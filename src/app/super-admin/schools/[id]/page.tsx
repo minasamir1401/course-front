@@ -1,4 +1,6 @@
 "use client";
+import DirectoryPager from "@/components/DirectoryPager";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
 import { apiFetch, API_URL } from '@/lib/api';
@@ -46,6 +48,10 @@ export default function SchoolManagementPage() {
   const [filterGrade, setFilterGrade] = useState("ALL");
   const [filterClass, setFilterClass] = useState("ALL");
   const [filterStatus, setFilterStatus] = useState("ALL");
+  const search = useDebouncedValue(searchTerm);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
+  useEffect(() => { setPage(1); }, [id, activeTab, search, filterGrade, filterClass, filterStatus]);
 
   useEffect(() => {
     const token = localStorage.getItem("super_admin_token");
@@ -54,7 +60,7 @@ export default function SchoolManagementPage() {
       return;
     }
     fetchData();
-  }, [id, activeTab]);
+  }, [id, activeTab, page, search, filterGrade, filterClass, filterStatus]);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -86,19 +92,21 @@ export default function SchoolManagementPage() {
       };
 
       if (activeTab === 'COURSES') {
-        const coursesRes = await apiFetch(`${API_URL}/courses?schoolId=${id}`, {
+        const coursesRes = await apiFetch(`${API_URL}/courses?schoolId=${id}&page=${page}&limit=25&search=${encodeURIComponent(search)}`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (coursesRes.ok) {
           const data = await coursesRes.json();
+          setPagination(data.pagination || { total: data.length || 0, totalPages: 1 });
           setCourses(Array.isArray(data.courses) ? data.courses : (Array.isArray(data) ? data : []));
         }
       } else {
-        const usersRes = await apiFetch(`${API_URL}/admin/users?schoolId=${id}&role=${roleMap[activeTab]}`, {
+        const usersRes = await apiFetch(`${API_URL}/admin/users?${new URLSearchParams({ schoolId: String(id), role: roleMap[activeTab], page: String(page), limit: "25", search, grade: filterGrade === "ALL" ? "" : filterGrade, classroomId: filterClass === "ALL" ? "" : filterClass, status: filterStatus === "ALL" ? "" : filterStatus })}`, {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (usersRes.ok) {
           const data = await usersRes.json();
+          setPagination(data.pagination || { total: data.length || 0, totalPages: 1 });
           setUsers(Array.isArray(data.users) ? data.users : (Array.isArray(data) ? data : []));
         }
       }
@@ -701,6 +709,7 @@ export default function SchoolManagementPage() {
           )}
         </div>
       </div>
+      <DirectoryPager page={page} pages={pagination.totalPages} total={pagination.total} onPage={setPage} loading={isLoading} />
     </DashboardLayout>
   );
 }

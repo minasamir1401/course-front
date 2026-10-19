@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, BookOpen, ClipboardList, BarChart3, Settings, LogOut, GraduationCap, ChevronLeft, Calendar, MessageSquare, Award } from 'lucide-react';
+import { LayoutDashboard, BookOpen, ClipboardList, BarChart3, Settings, LogOut, GraduationCap, ChevronLeft, Calendar, Award } from 'lucide-react';
 
 const NAV_ITEMS = [
   { label: "لوحة التحكم", href: "/dashboard", icon: LayoutDashboard },
@@ -12,7 +12,6 @@ const NAV_ITEMS = [
   { label: "الامتحانات والتقييمات", href: "/exams", icon: ClipboardList },
   { label: "تقارير الأداء", href: "/reports", icon: BarChart3 },
   { label: "الجدول الزمني", href: "/calendar", icon: Calendar },
-  { label: "الرسائل", href: "/messages", icon: MessageSquare },
   { label: "الإنجازات", href: "/activities", icon: Award },
 ];
 

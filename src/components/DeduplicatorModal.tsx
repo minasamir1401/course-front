@@ -104,7 +104,7 @@ export default function DeduplicatorModal({ onClose, token }: DeduplicatorModalP
         <ul className="space-y-2">
           {groups.map((g, i) => (
             <li key={i} className="bg-slate-50 p-3 rounded border text-sm">
-              <div className="font-semibold text-slate-700">Original: {g.title} <span className="text-xs text-slate-400">({new Date(g.original.createdAt).toLocaleString()})</span></div>
+              <div className="font-semibold text-slate-700">Original: {g.title} <span className="text-xs text-slate-400">({new Date(g.original.createdAt).toLocaleString(undefined, { timeZone: 'Africa/Cairo' })})</span></div>
               <ul className="mt-2 space-y-1 pl-4 border-l-2 border-red-200">
                 {g.duplicates.map(d => (
                   <li key={d.id} className="flex items-center gap-2">
@@ -115,7 +115,7 @@ export default function DeduplicatorModal({ onClose, token }: DeduplicatorModalP
                       className="rounded text-red-600 focus:ring-red-500"
                     />
                     <span className="text-slate-600 line-through">Duplicate (ID: {d.id.substring(0,8)}...)</span>
-                    <span className="text-xs text-slate-400">({new Date(d.createdAt).toLocaleString()})</span>
+                    <span className="text-xs text-slate-400">({new Date(d.createdAt).toLocaleString(undefined, { timeZone: 'Africa/Cairo' })})</span>
                   </li>
                 ))}
               </ul>

@@ -1,4 +1,7 @@
 "use client";
+import DirectoryPager from '@/components/DirectoryPager';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+
 
 import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
 import { fetchAllPages } from "@/lib/paginatedFetch";
@@ -19,6 +22,12 @@ export default function SchoolTeachersView() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const search = useDebouncedValue(searchTerm);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
+  const requestRef = React.useRef<AbortController | null>(null);
+  useEffect(() => { setPage(1); }, [search]);
+  useEffect(() => { if (schoolId) void fetchTeachers(schoolId); return () => requestRef.current?.abort(); }, [schoolId, page, search]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -37,7 +46,7 @@ export default function SchoolTeachersView() {
         if (parsed.schoolName) setSchoolName(parsed.schoolName);
         if (parsed.schoolId) {
           setSchoolId(parsed.schoolId);
-          fetchTeachers(parsed.schoolId);
+
         }
       }
     } catch (e) {
@@ -48,14 +57,19 @@ export default function SchoolTeachersView() {
 
   const fetchTeachers = async (sId: string) => {
     setLoading(true);
+    requestRef.current?.abort();
+    const currentRequest = new AbortController(); requestRef.current = currentRequest;
     try {
       const token = localStorage.getItem("school_admin_token");
-      const rows = await fetchAllPages(`${API_URL}/admin/users?schoolId=${sId}&role=TEACHER`, 'users', { headers: { Authorization: `Bearer ${token}` } });
-      setTeachers(rows);
+      const response = await apiFetch(`${API_URL}/admin/users?role=TEACHER&schoolId=${sId}&page=${page}&limit=25&search=${encodeURIComponent(search)}`, { headers: { Authorization: `Bearer ${token}` }, signal: currentRequest.signal });
+      if (!response.ok) throw new Error('Could not load directory');
+      const data = await response.json();
+      if (currentRequest.signal.aborted) return;
+      setTeachers(data.users || []); setPagination(data.pagination);
     } catch (e) {
       console.error(e);
     } finally {
-      setLoading(false);
+      if (!currentRequest.signal.aborted) setLoading(false);
     }
   };
 
@@ -272,6 +286,7 @@ export default function SchoolTeachersView() {
           </div>
         )}
       </div>
+      <DirectoryPager page={page} total={pagination.total} pages={pagination.totalPages} onPage={setPage} loading={loading} />
     </DashboardLayout>
   );
 }

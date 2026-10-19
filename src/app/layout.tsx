@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./student.css";
 import "katex/dist/katex.min.css";
 
 export const metadata: Metadata = {
@@ -8,17 +9,17 @@ export const metadata: Metadata = {
     google: 'notranslate',
   },
   title: {
-    default: "Platform",
-    template: "%s | Platform"
+    default: "Klevro",
+    template: "%s | Klevro"
   },
-  description: "Platform is the best smart educational platform for managing schools, centers, private tutoring, and exams all over the world. Enjoy a comprehensive and innovative Learning Management System (LMS).",
+  description: "Klevro brings your school courses, lessons, exams and progress together.",
   keywords: [
     "platform", "educational platform", "school management", "learning management system", "LMS",
     "exams platform", "online courses", "tutoring", "student management", "interactive learning"
   ],
-  authors: [{ name: "Platform Team" }],
+  authors: [{ name: "Klevro Team" }],
   creator: "Platform",
-  publisher: "Platform EduTech",
+  publisher: "Klevro",
   formatDetection: {
     email: false,
     address: false,
@@ -31,16 +32,16 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "Platform - The Future of Smart Education",
-    description: "Join Platform to manage your school, center, or courses with AI-powered tools and interactive assessments.",
+    title: "Klevro - Your learning space",
+    description: "Follow your school courses, lessons, exams and progress in Klevro.",
     url: 'https://platform.tech',
-    siteName: 'Platform',
+    siteName: 'Klevro',
     images: [
       {
         url: '/og-image.jpg',
         width: 1200,
         height: 630,
-        alt: 'Platform Logo',
+        alt: 'Klevro Logo',
       }
     ],
     locale: 'en_US',
@@ -48,8 +49,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: "Platform - The Smartest Educational Platform",
-    description: "Elevate education with the Platform. Comprehensive management for schools, courses, and smart exams.",
+    title: "Klevro - Learning & assessment",
+    description: "Your school courses, interactive learning and assessments in Klevro.",
     images: ['/twitter-image.jpg'],
   },
   robots: {
@@ -87,8 +88,12 @@ export default function RootLayout({
     <html lang="ar" dir="rtl" translate="no" className="notranslate">
       <head>
         <meta name="google" content="notranslate" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" />
       </head>
-      <body className="font-sans bg-[#F8FAFC] text-slate-800 notranslate" translate="no">
+      {/* Browser integrations may inject body attributes (e.g. location) before hydration. */}
+      <body className="font-sans bg-[#F8FAFC] text-slate-800 notranslate" translate="no" suppressHydrationWarning>
         <LanguageProvider>
           <NotificationProvider>
             <ImpersonationBanner />

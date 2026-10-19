@@ -1,5 +1,7 @@
 "use client";
 
+import { useLanguage } from "@/contexts/LanguageContext";
+import { metadataLabel } from "@/lib/bilingualMetadata";
 import React, { useState, useEffect } from 'react';
 import { LucideIcon, X } from 'lucide-react';
 import { createPortal } from 'react-dom';
@@ -15,6 +17,8 @@ interface InteractiveTagProps {
 }
 
 export function InteractiveTag({ label, value, icon: Icon, colorClass, bubbleTheme = "border-slate-200 text-slate-700", variant = 'meta', size = 'sm' }: InteractiveTagProps) {
+  const { language } = useLanguage();
+  const displayValue = typeof value === "string" ? metadataLabel(value, language) : value;
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const isSm = size === 'sm' || size === 'xs';
@@ -54,7 +58,7 @@ export function InteractiveTag({ label, value, icon: Icon, colorClass, bubbleThe
 
       {mounted && isOpen && createPortal(
         <div className="fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className={`bg-white w-full max-w-lg rounded-[32px] shadow-2xl p-6 md:p-8 border-2 space-y-4 animate-in zoom-in-95 duration-200 ${bubbleTheme}`}>
+          <div role="dialog" aria-modal="true" aria-label={label} className={`bg-white w-full max-w-lg rounded-[32px] shadow-2xl p-6 md:p-8 border-2 space-y-4 animate-in zoom-in-95 duration-200 ${bubbleTheme}`}>
             <div className="flex items-center justify-between border-b pb-4 mb-4">
               <h4 className="text-lg font-black flex items-center gap-2 uppercase tracking-widest">
                 {Icon && <Icon className="w-6 h-6" />}
@@ -68,14 +72,14 @@ export function InteractiveTag({ label, value, icon: Icon, colorClass, bubbleThe
               </button>
             </div>
             <div className="text-slate-800 text-base md:text-lg font-bold leading-relaxed max-h-[60vh] overflow-y-auto">
-              {value}
+              {displayValue}
             </div>
             <div className="flex justify-end pt-4">
               <button
                 onClick={() => setIsOpen(false)}
                 className="px-8 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-black text-sm transition-all"
               >
-                Close
+                {language === "ar" ? "إغلاق" : "Close"}
               </button>
             </div>
           </div>

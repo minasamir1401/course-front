@@ -1,5 +1,6 @@
 "use client";
 
+import BilingualMetadataEditor from "@/components/BilingualMetadataEditor";
 import React, { useMemo } from "react";
 import {
   Plus, Trash2, ChevronDown, ChevronUp, CheckCircle2,
@@ -154,7 +155,7 @@ export const SlideCard: React.FC<SlideCardProps> = React.memo(({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-slide-card={sIdx} tabIndex={-1}>
       {sIdx === 0 && (
         <div className="group/divider relative py-2 flex items-center justify-center my-2">
           <div className="absolute inset-0 flex items-center" aria-hidden="true">
@@ -449,121 +450,7 @@ export const SlideCard: React.FC<SlideCardProps> = React.memo(({
                 />
               </div>
 
-              {/* Common Metadata for ALL slide types */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 p-3 sm:p-6 bg-white border border-slate-200 rounded-2xl sm:rounded-[30px] shadow-sm mb-4">
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المعيار' : 'Standard'}</label>
-                  <select 
-                    className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
-                    value={block.standard || ""}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val === "__CUSTOM__") {
-                        const customVal = prompt(language === 'ar' ? "أدخل المعيار لهذه الشريحة:" : "Enter standard for this slide:");
-                        if (customVal && customVal.trim()) {
-                          updateBlock(source, sIdx, 'standard', customVal.trim());
-                        }
-                      } else {
-                        updateBlock(source, sIdx, 'standard', val);
-                      }
-                    }}
-                  >
-                    <option value="">{language === 'ar' ? 'بلا معيار (None)' : 'None'}</option>
-                    {block.standard && !((currentLessonStandards || "").split("\n").includes(block.standard)) && (
-                      <option value={block.standard}>{block.standard}</option>
-                    )}
-                    {(currentLessonStandards || "").split("\n").filter(Boolean).map((s: string) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                    <option value="__CUSTOM__" className="text-indigo-600 font-bold">{language === 'ar' ? '+ إضافة معيار مخصص للشريحة...' : '+ Add Custom Standard...'}</option>
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المؤشر' : 'Indicator'}</label>
-                  <select 
-                    className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
-                    value={block.indicator || ""}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val === "__CUSTOM__") {
-                        const customVal = prompt(language === 'ar' ? "أدخل المؤشر لهذه الشريحة:" : "Enter indicator for this slide:");
-                        if (customVal && customVal.trim()) {
-                          updateBlock(source, sIdx, 'indicator', customVal.trim());
-                        }
-                      } else {
-                        updateBlock(source, sIdx, 'indicator', val);
-                      }
-                    }}
-                  >
-                    <option value="">{language === 'ar' ? 'بلا مؤشر (None)' : 'None'}</option>
-                    {block.indicator && !((currentLessonIndicators || "").split("\n").includes(block.indicator)) && (
-                      <option value={block.indicator}>{block.indicator}</option>
-                    )}
-                    {(currentLessonIndicators || "").split("\n").filter(Boolean).map((ind: string) => (
-                      <option key={ind} value={ind}>{ind}</option>
-                    ))}
-                    <option value="__CUSTOM__" className="text-indigo-600 font-bold">{language === 'ar' ? '+ إضافة مؤشر مخصص للشريحة...' : '+ Add Custom Indicator...'}</option>
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'مخرج التعلم' : 'Learning Outcome'}</label>
-                  <select 
-                    className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
-                    value={block.learningOutcome || ""}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val === "__CUSTOM__") {
-                        const customVal = prompt(language === 'ar' ? "أدخل ناتج التعلم لهذه الشريحة:" : "Enter learning outcome for this slide:");
-                        if (customVal && customVal.trim()) {
-                          updateBlock(source, sIdx, 'learningOutcome', customVal.trim());
-                        }
-                      } else {
-                        updateBlock(source, sIdx, 'learningOutcome', val);
-                      }
-                    }}
-                  >
-                    <option value="">{language === 'ar' ? 'بلا ناتج تعلم (None)' : 'None'}</option>
-                    {block.learningOutcome && !((currentLessonLearningOutcomes || "").split("\n").includes(block.learningOutcome)) && (
-                      <option value={block.learningOutcome}>{block.learningOutcome}</option>
-                    )}
-                    {(currentLessonLearningOutcomes || "").split("\n").filter(Boolean).map((lo: string) => (
-                      <option key={lo} value={lo}>{lo}</option>
-                    ))}
-                    <option value="__CUSTOM__" className="text-indigo-600 font-bold">{language === 'ar' ? '+ إضافة ناتج تعلم مخصص...' : '+ Add Custom Outcome...'}</option>
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{language === 'ar' ? 'المهارة' : 'Skill'}</label>
-                  <select 
-                    className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 font-bold text-slate-700 text-xs outline-none focus:border-indigo-600 focus:bg-white"
-                    value={block.skill || "General"}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val === "add_custom") {
-                        const newVal = prompt(language === 'ar' ? "أدخل مهارة مخصصة جديدة:" : "Enter custom skill:");
-                        if (newVal && newVal.trim()) {
-                          const trimmed = newVal.trim();
-                          setCustomSkills(prev => Array.from(new Set([...prev, trimmed])));
-                          updateBlock(source, sIdx, 'skill', trimmed);
-                        }
-                      } else {
-                        updateBlock(source, sIdx, 'skill', val);
-                      }
-                    }}
-                  >
-                    <option value="General">{language === 'ar' ? 'عام' : 'General'}</option>
-                    {allExistingSkills.filter((sk: any) => sk !== "General").map((sk: any) => (
-                      <option key={sk} value={sk}>{sk}</option>
-                    ))}
-                    <option value="add_custom" className="text-indigo-600 font-bold">
-                      {language === 'ar' ? '+ إضافة مهارة مخصصة...' : '+ Add Custom Skill...'}
-                    </option>
-                  </select>
-                </div>
-              </div>
+              <BilingualMetadataEditor value={block} fields={['domain', 'standard', 'indicator', 'learningOutcome', 'skill']} language={language} onChange={patch => updateBlockFields(source, sIdx, patch, block)} />
 
               {block.type === 'QUESTION' && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 p-3 sm:p-6 bg-white border border-slate-200 rounded-2xl sm:rounded-[30px] shadow-sm mb-4">

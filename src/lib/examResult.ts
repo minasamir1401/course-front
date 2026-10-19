@@ -1,4 +1,5 @@
 export function getSubmissionTotalPoints(submission: any) {
+  if (submission?.exam?.totalPoints === null) return null;
   const directTotal = Number(submission?.exam?.totalPoints);
   if (Number.isFinite(directTotal) && directTotal >= 0) return directTotal;
 

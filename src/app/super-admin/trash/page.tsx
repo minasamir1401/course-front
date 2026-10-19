@@ -272,7 +272,7 @@ export default function TrashPage() {
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
       year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
-    });
+    , timeZone: 'Africa/Cairo' });
   };
 
   return (

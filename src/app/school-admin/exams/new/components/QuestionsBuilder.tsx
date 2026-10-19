@@ -1,3 +1,4 @@
+import { translateMetadataFields } from '@/lib/questionMetadataTranslation';
 // @ts-nocheck
 import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
 import React from 'react';
@@ -108,30 +109,12 @@ export const QuestionsBuilder = (props: any) => {
         from === 'ar' ? String(s.content || s.text || '') : String(s.contentEn || s.textEn || s.content || '')
       );
 
-      const srcDomain = from === 'ar' ? (tempQuestion.domain || '') : (tempQuestion.domainEn || tempQuestion.domain || '');
-      const srcOutcome = from === 'ar'
-        ? String(tempQuestion.standard || tempQuestion.learningOutcome || '')
-        : String(tempQuestion.standardEn || tempQuestion.learningOutcomeEn || tempQuestion.standard || tempQuestion.learningOutcome || '');
-      const srcIndicator = from === 'ar' ? (tempQuestion.indicator || '') : (tempQuestion.indicatorEn || tempQuestion.indicator || '');
-      const srcSkill = from === 'ar' ? (tempQuestion.skill || '') : (tempQuestion.skillEn || tempQuestion.skill || '');
-      const srcSubskill = from === 'ar' ? (tempQuestion.subskill || '') : (tempQuestion.subskillEn || tempQuestion.subskill || '');
-      const srcMicroSkill = from === 'ar' ? (tempQuestion.microSkill || '') : (tempQuestion.microSkillEn || tempQuestion.microSkill || '');
-      const srcErrorPattern = from === 'ar' ? (tempQuestion.errorPattern || '') : (tempQuestion.errorPatternEn || tempQuestion.errorPattern || '');
-
       const textsToTranslate = [
         srcText || '',
         srcExplanation || '',
         srcHint || '',
         ...srcOpts,
-        ...srcSections,
-        srcDomain || '',
-        srcOutcome || '',
-        srcIndicator || '',
-        srcSkill || '',
-        srcSubskill || '',
-        srcMicroSkill || '',
-        srcErrorPattern || ''
-      ];
+        ...srcSections      ];
 
       const translations = await translateBatch(textsToTranslate, from, to);
 
@@ -155,14 +138,6 @@ export const QuestionsBuilder = (props: any) => {
       const trSections = translations.slice(cursor, cursor + srcSections.length);
       cursor += srcSections.length;
 
-      const trDomain = translations[cursor++] || '';
-      const trOutcome = translations[cursor++] || '';
-      const trIndicator = translations[cursor++] || '';
-      const trSkill = translations[cursor++] || '';
-      const trSubskill = translations[cursor++] || '';
-      const trMicroSkill = translations[cursor++] || '';
-      const trErrorPattern = translations[cursor++] || '';
-
       const updated = { ...tempQuestion };
       if (to === 'en') {
         if (trText) updated.textEn = trText;
@@ -181,17 +156,6 @@ export const QuestionsBuilder = (props: any) => {
         } else if (trExplanation) {
           updated.sections = [{ id: Date.now(), type: 'EXPLANATION', content: srcExplanation || '', contentEn: trExplanation }];
         }
-
-        if (trDomain) updated.domainEn = trDomain;
-        if (trOutcome) {
-          updated.standardEn = trOutcome;
-          updated.learningOutcomeEn = trOutcome;
-        }
-        if (trIndicator) updated.indicatorEn = trIndicator;
-        if (trSkill) updated.skillEn = trSkill;
-        if (trSubskill) updated.subskillEn = trSubskill;
-        if (trMicroSkill) updated.microSkillEn = trMicroSkill;
-        if (trErrorPattern) updated.errorPatternEn = trErrorPattern;
 
         if (tempQuestion.correctAnswerIndex !== undefined && tempQuestion.correctAnswerIndex !== null) {
           if (trOpts[tempQuestion.correctAnswerIndex]) {
@@ -224,17 +188,6 @@ export const QuestionsBuilder = (props: any) => {
           updated.sections = [{ id: Date.now(), type: 'EXPLANATION', content: trExplanation, contentEn: srcExplanation || '' }];
         }
 
-        if (trDomain) updated.domain = trDomain;
-        if (trOutcome) {
-          updated.standard = trOutcome;
-          updated.learningOutcome = trOutcome;
-        }
-        if (trIndicator) updated.indicator = trIndicator;
-        if (trSkill) updated.skill = trSkill;
-        if (trSubskill) updated.subskill = trSubskill;
-        if (trMicroSkill) updated.microSkill = trMicroSkill;
-        if (trErrorPattern) updated.errorPattern = trErrorPattern;
-
         if (tempQuestion.correctAnswerIndex !== undefined && tempQuestion.correctAnswerIndex !== null) {
           if (trOpts[tempQuestion.correctAnswerIndex]) {
             updated.correctAnswer = trOpts[tempQuestion.correctAnswerIndex];
@@ -251,6 +204,7 @@ export const QuestionsBuilder = (props: any) => {
         setQuestionActiveLang('ar');
       }
 
+      Object.assign(updated, await translateMetadataFields(tempQuestion, to));
       setTempQuestion(updated);
     } catch (err: any) {
       console.error('Auto translate question error:', err);

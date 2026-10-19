@@ -1,6 +1,6 @@
 // A persisted ID is a UUID/CUID - long strings from the server (length > 20).
 // Short strings (timestamps, numeric strings) are treated as transient.
-export const isPersistedId = (id: unknown): id is string => typeof id === 'string' && id.length > 20;
+export const isPersistedId = (id: unknown): id is string => typeof id === 'string' && Boolean(id.trim()) && !/^[\d.]+$/.test(id) && !/^(temp|draft|new)[_-]/i.test(id);
 
 // Normalize question text to a comparable signature (strip HTML, collapse whitespace).
 export function normalizeQuestionText(text: unknown): string {
@@ -136,7 +136,15 @@ export function syncClientItemsWithServerIds(clientItems: any, serverItems: any)
     result[i] = item;
   }
 
-  return result;
+  // Multiple editor lists may still hold the same draft identity. Once one copy
+  // is persisted, every copy must use that ID on subsequent saves.
+  const draftIds = new Map<string, string>();
+  localItems.forEach((item: any, index: number) => {
+    if (item?.id !== undefined && item?.id !== null && !isPersistedId(item.id) && isPersistedId(result[index]?.id)) {
+      draftIds.set(String(item.id), result[index].id);
+    }
+  });
+  return result.map((item: any) => draftIds.has(String(item?.id)) ? { ...item, id: draftIds.get(String(item.id)) } : item);
 }
 
 export function syncClientSubExamsWithServerIds(clientSubExams: any, serverSubExams: any) {
@@ -162,4 +170,40 @@ export function syncClientSubExamsWithServerIds(clientSubExams: any, serverSubEx
       questions: syncClientItemsWithServerIds(localSub.questions, serverSub.questions),
     };
   });
+}
+
+export function syncClientModulesWithServerIds(clientModules: any[], serverModules: any[]) {
+  const questionIds = new Map<string, string>();
+  const syncQuestions = (local: any[], server: any[]) => {
+    const synced = syncClientItemsWithServerIds(local, server);
+    (local || []).forEach((question, index) => {
+      if (question.id !== undefined && question.id !== null && !isPersistedId(question.id) && isPersistedId(synced[index]?.id)) {
+        questionIds.set(String(question.id), synced[index].id);
+      }
+    });
+    return synced;
+  };
+  const syncModules = (locals: any[], servers: any[]): any[] => locals.map((local: any, index: number): any => {
+    const server = servers.find(item => item.id === local.id)
+      || (!isPersistedId(local.id) ? servers[index] : undefined);
+    if (!server) return local;
+    return {
+      ...local,
+      id: server.id,
+      questions: syncQuestions(local.questions, server.questions),
+      subExams: syncClientSubExamsWithServerIds(local.subExams, server.subExams).map((subExam: any, subIndex: number) => ({
+        ...subExam,
+        questions: syncQuestions(local.subExams[subIndex]?.questions, subExam.questions),
+      })),
+      subModules: syncModules(local.subModules || [], server.subModules || []),
+    };
+  });
+  const applyIds = (modules: any[]): any[] => modules.map(module => ({
+    ...module,
+    questions: (module.questions || []).map(applyQuestionId),
+    subExams: (module.subExams || []).map((subExam: any) => ({ ...subExam, questions: (subExam.questions || []).map(applyQuestionId) })),
+    subModules: applyIds(module.subModules || []),
+  }));
+  const applyQuestionId = (question: any) => questionIds.has(String(question.id)) ? { ...question, id: questionIds.get(String(question.id)) } : question;
+  return applyIds(syncModules(clientModules, serverModules));
 }

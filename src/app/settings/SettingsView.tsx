@@ -1,38 +1,16 @@
 "use client";
-
-import React from "react";
-import DashboardLayout from "@/components/DashboardLayout";
-import { Settings } from 'lucide-react';
-import { useLanguage } from "@/contexts/LanguageContext";
-
-export default function SettingsView() {
-  const { t, language } = useLanguage();
-
-  return (
-    <DashboardLayout>
-      <div className={`flex flex-col gap-6 ${language === 'ar' ? 'rtl' : 'ltr'}`} dir={language === 'ar' ? "rtl" : "ltr"}>
-        <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-          <div>
-            <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-              {t('settingsPage.title')}
-            </h2>
-            <div className="text-sm text-slate-500 mt-1 flex items-center gap-2">
-              <span>{t('settingsPage.home')}</span> <span className="text-slate-300">/</span> <span>{t('settingsPage.title')}</span>
-            </div>
-          </div>
-          <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-primary">
-            <Settings className="w-6 h-6" />
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-12 text-center flex flex-col items-center justify-center min-h-[400px]">
-          <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 mb-4">
-            <Settings className="w-10 h-10" />
-          </div>
-          <h3 className="text-xl font-bold text-slate-800 mb-2">{t('settingsPage.underDev')}</h3>
-          <p className="text-slate-500 max-w-md">{t('settingsPage.underDevDesc')}</p>
-        </div>
-      </div>
-    </DashboardLayout>
-  );
+import { useState } from 'react';
+import { Eye,EyeOff } from 'lucide-react';
+import DashboardLayout from '@/components/DashboardLayout';
+import StudentPageHeader from '@/components/student/StudentPageHeader';
+import { API_URL,apiFetch } from '@/lib/api';
+import { useLanguage } from '@/contexts/LanguageContext';
+export default function SettingsView(){
+ const {language,setLanguage}=useLanguage(); const ar=language==='ar'; const txt=(a:string,e:string)=>ar?a:e;
+ const [current,setCurrent]=useState(''),[next,setNext]=useState(''),[confirmation,setConfirmation]=useState(''),[error,setError]=useState(''),[success,setSuccess]=useState(false),[saving,setSaving]=useState(false),[show,setShow]=useState(false);
+ async function save(event:React.FormEvent){event.preventDefault();setError('');setSuccess(false);if(next!==confirmation){setError(txt('تأكيد كلمة المرور غير مطابق.','Passwords do not match.'));return;}setSaving(true);
+ try{const res=await apiFetch(API_URL+'/auth/change-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({currentPassword:current,newPassword:next})}); if(!res.ok){const data=await res.json().catch(()=>({}));throw new Error(data.error==='Current password is incorrect'?txt('كلمة المرور الحالية غير صحيحة.','Current password is incorrect.'):txt('تعذر تغيير كلمة المرور. تحقق من البيانات وحاول مرة أخرى.','Could not change your password. Check your details and retry.'));}setSuccess(true);setCurrent('');setNext('');setConfirmation('');}catch(error:any){setError(error.name === 'TypeError' ? txt('تعذر الاتصال. حاول مرة أخرى.','Connection failed. Please retry.') : error.message || txt('تعذر تغيير كلمة المرور. حاول مرة أخرى.','Could not change your password. Please retry.'));}finally{setSaving(false);}}
+ return <DashboardLayout><div className="student-page max-w-3xl"><StudentPageHeader title={txt('إعدادات الحساب','Account settings')} description={txt('اختر لغة الدراسة وحدّث كلمة مرورك.','Choose your language and update your password.')}/><section className="student-panel space-y-4"><h2 className="text-lg font-black">{txt('اللغة والتوقيت','Language & time')}</h2><label className="report-field"><span>{txt('لغة الواجهة','Interface language')}</span><select value={language} onChange={e=>setLanguage(e.target.value as 'ar'|'en')}><option value="ar">العربية</option><option value="en">English</option></select></label><p className="text-sm text-slate-600">{txt('كل مواعيد الدراسة والامتحانات بتوقيت مصر، مع ضبط التوقيت الصيفي تلقائيًا.','All lesson and exam dates use Egypt time, with automatic daylight saving adjustments.')}</p></section><form onSubmit={save} className="student-panel space-y-5" aria-busy={saving}><h2 className="text-lg font-black">{txt('تغيير كلمة المرور','Change password')}</h2>{error&&<p role="alert" className="report-error">{error}</p>}{success&&<p role="status" className="text-emerald-800 font-bold">{txt('تم تغيير كلمة المرور بنجاح.','Password changed successfully.')}</p>}
+ {[[current,setCurrent,txt('كلمة المرور الحالية','Current password'),'current-password'],[next,setNext,txt('كلمة المرور الجديدة','New password'),'new-password'],[confirmation,setConfirmation,txt('تأكيد كلمة المرور','Confirm password'),'new-password']].map(([value,setter,label,autocomplete],index)=><label className="report-field" key={String(label)}><span>{String(label)}</span><input required type={show?'text':'password'} autoComplete={String(autocomplete)} minLength={index?10:undefined} maxLength={index?72:undefined} value={String(value)} onChange={e=>(setter as (value:string)=>void)(e.target.value)} aria-describedby={index?'password-rules':undefined} aria-invalid={index===2&&!!confirmation&&confirmation!==next}/>{index===2&&confirmation&&confirmation!==next&&<small className="text-rose-700">{txt('الكلمتان غير متطابقتين.','Passwords do not match.')}</small>}</label>)}
+ <p id="password-rules" className="text-sm text-slate-600">{txt('استخدم من ١٠ إلى ٧٢ حرفًا، واختر كلمة مرور يصعب تخمينها.','Use 10–72 characters and choose a password that is difficult to guess.')}</p><button type="button" className="report-secondary" onClick={()=>setShow(v=>!v)} aria-pressed={show}>{show?<EyeOff size={18}/>:<Eye size={18}/>} {txt(show?'إخفاء كلمات المرور':'إظهار كلمات المرور',show?'Hide passwords':'Show passwords')}</button><div><button className="report-primary" disabled={saving}>{saving?txt('جارٍ الحفظ…','Saving…'):txt('حفظ كلمة المرور','Save password')}</button></div></form></div></DashboardLayout>;
 }

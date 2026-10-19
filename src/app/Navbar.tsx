@@ -1,113 +1,12 @@
 "use client";
-
-import React, { useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { Menu, X } from "lucide-react";
-
+import { useRef,useState } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { Menu,X } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useModalFocus } from '@/hooks/useModalFocus';
 export default function Navbar() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  return (
-    <header className="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-md z-50">
-      <div className="max-w-7xl mx-auto px-6 h-[90px] flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="h-16 md:h-20 w-auto hover:scale-105 transition-transform duration-300 relative">
-            <Image
-              src="/logo.jpeg"
-              alt="Klevro"
-              width={160} sizes="160px"
-              height={60}
-              priority
-              className="h-full w-auto object-contain"
-            />
-          </div>
-        </div>
-
-        <nav className="hidden md:flex items-center gap-10 text-[15px] font-bold text-[#334155]">
-          <Link href="#features" className="hover:text-indigo-600 transition-colors">
-            Features
-          </Link>
-          <Link href="#tracks" className="hover:text-indigo-600 transition-colors">
-            Tracks
-          </Link>
-          <Link href="#statistics" className="hover:text-indigo-600 transition-colors">
-            Statistics
-          </Link>
-          <Link href="#about" className="hover:text-indigo-600 transition-colors">
-            About
-          </Link>
-        </nav>
-
-        <div className="flex items-center gap-4">
-          <Link
-            href="/login"
-            className="hidden sm:flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-3 rounded-full font-bold text-[15px] transition-all"
-          >
-            Login
-          </Link>
-          <Link
-            href="/login"
-            className="hidden sm:flex items-center justify-center bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] hover:opacity-90 text-white px-6 py-3 rounded-full font-bold text-[15px] shadow-[0_8px_16px_rgba(79,70,229,0.25)] transition-all"
-          >
-            Get Started
-          </Link>
-          <button
-            aria-label={isMenuOpen ? "Close menu" : "Open menu"}
-            className="md:hidden text-slate-600 hover:text-indigo-600 p-2"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
-            {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile Menu */}
-      {isMenuOpen && (
-        <div className="md:hidden bg-white border-t border-slate-100 absolute top-[90px] left-0 right-0 p-6 space-y-4 shadow-xl animate-in slide-in-from-top duration-300">
-          <Link
-            href="#features"
-            onClick={() => setIsMenuOpen(false)}
-            className="block text-slate-600 font-bold hover:text-indigo-600"
-          >
-            Features
-          </Link>
-          <Link
-            href="#tracks"
-            onClick={() => setIsMenuOpen(false)}
-            className="block text-slate-600 font-bold hover:text-indigo-600"
-          >
-            Tracks
-          </Link>
-          <Link
-            href="#statistics"
-            onClick={() => setIsMenuOpen(false)}
-            className="block text-slate-600 font-bold hover:text-indigo-600"
-          >
-            Statistics
-          </Link>
-          <Link
-            href="#about"
-            onClick={() => setIsMenuOpen(false)}
-            className="block text-slate-600 font-bold hover:text-indigo-600"
-          >
-            About
-          </Link>
-          <hr className="border-slate-100" />
-          <Link
-            href="/login"
-            className="block text-center text-slate-700 bg-slate-100 py-3 rounded-full font-bold hover:bg-slate-200"
-          >
-            Login
-          </Link>
-          <Link
-            href="/login"
-            className="block bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] text-white text-center py-3 rounded-full font-bold"
-          >
-            Get Started
-          </Link>
-        </div>
-      )}
-    </header>
-  );
+  const {language,setLanguage}=useLanguage(); const ar=language==='ar'; const [open,setOpen]=useState(false); const ref=useRef<HTMLDivElement>(null); useModalFocus(open,ref,()=>setOpen(false));
+  const links=[['#features',ar?'ماذا تقدم المنصة؟':'Features'],['#how-it-works',ar?'كيف تبدأ؟':'How it works'],['#account-help',ar?'مساعدة الدخول':'Account help']];
+  return <header className="sticky top-0 z-50 bg-white/95 border-b border-slate-200"><div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3"><Link href="/" aria-label="Klevro" className="flex items-center gap-2 font-black text-xl text-slate-900"><Image src="/logo.jpeg" alt="" width={44} height={44} priority className="rounded-xl"/><span className="hidden sm:inline">Klevro</span></Link><nav aria-label={ar?'روابط الصفحة':'Page navigation'} className="hidden lg:flex gap-2">{links.map(([href,label])=><a className="student-nav-link" key={href} href={href}>{label}</a>)}</nav><div className="flex gap-2"><button className="student-icon-button text-xs font-black" onClick={()=>setLanguage(ar?'en':'ar')} aria-label={ar?'التبديل للإنجليزية':'Switch to Arabic'}>{ar?'EN':'عربي'}</button><Link href="/login" className="report-primary">{ar?'تسجيل الدخول':'Sign in'}</Link><button className="student-icon-button lg:hidden" aria-label={ar?'افتح القائمة':'Open menu'} aria-expanded={open} onClick={()=>setOpen(true)}><Menu size={20}/></button></div></div>{open&&<div className="fixed inset-0 z-[100] bg-slate-900/40 p-4 flex items-start justify-center" onClick={()=>setOpen(false)}><div ref={ref} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="landing-menu-title" className="bg-white rounded-[30px] p-6 shadow-xl border border-slate-200 w-full max-w-lg" onClick={e=>e.stopPropagation()}><div className="flex items-center justify-between mb-4"><h2 id="landing-menu-title" className="font-black">{ar?'القائمة':'Menu'}</h2><button className="student-icon-button" onClick={()=>setOpen(false)} aria-label={ar?'إغلاق':'Close'}><X size={20}/></button></div><nav>{links.map(([href,label])=><a key={href} href={href} className="student-nav-link" onClick={()=>setOpen(false)}>{label}</a>)}</nav></div></div>}</header>;
 }

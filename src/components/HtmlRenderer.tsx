@@ -7,6 +7,8 @@ import 'katex/dist/katex.min.css';
 import { sanitizeHtml } from '../lib/sanitize';
 import { resolveMediaUrl } from '../lib/utils';
 
+import { escapeMathHtml, isolateRichTextMath, protectRenderedMath } from "../lib/richTextMath";
+
 interface HtmlRendererProps {
   html: string;
   className?: string;
@@ -76,12 +78,12 @@ function renderKatex(inner: string, display: boolean): string {
     const rendered = katex.renderToString(sanitized, { throwOnError: false, displayMode: display });
     if (rendered.includes('katex-error')) {
       const cleanFallback = inner.replace(/\\([()[\]{}])/g, '$1').replace(/\\[a-zA-Z]+/g, ' ').trim();
-      return `<span dir="ltr" style="unicode-bidi:isolate;display:inline-block">${cleanFallback}</span>`;
+      return `<span dir="ltr" style="unicode-bidi:isolate;display:inline-block">${escapeMathHtml(cleanFallback)}</span>`;
     }
     // Wrap rendered KaTeX in a ltr span to prevent RTL context from reversing < > signs
     return `<span dir="ltr" style="unicode-bidi:isolate;display:inline-block">${rendered}</span>`;
   } catch {
-    return inner;
+    return escapeMathHtml(inner);
   }
 }
 
@@ -95,7 +97,8 @@ function renderKatex(inner: string, display: boolean): string {
 export function processHtml(html: string, imageLoading: "lazy" | "eager" = "lazy"): string {
   if (!html || typeof html !== 'string') return html || '';
 
-  let result = html;
+  const protectedMath = protectRenderedMath(isolateRichTextMath(html, false));
+  let result = protectedMath.html;
 
   // 0-pre. Rescue images from Word <!--[if !vml]-->...<![endif]--> blocks
   // (handles already-saved questions that contain raw Word HTML in the database)
@@ -186,7 +189,14 @@ export function processHtml(html: string, imageLoading: "lazy" | "eager" = "lazy
     return `<img ${attributes} src="${imageSrc}" loading="${imageLoading}" decoding="async" />`;
   });
 
-  return result;
+  return isolateRichTextMath(result.replace(/\x00RENDERED(\d+)\x00/g, (_, i) => {
+    const block = protectedMath.blocks[Number(i)];
+    // Older editor fallbacks retain canonical LaTeX even when KaTeX was unavailable.
+    const formula = block.match(/\bdata-latex=(["'])(.*?)\1/i);
+    if (!formula || /class=["'][^"']*\bkatex(?:[\s"'])/i.test(block)) return block;
+    const latex = formula[2].replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+    return block.replace(/^(<span\b[^>]*>)[\s\S]*<\/span>$/i, (_block, opening) => `${opening}${renderKatex(latex, /data-display=["']true["']/i.test(block))}</span>`);
+  }));
 }
 
 const htmlProcessCache = new Map<string, string>();
@@ -216,13 +226,11 @@ function HtmlRenderer({ html, className = "", tag: Tag = "div", imageLoading = "
     return getCachedProcessedHtml(html || "", imageLoading);
   }, [html, imageLoading]);
 
-  const hasMath = processedHtml.includes('katex') || processedHtml.includes('\\(') || processedHtml.includes('\\[');
-
   return (
     <Tag
       className={combinedClassName}
       dangerouslySetInnerHTML={{ __html: processedHtml }}
-      dir={hasMath ? undefined : "auto"}
+      dir="auto"
     />
   );
 }

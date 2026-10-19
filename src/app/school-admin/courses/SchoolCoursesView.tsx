@@ -105,7 +105,7 @@ export default function SchoolCoursesView() {
                 </div>
                 <div className={language === 'ar' ? 'text-right' : 'text-left'}>
                    <p className="text-slate-400 text-xs font-black uppercase tracking-widest mb-1">{t('schoolAdmin.coursesPage.totalCourses')}</p>
-                   <h3 className="text-2xl font-black text-slate-900">{t('schoolAdmin.coursesPage.lessonsCount').replace('{n}', String(courses.length))}</h3>
+                   <h3 className="text-2xl font-black text-slate-900">{courses.length}</h3>
                 </div>
              </div>
              <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm flex items-center gap-6">
@@ -122,8 +122,8 @@ export default function SchoolCoursesView() {
                    <CheckCircle2 className="w-8 h-8" />
                 </div>
                 <div className={language === 'ar' ? 'text-right' : 'text-left'}>
-                   <p className="text-slate-400 text-xs font-black uppercase tracking-widest mb-1">{t('schoolAdmin.coursesPage.activeContent')}</p>
-                   <h3 className="text-2xl font-black text-slate-900">100%</h3>
+                   <p className="text-slate-400 text-xs font-black uppercase tracking-widest mb-1">{(language === 'ar' ? 'كورسات تحتوي على دروس' : 'Courses with lessons')}</p>
+                   <h3 className="text-2xl font-black text-slate-900">{courses.filter(course => (course._count?.lessons || 0) > 0).length} / {courses.length}</h3>
                 </div>
              </div>
           </div>

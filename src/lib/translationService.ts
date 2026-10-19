@@ -18,7 +18,7 @@ function restoreClientMedia(text: string, mediaTokens: string[]): string {
   let restored = text;
   mediaTokens.forEach((original, idx) => {
     const regex = new RegExp(`\\s*__\\s*CLIENT_MEDIA_${idx}\\s*__\\s*`, 'gi');
-    restored = restored.replace(regex, original);
+    restored = restored.replace(regex, () => original);
   });
   return restored;
 }
@@ -51,7 +51,8 @@ export async function translateText(
 export async function translateBatch(
   texts: string[],
   from: 'ar' | 'en' = 'ar',
-  to: 'ar' | 'en' = 'en'
+  to: 'ar' | 'en' = 'en',
+  metadata?: 'all' | number[]
 ): Promise<string[]> {
   if (!Array.isArray(texts) || texts.length === 0) return [];
 
@@ -62,7 +63,7 @@ export async function translateBatch(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
-    body: JSON.stringify({ texts: payloadTexts, from, to }),
+    body: JSON.stringify({ texts: payloadTexts, from, to, ...(metadata === 'all' ? { kind: 'metadata' } : metadata ? { metadataIndices: metadata } : {}) }),
   });
 
   if (!res.ok) {

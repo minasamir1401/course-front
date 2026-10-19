@@ -20,11 +20,11 @@ assert.equal(getExamWorkflowView('module-1', null), 'module-portal');
 assert.equal(getExamWorkflowView('module-1', 'exam-1'), 'sub-exam-editor');
 assert.equal(
   buildModuleEditHref('SUPER_ADMIN', 'parent-edit-1', 'module-edit-1'),
-  '/super-admin/exams/edit/parent-edit-1?view=editor',
+  '/super-admin/exams/edit/parent-edit-1?editModuleId=module-edit-1',
 );
 assert.equal(
   buildModuleEditHref('SCHOOL_ADMIN', 'parent-edit-2', 'module-edit-2'),
-  '/school-admin/exams/edit/parent-edit-2?view=editor',
+  '/school-admin/exams/edit/parent-edit-2?editModuleId=module-edit-2',
 );
 assert.equal(buildModuleEditHref('SCHOOL_ADMIN', 'parent-edit-2', null), null);
 assert.equal(
@@ -99,6 +99,7 @@ assert.deepEqual(views, [
     isCentral: true,
     examsCount: 3,
     questionsCount: 9,
+    parentModuleId: null, subModules: [], subModulesCount: 0,
   },
 ]);
 

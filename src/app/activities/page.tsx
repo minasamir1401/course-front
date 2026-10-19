@@ -1,6 +1,8 @@
 "use client";
+import { questionMetadata } from "@/lib/bilingualMetadata";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
+import { useModalFocus } from "@/hooks/useModalFocus";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Sparkles, Award, Trophy, Play, CheckCircle2, AlertCircle, HelpCircle, Info, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, BookOpen, Clock, Target, X, XCircle, Lock, RefreshCw, Star, StarOff, BrainCircuit, ArrowLeft, ArrowRight, ListOrdered, TrendingUp, Layers, GraduationCap, Zap } from 'lucide-react';
 import { useRouter } from "next/navigation";
@@ -53,6 +55,10 @@ export default function ActivitiesPage() {
   const [currentAnswer, setCurrentAnswer] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [attemptResult, setAttemptResult] = useState<any>(null);
+  const [submitError,setSubmitError] = useState("");
+  const activityDialog = useRef<HTMLDivElement>(null);
+  useModalFocus(!!activeActivity, activityDialog, () => setActiveActivity(null));
+
   const [startTime, setStartTime] = useState<number>(0);
   const [hintsUsed, setHintsUsed] = useState<number>(0);
   const [attemptCount, setAttemptCount] = useState<number>(1);
@@ -173,12 +179,13 @@ export default function ActivitiesPage() {
   const startPlayActivity = async (activityId: string) => {
     if (!token) return;
     try {
-      setIsLoading(true);
+      setIsLoading(true); setSubmitError(""); setLoadError("");
       const res = await apiFetch(`${API_URL}/skills-hub/activities/${activityId}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
+      if (!res.ok) throw new Error("Activity unavailable");
       if (res.ok) {
         const activity = await res.json();
         setActiveActivity(activity);
@@ -192,6 +199,7 @@ export default function ActivitiesPage() {
       }
     } catch (err) {
       console.error("Error loading activity:", err);
+      setLoadError(language === "ar" ? "تعذر فتح النشاط. أعد المحاولة." : "Could not open activity. Please retry.");
     } finally {
       setIsLoading(false);
     }
@@ -200,7 +208,7 @@ export default function ActivitiesPage() {
   // Submit Answer
   const submitAnswer = async (overrideAnswer?: string) => {
     if (!token || !activeActivity || isSubmitting) return;
-    setIsSubmitting(true);
+    setIsSubmitting(true); setSubmitError("");
     const timeTaken = Math.round((Date.now() - startTime) / 1000);
     const answer = overrideAnswer !== undefined ? overrideAnswer : currentAnswer;
     
@@ -249,10 +257,11 @@ export default function ActivitiesPage() {
         setCompletedLocal(prev => new Set(prev).add(activeActivity.id));
       } else {
         const errData = await res.json();
-        alert(errData.error || (language === 'ar' ? "خطأ في الإرسال" : "Submission failed"));
+        setSubmitError(language === "ar" ? "تعذر إرسال إجابتك. أعد المحاولة دون إغلاق النشاط." : "Could not submit your answer. Retry without closing this activity.");
       }
     } catch (err) {
       console.error("Error submitting attempt:", err);
+      setSubmitError(language === "ar" ? "انقطع الاتصال. إجابتك ما زالت موجودة؛ أعد الإرسال." : "Connection failed. Your answer is still here; please retry.");
     } finally {
       setIsSubmitting(false);
     }
@@ -445,7 +454,7 @@ export default function ActivitiesPage() {
         ` }} />
 
         {/* ── PREMIUM HEADER ── */}
-        <div className="relative overflow-hidden rounded-[36px] bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 p-8 md:p-12 text-white shadow-2xl shadow-indigo-200/50">
+        <div className="student-activity-header relative overflow-hidden rounded-[36px] bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 p-8 md:p-12 text-white shadow-2xl shadow-indigo-200/50">
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')] opacity-15" />
           <div className="absolute -top-12 -left-12 w-64 h-64 bg-violet-400/20 blur-[80px] rounded-full animate-pulse" />
           
@@ -470,7 +479,7 @@ export default function ActivitiesPage() {
             </div>
             
             {/* Subject Tabs */}
-            <div className="flex gap-3 bg-black/15 p-2 rounded-2xl border border-white/10 shrink-0">
+            <div className="student-tabs w-full md:w-auto bg-white/10 rounded-2xl border border-white/20">
               {["", ...(progressData?.subjects || [])]
                 .filter((subj) => !(subj === "العلوم" && isStudentGrade123))
                 .map((subj) => (
@@ -537,7 +546,7 @@ export default function ActivitiesPage() {
             </div>
             <div className="space-y-1 flex-1 min-w-0">
               <span className="text-xs font-black text-slate-400 block uppercase">{language === 'ar' ? 'الصف الدراسي الحالي' : 'Current Grade'}</span>
-              <span className="text-lg font-black text-slate-800 truncate">{getGradeLabel(progressData?.grade || "الصف الثالث الابتدائي")}</span>
+              <span className="text-lg font-black text-slate-800 truncate">{getGradeLabel(progressData?.grade || "—")}</span>
             </div>
           </div>
         </div>
@@ -569,6 +578,7 @@ export default function ActivitiesPage() {
                     
                     {/* Cluster Header */}
                     <div
+                      role="button" tabIndex={0} aria-expanded={isExpanded} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); toggleCluster(cluster.id); } }}
                       onClick={() => toggleCluster(cluster.id)}
                       className={`p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 cursor-pointer hover:bg-slate-50/50 transition-colors border-b ${
                         isExpanded ? "border-slate-100" : "border-transparent"
@@ -664,7 +674,7 @@ export default function ActivitiesPage() {
                                         <h5 className="font-black text-slate-800 text-base line-clamp-2">{translateText(activity.title)}</h5>
                                         {activity.learningOutcome && (
                                           <p className="text-[10px] text-slate-400 font-bold truncate">
-                                            {language === 'ar' ? 'مخرجات التعلم: ' : 'Learning Outcome: '}{translateText(activity.learningOutcome)}
+                                            {language === 'ar' ? 'مخرجات التعلم: ' : 'Learning Outcome: '}{questionMetadata(activity, "learningOutcome", language)}
                                           </p>
                                         )}
                                       </div>
@@ -716,8 +726,9 @@ export default function ActivitiesPage() {
 
         {/* ── IMMERSIVE FULL-PAGE STUDENT GAME PLAYER OVERLAY ── */}
         {activeActivity && (
-          <div className="fixed inset-0 z-[150] bg-slate-50 flex flex-col w-full h-full min-h-screen overflow-hidden text-slate-900 animate-in fade-in duration-200" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+          <div ref={activityDialog} tabIndex={-1} role="dialog" aria-modal="true" aria-label={language === "ar" ? "النشاط التفاعلي" : "Interactive activity"} className="fixed inset-0 z-[150] bg-slate-50 flex flex-col w-full h-full min-h-screen overflow-hidden text-slate-900 animate-in fade-in duration-200" dir={language === 'ar' ? 'rtl' : 'ltr'}>
             
+            {submitError && <div role="alert" className="report-error m-3 flex flex-wrap items-center gap-3">{submitError}<button className="report-secondary" disabled={isSubmitting} onClick={() => submitAnswer()}>{language === 'ar' ? 'إعادة الإرسال' : 'Retry submission'}</button></div>}
             {/* Header Bar */}
             <header className="bg-white px-6 py-4 border-b border-slate-200/80 flex items-center justify-between shadow-xs shrink-0">
               <div className="flex items-center gap-4">
@@ -734,7 +745,7 @@ export default function ActivitiesPage() {
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-50 border border-amber-200/60 rounded-xl text-amber-700 text-xs font-black shadow-2xs">
                   <Award className="w-4 h-4 text-amber-500" />
-                  <span>+{activeActivity.points || 10} XP</span>
+                  <span>+{activeActivity.points ?? "—"} XP</span>
                 </div>
 
                 <div className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border text-xs font-black transition-all ${
@@ -786,19 +797,19 @@ export default function ActivitiesPage() {
                     />
                     <InteractiveTag 
                       label={language === 'ar' ? 'المعيار' : 'Standard'} 
-                      value={activeActivity.standard} 
+                      value={questionMetadata(activeActivity, "standard", language)} 
                       icon={Target} 
                       colorClass="bg-rose-50 text-rose-700 border border-rose-100" 
                     />
                     <InteractiveTag 
                       label={language === 'ar' ? 'المؤشر' : 'Indicator'} 
-                      value={activeActivity.indicator} 
+                      value={questionMetadata(activeActivity, "indicator", language)} 
                       icon={CheckCircle2} 
                       colorClass="bg-emerald-50 text-emerald-700 border border-emerald-100" 
                     />
                     <InteractiveTag 
                       label={language === 'ar' ? 'الهدف' : 'Outcome'} 
-                      value={activeActivity.learningOutcome} 
+                      value={questionMetadata(activeActivity, "learningOutcome", language)} 
                       icon={GraduationCap} 
                       colorClass="bg-purple-50 text-purple-700 border border-purple-100" 
                     />

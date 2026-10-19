@@ -2,10 +2,14 @@
 import { useEffect } from 'react';
 import { apiFetch, API_URL } from '@/lib/api';
 import { canRunExamAutosave } from '@/lib/examAutosavePolicy';
-import { buildDraftModules } from '@/lib/examEditingPayload';
+import { buildDraftModules, buildExamSubmissionPayload } from '@/lib/examEditingPayload';
+import { attachQuestionsToModules, getStandaloneExamQuestions } from '@/lib/examModuleQuestions';
+import { normalizePersistedExamQuestions } from '@/lib/persistedExamQuestion';
+import { requiresExamAutosaveIdSync, requiresStandaloneExamQuestionIdSync } from '@/lib/examAutosaveIdSync';
+import { syncClientItemsWithServerIds, syncClientModulesWithServerIds } from '@/lib/examAutosaveModuleSync';
 
 export const useExamAutosave = (props: any) => {
-  const { isAutoSaveEnabled, isLoading, createdId, examData, modules, isModuleModalOpen, currentModule, editingModuleIndex, manualSubmitRef, lastAutoSaveSnapshotRef, autoSaveGenerationRef, createdIdRef, setCreatedId, setCurrentModule, setModules, setEditingModuleIndex, setLastAutoSave, deletedQuestionIds, setDeletedQuestionIds, showToast, language, autoSaveWriteQueueRef, autoSaveTimerRef, standaloneQuestions } = props;
+  const { isAutoSaveEnabled, isLoading, createdId, examData, modules, isModuleModalOpen, currentModule, editingModuleIndex, manualSubmitRef, lastAutoSaveSnapshotRef, autoSaveGenerationRef, createdIdRef, setCreatedId, setCurrentModule, setModules, setEditingModuleIndex, setLastAutoSave, deletedQuestionIds, setDeletedQuestionIds, showToast, language, autoSaveWriteQueueRef, autoSaveTimerRef, standaloneQuestions, setStandaloneQuestions } = props;
 
   useEffect(() => {
     const activeExamId = createdIdRef.current || createdId;
@@ -36,51 +40,13 @@ export const useExamAutosave = (props: any) => {
           isModuleModalOpen,
         });
 
-                const targetSchoolIds = (examData.schoolIds || []).filter(Boolean);
+        const targetSchoolIds = (examData.schoolIds || []).filter(Boolean);
         const isCentral = targetSchoolIds.length === 0;
 
-        const allQuestions: any[] = [];
-        const modulesPayload = finalModules.map((m, index) => {
-           const mId = m.id || String(Date.now() + index);
-           const mSubExams = (m.subExams || []).map((s: any, sIdx: number) => {
-               const sId = s.id || String(Date.now() + index * 1000 + sIdx);
-               const sQuestions = (s.questions || []).map((q: any) => ({
-                   ...q,
-                   moduleId: mId,
-                   subExamId: sId
-               }));
-               allQuestions.push(...sQuestions);
-               return {
-                   id: sId,
-                   title: s.title,
-                   duration: s.duration || null,
-                   passingScore: s.passingScore || null,
-                   attemptsAllowed: s.attemptsAllowed === "" || s.attemptsAllowed === undefined || s.attemptsAllowed === null ? 999 : Number(s.attemptsAllowed),
-                   publishDate: s.publishDate || null,
-                   cutOffDate: s.cutOffDate || null,
-                   order: sIdx
-               };
-           });
-           
-           const mQuestions = (m.questions || []).map((q: any) => ({
-               ...q,
-               moduleId: mId
-           }));
-           allQuestions.push(...mQuestions);
-           return {
-              id: mId,
-              title: m.title,
-              description: m.content || null,
-              duration: m.duration || null,
-              passingScore: m.passingScore || null,
-              publishDate: m.publishDate || null,
-              cutOffDate: m.cutOffDate || null,
-              order: index,
-              subExams: mSubExams
-           };
+        const { modulesPayload, allQuestions, cleanedStandaloneQuestions } = buildExamSubmissionPayload({
+          modules: finalModules,
+          standaloneQuestions,
         });
-        
-        allQuestions.push(...(standaloneQuestions || []).map(q => ({ ...q, moduleId: null })));
         const submittedDeletedQuestionIds = [...(deletedQuestionIds || [])];
         const payload = {
           title: examData.title || (language === 'ar' ? "مسودة امتحان بدون عنوان" : "Untitled Exam Draft"),
@@ -129,123 +95,22 @@ export const useExamAutosave = (props: any) => {
              setCreatedId(serverId);
           }
           if (manualSubmitRef.current || requestGeneration !== autoSaveGenerationRef.current) return;
-          if (data && data.modules) {
-            const parsedModules = data.modules.map((l: any) => {
-              let parsedQuestions = [];
-              let parsedAssignments = [];
-              let parsedAttachments = [];
-              let parsedSlides = [];
-
-              try {
-                parsedQuestions = typeof l.questions === 'string' ? JSON.parse(l.questions) : (l.questions || []);
-              } catch (e) { parsedQuestions = []; }
-
-              try {
-                parsedAssignments = typeof l.assignments === 'string' ? JSON.parse(l.assignments) : (l.assignments || []);
-              } catch (e) { parsedAssignments = []; }
-
-              try {
-                parsedAttachments = typeof l.attachments === 'string' ? JSON.parse(l.attachments) : (l.attachments || []);
-              } catch (e) { parsedAttachments = []; }
-
-              try {
-                parsedSlides = typeof l.slides === 'string' ? JSON.parse(l.slides) : (l.slides || []);
-              } catch (e) { parsedSlides = [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? "المقدمة" : "Introduction", content: "", sections: [] }]; }
-
-              return {
-                ...l,
-                isVisible: l.isVisible !== undefined ? l.isVisible : true,
-                publishDate: l.publishDate ? new Date(new Date(l.publishDate).getTime() - new Date(l.publishDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
-                cutOffDate: l.cutOffDate ? new Date(new Date(l.cutOffDate).getTime() - new Date(l.cutOffDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
-                questions: Array.isArray(parsedQuestions) ? parsedQuestions.map(q => {
-                  let parsedExps = [""];
-                  try {
-                    parsedExps = typeof q.explanation === 'string' && q.explanation.startsWith('[') ? JSON.parse(q.explanation) : (q.explanations || [""]);
-                    if (!Array.isArray(parsedExps)) parsedExps = [q.explanation || ""];
-                  } catch (e) {
-                    parsedExps = [q.explanation || ""];
-                  }
-                  return { ...q, explanations: parsedExps };
-                }) : [],
-                assignments: Array.isArray(parsedAssignments) ? parsedAssignments.map(q => {
-                  let parsedExps = [""];
-                  try {
-                    parsedExps = typeof q.explanation === 'string' && q.explanation.startsWith('[') ? JSON.parse(q.explanation) : (q.explanations || [""]);
-                    if (!Array.isArray(parsedExps)) parsedExps = [q.explanation || ""];
-                  } catch (e) {
-                    parsedExps = [q.explanation || ""];
-                  }
-                  return { ...q, explanations: parsedExps };
-                }) : [],
-                attachments: Array.isArray(parsedAttachments) ? parsedAttachments : [],
-                slides: Array.isArray(parsedSlides) && parsedSlides.length ? parsedSlides : [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? "المقدمة" : "Introduction", content: "", sections: [] }]
-              };
-            });
-
-            // Adjust editing indexes if modal is open
-            if (isModuleModalOpen) {
-              let idx = editingModuleIndex;
-              if (idx === null) {
-                idx = parsedModules.length - 1;
-                setEditingModuleIndex(idx);
+          const saved = data.exam || data;
+          const serverQuestions = normalizePersistedExamQuestions(data.questions || saved.questions || []);
+          const serverModules = attachQuestionsToModules(data.modules || saved.modules || [], serverQuestions);
+          if (requiresExamAutosaveIdSync(finalModules, serverModules)) {
+            const syncedModules = syncClientModulesWithServerIds(finalModules, serverModules);
+            setModules(syncedModules);
+            if (isModuleModalOpen && syncedModules.length) {
+              const index = editingModuleIndex ?? syncedModules.length - 1;
+              if (syncedModules[index]) {
+                setCurrentModule(syncedModules[index]);
+                setEditingModuleIndex(index);
               }
-              if (idx >= 0 && idx < parsedModules.length) {
-                // Keep current state edits so we don't overwrite user actively typing, 
-                // but preserve backend-assigned IDs (UUIDs)
-                setCurrentModule((prev: any) => ({
-                ...prev,
-                id: parsedModules[idx].id,
-                content: prev.content,
-                slides: prev.slides.map((s: any, sIdx: number) => {
-                  const serverSlide = parsedModules[idx].slides?.[sIdx];
-                  return serverSlide ? { ...s, id: serverSlide.id } : s;
-                  }),
-                  questions: prev.questions.map((q: any, qIdx: number) => {
-                    const serverQ = parsedModules[idx].questions?.[qIdx];
-                    return serverQ ? { ...q, id: serverQ.id } : q;
-                  }),
-                  assignments: prev.assignments.map((a: any, aIdx: number) => {
-                    const serverA = parsedModules[idx].assignments?.[aIdx];
-                    return serverA ? { ...a, id: serverA.id } : a;
-                  })
-                }));
-              }
-              // Set all modules with backend IDs
-              setModules(parsedModules.map((pl: any, plIdx: number) => {
-                if (plIdx === idx) {
-                  return {
-                    ...pl,
-                    title: currentModule.title,
-                    domain: currentModule.domain,
-                    content: currentModule.content,
-                    videoUrl: currentModule.videoUrl,
-                    summary: currentModule.summary,
-                    notes: currentModule.notes,
-                    standards: currentModule.standards,
-                    indicators: currentModule.indicators,
-                    learningOutcomes: currentModule.learningOutcomes,
-                    isVisible: currentModule.isVisible,
-                    publishDate: currentModule.publishDate,
-                    cutOffDate: currentModule.cutOffDate,
-                    slides: currentModule.slides.map((s: any, sIdx: number) => {
-                      const serverSlide = pl.slides?.[sIdx];
-                      return serverSlide ? { ...s, id: serverSlide.id } : s;
-                    }),
-                    questions: currentModule.questions.map((q: any, qIdx: number) => {
-                      const serverQ = pl.questions?.[qIdx];
-                      return serverQ ? { ...q, id: serverQ.id } : q;
-                    }),
-                    assignments: currentModule.assignments.map((a: any, aIdx: number) => {
-                      const serverA = pl.assignments?.[aIdx];
-                      return serverA ? { ...a, id: serverA.id } : a;
-                    })
-                  };
-                }
-                return pl;
-              }));
-            } else {
-              setModules(parsedModules);
             }
+          }
+          if (requiresStandaloneExamQuestionIdSync(standaloneQuestions) || cleanedStandaloneQuestions.length !== (standaloneQuestions || []).length) {
+            setStandaloneQuestions?.(syncClientItemsWithServerIds(cleanedStandaloneQuestions, getStandaloneExamQuestions(serverQuestions)));
           }
           if (submittedDeletedQuestionIds.length > 0) {
             setDeletedQuestionIds?.((prev: string[]) => prev.filter((id) => !submittedDeletedQuestionIds.includes(id)));

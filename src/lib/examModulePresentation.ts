@@ -22,8 +22,7 @@ export function getCreatedAtLabel(value: unknown, language: Language) {
 
   const formatted = date.toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US', {
     dateStyle: 'medium',
-    timeStyle: 'short',
-  });
+    timeStyle: 'short', timeZone: 'Africa/Cairo' });
   return `${language === 'ar' ? 'تم الإنشاء' : 'Created'}: ${formatted}`;
 }
 
@@ -35,8 +34,7 @@ export function getUpdatedAtLabel(value: unknown, language: Language) {
 
   const formatted = date.toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US', {
     dateStyle: 'medium',
-    timeStyle: 'short',
-  });
+    timeStyle: 'short', timeZone: 'Africa/Cairo' });
   return `${language === 'ar' ? 'آخر تعديل' : 'Last updated'}: ${formatted}`;
 }
 

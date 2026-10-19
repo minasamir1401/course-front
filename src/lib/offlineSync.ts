@@ -201,7 +201,6 @@ class OfflineSyncManager {
       const records = new Map(saved.map(entry => [entry.id, entry]));
       for (const entry of legacy) if (!records.has(entry.id)) records.set(entry.id, entry);
 
-      const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
       const validItems: PendingSave[] = [];
       const staleIds: string[] = [];
       const ephemeralPatterns = [
@@ -221,12 +220,11 @@ class OfflineSyncManager {
       ];
 
       for (const entry of records.values()) {
-        const enqueuedTime = Date.parse(entry.enqueuedAt) || 0;
-        const isExpired = enqueuedTime > 0 && enqueuedTime < oneDayAgo;
-        const hasTooManyAttempts = (entry.attempts || 0) >= 3;
         const isEphemeralUrl = ephemeralPatterns.some((pattern) => entry.url?.includes(pattern));
 
-        if (isExpired || hasTooManyAttempts || isEphemeralUrl) {
+        // Never discard an unsent write just because time passed or a server rejected it.
+        // Users must be able to download/review that work before explicitly discarding it.
+        if (isEphemeralUrl) {
           staleIds.push(entry.id);
         } else {
           validItems.push({ ...entry, headers: safeHeaders(entry.headers || {}) });
@@ -235,19 +233,17 @@ class OfflineSyncManager {
 
       this.queue = validItems.sort((a, b) => (Date.parse(a.enqueuedAt) || 0) - (Date.parse(b.enqueuedAt) || 0));
 
-      if (staleIds.length > 0) {
-        await this.persistMutation([], staleIds);
-      }
-      if (typeof localStorage !== "undefined") {
-        try {
-          localStorage.removeItem(LEGACY_QUEUE_STORAGE_KEY);
-        } catch {}
-      }
-      if (database && this.queue.length > 0) {
+      if (database) {
         const transaction = database.transaction(QUEUE_STORE, "readwrite");
         const done = transactionDone(transaction);
+        for (const id of staleIds) transaction.objectStore(QUEUE_STORE).delete(id);
         for (const entry of this.queue) transaction.objectStore(QUEUE_STORE).put(entry);
         await done;
+        // Remove the migration source only after IndexedDB has committed successfully.
+        try { localStorage.removeItem(LEGACY_QUEUE_STORAGE_KEY); } catch {}
+      } else {
+        // This storage is the durable queue when IndexedDB is unavailable; never delete it.
+        await this.persistMutation(this.queue, staleIds);
       }
       if (this.isOnline && this.queue.length) this.scheduleFlush(2000);
     } catch {
@@ -347,16 +343,6 @@ class OfflineSyncManager {
         } else {
           const current = this.queue.find(entry => entry.id === item.id);
           if (current) { current.attempts += 1; await this.persistMutation([current], []); }
-
-          const isUnrecoverable =
-            response.status === 409 ||
-            response.status === 404 ||
-            ((response.status === 400 || response.status === 422) && (current?.attempts || 0) >= 2);
-
-          if (isUnrecoverable) {
-            await this.dequeue(item.id);
-            continue;
-          }
 
           this.lastError = `تعذر مزامنة التغييرات (${response.status}). تم الاحتفاظ بها للمراجعة وإعادة المحاولة.`;
           if (response.status >= 500 || response.status === 408 || response.status === 429) {

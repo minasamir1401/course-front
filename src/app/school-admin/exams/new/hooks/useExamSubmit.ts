@@ -8,6 +8,7 @@ export const useExamSubmit = (props: any) => {
 
     const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (manualSubmitRef.current || isLoading) return;
     if (!moduleMode && !examData.title) {
       showToast(t('courseCreate.titleRequired') || "Please enter a course title", "error");
       return;

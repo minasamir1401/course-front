@@ -1,3 +1,4 @@
+import { toEgyptInput, parseEgyptDate } from '@/lib/egyptTime';
 // @ts-nocheck
 import { useEffect } from 'react';
 import { apiFetch, API_URL } from '@/lib/api';
@@ -127,8 +128,8 @@ export const useExamAutosave = (props: any) => {
               return {
                 ...l,
                 isVisible: l.isVisible !== undefined ? l.isVisible : true,
-                publishDate: l.publishDate ? new Date(new Date(l.publishDate).getTime() - new Date(l.publishDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
-                cutOffDate: l.cutOffDate ? new Date(new Date(l.cutOffDate).getTime() - new Date(l.cutOffDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
+                publishDate: l.publishDate ? toEgyptInput(l.publishDate) : "",
+                cutOffDate: l.cutOffDate ? toEgyptInput(l.cutOffDate) : "",
                 questions: Array.isArray(parsedQuestions) ? parsedQuestions.map(q => {
                   let parsedExps = [""];
                   try {
@@ -236,8 +237,9 @@ export const useExamAutosave = (props: any) => {
     const queueWrite = () => {
       clearTimeout(timer);
       if (!queuedWrite) {
-        queuedWrite = autoSaveWriteQueueRef.current.then(runAutoSave, runAutoSave);
-        autoSaveWriteQueueRef.current = queuedWrite.then(() => undefined, () => undefined);
+        const write: Promise<unknown> = autoSaveWriteQueueRef.current.then(runAutoSave, runAutoSave);
+        queuedWrite = write;
+        autoSaveWriteQueueRef.current = write.then(() => undefined, () => undefined);
       }
       return queuedWrite;
     };

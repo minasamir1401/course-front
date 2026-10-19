@@ -2,6 +2,9 @@
 
 import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
 import React, { useState, useEffect, Suspense } from "react";
+import Link from "next/link";
+import { OfflineBanner } from "@/components/OfflineBanner";
+import { useModalFocus } from "@/hooks/useModalFocus";
 import ExamCountdown from "@/components/ExamCountdown";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
@@ -110,6 +113,7 @@ const ExamOptionButton = React.memo(function ExamOptionButton({
     <button
       type="button"
       dir={isEn ? 'ltr' : 'rtl'}
+      aria-pressed={!!isSelected}
       onClick={() => onSelect(option)}
       className={`w-full text-start p-5 rounded-2xl border-2 transition-all flex items-center justify-between gap-4 group ${
         showPreviewAnswers && isPreviewMode && isOptionCorrectInPreview
@@ -187,6 +191,20 @@ function TakeExamPageContent() {
   const examQuestions = React.useMemo(() => resolveTakeExamQuestions(exam), [exam]);
   const [submitting, setSubmitting] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const submitDialogRef = React.useRef<HTMLDivElement>(null);
+  useModalFocus(showSubmitModal, submitDialogRef, () => setShowSubmitModal(false));
+  const [loadError, setLoadError] = useState("");
+  const [submitError, setSubmitError] = useState("");
+  const [localSaveFailed, setLocalSaveFailed] = useState(false);
+  const [questionFilter, setQuestionFilter] = useState('all');
+  useEffect(() => {
+    if (!started) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [started]);
+
+
   const [showPreviewAnswers, setShowPreviewAnswers] = useState(false);
   const [reviewFlags, setReviewFlags] = useState<string[]>([]);
   const [revealedHints, setRevealedHints] = useState<Record<string, boolean>>({});
@@ -238,7 +256,7 @@ function TakeExamPageContent() {
     } else if (exam && isPreviewMode) {
       setTimeLeft(exam.duration * 60);
     }
-  }, [exam, id, isPreviewMode]);
+  }, [exam, id, isPreviewMode, subExamId]);
 
   useEffect(() => {
     if (isPreviewMode) return;
@@ -246,6 +264,7 @@ function TakeExamPageContent() {
   }, [id, isPreviewMode, reviewFlags, subExamId]);
 
   const fetchExam = async () => {
+    setLoading(true); setLoadError("");
     try {
       const [res, checkRes] = await Promise.all([
         apiFetch(`${API_URL}/exams/${id}${subExamId ? `?subExamId=${encodeURIComponent(subExamId)}` : ''}`, {
@@ -257,10 +276,7 @@ function TakeExamPageContent() {
       ]);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        showToast(data.error || "Failed to load exam", "error");
-        if (!isPreviewMode) {
-          router.back();
-        }
+        setLoadError(language === 'ar' ? 'تعذر تحميل الامتحان. تحقق من الاتصال أو صلاحية الدخول.' : 'Could not load this exam. Check your connection or access.');
         return;
       }
 
@@ -269,11 +285,11 @@ function TakeExamPageContent() {
         if (checkRes?.ok) {
           const checkData = await checkRes.json();
           if (!checkData.canTakeAgain) {
-            showToast("You have reached the maximum number of attempts allowed for this exam.", "error");
+            showToast(language === "ar" ? "استخدمت جميع المحاولات المسموح بها." : "You have used all available attempts.", "error");
             if (checkData.submissionId) {
               router.replace(`/exams/result/${checkData.submissionId}`);
             } else {
-              router.back();
+              setLoadError(language === "ar" ? "لا توجد محاولات متاحة لهذا الامتحان." : "No attempts are available for this exam.");
             }
             return;
           }
@@ -352,6 +368,7 @@ function TakeExamPageContent() {
       // Time is set in the separate useEffect now
     } catch (error) {
       console.error(error);
+      setLoadError(language === "ar" ? "تعذر الاتصال لتحميل الامتحان. أعد المحاولة." : "Could not connect to load the exam. Please retry.");
     } finally {
       setLoading(false);
     }
@@ -450,7 +467,7 @@ function TakeExamPageContent() {
       }
       if (!isPreviewMode) {
         try { localStorage.setItem(`exam_${id}_${subExamId || "root"}_answers`, JSON.stringify(newAnswers)); }
-        catch { /* Keep in-memory answer usable */ }
+        catch { setLocalSaveFailed(true); /* Keep in-memory answer usable */ }
       }
       return newAnswers;
     });
@@ -458,7 +475,7 @@ function TakeExamPageContent() {
 
   const handleSubmit = async () => {
     if (submitting) return;
-    setSubmitting(true);
+    setSubmitting(true); setSubmitError("");
     setShowSubmitModal(false);
     try {
       const timeTakenInSeconds = Math.max(0, exam.duration * 60 - remainingTimeRef.current);
@@ -471,7 +488,7 @@ function TakeExamPageContent() {
         body: JSON.stringify({ answers, totalTime: timeTakenInSeconds, subExamId, password: passwordInput || null }),
       });
       const data = await res.json().catch(() => ({}));
-      if (res.ok) {
+      if (res.ok && typeof data.submissionId === "string" && data.submissionId) {
         if (!isPreviewMode) {
           localStorage.removeItem(`exam_${id}_${subExamId || "root"}_answers`);
           localStorage.removeItem(`exam_${id}_${subExamId || "root"}_time`);
@@ -482,11 +499,11 @@ function TakeExamPageContent() {
         }
         router.push(`/exams/result/${data.submissionId}`);
       } else {
-        showToast(data.error || "Failed to submit exam", "error");
+        setSubmitError(language === "ar" ? "لم يتم تأكيد التسليم. إجاباتك ما زالت موجودة؛ أعد المحاولة." : "Submission was not confirmed. Your answers are still here; please retry.");
       }
     } catch (err) {
       console.error(err);
-      showToast("Failed to connect to the server", "error");
+      setSubmitError(language === "ar" ? "انقطع الاتصال أثناء التسليم. احتفظ بهذه الصفحة مفتوحة وأعد الإرسال." : "Connection failed during submission. Keep this page open and retry.");
     } finally {
       setSubmitting(false);
     }
@@ -501,7 +518,7 @@ function TakeExamPageContent() {
     );
   }
 
-  if (!exam) return null; // Prevent crash if exam failed to load but loading is finished (redirecting)
+  if (loadError || !exam) return <main className="min-h-screen bg-slate-50 flex items-center justify-center p-5" dir={language === 'ar' ? 'rtl' : 'ltr'}><section className="student-panel max-w-lg space-y-5"><h1 className="text-2xl font-black">{language === 'ar' ? 'تعذر فتح الامتحان' : 'Could not open exam'}</h1><p role="alert">{loadError}</p><div className="flex flex-wrap gap-3"><button className="report-primary" onClick={() => fetchExam()}>{language === 'ar' ? 'إعادة المحاولة' : 'Retry'}</button><Link className="report-secondary" href="/exams">{language === 'ar' ? 'العودة للامتحانات' : 'Back to exams'}</Link></div></section></main>;
 
   const isEn = studentQuestionLang === 'en';
   const activeExamLang: 'ar' | 'en' = studentQuestionLang;
@@ -683,6 +700,7 @@ function TakeExamPageContent() {
   return (
     <div className={`min-h-screen bg-slate-50 flex flex-col ${isEn ? 'ltr' : 'rtl'}`} dir={isEn ? 'ltr' : 'rtl'}>
       <Watermark text={watermarkText} />
+      <OfflineBanner language={language} />
       <StudentExamCalculator />
 
       {/* Submit Confirmation Modal */}
@@ -692,16 +710,16 @@ function TakeExamPageContent() {
             className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
             onClick={() => setShowSubmitModal(false)}
           ></div>
-          <div className="relative bg-white rounded-[40px] shadow-2xl max-w-md w-full p-10 text-center animate-in zoom-in-95 duration-200">
+          <div ref={submitDialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="submit-exam-title" className="relative bg-white rounded-[40px] shadow-2xl max-w-md w-full p-6 sm:p-10 text-center animate-in zoom-in-95 duration-200">
             <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-8 ${unansweredCount > 0 ? 'bg-amber-50 text-amber-600' : 'bg-green-50 text-green-600'}`}>
               {unansweredCount > 0 ? <AlertCircle className="w-10 h-10" /> : <Send className="w-10 h-10" />}
             </div>
-            <h2 className="text-3xl font-black text-slate-800 mb-4">
+            <h2 id="submit-exam-title" className="text-2xl font-black text-slate-800 mb-4">
               {unansweredCount > 0 ? (isEn ? "Warning: Unanswered Questions" : "تنبيه: أسئلة لم تحل") : (isEn ? "Submit Exam?" : "تسليم الامتحان؟")}
             </h2>
             <p className="text-slate-500 mb-10 leading-relaxed">
               {unansweredCount > 0 
-                ? (isEn ? `You have answered ${answers.length} out of ${examQuestions.length} questions. There are ${unansweredCount} unanswered questions. Are you sure you want to submit?` : `لقد أجبت على ${answers.length} من أصل ${examQuestions.length} سؤال. هناك ${unansweredCount} سؤال لم يتم حلهم بعد. هل أنت متأكد من التسليم؟`)
+                ? (isEn ? `You have answered ${answeredQuestionsCount} out of ${questionsThatRequireAnswer.length} questions. There are ${unansweredCount} unanswered questions. Are you sure you want to submit?` : `لقد أجبت على ${answeredQuestionsCount} من أصل ${questionsThatRequireAnswer.length} سؤال. هناك ${unansweredCount} سؤال لم يتم حلهم بعد. هل أنت متأكد من التسليم؟`)
                 : (isEn ? "You are about to finish the exam and submit your answers. Please review all questions before confirming." : "أنت على وشك إنهاء الامتحان وتسليم إجاباتك. يرجى التأكد من مراجعة كافة الأسئلة قبل التأكيد.")}
             </p>
             <div className="flex flex-col gap-4">
@@ -792,11 +810,17 @@ function TakeExamPageContent() {
       </div>
 
       <div className="flex-1 max-w-3xl mx-auto w-full p-6 py-12">
+        <p role="status" className="text-sm text-slate-600 mb-4">{isPreviewMode ? (isEn ? 'Preview: answers are not recorded.' : 'معاينة: لا تُسجّل الإجابات.') : localSaveFailed ? (isEn ? 'Device storage is unavailable. Keep this page open until submission.' : 'تعذر الحفظ على الجهاز. احتفظ بالصفحة مفتوحة حتى التسليم.') : (isEn ? 'Answers are saved on this device. They reach your school only after successful submission.' : 'الإجابات محفوظة على هذا الجهاز، ولا تصل للمدرسة إلا بعد تأكيد التسليم.')}</p>
+        {submitError && <div role="alert" className="report-error mb-5"><p>{submitError}</p><button className="report-primary mt-3" disabled={submitting} onClick={handleSubmit}>{isEn ? 'Retry submission' : 'إعادة التسليم'}</button></div>}
+
+        <label className="report-field mb-4"><span>{isEn ? 'Question navigation' : 'التنقل بين الأسئلة'}</span><select value={questionFilter} onChange={e => setQuestionFilter(e.target.value)}><option value="all">{isEn ? 'All questions' : 'كل الأسئلة'}</option><option value="unanswered">{isEn ? 'Unanswered questions' : 'الأسئلة غير المجابة'}</option><option value="flagged">{isEn ? 'Flagged for review' : 'المعلّمة للمراجعة'}</option></select></label>
+        {questionFilter !== 'all' && !examQuestions.some((q: any) => questionFilter === 'unanswered' ? !isQuestionAnswered(q) : reviewFlags.includes(String(q.id))) && <p role="status" className="text-sm text-slate-600 mb-4">{isEn ? 'No questions match this selection.' : 'لا توجد أسئلة في هذا الاختيار.'}</p>}
         {/* Progress Bar */}
         <div className="mb-8">
           <div className="flex flex-wrap gap-2 mb-4">
             {examQuestions.map((examQuestion: any, index: number) => {
               const answered = isQuestionAnswered(examQuestion);
+              if (questionFilter === 'unanswered' && answered || questionFilter === 'flagged' && !reviewFlags.includes(String(examQuestion.id))) return null;
               const isActive = currentQuestion === index;
               return (
                 <button
@@ -810,7 +834,8 @@ function TakeExamPageContent() {
                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                         : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-200 hover:text-indigo-600'
                   }`}
-                  aria-label={`${isEn ? 'Question' : 'السؤال'} ${index + 1}`}
+                  aria-current={isActive ? "step" : undefined}
+                  aria-label={`${isEn ? 'Question' : 'السؤال'} ${index + 1} — ${answered ? (isEn ? "Answered" : "تمت الإجابة") : (isEn ? "Unanswered" : "لم تجب")} ${reviewFlags.includes(String(examQuestion.id)) ? (isEn ? "Flagged for review" : "للمراجعة") : ""}`}
                 >
                   {index + 1}
                 </button>
@@ -819,7 +844,7 @@ function TakeExamPageContent() {
           </div>
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+              <span className="text-sm font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
                 {isEn ? 'Question' : 'السؤال'} {Math.min(currentQuestion + 1, examQuestions.length)} {isEn ? 'of' : 'من'} {examQuestions.length}
               </span>
               <span className={`text-sm font-bold px-3 py-1 rounded-full ${
@@ -925,11 +950,12 @@ function TakeExamPageContent() {
                     if (choices.length === 0) {
                       return (
                         <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-4 animate-in fade-in">
-                          <label className="block text-sm font-black text-slate-700">
+                          <label htmlFor="exam-free-answer" className="block text-sm font-black text-slate-700">
                             {isEn ? 'Enter your answer here (Student-Produced Response / Numeric):' : 'اكتب إجابتك هنا (إجابة حرة / رقمية):'}
                           </label>
                           <input
                             type="text"
+                            id="exam-free-answer"
                             value={selectedAnswer || ''}
                             onChange={(e) => handleSelectAnswer(e.target.value)}
                             placeholder={isEn ? 'Enter your answer...' : 'أدخل الإجابة...'}
@@ -993,6 +1019,7 @@ function TakeExamPageContent() {
                       return (
                       <button
                         key={option.value}
+                        aria-pressed={isSelected}
                         onClick={() => handleSelectAnswer(option.value)}
                         className={`flex-1 py-6 rounded-2xl border-2 font-bold text-xl transition-all ${
                           showPreviewAnswers && isPreviewMode && isCorrect

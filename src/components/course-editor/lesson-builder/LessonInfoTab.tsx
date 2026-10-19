@@ -1,10 +1,11 @@
 "use client";
+import { parseLessonMetadataRows } from "@/lib/lessonMetadataExcel";
 
-import React, { useState } from "react";
-import { Edit2, Plus, Trash2, FileJson, Upload, Download, Search, ChevronDown, Target, BookOpen, Video } from "lucide-react";
+import BilingualMetadataEditor from "@/components/BilingualMetadataEditor";
+import React from "react";
+import { Upload, Download, Target, Video } from "lucide-react";
 import * as XLSX from "xlsx";
 import { buildCourseMetadataTemplateRows } from '@/lib/examExcelTemplates';
-import { useCourseEditor } from "../CourseEditorContext";
 
 interface LessonInfoTabProps {
   currentLesson: any;
@@ -23,19 +24,18 @@ export const LessonInfoTab: React.FC<LessonInfoTabProps> = ({
   metadataExcelRef,
   handleExcelUpload
 }) => {
-  const { lessons = [], availableMetadata } = useCourseEditor() as any;
-  const t = (key: string) => key;
-  const [isStandardDropdownOpen, setIsStandardDropdownOpen] = useState(false);
-  const [isIndicatorDropdownOpen, setIsIndicatorDropdownOpen] = useState(false);
-  const [isOutcomeDropdownOpen, setIsOutcomeDropdownOpen] = useState(false);
+  const latestLesson = React.useRef(currentLesson);
+  React.useEffect(() => { latestLesson.current = currentLesson; }, [currentLesson]);
 
   const handleMetadataExcelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { showToast(language === "ar" ? "الحد الأقصى 5 ميجابايت" : "Maximum file size: 5 MB", "error"); e.target.value = ""; return; }
 
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
+        if (latestLesson.current !== currentLesson) throw new Error(language === "ar" ? "تغير الدرس أثناء قراءة الملف. أعد الاستيراد." : "The lesson changed while reading the file. Import again.");
         const data = new Uint8Array(evt.target?.result as ArrayBuffer);
         const wb = XLSX.read(data, { type: "array" });
         const ws = wb.Sheets[wb.SheetNames[0]];
@@ -46,90 +46,13 @@ export const LessonInfoTab: React.FC<LessonInfoTabProps> = ({
           return;
         }
 
-        const headers = (rows[0] as string[]).map((h) => String(h).trim().toLowerCase());
+        const metadata = parseLessonMetadataRows(rows, currentLesson.title);
+        setCurrentLesson((prev: any) => ({ ...prev, ...metadata }));
 
-        const stdArIdx = headers.findIndex(h => (h.includes("standard") || h.includes("معيار") || h.includes("المعايير")) && (h.includes("ar") || h.includes("عرب")));
-        const stdEnIdx = headers.findIndex(h => (h.includes("standard") || h.includes("معيار") || h.includes("المعايير")) && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
-        const stdIdx = headers.findIndex(h => h.includes("standard") || h.includes("معيار") || h.includes("المعايير"));
-
-        const indArIdx = headers.findIndex(h => (h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشرات")) && (h.includes("ar") || h.includes("عرب")));
-        const indEnIdx = headers.findIndex(h => (h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشرات")) && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
-        const indIdx = headers.findIndex(h => h.includes("indicator") || h.includes("مؤشر") || h.includes("المؤشرات"));
-
-        const loArIdx = headers.findIndex(h => (h.includes("outcome") || h.includes("ناتج") || h.includes("مخرج") || h.includes("النواتج") || h.includes("المخرجات")) && (h.includes("ar") || h.includes("عرب")));
-        const loEnIdx = headers.findIndex(h => (h.includes("outcome") || h.includes("ناتج") || h.includes("مخرج") || h.includes("النواتج") || h.includes("المخرجات")) && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
-        const loIdx = headers.findIndex(h => h.includes("outcome") || h.includes("ناتج") || h.includes("مخرج") || h.includes("النواتج") || h.includes("المخرجات"));
-
-        const domainArIdx = headers.findIndex(h => (h.includes("domain") || h.includes("مجال") || h.includes("المجال")) && (h.includes("ar") || h.includes("عرب")));
-        const domainEnIdx = headers.findIndex(h => (h.includes("domain") || h.includes("مجال") || h.includes("المجال")) && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
-        const domainIdx = headers.findIndex(h => h.includes("domain") || h.includes("مجال") || h.includes("المجال"));
-
-        const lessonArIdx = headers.findIndex(h => (h.includes("lesson") || h.includes("درس") || h.includes("الدرس")) && (h.includes("ar") || h.includes("عرب")));
-        const lessonEnIdx = headers.findIndex(h => (h.includes("lesson") || h.includes("درس") || h.includes("الدرس")) && (h.includes("en") || h.includes("إنجل") || h.includes("انجل")));
-        const lessonIdx = headers.findIndex(h => h.includes("lesson") || h.includes("درس") || h.includes("الدرس"));
-
-        if (stdIdx === -1 && indIdx === -1 && loIdx === -1 && domainIdx === -1) {
-          showToast(language === 'ar' ? "لم يتم العثور على أعمدة متوافقة (المعايير، المؤشرات، المخرجات، المجال)" : "No matching columns found (Standards, Indicators, Outcomes, Domain)", "error");
-          return;
-        }
-
-        let standardVal = "";
-        let indicatorVal = "";
-        let outcomeVal = "";
-        let domainVal = "";
-
-        const dataRows = rows.slice(1).filter(r => r.some(c => String(c).trim() !== ""));
-
-        let filteredRows = dataRows;
-        if (currentLesson.title) {
-          const currentLessonTitleLower = currentLesson.title.trim().toLowerCase();
-          const matchingRows = dataRows.filter(r => {
-            const rowLessonAr = lessonArIdx >= 0 ? String(r[lessonArIdx] ?? "").trim().toLowerCase() : "";
-            const rowLessonEn = lessonEnIdx >= 0 ? String(r[lessonEnIdx] ?? "").trim().toLowerCase() : "";
-            const rowLesson = lessonIdx >= 0 ? String(r[lessonIdx] ?? "").trim().toLowerCase() : "";
-            return (rowLessonAr && (currentLessonTitleLower.includes(rowLessonAr) || rowLessonAr.includes(currentLessonTitleLower))) ||
-              (rowLessonEn && (currentLessonTitleLower.includes(rowLessonEn) || rowLessonEn.includes(currentLessonTitleLower))) ||
-              (rowLesson && (currentLessonTitleLower.includes(rowLesson) || rowLesson.includes(currentLessonTitleLower)));
-          });
-          if (matchingRows.length > 0) {
-            filteredRows = matchingRows;
-          }
-        }
-
-        if (filteredRows.length > 0) {
-          const pickVal = (r: any[], arIdx: number, enIdx: number, fallbackIdx: number) => {
-            const arVal = arIdx >= 0 ? String(r[arIdx] ?? "").trim() : "";
-            const enVal = enIdx >= 0 ? String(r[enIdx] ?? "").trim() : "";
-            const fbVal = fallbackIdx >= 0 ? String(r[fallbackIdx] ?? "").trim() : "";
-            if (language === 'en') {
-              return enVal || arVal || fbVal;
-            }
-            return arVal || enVal || fbVal;
-          };
-
-          const standardsList = filteredRows.map(r => pickVal(r, stdArIdx, stdEnIdx, stdIdx)).filter(Boolean);
-          const indicatorsList = filteredRows.map(r => pickVal(r, indArIdx, indEnIdx, indIdx)).filter(Boolean);
-          const outcomesList = filteredRows.map(r => pickVal(r, loArIdx, loEnIdx, loIdx)).filter(Boolean);
-          const domainList = filteredRows.map(r => pickVal(r, domainArIdx, domainEnIdx, domainIdx)).filter(Boolean);
-
-          standardVal = standardsList.join("\n");
-          indicatorVal = indicatorsList.join("\n");
-          outcomeVal = outcomesList.join("\n");
-          domainVal = domainList[0] || "";
-        }
-
-        setCurrentLesson((prev: any) => ({
-          ...prev,
-          standards: standardVal || prev.standards,
-          indicators: indicatorVal || prev.indicators,
-          learningOutcomes: outcomeVal || prev.learningOutcomes,
-          domain: domainVal || prev.domain
-        }));
-
-        showToast(t('courseCreate.excelMetadataSuccess') || "Standards, indicator and domain successfully imported from Excel", "success");
-      } catch (err) {
+        showToast(language === 'ar' ? 'تم استيراد البيانات باللغتين' : 'Bilingual metadata imported', 'success');
+      } catch (err: any) {
         console.error(err);
-        showToast(t('courseCreate.excelMetadataError') || "Error reading Excel file", "error");
+        showToast(err.message || (language === 'ar' ? 'تعذرت قراءة الملف' : 'Could not read workbook'), 'error');
       }
     };
     reader.readAsArrayBuffer(file);
@@ -181,63 +104,13 @@ export const LessonInfoTab: React.FC<LessonInfoTabProps> = ({
           </div>
           {language === 'ar' ? "الأهداف الأكاديمية والمعايير" : "Academic Standards & Outcomes"}
         </h4>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">{language === 'ar' ? "المجال" : "Domain"}</label>
-            <select
-              value={currentLesson.domain || ""}
-              onChange={(e) => setCurrentLesson({ ...currentLesson, domain: e.target.value })}
-              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none shadow-sm font-bold"
-            >
-              <option value="">{t('courseCreate.selectDomain') || "Select Domain..."}</option>
-              {availableMetadata.domains?.map((domainName: string) => (
-                <option key={domainName} value={domainName}>{domainName}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">{language === 'ar' ? "المعايير" : "Standards"}</label>
-            <select
-              value={currentLesson.standards || ""}
-              onChange={(e) => setCurrentLesson({ ...currentLesson, standards: e.target.value })}
-              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none shadow-sm font-bold truncate"
-            >
-              <option value="">{t('courseCreate.selectStandard') || "Select Standard..."}</option>
-              {availableMetadata.standards?.map((standardName: string) => (
-                <option key={standardName} value={standardName}>{standardName}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">{language === 'ar' ? "المؤشرات" : "Indicators"}</label>
-            <select
-              value={currentLesson.indicators || ""}
-              onChange={(e) => setCurrentLesson({ ...currentLesson, indicators: e.target.value })}
-              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none shadow-sm font-bold truncate"
-            >
-              <option value="">{t('courseCreate.selectIndicator') || "Select Indicator..."}</option>
-              {availableMetadata.indicators?.map((indicatorName: string) => (
-                <option key={indicatorName} value={indicatorName}>{indicatorName}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">{language === 'ar' ? "نواتج التعلم (LOs)" : "Learning Outcomes (LOs)"}</label>
-            <select
-              value={currentLesson.learningOutcomes || ""}
-              onChange={(e) => setCurrentLesson({ ...currentLesson, learningOutcomes: e.target.value })}
-              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-slate-900 text-sm outline-none focus:border-indigo-600 appearance-none shadow-sm font-bold truncate"
-            >
-              <option value="">{t('courseCreate.selectOutcome') || "Select Learning Outcome..."}</option>
-              {availableMetadata.outcomes?.map((outcomeName: string) => (
-                <option key={outcomeName} value={outcomeName}>{outcomeName}</option>
-              ))}
-            </select>
-          </div>
+        <input type="file" ref={metadataExcelRef} accept=".xlsx,.xls" className="hidden" onChange={handleMetadataExcelChange} />
+        <div className="flex flex-wrap gap-3">
+          <button type="button" onClick={() => handleExcelUpload('metadata')} className="flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-5 py-3 text-sm font-bold text-emerald-700 shadow-sm hover:bg-emerald-100"><Upload size={16} />{language === 'ar' ? 'استيراد Metadata' : 'Import metadata'}</button>
+          <button type="button" onClick={downloadMetadataTemplate} className="flex items-center gap-2 rounded-xl border border-indigo-100 bg-indigo-50 px-5 py-3 text-sm font-bold text-indigo-700 shadow-sm hover:bg-indigo-100"><Download size={16} />{language === 'ar' ? 'قالب Excel باللغتين' : 'Bilingual Excel template'}</button>
         </div>
+        <p className="text-xs text-slate-500">{language === 'ar' ? 'اكتب عنوان هذا الدرس في القالب لربط المعايير به.' : 'Use this lesson’s title in the template to match its metadata.'}</p>
+        <BilingualMetadataEditor value={currentLesson} fields={['domain', 'standards', 'indicators', 'learningOutcomes']} language={language} onChange={patch => setCurrentLesson((prev: any) => ({ ...prev, ...patch }))} />
       </div>
     </div>
   );

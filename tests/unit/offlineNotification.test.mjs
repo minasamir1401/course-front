@@ -12,7 +12,7 @@ function harness() {
   const offlineSync = { enqueue: async entry => { queued.push(entry); if (rejectStorage) throw new Error('quota'); }, getPending: () => [], flush: async () => {} };
   const mod = { exports: {} };
   const code = ts.transpileModule(fs.readFileSync(new URL('../../src/context/NotificationContext.tsx', import.meta.url), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
-  new Function('require', 'module', 'exports', 'window', 'navigator', 'localStorage', 'setTimeout', code)(id => id === 'react' ? react : id === '@/lib/offlineSync' ? { offlineSync, captureOfflineOwner: () => owner } : id === 'lucide-react' ? {} : require(id), mod, mod.exports, window, { onLine: true }, { getItem: () => 'en' }, () => 0);
+  new Function('require', 'module', 'exports', 'window', 'navigator', 'localStorage', 'setTimeout', code)(id => id === 'react' ? react : id === '@/hooks/useModalFocus' ? { useModalFocus() {} } : id === '@/contexts/LanguageContext' ? { useLanguage: () => ({ language: 'en' }) } : id === '@/lib/offlineSync' ? { offlineSync, captureOfflineOwner: () => owner } : id === 'lucide-react' ? {} : require(id), mod, mod.exports, window, { onLine: true }, { getItem: () => 'en' }, () => 0);
   mod.exports.NotificationProvider({ children: null });
   effects.forEach(fn => fn());
   return { window, queued, states, switchOwner: () => { owner = { userId: 'account-b', schoolId: 'school-b' }; }, failStorage: () => { rejectStorage = true; }, resolve: () => resolveFetch(new Response('{}', { status: 503 })) };

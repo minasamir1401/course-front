@@ -4,6 +4,7 @@ export function buildQuestionTemplateRows(_type: 'questions' | 'assignments', la
   return questionTemplateRows(language);
 }
 
+import { metadataLabel } from './bilingualMetadata';
 import { normalizeDok } from './examQuestionMetadata';
 
 export function buildAdvancedMetadataTemplateRows(language: string, list: any[]) {
@@ -47,11 +48,11 @@ export function buildAdvancedMetadataTemplateRows(language: string, list: any[])
       'قوانين نيوتن للحركة', 'Newton\'s Laws of Motion',
       'القانون الثاني لنيوتن', 'Newton\'s Second Law',
       'حساب التسارع والقوة المحصلة', 'Calculating Acceleration and Net Force',
-      'Medium',
-      'DOK 2',
-      'Application',
+      metadataLabel('Medium', language),
+      metadataLabel('DOK 2', language),
+      metadataLabel('Application', language),
       'الخلط بين الكتلة والوزن', 'Confusing mass with weight',
-      '2 mins'
+      '2:00'
     ]);
     rows.push([
       '',
@@ -63,11 +64,11 @@ export function buildAdvancedMetadataTemplateRows(language: string, list: any[])
       'التركيب الذري', 'Atomic Structure',
       'مستويات الطاقة والإلكترونات', 'Energy Levels & Electrons',
       'قاعدة باولي ومبدأ البناء التصاعدي', 'Pauli Principle & Aufbau Principle',
-      'Hard',
-      'DOK 3',
-      'Analyze',
+      metadataLabel('Hard', language),
+      metadataLabel('DOK 3', language),
+      metadataLabel('Analyze', language),
       'الخطأ في ترتيب المستويات الفرعية 4s و 3d', 'Error in orbital order 4s and 3d',
-      '3 mins'
+      '3:00'
     ]);
     rows.push([
       '',
@@ -79,11 +80,11 @@ export function buildAdvancedMetadataTemplateRows(language: string, list: any[])
       'المعادلات الجبرية', 'Algebraic Equations',
       'المعادلات الخطية', 'Linear Equations',
       'عزل المتغير وتبسيط المعادلة', 'Isolating Variables & Simplifying Equations',
-      'Easy',
-      'DOK 1',
-      'Remember',
+      metadataLabel('Easy', language),
+      metadataLabel('DOK 1', language),
+      metadataLabel('Remember', language),
       'نسيان تغيير الإشارة عند النقل للطرف الآخر', 'Forgetting to flip signs across equation sides',
-      '1 min'
+      '1:00'
     ]);
     return rows;
   }
@@ -107,12 +108,12 @@ export function buildAdvancedMetadataTemplateRows(language: string, list: any[])
       question.subskillEn || '',
       question.microSkill || '',
       question.microSkillEn || '',
-      question.level || 'Medium',
-      normalizeDok(question.dok) || question.dok || 'DOK 2',
-      question.cognitive || 'Apply',
+      question.level || '',
+      normalizeDok(question.dok) || question.dok || '',
+      question.cognitive || '',
       question.errorPattern || '',
       question.errorPatternEn || '',
-      question.estimatedTime || '2 mins',
+      question.estimatedTime || '',
     ]);
   }
 

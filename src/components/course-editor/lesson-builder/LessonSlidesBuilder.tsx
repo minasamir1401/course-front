@@ -1,5 +1,7 @@
 "use client";
+import { translateMetadataFields } from "@/lib/questionMetadataTranslation";
 
+import SlideKeyboardRegion from "@/components/SlideKeyboardRegion";
 import React, { useState, useMemo } from "react";
 import { Plus, Upload, Download, Layout, Copy } from "lucide-react";
 import { useLessonBlocks } from "./useLessonBlocks";
@@ -240,6 +242,7 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
       const trOpts = translations.slice(cursor, cursor + srcOpts.length);
       cursor += srcOpts.length;
       const trSections = translations.slice(cursor, cursor + srcSections.length);
+      cursor += srcSections.length;
 
       const updated = { ...block };
       if (to === 'en') {
@@ -287,6 +290,7 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
         }
       }
 
+      Object.assign(updated, await translateMetadataFields(block, to));
       setCurrentLesson((prev: any) => {
         const newSlides = [...(prev[source] || [])];
         newSlides[sIdx] = updated;
@@ -316,7 +320,7 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
       : (language === 'ar' ? 'قم بإضافة أسئلة تدريبية تفاعلية لتقييم فهم واستيعاب الطالب' : 'Add interactive practice questions to evaluate student understanding');
 
   return (
-    <div className="space-y-8">
+    <SlideKeyboardRegion language={language} onNavigate={index => setExpandedSlides(prev => ({ ...prev, [index]: true, [list[index]?.id ?? index]: true }))}>
       {source !== 'slides' && (
         <input 
           type="file" 
@@ -456,6 +460,6 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
           onSuccess={() => {}}
         />
       )}
-    </div>
+    </SlideKeyboardRegion>
   );
 };

@@ -10,6 +10,7 @@ export const useExamSubmit = (props: any) => {
 
     const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (manualSubmitRef.current || isLoading) return;
     if (isLoadingQuestions || props.isQuestionsLoaded === false) {
       showToast(language === 'ar' ? 'يرجى الانتظار لحظات حتى يكتمل تحميل الأسئلة أولاً' : 'Please wait for questions to finish loading first', 'warning');
       return;

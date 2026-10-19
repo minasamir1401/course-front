@@ -1,3 +1,4 @@
+import { useSlideKeyboard } from '@/hooks/useSlideKeyboard';
 import { useState, useEffect } from 'react';
 import { isAnswerCorrect } from '@/lib/answerEvaluation';
 
@@ -19,6 +20,8 @@ export const useStudentPreview = (props: { language: string }) => {
   const [previewActivitiesList, setPreviewActivitiesList] = useState<any[]>([]);
   const [previewTimeLeft, setPreviewTimeLeft] = useState<number | null>(null);
   const [previewIsLoading, setPreviewIsLoading] = useState<boolean>(false);
+
+  useEffect(() => { if (previewActivity) document.querySelector<HTMLElement>('[data-slide-preview]')?.focus(); }, [previewActivity?.id]);
 
   // Auto-hide toast
   useEffect(() => {
@@ -126,6 +129,9 @@ export const useStudentPreview = (props: { language: string }) => {
     setPreviewStartTime(Date.now());
   };
 
+  useSlideKeyboard({ enabled: !!previewActivity && !previewHelperModal.type && !previewIsSubmitting && !previewIsLoading,
+    language, index: previewActivitiesList.findIndex((activity: any) => activity.id === previewActivity?.id), count: previewActivitiesList.length,
+    previous: handlePreviewPrev, next: handlePreviewNext, allowDialog: true });
   return {
     previewActivity, setPreviewActivity,
     previewAnswer, setPreviewAnswer,

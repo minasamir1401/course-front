@@ -199,6 +199,7 @@ export default function SuperAdminNewExamPage() {
     const targetModule = primaryModule || currentModule;
     if (!targetModule) return;
     const persistDraftAndOpen = async () => {
+      if (manualSubmitRef.current) return;
       const localSubExam = (targetModule.subExams || [])[index];
       if (!localSubExam) return;
 

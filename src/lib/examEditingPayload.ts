@@ -1,3 +1,4 @@
+const moduleMetadataPayload = (module: any) => Object.fromEntries(['domain', 'standards', 'indicators', 'learningOutcomes'].flatMap(field => [field, `${field}En`]).filter(field => module?.[field] !== undefined).map(field => [field, module[field]]));
 const isPersistedId = (id: unknown): id is string => typeof id === 'string' && id.length > 20;
 
 function normalizeQuestionText(text: unknown): string {
@@ -156,6 +157,7 @@ export function buildModulesSubmissionPayload(modules: any[]) {
 
       return {
         id: subModuleId,
+        ...moduleMetadataPayload(subModuleItem),
         title: subModuleItem.title,
         description: subModuleItem.content || subModuleItem.description || null,
         duration: subModuleItem.duration || null,
@@ -169,6 +171,7 @@ export function buildModulesSubmissionPayload(modules: any[]) {
 
     return {
       id: moduleId,
+      ...moduleMetadataPayload(moduleItem),
       title: moduleItem.title,
       description: moduleItem.content || moduleItem.description || null,
       duration: moduleItem.duration || null,
@@ -247,7 +250,8 @@ export function deduplicateSubmissionQuestions(questions: any[]) {
     const isStandalone = !q.moduleId && !q.subExamId;
     const scopeKey = `${q.moduleId || 'standalone'}:${q.subExamId || 'none'}:${fullContentSig}`;
 
-    const id = isPersistedId(q.id) ? q.id : null;
+    // Draft IDs identify the same question across editor lists before the first save.
+    const id = q.id === undefined || q.id === null ? null : String(q.id).trim() || null;
     if (id) {
       if (seenIds.has(id)) continue;
       seenIds.add(id);

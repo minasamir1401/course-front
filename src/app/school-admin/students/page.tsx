@@ -1,4 +1,7 @@
 "use client";
+import DirectoryPager from '@/components/DirectoryPager';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+
 import { fetchAllPages } from "@/lib/paginatedFetch";
 
 import React, { useState, useEffect } from "react";
@@ -18,6 +21,12 @@ export default function SchoolAdminStudentsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const search = useDebouncedValue(searchTerm);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
+  const requestRef = React.useRef<AbortController | null>(null);
+  useEffect(() => { setPage(1); }, [search]);
+  useEffect(() => { if (schoolId) void fetchStudents(schoolId); return () => requestRef.current?.abort(); }, [schoolId, page, search]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -53,7 +62,7 @@ export default function SchoolAdminStudentsPage() {
         if (parsed.schoolName) setSchoolName(parsed.schoolName);
         if (parsed.schoolId) {
           setSchoolId(parsed.schoolId);
-          fetchStudents(parsed.schoolId);
+
           fetchClassrooms(parsed.schoolId);
         }
       }
@@ -67,18 +76,22 @@ export default function SchoolAdminStudentsPage() {
     setError("");
     const token = localStorage.getItem("school_admin_token");
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
 
+
+    requestRef.current?.abort();
+    const currentRequest = new AbortController(); requestRef.current = currentRequest;
     try {
-      const rows = await fetchAllPages(`${API_URL}/admin/users?schoolId=${sId}&role=STUDENT`, 'users', { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal });
-      setStudents(rows);
-      clearTimeout(timeoutId);
+      const response = await apiFetch(`${API_URL}/admin/users?role=STUDENT&schoolId=${sId}&page=${page}&limit=25&search=${encodeURIComponent(search)}`, { headers: { Authorization: `Bearer ${token}` }, signal: currentRequest.signal });
+      if (!response.ok) throw new Error('Could not load directory');
+      const data = await response.json();
+      if (currentRequest.signal.aborted) return;
+      setStudents(data.users || []); setPagination(data.pagination);
+
     } catch (e: any) {
-      clearTimeout(timeoutId);
-      setError(t('schoolAdmin.studentsPage.connError') || 'Connection error');
+
+      if (!currentRequest.signal.aborted) setError(t('schoolAdmin.studentsPage.connError') || 'Connection error');
     } finally {
-      setLoading(false);
+      if (!currentRequest.signal.aborted) setLoading(false);
     }
   };
 
@@ -253,7 +266,7 @@ export default function SchoolAdminStudentsPage() {
                            </div>
                         </td>
                         <td className="px-6 py-5 text-slate-500 text-xs font-bold">
-                           {student.createdAt ? new Date(student.createdAt).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US') : "—"}
+                           {student.createdAt ? new Date(student.createdAt).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { timeZone: 'Africa/Cairo' }) : "—"}
                         </td>
                         <td className="px-6 py-5">
                            <div className="flex items-center justify-center">
@@ -354,6 +367,8 @@ export default function SchoolAdminStudentsPage() {
           </div>
         )}
       </div>
+      {error && <div role="alert" className="report-error">{error} <button className="underline" onClick={() => fetchStudents(schoolId)}>{language === 'ar' ? 'إعادة المحاولة' : 'Retry'}</button></div>}
+      <DirectoryPager page={page} total={pagination.total} pages={pagination.totalPages} onPage={setPage} loading={loading} />
     </DashboardLayout>
   );
 }

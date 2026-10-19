@@ -6,7 +6,7 @@ import { Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, Ali
 import { uploadFileToServer } from "@/lib/image-utils";
 import { buildRichTextImageHtml, getRichTextImageStyles } from "@/lib/richTextImage";
 import { convertPlainTextToHtml, shouldPreferPlainTextPaste } from "@/lib/richTextPaste";
-import { buildRichTextMathHtml } from "@/lib/richTextMath";
+import { buildRichTextMathHtml, isolateRichTextMath, isolateEditorMath } from "@/lib/richTextMath";
 import NextImage from "next/image";
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -184,7 +184,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
   // Initialize and keep in sync
   useEffect(() => {
     // Intercept and fix any legacy/absolute image URLs pointing to the backend domain
-    const cleanValue = (value || "").replace(/https?:\/\/([a-zA-Z0-9.-]+)\/uploads\//g, "/uploads/");
+    const cleanValue = isolateRichTextMath(value || "").replace(/https?:\/\/([a-zA-Z0-9.-]+)\/uploads\//g, "/uploads/");
 
     if (editorRef.current && editorRef.current.innerHTML !== cleanValue) {
       if (document.activeElement !== editorRef.current) {
@@ -499,6 +499,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
 
   const handleInput = (immediate = false) => {
     if (editorRef.current) {
+      isolateEditorMath(editorRef.current);
       const content = editorRef.current.innerHTML;
       if (content !== value) onChange(content);
     }
@@ -508,6 +509,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
   const handleBlur = () => {
     setIsFocused(false);
     if (editorRef.current) {
+      isolateEditorMath(editorRef.current);
       const content = editorRef.current.innerHTML;
       if (content !== value) onChange(content);
     }
@@ -1056,7 +1058,8 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
         <div
           ref={editorRef}
           contentEditable
-          onInput={() => handleInput(false)}
+          onInput={(event) => { if (!(event.nativeEvent as InputEvent).isComposing) handleInput(false); }}
+          onCompositionEnd={() => handleInput(false)}
           onFocus={handleFocus}
           onBlur={handleBlur}
           onPaste={handlePaste}

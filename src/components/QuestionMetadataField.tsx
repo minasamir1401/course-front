@@ -2,6 +2,7 @@
 "use client";
 
 import React from "react";
+import { metadataLabel } from "@/lib/bilingualMetadata";
 import { Plus, Trash2 } from "lucide-react";
 import {
   formatEstimatedTime,
@@ -60,9 +61,9 @@ export const QuestionMetadataField = ({
         onChange={(e) => onChange(e.target.value)}
       >
         <option value="">{language === "ar" ? "اختر..." : "Select..."}</option>
-        {options.map((option: string) => (
+        {(value && !options.includes(value) ? [value, ...options] : options).map((option: string) => (
           <option key={option} value={option}>
-            {option}
+            {metadataLabel(option, language)}
           </option>
         ))}
       </select>

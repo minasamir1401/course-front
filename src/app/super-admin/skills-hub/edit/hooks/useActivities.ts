@@ -129,6 +129,7 @@ export const useActivities = (props: { clusterId: string | null; language: strin
         difficulty: data.difficulty || 'Medium',
         dok: data.dok || null,
         estimatedTime: Number(data.estimatedTime) || 60,
+        ...Object.fromEntries(['standardEn', 'indicatorEn', 'learningOutcomeEn', 'skillEn'].filter(field => data[field] !== undefined).map(field => [field, data[field] || null])),
         standard: data.standard || null,
         indicator: data.indicator || null,
         learningOutcome: data.learningOutcome || null,

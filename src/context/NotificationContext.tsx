@@ -1,4 +1,6 @@
 "use client";
+import { useModalFocus } from "@/hooks/useModalFocus";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { CheckCircle2, XCircle, AlertCircle, X, WifiOff, ServerCrash } from 'lucide-react';
@@ -100,6 +102,8 @@ const queueFailedWrite = async (input: RequestInfo | URL, init: RequestInit | un
 };
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
+  const { language } = useLanguage();
+  const modalRef = useRef<HTMLDivElement>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [confirmState, setConfirmState] = useState<{
     isOpen: boolean;
@@ -157,7 +161,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     const handleOnline = () => {
       setIsOnline(true);
       showToast(
-        localStorage.getItem('language') === 'en'
+        localStorage.getItem('lms_lang') === 'en'
           ? 'Back online. Connection restored.'
           : 'تم استعادة الاتصال بالإنترنت بنجاح.',
         'success'
@@ -401,16 +405,16 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       {children}
 
       {/* Toast Container */}
-      <div className="fixed bottom-6 left-6 z-[9999] flex flex-col gap-3 max-w-md w-full pointer-events-none">
+      <div aria-live="polite" aria-atomic="false" className="fixed bottom-24 sm:bottom-6 start-3 sm:start-6 z-[9999] flex flex-col gap-3 max-w-md w-[calc(100%-1.5rem)] pointer-events-none">
         {toasts.map((toast) => (
           <div
             key={toast.id}
             className={`
               pointer-events-auto
               flex items-center justify-between gap-4 p-4 rounded-2xl border backdrop-blur-xl shadow-2xl animate-in slide-in-from-left duration-300
-              ${toast.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : ''}
-              ${toast.type === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-400' : ''}
-              ${toast.type === 'info' ? 'bg-blue-500/10 border-blue-500/20 text-blue-400' : ''}
+              ${toast.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : ''}
+              ${toast.type === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800' : ''}
+              ${toast.type === 'info' ? 'bg-sky-50 border-sky-200 text-sky-800' : ''}
             `}
           >
             <div className="flex items-center gap-3">
@@ -420,6 +424,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
               <p className="font-bold text-sm leading-tight">{toast.message}</p>
             </div>
             <button
+              aria-label={language === "ar" ? "إغلاق الإشعار" : "Dismiss notification"}
               onClick={() => removeToast(toast.id, toast.message)}
               className="p-1 hover:bg-white/5 rounded-lg transition-colors"
             >
@@ -433,18 +438,18 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       {confirmState && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 rtl" dir="rtl">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => handleConfirm(false)}></div>
-          <div className="relative bg-[#0f0f1d] border border-white/10 w-full max-w-md rounded-[32px] p-8 shadow-2xl animate-in zoom-in-95 duration-300">
+          <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="global-confirm-title" aria-describedby="global-confirm-message" tabIndex={-1} className="relative bg-white border border-slate-200 w-full max-w-md rounded-[32px] p-8 shadow-2xl animate-in zoom-in-95 duration-300">
             <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-2xl flex items-center justify-center mb-6">
               <AlertCircle className="w-8 h-8" />
             </div>
-            <h3 className="text-2xl font-black text-white mb-2">{confirmState.title}</h3>
-            <p className="text-slate-400 font-medium leading-relaxed mb-8">
+            <h3 id="global-confirm-title" className="text-2xl font-black text-slate-900 mb-2">{confirmState.title}</h3>
+            <p id="global-confirm-message" className="text-slate-600 font-medium leading-relaxed mb-8">
               {confirmState.message}
             </p>
             <div className="grid grid-cols-2 gap-4">
               <button
                 onClick={() => handleConfirm(false)}
-                className="py-4 rounded-2xl font-bold text-slate-300 bg-white/5 hover:bg-white/10 transition-all"
+                className="report-secondary"
               >
                 إلغاء
               </button>

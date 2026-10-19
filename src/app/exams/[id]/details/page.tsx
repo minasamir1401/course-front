@@ -1,295 +1,53 @@
 "use client";
-
-import React, { useState, useEffect } from "react";
-import DashboardLayout from "@/components/DashboardLayout";
-import { FileText, Clock, AlertCircle, CheckCircle2, Calendar, Lock, Eye, EyeOff, Hourglass, CalendarClock, Sparkles, Target, Award, PlayCircle, Timer, ArrowLeft, ArrowRight, ChevronRight, Layers, Flame, Zap, Trophy, Medal, Map, ArrowDown, ChevronDown, Check } from 'lucide-react';
-import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { API_URL, apiFetch } from "@/lib/api";
-import { getStudentExamTitle, getStudentExamDuration } from "@/lib/examModuleView";
-import { useLanguage } from "@/contexts/LanguageContext";
-
-const cleanStudentTitle = (title: string | undefined | null) => {
-  if (!title) return "";
-  return title
-    .replace(/الموديول\s+/gi, "القسم ")
-    .replace(/موديول\s+/gi, "قسم ")
-    .replace(/المديول\s+/gi, "القسم ")
-    .replace(/مديول\s+/gi, "قسم ");
-};
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
+import Link from 'next/link';
+import { Clock, FileText, Layers } from 'lucide-react';
+import DashboardLayout from '@/components/DashboardLayout';
+import StudentPageHeader, { StudentFeedback } from '@/components/student/StudentPageHeader';
+import { API_URL, apiFetch } from '@/lib/api';
+import { getStudentExamTitle, getStudentExamDuration } from '@/lib/examModuleView';
+import { studentExamAvailability, latestStudentSubmission, examAvailabilityLabel } from '@/lib/studentExamAvailability';
+import { formatEgyptDateTime } from '@/lib/egyptTime';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function ExamDetailsPage() {
-  const { t, language } = useLanguage();
-  const { id } = useParams();
-  const router = useRouter();
-  
-  const [activeModule, setActiveModule] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
+  const { id } = useParams(); const { language } = useLanguage(); const ar = language === 'ar'; const txt = (a: string, e: string) => ar ? a : e;
+  const [exam, setExam] = useState<any>(null), [loading, setLoading] = useState(true), [error, setError] = useState(''), [reload, setReload] = useState(0);
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(timer); }, []);
   useEffect(() => {
-    fetchData();
-  }, [id]);
-
-  const fetchData = async () => {
-    try {
-      const candidateToken = localStorage.getItem("lms_token") ||
-        localStorage.getItem("school_admin_token") ||
-        localStorage.getItem("super_admin_token");
-
-      const headers: Record<string, string> = {};
-      if (candidateToken && candidateToken !== "cookie_auth" && candidateToken !== "null" && candidateToken !== "undefined") {
-        headers["Authorization"] = `Bearer ${candidateToken}`;
-      }
-
-      const res = await apiFetch(`${API_URL}/exams/${id}?includeQuestions=false`, { headers });
-      if (res.ok) {
-        setActiveModule(await res.json());
-      } else {
-        setError("Failed to load exam details");
-      }
-    } catch (e) {
-      setError(t('exams.connError') || "Connection Error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getExamStatus = (exam: any, userSubs: any[]) => {
-    const now = new Date();
-    const start = exam.startDate ? new Date(exam.startDate) : null;
-    const end = exam.endDate ? new Date(exam.endDate) : null;
-
-    if (start && now < start) return { label: language === 'ar' ? "قريباً" : "Upcoming", color: "bg-amber-100 text-amber-700", icon: CalendarClock, type: "UPCOMING" };
-    if (end && now > end) return { label: language === 'ar' ? "منتهي" : "Expired", color: "bg-slate-100 text-slate-500", icon: Hourglass, type: "EXPIRED" };
-
-    if (exam.attemptsAllowed && userSubs.length >= exam.attemptsAllowed) {
-      return { label: language === 'ar' ? "مكتمل" : "Completed", color: "bg-indigo-100 text-indigo-700", icon: CheckCircle2, type: "COMPLETED" };
-    }
-
-    return { label: language === 'ar' ? "متاح الآن" : "Available Now", color: "bg-green-100 text-green-700", icon: PlayCircle, type: "AVAILABLE" };
-  };
-
-  const getChildExamStatus = (exam: any, userSubs: any[]) => {
-    const now = new Date();
-    const start = exam.publishDate ? new Date(exam.publishDate) : (exam.startDate ? new Date(exam.startDate) : null);
-    const end = exam.cutOffDate ? new Date(exam.cutOffDate) : (exam.endDate ? new Date(exam.endDate) : null);
-
-    if (start && now < start) return { label: language === 'ar' ? "قريباً" : "Upcoming", color: "bg-amber-100 text-amber-700", icon: CalendarClock, type: "UPCOMING" };
-    if (end && now > end) return { label: language === 'ar' ? "منتهي" : "Expired", color: "bg-slate-100 text-slate-500", icon: Hourglass, type: "EXPIRED" };
-
-    if (exam.attemptsAllowed && exam.attemptsAllowed !== 999 && userSubs.length >= exam.attemptsAllowed) {
-      return { label: language === 'ar' ? "مكتمل" : "Completed", color: "bg-indigo-100 text-indigo-700", icon: CheckCircle2, type: "COMPLETED" };
-    }
-
-    return { label: language === 'ar' ? "متاح الآن" : "Available Now", color: "bg-green-100 text-green-700", icon: PlayCircle, type: "AVAILABLE" };
-  };
-
-  const getSubmissionsForExam = (examId: string) => {
-    return (activeModule?.submissions || []).filter((sub: any) => sub.subExamId === examId);
-  };
-
-  const rootSections = (activeModule?.modules || []).filter((m: any) => !m.parentModuleId);
-
-  return (
-    <DashboardLayout>
-      <div className={`w-full max-w-[1000px] mx-auto space-y-8 pb-24 px-4 sm:px-6 md:px-8 bg-slate-50/50 min-h-screen overflow-x-hidden ${language === 'ar' ? 'rtl' : 'ltr'}`} dir={language === 'ar' ? "rtl" : "ltr"}>
-        
-        {/* Navigation & Header */}
-        <div className="pt-8 flex items-center gap-4">
-          <button
-            onClick={() => router.push('/exams')}
-            className="w-10 h-10 rounded-xl bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
-          >
-            <ArrowRight className="w-5 h-5" />
-          </button>
-          <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
-            {language === 'ar' ? 'تفاصيل الامتحان' : 'Exam Details'}
-          </h1>
-        </div>
-
-        {loading ? (
-            <div className="py-24 text-center flex flex-col items-center gap-6 bg-white rounded-[32px] border border-slate-100 shadow-sm">
-                <div className="w-14 h-14 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin shadow-lg"></div>
-            </div>
-        ) : error ? (
-            <div className="py-24 text-center bg-rose-50 rounded-[32px] border border-rose-100 shadow-sm">
-                <AlertCircle className="w-12 h-12 text-rose-500 mx-auto mb-4" />
-                <p className="text-rose-600 font-black text-xl">{error}</p>
-            </div>
-        ) : !activeModule ? (
-            <div className="py-24 text-center bg-white rounded-[32px] border border-slate-100 shadow-sm">
-                <p className="text-slate-600 font-black text-xl">{language === 'ar' ? 'لم يتم العثور على الامتحان' : 'Exam not found'}</p>
-            </div>
-        ) : (
-            <div className="bg-white rounded-[40px] border-2 border-indigo-100 shadow-xl shadow-indigo-100/50 p-6 md:p-10 animate-in fade-in slide-in-from-top-4 duration-500">
-                <div className="flex items-center gap-4 mb-8 pb-8 border-b border-slate-100">
-                  <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center">
-                    <Layers className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-black text-slate-900">{cleanStudentTitle(getStudentExamTitle(activeModule))}</h3>
-                    <p className="text-slate-500 font-bold">
-                      {language === 'ar'
-                        ? (rootSections.length === 1 ? 'قسم واحد متاح' : rootSections.length === 2 ? 'قسمان متاحان' : rootSections.length >= 3 && rootSections.length <= 10 ? `${rootSections.length} أقسام متاحة` : `${rootSections.length} قسماً متاحاً`)
-                        : `${rootSections.length} Available Sections`}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-8">
-                  {rootSections.map((section: any, idx: number) => (
-                    <div key={section.id} className="relative pl-0 pr-8 md:pr-12">
-                      <div className="absolute top-0 right-0 w-8 md:w-12 h-full flex flex-col items-center">
-                        <div className="w-8 h-8 md:w-10 md:h-10 bg-indigo-50 border-2 border-indigo-200 text-indigo-600 rounded-full flex items-center justify-center font-black text-sm z-10 shadow-sm">
-                          {idx + 1}
-                        </div>
-                        {idx !== (rootSections.length - 1) && (
-                          <div className="w-1 flex-1 bg-indigo-50 my-2 rounded-full"></div>
-                        )}
-                      </div>
-                      
-                      <div className="bg-slate-50 rounded-3xl p-6 border border-slate-100 mr-2 md:mr-4">
-                        <h4 className="text-lg md:text-xl font-black text-slate-900 mb-6 flex items-center gap-2">
-                          <Target className="w-5 h-5 text-indigo-500" />
-                          {cleanStudentTitle(section.title)}
-                        </h4>
-                        
-                        <div className="space-y-4">
-                          {section.subExams?.map((exam: any) => {
-                            const userSubs = getSubmissionsForExam(exam.id);
-                            const status = getChildExamStatus(exam, userSubs);
-                            
-                            return (
-                              <div key={exam.id} className="bg-white rounded-2xl p-4 md:p-5 border border-slate-200 shadow-sm hover:border-indigo-300 hover:shadow-md transition-all flex flex-col md:flex-row gap-4 items-center group">
-                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${status.type === 'AVAILABLE' ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>
-                                  <FileText className="w-6 h-6" />
-                                </div>
-                                <div className="flex-1 text-center md:text-right">
-                                  <h5 className="font-black text-slate-800 group-hover:text-indigo-600 transition-colors mb-1">{exam.title}</h5>
-                                  <div className="flex items-center justify-center md:justify-start gap-3 text-[11px] font-bold text-slate-500">
-                                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {getStudentExamDuration(activeModule, exam.id)} {language === 'ar' ? 'دقيقة' : 'Minutes'}</span>
-                                    <span className="flex items-center gap-1"><FileText className="w-3.5 h-3.5" /> {exam.questionsCount ?? exam._count?.questions ?? 0} {language === 'ar' ? 'سؤال' : 'Questions'}</span>
-                                    {exam.attemptsAllowed !== 999 && (
-                                      <span className="flex items-center gap-1"><Timer className="w-3.5 h-3.5" /> {language === 'ar' ? 'مسموح' : 'Allowed'} {exam.attemptsAllowed} {language === 'ar' ? 'محاولات' : 'Attempts'}</span>
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="shrink-0 flex items-center gap-3">
-                                  {userSubs.length > 0 && (
-                                    <div className="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-black border border-emerald-100 flex items-center gap-1">
-                                      <Check className="w-3 h-3" />
-                                      {language === 'ar' ? 'تمت المحاولة' : 'Attempted'}
-                                    </div>
-                                  )}
-                                  <Link
-                                    href={status.type === 'AVAILABLE' ? `/exams/${activeModule.id}?subExamId=${exam.id}` : `/exams/result/${userSubs[0]?.id || ''}`}
-                                    className={`px-6 py-3 rounded-xl font-black text-xs transition-colors flex items-center gap-2 ${status.type === 'AVAILABLE' ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                                  >
-                                    {status.type === 'AVAILABLE' ? (language === 'ar' ? 'ابدأ الاختبار' : 'Start Exam') : status.type === 'COMPLETED' ? (language === 'ar' ? 'عرض النتيجة' : 'View Result') : status.label}
-                                    <ArrowLeft className="w-4 h-4" />
-                                  </Link>
-                                </div>
-                              </div>
-                            );
-                          })}
-
-                          {/* Sub-modules inside this section */}
-                          {section.subModules && section.subModules.length > 0 && (
-                            <div className="mt-6 space-y-4 pt-4 border-t border-slate-200/80">
-                              <div className="text-xs font-black text-slate-600 uppercase tracking-wider flex items-center gap-2">
-                                <Layers className="w-4 h-4 text-indigo-600" />
-                                {language === 'ar' ? 'الأقسام الفرعية' : 'Sub-Sections'}
-                              </div>
-                              <div className="space-y-4">
-                                {section.subModules.map((subMod: any) => (
-                                  <div key={subMod.id} className="bg-white/90 rounded-2xl p-5 border border-indigo-100/80 shadow-xs space-y-3">
-                                    <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
-                                      <h5 className="font-black text-slate-800 text-base flex items-center gap-2">
-                                        <span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
-                                        {cleanStudentTitle(subMod.title)}
-                                      </h5>
-                                      <span className="text-xs font-bold text-slate-400">
-                                        {(subMod.subExams?.length || 0)} {language === 'ar' ? 'اختبار' : 'exams'}
-                                      </span>
-                                    </div>
-                                    <div className="space-y-2">
-                                      {subMod.subExams?.map((smExam: any) => {
-                                        const smSubs = getSubmissionsForExam(smExam.id);
-                                        const smStatus = getChildExamStatus(smExam, smSubs);
-                                        return (
-                                          <div key={smExam.id} className="bg-slate-50/80 rounded-xl p-3.5 border border-slate-200/60 flex flex-col sm:flex-row gap-3 items-center justify-between hover:border-indigo-300 transition-all">
-                                            <div className="flex items-center gap-3">
-                                              <FileText className="w-4 h-4 text-indigo-500 shrink-0" />
-                                              <div>
-                                                <span className="font-bold text-sm text-slate-800">{smExam.title}</span>
-                                                <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium">
-                                                  <span>{getStudentExamDuration(activeModule, smExam.id)} {language === 'ar' ? 'دقيقة' : 'min'}</span>
-                                                  <span>•</span>
-                                                  <span>{smExam.questionsCount ?? smExam._count?.questions ?? 0} {language === 'ar' ? 'سؤال' : 'questions'}</span>
-                                                </div>
-                                              </div>
-                                            </div>
-                                            <Link
-                                              href={smStatus.type === 'AVAILABLE' ? `/exams/${activeModule.id}?subExamId=${smExam.id}` : `/exams/result/${smSubs[0]?.id || ''}`}
-                                              className="px-4 py-2 rounded-xl text-xs font-black bg-indigo-600 hover:bg-indigo-700 text-white transition-all shadow-xs"
-                                            >
-                                              {language === 'ar' ? 'ابدأ' : 'Start'}
-                                            </Link>
-                                          </div>
-                                        );
-                                      })}
-                                      {(!subMod.subExams || subMod.subExams.length === 0) && (
-                                        <div className="text-xs text-slate-400 text-center py-2">
-                                          {language === 'ar' ? 'لا توجد اختبارات داخل هذا القسم الفرعي بعد' : 'No exams in this sub-section yet'}
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* If no subExams but there are questions directly in the module, show start button */}
-                          {(!section.subExams || section.subExams.length === 0) && section.questions && section.questions.length > 0 && (
-                            <div className="bg-white rounded-2xl p-4 md:p-5 border border-slate-200 shadow-sm hover:border-indigo-300 hover:shadow-md transition-all flex flex-col md:flex-row gap-4 items-center group">
-                              <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-indigo-50 text-indigo-600">
-                                <FileText className="w-6 h-6" />
-                              </div>
-                              <div className="flex-1 text-center md:text-right">
-                                <h5 className="font-black text-slate-800 group-hover:text-indigo-600 transition-colors mb-1">{cleanStudentTitle(section.title)}</h5>
-                                <div className="flex items-center justify-center md:justify-start gap-3 text-[11px] font-bold text-slate-500">
-                                  <span className="flex items-center gap-1"><FileText className="w-3.5 h-3.5" /> {section.questions.length} {language === 'ar' ? 'سؤال' : 'Questions'}</span>
-                                  {activeModule.duration && (
-                                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {getStudentExamDuration(activeModule, null, section.id)} {language === 'ar' ? 'دقيقة' : 'Minutes'}</span>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="shrink-0">
-                                <Link
-                                  href={`/exams/${activeModule.id}?moduleId=${section.id}`}
-                                  className="px-6 py-3 rounded-xl font-black text-xs bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200 transition-colors flex items-center gap-2"
-                                >
-                                  {language === 'ar' ? 'ابدأ الاختبار' : 'Start Exam'}
-                                  <ArrowLeft className="w-4 h-4" />
-                                </Link>
-                              </div>
-                            </div>
-                          )}
-                          {(!section.subExams || section.subExams.length === 0) && (!section.questions || section.questions.length === 0) && (!section.subModules || section.subModules.length === 0) && (
-                            <div className="text-center py-6 text-slate-400 text-sm font-bold bg-white rounded-2xl border border-dashed border-slate-200">
-                              {language === 'ar' ? 'لا يوجد اختبارات في هذا القسم' : 'No exams in this section'}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-        )}
-      </div>
-    </DashboardLayout>
-  );
+    const controller = new AbortController(); setLoading(true); setError('');
+    apiFetch(API_URL + '/exams/' + id + '?includeQuestions=false', { signal: controller.signal }).then(async response => {
+      if (!response.ok) throw new Error(); const data = await response.json(); if (!controller.signal.aborted) setExam(data);
+    }).catch(() => { if (!controller.signal.aborted) setError(txt('تعذر تحميل تفاصيل الامتحان. حاول مرة أخرى.', 'Could not load exam details. Please retry.')); }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, [id, reload, language]);
+  const clean = (title: string) => (title || '').replace(/(?:الموديول|الموديل|المديول|موديول|مديول)\s+/g, 'القسم ');
+  function examRow(child: any, moduleId?: string, sectionTitle?: string) {
+    const submissions = (exam.submissions || []).filter((item: any) => child ? item.subExamId === child.id : !item.subExamId);
+    const status = studentExamAvailability(child || exam, submissions, child ? exam : undefined, now);
+    const last = latestStudentSubmission(submissions);
+    const href = '/exams/' + exam.id + (child ? '?subExamId=' + child.id : moduleId ? '?moduleId=' + moduleId : '');
+    const opens = child?.publishDate || exam.startDate; const closes = child?.cutOffDate || exam.endDate;
+    const attempts = child?.attemptsAllowed ?? exam.attemptsAllowed;
+    return <article key={child?.id || moduleId || exam.id} className="rounded-[24px] border border-slate-200 bg-white p-5 space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="font-black text-slate-900 break-words">{clean(child?.title || sectionTitle || exam.title)}</h3><span className="student-status" data-status={status}>{examAvailabilityLabel(status, ar)}</span></div>
+      <div className="flex flex-wrap gap-4 text-sm text-slate-600"><span className="flex items-center gap-1"><Clock size={16}/>{getStudentExamDuration(exam, child?.id || null, moduleId)} {txt('دقيقة', 'min')}</span><span className="flex items-center gap-1"><FileText size={16}/>{child?.questionsCount ?? child?._count?.questions ?? child?.questions?.length ?? (moduleId ? exam.modules?.find((m: any) => m.id === moduleId)?.questionsCount : exam.questionsCount) ?? '—'} {txt('سؤال', 'questions')}</span><span>{txt('المحاولات:', 'Attempts:')} {submissions.length} / {attempts && attempts !== 999 ? attempts : txt('غير محدودة', 'Unlimited')}</span></div>
+      {(opens || closes) && <p className="text-sm text-slate-600">{opens && <span className="block">{txt('يفتح:', 'Opens:')} {formatEgyptDateTime(opens, language)}</span>}{closes && <span className="block">{txt('يغلق:', 'Closes:')} {formatEgyptDateTime(closes, language)}</span>}<small>{txt('بتوقيت مصر', 'Egypt time')}</small></p>}
+      <div className="flex flex-wrap gap-3">{status === 'AVAILABLE' ? <Link className="report-primary" href={href}>{txt(submissions.length ? 'محاولة جديدة' : 'ابدأ الاختبار', submissions.length ? 'New attempt' : 'Start exam')}</Link> : <span className="text-sm text-slate-600">{status === 'UPCOMING' ? txt('ستتمكن من البدء عند موعد الإتاحة.', 'You can start when the exam opens.') : status === 'CLOSED' ? txt('انتهت فترة استقبال الإجابات.', 'The submission period has ended.') : txt('استخدمت المحاولات المسموح بها.', 'You have used all available attempts.')}</span>}{last && <Link className="report-secondary" href={'/exams/result/' + last.id}>{txt('نتيجة آخر محاولة', 'Latest result')}</Link>}</div>
+    </article>;
+  }
+  function sectionView(section: any, level = 0): React.ReactNode {
+    const children = section.subModules || (exam.modules || []).filter((item: any) => item.parentModuleId === section.id);
+    return <section key={section.id} className={level ? 'space-y-4 border-s-2 border-indigo-100 ps-4' : 'student-panel space-y-4'}><h2 className="text-lg font-black text-slate-900 flex gap-2 items-center"><Layers size={20}/>{clean(section.title)}</h2>
+      {(section.subExams || []).map((child: any) => examRow(child))}
+      {!section.subExams?.length && ((section.questionsCount ?? section._count?.questions ?? section.questions?.length ?? 0) > 0) && examRow(null, section.id, section.title)}
+      {children.map((child: any) => sectionView(child, level + 1))}
+      {!section.subExams?.length && !children.length && !(section.questionsCount || section._count?.questions || section.questions?.length) && <p className="text-sm text-slate-500">{txt('لا توجد اختبارات منشورة في هذا القسم.', 'No published exams in this section.')}</p>}
+    </section>;
+  }
+  return <DashboardLayout><div className="student-page"><StudentPageHeader title={exam ? clean(getStudentExamTitle(exam)) : txt('تفاصيل الامتحان', 'Exam details')} description={txt('راجع المواعيد والمدة والمحاولات قبل البدء. جميع المواعيد بتوقيت مصر.', 'Check dates, duration and attempts before starting. All dates use Egypt time.')} back={{ href: '/exams', label: txt('الامتحانات', 'Exams') }}/>
+    {loading ? <p role="status" className="student-panel">{txt('جارٍ تحميل التفاصيل…', 'Loading exam details…')}</p> : error ? <StudentFeedback title={error} retry={() => setReload(v => v + 1)}/> : exam && <>{(exam.modules || []).filter((item: any) => !item.parentModuleId).map((section: any) => sectionView(section))}{!exam.modules?.length && examRow(null)}</>}
+  </div></DashboardLayout>;
 }

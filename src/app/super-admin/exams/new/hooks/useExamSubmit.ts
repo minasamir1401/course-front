@@ -8,6 +8,7 @@ export const useExamSubmit = (props: any) => {
 
     const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (manualSubmitRef.current || isLoading) return;
     if (!moduleMode && !examData.title) {
       showToast(language === 'ar' ? "يرجى إدخال عنوان الاختبار في الإعدادات" : "Please enter the exam title in Settings", "error");
       return;

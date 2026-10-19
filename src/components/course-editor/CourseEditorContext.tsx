@@ -1,4 +1,6 @@
 "use client";
+import { lessonTranslationPayload } from "@/lib/bilingualMetadata";
+import { toEgyptInput, parseEgyptDate } from '@/lib/egyptTime';
 
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -8,121 +10,9 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { offlineSync, captureOfflineOwner } from "@/lib/offlineSync";
 import { buildCourseLessonSummary } from "@/lib/courseLessonSummary";
 import { useDeletionPolicy } from "@/hooks/useDeletionPolicy";
-
-export interface CourseData {
-  title: string;
-  description: string;
-  coverImage: string;
-  grades: string[];
-  subject: string;
-  country: string;
-  isCentral: boolean;
-  schoolId: string;
-  schoolIds: string[];
-}
-
-export interface Lesson {
-  id?: string;
-  title: string;
-  domain: string;
-  videoUrl: string;
-  summary: string;
-  notes: string;
-  standards: string;
-  indicators: string;
-  learningOutcomes: string;
-  isVisible: boolean;
-  publishDate: string;
-  cutOffDate: string;
-  slides: any[];
-  questions: any[];
-  assignments: any[];
-  attachments: any[];
-  createdAt?: string | Date;
-  slidesCount?: number;
-  isContentLoaded?: boolean;
-}
-
-interface CourseEditorContextType {
-  role: "SUPER_ADMIN" | "SCHOOL_ADMIN";
-  courseId: string | null;
-  schoolIdParam: string | null;
-  isLoading: boolean;
-  isSubmitting: boolean;
-  setIsSubmitting: React.Dispatch<React.SetStateAction<boolean>>;
-  schools: any[];
-  isAutoSaveEnabled: boolean;
-  setIsAutoSaveEnabled: React.Dispatch<React.SetStateAction<boolean>>;
-  lastAutoSave: Date | null;
-  setLastAutoSave: React.Dispatch<React.SetStateAction<Date | null>>;
-  hasUnsavedChanges: boolean;
-  setHasUnsavedChanges: React.Dispatch<React.SetStateAction<boolean>>;
-  courseData: CourseData;
-  setCourseData: React.Dispatch<React.SetStateAction<CourseData>>;
-  lessons: Lesson[];
-  setLessons: React.Dispatch<React.SetStateAction<Lesson[]>>;
-  exams: any[];
-  setExams: React.Dispatch<React.SetStateAction<any[]>>;
-  activeContentTab: "lessons";
-  isLessonModalOpen: boolean;
-  isLessonContentLoading: boolean;
-  availableMetadata: { domains: string[]; standards: string[]; indicators: string[]; outcomes: string[] };
-  setAvailableMetadata: React.Dispatch<React.SetStateAction<{ domains: string[]; standards: string[]; indicators: string[]; outcomes: string[] }>>;
-  setIsLessonModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  isBankModalOpen: boolean;
-  setIsBankModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  isQuestionBankModalOpen: boolean;
-  setIsQuestionBankModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  bankItems: any[];
-  setBankItems: React.Dispatch<React.SetStateAction<any[]>>;
-  bankQuestions: any[];
-  setBankQuestions: React.Dispatch<React.SetStateAction<any[]>>;
-  editingLessonIndex: number | null;
-  setEditingLessonIndex: React.Dispatch<React.SetStateAction<number | null>>;
-  currentLesson: Lesson;
-  setCurrentLesson: React.Dispatch<React.SetStateAction<Lesson>>;
-  activeTab: "info" | "slides" | "exercises" | "assignments" | "attachments" | "scheduling";
-  setActiveTab: React.Dispatch<React.SetStateAction<"info" | "slides" | "exercises" | "assignments" | "attachments" | "scheduling">>;
-  showQuestionForm: boolean;
-  setShowQuestionForm: React.Dispatch<React.SetStateAction<boolean>>;
-  editingQuestionIndex: number | null;
-  setEditingQuestionIndex: React.Dispatch<React.SetStateAction<number | null>>;
-  questionSource: "assignments" | "questions";
-  setQuestionSource: React.Dispatch<React.SetStateAction<"assignments" | "questions">>;
-  tempQuestion: any;
-  setTempQuestion: React.Dispatch<React.SetStateAction<any>>;
-  openDropdownId: string | null;
-  setOpenDropdownId: React.Dispatch<React.SetStateAction<string | null>>;
-  metadataExcelRef: React.RefObject<HTMLInputElement | null>;
-  questionsExcelRef: React.RefObject<HTMLInputElement | null>;
-  assignmentsExcelRef: React.RefObject<HTMLInputElement | null>;
-
-  // Handlers
-  fetchCourseData: (token: string, id: string) => Promise<void>;
-  toggleCourseSchool: (id: string) => void;
-  selectAllSchools: () => void;
-  handleRemoveLesson: (index: number) => void;
-  openAddLessonModal: () => void;
-  openEditLessonModal: (index: number) => void;
-  openBankModal: () => Promise<void>;
-  openQuestionBankModal: () => Promise<void>;
-  addQuestionFromBank: (q: any) => void;
-  saveLesson: () => Promise<void>;
-  handleSubmit: (e?: React.FormEvent, isAutoSave?: boolean) => Promise<void>;
-  handleDeleteCourse: () => Promise<void>;
-  linkExamToCourse: (examId: string) => Promise<void>;
-  // Draft backup
-  hasDraft: boolean;
-  draftSavedAt: string | null;
-  restoreFromDraft: () => Promise<void>;
-  clearDraft: () => void;
-  isSettingsHidden: boolean;
-  setIsSettingsHidden: React.Dispatch<React.SetStateAction<boolean>>;
-  allowContentDeletion: boolean;
-}
-
+import type { CourseData, Lesson, CourseEditorContextType } from './types';
+export type { CourseData, Lesson } from './types';
 const CourseEditorContext = createContext<CourseEditorContextType | undefined>(undefined);
-
 export const CourseEditorProvider: React.FC<{
   role: "SUPER_ADMIN" | "SCHOOL_ADMIN";
   children: React.ReactNode;
@@ -134,7 +24,6 @@ export const CourseEditorProvider: React.FC<{
   const courseId = searchParams.get("id");
   const schoolIdParam = searchParams.get("schoolId");
   const allowContentDeletion = useDeletionPolicy(role);
-
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [schools, setSchools] = useState<any[]>([]);
@@ -144,7 +33,6 @@ export const CourseEditorProvider: React.FC<{
   const initialLoadDoneRef = useRef(false);
   const userEditedRef = useRef(false);
   const [isSettingsHidden, setIsSettingsHidden] = useState(true);
-
   const [courseData, setCourseData] = useState<CourseData>({
     title: "",
     description: "",
@@ -156,7 +44,6 @@ export const CourseEditorProvider: React.FC<{
     schoolId: schoolIdParam || "",
     schoolIds: (schoolIdParam ? [schoolIdParam] : []) as string[],
   });
-
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const serializeLessonContent = (lesson: Lesson, field: "attachments" | "slides" | "questions" | "assignments") => {
     // Existing lessons from the fast list are summaries. Never overwrite their
@@ -175,7 +62,6 @@ export const CourseEditorProvider: React.FC<{
   const [bankItems, setBankItems] = useState<any[]>([]);
   const [bankQuestions, setBankQuestions] = useState<any[]>([]);
   const [editingLessonIndex, setEditingLessonIndex] = useState<number | null>(null);
-
   const [currentLesson, setCurrentLesson] = useState<Lesson>({
     title: "",
     domain: "",
@@ -236,7 +122,6 @@ export const CourseEditorProvider: React.FC<{
   const justRestoredRef = useRef(false);
   const isSavingRef = useRef(false);
   const draftStorageWarningShownRef = useRef(false);
-
 
   const acquireSaveLock = async (waitForExistingSave: boolean) => {
     while (isSavingRef.current) {
@@ -372,7 +257,7 @@ export const CourseEditorProvider: React.FC<{
         localStorage.removeItem(DRAFT_KEY);
         void offlineSync.removeDraft(DRAFT_KEY);
         showToast(
-          language === 'ar' ? `تم استرداد المسودة المحفوظة بتاريخ ${new Date(draft.savedAt).toLocaleString('ar')}` : `Draft from ${new Date(draft.savedAt).toLocaleString()} restored`,
+          language === 'ar' ? `تم استرداد المسودة المحفوظة بتاريخ ${new Date(draft.savedAt).toLocaleString('ar', { timeZone: 'Africa/Cairo' })}` : `Draft from ${new Date(draft.savedAt).toLocaleString(undefined, { timeZone: 'Africa/Cairo' })} restored`,
           'success'
         );
         setHasDraft(false);
@@ -561,8 +446,8 @@ export const CourseEditorProvider: React.FC<{
               ...l,
               id: l.id || l._id,
               isVisible: l.isVisible !== undefined ? l.isVisible : true,
-              publishDate: l.publishDate && !isNaN(new Date(l.publishDate).getTime()) ? new Date(new Date(l.publishDate).getTime() - new Date(l.publishDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
-              cutOffDate: l.cutOffDate && !isNaN(new Date(l.cutOffDate).getTime()) ? new Date(new Date(l.cutOffDate).getTime() - new Date(l.cutOffDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
+              publishDate: l.publishDate && !isNaN(new Date(l.publishDate).getTime()) ? toEgyptInput(l.publishDate) : "",
+              cutOffDate: l.cutOffDate && !isNaN(new Date(l.cutOffDate).getTime()) ? toEgyptInput(l.cutOffDate) : "",
               questions: Array.isArray(parsedQuestions)
                 ? parsedQuestions.filter(Boolean).map((q) => {
                     let parsedExps = [""];
@@ -771,8 +656,8 @@ export const CourseEditorProvider: React.FC<{
         lessonToEdit = {
           ...lesson,
           isContentLoaded: true,
-          publishDate: lesson.publishDate ? new Date(lesson.publishDate).toISOString().slice(0, 16) : "",
-          cutOffDate: lesson.cutOffDate ? new Date(lesson.cutOffDate).toISOString().slice(0, 16) : "",
+          publishDate: lesson.publishDate ? toEgyptInput(lesson.publishDate) : "",
+          cutOffDate: lesson.cutOffDate ? toEgyptInput(lesson.cutOffDate) : "",
           slides: parseArray(lesson.slides),
           questions: parseArray(lesson.questions),
           assignments: parseArray(lesson.assignments),
@@ -927,7 +812,7 @@ export const CourseEditorProvider: React.FC<{
           ...courseData,
           ...getSchoolPayload(),
           lessons: deduplicatedLessons.map((l) => ({
-            id: l.id,
+            id: l.id, ...lessonTranslationPayload(l),
             title: l.title,
             domain: l.domain || null,
             videoUrl: l.videoUrl || null,
@@ -937,8 +822,8 @@ export const CourseEditorProvider: React.FC<{
             indicators: l.indicators || null,
             learningOutcomes: l.learningOutcomes || null,
             isVisible: l.isVisible !== undefined ? l.isVisible : true,
-            publishDate: l.publishDate ? new Date(l.publishDate).toISOString() : null,
-            cutOffDate: l.cutOffDate ? new Date(l.cutOffDate).toISOString() : null,
+            publishDate: l.publishDate ? parseEgyptDate(l.publishDate).toISOString() : null,
+            cutOffDate: l.cutOffDate ? parseEgyptDate(l.cutOffDate).toISOString() : null,
             attachments: serializeLessonContent(l, "attachments"),
             slides: serializeLessonContent(l, "slides"),
             questions: serializeLessonContent(l, "questions"),
@@ -1064,12 +949,12 @@ export const CourseEditorProvider: React.FC<{
               ...courseData,
               ...getSchoolPayload(),
               lessons: deduplicatedLessons2.map((l) => ({
-                id: l.id, title: l.title, domain: l.domain || null, videoUrl: l.videoUrl || null,
+                id: l.id, ...lessonTranslationPayload(l), title: l.title, domain: l.domain || null, videoUrl: l.videoUrl || null,
                 summary: l.summary || null, notes: l.notes || null, standards: l.standards || null,
                 indicators: l.indicators || null, learningOutcomes: l.learningOutcomes || null,
                 isVisible: l.isVisible !== undefined ? l.isVisible : true,
-                publishDate: l.publishDate ? new Date(l.publishDate).toISOString() : null,
-                cutOffDate: l.cutOffDate ? new Date(l.cutOffDate).toISOString() : null,
+                publishDate: l.publishDate ? parseEgyptDate(l.publishDate).toISOString() : null,
+                cutOffDate: l.cutOffDate ? parseEgyptDate(l.cutOffDate).toISOString() : null,
             attachments: serializeLessonContent(l, "attachments"),
             slides: serializeLessonContent(l, "slides"),
             questions: serializeLessonContent(l, "questions"),
@@ -1111,12 +996,12 @@ export const CourseEditorProvider: React.FC<{
             ...courseData,
             ...getSchoolPayload(),
             lessons: deduplicatedLessons3.map((l) => ({
-              id: l.id, title: l.title, domain: l.domain || null, videoUrl: l.videoUrl || null,
+              id: l.id, ...lessonTranslationPayload(l), title: l.title, domain: l.domain || null, videoUrl: l.videoUrl || null,
               summary: l.summary || null, notes: l.notes || null, standards: l.standards || null,
               indicators: l.indicators || null, learningOutcomes: l.learningOutcomes || null,
               isVisible: l.isVisible !== undefined ? l.isVisible : true,
-              publishDate: l.publishDate ? new Date(l.publishDate).toISOString() : null,
-              cutOffDate: l.cutOffDate ? new Date(l.cutOffDate).toISOString() : null,
+              publishDate: l.publishDate ? parseEgyptDate(l.publishDate).toISOString() : null,
+              cutOffDate: l.cutOffDate ? parseEgyptDate(l.cutOffDate).toISOString() : null,
             attachments: serializeLessonContent(l, "attachments"),
             slides: serializeLessonContent(l, "slides"),
             questions: serializeLessonContent(l, "questions"),
@@ -1198,7 +1083,7 @@ export const CourseEditorProvider: React.FC<{
           ...courseData,
           ...getSchoolPayload(),
           lessons: deduplicatedLessonsToSend.map((l) => ({
-            id: l.id,
+            id: l.id, ...lessonTranslationPayload(l),
             title: l.title,
             domain: l.domain || null,
             videoUrl: l.videoUrl || null,
@@ -1208,8 +1093,8 @@ export const CourseEditorProvider: React.FC<{
             indicators: l.indicators || null,
             learningOutcomes: l.learningOutcomes || null,
             isVisible: l.isVisible !== undefined ? l.isVisible : true,
-            publishDate: l.publishDate ? new Date(l.publishDate).toISOString() : null,
-            cutOffDate: l.cutOffDate ? new Date(l.cutOffDate).toISOString() : null,
+            publishDate: l.publishDate ? parseEgyptDate(l.publishDate).toISOString() : null,
+            cutOffDate: l.cutOffDate ? parseEgyptDate(l.cutOffDate).toISOString() : null,
             attachments: serializeLessonContent(l, "attachments"),
             slides: serializeLessonContent(l, "slides"),
             questions: serializeLessonContent(l, "questions"),
@@ -1251,8 +1136,8 @@ export const CourseEditorProvider: React.FC<{
             ...l,
             id: l.id || l._id,
             isVisible: l.isVisible !== undefined ? l.isVisible : true,
-            publishDate: l.publishDate && !isNaN(new Date(l.publishDate).getTime()) ? new Date(new Date(l.publishDate).getTime() - new Date(l.publishDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
-            cutOffDate: l.cutOffDate && !isNaN(new Date(l.cutOffDate).getTime()) ? new Date(new Date(l.cutOffDate).getTime() - new Date(l.cutOffDate).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "",
+            publishDate: l.publishDate && !isNaN(new Date(l.publishDate).getTime()) ? toEgyptInput(l.publishDate) : "",
+            cutOffDate: l.cutOffDate && !isNaN(new Date(l.cutOffDate).getTime()) ? toEgyptInput(l.cutOffDate) : "",
             questions: Array.isArray(parsedQuestions)
               ? parsedQuestions.map((q) => {
                   let parsedExps = [""];
@@ -1337,6 +1222,7 @@ export const CourseEditorProvider: React.FC<{
                   videoUrl: currentLesson.videoUrl,
                   summary: currentLesson.summary,
                   notes: currentLesson.notes,
+                  ...lessonTranslationPayload(currentLesson),
                   standards: currentLesson.standards,
                   indicators: currentLesson.indicators,
                   learningOutcomes: currentLesson.learningOutcomes,
@@ -1399,12 +1285,12 @@ export const CourseEditorProvider: React.FC<{
                 ...courseData,
                 ...getSchoolPayload(),
                 lessons: deduplicatedLessons4.map((l) => ({
-                  id: l.id, title: l.title, domain: l.domain || null, videoUrl: l.videoUrl || null,
+                  id: l.id, ...lessonTranslationPayload(l), title: l.title, domain: l.domain || null, videoUrl: l.videoUrl || null,
                   summary: l.summary || null, notes: l.notes || null, standards: l.standards || null,
                   indicators: l.indicators || null, learningOutcomes: l.learningOutcomes || null,
                   isVisible: l.isVisible !== undefined ? l.isVisible : true,
-                  publishDate: l.publishDate ? new Date(l.publishDate).toISOString() : null,
-                  cutOffDate: l.cutOffDate ? new Date(l.cutOffDate).toISOString() : null,
+                  publishDate: l.publishDate ? parseEgyptDate(l.publishDate).toISOString() : null,
+                  cutOffDate: l.cutOffDate ? parseEgyptDate(l.cutOffDate).toISOString() : null,
             attachments: serializeLessonContent(l, "attachments"),
             slides: serializeLessonContent(l, "slides"),
             questions: serializeLessonContent(l, "questions"),
@@ -1449,12 +1335,12 @@ export const CourseEditorProvider: React.FC<{
           ...courseData,
           ...getSchoolPayload(),
           lessons: deduplicatedLessons5.map((l) => ({
-            id: l.id, title: l.title, domain: l.domain || null, videoUrl: l.videoUrl || null,
+            id: l.id, ...lessonTranslationPayload(l), title: l.title, domain: l.domain || null, videoUrl: l.videoUrl || null,
             summary: l.summary || null, notes: l.notes || null, standards: l.standards || null,
             indicators: l.indicators || null, learningOutcomes: l.learningOutcomes || null,
             isVisible: l.isVisible !== undefined ? l.isVisible : true,
-            publishDate: l.publishDate ? new Date(l.publishDate).toISOString() : null,
-            cutOffDate: l.cutOffDate ? new Date(l.cutOffDate).toISOString() : null,
+            publishDate: l.publishDate ? parseEgyptDate(l.publishDate).toISOString() : null,
+            cutOffDate: l.cutOffDate ? parseEgyptDate(l.cutOffDate).toISOString() : null,
             attachments: serializeLessonContent(l, "attachments"),
             slides: serializeLessonContent(l, "slides"),
             questions: serializeLessonContent(l, "questions"),

@@ -298,15 +298,15 @@ export const LessonList: React.FC = () => {
                       {lesson.createdAt && (
                         <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-50 text-purple-600 text-[10px] font-black uppercase">
                           <Clock className="w-3 h-3" />
-                          {new Date(lesson.createdAt).toLocaleDateString(language === "ar" ? "ar-EG" : "en-US", { year: "numeric", month: "short", day: "numeric" })}
+                          {new Date(lesson.createdAt).toLocaleDateString(language === "ar" ? "ar-EG" : "en-US", { year: "numeric", month: "short", day: "numeric" , timeZone: 'Africa/Cairo' })}
                         </div>
                       )}
                       {lesson.publishDate && (
                         <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black uppercase">
                           <Clock className="w-3 h-3" />
                           {language === "ar"
-                            ? `مجدول: ${new Date(lesson.publishDate).toLocaleDateString("ar-EG")}`
-                            : `Scheduled: ${new Date(lesson.publishDate).toLocaleDateString("en-US")}`}
+                            ? `مجدول: ${new Date(lesson.publishDate).toLocaleDateString("ar-EG", { timeZone: 'Africa/Cairo' })}`
+                            : `Scheduled: ${new Date(lesson.publishDate).toLocaleDateString("en-US", { timeZone: 'Africa/Cairo' })}`}
                         </div>
                       )}
                       <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 text-slate-400 text-[10px] font-black uppercase">

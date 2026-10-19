@@ -1,3 +1,4 @@
+import { lessonTranslationPayload } from './bilingualMetadata';
 export function buildCourseLessonSummary(lesson: any) {
   const slidesCount = Number(lesson.slidesCount)
     || (Array.isArray(lesson.slides) ? lesson.slides.length : 0)
@@ -11,6 +12,7 @@ export function buildCourseLessonSummary(lesson: any) {
     videoUrl: lesson.videoUrl || "",
     summary: lesson.summary || "",
     notes: lesson.notes || "",
+    ...lessonTranslationPayload(lesson),
     standards: lesson.standards || "",
     indicators: lesson.indicators || "",
     learningOutcomes: lesson.learningOutcomes || "",

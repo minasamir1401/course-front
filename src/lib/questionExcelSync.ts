@@ -1,7 +1,11 @@
+import { questionMetadataFields } from './bilingualMetadata';
+import { metadataColumn } from './lessonMetadataExcel';
 import { isOptionMatch } from './answerEvaluation';
 import { normalizeDok } from './examQuestionMetadata';
 
 type Question = Record<string, any>;
+
+const metadataHeaderNames: Record<string, string> = { course: 'الاختبار', section: 'القسم', domain: 'المجال', standard: 'المعيار', learningOutcome: 'نواتج التعلم', indicator: 'المؤشر', skill: 'المهارة', subskill: 'المهارة الفرعية', microSkill: 'المهارة الدقيقة', errorPattern: 'نمط الخطأ' };
 
 export const bilingualHeaders = [
   'معرف السؤال (Question ID)',
@@ -26,7 +30,9 @@ export const bilingualHeaders = [
   'الدرجة (Points)',
   'رابط الفيديو (Video URL)',
   'التفسير بالعربية (Explanation - Ar)',
-  'التفسير بالإنجليزية (Explanation - En)'
+  'التفسير بالإنجليزية (Explanation - En)',
+  ...questionMetadataFields.flatMap(field => [`${metadataHeaderNames[field]} بالعربية (${field} Ar)`, `${metadataHeaderNames[field]} بالإنجليزية (${field} En)`]),
+  'مستوى الصعوبة (Difficulty Level)', 'عمق المعرفة (DOK)', 'المستوى المعرفي (Cognitive Level)', 'الوقت التقديري (Estimated Time)'
 ];
 
 export const syncHeaders = [
@@ -52,7 +58,9 @@ export const syncHeaders = [
   'Points',
   'Video URL',
   'Explanation (Ar)',
-  'Explanation (En)'
+  'Explanation (En)',
+  ...questionMetadataFields.flatMap(field => [`${field} (Ar)`, `${field} (En)`]),
+  'Difficulty Level', 'DOK', 'Cognitive Level', 'Estimated Time'
 ];
 
 const key = (v: unknown) => String(v ?? '').trim();
@@ -108,7 +116,9 @@ export function questionExportRows(questions: Question[], language: string): any
       q.points ?? 1,
       q.videoUrl ?? '',
       q.explanation ?? (q.sections?.length ? JSON.stringify(q.sections) : ''),
-      q.explanationEn ?? ''
+      q.explanationEn ?? '',
+      ...questionMetadataFields.flatMap(field => [q[field] ?? '', q[`${field}En`] ?? '']),
+      q.level ?? '', q.dok ?? '', q.cognitive ?? '', q.estimatedTime ?? ''
     ];
   })];
 }
@@ -184,7 +194,7 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
     return headersNorm.findIndex((h, idx) => predicate(h, String(rows[0][idx] ?? ''), idx));
   };
 
-  const isEnHeader = (h: string) => /\ben\b/.test(h) || h.includes('إنجليزي') || h.includes('انجليزي');
+  const isEnHeader = (h: string) => /\ben\b/.test(h) || h.includes('إنجل') || h.includes('انجل');
   const isIdHeader = (h: string) => h.includes('question id') || h.includes('معرف') || h.includes('رقم السؤال') || h === 'id';
 
   const idIndex = findCol(h => isIdHeader(h));
@@ -479,6 +489,8 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
     if (videoIndex >= 0) q.videoUrl = String(row[videoIndex] ?? '');
 
     const metadataFields: Record<string, string[]> = {
+      course: ['course', 'exam', 'الاختبار'], courseEn: ['course en'],
+      section: ['section', 'القسم'], sectionEn: ['section en'],
       domain: ['domain', 'المجال'],
       domainEn: ['domain en', 'المجال بالانجليزي', 'المجال بالإنجليزي'],
       skill: ['skill', 'المهارة'],
@@ -502,20 +514,24 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
     };
     let metadataChanged = false;
     for (const [field, names] of Object.entries(metadataFields)) {
-      const i = findCol(h => names.some(n => h.includes(normalize(n))));
+      const base = field.replace(/En$/, '');
+      const lookup = base === 'standard' ? 'standards' : base === 'indicator' ? 'indicators' : base === 'learningOutcome' ? 'learningOutcomes' : base;
+      const i = questionMetadataFields.includes(base as any)
+        ? metadataColumn(rows[0], lookup, field.endsWith('En'))
+        : findCol(h => !isEnHeader(h) && names.some(n => h.includes(normalize(n))));
       if (i >= 0) {
         const val = String(row[i] ?? '').trim();
         q[field] = field === 'dok' ? (normalizeDok(val) || val) : val;
-        if (q[field] !== previous?.[field]) metadataChanged = true;
+        if (String(q[field] ?? '') !== String(previous?.[field] ?? '')) metadataChanged = true;
       }
     }
-    if (findCol(h => ['learning outcome', 'نواتج التعلم'].some(n => h.includes(normalize(n)))) >= 0) {
+    if (metadataColumn(rows[0], 'learningOutcomes', false) >= 0 && metadataColumn(rows[0], 'standards', false) < 0) {
       q.standard = q.learningOutcome;
-    } else if (findCol(h => ['standard', 'المعيار'].some(n => h.includes(normalize(n)))) >= 0) {
+    } else if (metadataColumn(rows[0], 'standards', false) >= 0 && metadataColumn(rows[0], 'learningOutcomes', false) < 0) {
       q.learningOutcome = q.standard;
     }
-    if (q.learningOutcomeEn && !q.standardEn) q.standardEn = q.learningOutcomeEn;
-    if (q.standardEn && !q.learningOutcomeEn) q.learningOutcomeEn = q.standardEn;
+    if (metadataColumn(rows[0], 'standards', true) < 0 && q.learningOutcomeEn && !q.standardEn) q.standardEn = q.learningOutcomeEn;
+    if (metadataColumn(rows[0], 'learningOutcomes', true) < 0 && q.standardEn && !q.learningOutcomeEn) q.learningOutcomeEn = q.standardEn;
 
     if (expIndex >= 0) {
       const previousExplanation = previous?.explanation

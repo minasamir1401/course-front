@@ -1,4 +1,5 @@
 "use client";
+import { useLessonPersistence } from "@/hooks/useLessonPersistence";
 
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -44,6 +45,8 @@ export function useLessonPlayer() {
   const [courseLessons, setCourseLessons] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isExpired, setIsExpired] = useState(false);
+
+  const persistence = useLessonPersistence(lessonId, Boolean(lesson) && !isLoading && !isExpired && searchParams.get('preview') !== 'true');
 
   // Player State
   const [currentStage, setCurrentStage] = useState<'welcome' | 'slides' | 'assignments' | 'exercises' | 'summary'>('welcome');
@@ -352,6 +355,7 @@ export function useLessonPlayer() {
   }, [currentStage, xpData]);
 
   const fetchData = async () => {
+    setIsLoading(true); setIsExpired(false); setLesson(null);
     try {
       const token = localStorage.getItem("lms_token") || 
                     localStorage.getItem("super_admin_token") || 
@@ -460,25 +464,7 @@ export function useLessonPlayer() {
     }
   };
 
-  const handleProgressUpdate = async (state: { playedSeconds: number }) => {
-    if (searchParams.get('preview') === 'true') return; // Do not save progress in preview mode
-    try {
-      const token = localStorage.getItem("lms_token") || 
-                    localStorage.getItem("super_admin_token") || 
-                    localStorage.getItem("school_admin_token");
-      if (!token) return;
-
-      await apiFetch(`${API_URL}/progress/lesson/${lessonId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ watchedSeconds: Math.floor(state.playedSeconds) })
-      });
-    } catch (error) {
-      console.error("Progress save failed", error);
-    }
-  };
+  const handleProgressUpdate = async (state: { playedSeconds: number }) => { persistence.updatePosition(state.playedSeconds); };
 
   const handleAnswerSelect = (option: string) => {
     if (quizSubmitted[currentQuestionIndex]) return;
@@ -538,7 +524,7 @@ export function useLessonPlayer() {
 
 
   return {
-    lesson, course, courseLessons, isLoading, isExpired,
+    lesson, course, courseLessons, isLoading, isExpired, retryLoad: fetchData,
     currentStage, setCurrentStage, currentSlideIndex, setCurrentSlideIndex,
     currentQuestionIndex, setCurrentQuestionIndex, answers, setAnswers,
     score, setScore, quizTimer, setQuizTimer, assignmentTimer, setAssignmentTimer,
@@ -553,6 +539,7 @@ export function useLessonPlayer() {
     sessionXP, setSessionXP, sessionBonusXP, setSessionBonusXP,
     toastFeedback, setToastFeedback, feedbackKey, setFeedbackKey,
     unansweredWarning, setUnansweredWarning,
+    ...persistence,
     submitAnswerProgress, handleProgressUpdate, handleAnswerSelect, handleNextQuestion,
     t, language, router, searchParams, courseId, lessonId, showToast, confirmFinishQuiz,
     previewStreakRef

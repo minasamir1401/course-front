@@ -1,7 +1,9 @@
 "use client";
+import EgyptClock from "./EgyptClock";
+import StudentHeader from './student/StudentHeader';
 
 import React, { useState, useEffect } from "react";
-import { Search, Bell, Menu, ChevronDown, LogOut, Settings, User, ArrowLeftCircle, Sparkles, Globe, Zap, Building2 } from 'lucide-react';
+import { Search, Menu, ChevronDown, LogOut, Settings, User, ArrowLeftCircle, Sparkles, Globe, Zap, Building2 } from 'lucide-react';
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -149,6 +151,8 @@ export default function Header({
 
   const handleLogout = () => logout(router, pathname ?? undefined);
 
+  if (isStudent) return <StudentHeader pathname={pathname || ''} isFullscreen={isFullscreen} onToggleFullscreen={onToggleFullscreen} />;
+
   return (
     <header className={`sticky top-0 z-50 w-full transition-all duration-700 ${isFullscreen ? 'pt-1 px-1' : scrolled ? 'pt-2 px-2 md:pt-4 md:px-4' : 'pt-0 px-0 md:pt-6 md:px-6'}`}>
       <div
@@ -269,17 +273,7 @@ export default function Header({
             </nav>
           )}
 
-          {/* Search Bar */}
-          {!isMobile && !isFullscreen && (
-            <div className="hidden xl:flex items-center gap-3 bg-white/50 border border-white/80 rounded-2xl px-5 py-3 w-80 focus-within:w-96 focus-within:bg-white focus-within:shadow-2xl focus-within:shadow-indigo-100 focus-within:border-indigo-200 transition-all duration-500 group">
-              <Search className="w-4 h-4 text-slate-400 shrink-0 group-focus-within:text-indigo-600" />
-              <input
-                type="text"
-                placeholder={t('header.searchPlaceholder')}
-                className="bg-transparent text-xs font-bold outline-none w-full placeholder:text-slate-400"
-              />
-            </div>
-          )}
+          <EgyptClock />
         </div>
 
         {/* ── LEFT SIDE: Profile & Utilities ── */}
@@ -327,16 +321,9 @@ export default function Header({
             <span className="hidden sm:inline">
               {!isOnline
                 ? (language === 'ar' ? "غير متصل بالإنترنت" : "Offline")
-                : (language === 'ar' ? "متصل بالخادم" : "Connected")}
+                : (language === 'ar' ? "متصل بالإنترنت" : "Internet connected")}
             </span>
           </div>
-
-          {!isFullscreen && (
-            <button className="relative w-8 h-8 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-xl hover:shadow-indigo-100/20 transition-all border border-transparent hover:border-slate-100">
-              <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="absolute top-2 right-2 sm:top-3 sm:right-3 w-2 h-2 rounded-full bg-rose-500 ring-4 ring-white animate-pulse" />
-            </button>
-          )}
 
           <div className="h-10 w-px bg-slate-200/50 mx-2 hidden md:block" />
 

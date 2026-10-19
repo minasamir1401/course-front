@@ -1,4 +1,5 @@
 "use client";
+import { questionMetadata } from "@/lib/bilingualMetadata";
 
 import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
 import React, { useState, useEffect } from "react";
@@ -17,6 +18,7 @@ import { InteractiveTag } from "@/components/InteractiveTag";
 import InteractiveQuestionRenderer from "@/components/InteractiveQuestionRenderer";
 import { getSubmissionTotalPoints } from "@/lib/examResult";
 import { getExamSessionToken } from "@/lib/examSession";
+import SubmissionOutcome from '@/components/reports/SubmissionOutcome';
 
 const stripHtmlAndNormalize = (str: any) => {
   if (str === null || str === undefined) return '';
@@ -112,7 +114,7 @@ const t = (key: string, lang: 'ar' | 'en') => {
     loadError: { ar: 'فشل في تحميل تفاصيل النتيجة', en: 'Failed to load result details' },
     backToExams: { ar: 'العودة للامتحانات', en: 'Back to Exams' },
     resultsHidden: { ar: 'النتائج محجوبة', en: 'Results Hidden' },
-    resultsHiddenMsg: { ar: 'لقد تم تسليم إجاباتك بنجاح. قام المعلم بإخفاء تفاصيل النتائج والدرجات لهذا الامتحان حالياً. سيتم إخطارك عند إتاحة النتائج.', en: 'Your answers have been submitted successfully. The teacher has hidden the results and grades for this exam. You will be notified when results are available.' },
+    resultsHiddenMsg: { ar: 'لقد تم تسليم إجاباتك بنجاح. قام المعلم بإخفاء تفاصيل النتائج والدرجات لهذا الامتحان حالياً. يمكنك الرجوع إلى هذه الصفحة لمراجعة النتيجة عند إتاحتها.', en: 'Your answers have been submitted successfully. The teacher has hidden the results and grades for this exam. Return to this page to check your result when it is available.' },
     submittedOn: { ar: 'تاريخ التسليم:', en: 'Submitted on:' },
     finalGrade: { ar: 'الدرجة النهائية', en: 'Final Grade' },
     pointsEarned: { ar: 'النقاط المحصلة', en: 'Points Earned' },
@@ -350,10 +352,12 @@ export default function ExamResultPage() {
 
   const [submission, setSubmission] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [reviewFilter, setReviewFilter] = useState("all");
 
-  useEffect(() => { fetchResult(); }, [id]);
+  useEffect(() => { const controller = new AbortController(); void fetchResult(controller.signal); return () => controller.abort(); }, [id]);
 
-  const fetchResult = async () => {
+  const fetchResult = async (signal?: AbortSignal) => {
+    setLoading(true); setSubmission(null);
     try {
       const isAdminPreviewSession = !!(
         localStorage.getItem("super_admin_token") || localStorage.getItem("school_admin_token")
@@ -365,25 +369,26 @@ export default function ExamResultPage() {
         return;
       }
       const res = await apiFetch(`${API_URL}/exams/submissions/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` }, signal,
       });
       const data = await res.json();
+      if (signal?.aborted) return;
       if (res.ok) {
         setSubmission(data);
       } else {
         showToast(data.error || t('resultError', lang), "error");
-        router.push("/exams");
+        // Keep the page available for retry instead of discarding the failed request.
       }
     } catch (error) {
-      console.error(error);
+      if (!signal?.aborted) console.error(error);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   };
 
   const evalAnswerCorrect = (ans: any): boolean => {
     if (!ans) return false;
-    if (ans.isCorrect) return true;
+    if (typeof ans.isCorrect === "boolean") return ans.isCorrect;
     const q = ans.question;
     if (!q) return false;
 
@@ -422,33 +427,11 @@ export default function ExamResultPage() {
 
   const submissionTotalPoints = getSubmissionTotalPoints(submission);
 
-  const evaluatedStats = React.useMemo(() => {
-    if (!submission?.answers || !Array.isArray(submission.answers) || submission.answers.length === 0) {
-      const fallbackTotal = Number(submission?.totalScore) || 0;
-      const fallbackPoints = submissionTotalPoints || 1;
-      const fallbackPct = typeof submission?.percentage === 'number'
-        ? submission.percentage
-        : (fallbackPoints > 0 ? (fallbackTotal / fallbackPoints) * 100 : 0);
-      return { totalScore: fallbackTotal, totalPoints: fallbackPoints, percentage: fallbackPct };
-    }
-
-    let earned = 0;
-    let maxPts = 0;
-    for (const ans of submission.answers) {
-      const qPts = Number(ans.question?.points) || 1;
-      maxPts += qPts;
-      if (evalAnswerCorrect(ans)) {
-        earned += qPts;
-      }
-    }
-    const maxSafe = maxPts > 0 ? maxPts : (submissionTotalPoints || 1);
-    const pct = (earned / maxSafe) * 100;
-    return {
-      totalScore: earned,
-      totalPoints: maxSafe,
-      percentage: pct
-    };
-  }, [submission, submissionTotalPoints]);
+  const evaluatedStats = React.useMemo(() => ({
+    totalScore: Number(submission?.totalScore) || 0,
+    totalPoints: submissionTotalPoints,
+    percentage: typeof submission?.percentage === 'number' ? submission.percentage : 0,
+  }), [submission, submissionTotalPoints]);
 
   const examTitle = (lang === 'en' && (submission?.subExam?.titleEn || submission?.exam?.titleEn))
     ? (submission?.subExam?.titleEn || submission?.exam?.titleEn)
@@ -467,7 +450,7 @@ export default function ExamResultPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-6">
+      <div className="student-result-page min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-6">
         <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
         <p className="font-black text-xl text-slate-400 animate-pulse">{t('loading', lang)}</p>
       </div>
@@ -476,10 +459,10 @@ export default function ExamResultPage() {
 
   if (!submission) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-6">
+      <div className="student-result-page min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-6">
         <XCircle className="w-16 h-16 text-rose-500" />
         <p className="font-black text-xl text-slate-600">{t('loadError', lang)}</p>
-        <Link href="/exams" className="btn-primary">{t('backToExams', lang)}</Link>
+        <button className="report-primary" onClick={() => fetchResult()}>{lang === "ar" ? "إعادة المحاولة" : "Retry"}</button><Link href="/exams" className="report-secondary">{t('backToExams', lang)}</Link>
       </div>
     );
   }
@@ -487,7 +470,7 @@ export default function ExamResultPage() {
   // HIDE_ALL STATE
   if (visibility === "HIDE_ALL" && !isAdmin) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6" dir={dir}>
+      <div className="student-result-page min-h-screen bg-slate-50 flex items-center justify-center p-6" dir={dir}>
         <LangToggle />
         <div className="max-w-xl w-full bg-white rounded-[40px] shadow-2xl shadow-slate-200 p-12 text-center border border-slate-100">
           <div className="w-24 h-24 bg-amber-50 text-amber-500 rounded-3xl flex items-center justify-center mx-auto mb-8 border border-amber-100">
@@ -497,7 +480,7 @@ export default function ExamResultPage() {
           <p className="text-slate-500 mb-10 leading-relaxed text-lg">{t('resultsHiddenMsg', lang)}</p>
           <div className="bg-slate-50 p-6 rounded-2xl mb-10 text-right border border-slate-100">
             <h4 className="font-black text-slate-700 mb-1">{examTitle}</h4>
-            <p className="text-sm text-slate-400">{t('submittedOn', lang)} {new Date(submission.createdAt).toLocaleDateString(lang === 'ar' ? "ar-EG" : "en-GB")}</p>
+            <p className="text-sm text-slate-400">{t('submittedOn', lang)} {new Date(submission.createdAt).toLocaleDateString(lang === 'ar' ? "ar-EG" : "en-GB", { timeZone: 'Africa/Cairo' })}</p>
           </div>
           <Link href="/exams" className="w-full bg-indigo-600 text-white py-5 rounded-2xl font-black text-xl shadow-xl shadow-indigo-100 hover:scale-[1.02] transition-all flex items-center justify-center gap-3">
             {t('backToExams', lang)}
@@ -509,7 +492,7 @@ export default function ExamResultPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f1f5f9] pb-20" dir={dir}>
+    <main className="student-result-page min-h-screen bg-slate-50 pb-20" dir={dir}>
       <Watermark text={watermarkText} />
       <LangToggle />
 
@@ -567,7 +550,7 @@ export default function ExamResultPage() {
                 {evaluatedStats.totalScore}
                 <span className="text-lg font-bold text-slate-300 mx-2">/</span>
                 <span className="text-lg font-bold text-slate-400">
-                  {evaluatedStats.totalPoints}
+                  {evaluatedStats.totalPoints ?? "—"}
                 </span>
               </h4>
             </div>
@@ -584,7 +567,7 @@ export default function ExamResultPage() {
 
             <Link
               href="/exams"
-              className="col-span-full bg-slate-900 text-white py-5 rounded-2xl font-black text-lg flex items-center justify-center gap-3 hover:bg-black transition-all shadow-xl shadow-slate-200"
+              className="col-span-full premium-gradient-primary text-white py-5 rounded-2xl font-black text-lg flex items-center justify-center gap-3 hover:brightness-110 transition-all shadow-xl shadow-indigo-100"
             >
               <LayoutDashboard className="w-6 h-6" />
               {t('backToList', lang)}
@@ -592,6 +575,7 @@ export default function ExamResultPage() {
           </div>
         </div>
 
+        <SubmissionOutcome submission={submission} language={lang} />
         {/* Detailed Review */}
         {(visibility === "SHOW_ANSWERS" || visibility === "SHOW_MARK_ONLY" || visibility === "SHOW_ALL" || isAdmin) ? (
           <div className="space-y-6">
@@ -609,7 +593,12 @@ export default function ExamResultPage() {
               </span>
             </div>
 
+            <div className="student-panel flex flex-wrap items-end justify-between gap-4"><label className="report-field"><span>{lang === 'ar' ? 'عرض الإجابات' : 'Show answers'}</span><select value={reviewFilter} onChange={event => setReviewFilter(event.target.value)}><option value="all">{lang === 'ar' ? 'كل الإجابات' : 'All answers'}</option><option value="incorrect">{lang === 'ar' ? 'تحتاج مراجعة' : 'Needs review'}</option><option value="correct">{lang === 'ar' ? 'الصحيحة' : 'Correct'}</option><option value="unanswered">{lang === 'ar' ? 'لم تُجب' : 'Unanswered'}</option></select></label><Link className="report-secondary" href="/reports">{lang === 'ar' ? 'افتح تقرير تقدمك' : 'Open progress report'}</Link><Link className="report-primary" href="/courses">{lang === 'ar' ? 'تدرب في دروسك' : 'Practise in your lessons'}</Link></div>
+            {!submission.answers.some((answer: any) => { const answered = answer.selectedAnswer != null && String(answer.selectedAnswer).trim() !== ''; return reviewFilter === 'all' || (reviewFilter === 'unanswered' ? !answered : reviewFilter === 'correct' ? answered && evalAnswerCorrect(answer) : answered && !evalAnswerCorrect(answer)); }) && <p role="status" className="student-panel">{lang === 'ar' ? 'لا توجد إجابات في هذا الاختيار.' : 'No answers in this selection.'}</p>}
             {submission.answers.map((answer: any, index: number) => {
+              const answeredForFilter = answer.selectedAnswer != null && String(answer.selectedAnswer).trim() !== '';
+              if (reviewFilter === 'unanswered' && answeredForFilter || reviewFilter === 'correct' && (!answeredForFilter || !evalAnswerCorrect(answer)) || reviewFilter === 'incorrect' && (!answeredForFilter || evalAnswerCorrect(answer))) return null;
+
               let optionsArr: any[] = [];
               try {
                 optionsArr = typeof answer.question.options === 'string'
@@ -635,10 +624,10 @@ export default function ExamResultPage() {
 
               const isQuestionCorrect = evalAnswerCorrect(answer);
               const questionTags = [
-                answer.question.domain && {
+                questionMetadata(answer.question, "domain", lang) && {
                   key: 'domain',
                   label: t('domain', lang),
-                  value: answer.question.domain,
+                  value: questionMetadata(answer.question, "domain", lang),
                   icon: Globe,
                   colorClass: 'bg-cyan-50 text-cyan-700 border border-cyan-100 hover:bg-cyan-100',
                   bubbleTheme: 'border-cyan-200 text-cyan-900',
@@ -651,74 +640,74 @@ export default function ExamResultPage() {
                   colorClass: 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200',
                   bubbleTheme: 'border-slate-200 text-slate-800',
                 },
-                answer.question.dok && {
+                questionMetadata(answer.question, "dok", lang) && {
                   key: 'dok',
                   label: t('dok', lang),
-                  value: answer.question.dok,
+                  value: questionMetadata(answer.question, "dok", lang),
                   icon: ListOrdered,
                   colorClass: 'bg-yellow-50 text-yellow-700 border border-yellow-100 hover:bg-yellow-100',
                   bubbleTheme: 'border-yellow-200 text-yellow-900',
                 },
-                answer.question.skill && {
+                questionMetadata(answer.question, "skill", lang) && {
                   key: 'skill',
                   label: t('skill', lang),
-                  value: answer.question.skill,
+                  value: questionMetadata(answer.question, "skill", lang),
                   icon: Star,
                   colorClass: 'bg-amber-50 text-amber-600 border border-amber-100 hover:bg-amber-100',
                   bubbleTheme: 'border-amber-200 text-amber-900',
                 },
-                answer.question.subskill && {
+                questionMetadata(answer.question, "subskill", lang) && {
                   key: 'subskill',
                   label: t('subskill', lang),
-                  value: answer.question.subskill,
+                  value: questionMetadata(answer.question, "subskill", lang),
                   icon: Star,
                   colorClass: 'bg-orange-50 text-orange-600 border border-orange-100 hover:bg-orange-100',
                   bubbleTheme: 'border-orange-200 text-orange-900',
                 },
-                answer.question.microSkill && {
+                questionMetadata(answer.question, "microSkill", lang) && {
                   key: 'microSkill',
                   label: t('microSkill', lang),
-                  value: answer.question.microSkill,
+                  value: questionMetadata(answer.question, "microSkill", lang),
                   icon: Star,
                   colorClass: 'bg-rose-50 text-rose-600 border border-rose-100 hover:bg-rose-100',
                   bubbleTheme: 'border-rose-200 text-rose-900',
                 },
-                answer.question.cognitive && {
+                questionMetadata(answer.question, "cognitive", lang) && {
                   key: 'cognitive',
                   label: t('cognitive', lang),
-                  value: answer.question.cognitive,
+                  value: questionMetadata(answer.question, "cognitive", lang),
                   icon: Target,
                   colorClass: 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200',
                   bubbleTheme: 'border-slate-300 text-slate-900',
                 },
-                answer.question.standard && {
+                questionMetadata(answer.question, "standard", lang) && {
                   key: 'standard',
                   label: t('standard', lang),
-                  value: answer.question.standard,
+                  value: questionMetadata(answer.question, "standard", lang),
                   icon: Target,
                   colorClass: 'bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100',
                   bubbleTheme: 'border-blue-200 text-blue-900',
                 },
-                answer.question.indicator && {
+                questionMetadata(answer.question, "indicator", lang) && {
                   key: 'indicator',
                   label: t('indicator', lang),
-                  value: answer.question.indicator,
+                  value: questionMetadata(answer.question, "indicator", lang),
                   icon: TrendingUp,
                   colorClass: 'bg-purple-50 text-purple-600 border border-purple-100 hover:bg-purple-100',
                   bubbleTheme: 'border-purple-200 text-purple-900',
                 },
-                answer.question.learningOutcome && {
+                questionMetadata(answer.question, "learningOutcome", lang) && {
                   key: 'outcome',
                   label: t('outcome', lang),
-                  value: answer.question.learningOutcome,
+                  value: questionMetadata(answer.question, "learningOutcome", lang),
                   icon: Award,
                   colorClass: 'bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100',
                   bubbleTheme: 'border-emerald-200 text-emerald-900',
                 },
-                answer.question.errorPattern && {
+                questionMetadata(answer.question, "errorPattern", lang) && {
                   key: 'errorPattern',
                   label: t('errorPattern', lang),
-                  value: answer.question.errorPattern,
+                  value: questionMetadata(answer.question, "errorPattern", lang),
                   icon: AlertCircle,
                   colorClass: 'bg-rose-50 text-rose-600 border border-rose-100 hover:bg-rose-100',
                   bubbleTheme: 'border-rose-200 text-rose-900',
@@ -1033,6 +1022,6 @@ export default function ExamResultPage() {
           </div>
         )}
       </div>
-    </div>
+    </main>
   );
 }

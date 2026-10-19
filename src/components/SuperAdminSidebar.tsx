@@ -54,6 +54,7 @@ export default function SuperAdminSidebar({
       return pathname === '/super-admin/users' && !currentRole;
     }
     if (href === '/super-admin') return pathname === '/super-admin';
+    if (/\/(exams|courses)$/.test(href)) return pathname === href || (pathname.startsWith(href + '/') && !/\/(new|create)$/.test(pathname));
     return pathname.startsWith(href);
   };
 
@@ -63,7 +64,7 @@ export default function SuperAdminSidebar({
 
   return (
     <>
-      <aside className={`fixed top-0 ${sidePosition} h-full w-[280px] max-w-[85vw] bg-white border-slate-100 z-50 transition-transform duration-300 ${isOpen ? 'translate-x-0' : sideSlideOut} shadow-xl flex flex-col ${language === 'ar' ? 'border-l' : 'border-r'}`}>
+      <aside aria-hidden={!isOpen} inert={!isOpen} className={`fixed top-0 ${sidePosition} h-full w-[280px] max-w-[85vw] bg-white border-slate-100 z-50 transition-transform duration-300 ${isOpen ? 'translate-x-0' : sideSlideOut} shadow-xl flex flex-col ${language === 'ar' ? 'border-l' : 'border-r'}`}>
 
         {/* Brand Logo */}
         <div className="px-6 py-8 border-b border-slate-100">
@@ -84,7 +85,7 @@ export default function SuperAdminSidebar({
 
           {/* PLATFORM */}
           <div className="space-y-1">
-            <p className="px-3 py-1 text-[10px] font-black text-slate-400 uppercase tracking-[2px]">{t('superAdmin.sidebar.platformManagement')}</p>
+            <p className="px-3 py-1 text-[10px] font-black text-slate-600 uppercase tracking-[2px]">{t('superAdmin.sidebar.platformManagement')}</p>
             <SidebarLink href="/super-admin/schools" icon={Building2} label={t('superAdmin.sidebar.manageSchools')} active={isActive('/super-admin/schools')} />
             <SidebarLink href="/super-admin/users" icon={Users} label={t('superAdmin.sidebar.manageUsers')} active={isActive('/super-admin/users')} />
             <SidebarLink href="/super-admin/backups" icon={Database} label={language === 'ar' ? "النسخ الاحتياطي" : "System Backups"} active={isActive('/super-admin/backups')} />
@@ -93,40 +94,40 @@ export default function SuperAdminSidebar({
 
           {/* EXAMS */}
           <div className="space-y-1">
-            <p className="px-3 py-1 text-[10px] font-black text-slate-400 uppercase tracking-[2px]">{t('superAdmin.sidebar.centralExams')}</p>
+            <p className="px-3 py-1 text-[10px] font-black text-slate-600 uppercase tracking-[2px]">{t('superAdmin.sidebar.centralExams')}</p>
             <SidebarLink href="/super-admin/exams" icon={ClipboardList} label={t('superAdmin.sidebar.allExams')} active={isActive('/super-admin/exams')} />
             <SidebarLink href="/super-admin/exams/new" icon={BookOpen} label={t('superAdmin.sidebar.createNew')} active={isActive('/super-admin/exams/new')} />
           </div>
 
           {/* COURSES */}
           <div className="space-y-1">
-            <p className="px-3 py-1 text-[10px] font-black text-slate-400 uppercase tracking-[2px]">{t('superAdmin.sidebar.centralCourses')}</p>
+            <p className="px-3 py-1 text-[10px] font-black text-slate-600 uppercase tracking-[2px]">{t('superAdmin.sidebar.centralCourses')}</p>
             <SidebarLink href="/super-admin/courses" icon={Layers} label={t('superAdmin.sidebar.allCourses')} active={isActive('/super-admin/courses')} />
             <SidebarLink href="/super-admin/courses/create" icon={Plus} label={t('superAdmin.sidebar.addCourse')} active={isActive('/super-admin/courses/create')} />
           </div>
 
           {/* SKILLS HUB */}
           <div className="space-y-1">
-            <p className="px-3 py-1 text-[10px] font-black text-slate-400 uppercase tracking-[2px]">{language === 'ar' ? "مكتبة المهارات" : "Skills Library"}</p>
+            <p className="px-3 py-1 text-[10px] font-black text-slate-600 uppercase tracking-[2px]">{language === 'ar' ? "مكتبة المهارات" : "Skills Library"}</p>
             <SidebarLink href="/super-admin/skills-hub" icon={BookOpen} label={language === 'ar' ? "أنشطة ومهارات" : "Skills Hub"} active={isActive('/super-admin/skills-hub')} />
             <SidebarLink href="/super-admin/skills-hub?action=add-cluster" icon={Plus} label={language === 'ar' ? "إضافة محور مهاراتي" : "Add Skill Cluster"} active={isActive('/super-admin/skills-hub?action=add-cluster')} />
           </div>
 
           {/* MONITORING */}
           <div className="space-y-1">
-            <p className="px-3 py-1 text-[10px] font-black text-slate-400 uppercase tracking-[2px]">{language === 'ar' ? 'المراقبة' : 'Monitoring'}</p>
+            <p className="px-3 py-1 text-[10px] font-black text-slate-600 uppercase tracking-[2px]">{language === 'ar' ? 'المراقبة' : 'Monitoring'}</p>
             <SidebarLink href="/super-admin/monitor" icon={Activity} label={language === 'ar' ? "مراقبة النظام" : "System Monitor"} active={isActive('/super-admin/monitor')} />
           </div>
 
           {/* REPORTS */}
           <div className="space-y-1">
-            <p className="px-3 py-1 text-[10px] font-black text-slate-400 uppercase tracking-[2px]">{t('superAdmin.sidebar.reports')}</p>
+            <p className="px-3 py-1 text-[10px] font-black text-slate-600 uppercase tracking-[2px]">{t('superAdmin.sidebar.reports')}</p>
             <SidebarLink href="/super-admin/reports" icon={PieChart} label={t('superAdmin.sidebar.attendanceReport')} active={isActive('/super-admin/reports')} />
           </div>
 
           {/* SETTINGS */}
           <div className="space-y-1">
-            <p className="px-3 py-1 text-[10px] font-black text-slate-400 uppercase tracking-[2px]">{language === 'ar' ? 'الإعدادات' : 'Settings'}</p>
+            <p className="px-3 py-1 text-[10px] font-black text-slate-600 uppercase tracking-[2px]">{language === 'ar' ? 'الإعدادات' : 'Settings'}</p>
             <SidebarLink href="/super-admin/settings" icon={Settings} label={language === 'ar' ? "الإعدادات" : "Settings"} active={isActive('/super-admin/settings')} />
           </div>
 

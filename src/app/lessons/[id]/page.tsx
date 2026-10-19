@@ -1,6 +1,12 @@
 "use client";
+import { questionMetadata } from "@/lib/bilingualMetadata";
+import { useSlideKeyboard } from "@/hooks/useSlideKeyboard";
+import { useModalFocus } from "@/hooks/useModalFocus";
+import StudentPageHeader from "@/components/student/StudentPageHeader";
+import ConfirmDialog from "@/components/student/ConfirmDialog";
+import LessonSaveStatus from "@/components/LessonSaveStatus";
+import LessonAccessState from "@/components/LessonAccessState";
 import { useLessonPlayer } from './hooks/useLessonPlayer';
-
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { API_URL } from '@/lib/api';
@@ -9,7 +15,6 @@ import { Play, Pause, ChevronLeft, ChevronRight, CheckCircle2, HelpCircle, BookO
 import dynamic from 'next/dynamic';
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-
 const VideoPlayer = dynamic(() => import('@/components/VideoPlayer'), { ssr: false });
 const Confetti = dynamic(() => import('react-confetti'), { ssr: false });
 import InteractiveQuestionRenderer from '@/components/InteractiveQuestionRenderer';
@@ -17,7 +22,6 @@ import HtmlRenderer from '@/components/HtmlRenderer';
 import { getOptionLetter, cleanOptionText } from '@/lib/utils';
 import AnimatedFeedback from "@/components/AnimatedFeedback";
 import { InteractiveTag } from "@/components/InteractiveTag";
-
 import { 
   normalizeAnswerGlobal, 
   checkAdvancedCorrect, 
@@ -28,19 +32,14 @@ import {
   ItemSectionsBubbles
 } from "@/components/LessonSubComponents";
 import LessonSummaryView from "@/components/LessonSummaryView";
-
 export default function LessonPlayerPage() {
   const { t, language } = useLanguage();
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
-
   const courseId = searchParams.get('courseId');
   const lessonId = params.id as string;
   const { showToast } = useNotification();
-
-
-
   const player = useLessonPlayer();
   const {
     lesson, course, courseLessons, isLoading, isExpired,
@@ -62,67 +61,32 @@ export default function LessonPlayerPage() {
     confirmFinishQuiz,
     previewStreakRef
   } = player;
-
-  if (isLoading) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[70vh]">
-          <div className="text-center space-y-6">
-            <div className="w-24 h-24 border-[6px] border-indigo-600/10 border-t-indigo-600 rounded-full animate-spin shadow-2xl shadow-indigo-200 mx-auto"></div>
-            <p className="text-indigo-600 font-black text-sm uppercase tracking-[4px] animate-pulse">{t('lesson.preparing')}</p>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  if (isExpired) {
-    return (
-      <DashboardLayout>
-        <div className="min-h-[70vh] flex flex-col items-center justify-center p-8 text-center" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-          <div className="w-24 h-24 bg-red-500/10 rounded-[40px] flex items-center justify-center mb-8 border border-red-500/20 animate-bounce">
-            <Timer className="w-12 h-12 text-red-500" />
-          </div>
-          <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tight">{t('lesson.expiredAccess')}</h2>
-          <p className="text-slate-500 text-lg font-bold max-w-md mb-12 leading-relaxed">
-            {t('lesson.expiredMessage')} {lesson?.cutOffDate && !isNaN(new Date(lesson.cutOffDate).getTime()) ? `(${new Date(lesson.cutOffDate).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US')})` : ''}. {t('lesson.contactAdmin')}
-          </p>
-          <button
-            onClick={() => router.push('/courses')}
-            className="bg-indigo-600 text-white px-12 py-5 rounded-[22px] font-black text-lg hover:scale-105 transition-all shadow-2xl shadow-indigo-100"
-          >
-            {t('lesson.backToCourses')}
-          </button>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  if (!lesson) {
-    return (
-      <DashboardLayout>
-        <div className="min-h-[70vh] flex items-center justify-center">
-          <div className="text-center space-y-4">
-            <AlertCircle className="w-16 h-16 text-slate-300 mx-auto" />
-            <p className="text-slate-400 font-black text-xl">{t('lesson.contentNotAvailable')}</p>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
+  const [confirmation, setConfirmation] = useState<{ message: string; resolve: (value: boolean) => void } | null>(null);
+  const requestConfirmation = (message: string) => new Promise<boolean>(resolve => setConfirmation({ message, resolve }));
+  const milestoneDialog = useRef<HTMLDivElement>(null), warningDialog = useRef<HTMLDivElement>(null);
+  useModalFocus(!!showStreakMilestone, milestoneDialog, () => setShowStreakMilestone(null));
+  useModalFocus(!!unansweredWarning, warningDialog, () => setUnansweredWarning(null));
+  const previousSlideButton = useRef<HTMLButtonElement>(null), nextSlideButton = useRef<HTMLButtonElement>(null);
+  useSlideKeyboard({ enabled: !isLoading && !isExpired && currentStage === 'slides' && !confirmation && !showStreakMilestone && !unansweredWarning,
+    language, index: currentSlideIndex, count: lesson?.slides?.length || 0,
+    previous: () => previousSlideButton.current?.click(), next: () => nextSlideButton.current?.click() });
+  if (isLoading || isExpired || !lesson) return <LessonAccessState {...{ isLoading, isExpired, lesson, language, t, router }} retry={player.retryLoad} />;
   const currentLessonIdx = courseLessons.findIndex((l) => l.id === lessonId);
   const prevLesson = currentLessonIdx > 0 ? courseLessons[currentLessonIdx - 1] : null;
   const nextLesson = currentLessonIdx >= 0 && currentLessonIdx < courseLessons.length - 1 ? courseLessons[currentLessonIdx + 1] : null;
-
-  const goToLesson = (lsn: any) => {
+  const isLessonAvailable = (item: any) => (!item.publishDate || Date.parse(item.publishDate) <= Date.now()) && (!item.cutOffDate || Date.parse(item.cutOffDate) > Date.now());
+  const goToLesson = async (lsn: any) => {
+    if (!isLessonAvailable(lsn)) { showToast(language === 'ar' ? 'هذا الدرس غير متاح في الوقت الحالي. راجع موعد الإتاحة في المقرر.' : 'This lesson is not available now. Check its dates in your course.', 'info'); return; }
+    if ((player.saveStatus === "error" || player.saveStatus === "saving") && !await requestConfirmation(language === "ar" ? "لم يتأكد حفظ تقدمك بعد. هل تريد الانتقال؟" : "Your progress save is not confirmed yet. Continue to another lesson?")) return;
     router.push(`/lessons/${lsn.id}?courseId=${lesson?.courseId || courseId}`);
   };
-
   return (
     <DashboardLayout>
-      <div className="max-w-[1600px] mx-auto space-y-6 md:space-y-12 pb-24 overflow-x-hidden px-1 sm:px-0" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <div className="max-w-[1280px] mx-auto space-y-5 md:space-y-6 pb-12 overflow-x-hidden px-1 sm:px-0" dir={language === 'ar' ? 'rtl' : 'ltr'}>
 
+{confirmation && <ConfirmDialog message={confirmation.message} onCancel={() => { confirmation.resolve(false); setConfirmation(null); }} onConfirm={() => { confirmation.resolve(true); setConfirmation(null); }} />}
+
+<LessonSaveStatus status={player.saveStatus} at={player.lastSavedAt} retry={player.retrySave} language={language} />
         {/* Preview Banner */}
         {searchParams.get('preview') === 'true' && (
           <div className="bg-gradient-to-r from-amber-500 to-orange-600 text-white p-5 rounded-3xl flex flex-col sm:flex-row items-center justify-between shadow-lg font-black text-sm gap-4 animate-in slide-in-from-top duration-300">
@@ -138,87 +102,12 @@ export default function LessonPlayerPage() {
             </button>
           </div>
         )}
-
-        {/* ── IMMERSIVE LESSON HEADER ── */}
-        <div className="relative w-full rounded-[32px] md:rounded-[40px] bg-[#0f172a] overflow-hidden p-6 md:p-10 shadow-2xl border border-slate-800 group">
-          <div className="absolute top-[-50%] right-[-10%] w-[500px] h-[500px] bg-indigo-600/20 rounded-full blur-[120px] pointer-events-none group-hover:bg-indigo-600/30 transition-all duration-1000" />
-          <div className="absolute bottom-[-50%] left-[-10%] w-[400px] h-[400px] bg-violet-600/20 rounded-full blur-[100px] pointer-events-none" />
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03]"></div>
-          
-          <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
-            <div className="flex items-center gap-4 md:gap-6 w-full md:w-auto">
-              {prevLesson ? (
-                <button
-                  onClick={() => goToLesson(prevLesson)}
-                  className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:border-indigo-400/50 hover:bg-white/10 transition-all shadow-sm group/nav shrink-0 backdrop-blur-md"
-                  title={prevLesson.title}
-                >
-                  <ChevronRight className={`w-6 h-6 text-slate-300 group-hover/nav:text-white transition-transform ${language === 'ar' ? 'group-hover/nav:translate-x-1' : 'group-hover/nav:-translate-x-1'}`} />
-                </button>
-              ) : (
-                <button
-                  onClick={() => router.back()}
-                  className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all shadow-sm shrink-0 backdrop-blur-md"
-                  title={language === 'ar' ? 'رجوع' : 'Back'}
-                >
-                  <ArrowRight className={`w-6 h-6 text-slate-300 ${language === 'en' && 'rotate-180'}`} />
-                </button>
-              )}
-              <div className="flex-1">
-                <p className="text-indigo-400 font-black text-[10px] md:text-xs flex items-center gap-2 mb-1.5 uppercase tracking-widest">
-                  <BookOpen className="w-4 h-4" />
-                  {course?.title || t('lesson.educationalCourse')}
-                </p>
-                <h1 className="text-xl sm:text-2xl md:text-4xl font-black text-white tracking-tight leading-tight line-clamp-2">{lesson.title}</h1>
-              </div>
-              {nextLesson && (
-                <button
-                  onClick={() => goToLesson(nextLesson)}
-                  className="w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-indigo-600 border border-indigo-500 flex items-center justify-center hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-500/20 group/nav shrink-0"
-                  title={nextLesson.title}
-                >
-                  <ChevronLeft className={`w-6 h-6 text-white transition-transform ${language === 'ar' ? 'group-hover/nav:-translate-x-1' : 'group-hover/nav:translate-x-1 rotate-180'}`} />
-                </button>
-              )}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-4 w-full md:w-auto justify-between md:justify-end border-t border-white/10 md:border-none pt-4 md:pt-0 mt-2 md:mt-0">
-              <div className="hidden lg:flex gap-1.5 p-2 bg-white/5 border border-white/10 rounded-2xl backdrop-blur-md">
-                {['welcome', 'slides', 'assignments', 'exercises', 'summary'].map((s) => (
-                  <div key={s} className={`h-2 rounded-full transition-all duration-500 ${currentStage === s ? 'w-12 bg-indigo-500 shadow-lg shadow-indigo-500/50' : 'w-4 bg-white/20'}`}></div>
-                ))}
-              </div>
-              <div className="hidden lg:block h-10 w-px bg-white/10 mx-2"></div>
-              
-              {/* Streak Widget */}
-              {currentStreak > 0 && (
-                <div className="flex items-center gap-1.5 bg-amber-500/20 border border-amber-400/30 text-amber-400 px-4 py-2.5 rounded-2xl font-black text-xs md:text-sm animate-pulse shadow-sm">
-                  <span className="text-sm">🔥</span>
-                  <span>{currentStreak} {language === 'ar' ? 'متتالي' : 'Streak'}</span>
-                </div>
-              )}
-
-              {/* XP Widget */}
-              <div className="flex items-center gap-1.5 bg-amber-500/20 border border-amber-400/30 text-amber-400 px-4 py-2.5 rounded-2xl font-black text-xs md:text-sm shadow-sm">
-                <span className="text-sm">⭐</span>
-                <span>{totalLessonXP} XP</span>
-              </div>
-
-              {/* Academic Score Widget */}
-              <div className="bg-gradient-to-r from-indigo-500 to-violet-600 text-white px-6 py-3 md:py-4 rounded-2xl text-sm md:text-base font-black flex items-center gap-3 shadow-xl shadow-indigo-500/20 hover:scale-105 transition-transform cursor-default border border-indigo-400/50">
-                <Star className="w-5 h-5 fill-current text-indigo-100" />
-                {score} {t('lesson.pointsEarned')}
-              </div>
-            </div>
-          </div>
-        </div>
-
+        <StudentPageHeader title={lesson.title} description={course?.title || t('lesson.educationalCourse')} back={{ href: `/courses/${lesson.courseId || courseId}`, label: language === 'ar' ? 'محتوى المقرر' : 'Course contents' }} action={<div className="flex flex-wrap gap-2"><span className="student-status bg-amber-50 text-amber-800">{language === 'ar' ? 'نقاط التشجيع:' : 'Reward points:'} {totalLessonXP} XP</span><span className="student-status">{language === 'ar' ? 'الدرجة:' : 'Score:'} {score}</span>{currentStreak > 0 && <span className="student-status">{currentStreak} {language === 'ar' ? 'إجابات صحيحة متتالية' : 'correct in a row'}</span>}</div>}/>
         {/* Elegant Next/Prev Lesson Switcher Bar (Placed directly below the header) */}
         {/* Elegant Next/Prev Lesson Switcher & Course Index Bar */}
         {courseLessons.length > 0 && (
           <div className="bg-white/70 backdrop-blur-xl border border-slate-200/80 p-4 rounded-[30px] flex flex-col md:flex-row items-center justify-between shadow-sm hover:shadow-md animate-in fade-in slide-in-from-top-2 duration-500 gap-4 transition-all relative overflow-hidden">
             <div className="absolute top-0 left-0 w-2 h-full bg-indigo-500 rounded-l-[30px]"></div>
-            
             <div className="flex items-center gap-4 pl-4 rtl:pl-0 rtl:pr-4 w-full md:w-auto">
               <div className="w-12 h-12 bg-indigo-50 rounded-[18px] flex items-center justify-center text-indigo-600 shrink-0 border border-indigo-100/50">
                 <BookOpen className="w-5 h-5" />
@@ -237,11 +126,11 @@ export default function LessonPlayerPage() {
                 </p>
               </div>
             </div>
-
             {/* Quick Course Index Dropdown */}
             {courseLessons.length > 1 && (
               <div className="flex items-center gap-2 w-full md:w-auto justify-center">
                 <select
+                  aria-label={language === "ar" ? "اختر درسًا من المقرر" : "Choose a course lesson"}
                   value={lessonId}
                   onChange={(e) => {
                     const target = courseLessons.find((l: any) => l.id === e.target.value);
@@ -250,18 +139,18 @@ export default function LessonPlayerPage() {
                   className="bg-slate-50 hover:bg-white border border-slate-200 text-slate-900 rounded-2xl py-2.5 px-4 font-black text-xs md:text-sm outline-none focus:border-indigo-600 transition-all cursor-pointer shadow-sm w-full md:w-auto max-w-[320px] truncate"
                 >
                   {courseLessons.map((l: any, idx: number) => (
-                    <option key={l.id} value={l.id}>
+                    <option key={l.id} value={l.id} disabled={!isLessonAvailable(l)}>
                       {language === 'ar' ? `الدرس ${idx + 1}: ${l.title}` : `Lesson ${idx + 1}: ${l.title}`}
                     </option>
                   ))}
                 </select>
               </div>
             )}
-
             {/* Previous & Next Navigation Buttons */}
             <div className="flex items-center gap-3 w-full md:w-auto justify-end">
               {prevLesson && (
                 <button
+                  disabled={!isLessonAvailable(prevLesson)}
                   onClick={() => goToLesson(prevLesson)}
                   title={prevLesson.title}
                   className="flex items-center gap-2.5 px-4 py-2.5 bg-white border border-slate-200 text-slate-900 rounded-2xl font-black text-xs md:text-sm hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 transition-all shadow-sm group cursor-pointer"
@@ -277,6 +166,7 @@ export default function LessonPlayerPage() {
               )}
               {nextLesson && (
                 <button
+                  disabled={!isLessonAvailable(nextLesson)}
                   onClick={() => goToLesson(nextLesson)}
                   title={nextLesson.title}
                   className="flex items-center gap-2.5 px-5 py-2.5 bg-indigo-600 text-white rounded-2xl font-black text-xs md:text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 group cursor-pointer border border-indigo-500/20"
@@ -293,11 +183,11 @@ export default function LessonPlayerPage() {
             </div>
           </div>
         )}
-
         {/* ── STAGE NAVIGATION TABS ── */}
         {currentStage !== 'summary' && (
-          <div className="w-full bg-white/80 backdrop-blur-xl border border-slate-200/80 p-3 rounded-[24px] shadow-sm flex flex-wrap items-center justify-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div role="group" aria-label={language === "ar" ? "مراحل الدرس" : "Lesson stages"} className="w-full bg-white/80 backdrop-blur-xl border border-slate-200/80 p-3 rounded-[24px] shadow-sm flex flex-wrap items-center justify-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
             <button
+              data-slide-nav="open" aria-pressed={currentStage === 'slides' || currentStage === 'welcome'}
               onClick={() => {
                 if (!slideSubmitted[currentSlideIndex] && lesson.slides?.[currentSlideIndex]) {
                   const q = lesson.slides[currentSlideIndex];
@@ -321,8 +211,8 @@ export default function LessonPlayerPage() {
               <BookOpen className="w-4 h-4" />
               <span>{language === 'ar' ? 'الشرح والدرس' : 'Explanation Content'}</span>
             </button>
-
             <button
+              aria-pressed={currentStage === 'assignments'}
               onClick={() => {
                 if (!assignmentSubmitted[currentAssignmentIndex] && lesson.assignments?.[currentAssignmentIndex]) {
                   const q = lesson.assignments[currentAssignmentIndex];
@@ -346,8 +236,8 @@ export default function LessonPlayerPage() {
               <FileDown className="w-4 h-4" />
               <span>{language === 'ar' ? 'الواجبات' : 'Assignment'}</span>
             </button>
-
             <button
+              aria-pressed={currentStage === 'exercises'}
               onClick={() => {
                 if (!quizSubmitted[currentQuestionIndex] && lesson.questions?.[currentQuestionIndex]) {
                   const q = lesson.questions[currentQuestionIndex];
@@ -373,7 +263,6 @@ export default function LessonPlayerPage() {
             </button>
           </div>
         )}
-
         {/* ── MAIN CONTENT AREA ── */}
         <div className="w-full flex flex-col items-center gap-6 md:gap-10">
           <div className="w-full space-y-10">            {currentStage === 'welcome' && (
@@ -387,30 +276,27 @@ export default function LessonPlayerPage() {
                     />
                   </div>
                 )}
-
-                <div className="text-center mb-12">
-                  <div className="w-20 h-20 bg-indigo-600 rounded-[30px] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-indigo-100 animate-bounce-slow">
+                <div className="text-center mb-6">
+                  <div className="w-20 h-20 bg-indigo-600 rounded-[30px] flex items-center justify-center mx-auto mb-4 shadow-md shadow-indigo-100">
                     <Sparkles className="w-10 h-10 text-white" />
                   </div>
                   <h2 className="text-3xl md:text-4xl font-black text-slate-900 mb-4 tracking-tight">{t('lesson.readyToStart')}</h2>
                   <p className="text-slate-500 text-base md:text-lg font-bold max-w-xl mx-auto leading-relaxed">
-                    {lesson.videoUrl ? (language === 'ar' ? 'شاهد الفيديو أعلاه ثم ابدأ في استعراض الشرح والتمارين.' : 'Watch the video above, then start browsing the explanation and exercises.') : t('lesson.readyMessage')}
+                    {lesson.videoUrl ? (language === 'ar' ? 'شاهد الفيديو أعلاه ثم ابدأ في استعراض الشرح والتمارين.' : 'Watch the video above, then start browsing the explanation and exercises.') : (language === 'ar' ? 'ابدأ بمحتوى الدرس، ثم طبّق ما تعلمته في التدريبات والتمارين.' : 'Start with the lesson content, then practise what you learned in the activities and exercises.')}
                   </p>
                 </div>
-
                 {(lesson.standards || lesson.indicators || lesson.learningOutcomes) && (
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
                     {[
-                      { title: t('lesson.standards'), icon: Target, content: lesson.standards, color: "text-blue-600", bg: "bg-blue-50" },
-                      { title: t('lesson.indicators'), icon: TrendingUp, content: lesson.indicators, color: "text-purple-600", bg: "bg-purple-50" },
-                      { title: t('lesson.outcomes'), icon: Award, content: lesson.learningOutcomes, color: "text-emerald-600", bg: "bg-emerald-50" },
+                      { title: t('lesson.standards'), icon: Target, content: questionMetadata(lesson, "standards", language), color: "text-blue-600", bg: "bg-blue-50" },
+                      { title: t('lesson.indicators'), icon: TrendingUp, content: questionMetadata(lesson, "indicators", language), color: "text-purple-600", bg: "bg-purple-50" },
+                      { title: t('lesson.outcomes'), icon: Award, content: questionMetadata(lesson, "learningOutcomes", language), color: "text-emerald-600", bg: "bg-emerald-50" },
                     ].filter(item => item.content && String(item.content).trim() !== '').map((item, i) => (
                       <WelcomeGadgetCard key={i} item={item} t={t} />
                     ))}
                   </div>
                 )}
-
-                <div className="mt-12 text-center space-y-6">
+                <div className="mt-6 text-center space-y-4">
                   <button
                     onClick={() => {
                       setToastFeedback(null);
@@ -424,7 +310,6 @@ export default function LessonPlayerPage() {
                 </div>
               </div>
             )}
-
             {currentStage === 'slides' && (
               <div className="premium-card rounded-3xl overflow-hidden flex flex-col group mx-auto w-full max-w-4xl">
                 <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between px-8 shrink-0">
@@ -436,7 +321,6 @@ export default function LessonPlayerPage() {
                     {t('lesson.slide')} {currentSlideIndex + 1} / {lesson.slides.length}
                   </div>
                 </div>
-
                 <div className="p-5 md:p-8 flex flex-col items-center text-center w-full">
                   {lesson.slides[currentSlideIndex].id === 'intro-video-slide' && (
                     <h3 className="text-2xl md:text-4xl font-black text-slate-900 mb-6 leading-tight tracking-tight animate-in fade-in slide-in-from-top-4 duration-500">
@@ -462,7 +346,7 @@ export default function LessonPlayerPage() {
                     {lesson.slides[currentSlideIndex].skill && (
                       <InteractiveTag 
                         label={t('lesson.skill') || 'Skill'} 
-                        value={lesson.slides[currentSlideIndex].skill} 
+                        value={questionMetadata(lesson.slides[currentSlideIndex], "skill", language)} 
                         icon={Star} 
                         colorClass="bg-amber-50 text-amber-600 border border-amber-100 hover:bg-amber-100" 
                         bubbleTheme="border-amber-200 text-amber-900" 
@@ -471,7 +355,7 @@ export default function LessonPlayerPage() {
                     {lesson.slides[currentSlideIndex].standard && (
                       <InteractiveTag 
                         label={t('lesson.standards')} 
-                        value={lesson.slides[currentSlideIndex].standard} 
+                        value={questionMetadata(lesson.slides[currentSlideIndex], "standard", language)} 
                         icon={Target} 
                         colorClass="bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100" 
                         bubbleTheme="border-blue-200 text-blue-900" 
@@ -480,7 +364,7 @@ export default function LessonPlayerPage() {
                     {lesson.slides[currentSlideIndex].indicator && (
                       <InteractiveTag 
                         label={t('lesson.indicators')} 
-                        value={lesson.slides[currentSlideIndex].indicator} 
+                        value={questionMetadata(lesson.slides[currentSlideIndex], "indicator", language)} 
                         icon={TrendingUp} 
                         colorClass="bg-purple-50 text-purple-600 border border-purple-100 hover:bg-purple-100" 
                         bubbleTheme="border-purple-200 text-purple-900" 
@@ -489,7 +373,7 @@ export default function LessonPlayerPage() {
                     {lesson.slides[currentSlideIndex].learningOutcome && (
                       <InteractiveTag 
                         label={t('lesson.outcomes')} 
-                        value={lesson.slides[currentSlideIndex].learningOutcome} 
+                        value={questionMetadata(lesson.slides[currentSlideIndex], "learningOutcome", language)} 
                         icon={Award} 
                         colorClass="bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100" 
                         bubbleTheme="border-emerald-200 text-emerald-900" 
@@ -498,13 +382,12 @@ export default function LessonPlayerPage() {
                     {isQuestionLike(lesson.slides[currentSlideIndex]) && lesson.slides[currentSlideIndex].dok && (
                       <InteractiveTag 
                         label={language === 'ar' ? 'عمق المعرفة' : 'DOK'} 
-                        value={lesson.slides[currentSlideIndex].dok} 
+                        value={questionMetadata(lesson.slides[currentSlideIndex], "dok", language)} 
                         icon={ListOrdered} 
                         colorClass="bg-yellow-50 text-yellow-700 border border-yellow-100 hover:bg-yellow-100" 
                         bubbleTheme="border-yellow-200 text-yellow-900" 
                       />
                     )}
-
                     {/* PRE_QUESTION_ONLY bubbles (e.g. WARNING) placed here, above the question content */}
                     <div className="w-full text-start mb-2">
                       <ItemSectionsBubbles 
@@ -515,9 +398,6 @@ export default function LessonPlayerPage() {
                       />
                     </div>
                   </div>
-
-
-
                   {/* Question Options for Slide */}
                   {isQuestionLike(lesson.slides[currentSlideIndex]) && (
                     <>
@@ -540,7 +420,6 @@ export default function LessonPlayerPage() {
                               const isSubmitted = slideSubmitted[currentSlideIndex];
                               const isCorrect = isSubmitted && (isMulti ? (lesson.slides[currentSlideIndex].correctAnswers || []).includes(opt) : ((!lesson.slides[currentSlideIndex].correctAnswer && isSelected) || normalizeAnswerGlobal(opt) === normalizeAnswerGlobal(lesson.slides[currentSlideIndex].correctAnswer)));
                               const isWrong = isSubmitted && isSelected && !isCorrect;
-
                               return (
                                 <button
                                   key={oIdx}
@@ -612,7 +491,6 @@ export default function LessonPlayerPage() {
                       >
                         {language === 'ar' ? 'تأكيد الإجابة ✓' : 'Confirm Answer ✓'}
                       </button>
-
                       {/* HINT bubble next to confirm button */}
                       <ItemSectionsBubbles 
                         item={lesson.slides[currentSlideIndex]} 
@@ -622,7 +500,6 @@ export default function LessonPlayerPage() {
                       />
                     </div>
                   )}
-
                   {/* POST_ANSWER bubbles container */}
                   <div className="flex w-full max-w-4xl flex-wrap gap-3 text-start mt-6 justify-start">
                     <ItemSectionsBubbles 
@@ -632,7 +509,6 @@ export default function LessonPlayerPage() {
                       filterType="POST_ANSWER_ONLY"
                     />
                   </div>
-
                   {isQuestionLike(lesson.slides[currentSlideIndex]) && slideAnswers[currentSlideIndex] && (lesson.slides[currentSlideIndex].hint || lesson.slides[currentSlideIndex].hintEn) && (
                     <div className="w-full mt-6 p-5 bg-indigo-50 border-2 border-indigo-100 rounded-2xl text-indigo-900 animate-in slide-in-from-top-4 fade-in duration-500 text-start shadow-sm hidden">
                       <div className="flex items-center gap-2 mb-2 font-black text-indigo-700">
@@ -644,7 +520,6 @@ export default function LessonPlayerPage() {
                       </div>
                     </div>
                   )}
-
                   {isQuestionLike(lesson.slides[currentSlideIndex]) && slideSubmitted[currentSlideIndex] && (lesson.slides[currentSlideIndex].explanation || lesson.slides[currentSlideIndex].explanationEn) && (
                     <div className="w-full mt-4 p-5 bg-blue-50 border-2 border-blue-100 rounded-2xl text-blue-900 animate-in slide-in-from-top-4 fade-in duration-700 delay-200 text-start shadow-sm">
                       <div className="flex items-center gap-2 mb-2 font-black text-blue-700">
@@ -656,15 +531,9 @@ export default function LessonPlayerPage() {
                       </div>
                     </div>
                   )}
-
-
-
-
-
                 </div>
-
-                <div className="p-6 border-t border-slate-100 bg-slate-50/30 flex justify-between items-center gap-6 shrink-0" dir="rtl">
-                  <button
+                <div className="p-6 border-t border-slate-100 bg-slate-50/30 flex justify-between items-center gap-6 shrink-0" dir={language === "ar" ? "rtl" : "ltr"}>
+                  <button ref={previousSlideButton} data-slide-nav="previous" aria-label={language === "ar" ? "الشريحة السابقة" : "Previous slide"}
                     onClick={() => {
                       setToastFeedback(null);
                       if (currentSlideIndex > 0) {
@@ -675,17 +544,15 @@ export default function LessonPlayerPage() {
                     }}
                     className="w-12 h-12 rounded-2xl bg-slate-50/80 border-2 border-slate-200/60 flex items-center justify-center hover:bg-slate-100 transition-all shadow-sm"
                   >
-                    <ChevronRight className="w-6 h-6 text-slate-900" />
+                    {language === "ar" ? <ChevronRight className="w-6 h-6 text-slate-900" /> : <ChevronLeft className="w-6 h-6 text-slate-900" />}
                   </button>
-
                   <div className="flex gap-2 flex-wrap justify-center">
                     {lesson.slides.map((_: any, i: number) => (
                       <div key={i} className={`h-1.5 rounded-full transition-all duration-700 ${currentSlideIndex === i ? 'w-8 bg-indigo-600' : 'w-1.5 bg-slate-200'}`}></div>
                     ))}
                   </div>
-
                   {currentSlideIndex < lesson.slides.length - 1 ? (
-                    <button
+                    <button ref={nextSlideButton} data-slide-nav="next" aria-label={language === "ar" ? "الشريحة التالية" : "Next slide"}
                       onClick={() => {
                         setToastFeedback(null);
                         const isPreviewMode = searchParams.get('preview') === 'true';
@@ -703,7 +570,7 @@ export default function LessonPlayerPage() {
                       }}
                       className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 shadow-xl shadow-indigo-100 transition-all border border-indigo-500/20"
                     >
-                      <ChevronLeft className="w-6 h-6 text-white" />
+                      {language === "ar" ? <ChevronLeft className="w-6 h-6 text-white" /> : <ChevronRight className="w-6 h-6 text-white" />}
                     </button>
                   ) : (
                     <button
@@ -730,7 +597,6 @@ export default function LessonPlayerPage() {
                 </div>
               </div>
             )}
-
             {currentStage === 'assignments' && (
               <div className="space-y-6 animate-in slide-in-from-bottom-8 duration-700 flex flex-col items-center w-full">
                 {/* 1. Header Navigation Bar for Assignment */}
@@ -765,7 +631,6 @@ export default function LessonPlayerPage() {
                     {Math.floor(assignmentTimer / 60)}:{(assignmentTimer % 60).toString().padStart(2, '0')}
                   </div>
                 </div>
-
                 {/* 2. Main Question Card for Assignment */}
                 <div className="premium-card rounded-[40px] overflow-hidden shadow-2xl border-indigo-50 w-full max-w-5xl mx-auto flex flex-col">
                   {lesson.assignments?.length > 0 && lesson.assignments[currentAssignmentIndex] ? (
@@ -787,7 +652,7 @@ export default function LessonPlayerPage() {
                             {lesson.assignments[currentAssignmentIndex].dok && (
                               <InteractiveTag 
                                 label={language === 'ar' ? 'عمق المعرفة' : 'DOK'}
-                                value={lesson.assignments[currentAssignmentIndex].dok}
+                                value={questionMetadata(lesson.assignments[currentAssignmentIndex], "dok", language)}
                                 icon={ListOrdered}
                                 colorClass="bg-yellow-50 text-yellow-700 border border-yellow-100 hover:bg-yellow-100"
                                 bubbleTheme="border-yellow-200 text-yellow-900"
@@ -796,7 +661,7 @@ export default function LessonPlayerPage() {
                             {lesson.assignments[currentAssignmentIndex].skill && (
                               <InteractiveTag 
                                 label={t('lesson.skill') || 'Skill'}
-                                value={lesson.assignments[currentAssignmentIndex].skill}
+                                value={questionMetadata(lesson.assignments[currentAssignmentIndex], "skill", language)}
                                 icon={Star}
                                 colorClass="bg-amber-50 text-amber-600 border border-amber-100 hover:bg-amber-100"
                                 bubbleTheme="border-amber-200 text-amber-900"
@@ -805,7 +670,7 @@ export default function LessonPlayerPage() {
                             {lesson.assignments[currentAssignmentIndex].standard && (
                               <InteractiveTag 
                                 label={t('lesson.standard') || 'Standard'}
-                                value={lesson.assignments[currentAssignmentIndex].standard}
+                                value={questionMetadata(lesson.assignments[currentAssignmentIndex], "standard", language)}
                                 icon={Target}
                                 colorClass="bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100"
                                 bubbleTheme="border-blue-200 text-blue-900"
@@ -814,7 +679,7 @@ export default function LessonPlayerPage() {
                             {lesson.assignments[currentAssignmentIndex].indicator && (
                               <InteractiveTag 
                                 label={t('lesson.indicator') || 'Indicator'}
-                                value={lesson.assignments[currentAssignmentIndex].indicator}
+                                value={questionMetadata(lesson.assignments[currentAssignmentIndex], "indicator", language)}
                                 icon={TrendingUp}
                                 colorClass="bg-purple-50 text-purple-600 border border-purple-100 hover:bg-purple-100"
                                 bubbleTheme="border-purple-200 text-purple-900"
@@ -823,7 +688,7 @@ export default function LessonPlayerPage() {
                             {lesson.assignments[currentAssignmentIndex].learningOutcome && (
                               <InteractiveTag 
                                 label={t('lesson.outcome') || 'Outcome'}
-                                value={lesson.assignments[currentAssignmentIndex].learningOutcome}
+                                value={questionMetadata(lesson.assignments[currentAssignmentIndex], "learningOutcome", language)}
                                 icon={Award}
                                 colorClass="bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100"
                                 bubbleTheme="border-emerald-200 text-emerald-900"
@@ -831,12 +696,10 @@ export default function LessonPlayerPage() {
                             )}
                           </div>
                         </div>
-
                         {/* Question Text */}
                         <div className="question-frame mb-8 w-full">
                           <HtmlRenderer html={lesson.assignments[currentAssignmentIndex].text} tag="div" className="text-lg md:text-2xl font-black text-slate-900 leading-relaxed tracking-tight break-words w-full text-start" />
                         </div>
-
                         {/* Question Input */}
                         {isQuestionLike(lesson.assignments[currentAssignmentIndex]) && (
                           <>
@@ -859,7 +722,6 @@ export default function LessonPlayerPage() {
                                   const isSubmitted = assignmentSubmitted[currentAssignmentIndex];
                                   const isCorrect = isSubmitted && (isMulti ? (lesson.assignments[currentAssignmentIndex].correctAnswers || []).includes(opt) : ((!lesson.assignments[currentAssignmentIndex].correctAnswer && isSelected) || normalizeAnswerGlobal(opt) === normalizeAnswerGlobal(lesson.assignments[currentAssignmentIndex].correctAnswer)));
                                   const isWrong = isSubmitted && isSelected && !isCorrect;
-
                                   return (
                                     <button
                                       key={oIdx}
@@ -926,7 +788,6 @@ export default function LessonPlayerPage() {
                             )}
                           </>
                         )}
-
                         {assignmentAnswers[currentAssignmentIndex] && !assignmentSubmitted[currentAssignmentIndex] && (
                           <div className="flex flex-wrap gap-4 items-center justify-center mt-2 mb-6">
                             <button
@@ -949,7 +810,6 @@ export default function LessonPlayerPage() {
                             />
                           </div>
                         )}
-                        
                         <div className="flex w-full flex-wrap gap-3 text-start mt-4">
                           <ItemSectionsBubbles 
                             item={lesson.assignments[currentAssignmentIndex]} 
@@ -958,7 +818,6 @@ export default function LessonPlayerPage() {
                             filterType="POST_ANSWER_ONLY"
                           />
                         </div>
-
                         {assignmentAnswers[currentAssignmentIndex] && (lesson.assignments[currentAssignmentIndex].hint || lesson.assignments[currentAssignmentIndex].hintEn) && (
                           <div className="w-full mb-6 mt-4 p-5 bg-indigo-50 border-2 border-indigo-100 rounded-2xl text-indigo-900 animate-in slide-in-from-top-4 fade-in duration-500 text-start shadow-sm">
                             <div className="flex items-center gap-2 mb-2 font-black text-indigo-700">
@@ -970,7 +829,6 @@ export default function LessonPlayerPage() {
                             </div>
                           </div>
                         )}
-
                         {assignmentSubmitted[currentAssignmentIndex] && (lesson.assignments[currentAssignmentIndex].explanation || lesson.assignments[currentAssignmentIndex].explanationEn) && (
                           <div className="w-full mb-6 mt-2 p-5 bg-blue-50 border-2 border-blue-100 rounded-2xl text-blue-900 animate-in slide-in-from-top-4 fade-in duration-700 delay-200 text-start shadow-sm">
                             <div className="flex items-center gap-2 mb-2 font-black text-blue-700">
@@ -982,9 +840,6 @@ export default function LessonPlayerPage() {
                             </div>
                           </div>
                         )}
-
-
-
                         {assignmentSubmitted[currentAssignmentIndex] && isQuestionLike(lesson.assignments[currentAssignmentIndex]) && (() => {
                           const isMulti = lesson.assignments[currentAssignmentIndex].type === 'MULTI_SELECT' || lesson.assignments[currentAssignmentIndex].label === 'MULTI_SELECT';
                           const effectiveAType = lesson.assignments[currentAssignmentIndex].type === 'QUESTION'
@@ -992,22 +847,15 @@ export default function LessonPlayerPage() {
                             : lesson.assignments[currentAssignmentIndex].type;
                           const isStandard = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(effectiveAType || 'MCQ');
                           const studentAnswers = assignmentAnswers[currentAssignmentIndex] || (isMulti ? [] : '');
-                          
                           const isCorrect = isStandard
                             ? (isMulti ? studentAnswers.length === (lesson.assignments[currentAssignmentIndex].correctAnswers || []).length && studentAnswers.every((a: string) => (lesson.assignments[currentAssignmentIndex].correctAnswers || []).includes(a)) : (!lesson.assignments[currentAssignmentIndex].correctAnswer || normalizeAnswerGlobal(assignmentAnswers[currentAssignmentIndex]) === normalizeAnswerGlobal(lesson.assignments[currentAssignmentIndex].correctAnswer)))
                             : checkAdvancedCorrect(lesson.assignments[currentAssignmentIndex], assignmentAnswers[currentAssignmentIndex]);
-
                           const isSkipped = !studentAnswers || (Array.isArray(studentAnswers) && studentAnswers.length === 0) || studentAnswers === '' || studentAnswers === '[]';
                           const isExplanation = lesson.assignments[currentAssignmentIndex].type === 'EXPLANATION' || lesson.assignments[currentAssignmentIndex].label === 'EXPLANATION';
-
                           if (isExplanation) return null;
-
                           return null;
                         })()}
-
-
                       </div>
-
                       {/* Footer Actions for Assignment */}
                       <div className="p-6 md:p-8 border-t border-slate-100 bg-slate-50/30 flex justify-between items-center shrink-0">
                         <button
@@ -1018,7 +866,7 @@ export default function LessonPlayerPage() {
                           {t('lesson.previous')}
                         </button>
                         <button
-                          onClick={() => {
+                          onClick={async () => {
                             const isPreviewMode = searchParams.get('preview') === 'true';
                             if (!assignmentSubmitted[currentAssignmentIndex]) {
                               const q = lesson.assignments[currentAssignmentIndex];
@@ -1041,16 +889,14 @@ export default function LessonPlayerPage() {
                                   unanswered.push(i + 1);
                                 }
                               }
-
                               if (unanswered.length > 0) {
                                 const confirmMsg = language === 'ar'
                                   ? `⚠️ لديك واجبات لم تقم بالإجابة عليها (أرقام: ${unanswered.join(', ')}). هل أنت متأكد من رغبتك في الانتقال للتمارين؟`
                                   : `⚠️ You have unanswered assignments (numbers: ${unanswered.join(', ')}). Are you sure you want to go to exercises?`;
-                                if (!window.confirm(confirmMsg)) {
+                                if (!await requestConfirmation(confirmMsg)) {
                                   return; // Stop transition
                                 }
                               }
-
                               // Mark all as submitted
                               const nextSubmitted = { ...assignmentSubmitted };
                               lesson.assignments.forEach((as: any, idx: number) => {
@@ -1083,7 +929,6 @@ export default function LessonPlayerPage() {
                 </div>
               </div>
             )}
-
             {currentStage === 'exercises' && (
               <div className="space-y-6 animate-in slide-in-from-bottom-8 duration-700 flex flex-col items-center w-full">
                 <div className="premium-card p-4 rounded-[30px] flex flex-col md:flex-row items-center justify-between border-b-4 border-indigo-600 w-full max-w-4xl mx-auto gap-4 shrink-0">
@@ -1110,18 +955,17 @@ export default function LessonPlayerPage() {
                     ))}
                   </div>
                   <button
-                    onClick={() => {
-                      if (confirm(t('lesson.quizModePrompt') || 'Enable Quiz Mode?')) {
+                    onClick={async () => {
+                      if (await requestConfirmation(t('lesson.quizModePrompt') || 'Enable Quiz Mode?')) {
                         showToast(t('lesson.quizModeEnabled') || 'Quiz Mode Enabled', "info");
                       }
                     }}
                     className="px-5 py-2.5 bg-orange-500 text-white rounded-2xl font-black text-xs flex items-center gap-2 hover:bg-orange-600 transition-all shadow-lg"
                   >
                     <HelpCircle className="w-4 h-4" />
-                    Quiz Me!
+                    {language === "ar" ? "اختبر فهمي" : "Quiz me"}
                   </button>
                 </div>
-
                 <div className="premium-card rounded-[40px] overflow-hidden shadow-2xl border-indigo-50 w-full max-w-5xl mx-auto flex flex-col">
                   {lesson.questions.length > 0 && lesson.questions[currentQuestionIndex] ? (
                     <>
@@ -1141,7 +985,7 @@ export default function LessonPlayerPage() {
                             {lesson.questions[currentQuestionIndex].dok && (
                               <InteractiveTag 
                                 label={language === 'ar' ? 'عمق المعرفة' : 'DOK'}
-                                value={lesson.questions[currentQuestionIndex].dok}
+                                value={questionMetadata(lesson.questions[currentQuestionIndex], "dok", language)}
                                 icon={ListOrdered}
                                 colorClass="bg-yellow-50 text-yellow-700 border border-yellow-100 hover:bg-yellow-100"
                                 bubbleTheme="border-yellow-200 text-yellow-900"
@@ -1150,7 +994,7 @@ export default function LessonPlayerPage() {
                             {lesson.questions[currentQuestionIndex].skill && (
                               <InteractiveTag 
                                 label={t('lesson.skill') || 'Skill'}
-                                value={lesson.questions[currentQuestionIndex].skill}
+                                value={questionMetadata(lesson.questions[currentQuestionIndex], "skill", language)}
                                 icon={Star}
                                 colorClass="bg-amber-50 text-amber-600 border border-amber-100 hover:bg-amber-100"
                                 bubbleTheme="border-amber-200 text-amber-900"
@@ -1159,7 +1003,7 @@ export default function LessonPlayerPage() {
                             {lesson.questions[currentQuestionIndex].standard && (
                               <InteractiveTag 
                                 label={t('lesson.standard') || 'Standard'}
-                                value={lesson.questions[currentQuestionIndex].standard}
+                                value={questionMetadata(lesson.questions[currentQuestionIndex], "standard", language)}
                                 icon={Target}
                                 colorClass="bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100"
                                 bubbleTheme="border-blue-200 text-blue-900"
@@ -1168,7 +1012,7 @@ export default function LessonPlayerPage() {
                             {lesson.questions[currentQuestionIndex].indicator && (
                               <InteractiveTag 
                                 label={t('lesson.indicator') || 'Indicator'}
-                                value={lesson.questions[currentQuestionIndex].indicator}
+                                value={questionMetadata(lesson.questions[currentQuestionIndex], "indicator", language)}
                                 icon={TrendingUp}
                                 colorClass="bg-purple-50 text-purple-600 border border-purple-100 hover:bg-purple-100"
                                 bubbleTheme="border-purple-200 text-purple-900"
@@ -1177,7 +1021,7 @@ export default function LessonPlayerPage() {
                             {lesson.questions[currentQuestionIndex].learningOutcome && (
                               <InteractiveTag 
                                 label={t('lesson.outcome') || 'Outcome'}
-                                value={lesson.questions[currentQuestionIndex].learningOutcome}
+                                value={questionMetadata(lesson.questions[currentQuestionIndex], "learningOutcome", language)}
                                 icon={Award}
                                 colorClass="bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100"
                                 bubbleTheme="border-emerald-200 text-emerald-900"
@@ -1189,11 +1033,9 @@ export default function LessonPlayerPage() {
                             {Math.floor(quizTimer / 60)}:{(quizTimer % 60).toString().padStart(2, '0')}
                           </div>
                         </div>
-
                         <div className="question-frame mb-8 w-full">
                           <HtmlRenderer html={lesson.questions[currentQuestionIndex].text} tag="div" className="text-lg md:text-2xl font-black text-slate-900 leading-relaxed tracking-tight break-words w-full text-start" />
                         </div>
-
                         {/* Resolve effective type: if type='QUESTION', use label; otherwise use type */}
                         {['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(
                           (lesson.questions[currentQuestionIndex].type === 'QUESTION'
@@ -1207,7 +1049,6 @@ export default function LessonPlayerPage() {
                               const isSubmitted = quizSubmitted[currentQuestionIndex];
                               const isCorrect = isSubmitted && (isMulti ? (lesson.questions[currentQuestionIndex].correctAnswers || []).includes(opt) : ((!lesson.questions[currentQuestionIndex].correctAnswer && isSelected) || normalizeAnswerGlobal(opt) === normalizeAnswerGlobal(lesson.questions[currentQuestionIndex].correctAnswer)));
                               const isWrong = isSubmitted && isSelected && !isCorrect;
-
                               return (
                                 <button
                                   key={oIdx}
@@ -1261,7 +1102,6 @@ export default function LessonPlayerPage() {
                             />
                           </div>
                         )}
-
                         {answers[currentQuestionIndex] && !quizSubmitted[currentQuestionIndex] && (
                           <div className="flex flex-wrap gap-4 items-center justify-center mt-2 mb-6">
                             <button
@@ -1284,7 +1124,6 @@ export default function LessonPlayerPage() {
                             />
                           </div>
                         )}
-                        
                         <div className="flex w-full flex-wrap gap-3 text-start mt-4">
                           <ItemSectionsBubbles 
                             item={lesson.questions[currentQuestionIndex]} 
@@ -1293,7 +1132,6 @@ export default function LessonPlayerPage() {
                             filterType="POST_ANSWER_ONLY"
                           />
                         </div>
-
                         {answers[currentQuestionIndex] && (lesson.questions[currentQuestionIndex].hint || lesson.questions[currentQuestionIndex].hintEn) && (
                           <div className="w-full mb-6 mt-4 p-5 bg-indigo-50 border-2 border-indigo-100 rounded-2xl text-indigo-900 animate-in slide-in-from-top-4 fade-in duration-500 text-start shadow-sm">
                             <div className="flex items-center gap-2 mb-2 font-black text-indigo-700">
@@ -1305,7 +1143,6 @@ export default function LessonPlayerPage() {
                             </div>
                           </div>
                         )}
-
                         {quizSubmitted[currentQuestionIndex] && (lesson.questions[currentQuestionIndex].explanation || lesson.questions[currentQuestionIndex].explanationEn) && (
                           <div className="w-full mb-6 mt-2 p-5 bg-blue-50 border-2 border-blue-100 rounded-2xl text-blue-900 animate-in slide-in-from-top-4 fade-in duration-700 delay-200 text-start shadow-sm">
                             <div className="flex items-center gap-2 mb-2 font-black text-blue-700">
@@ -1317,9 +1154,6 @@ export default function LessonPlayerPage() {
                             </div>
                           </div>
                         )}
-
-
-
                         {quizSubmitted[currentQuestionIndex] && (() => {
                           const isMulti = lesson.questions[currentQuestionIndex].type === 'MULTI_SELECT' || lesson.questions[currentQuestionIndex].label === 'MULTI_SELECT';
                           const effectiveQType = lesson.questions[currentQuestionIndex].type === 'QUESTION'
@@ -1327,22 +1161,15 @@ export default function LessonPlayerPage() {
                             : lesson.questions[currentQuestionIndex].type;
                           const isStandard = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(effectiveQType || 'MCQ');
                           const studentAnswers = answers[currentQuestionIndex] || (isMulti ? [] : '');
-                          
                           const isCorrect = isStandard
                             ? (isMulti ? studentAnswers.length === (lesson.questions[currentQuestionIndex].correctAnswers || []).length && studentAnswers.every((a: string) => (lesson.questions[currentQuestionIndex].correctAnswers || []).includes(a)) : (!lesson.questions[currentQuestionIndex].correctAnswer || normalizeAnswerGlobal(answers[currentQuestionIndex]) === normalizeAnswerGlobal(lesson.questions[currentQuestionIndex].correctAnswer)))
                             : checkAdvancedCorrect(lesson.questions[currentQuestionIndex], answers[currentQuestionIndex]);
-
                           const isSkipped = !studentAnswers || (Array.isArray(studentAnswers) && studentAnswers.length === 0) || studentAnswers === '' || studentAnswers === '[]';
                           const isExplanation = lesson.questions[currentQuestionIndex].type === 'EXPLANATION' || lesson.questions[currentQuestionIndex].label === 'EXPLANATION';
-
                           if (isExplanation) return null;
-
                           return null;
                         })()}
-
-
                       </div>
-
                       <div className="p-6 md:p-8 border-t border-slate-100 bg-slate-50/30 flex justify-between items-center shrink-0">
                         <button
                           onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
@@ -1377,7 +1204,6 @@ export default function LessonPlayerPage() {
                 </div>
               </div>
             )}
-
             {currentStage === 'summary' && (
               <LessonSummaryView
                 pct={attemptedMaxScore > 0 ? Math.round((score / attemptedMaxScore) * 100) : 0}
@@ -1433,15 +1259,13 @@ export default function LessonPlayerPage() {
           onComplete={() => setToastFeedback(null)} 
         />
       )}
-
       {/* ── Streak Milestone Celebration Modal ── */}
       {showStreakMilestone && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-md animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[160] flex items-center justify-center bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
           <div className="fixed inset-0 pointer-events-none z-[100]">
             <Confetti recycle={false} numberOfPieces={showStreakMilestone.count >= 10 ? 600 : 300} gravity={0.15} />
           </div>
-
-          <div className={`relative p-8 md:p-12 rounded-[32px] max-w-md w-full mx-4 text-center shadow-2xl animate-in zoom-in-95 duration-500 flex flex-col items-center z-[101] border ${
+          <div ref={milestoneDialog} tabIndex={-1} role="dialog" aria-modal="true" aria-label={language === "ar" ? "إنجاز جديد" : "New achievement"} className={`relative p-8 md:p-12 rounded-[32px] max-w-md w-full mx-4 text-center shadow-2xl animate-in zoom-in-95 duration-500 flex flex-col items-center z-[101] border ${
             showStreakMilestone.count >= 10
               ? 'bg-gradient-to-b from-indigo-50 to-white border-indigo-200'
               : 'bg-white border-amber-200'
@@ -1454,20 +1278,17 @@ export default function LessonPlayerPage() {
             }`}>
               {showStreakMilestone.count >= 10 ? '🏆' : '🔥'}
             </div>
-            
             <h3 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">
               {showStreakMilestone.count >= 10
-                ? 'Perfect Set! 🏆'
+                ? (language === 'ar' ? 'إتقان رائع!' : 'Perfect set!')
                 : showStreakMilestone.count >= 5
-                  ? 'On Fire! 🔥'
-                  : 'Streak! 🎉'
+                  ? (language === 'ar' ? 'تقدم ممتاز!' : 'On fire!')
+                  : (language === 'ar' ? 'إجابات صحيحة متتالية!' : 'Streak!')
               }
             </h3>
-            
             <p className="text-slate-500 font-bold text-base mb-6 leading-relaxed">
-              You answered {showStreakMilestone.count} questions correctly in a row! You earned a bonus of:
+              {language === 'ar' ? `أجبت عن ${showStreakMilestone.count} أسئلة صحيحة متتالية! حصلت على مكافأة:` : `You answered ${showStreakMilestone.count} questions correctly in a row! Your bonus:`}
             </p>
-
             <div className={`inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl font-black text-xl mb-8 shadow-inner animate-pulse ${
               showStreakMilestone.count >= 10
                 ? 'bg-indigo-50 border border-indigo-200 text-indigo-600'
@@ -1475,7 +1296,6 @@ export default function LessonPlayerPage() {
             }`}>
               {showStreakMilestone.count >= 10 ? '⭐' : '🎁'} +{showStreakMilestone.xp} XP
             </div>
-
             <button
               onClick={() => setShowStreakMilestone(null)}
               className={`w-full font-black py-4 rounded-2xl text-base shadow-lg transition-all border text-white ${
@@ -1485,33 +1305,29 @@ export default function LessonPlayerPage() {
               }`}
             >
               {showStreakMilestone.count >= 10
-                ? 'Amazing! ⭐'
-                : 'Awesome! Keep going'
+                ? (language === 'ar' ? 'رائع، نكمل!' : 'Amazing!')
+                : (language === 'ar' ? 'استمر في التقدم' : 'Keep going!')
               }
             </button>
           </div>
         </div>
       )}
-
       {/* ── Unanswered Questions Warning Modal ── */}
       {unansweredWarning && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="relative p-8 rounded-[32px] max-w-md w-full mx-4 text-center shadow-2xl bg-white border border-slate-200 flex flex-col items-center z-[101]">
+        <div className="fixed inset-0 z-[160] flex items-center justify-center bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div ref={warningDialog} tabIndex={-1} role="dialog" aria-modal="true" aria-label={language === "ar" ? "أسئلة غير مجابة" : "Unanswered questions"} className="relative p-8 rounded-[32px] max-w-md w-full mx-4 text-center shadow-2xl bg-white border border-slate-200 flex flex-col items-center z-[101]">
             <div className="w-20 h-20 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-500 mb-6">
               <AlertCircle className="w-10 h-10" />
             </div>
-            
             <h3 className="text-2xl font-black text-slate-900 mb-2">
               {language === 'ar' ? 'أسئلة غير مجابة!' : 'Unanswered Questions!'}
             </h3>
-            
             <p className="text-slate-500 font-bold text-sm mb-6 leading-relaxed">
               {language === 'ar' 
                 ? `لقد تركت الأسئلة التالية بدون إجابة: (${unansweredWarning.join(', ')}). هل أنت تأكد من إنهاء الاختبار؟`
                 : `You left the following question(s) unanswered: (${unansweredWarning.join(', ')}). Are you sure you want to finish the quiz?`
               }
             </p>
-
             <div className="flex items-center gap-3 w-full">
               <button
                 onClick={() => setUnansweredWarning(null)}
@@ -1529,20 +1345,17 @@ export default function LessonPlayerPage() {
           </div>
         </div>
       )}
-
       <style dangerouslySetInnerHTML={{
         __html: `
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.1); border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.2); }
-
       @keyframes bounce-slow {
         0 %, 100 % { transform: translateY(0); }
           50% {transform: translateY(-10px); }
         }
       .animate-bounce-slow {animation: bounce-slow 3s infinite ease-in-out; }
-
       /* ── Trophy float: gentle up/down with scale pulse ── */
       @keyframes float-trophy {
         0 % { transform: translateY(0px) scale(1); box- shadow: 0 0 40px rgba(16,185,129,0.6), 0 20px 40px rgba(5,150,105,0.4); }
@@ -1551,7 +1364,6 @@ export default function LessonPlayerPage() {
       100% {transform: translateY(0px) scale(1); box-shadow: 0 0 40px rgba(16,185,129,0.6), 0 20px 40px rgba(5,150,105,0.4); }
         }
       .animate-float-trophy {animation: float-trophy 2.4s infinite ease-in-out; }
-
       /* ── Star float: bouncy with glow pulse ── */
       @keyframes float-star {
         0 % { transform: translateY(0px) rotate(- 3deg) scale(1); }
@@ -1561,14 +1373,12 @@ export default function LessonPlayerPage() {
       100% {transform: translateY(0px) rotate(-3deg) scale(1); }
         }
       .animate-float-star {animation: float-star 2.2s infinite ease-in-out; }
-
       /* ── Slow spin for conic ring & star icon ── */
       @keyframes spin-slow {
         from {transform: rotate(0deg); }
       to   {transform: rotate(360deg); }
         }
       .animate-spin-slow {animation: spin-slow 6s linear infinite; }
-
       /* ── Shake for retry icon ── */
       @keyframes shake {
         0 %, 100 % { transform: translateX(0) rotate(0deg); }
@@ -1580,7 +1390,6 @@ export default function LessonPlayerPage() {
       90%      {transform: translateX(3px) rotate(1deg); }
         }
       .animate-shake {animation: shake 1.8s infinite ease-in-out; }
-
       /* ── Slow ping for glow rings ── */
       @keyframes ping-slow {
         0 % { transform: scale(0.85); opacity: 0.8; }
@@ -1588,22 +1397,18 @@ export default function LessonPlayerPage() {
       100% {transform: scale(0.85); opacity: 0.8; }
         }
       .animate-ping-slow {animation: ping-slow 2s infinite ease-in-out; }
-
       .premium-card {
         background: rgba(255, 255, 255, 0.8);
       backdrop-filter: blur(20px);
       border: 1px solid rgba(255, 255, 255, 0.5);
       box-shadow: 0 20px 50px rgba(0, 0, 0, 0.02);
         }
-
       .premium-gradient-primary {
         background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
         }
-
       .animate-in {
         animation: fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1);
         }
-
       @keyframes fade-in {
         from {opacity: 0; transform: translateY(10px); }
       to {opacity: 1; transform: translateY(0); }

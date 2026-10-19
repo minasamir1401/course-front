@@ -1,4 +1,7 @@
 "use client";
+import DirectoryPager from '@/components/DirectoryPager';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+
 
 import { apiFetch, API_URL } from '@/lib/api';
 import React, { useState, useEffect } from "react";
@@ -18,6 +21,11 @@ export default function StudentsManagement() {
   const [schools, setSchools] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const search = useDebouncedValue(searchTerm);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
+  const [listError, setListError] = useState('');
+  const requestRef = React.useRef<AbortController | null>(null);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   
   // Modal states
@@ -50,26 +58,35 @@ export default function StudentsManagement() {
     fetchData();
   }, [router]);
 
+  useEffect(() => { setPage(1); }, [search]);
+  useEffect(() => { void fetchData(); return () => requestRef.current?.abort(); }, [page, search]);
+
   const fetchData = async () => {
+    setListError('');
+    requestRef.current?.abort();
+    const currentRequest = new AbortController(); requestRef.current = currentRequest;
+    const directoryQuery = new URLSearchParams({ page: String(page), limit: '25', search, role: 'STUDENT' });
     setIsLoading(true);
     const token = localStorage.getItem("super_admin_token");
     try {
       const [usersRes, schoolsRes] = await Promise.all([
-        apiFetch(API_URL + "/admin/users", { headers: { "Authorization": `Bearer ${token}` } }),
+        apiFetch(API_URL + "/admin/users?" + directoryQuery, { headers: { "Authorization": `Bearer ${token}` }, signal: currentRequest.signal }),
         apiFetch(API_URL + "/admin/schools", { headers: { "Authorization": `Bearer ${token}` } })
       ]);
       
+      if (!usersRes.ok) throw new Error('Could not load directory');
       if (usersRes.ok) {
         const allUsersData = await usersRes.json();
         const allUsers = Array.isArray(allUsersData) ? allUsersData : (allUsersData.users || []);
-        setStudents(allUsers.filter((u: any) => u.role === 'STUDENT'));
+        if (currentRequest.signal.aborted) return;
+        setStudents(allUsers); setPagination(allUsersData.pagination);
       }
       if (schoolsRes.ok) {
         const schoolsData = await schoolsRes.json();
         setSchools(Array.isArray(schoolsData) ? schoolsData : (schoolsData.schools || []));
       }
     } catch (error) {
-      console.error("Failed to fetch data:", error);
+      if (!currentRequest.signal.aborted) setListError(language === 'ar' ? 'تعذر تحميل القائمة. أعد المحاولة.' : 'Could not load directory. Please retry.');
     } finally {
       setIsLoading(false);
     }
@@ -362,6 +379,8 @@ export default function StudentsManagement() {
         )}
         </div>
       </div>
+      {listError && <div role="alert" className="report-error">{listError}<button className="underline ms-3" onClick={() => fetchData()}>{language === 'ar' ? 'إعادة المحاولة' : 'Retry'}</button></div>}
+      <DirectoryPager page={page} total={pagination.total} pages={pagination.totalPages} onPage={setPage} loading={isLoading} />
     </DashboardLayout>
   );
 }
