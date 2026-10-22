@@ -18,11 +18,11 @@
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
     "dompurify": "^3.4.5",
-    "katex": "^0.17.0",
+    "katex": "^0.19.0",
     "lucide-react": "^1.18.0",
     "mathlive": "^0.110.0",
-    "next": "16.2.4",
-    "pm2": "^5.4.0",
+    "next": "16.4.2",
+    "pm2": "^7.1.0",
     "react": "19.2.4",
     "react-confetti": "^6.4.0",
     "react-dom": "19.2.4",
@@ -30,7 +30,7 @@
     "recharts": "^3.8.1",
     "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7",
-    "xlsx": "^0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.2",
@@ -44,7 +44,7 @@
     "@types/react-dom": "^19",
     "@types/vimeo__player": "^2.18.3",
     "eslint": "^9",
-    "eslint-config-next": "16.2.4",
+    "eslint-config-next": "16.4.2",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

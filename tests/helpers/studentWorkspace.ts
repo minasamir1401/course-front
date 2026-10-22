@@ -17,6 +17,7 @@ export async function studentSession(page:Page,language='en'){
   const path=new URL(route.request().url()).pathname;let data:any={};
   if(path==='/api/student/stats')data={name:'Student',schoolName:'School',grade:'Grade 3',classroomName:'A',teacherName:'Teacher',overallCourseProgress:40,avgScore:50,totalExams:2,xp:20,courseProgresses:[course],upcomingTasks:[],generatedAt:stamp};
   else if(path==='/api/student/xp-summary')data={totalXP:20,courseXP:[{courseId:'course',xp:10}],skillsXP:{title:'Activities',xp:10}};
+  else if(path==='/api/certificates')data={items:[],total:0};
   else if(path==='/api/courses/course')data=course;
   else if(path==='/api/lessons/lesson')data=lesson;
   else if(path==='/api/exams')data=[exam];

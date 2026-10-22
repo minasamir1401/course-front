@@ -1,0 +1,15 @@
+.artwork { position:relative; flex-shrink:0; isolation:isolate; overflow:hidden; background:linear-gradient(125deg,#f2edff 0%,#fbfdff 48%,#e6f9fc 100%); }
+.artwork::before { content:''; position:absolute; z-index:-1; inset:0; background:url('/klevro/backgrounds/network-transparent.svg') center / cover; opacity:.28; }
+.artwork::after { content:''; position:absolute; z-index:-1; width:120%; height:120%; left:-10%; bottom:-33%; background:url('/klevro/waves/wave-hero.svg') center / 100% 100% no-repeat; opacity:.68; transform:scaleY(-1); }
+.illustration { object-fit:contain; padding:8px 14px 2px; filter:drop-shadow(0 5px 5px #5b42861b); }
+.uploaded { object-fit:cover; }
+.cover { width:100%; aspect-ratio:2.15; }
+.thumbnail { width:70px; height:58px; border-radius:12px; border:1px solid #ece6f8; }
+.thumbnail .illustration { padding:3px; }
+.preview { width:150px; height:95px; border-radius:12px; }
+.previewPanel { display:flex; align-items:center; gap:16px; border:1px solid #e6e0f1; border-radius:16px; padding:12px; background:#fdfcff; color:#35264f; }
+.previewPanel>div:last-child { min-width:0; }
+.previewPanel strong { font-size:13px; }
+.previewPanel p { margin:4px 0; font-size:12px; overflow-wrap:anywhere; }
+.previewPanel small { display:block; color:#665d76; font-size:11px; line-height:1.8; }
+@media(max-width:600px) { .previewPanel { flex-direction:column; align-items:stretch; } .preview { width:100%; height:130px; } .thumbnail { width:53px; height:48px; } }

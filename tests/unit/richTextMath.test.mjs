@@ -114,3 +114,22 @@ test('live editor isolation preserves the caret, Arabic text, and canonical math
     assert.match(await page.locator('#editor').textContent(), /والنص العربي/);
   } finally { await browser.close(); }
 });
+
+test('normalizing a blurred math editor does not steal focus from another field', async () => {
+  const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH || 'C:/Users/Administrator/AppData/Local/ms-playwright/chromium-1234/chrome-win64/chrome.exe' });
+  try {
+    const page = await browser.newPage();
+    await page.setContent('<div id="explanation" contenteditable="true">الشرح x = 5</div><div id="hint" contenteditable="true">تلميح</div>');
+    await page.addScriptTag({ content: `${escapeMathHtml.toString()}\n${isolatePlainTextMath.toString()}\n${isolateEditorMath.toString()}` });
+    await page.evaluate(() => {
+      const explanation = document.getElementById('explanation');
+      explanation.addEventListener('blur', () => isolateEditorMath(explanation));
+    });
+    await page.locator('#explanation').click();
+    await page.locator('#hint').click();
+    assert.equal(await page.locator('#hint').evaluate(element => document.activeElement === element), true);
+    await page.keyboard.type(' جديد');
+    assert.match(await page.locator('#hint').textContent(), /جديد/);
+    assert.equal(await page.locator('#explanation').textContent(), 'الشرح x = 5');
+  } finally { await browser.close(); }
+});

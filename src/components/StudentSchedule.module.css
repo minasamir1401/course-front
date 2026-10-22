@@ -1,0 +1,26 @@
+.page { position:relative; isolation:isolate; max-width:1200px; margin:auto; color:#30283c; font-family:var(--student-font,'Cairo','Segoe UI',Tahoma,Arial,sans-serif); }
+.hero { display:flex; align-items:center; justify-content:space-between; gap:24px; min-height:180px; position:relative; }
+.hero::before { content:''; position:absolute; z-index:-1; inset:-25px calc((100% - 100vw)/2) -20px; background:url('/klevro/waves/dashboard-hero-wave.svg') center/100% 100% no-repeat; opacity:.4; }
+.hero h1 { display:flex; align-items:center; gap:12px; font-size:clamp(25px,2.4vw,32px); font-weight:900; }
+.hero h1>span { display:grid; place-items:center; width:48px; height:48px; border-radius:15px; color:#6744a4; background:#ece5fa; }
+.hero p { font-size:12px; line-height:2; color:#5c5466; margin-top:9px; }
+.hero img { width:280px; height:175px; object-fit:contain; }
+.filters { background:#fff; padding:18px 22px; border:1px solid #e8e3ef; border-radius:24px; box-shadow:0 6px 18px #3d25510b; margin-bottom:27px; }
+.filterTop { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px; margin-bottom:15px; }
+.presets { display:flex; gap:6px; padding:4px; border-radius:999px; background:#f6f3fa; }
+.presets button { min-height:38px; padding:7px 19px; border-radius:999px; font-size:12px; color:#5f4f6c; font-weight:700; }
+.presets button[aria-pressed='true'] { color:#fff; background:linear-gradient(100deg,#5828dc,#7641e8); box-shadow:0 3px 7px #5a2ac32b; }
+.fields { display:flex; align-items:end; gap:13px; }
+.field { display:flex; flex:1; min-width:0; flex-direction:column; gap:7px; font-size:12px; color:#5e5468; }
+.field input,.field select { width:100%; min-width:0; min-height:42px; padding:8px 13px; border-radius:13px; border:1px solid #e9e4ef; background:#f2f5fb; color:#40364e; font-size:12px; }
+.action { display:inline-flex; align-items:center; justify-content:center; gap:7px; padding:9px 16px; min-height:42px; border:1px solid #e6e0ec; background:#fff; color:#644c7a; border-radius:999px; font-size:12px; font-weight:700; }
+.group { margin-block:22px; }.group h2 { display:flex; align-items:center; gap:9px; padding:11px 15px; border-radius:12px; background:linear-gradient(100deg,#e7e7fa,#ddf2fa); font-size:12px; font-weight:800; margin-bottom:12px; }.group h2 svg { color:#684e81; }.group h2 span { margin-inline-start:auto; color:#625174; font-size:12px; }
+.events { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:15px; }
+.card { display:flex; align-items:center; gap:16px; padding:12px; background:#fff; border:1px solid #e9e3ef; border-radius:21px; box-shadow:0 5px 15px #49315d0a; }
+.copy { flex:1; min-width:0; }.copy h3 { font-size:14px; line-height:1.9; font-weight:800; margin-block:7px; overflow-wrap:anywhere; }.copy p { display:flex; align-items:start; gap:5px; font-size:12px; line-height:1.9; color:#5b5363; }.copy p svg { flex-shrink:0; margin-top:3px; }.copy a { margin-top:10px; padding-block:6px; min-height:36px; font-size:12px; }
+.kind { display:inline-flex; gap:5px; align-items:center; padding:4px 9px; border:1px solid #e4dcee; border-radius:999px; background:#f6f1fc; color:#634e75; font-size:12px; }.kind::before { content:''; width:5px; height:5px; border-radius:50%; background:#aa82cb; }.kind[data-kind$='END']::before { background:#e7a060; }.kind[data-kind^='EXAM'] { background:#ecfaf8; }
+.art { width:39%; align-self:stretch; min-height:140px; border-radius:15px; flex-shrink:0; }.art img { object-fit:contain; padding:8px; }
+.empty { padding:50px 25px; text-align:center; background:#fff; border:1px solid #e7e0ef; border-radius:23px; font-size:13px; color:#5f546a; }.empty>svg { margin:0 auto 13px; color:#6a4697; }.empty a { margin-top:18px; }
+.page :where(button,a,input,select):focus-visible { outline:3px solid #9b79cc; outline-offset:3px; }
+@media(max-width:800px) { .hero img { width:210px; height:150px; }.hero { min-height:170px; }.events { grid-template-columns:1fr; }.art { width:35%; min-height:125px; } }
+@media(max-width:500px) { .hero { flex-wrap:wrap; gap:0; padding-top:17px; }.hero>div { width:100%; }.hero img { width:185px; height:105px; margin-inline-start:auto; }.hero h1 { font-size:24px; }.hero p { font-size:12px; }.filters { padding:14px; border-radius:21px; }.fields { flex-wrap:wrap; }.fields>button { width:100%; }.field { flex-basis:40%; }.filterTop { gap:10px; }.presets { width:100%; }.presets button { flex:1; padding-inline:10px; }.art { width:33%; min-height:120px; }.card { gap:10px; }.copy h3 { font-size:12px; }.copy p { font-size:12px; } }

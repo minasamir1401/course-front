@@ -7,6 +7,7 @@ import RichTextEditor from "@/components/RichTextEditor";
 import { getOptionLetter } from "@/lib/utils";
 import MathInput from "@/components/MathInput";
 import * as XLSX from "xlsx";
+import { buildAdvancedMetadataTemplateRows } from '@/lib/examExcelTemplates';
 import QuestionImageGallery from '@/components/QuestionImageGallery';
 import { extractImageUrls } from '@/lib/image-utils';
 export default function LessonQuestionForm(props: any) {
@@ -76,27 +77,7 @@ export default function LessonQuestionForm(props: any) {
                 </h4>
                 <button 
                   onClick={() => {
-                    const metadataMap = [
-                      { key: 'id', labelAr: 'معرف السؤال', labelEn: 'Question ID' },
-                      { key: 'course', labelAr: 'الدرس', labelEn: 'Lesson' },
-                      { key: 'section', labelAr: 'القسم', labelEn: 'Section' },
-                      { key: 'domain', labelAr: 'المجال', labelEn: 'Domain' },
-                      { key: 'standard', labelAr: 'المعيار', labelEn: 'Standard' },
-                      { key: 'indicator', labelAr: 'المؤشرات', labelEn: 'Indicators' },
-                      { key: 'skill', labelAr: 'المهارة', labelEn: 'Skill' },
-                      { key: 'subskill', labelAr: 'المهارة الفرعية', labelEn: 'Subskill' },
-                      { key: 'microSkill', labelAr: 'المهارة الدقيقة', labelEn: 'Micro Skill' },
-                      { key: 'level', labelAr: 'الصعوبة', labelEn: 'Difficulty' },
-                      { key: 'dok', labelAr: 'عمق المعرفة (DOK)', labelEn: 'DOK' },
-                      { key: 'cognitive', labelAr: 'المستوى المعرفي', labelEn: 'Cognitive' },
-                      { key: 'errorPattern', labelAr: 'نمط الخطأ', labelEn: 'Error Pattern' },
-                      { key: 'estimatedTime', labelAr: 'الوقت المقدر', labelEn: 'Estimated Time' },
-                    ];
-                    const data: any = {};
-                    metadataMap.forEach(field => {
-                      data[language === 'ar' ? field.labelAr : field.labelEn] = tempQuestion[field.key] || "";
-                    });
-                    const worksheet = XLSX.utils.json_to_sheet([data]);
+                    const worksheet = XLSX.utils.aoa_to_sheet(buildAdvancedMetadataTemplateRows(language, [tempQuestion]));
                     const workbook = XLSX.utils.book_new();
                     XLSX.utils.book_append_sheet(workbook, worksheet, "Metadata Template");
                     XLSX.writeFile(workbook, "Metadata_Template.xlsx");

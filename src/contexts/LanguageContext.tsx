@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { usePathname } from 'next/navigation';
 import arTranslations from "@/locales/ar.json";
 import enTranslations from "@/locales/en.json";
 
@@ -12,12 +13,14 @@ const translations: Record<Language, any> = {
 };
 
 interface LanguageContextType {
+  ready: boolean;
   language: Language;
   setLanguage: (lang: Language) => void;
   t: (key: string) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType>({
+  ready: false,
   language: "ar",
   setLanguage: () => {},
   t: () => ""
@@ -25,7 +28,8 @@ const LanguageContext = createContext<LanguageContextType>({
 
 export const LanguageProvider = ({ children }: { children: React.ReactNode }) => {
   const [language, setLanguageState] = useState<Language>("ar");
-  const [mounted, setMounted] = useState(false);
+  const [ready, setReady] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     const stored = localStorage.getItem("lms_lang") as Language;
@@ -37,7 +41,7 @@ export const LanguageProvider = ({ children }: { children: React.ReactNode }) =>
       document.documentElement.dir = 'rtl';
       document.documentElement.lang = 'ar';
     }
-    setMounted(true);
+    setReady(true);
   }, []);
 
   const setLanguage = (lang: Language) => {
@@ -78,12 +82,11 @@ export const LanguageProvider = ({ children }: { children: React.ReactNode }) =>
     return key;
   };
 
-  if (!mounted) {
-    return <div className="min-h-screen bg-slate-50" />;
-  }
+  // Public content must be present in server HTML; account pages retain their hydration gate.
+  if (!ready && pathname !== "/") return <div className="min-h-screen bg-slate-50" />;
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={{ language, setLanguage, t, ready }}>
       <div dir={language === 'ar' ? 'rtl' : 'ltr'}>
         {children}
       </div>

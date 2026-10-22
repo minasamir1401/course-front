@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import styles from "./StudentExamCalculator.module.css";
 import {
   Calculator,
   Delete,
@@ -122,7 +123,7 @@ export default function StudentExamCalculator() {
       <button
         type="button"
         onClick={() => setIsOpen((current) => !current)}
-        className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-30 w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-slate-900 text-white shadow-2xl shadow-slate-300 hover:bg-indigo-600 transition-all flex items-center justify-center"
+        className={styles.launcher}
         aria-label="Open calculator"
       >
         <Calculator className="w-5 h-5 md:w-6 md:h-6" />
@@ -130,7 +131,7 @@ export default function StudentExamCalculator() {
 
       {isOpen && (
         <div className="fixed inset-x-2 bottom-20 md:inset-x-auto md:bottom-24 md:right-6 z-30 w-auto md:w-[360px] md:max-w-[calc(100vw-1.5rem)] max-h-[calc(100vh-6rem)] md:max-h-[min(760px,calc(100vh-7rem))] rounded-[24px] md:rounded-[28px] border border-slate-200 bg-white shadow-2xl shadow-slate-300 overflow-hidden">
-          <div className="flex items-center justify-between px-4 md:px-5 py-3 md:py-4 bg-slate-900 text-white">
+          <div className={styles.header}>
             <div className="flex items-center gap-2 font-black text-sm">
               <Calculator className="w-4 h-4" />
               <span>Scientific Calculator</span>

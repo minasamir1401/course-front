@@ -5,8 +5,6 @@ import { normalizeDok } from './examQuestionMetadata';
 
 type Question = Record<string, any>;
 
-const metadataHeaderNames: Record<string, string> = { course: 'الاختبار', section: 'القسم', domain: 'المجال', standard: 'المعيار', learningOutcome: 'نواتج التعلم', indicator: 'المؤشر', skill: 'المهارة', subskill: 'المهارة الفرعية', microSkill: 'المهارة الدقيقة', errorPattern: 'نمط الخطأ' };
-
 export const bilingualHeaders = [
   'معرف السؤال (Question ID)',
   'الإجراء (Action: ADD/UPDATE/DELETE)',
@@ -31,8 +29,6 @@ export const bilingualHeaders = [
   'رابط الفيديو (Video URL)',
   'التفسير بالعربية (Explanation - Ar)',
   'التفسير بالإنجليزية (Explanation - En)',
-  ...questionMetadataFields.flatMap(field => [`${metadataHeaderNames[field]} بالعربية (${field} Ar)`, `${metadataHeaderNames[field]} بالإنجليزية (${field} En)`]),
-  'مستوى الصعوبة (Difficulty Level)', 'عمق المعرفة (DOK)', 'المستوى المعرفي (Cognitive Level)', 'الوقت التقديري (Estimated Time)'
 ];
 
 export const syncHeaders = [
@@ -59,8 +55,6 @@ export const syncHeaders = [
   'Video URL',
   'Explanation (Ar)',
   'Explanation (En)',
-  ...questionMetadataFields.flatMap(field => [`${field} (Ar)`, `${field} (En)`]),
-  'Difficulty Level', 'DOK', 'Cognitive Level', 'Estimated Time'
 ];
 
 const key = (v: unknown) => String(v ?? '').trim();
@@ -117,8 +111,6 @@ export function questionExportRows(questions: Question[], language: string): any
       q.videoUrl ?? '',
       q.explanation ?? (q.sections?.length ? JSON.stringify(q.sections) : ''),
       q.explanationEn ?? '',
-      ...questionMetadataFields.flatMap(field => [q[field] ?? '', q[`${field}En`] ?? '']),
-      q.level ?? '', q.dok ?? '', q.cognitive ?? '', q.estimatedTime ?? ''
     ];
   })];
 }
@@ -530,8 +522,8 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
     } else if (metadataColumn(rows[0], 'standards', false) >= 0 && metadataColumn(rows[0], 'learningOutcomes', false) < 0) {
       q.learningOutcome = q.standard;
     }
-    if (metadataColumn(rows[0], 'standards', true) < 0 && q.learningOutcomeEn && !q.standardEn) q.standardEn = q.learningOutcomeEn;
-    if (metadataColumn(rows[0], 'learningOutcomes', true) < 0 && q.standardEn && !q.learningOutcomeEn) q.learningOutcomeEn = q.standardEn;
+    if (metadataColumn(rows[0], 'learningOutcomes', true) >= 0 && metadataColumn(rows[0], 'standards', true) < 0 && q.learningOutcomeEn && !q.standardEn) q.standardEn = q.learningOutcomeEn;
+    if (metadataColumn(rows[0], 'standards', true) >= 0 && metadataColumn(rows[0], 'learningOutcomes', true) < 0 && q.standardEn && !q.learningOutcomeEn) q.learningOutcomeEn = q.standardEn;
 
     if (expIndex >= 0) {
       const previousExplanation = previous?.explanation

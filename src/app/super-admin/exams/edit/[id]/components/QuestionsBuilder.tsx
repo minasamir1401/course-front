@@ -94,6 +94,14 @@ export const QuestionsBuilder = (props: any) => {
       const from = questionActiveLang;
       const to = from === 'ar' ? 'en' : 'ar';
 
+      if (props.translateQuestion) {
+        const translated = await props.translateQuestion(tempQuestion, from, to);
+        // Keep edits made while translation was running, and respect cancellation.
+        setTempQuestion((current: any) => current === tempQuestion ? translated : current);
+        setQuestionActiveLang(to);
+        return;
+      }
+
       const srcText = from === 'ar'
         ? (tempQuestion.text || '')
         : (tempQuestion.textEn || tempQuestion.text || '');
@@ -209,6 +217,7 @@ export const QuestionsBuilder = (props: any) => {
       setTempQuestion(updated);
     } catch (err: any) {
       console.error('Auto translate question error:', err);
+      props.onTranslationError?.(err);
     } finally {
       setIsTranslatingQuestion(false);
     }
@@ -225,6 +234,7 @@ export const QuestionsBuilder = (props: any) => {
 
     return (
       <div className="space-y-8 animate-in fade-in duration-300">
+        {!props.formOnly && <>
         <input
           type="file"
           ref={source === 'assignments' ? assignmentsExcelRef : questionsExcelRef}
@@ -540,6 +550,7 @@ export const QuestionsBuilder = (props: any) => {
           </div>
         )}
 
+        </>}
         {/* Premium Save Slide Form inside card list view */}
         {showQuestionForm && (
           <div className="bg-white rounded-[40px] border-2 border-indigo-500 shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -580,7 +591,7 @@ export const QuestionsBuilder = (props: any) => {
                       }
                       setTempQuestion(updated);
                     }}
-                    options={QUESTION_TYPES.map(type => ({ value: type.id, label: type.labelEn }))}
+                    options={(props.questionTypes || QUESTION_TYPES).map((type: any) => ({ value: type.id, label: questionActiveLang === 'ar' ? type.labelAr : type.labelEn }))}
                     placeholder={questionActiveLang === 'en' ? 'Select Type...' : (language === 'ar' ? 'اختر النوع...' : 'Select Type...')}
                   />
                 </div>
@@ -1038,7 +1049,7 @@ export const QuestionsBuilder = (props: any) => {
               </div>
 
               {/* Options & Choices block */}
-              {tempQuestion.type !== "TEXT" && (
+              {props.renderAnswerEditor && !['MCQ', 'MULTI_SELECT', 'TRUE_FALSE'].includes(tempQuestion.type) ? props.renderAnswerEditor(questionActiveLang) : tempQuestion.type !== "TEXT" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-slate-100 pt-6">
                   {tempQuestion.type === "TRUE_FALSE" ? (
                     <div className="grid grid-cols-2 gap-6 mt-4 col-span-2">

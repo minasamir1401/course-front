@@ -1,0 +1,22 @@
+import { test,expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
+import { studentSession,lesson,course,exam } from './helpers/studentWorkspace';
+const titles=['المجموعات والعمليات عليها','المعادلات الخطية وتطبيقاتها في المسائل الحسابية','الأسس والقوى','المتوسط الحسابي وتطبيقاته في الحياة اليومية'];
+const lessons=titles.map((title,index)=>({...lesson,id:index===2?'lesson':`lesson-${index}`,title,order:index,publishDate:null,cutOffDate:null}));
+for(const language of ['ar','en'])test(`syllabus buttons and assessment entry fit all devices ${language}`,async({page})=>{
+ test.setTimeout(180000);await studentSession(page,language);await page.route('https://fonts.googleapis.com/**',r=>r.abort());await page.emulateMedia({reducedMotion:'reduce'});await page.route('**/api/courses/course*',r=>r.fulfill({json:{...course,title:'الرياضيات — تجربة آدم — أولى ثانوي',lessons}}));await page.route('**/api/lessons/lesson',r=>r.fulfill({json:lessons[2]}));await page.route('**/api/exams/exam',r=>r.fulfill({json:{...exam,title:'اللغة العربية — واجب تطبيقي — تجربة آدم',titleEn:'Arabic practice assessment',subjects:'["اللغة العربية"]',type:'Assignment',domain:'النحو والقراءة'}}));
+ for(const width of [320,390,768,1011,1264,1536]){
+  await page.setViewportSize({width,height:width<600?844:1000});
+  await page.goto('/lessons/lesson?courseId=course',{waitUntil:'domcontentloaded'});await expect(page.locator('[data-lesson-syllabus]')).toBeVisible();const buttons=page.locator('[data-lesson-syllabus] button');await expect(buttons).toHaveCount(2);await expect(buttons.nth(0)).toContainText(titles[1]);await expect(buttons.nth(1)).toContainText(titles[3]);
+  expect(await page.locator('[data-lesson-syllabus]').evaluate(element=>{const card=element.getBoundingClientRect();return Array.from(element.querySelectorAll('button,select')).every(item=>{const bounds=item.getBoundingClientRect();return bounds.left>=card.left-1&&bounds.right<=card.right+1&&item.scrollWidth<=item.clientWidth+1;});})).toBe(true);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  if(width===390||width===1264){const audit=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();expect(audit.violations.map(v=>({id:v.id,nodes:v.nodes.map(n=>n.target)}))).toEqual([]);await page.screenshot({path:`../artifacts/learning-ui/lesson-navigation-${language}-${width}.png`,fullPage:true});}
+  await page.goto('/exams/exam',{waitUntil:'domcontentloaded'});await expect(page.getByRole('button',{name:language==='ar'?'ابدأ الامتحان الآن':'Start Exam Now',exact:true})).toBeVisible();await expect(page.locator('[data-subject="arabic"]')).toBeVisible();await expect(page.getByRole('heading',{name:language==='ar'?'قبل أن تبدأ':'Before you begin',exact:true})).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  if(width===390||width===1264){const audit=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();expect(audit.violations.map(v=>({id:v.id,nodes:v.nodes.map(n=>n.target)}))).toEqual([]);await page.screenshot({path:`../artifacts/learning-ui/exam-entry-${language}-${width}.png`,fullPage:true});}
+ }
+});
+
+test('entry language switch preserves password and failed verification can retry',async({page})=>{
+ await studentSession(page);await page.route('https://fonts.googleapis.com/**',r=>r.abort());await page.route('**/api/exams/exam',r=>r.fulfill({json:{...exam,password:true,subjects:'Math'}}));let attempts=0;await page.route('**/api/exams/exam/verify-access',r=>{attempts++;return attempts===1?r.fulfill({status:403,json:{error:'Incorrect password'}}):r.fulfill({json:{allowed:true}});});
+ await page.goto('/exams/exam',{waitUntil:'domcontentloaded'});await page.getByLabel('Exam password',{exact:true}).fill('test-secret');await page.getByRole('button',{name:'العربية',exact:true}).click();await expect(page.getByLabel('كلمة سر فتح الامتحان',{exact:true})).toHaveValue('test-secret');await page.getByRole('button',{name:'English',exact:true}).click();await page.getByRole('button',{name:'Start Exam Now',exact:true}).click();await expect(page.getByText('Incorrect password',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Start Exam Now',exact:true}).click();await expect(page.getByRole('button').filter({hasText:'Choice A'}).first()).toBeVisible();expect(attempts).toBe(2);
+});

@@ -122,7 +122,7 @@ const openAddModuleModal = () => {
     } else {
       list = currentModule[source] || [];
     }
-    const wsData = buildAdvancedMetadataTemplateRows(list, language);
+    const wsData = buildAdvancedMetadataTemplateRows(language, list);
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Advanced Metadata Template');

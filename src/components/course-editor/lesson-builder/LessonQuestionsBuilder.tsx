@@ -24,6 +24,7 @@ import CopySlidesModal from "@/components/modals/CopySlidesModal";
 import { useCourseEditor } from "../CourseEditorContext";
 import * as XLSX from "xlsx";
 import { QuestionExcelExportButton } from '@/components/QuestionExcelExportButton';
+import QuestionMetadataExcelTools from '@/components/QuestionMetadataExcelTools';
 import { translateBatch } from '@/lib/translationService';
 import QuestionImageGallery from '@/components/QuestionImageGallery';
 import { extractImageUrls } from '@/lib/image-utils';
@@ -743,6 +744,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
           </div>
           <div className="flex flex-wrap gap-3">
             <QuestionExcelExportButton questions={currentLesson[source] || []} language={language} />
+            <QuestionMetadataExcelTools questions={currentLesson[source] || []} scope={`${currentLesson.id ?? ''}:${source}`} language={language} disabled={showQuestionForm} onChange={questions => setCurrentLesson({ ...currentLesson, [source]: questions })} />
             <button 
               type="button"
               onClick={() => handleExcelUpload(source === 'assignments' ? 'assignments' : 'questions')}

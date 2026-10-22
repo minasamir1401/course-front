@@ -29,7 +29,7 @@ export function buildQuestionWorkbook(questions: any[] | null, language: string 
     ['5. اختيارات متعددة (MULTI_SELECT): اكتب الإجابات في عمود الإجابات المتعددة مثل: ["خيار 1", "خيار 2"] أو أرقام الخيارات 1, 3.'],
     ['6. إضافة أو تعديل: لإضافة أسئلة جديدة اترك Question ID فارغاً (أو اتركه دون تعديل مع Action: ADD). لتعديل أسئلة سابقة حافظ على الـ Question ID الأصلي.'],
     ['7. حذف سؤال: اكتب DELETE في عمود Action لحذف السؤال عند إعادة الرفع.'],
-    ['8. الميتا داتا والتصنيفات: يدعم النظام إضافة أعمدة الميتا داتا (المجال، المهارة، المؤشر، عمق المعرفة DOK، الصعوبة) بالعربية أو الإنجليزية في نفس الملف، أو استخدام نموذج الميتا داتا المتقدم ثنائي اللغة.']
+    ['8. هذا الشيت للأسئلة فقط. استخدم نموذج الميتا داتا المنفصل للتصنيفات والمهارات والصعوبة وDOK. استورد الأسئلة أولاً، ثم نزّل نموذج الميتا داتا لربطه بمعرفات الأسئلة. تعديل الأسئلة لا يمس الميتا داتا المحفوظة.']
   ] : [
     ['Bilingual Questions Template Guide (دليل تعبئة الأسئلة)'],
     ['1. Dual Languages: You can fill question text, options, and explanations in both Arabic and English in the same row.'],
@@ -39,7 +39,7 @@ export function buildQuestionWorkbook(questions: any[] | null, language: string 
     ['5. MULTI_SELECT: Write the answers in Correct Answers column e.g. ["Option 1", "Option 2"] or option numbers: 1, 3.'],
     ['6. Add or Update: Leave Question ID blank (or set Action to ADD) for new questions. Keep Question ID when updating existing questions.'],
     ['7. Delete: Set Action to DELETE to remove a question upon import.'],
-    ['8. Metadata & Taxonomies: You can optionally add metadata columns (Domain, Skill, Indicator, DOK, Difficulty) in Arabic or English directly in this sheet, or use the dedicated Advanced Metadata Template.']
+    ['8. This sheet contains questions only. Use the separate Metadata Template for taxonomies, skills, difficulty and DOK. Import questions first, then download their metadata template with Question IDs. Editing questions preserves stored metadata.']
   ];
 
   const instructionsSheet = XLSX.utils.aoa_to_sheet(instructionsData);

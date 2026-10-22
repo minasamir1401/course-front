@@ -3,6 +3,11 @@ import { questionMetadata } from "@/lib/bilingualMetadata";
 import { useSlideKeyboard } from "@/hooks/useSlideKeyboard";
 import { useModalFocus } from "@/hooks/useModalFocus";
 import StudentPageHeader from "@/components/student/StudentPageHeader";
+import SubjectArtwork from "@/components/student/SubjectArtwork";
+import headingStyles from "./LessonCourseHeading.module.css";
+import LearningBackdrop from "@/components/student/LearningBackdrop";
+import frame from "@/components/student/LearningPage.module.css";
+import LessonSyllabus from "@/components/student/LessonSyllabus";
 import ConfirmDialog from "@/components/student/ConfirmDialog";
 import LessonSaveStatus from "@/components/LessonSaveStatus";
 import LessonAccessState from "@/components/LessonAccessState";
@@ -81,8 +86,9 @@ export default function LessonPlayerPage() {
     router.push(`/lessons/${lsn.id}?courseId=${lesson?.courseId || courseId}`);
   };
   return (
-    <DashboardLayout>
-      <div className="max-w-[1280px] mx-auto space-y-5 md:space-y-6 pb-12 overflow-x-hidden px-1 sm:px-0" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+    <DashboardLayout mainClassName={frame.main}>
+      <div className={frame.shell} dir={language === 'ar' ? 'rtl' : 'ltr'}><LearningBackdrop/>
+      <div className={`${headingStyles.player} space-y-5 md:space-y-6 pb-12`}>
 
 {confirmation && <ConfirmDialog message={confirmation.message} onCancel={() => { confirmation.resolve(false); setConfirmation(null); }} onConfirm={() => { confirmation.resolve(true); setConfirmation(null); }} />}
 
@@ -102,90 +108,14 @@ export default function LessonPlayerPage() {
             </button>
           </div>
         )}
+        <div className={headingStyles.heading}>
         <StudentPageHeader title={lesson.title} description={course?.title || t('lesson.educationalCourse')} back={{ href: `/courses/${lesson.courseId || courseId}`, label: language === 'ar' ? 'محتوى المقرر' : 'Course contents' }} action={<div className="flex flex-wrap gap-2"><span className="student-status bg-amber-50 text-amber-800">{language === 'ar' ? 'نقاط التشجيع:' : 'Reward points:'} {totalLessonXP} XP</span><span className="student-status">{language === 'ar' ? 'الدرجة:' : 'Score:'} {score}</span>{currentStreak > 0 && <span className="student-status">{currentStreak} {language === 'ar' ? 'إجابات صحيحة متتالية' : 'correct in a row'}</span>}</div>}/>
-        {/* Elegant Next/Prev Lesson Switcher Bar (Placed directly below the header) */}
-        {/* Elegant Next/Prev Lesson Switcher & Course Index Bar */}
-        {courseLessons.length > 0 && (
-          <div className="bg-white/70 backdrop-blur-xl border border-slate-200/80 p-4 rounded-[30px] flex flex-col md:flex-row items-center justify-between shadow-sm hover:shadow-md animate-in fade-in slide-in-from-top-2 duration-500 gap-4 transition-all relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-2 h-full bg-indigo-500 rounded-l-[30px]"></div>
-            <div className="flex items-center gap-4 pl-4 rtl:pl-0 rtl:pr-4 w-full md:w-auto">
-              <div className="w-12 h-12 bg-indigo-50 rounded-[18px] flex items-center justify-center text-indigo-600 shrink-0 border border-indigo-100/50">
-                <BookOpen className="w-5 h-5" />
-              </div>
-              <div className="text-start">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                  <span>{language === 'ar' ? 'فهرس الدروس' : 'Lesson Syllabus'}</span>
-                  {currentLessonIdx >= 0 && (
-                    <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-md font-extrabold text-[10px]">
-                      {language === 'ar' ? `الدرس ${currentLessonIdx + 1} من ${courseLessons.length}` : `Lesson ${currentLessonIdx + 1} of ${courseLessons.length}`}
-                    </span>
-                  )}
-                </p>
-                <p className="text-sm md:text-base font-black text-slate-800 truncate max-w-[200px] md:max-w-[280px]">
-                  {course?.title || (language === 'ar' ? "الكورس الدراسي" : "Educational Course")}
-                </p>
-              </div>
-            </div>
-            {/* Quick Course Index Dropdown */}
-            {courseLessons.length > 1 && (
-              <div className="flex items-center gap-2 w-full md:w-auto justify-center">
-                <select
-                  aria-label={language === "ar" ? "اختر درسًا من المقرر" : "Choose a course lesson"}
-                  value={lessonId}
-                  onChange={(e) => {
-                    const target = courseLessons.find((l: any) => l.id === e.target.value);
-                    if (target) goToLesson(target);
-                  }}
-                  className="bg-slate-50 hover:bg-white border border-slate-200 text-slate-900 rounded-2xl py-2.5 px-4 font-black text-xs md:text-sm outline-none focus:border-indigo-600 transition-all cursor-pointer shadow-sm w-full md:w-auto max-w-[320px] truncate"
-                >
-                  {courseLessons.map((l: any, idx: number) => (
-                    <option key={l.id} value={l.id} disabled={!isLessonAvailable(l)}>
-                      {language === 'ar' ? `الدرس ${idx + 1}: ${l.title}` : `Lesson ${idx + 1}: ${l.title}`}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-            {/* Previous & Next Navigation Buttons */}
-            <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-              {prevLesson && (
-                <button
-                  disabled={!isLessonAvailable(prevLesson)}
-                  onClick={() => goToLesson(prevLesson)}
-                  title={prevLesson.title}
-                  className="flex items-center gap-2.5 px-4 py-2.5 bg-white border border-slate-200 text-slate-900 rounded-2xl font-black text-xs md:text-sm hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 transition-all shadow-sm group cursor-pointer"
-                >
-                  <ChevronRight className={`w-4 h-4 transition-transform text-slate-400 group-hover:text-indigo-600 ${language === 'ar' ? 'group-hover:translate-x-1' : 'group-hover:-translate-x-1'}`} />
-                  <div className="flex flex-col text-start">
-                    <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">
-                      {language === 'ar' ? `الدرس السابق (${currentLessonIdx})` : `Previous (${currentLessonIdx})`}
-                    </span>
-                    <span className="truncate max-w-[120px] text-xs font-black">{prevLesson.title}</span>
-                  </div>
-                </button>
-              )}
-              {nextLesson && (
-                <button
-                  disabled={!isLessonAvailable(nextLesson)}
-                  onClick={() => goToLesson(nextLesson)}
-                  title={nextLesson.title}
-                  className="flex items-center gap-2.5 px-5 py-2.5 bg-indigo-600 text-white rounded-2xl font-black text-xs md:text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 group cursor-pointer border border-indigo-500/20"
-                >
-                  <div className="flex flex-col text-start">
-                    <span className="text-[9px] text-indigo-100 font-bold uppercase tracking-wider">
-                      {language === 'ar' ? `الدرس التالي (${currentLessonIdx + 2})` : `Next (${currentLessonIdx + 2})`}
-                    </span>
-                    <span className="truncate max-w-[130px] text-xs font-black">{nextLesson.title}</span>
-                  </div>
-                  <ChevronLeft className={`w-4 h-4 group-hover:-translate-x-0.5 transition-transform text-white ${language === 'en' ? 'rotate-180' : ''}`} />
-                </button>
-              )}
-            </div>
-          </div>
-        )}
+          <SubjectArtwork subject={course?.subject} title={course?.title || lesson.title} coverImage={course?.coverImage} className={headingStyles.art}/>
+        </div>
+        {courseLessons.length > 0 && <LessonSyllabus lessons={courseLessons} lessonId={lessonId} courseTitle={course?.title || ''} language={language} onNavigate={goToLesson} isAvailable={isLessonAvailable} />}
         {/* ── STAGE NAVIGATION TABS ── */}
         {currentStage !== 'summary' && (
-          <div role="group" aria-label={language === "ar" ? "مراحل الدرس" : "Lesson stages"} className="w-full bg-white/80 backdrop-blur-xl border border-slate-200/80 p-3 rounded-[24px] shadow-sm flex flex-wrap items-center justify-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div role="group" aria-label={language === "ar" ? "مراحل الدرس" : "Lesson stages"} className={`${headingStyles.stages} w-full bg-white/80 backdrop-blur-xl border border-slate-200/80 p-3 rounded-[24px] shadow-sm flex flex-wrap items-center justify-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300`}>
             <button
               data-slide-nav="open" aria-pressed={currentStage === 'slides' || currentStage === 'welcome'}
               onClick={() => {
@@ -209,7 +139,7 @@ export default function LessonPlayerPage() {
               }`}
             >
               <BookOpen className="w-4 h-4" />
-              <span>{language === 'ar' ? 'الشرح والدرس' : 'Explanation Content'}</span>
+              <span><strong>{language === 'ar' ? 'الشرح والدرس' : 'Explanation Content'}</strong><small aria-hidden="true">{lesson.slides?.length || 0} {language === 'ar' ? 'شرائح للشرح' : 'learning slides'}</small></span>
             </button>
             <button
               aria-pressed={currentStage === 'assignments'}
@@ -234,7 +164,7 @@ export default function LessonPlayerPage() {
               }`}
             >
               <FileDown className="w-4 h-4" />
-              <span>{language === 'ar' ? 'الواجبات' : 'Assignment'}</span>
+              <span><strong>{language === 'ar' ? 'الواجبات' : 'Assignment'}</strong><small aria-hidden="true">{lesson.assignments?.length || 0} {language === 'ar' ? 'تدريبات للتطبيق' : 'practice items'}</small></span>
             </button>
             <button
               aria-pressed={currentStage === 'exercises'}
@@ -259,13 +189,13 @@ export default function LessonPlayerPage() {
               }`}
             >
               <HelpCircle className="w-4 h-4" />
-              <span>{language === 'ar' ? 'الاختبار' : 'Quiz'}</span>
+              <span><strong>{language === 'ar' ? 'الاختبار' : 'Quiz'}</strong><small aria-hidden="true">{lesson.questions?.length || 0} {language === 'ar' ? 'أسئلة للمراجعة' : 'review questions'}</small></span>
             </button>
           </div>
         )}
         {/* ── MAIN CONTENT AREA ── */}
         <div className="w-full flex flex-col items-center gap-6 md:gap-10">
-          <div className="w-full space-y-10">            {currentStage === 'welcome' && (
+          <div className={`${headingStyles.content} w-full space-y-10`} data-lesson-stage={currentStage}>            {currentStage === 'welcome' && (
               <div className="premium-card p-6 md:p-12 rounded-[48px] animate-in fade-in zoom-in duration-700 flex flex-col justify-center min-h-[400px]">
                 {lesson.videoUrl && (
                   <div className="w-full max-w-4xl mx-auto mb-10 rounded-[35px] overflow-hidden shadow-2xl border border-slate-200 relative aspect-video" style={{ aspectRatio: '16/9' }}>
@@ -311,8 +241,8 @@ export default function LessonPlayerPage() {
               </div>
             )}
             {currentStage === 'slides' && (
-              <div className="premium-card rounded-3xl overflow-hidden flex flex-col group mx-auto w-full max-w-4xl">
-                <div className="p-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between px-8 shrink-0">
+              <div className={`${headingStyles.slideCard} premium-card flex flex-col group mx-auto w-full`}>
+                <div className={headingStyles.slideToolbar}>
                   <div className="flex items-center gap-3 text-slate-400 font-black text-xs uppercase tracking-widest">
                     <Layout className="w-4 h-4" />
                     {t('lesson.slides')}
@@ -435,6 +365,7 @@ export default function LessonPlayerPage() {
                                     }
                                   }}
                                   className={`relative p-4 md:p-6 rounded-3xl border-4 text-right transition-all group overflow-hidden ${isSelected ? (isCorrect ? 'border-emerald-500 bg-emerald-50' : isWrong ? 'border-red-500 bg-red-50' : 'border-indigo-500 bg-indigo-50') : 'border-slate-100 bg-white hover:border-indigo-200'} ${isSubmitted && !isSelected && !isCorrect ? 'opacity-50' : ''}`}
+                                  aria-pressed={isSelected} data-lesson-option data-result={isCorrect ? "correct" : isWrong ? "incorrect" : undefined}
                                   disabled={isSubmitted}
                                 >
                                   <div className="flex items-center gap-3.5 flex-1 text-start w-full overflow-hidden">
@@ -600,7 +531,7 @@ export default function LessonPlayerPage() {
             {currentStage === 'assignments' && (
               <div className="space-y-6 animate-in slide-in-from-bottom-8 duration-700 flex flex-col items-center w-full">
                 {/* 1. Header Navigation Bar for Assignment */}
-                <div className="premium-card p-4 rounded-[30px] flex flex-col md:flex-row items-center justify-between border-b-4 border-indigo-600 w-full max-w-4xl mx-auto gap-4 shrink-0">
+                <div className={`${headingStyles.questionNav} premium-card w-full mx-auto`}>
                   <div className="flex flex-wrap gap-2 justify-center">
                     {lesson.assignments?.map((_: any, i: number) => (
                       <button
@@ -632,12 +563,12 @@ export default function LessonPlayerPage() {
                   </div>
                 </div>
                 {/* 2. Main Question Card for Assignment */}
-                <div className="premium-card rounded-[40px] overflow-hidden shadow-2xl border-indigo-50 w-full max-w-5xl mx-auto flex flex-col">
+                <div className={`${headingStyles.questionCard} premium-card w-full mx-auto flex flex-col`}>
                   {lesson.assignments?.length > 0 && lesson.assignments[currentAssignmentIndex] ? (
                     <>
-                      <div className="p-8 md:p-10">
+                      <div className={headingStyles.questionBody}>
                         {/* Metadata Row */}
-                        <div className="flex justify-between items-start mb-6">
+                        <div className={headingStyles.metadata}>
                           <div className="flex flex-wrap items-center gap-3 max-w-full w-full">
                             <span className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-xs md:text-sm font-black uppercase tracking-wider shadow-sm max-w-full break-words whitespace-normal text-right">
                               {language === 'ar' ? 'الواجب' : 'Assignment'} {currentAssignmentIndex + 1}
@@ -736,6 +667,7 @@ export default function LessonPlayerPage() {
                                         }
                                       }}
                                       disabled={isSubmitted}
+                                      aria-pressed={isSelected} data-lesson-option data-result={isCorrect ? "correct" : isWrong ? "incorrect" : undefined}
                                       className={`p-5 md:p-6 rounded-[25px] border-4 text-start transition-all duration-300 font-black text-sm md:text-base relative break-words overflow-hidden ${isSelected ? (isCorrect ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : isWrong ? 'border-red-500 bg-red-50 text-red-700' : 'bg-indigo-600 border-white text-white shadow-xl shadow-indigo-100') : 'bg-white border-slate-50 text-slate-600 hover:border-indigo-200'} ${isSubmitted && !isSelected && !isCorrect ? 'opacity-50' : ''}`}
                                     >
                                       <div className="flex items-center justify-between gap-4">
@@ -931,7 +863,7 @@ export default function LessonPlayerPage() {
             )}
             {currentStage === 'exercises' && (
               <div className="space-y-6 animate-in slide-in-from-bottom-8 duration-700 flex flex-col items-center w-full">
-                <div className="premium-card p-4 rounded-[30px] flex flex-col md:flex-row items-center justify-between border-b-4 border-indigo-600 w-full max-w-4xl mx-auto gap-4 shrink-0">
+                <div className={`${headingStyles.questionNav} premium-card w-full mx-auto`}>
                   <div className="flex flex-wrap gap-2 justify-center">
                     {lesson.questions.map((_: any, i: number) => (
                       <button
@@ -966,11 +898,11 @@ export default function LessonPlayerPage() {
                     {language === "ar" ? "اختبر فهمي" : "Quiz me"}
                   </button>
                 </div>
-                <div className="premium-card rounded-[40px] overflow-hidden shadow-2xl border-indigo-50 w-full max-w-5xl mx-auto flex flex-col">
+                <div className={`${headingStyles.questionCard} premium-card w-full mx-auto flex flex-col`}>
                   {lesson.questions.length > 0 && lesson.questions[currentQuestionIndex] ? (
                     <>
-                      <div className="p-8 md:p-10">
-                        <div className="flex justify-between items-start mb-6">
+                      <div className={headingStyles.questionBody}>
+                        <div className={headingStyles.metadata}>
                           <div className="flex flex-wrap items-center gap-3 max-w-full w-full">
                             <span className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-xs md:text-sm font-black uppercase tracking-wider shadow-sm max-w-full break-words whitespace-normal text-right">
                               {t('lesson.question')} {currentQuestionIndex + 1}
@@ -1054,7 +986,8 @@ export default function LessonPlayerPage() {
                                   key={oIdx}
                                   onClick={() => handleAnswerSelect(opt)}
                                   disabled={isSubmitted}
-                                  className={`p-5 md:p-6 rounded-[25px] border-4 text-start transition-all duration-300 font-black text-sm md:text-base relative break-words overflow-hidden ${isSelected ? (isCorrect ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : isWrong ? 'border-red-500 bg-red-50 text-red-700' : 'bg-indigo-600 border-white text-white shadow-xl shadow-indigo-100') : 'bg-white border-slate-50 text-slate-600 hover:border-indigo-200'} ${isSubmitted && !isSelected && !isCorrect ? 'opacity-50' : ''}`}
+                                  aria-pressed={isSelected} data-lesson-option data-result={isCorrect ? "correct" : isWrong ? "incorrect" : undefined}
+                                      className={`p-5 md:p-6 rounded-[25px] border-4 text-start transition-all duration-300 font-black text-sm md:text-base relative break-words overflow-hidden ${isSelected ? (isCorrect ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : isWrong ? 'border-red-500 bg-red-50 text-red-700' : 'bg-indigo-600 border-white text-white shadow-xl shadow-indigo-100') : 'bg-white border-slate-50 text-slate-600 hover:border-indigo-200'} ${isSubmitted && !isSelected && !isCorrect ? 'opacity-50' : ''}`}
                                 >
                                   <div className="flex items-center justify-between gap-4">
                                     <div className="flex items-center gap-3.5 flex-1 text-start min-w-0">
@@ -1249,7 +1182,7 @@ export default function LessonPlayerPage() {
             )}
           </div>
         </div>
-      </div>      {/* ── Animated Feedback Overlay ── */}
+      </div></div>      {/* ── Animated Feedback Overlay ── */}
       {toastFeedback && (
         <AnimatedFeedback 
           key={feedbackKey}

@@ -414,6 +414,7 @@ export default function EditSchoolSkillClusterPage() {
            <div className="absolute top-0 right-0 w-1/3 h-full bg-amber-500/5 blur-[120px] rounded-full -mr-20"></div>
         </div>
 
+        
         {/* Tabs */}
         <div className="flex overflow-x-auto hide-scrollbar gap-2 sm:gap-4 p-2 bg-white rounded-2xl sm:rounded-full shadow-sm border border-slate-100">
            {[

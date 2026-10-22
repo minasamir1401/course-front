@@ -2,6 +2,8 @@
 
 import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
 import React from "react";
+import { SubjectPreview } from "@/components/student/SubjectArtwork";
+import { SUBJECT_CATALOG } from "@/lib/subjectArtwork";
 import Image from "next/image";
 import { useCourseEditor } from "./CourseEditorContext";
 import { Settings, Edit2, CheckCircle2, Trash2, Upload, Layers, EyeOff } from "lucide-react";
@@ -365,11 +367,16 @@ export const CourseSettingsForm: React.FC = () => {
             <label className="text-xs font-black text-slate-400 uppercase tracking-widest block">{language === "ar" ? "المادة" : "Subject"}</label>
             <input
               type="text"
+              list="course-subject-options"
+              aria-label={language === "ar" ? "المادة" : "Subject"}
               value={courseData.subject}
               onChange={(e) => setCourseData({ ...courseData, subject: e.target.value })}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-900 font-bold outline-none focus:border-indigo-600 transition-all text-sm"
             />
           </div>
+
+          <datalist id="course-subject-options">{SUBJECT_CATALOG.map(subject => <option key={subject.key} value={language === "ar" ? subject.ar : subject.en} />)}</datalist>
+          <SubjectPreview subject={courseData.subject} title={courseData.title} coverImage={courseData.coverImage} language={language} />
 
           {role === "SUPER_ADMIN" && (
             <div className="space-y-2">

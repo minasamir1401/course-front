@@ -2,7 +2,7 @@
 import React from 'react';
 import { Settings, Layers, CheckCircle2, ListOrdered, Upload, Download, FileText } from 'lucide-react';
 import { CustomSelect } from '@/components/ui/CustomSelect';
-import FileUpload from '@/components/FileUpload';
+import { SubjectPreview } from '@/components/student/SubjectArtwork';
 import { CATEGORIES } from '../constants';
 import { getGradeName, getSubjectName } from '../utils/examUtils';
 
@@ -36,15 +36,9 @@ export const SettingsPanel = (props: any) => {
           </div>
 
           <div className="space-y-6 relative z-10 transition-all duration-300">
-            {/* Cover Image Upload */}
+            {/* Automatic subject cover */}
             <div className="space-y-3">
-              <FileUpload
-                label={language === 'ar' ? 'صورة غلاف التقييم' : 'Assessment Cover Image'}
-                accept="image/*"
-                value={examData.coverImage}
-                onUploadSuccess={(url) => setExamData({ ...examData, coverImage: url })}
-                tokenKey="super_admin_token"
-              />
+              <SubjectPreview subject={examData.subjects} title={examData.title} language={language} allowCustomCover={false} />
             </div>
 
             <div className="space-y-2">
@@ -164,7 +158,7 @@ export const SettingsPanel = (props: any) => {
                       >
                         {examData.subjects.includes(cat) && <CheckCircle2 className="w-3 h-3" />}
                       </div>
-                      <span className="text-xs font-black">{getSubjectName(cat)}</span>
+                      <span className="text-xs font-black">{getSubjectName(cat, language)}</span>
                     </label>
                   ))}
                 </div>
