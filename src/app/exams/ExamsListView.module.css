@@ -1,0 +1,83 @@
+:global(.student-workspace) main.main { width:100%; max-width:none; padding:0 clamp(18px,4.5vw,70px) 35px; background:#f7f8fd; }
+.page { position:relative; isolation:isolate; max-width:1280px; margin-inline:auto; color:#292034; font-family:var(--student-font,'Cairo','Segoe UI',Tahoma,Arial,sans-serif); }
+.hero { position:relative; display:flex; align-items:center; justify-content:space-between; min-height:190px; gap:24px; padding-block:25px 20px; }
+.heroCopy { position:relative; z-index:2; width:65%; }
+.breadcrumb { display:flex; align-items:center; gap:8px; width:fit-content; min-height:34px; margin-bottom:8px; color:#654a7f; font-size:12px; }
+.breadcrumb>span { color:#51475f; }
+.title { display:flex; align-items:center; gap:12px; }
+.title>span { display:grid; place-items:center; width:48px; height:48px; border-radius:15px; background:linear-gradient(130deg,#eee6fb,#e0d8f3); flex-shrink:0; }
+.title h1 { font-size:clamp(23px,2.4vw,30px); font-weight:900; line-height:1.7; }
+.heroCopy>p { color:#58545f; font-size:12px; line-height:2; margin-top:8px; }
+.heroArt { position:relative; width:340px; max-width:34%; height:185px; object-fit:contain; margin-block:-25px -15px; }
+.wave { position:absolute; z-index:-1; pointer-events:none; width:100vw; height:195px; left:calc((100% - 100vw) / 2); bottom:-20px; background:url('/klevro/waves/dashboard-hero-wave.svg') center / 100% 100% no-repeat; opacity:.48; transform:scaleY(-1); }
+.examPanel { position:relative; padding:17px; border:1px solid #e5e1ef; border-radius:27px; background:#ffffffd9; box-shadow:0 5px 20px #3d28520a; }
+.toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:12px; padding:0 3px 9px; }
+.search { display:flex; align-items:center; gap:8px; width:310px; padding-inline:12px; border:1px solid #e3dfec; border-radius:12px; background:#f8f7fc; color:#5e5468; }
+.search input { width:100%; min-width:0; min-height:42px; background:transparent; border:0; color:#302740; font-size:12px; outline:none; }
+.search input::placeholder { color:#5c5265; }
+.search:focus-within { outline:2px solid #9872d2; outline-offset:2px; }
+.statusFilter { display:flex; align-items:center; gap:8px; padding:0 10px; border:1px solid #e3dfec; border-radius:12px; background:#fff; color:#5e5068; font-size:12px; }
+.statusFilter select { min-height:42px; color:#4c3e61; background:transparent; border:0; font-size:12px; max-width:180px; }
+.toolbarActions { display:flex; align-items:center; flex-wrap:wrap; gap:14px; margin-inline-start:auto; }
+.toolbarActions>a,.toolbarActions>button { display:flex; align-items:center; justify-content:center; gap:7px; min-height:42px; color:#634582; font-size:12px; }
+.toolbarActions>button { text-decoration:underline; cursor:pointer; }
+.resultCount { color:#5c5464; font-size:12px; min-height:24px; padding-inline:6px; }
+.list { display:flex; flex-direction:column; gap:16px; }
+.card { display:flex; flex-direction:row-reverse; align-items:stretch; gap:24px; padding:8px; border:1px solid #e8e4f0; border-radius:22px; background:#fff; box-shadow:0 4px 10px #35224908; }
+.visual { position:relative; flex:0 0 34%; min-width:0; min-height:207px; border:1px solid #eee9f5; border-radius:17px; overflow:hidden; }
+.visual>div { width:100%; height:100%; aspect-ratio:auto; min-height:207px; }
+.visual img { object-fit:contain; padding:18px 18px 5px; }
+.badge { position:absolute; top:13px; inset-inline-end:12px; display:flex; align-items:center; gap:6px; max-width:calc(100% - 24px); padding:5px 10px; background:#fffffff2; border:1px solid #ebe4f4; border-radius:999px; color:#544363; font-size:12px; font-weight:600; box-shadow:0 2px 4px #3821450b; }
+.badge>span { width:6px; height:6px; border-radius:50%; background:#ab82ca; flex-shrink:0; }
+.badge[data-state='AVAILABLE']>span { background:#20c6a4; }.badge[data-state='COMPLETED']>span { background:#eea067; }.badge[data-state='CLOSED']>span { background:#d47c91; }
+.cardContent { flex:1; min-width:0; display:flex; flex-direction:column; padding:5px 8px 5px 0; }
+.cardHeading { display:flex; align-items:center; gap:11px; }
+.cardHeading>div { min-width:0; }
+.cardHeading h2 { font-size:17px; font-weight:900; line-height:1.8; overflow-wrap:anywhere; }
+.cardHeading h2 a:hover { color:#60329b; }
+.examIcon { display:grid; place-items:center; flex-shrink:0; width:44px; height:44px; border:1px solid #a5d7dd; border-radius:14px; background:linear-gradient(145deg,#f5ffff,#ece7fb); box-shadow:0 0 0 4px #eff7f8; }
+.examIcon img { opacity:1; }.examIcon[data-state='UPCOMING'] { border-color:#baa3dd; }
+.subject { font-size:12px; color:#5f5269; line-height:1.8; margin-top:1px; }
+.chips { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-block:11px; }
+.chips>span { display:flex; align-items:center; gap:6px; min-height:28px; padding:5px 10px; border-radius:999px; background:#f2eef8; color:#51405f; font-size:12px; }
+.chips svg { color:#6e488d; flex-shrink:0; }
+.cardBottom { display:flex; gap:16px; justify-content:space-between; flex:1; }
+.dates { min-width:0; }
+.dates p { display:flex; align-items:flex-start; gap:6px; color:#5b5661; font-size:12px; line-height:1.8; margin-top:3px; }
+.dates p>svg { flex-shrink:0; margin-top:2px; color:#545762; }
+.dates .stateNote { color:#5d5464; font-size:12px; margin-top:8px; }
+.dates .noDates { color:#5d5266; }
+.cardActions { display:flex; flex-direction:column; align-items:stretch; justify-content:flex-end; flex-shrink:0; gap:8px; min-width:145px; }
+.primary,.secondary { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:40px; padding:8px 17px; border-radius:999px; font-size:12px; font-weight:700; text-align:center; }
+.primary { background:linear-gradient(100deg,#5124de,#6936e8); border:1px solid #5724d4; color:#fff; box-shadow:0 4px 7px #6435c72b; }
+.primary:hover { background:#4d20cc; }.secondary { background:#fff; border:1px solid #e4dcec; box-shadow:0 3px 5px #452a610a; color:#664382; }
+.secondary:hover { background:#f7f2fe; }
+.detailsLink { display:flex; justify-content:center; align-items:center; gap:6px; min-height:34px; color:#664b81; font-size:12px; text-decoration:underline; }
+.reports { display:flex; align-items:center; justify-content:center; gap:9px; width:fit-content; min-height:44px; padding:10px 17px; margin:20px auto 0; color:#684483; border:1px solid #e6ddf0; border-radius:999px; background:#ffffffc9; font-size:12px; }
+.empty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:15px; min-height:300px; padding:28px; text-align:center; color:#5d3c8d; }
+.empty h2 { font-size:20px; font-weight:800; }.empty p { font-size:13px; color:#5a5266; line-height:1.9; }.empty>a,.empty>button { min-height:44px; padding:10px 18px; border:1px solid #bda5dd; border-radius:12px; font-size:12px; cursor:pointer; }
+.skeletons { display:flex; flex-direction:column; gap:16px; }.skeletons>div { height:220px; border-radius:22px; background:linear-gradient(110deg,#efebf5,#fafbff,#e7f3f8); }
+.page :where(a,button,select):focus-visible { outline:3px solid #9773cb; outline-offset:4px; }
+@media(max-width:1050px) { .card { gap:17px; }.cardBottom { flex-wrap:wrap; gap:10px; }.cardActions { flex-direction:row; justify-content:flex-end; flex-wrap:wrap; width:100%; }.cardContent { padding-block:7px; }.visual { flex-basis:31%; }.cardHeading h2 { font-size:16px; }.hero { min-height:180px; }.heroArt { max-width:32%; } }
+@media(max-width:700px) { :global(.student-workspace) main.main { padding:0 18px 110px; }.hero { align-items:flex-start; min-height:223px; padding-top:16px; }.heroCopy { width:100%; }.title { gap:9px; }.title h1 { font-size:23px; }.title>span { width:41px; height:41px; border-radius:13px; }.heroCopy>p { max-width:70%; font-size:12px; }.heroArt { position:absolute; width:200px; max-width:40%; height:125px; inset-inline-end:-5px; bottom:3px; margin:0; }.wave { bottom:-5px; height:190px; }.examPanel { padding:12px; border-radius:23px; }.toolbar { gap:10px; }.search { width:100%; }.statusFilter { flex:1; justify-content:space-between; }.toolbarActions { gap:10px; }.toolbarActions>a { font-size:12px; }.card { gap:15px; }.visual { flex-basis:32%; }.chips { gap:5px; }.chips>span { padding:5px 8px; font-size:12px; }.cardHeading h2 { font-size:15px; }.examIcon { width:36px; height:38px; border-radius:11px; }.examIcon img { width:22px; height:22px; }.cardActions { justify-content:flex-start; }.primary,.secondary { min-height:44px; padding-inline:14px; }.badge { font-size:12px; padding:4px 7px; inset-inline-end:7px; top:9px; max-width:calc(100% - 14px); }.visual img { padding:20px 6px 5px; } }
+@media(max-width:520px) { :global(.student-workspace) main.main { padding:0 12px 110px; }.hero { min-height:240px; }.heroCopy>p { max-width:100%; }.heroArt { width:160px; height:100px; max-width:50%; bottom:-7px; opacity:.95; }.breadcrumb { margin-bottom:5px; }.examPanel { padding:10px; border-radius:22px; }.toolbarActions { width:100%; justify-content:space-between; }.toolbarActions>a { margin-inline-start:auto; }.statusFilter { width:100%; }.statusFilter select { max-width:none; flex:1; }.card { flex-direction:column; gap:12px; padding:7px; border-radius:19px; }.visual { flex:auto; width:100%; min-height:140px; height:140px; border-radius:14px; }.visual>div { height:140px; min-height:140px; }.visual img { padding:7px 22px; }.badge { font-size:12px; inset-inline-end:10px; top:10px; }.cardContent { padding:3px 7px 8px; }.cardHeading h2 { font-size:16px; }.cardBottom { gap:12px; }.cardActions { width:100%; }.primary,.secondary { flex:1; }.detailsLink { min-height:44px; flex:1; }.dates p { font-size:12px; }.dates .stateNote { font-size:12px; }.chips>span { font-size:12px; }.reports { font-size:12px; gap:7px; } }
+@media(prefers-reduced-motion:reduce) { .page * { transition:none; } }
+
+/* Assessment overview: two columns, keeping all dates and availability actions. */
+.list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
+.examPanel { background:transparent; border:0; box-shadow:none; padding:0; }
+.toolbar { padding:0 0 15px; }.resultCount { padding-bottom:9px; }
+.card { position:relative; display:flex; flex-direction:column; padding:17px; gap:12px; border-radius:22px; min-width:0; }
+.visual { position:absolute; width:92px; height:76px; min-height:0; inset-inline-end:14px; top:14px; border:0; border-radius:14px; }
+.visual>div { min-height:0; height:76px; }.visual img { padding:5px; }
+.badge { position:static; max-width:none; font-size:12px; margin-top:3px; padding:3px 7px; width:fit-content; }
+.visual .badge { position:absolute; top:80px; inset-inline-end:0; white-space:nowrap; }
+.cardContent { padding:0; }.cardHeading { padding-inline-end:96px; min-height:76px; align-items:start; gap:8px; }
+.examIcon { width:32px; height:34px; border-radius:10px; box-shadow:none; }.examIcon img { width:20px; height:20px; }.cardHeading h2 { font-size:15px; line-height:1.9; }
+.subject { font-size:12px; }.chips { margin-block:16px 10px; padding-inline-end:70px; gap:6px; }.chips>span { font-size:12px; padding:4px 8px; }
+.cardBottom { flex-direction:column; gap:12px; }.dates p { font-size:12px; }.dates .stateNote { margin-top:6px; }
+.cardActions { width:100%; flex-direction:row; flex-wrap:wrap; gap:8px; }.cardActions .primary { background:linear-gradient(100deg,#5145c9,#5351dc); box-shadow:0 3px 6px #5448c527; }.cardActions>a { flex:1; min-height:40px; font-size:12px; }.cardActions .detailsLink { flex-basis:100%; min-height:30px; }
+@media(max-width:800px) { .list { gap:13px; }.card { padding:13px; }.cardHeading { display:block; padding-inline-end:83px; }.examIcon { display:none; }.visual { width:78px; height:72px; inset-inline-end:11px; }.visual>div { height:72px; }.cardHeading h2 { font-size:13px; }.chips { padding-inline-end:0; margin-top:20px; } }
+@media(max-width:600px) { .list { grid-template-columns:1fr; }.card { padding:16px; }.cardHeading h2 { font-size:15px; }.cardHeading { padding-inline-end:100px; min-height:72px; }.visual { width:95px; height:78px; }.visual>div { height:78px; }.chips { margin-top:15px; padding-inline-end:80px; }.badge { font-size:12px; }.cardContent { padding:0; }.cardActions { flex-direction:row; }.dates p { font-size:12px; }.cardActions>a { min-height:44px; } }
+
+.visual { overflow:visible; }.visual>div { border-radius:14px; overflow:hidden; }.visual .badge { z-index:1; }

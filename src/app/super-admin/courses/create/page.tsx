@@ -9,6 +9,7 @@ import { apiFetch, API_URL } from '@/lib/api';
 import { normalizeDok } from '@/lib/examQuestionMetadata';
 import { useNotification } from "@/context/NotificationContext";
 import DashboardLayout from "@/components/DashboardLayout";
+import { SubjectPreview } from "@/components/student/SubjectArtwork";
 import { LessonInfoTab } from "@/components/course-editor/lesson-builder/LessonInfoTab";
 import { LessonSlidesBuilder } from "@/components/course-editor/lesson-builder/LessonSlidesBuilder";
 import { LessonQuestionsBuilder } from "@/components/course-editor/lesson-builder/LessonQuestionsBuilder";
@@ -875,6 +876,8 @@ export default function CreateCoursePage() {
               <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{t('courseCreate.coverImage') || "Cover Image"}</label>
               <input type="text" value={courseData.coverImage} onChange={e => setCourseData({...courseData, coverImage: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all" placeholder="https://..." />
             </div>
+            <SubjectPreview subject={courseData.subjects} title={courseData.title} coverImage={courseData.coverImage} language={language} />
+
 
             <div className="space-y-2">
               <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{t('courseCreate.targetGrades')} <span className="text-red-500">*</span></label>

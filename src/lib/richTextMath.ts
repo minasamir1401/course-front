@@ -59,7 +59,7 @@ export function isolatePlainTextMath(html: string): string {
 /** Wrap live text nodes without replacing the editor or moving its caret. */
 export function isolateEditorMath(root: HTMLElement): void {
   const selection = root.ownerDocument.getSelection();
-  const offsets = selection?.anchorNode && selection.focusNode && root.contains(selection.anchorNode) && root.contains(selection.focusNode)
+  const offsets = root.ownerDocument.activeElement === root && selection?.anchorNode && selection.focusNode && root.contains(selection.anchorNode) && root.contains(selection.focusNode)
     ? [selection.anchorNode, selection.focusNode].map((node, index) => {
       const range = root.ownerDocument.createRange();
       range.selectNodeContents(root);

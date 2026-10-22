@@ -1,0 +1,27 @@
+:global(.student-workspace) main.main { width:100%; max-width:none; padding:0 28px 40px; background:#f7f8fd; }
+.shell { position:relative; isolation:isolate; min-height:calc(100vh - 60px); padding:28px 0 12px; color:#292037; font-family:'Cairo','Plus Jakarta Sans','Segoe UI',Tahoma,Arial,sans-serif; }
+.backdrop { position:absolute; z-index:-1; pointer-events:none; inset:0; left:calc((100% - 100vw) / 2); width:100vw; overflow:hidden; }
+.topWave { position:absolute; width:100%; height:330px; top:40px; left:0; background:url('/klevro/waves/dashboard-hero-wave.svg') center / 100% 100% no-repeat; opacity:.45; }
+.bottomWave { position:absolute; width:110%; height:290px; bottom:-100px; left:-5%; background:url('/klevro/waves/login-wave.svg') center / 100% 100% no-repeat; opacity:.44; transform:scaleY(-1); }
+.rightNetwork { position:absolute; width:340px; height:630px; right:-70px; top:-50px; background:url('/klevro/backgrounds/network-transparent.svg') center / cover; opacity:.55; }
+.leftNetwork { position:absolute; width:280px; height:500px; left:-80px; bottom:0; background:url('/klevro/backgrounds/network-transparent.svg') center / cover; opacity:.35; }
+.orbOne,.orbTwo,.orbThree { position:absolute; width:23px; height:23px; border-radius:50%; background:radial-gradient(circle at 28% 20%,#b6e9fc,#36b6d1 45%,#9971d7); box-shadow:0 3px 5px #a38eb322; }
+.orbOne { top:86px; left:7%; }.orbTwo { bottom:230px; right:8%; width:15px; height:15px; }.orbThree { bottom:380px; left:9%; background:radial-gradient(circle at 25% 20%,#f9e5dd,#dcacc5,#a787cd); }
+.hero { position:relative; display:flex; justify-content:space-between; align-items:center; gap:25px; max-width:1100px; min-height:170px; margin:0 auto 24px; }
+.heroCopy { flex:1; min-width:0; }
+.back { display:flex; align-items:center; gap:8px; width:fit-content; min-height:36px; color:#754ca7; font-size:12px; font-weight:700; margin-bottom:12px; }
+.hero h1 { font-size:clamp(24px,2.4vw,35px); font-weight:900; line-height:1.7; overflow-wrap:anywhere; }
+.description { color:#716b7a; font-size:13px; line-height:2; margin-top:9px; overflow-wrap:anywhere; }
+.heroArt { flex-shrink:0; width:240px; height:145px; border:0; border-radius:0; background:transparent; overflow:visible; }
+.heroArt::before,.heroArt::after { display:none; }.heroArt img { padding:0; object-fit:contain; }
+.content { position:relative; width:100%; max-width:920px; margin-inline:auto; }
+.primary,.secondary { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; padding:10px 22px; border-radius:999px; font-size:12px; font-weight:800; line-height:1.7; text-align:center; }
+.primary { background:linear-gradient(100deg,#5222df,#6933e8); color:#fff; border:1px solid #5828d8; box-shadow:0 5px 10px #6234cf30; }.primary:hover { background:#4c20cb; }
+.secondary { border:1px solid #e1dce8; background:#fff; color:#694496; box-shadow:0 2px 4px #3620480e; }.secondary:hover { border-color:#bba2dd; background:#faf7ff; }
+.panel { padding:25px 28px; border:1px solid #e5e1ed; border-radius:27px; background:#fff; box-shadow:0 8px 22px #3e2a560b; }
+.status { padding:24px; border:1px solid #e6def1; border-radius:20px; background:#fff; color:#68517d; font-size:14px; }
+.shell :where(a,button,summary,select):focus-visible { outline:3px solid #9c7bd0; outline-offset:4px; }
+@media(min-width:1600px) { .shell { padding-top:35px; }.hero { min-height:200px; max-width:1250px; }.heroArt { width:290px; height:170px; }.content { max-width:1000px; }.panel { padding:30px; } }
+@media(max-width:1000px) { .hero { gap:18px; }.heroArt { width:200px; height:130px; }.hero h1 { font-size:26px; }.rightNetwork { width:240px; opacity:.3; }.orbOne,.orbTwo,.orbThree { opacity:.5; } }
+@media(max-width:700px) { :global(.student-workspace) main.main { padding:0 16px 110px; }.shell { padding-top:18px; }.hero { flex-wrap:wrap; gap:12px; margin-bottom:19px; min-height:0; }.heroCopy { flex-basis:100%; }.hero h1 { font-size:24px; }.description { font-size:12px; }.heroArt { width:190px; height:110px; margin-inline-start:auto; }.panel { padding:19px; border-radius:23px; }.topWave { top:100px; height:250px; }.bottomWave { height:230px; bottom:-65px; }.back { font-size:11px; }.primary,.secondary { font-size:11px; padding-inline:17px; } }
+@media(max-width:359px) { :global(.student-workspace) main.main { padding-inline:12px; }.hero h1 { font-size:22px; }.panel { padding:15px; } }

@@ -115,7 +115,7 @@ export default function Header({
     if (isSuperAdmin && token) {
       const fetchSchools = async () => {
         try {
-          const res = await apiFetch(API_URL + "/admin/schools", {
+          const res = await apiFetch(API_URL + "/admin/schools?view=options", {
 
             headers: { "Authorization": `Bearer ${token}` }
           });
@@ -160,8 +160,8 @@ export default function Header({
           isFullscreen 
             ? "h-12 md:h-14 bg-white/95 shadow-sm rounded-2xl px-2 md:px-4 w-fit ml-auto border border-slate-100"
             : scrolled
-            ? "h-16 md:h-20 bg-white/80 backdrop-blur-2xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-[32px] md:rounded-[40px] border border-white px-3 md:px-6 max-w-7xl"
-            : "h-20 md:h-24 bg-white/40 backdrop-blur-xl border-b border-slate-200/50 md:border md:border-white/60 md:rounded-[40px] px-4 md:px-8 max-w-[1600px] shadow-sm hover:shadow-xl hover:bg-white/60"
+            ? "h-16 md:h-20 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-[32px] md:rounded-[40px] border border-white px-3 md:px-6 max-w-7xl"
+            : "h-20 md:h-24 bg-white border-b border-slate-200/50 md:border md:border-white/60 md:rounded-[40px] px-4 md:px-8 max-w-[1600px] shadow-sm"
         }`}
       >
         {/* ── RIGHT SIDE: Navigation & Logo ── */}

@@ -183,6 +183,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
 
   // Initialize and keep in sync
   useEffect(() => {
+    if (!editorRef.current || document.activeElement === editorRef.current) return;
     // Intercept and fix any legacy/absolute image URLs pointing to the backend domain
     const cleanValue = isolateRichTextMath(value || "").replace(/https?:\/\/([a-zA-Z0-9.-]+)\/uploads\//g, "/uploads/");
 
@@ -509,7 +510,8 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
   const handleBlur = () => {
     setIsFocused(false);
     if (editorRef.current) {
-      isolateEditorMath(editorRef.current);
+      // Input already normalized the content. Changing the selection during blur
+      // can focus this editor again while the user is clicking another field.
       const content = editorRef.current.innerHTML;
       if (content !== value) onChange(content);
     }

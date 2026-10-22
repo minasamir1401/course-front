@@ -19,7 +19,7 @@ export default function SuperAdminCoursesPage() {
   const [courses, setCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [mergingCloud, setMergingCloud] = useState(false); // silent background cloud merge
+
   const jsonInputRef = useRef<HTMLInputElement | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -39,14 +39,6 @@ export default function SuperAdminCoursesPage() {
     fetchCourses(true);
     fetchStats();
 
-    // ⚡ Silent background refresh after 3s — by then the Backup DB cache is warm
-    // and the second fetch will include cloud-only courses + update 'local' badges to 'both'
-    // This runs WITHOUT any loading spinner so the user sees local courses immediately
-    const cloudRefreshTimer = setTimeout(() => {
-      silentCloudMerge();
-    }, 3000);
-
-    return () => clearTimeout(cloudRefreshTimer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -129,56 +121,6 @@ export default function SuperAdminCoursesPage() {
     } finally {
       setLoading(false);
       setLoadingMore(false);
-    }
-  };
-
-  // ⚡ Silent background cloud merge — runs 3s after initial load
-  // Fetches courses again (Backup DB cache is now warm) and merges cloud data
-  // WITHOUT showing any loading spinner or removing existing courses
-  const silentCloudMerge = async () => {
-    try {
-      setMergingCloud(true);
-      const token = localStorage.getItem("super_admin_token");
-      const url = new URL(`${API_URL}/courses`);
-      url.searchParams.append("page", "1");
-      url.searchParams.append("limit", "100");
-
-      const res = await apiFetch(url.toString(), {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-      const freshCourses: any[] = data.courses || [];
-
-      // Merge: update existing badges + add any cloud-only courses
-      setCourses(prev => {
-        const existingMap = new Map(prev.map((c: any) => [c.id, c]));
-        for (const fc of freshCourses) {
-          if (fc?.id) {
-            if (existingMap.has(fc.id)) {
-              // Update _source badge (e.g. 'local' → 'both')
-              const existing = existingMap.get(fc.id);
-              if (existing._source !== fc._source) {
-                existingMap.set(fc.id, { ...existing, _source: fc._source });
-              }
-            } else {
-              // New cloud-only course — add it
-              existingMap.set(fc.id, fc);
-            }
-          }
-        }
-        const mergedList = Array.from(existingMap.values());
-        // Sort: local and 'both' first, 'cloud' only at the end
-        return mergedList.sort((a: any, b: any) => {
-          if (a._source === 'cloud' && b._source !== 'cloud') return 1;
-          if (a._source !== 'cloud' && b._source === 'cloud') return -1;
-          return 0; // maintain original order otherwise
-        });
-      });
-    } catch (e) {
-      // Silent fail — don't show error toast for background refresh
-      console.warn('[Cloud Merge] Background refresh failed silently:', e);
-    } finally {
-      setMergingCloud(false);
     }
   };
 
@@ -304,21 +246,21 @@ export default function SuperAdminCoursesPage() {
       <div className="space-y-6 sm:space-y-10" dir={language === 'ar' ? 'rtl' : 'ltr'}>
           
           {/* Header Section */}
-          <div className="relative bg-white rounded-[20px] sm:rounded-[50px] p-4 sm:p-12 overflow-hidden shadow-sm border border-slate-100">
-             <div className="relative z-10 flex flex-col lg:flex-row justify-between items-center gap-6 sm:gap-10">
-                <div className={`flex flex-col sm:flex-row items-center gap-4 sm:gap-8 ${language === 'ar' ? 'text-right sm:items-start' : 'text-left sm:items-start'}`}>
-                   <div className="w-12 h-12 sm:w-24 h-24 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-xl sm:rounded-[35px] flex items-center justify-center shadow-xl sm:shadow-2xl shadow-indigo-500/20 transform -rotate-3 hover:rotate-0 transition-all duration-500 shrink-0">
-                      <Sparkles className="w-6 h-6 sm:w-12 h-12 text-white" />
+          <div className="relative min-w-0 bg-white rounded-[20px] sm:rounded-[36px] p-4 sm:p-6 xl:p-8 overflow-hidden shadow-sm border border-slate-100">
+             <div className="relative z-10 flex min-w-0 flex-col gap-6 sm:gap-8">
+                <div className={`flex min-w-0 w-full items-start gap-3 sm:gap-6 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+                   <div className="w-12 h-12 sm:w-20 sm:h-20 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-xl sm:rounded-[28px] flex items-center justify-center shadow-xl shadow-indigo-500/20 transform -rotate-3 hover:rotate-0 transition-all duration-500 shrink-0">
+                      <Sparkles className="w-6 h-6 sm:w-10 sm:h-10 text-white" />
                    </div>
-                   <div>
-                      <h1 className="text-lg sm:text-4xl font-black text-slate-900 mb-1 sm:mb-3 tracking-tight">{t('coursesPage.title')}</h1>
-                      <p className="text-slate-500 text-[10px] sm:text-lg font-medium max-w-xl leading-relaxed opacity-80">
+                   <div className="min-w-0 flex-1">
+                      <h1 className="text-xl sm:text-3xl xl:text-4xl font-black text-slate-900 mb-2 tracking-tight leading-snug break-words">{t('coursesPage.title')}</h1>
+                      <p className="text-slate-500 text-xs sm:text-base font-medium max-w-2xl leading-relaxed break-words opacity-80">
                          {t('coursesPage.subtitle')}
                       </p>
                    </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                <div className="grid min-w-0 w-full grid-cols-1 sm:grid-cols-2 2xl:grid-cols-4 gap-3">
                   <input
                     type="file"
                     ref={jsonInputRef}
@@ -328,31 +270,31 @@ export default function SuperAdminCoursesPage() {
                   />
                   <button 
                     onClick={handleRestoreFromCloud}
-                    className="group bg-sky-50 text-sky-600 border border-sky-100 px-6 sm:px-8 py-3 sm:py-5 rounded-xl sm:rounded-[22px] font-black text-xs sm:text-xl shadow-sm hover:scale-105 transition-all flex items-center gap-2 sm:gap-4 justify-center"
+                    className="group min-w-0 min-h-12 bg-sky-50 text-sky-600 border border-sky-100 px-4 py-3 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base shadow-sm hover:bg-sky-100 transition-colors flex items-center gap-2 justify-center text-center"
                     title={language === 'ar' ? "استرجاع كافة الكورسات والدروس من السحابة" : "Restore all courses & lessons from cloud"}
                   >
-                    <DownloadCloud className="w-4 h-4 sm:w-6 h-6" />
+                    <DownloadCloud className="w-5 h-5 shrink-0" />
                     {language === 'ar' ? "استرجاع السحابة" : "Restore Cloud"}
                   </button>
                   <button 
                     onClick={() => setIsImportModalOpen(true)}
-                    className="group bg-indigo-50 text-indigo-600 px-6 sm:px-8 py-3 sm:py-5 rounded-xl sm:rounded-[22px] font-black text-xs sm:text-xl shadow-sm hover:scale-105 transition-all flex items-center gap-2 sm:gap-4 justify-center"
+                    className="group min-w-0 min-h-12 bg-indigo-50 text-indigo-600 px-4 py-3 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base shadow-sm hover:bg-indigo-100 transition-colors flex items-center gap-2 justify-center text-center"
                   >
-                    <FileSpreadsheet className="w-4 h-4 sm:w-6 h-6" />
+                    <FileSpreadsheet className="w-5 h-5 shrink-0" />
                     {language === 'ar' ? "استيراد Excel" : "Import Excel"}
                   </button>
                   <button 
                     onClick={() => jsonInputRef.current?.click()}
-                    className="group bg-emerald-50 text-emerald-600 px-6 sm:px-8 py-3 sm:py-5 rounded-xl sm:rounded-[22px] font-black text-xs sm:text-xl shadow-sm hover:scale-105 transition-all flex items-center gap-2 sm:gap-4 justify-center"
+                    className="group min-w-0 min-h-12 bg-emerald-50 text-emerald-600 px-4 py-3 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base shadow-sm hover:bg-emerald-100 transition-colors flex items-center gap-2 justify-center text-center"
                   >
-                    <Upload className="w-4 h-4 sm:w-6 h-6" />
+                    <Upload className="w-5 h-5 shrink-0" />
                     {language === 'ar' ? "استعادة JSON" : "Restore JSON"}
                   </button>
                   <Link 
                     href="/super-admin/courses/create"
-                    className="group bg-slate-900 text-white px-6 sm:px-12 py-3 sm:py-5 rounded-xl sm:rounded-[22px] font-black text-xs sm:text-xl shadow-xl shadow-slate-900/10 hover:scale-105 transition-all flex items-center gap-2 sm:gap-4 justify-center"
+                    className="group min-w-0 min-h-12 bg-slate-900 text-white px-4 py-3 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base shadow-xl shadow-slate-900/10 hover:bg-slate-800 transition-colors flex items-center gap-2 justify-center text-center"
                   >
-                    <Plus className="w-4 h-4 sm:w-6 h-6 group-hover:rotate-90 transition-transform" />
+                    <Plus className="w-5 h-5 shrink-0 group-hover:rotate-90 transition-transform" />
                     {t('coursesPage.createCurriculum')}
                   </Link>
                 </div>
@@ -470,19 +412,19 @@ export default function SuperAdminCoursesPage() {
                            <p className="text-slate-400 text-xs sm:text-sm font-bold line-clamp-1">{course.description || (language === 'ar' ? "منهج تعليمي مركزي." : "Central curriculum.")}</p>
                         </div>
  
-                        <div className="flex items-center gap-6 shrink-0 w-full md:w-auto justify-between md:justify-end border-t border-slate-50 md:border-none pt-4 md:pt-0">
-                           <div className="flex items-center gap-4 text-xs font-black text-slate-400 uppercase tracking-widest">
-                              <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
+                        <div className="flex flex-wrap items-center gap-3 shrink-0 w-full md:w-auto justify-between md:justify-end border-t border-slate-50 md:border-none pt-4 md:pt-0">
+                           <div className="flex flex-wrap items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest">
+                              <div className="flex shrink-0 items-center gap-2 whitespace-nowrap bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
                                  <Monitor className="w-4 h-4 text-indigo-400" />
                                  <span className="hidden sm:inline">{language === 'ar' ? "درس" : "lesson(s)"}</span> {course._count?.lessons || 0}
                               </div>
-                              <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
+                              <div className="flex shrink-0 items-center gap-2 whitespace-nowrap bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
                                  <GraduationCap className="w-4 h-4 text-blue-400" />
                                  <span className="hidden sm:inline">{language === 'ar' ? "طالب" : "student(s)"}</span> {course._count?.enrollments || 0}
                               </div>
                            </div>
                            
-                           <div className="flex items-center gap-2">
+                           <div className="flex flex-wrap shrink-0 items-center gap-2">
                               <button 
                                 onClick={async () => {
                                   try {

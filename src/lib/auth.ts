@@ -27,7 +27,14 @@ export const AUTH_KEYS = {
   }
 };
 
-export const checkAuthSession = async (): Promise<{ authenticated: boolean; user: any | null }> => {
+let sessionRequest: Promise<{ authenticated: boolean; user: any | null }> | null = null;
+export const checkAuthSession = (): Promise<{ authenticated: boolean; user: any | null }> => {
+  // Multiple guards on one page share the current request, never a cached identity.
+  if (sessionRequest) return sessionRequest;
+  sessionRequest = readAuthSession().finally(() => { sessionRequest = null; });
+  return sessionRequest;
+};
+const readAuthSession = async (): Promise<{ authenticated: boolean; user: any | null }> => {
   try {
     const res = await apiFetch('/api/auth/me');
     if (!res.ok) return { authenticated: false, user: null };
@@ -39,6 +46,7 @@ export const checkAuthSession = async (): Promise<{ authenticated: boolean; user
 };
 
 export const clearAllAuthData = () => {
+  sessionRequest = null;
   Object.values(AUTH_KEYS).forEach(config => {
     localStorage.removeItem(config.TOKEN);
     localStorage.removeItem(config.USER);
@@ -50,7 +58,7 @@ export const clearAllAuthData = () => {
   localStorage.removeItem("original_admin_type");
 };
 
-export const logout = (router: any, currentPath: string = "") => {
+export const logout = async (router: any, currentPath: string = "") => {
   let redirectPath = AUTH_KEYS.STUDENT.LOGIN_PATH;
   let authKey = AUTH_KEYS.STUDENT;
   
@@ -62,9 +70,21 @@ export const logout = (router: any, currentPath: string = "") => {
     authKey = AUTH_KEYS.SCHOOL_ADMIN;
   }
 
+  // Remove this browser's push endpoint before clearing the authenticated cookie.
+  // Unsubscribing also invalidates the push endpoint if the server is unreachable.
+  if (!currentPath.startsWith('/school-admin') && !currentPath.startsWith('/super-admin') && 'serviceWorker' in navigator) {
+    try {
+      const registration = await navigator.serviceWorker.getRegistration('/');
+      const subscription = await registration?.pushManager?.getSubscription();
+      if (subscription) {
+        try { await fetch('/api/push/subscriptions', { method: 'DELETE', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: subscription.endpoint }), signal: AbortSignal.timeout(3000) }); } catch {}
+        await subscription.unsubscribe();
+      }
+    } catch { /* The generic lock-screen payload contains no private learning data. */ }
+  }
   // Clear httpOnly cookie on server
   try {
-    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include', signal: AbortSignal.timeout(3000) });
   } catch {
     // Non-fatal
   }

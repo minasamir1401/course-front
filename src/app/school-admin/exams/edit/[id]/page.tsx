@@ -252,6 +252,7 @@ export default function SchoolAdminEditExamPage() {
   if (effectiveWorkflowView === "sub-exam-editor" && moduleId && subExamId) {
     return (
       <DashboardLayout>
+        
         <SubExamEditorScreen
           backHref={`/school-admin/exams/edit/${examId}?moduleId=${encodeURIComponent(moduleId)}`}
           examHref={`/exams/${examId}?preview=true&subExamId=${encodeURIComponent(subExamId)}`}
@@ -271,6 +272,7 @@ export default function SchoolAdminEditExamPage() {
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto space-y-12">
+        
         
         <ModuleModal 
           {...state}

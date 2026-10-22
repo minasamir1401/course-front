@@ -1,0 +1,24 @@
+import { test,expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
+import { studentSession,course,stamp } from './helpers/studentWorkspace';
+test.use({serviceWorkers:'block'});
+const stats={name:'Student',overallCourseProgress:38,avgScore:69,totalExams:9,xp:370,generatedAt:stamp,upcomingTasks:[],courseProgresses:[{...course,progressPercent:70},{...course,id:'science',subject:'Science',title:'Science — discovery',progressPercent:0},{...course,id:'arabic',subject:'Arabic',title:'اللغة العربية — أولى ثانوي',progressPercent:50},{...course,id:'english',subject:'English',title:'English — reading',progressPercent:25}]};
+for(const language of ['ar','en'])test(`dashboard matches reference structure and real values ${language}`,async({page})=>{
+ test.setTimeout(240000);await studentSession(page,language);await page.route('https://fonts.googleapis.com/**',route=>route.abort());await page.route('**/api/student/stats',route=>route.fulfill({json:stats}));const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ for(const width of [320,390,768,1011,1152,1440,1536]){
+  await page.setViewportSize({width,height:width<600?844:928});await page.goto('/dashboard',{waitUntil:'domcontentloaded'});await expect(page.locator('h1')).toContainText('Student');await expect(page.locator('h1 bdi')).toHaveText('Student');
+  const values=page.locator('[class*="metricValue"]');await expect(values).toHaveCount(4);await expect(values.nth(0)).toHaveText(language==='ar'?'٣٨%':'38%');await expect(values.nth(3)).toHaveText(language==='ar'?'٣٧٠':'370');
+  await expect(page.locator('a[href="/assignments"]')).toHaveCount(0);await expect(page.getByRole('link',{name:language==='ar'?'أكمل دراستك':'Continue learning',exact:true})).toHaveAttribute('href','/courses/course');expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  if(width===390||width===1152){await page.emulateMedia({reducedMotion:'reduce'});const audit=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();expect(audit.violations.map(v=>({id:v.id,targets:v.nodes.map(n=>n.target)}))).toEqual([]);await page.screenshot({path:`../artifacts/dashboard-ui/dashboard-${language}-${width}.png`,fullPage:true});}
+ }
+ expect(errors).toEqual([]);
+});
+test('dashboard refresh preserves records on failure and recovers',async({page})=>{
+ await studentSession(page);await page.route('https://fonts.googleapis.com/**',r=>r.abort());let fails=false;await page.route('**/api/student/stats',r=>fails?r.fulfill({status:503,json:{error:'Unavailable'}}):r.fulfill({json:stats}));await page.goto('/dashboard',{waitUntil:'domcontentloaded'});await expect(page.locator('[class*="metricValue"]').nth(3)).toHaveText('370');fails=true;await page.getByRole('button',{name:'Refresh progress',exact:true}).click();await expect(page.getByRole('alert').filter({hasText:'Could not load your progress'})).toContainText('Could not load your progress');await expect(page.locator('[class*="metricValue"]').nth(3)).toHaveText('370');fails=false;await page.getByRole('button',{name:'Retry',exact:true}).click();await expect(page.getByRole('alert').filter({hasText:'Could not load your progress'})).toHaveCount(0);
+});
+test('empty and scheduled states use actual records',async({page})=>{
+ await studentSession(page);await page.route('https://fonts.googleapis.com/**',r=>r.abort());await page.route('**/api/student/stats',r=>r.fulfill({json:{...stats,avgScore:null,xp:0,courseProgresses:[],upcomingTasks:[{id:'exam',title:'Scheduled assessment',startDate:'2099-01-01T10:00:00Z'}]}}));await page.goto('/dashboard',{waitUntil:'domcontentloaded'});await expect(page.locator('[class*="metricValue"]').nth(1)).toHaveText('—');await expect(page.locator('[class*="metricValue"]').nth(3)).toHaveText('0');await expect(page.getByRole('link',{name:'Continue learning',exact:true})).toHaveAttribute('href','/courses');await expect(page.locator('a[href="/exams/exam/details"]')).toContainText('Scheduled assessment');
+});
+test('assignments are removed from navigation and old URLs redirect',async({page})=>{
+ await studentSession(page);await page.route('https://fonts.googleapis.com/**',r=>r.abort());await page.setViewportSize({width:390,height:844});await page.goto('/dashboard',{waitUntil:'domcontentloaded'});await page.getByRole('button',{name:'Menu & account',exact:true}).click();await expect(page.getByRole('dialog').locator('a[href="/assignments"]')).toHaveCount(0);await expect(page.getByRole('dialog').locator('a[href="/activities"]')).toBeVisible();await page.keyboard.press('Escape');await page.goto('/assignments',{waitUntil:'domcontentloaded'});await expect(page).toHaveURL(/\/exams$/);await expect(page.locator('a[href="/assignments"]')).toHaveCount(0);await page.goto('/calendar',{waitUntil:'domcontentloaded'});await expect(page.getByRole('link',{name:'View exams',exact:true})).toHaveAttribute('href','/exams');
+});

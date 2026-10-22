@@ -1,79 +1,25 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { siteUrl } from "@/lib/siteSeo";
 import "./globals.css";
 import "./student.css";
 import "katex/dist/katex.min.css";
+import InstallApp from '@/components/platform/InstallApp';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://platform.tech'),
-  other: {
-    google: 'notranslate',
-  },
-  title: {
-    default: "Klevro",
-    template: "%s | Klevro"
-  },
-  description: "Klevro brings your school courses, lessons, exams and progress together.",
-  keywords: [
-    "platform", "educational platform", "school management", "learning management system", "LMS",
-    "exams platform", "online courses", "tutoring", "student management", "interactive learning"
-  ],
-  authors: [{ name: "Klevro Team" }],
-  creator: "Platform",
-  publisher: "Klevro",
-  formatDetection: {
-    email: false,
-    address: false,
-    telephone: false,
-  },
-  alternates: {
-    canonical: '/',
-    languages: {
-      'en-US': '/en',
-    },
-  },
-  openGraph: {
-    title: "Klevro - Your learning space",
-    description: "Follow your school courses, lessons, exams and progress in Klevro.",
-    url: 'https://platform.tech',
-    siteName: 'Klevro',
-    images: [
-      {
-        url: '/og-image.jpg',
-        width: 1200,
-        height: 630,
-        alt: 'Klevro Logo',
-      }
-    ],
-    locale: 'en_US',
-    type: 'website',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: "Klevro - Learning & assessment",
-    description: "Your school courses, interactive learning and assessments in Klevro.",
-    images: ['/twitter-image.jpg'],
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
-  },
-  icons: {
-    icon: '/logo.jpeg',
-    shortcut: '/logo.jpeg',
-    apple: '/logo.jpeg',
-  },
-  verification: {
-    google: 'MflyIkcGh9qSgjG20hEVvldZM3whuI_2adk1pL16v7Y',
-  },
-  category: 'education',
+  metadataBase: siteUrl,
+  title: { default: 'Klevro | مساحة التعلم والتقييم', template: '%s | Klevro' },
+  description: 'Klevro يجمع مقررات المدرسة والدروس والتقييمات والأنشطة وتقارير التقدم في مساحة تعليمية واحدة.',
+  applicationName: 'Klevro', creator: 'Klevro', publisher: 'Klevro', category: 'education',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: { capable: true, statusBarStyle: 'default', title: 'Klevro' },
+  formatDetection: { email: false, address: false, telephone: false },
+  other: { google: 'notranslate' },
+  robots: { index: false, follow: false },
+  icons: { icon: '/logo.jpeg', shortcut: '/pwa/icon-192.png', apple: '/pwa/apple-180.png' },
+  verification: { google: 'MflyIkcGh9qSgjG20hEVvldZM3whuI_2adk1pL16v7Y' },
 };
+
+export const viewport: Viewport = { themeColor: '#5028E8', width: 'device-width', initialScale: 1, viewportFit: 'cover' };
 
 import { NotificationProvider } from "@/context/NotificationContext";
 import ImpersonationBanner from "@/components/ImpersonationBanner";
@@ -98,6 +44,7 @@ export default function RootLayout({
           <NotificationProvider>
             <ImpersonationBanner />
             {children}
+            <InstallApp />
           </NotificationProvider>
         </LanguageProvider>
       </body>

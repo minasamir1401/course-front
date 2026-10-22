@@ -9,8 +9,10 @@ import { LayoutDashboard, ClipboardList, BookOpen, BarChart3, Sparkles } from 'l
 import { useLanguage } from "@/contexts/LanguageContext";
 import AdminErrorBridge from "@/components/AdminErrorBridge";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import CompetitionShortcut from '@/components/competitions/CompetitionShortcut';
+import Leaderboard from '@/components/competitions/Leaderboard';
 
-export default function DashboardLayout({ children, hideSidebar }: { children: React.ReactNode; hideSidebar?: boolean }) {
+export default function DashboardLayout({ children, hideSidebar, mainClassName = "" }: { children: React.ReactNode; hideSidebar?: boolean; mainClassName?: string }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -68,8 +70,7 @@ export default function DashboardLayout({ children, hideSidebar }: { children: R
       <OfflineBanner language={language} />
       {/* Background Ornaments */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-100/40 blur-[120px] rounded-full animate-pulse" />
-        <div className="absolute bottom-[-5%] right-[-5%] w-[30%] h-[30%] bg-blue-100/30 blur-[100px] rounded-full" />
+        <div className={`absolute inset-0 ${isStudent ? 'bg-gradient-to-br from-indigo-50/40 via-transparent to-blue-50/30' : 'bg-slate-50/60'}`} />
       </div>
 
       {isSidebarOpen && hasSidebar && (
@@ -92,8 +93,10 @@ export default function DashboardLayout({ children, hideSidebar }: { children: R
           onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
         />
 
-        <main id="main-content" tabIndex={-1} className={`flex-1 p-1 sm:p-2 md:p-8 lg:p-10 transition-all duration-500 overflow-x-hidden ${isStudent && isMobile ? "pb-32" : "pb-10"} ${isFullscreen ? '!p-2 sm:!p-4' : ''}`}>
+        <main id="main-content" tabIndex={-1} className={`flex-1 p-1 sm:p-2 md:p-8 lg:p-10 transition-all duration-500 overflow-x-hidden ${isStudent && isMobile ? "pb-32" : "pb-10"} ${isFullscreen ? '!p-2 sm:!p-4' : ''} ${mainClassName}`}>
           {children}
+          {isStudent && pathname === '/dashboard' && <Leaderboard/>}
+          {isStudent && ['/dashboard', '/courses', '/exams', '/activities'].includes(pathname || '') && <CompetitionShortcut sourceKind={pathname === '/courses' ? 'COURSE' : pathname === '/exams' ? 'EXAM' : pathname === '/activities' ? 'ACTIVITY' : undefined}/>}
         </main>
 
 

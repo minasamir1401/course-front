@@ -1,46 +1,28 @@
 "use client";
-import { questionMetadata } from "@/lib/bilingualMetadata";
+import { studentContentText, studentGradeLabel } from '@/lib/studentLocale';
+import { questionMetadata, metadataLabel } from "@/lib/bilingualMetadata";
 
 import React, { useEffect, useState, useRef } from "react";
 import { useModalFocus } from "@/hooks/useModalFocus";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Sparkles, Award, Trophy, Play, CheckCircle2, AlertCircle, HelpCircle, Info, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, BookOpen, Clock, Target, X, XCircle, Lock, RefreshCw, Star, StarOff, BrainCircuit, ArrowLeft, ArrowRight, ListOrdered, TrendingUp, Layers, GraduationCap, Zap } from 'lucide-react';
-import { useRouter } from "next/navigation";
+import LearningBackdrop from '@/components/student/LearningBackdrop';
+import frame from '@/components/student/LearningPage.module.css';
+import ActivitiesOverview, {hasActivityAttempt} from './ActivitiesOverview';
+import styles from './ActivitiesPage.module.css';
+import { Trophy, Sparkles, CheckCircle2, HelpCircle, Info, BookOpen, Clock, Target, X, RefreshCw, BrainCircuit, ArrowUpRight, ArrowLeft, ArrowRight, Layers, GraduationCap, Zap } from 'lucide-react';
 import { API_URL, apiFetch } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import InteractiveQuestionRenderer from "@/components/InteractiveQuestionRenderer";
 import AnimatedFeedback from "@/components/AnimatedFeedback";
 import { createPortal } from "react-dom";
 import HtmlRenderer from "@/components/HtmlRenderer";
-import { MetadataModalButton } from "@/components/LessonSubComponents";
-import { InteractiveTag } from "@/components/InteractiveTag";
-import dynamic from 'next/dynamic';
-
-const Confetti = dynamic(() => import('react-confetti'), { ssr: false });
 
 export default function ActivitiesPage() {
-  const router = useRouter();
   const { language } = useLanguage();
   
-  const getGradeLabel = (g: string) => {
-    if (language === "ar") return g;
-    const map: Record<string, string> = {
-      "الصف الأول الابتدائي": "Grade 1 Primary",
-      "الصف الثاني الابتدائي": "Grade 2 Primary",
-      "الصف الثالث الابتدائي": "Grade 3 Primary",
-      "الصف الرابع الابتدائي": "Grade 4 Primary",
-      "الصف الخامس الابتدائي": "Grade 5 Primary",
-      "الصف السادس الابتدائي": "Grade 6 Primary",
-      "الصف الأول الإعدادي": "Grade 7 Preparatory",
-      "الصف الثاني الإعدادي": "Grade 8 Preparatory",
-      "الصف الثالث الإعدادي": "Grade 9 Preparatory",
-      "الصف الأول الثانوي": "Grade 10 Secondary",
-      "الصف الثاني الثانوي": "Grade 11 Secondary",
-      "الصف الثالث الثانوي": "Grade 12 Secondary"
-    };
-    return map[g] || g;
-  };
-  const [token, setToken] = useState<string | null>(null);
+  const getGradeLabel = (grade:string) => studentGradeLabel(grade,language);
+  const [sessionReady, setSessionReady] = useState(false);
+  const progressRequest = useRef(0);
   const [userGrade, setUserGrade] = useState<string>("");
   
   // Data States
@@ -50,14 +32,21 @@ export default function ActivitiesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [expandedClusters, setExpandedClusters] = useState<Record<string, boolean>>({});
   
+
   // Game Play States
   const [activeActivity, setActiveActivity] = useState<any>(null);
+  const [openingId,setOpeningId] = useState<string|null>(null);
+  const activityOpener = useRef<HTMLElement|null>(null);
   const [currentAnswer, setCurrentAnswer] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [attemptResult, setAttemptResult] = useState<any>(null);
   const [submitError,setSubmitError] = useState("");
   const activityDialog = useRef<HTMLDivElement>(null);
-  useModalFocus(!!activeActivity, activityDialog, () => setActiveActivity(null));
+  useModalFocus(!!activeActivity, activityDialog, () => {
+    if (helperModal.type) setHelperModal({type:null,content:""}); else closePlayer();
+  });
+
+  useEffect(()=>{if (!activeActivity && activityOpener.current) { if (activityOpener.current.isConnected) activityOpener.current.focus(); activityOpener.current=null; }},[activeActivity]);
 
   const [startTime, setStartTime] = useState<number>(0);
   const [hintsUsed, setHintsUsed] = useState<number>(0);
@@ -68,8 +57,6 @@ export default function ActivitiesPage() {
   const [showStreakMilestone, setShowStreakMilestone] = useState<{ show: boolean; count: number } | null>(null);
   const [toastFeedback, setToastFeedback] = useState<{ isCorrect: boolean; xp: number; streakCount?: number } | null>(null);
   
-  // Track local session XP for the header
-  const [sessionXP, setSessionXP] = useState(0);
 
   useEffect(() => {
     if (attemptResult && attemptResult.isCorrect && attemptResult.currentStreak > 0 && attemptResult.currentStreak % 5 === 0) {
@@ -98,7 +85,7 @@ export default function ActivitiesPage() {
   }, [activeActivity, timeLeft, attemptResult, language]);
   
   // Helper Modal States
-  const [helperModal, setHelperModal] = useState<{ type: "hint" | "tip" | "keyInsight" | null; content: string }>({
+  const [helperModal, setHelperModal] = useState<{ type: "hint" | "tip" | "keyInsight" | "explanation" | "meta" | null; content: string; title?:string }>({
     type: null,
     content: ""
   });
@@ -128,27 +115,22 @@ export default function ActivitiesPage() {
       setSubject("الرياضيات");
       return;
     }
-    const storedToken = localStorage.getItem("lms_token");
-    if (!storedToken) {
-      router.push("/login");
-      return;
-    }
-    setToken(storedToken);
-    fetchProgress(storedToken, subject);
-  }, [router, subject, isStudentGrade123]);
+    // The API authenticates the httpOnly session cookie; no local token is required.
+    setSessionReady(true);
+    void fetchProgress(subject);
+    return () => { progressRequest.current++; };
+  }, [subject, isStudentGrade123]);
 
-  const fetchProgress = async (authToken: string, currentSubject: string) => {
-    setIsLoading(true);
+  const fetchProgress = async (currentSubject: string, silent = false) => {
+    const requestId = ++progressRequest.current;
+    if (!silent) setIsLoading(true);
     setLoadError("");
     try {
-      const res = await apiFetch(`${API_URL}/skills-hub/progress?subject=${encodeURIComponent(currentSubject)}`, {
-        headers: {
-          Authorization: `Bearer ${authToken}`
-        }
-      });
+      const res = await apiFetch(`${API_URL}/skills-hub/progress?subject=${encodeURIComponent(currentSubject)}`);
       if (!res.ok) throw new Error("Failed to load activities");
       if (res.ok) {
         const data = await res.json();
+        if (requestId !== progressRequest.current) return;
         setProgressData(data);
         
         // Auto-expand the first cluster if not already set
@@ -161,10 +143,11 @@ export default function ActivitiesPage() {
         }
       }
     } catch (error) {
-      setLoadError(language === "ar" ? "تعذر تحميل الأنشطة. أعد المحاولة." : "Could not load activities. Please retry.");
+      if (requestId !== progressRequest.current) return;
+      setLoadError('progress');
       console.error("Error fetching progress data:", error);
     } finally {
-      setIsLoading(false);
+      if (requestId === progressRequest.current && !silent) setIsLoading(false);
     }
   };
 
@@ -177,17 +160,16 @@ export default function ActivitiesPage() {
 
   // Start Playing Activity
   const startPlayActivity = async (activityId: string) => {
-    if (!token) return;
+    if (!sessionReady || openingId) return;
+    if (!activeActivity) activityOpener.current = document.activeElement as HTMLElement | null;
+    setOpeningId(activityId);
     try {
-      setIsLoading(true); setSubmitError(""); setLoadError("");
-      const res = await apiFetch(`${API_URL}/skills-hub/activities/${activityId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      setSubmitError(""); setLoadError("");
+      const res = await apiFetch(`${API_URL}/skills-hub/activities/${activityId}`);
       if (!res.ok) throw new Error("Activity unavailable");
       if (res.ok) {
         const activity = await res.json();
+        setHelperModal({type:null,content:""});
         setActiveActivity(activity);
         setCurrentAnswer("");
         setStartTime(Date.now());
@@ -199,15 +181,15 @@ export default function ActivitiesPage() {
       }
     } catch (err) {
       console.error("Error loading activity:", err);
-      setLoadError(language === "ar" ? "تعذر فتح النشاط. أعد المحاولة." : "Could not open activity. Please retry.");
+      setLoadError('activity');
     } finally {
-      setIsLoading(false);
+      setOpeningId(null);
     }
   };
 
   // Submit Answer
   const submitAnswer = async (overrideAnswer?: string) => {
-    if (!token || !activeActivity || isSubmitting) return;
+    if (!sessionReady || !activeActivity || isSubmitting) return;
     setIsSubmitting(true); setSubmitError("");
     const timeTaken = Math.round((Date.now() - startTime) / 1000);
     const answer = overrideAnswer !== undefined ? overrideAnswer : currentAnswer;
@@ -216,8 +198,7 @@ export default function ActivitiesPage() {
       const res = await apiFetch(`${API_URL}/skills-hub/activities/${activeActivity.id}/attempt`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           selectedAnswer: answer,
@@ -240,13 +221,10 @@ export default function ActivitiesPage() {
             streakCount: result.currentStreak || undefined
           });
           
-          if (result.earnedXP > 0 || (result.bonusXP && result.bonusXP > 0)) {
-            setSessionXP(prev => prev + (result.earnedXP || 0) + (result.bonusXP || 0));
-          }
         }
         
         // Refresh background progress data silently
-        fetchProgress(token, subject);
+        void fetchProgress(subject, true);
         // Force global stats (Sidebar, Header) to re-fetch on next navigation or instantly if context updates
         sessionStorage.removeItem("student_stats_cache_v1");
         
@@ -256,7 +234,6 @@ export default function ActivitiesPage() {
         }
         setCompletedLocal(prev => new Set(prev).add(activeActivity.id));
       } else {
-        const errData = await res.json();
         setSubmitError(language === "ar" ? "تعذر إرسال إجابتك. أعد المحاولة دون إغلاق النشاط." : "Could not submit your answer. Retry without closing this activity.");
       }
     } catch (err) {
@@ -267,9 +244,6 @@ export default function ActivitiesPage() {
     }
   };
 
-  // Types that get instant feedback (no Submit button needed)
-  const autoSubmitTypes = ["MCQ", "TRUE_FALSE"];
-
   // Handle answer change
   const handleAnswerChange = (val: string) => {
     setCurrentAnswer(val);
@@ -277,25 +251,10 @@ export default function ActivitiesPage() {
 
   // Close Game Player
   const closePlayer = () => {
+    setHelperModal({type:null,content:""});
     setActiveActivity(null);
     setAttemptResult(null);
     setTimeLeft(null);
-  };
-
-  // Render Stars
-  const renderStarIcons = (count: number) => {
-    return (
-      <div className="flex gap-1 items-center justify-center">
-        {[1, 2, 3].map(index => {
-          const isFilled = index <= count;
-          return isFilled ? (
-            <Star key={index} className="w-5 h-5 fill-amber-400 text-amber-400 animate-pulse" />
-          ) : (
-            <StarOff key={index} className="w-5 h-5 text-slate-300" />
-          );
-        })}
-      </div>
-    );
   };
 
   // Type Translations
@@ -331,13 +290,7 @@ export default function ActivitiesPage() {
     return language === 'ar' ? item.ar : item.en;
   };
 
-  // Calculate overall metrics
-  const totalStars = progressData?.clusters?.reduce((sum: number, c: any) => sum + (c.stats.totalStarsEarned || 0), 0) || 0;
-  const maxPossibleStars = progressData?.clusters?.reduce((sum: number, c: any) => sum + (c.stats.maxPossibleStars || 0), 0) || 0;
-  const totalXP = progressData?.clusters?.reduce((sum: number, c: any) => sum + (c.stats.totalXPEarned || 0), 0) || 0;
-  const averageMastery = progressData?.clusters?.length > 0 
-    ? Math.round(progressData.clusters.reduce((sum: number, c: any) => sum + (c.stats.masteryPercent || 0), 0) / progressData.clusters.length) 
-    : 0;
+  const hasSavedAttempt = hasActivityAttempt;
 
   // Flatten all activities in the current subject
   const allActivities = progressData?.clusters?.flatMap((cluster: any) => 
@@ -377,8 +330,10 @@ export default function ActivitiesPage() {
     return String(val);
   };
 
+  const loadErrorMessage = !loadError ? '' : loadError === 'progress' ? (language === 'ar' ? 'تعذر تحميل الأنشطة. أعد المحاولة.' : 'Could not load activities. Please retry.') : (language === 'ar' ? 'تعذر فتح النشاط. أعد المحاولة.' : 'Could not open activity. Please retry.');
+
   return (
-    <DashboardLayout>
+    <DashboardLayout mainClassName={frame.main}>
       {toastFeedback && (
         <AnimatedFeedback 
           isCorrect={toastFeedback.isCorrect === true} 
@@ -387,548 +342,55 @@ export default function ActivitiesPage() {
           onComplete={() => setToastFeedback(null)} 
         />
       )}
-      <div className="max-w-7xl mx-auto space-y-8 pb-24 px-4 overflow-x-hidden" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-        
-        {/* Style block for customized 3D animation, confetti, etc. */}
-        <style dangerouslySetInnerHTML={{ __html: `
-          @keyframes floating-bubble {
-            0% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-10px) rotate(3deg); }
-            100% { transform: translateY(0px) rotate(0deg); }
-          }
-          .animate-float {
-            animation: floating-bubble 4s ease-in-out infinite;
-          }
-          .game-card-3d {
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            box-shadow: 0 8px 0 #cbd5e1, 0 12px 15px rgba(0,0,0,0.05);
-            border-bottom: 2px solid #e2e8f0;
-          }
-          .game-card-3d:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 0 #94a3b8, 0 16px 20px rgba(0,0,0,0.08);
-          }
-          .game-card-3d:active {
-            transform: translateY(6px);
-            box-shadow: 0 2px 0 #94a3b8, 0 4px 6px rgba(0,0,0,0.1);
-          }
-          .game-btn-3d-violet {
-            background: linear-gradient(135deg, #8b5cf6, #6d28d9);
-            box-shadow: 0 6px 0 #4c1d95, 0 10px 15px rgba(139, 92, 246, 0.3);
-            transition: all 0.15s ease;
-          }
-          .game-btn-3d-violet:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 0 #4c1d95, 0 12px 18px rgba(139, 92, 246, 0.4);
-          }
-          .game-btn-3d-violet:active {
-            transform: translateY(6px);
-            box-shadow: 0 0px 0 #4c1d95, 0 4px 6px rgba(139, 92, 246, 0.2);
-          }
-          .game-btn-3d-emerald {
-            background: linear-gradient(135deg, #10b981, #047857);
-            box-shadow: 0 6px 0 #064e3b, 0 10px 15px rgba(16, 185, 129, 0.3);
-            transition: all 0.15s ease;
-          }
-          .game-btn-3d-emerald:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 0 #064e3b, 0 12px 18px rgba(16, 185, 129, 0.4);
-          }
-          .game-btn-3d-emerald:active {
-            transform: translateY(6px);
-            box-shadow: 0 0px 0 #064e3b, 0 4px 6px rgba(16, 185, 129, 0.2);
-          }
-          .glass-modal {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-          }
-          .star-pop {
-            animation: pop-star-in 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.5) both;
-          }
-          @keyframes pop-star-in {
-            0% { transform: scale(0) rotate(-45deg); opacity: 0; }
-            70% { transform: scale(1.2) rotate(15deg); }
-            100% { transform: scale(1) rotate(0); opacity: 1; }
-          }
-        ` }} />
-
-        {/* ── PREMIUM HEADER ── */}
-        <div className="student-activity-header relative overflow-hidden rounded-[36px] bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 p-8 md:p-12 text-white shadow-2xl shadow-indigo-200/50">
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')] opacity-15" />
-          <div className="absolute -top-12 -left-12 w-64 h-64 bg-violet-400/20 blur-[80px] rounded-full animate-pulse" />
-          
-          <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="space-y-4 text-center md:text-right">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 rounded-full border border-white/20">
-                <Sparkles className="w-4 h-4 text-amber-300 animate-spin" style={{ animationDuration: '4s' }} />
-                <span className="text-[11px] font-black tracking-widest uppercase">Skills Hub</span>
-              </div>
-              <h1 className="text-3xl md:text-5xl font-black leading-tight tracking-tight">
-                {language === 'ar' ? (
-                  <>مركز <span className="text-amber-300">المهارات والأنشطة التفاعلية</span></>
-                ) : (
-                  <>Interactive <span className="text-amber-300">Skills & Activities Hub</span></>
-                )}
-              </h1>
-              <p className="text-indigo-100/90 text-sm md:text-base max-w-xl font-bold leading-relaxed">
-                {language === 'ar' 
-                  ? 'طوّر مهاراتك من خلال أنشطة تفاعلية وألعاب ذكية ثلاثية الأبعاد مصممة خصيصاً لتنمية التفكير الإبداعي والتحليلي.' 
-                  : 'Develop your skills through interactive activities and smart 3D games tailored to foster creative and analytical thinking.'}
-              </p>
-            </div>
-            
-            {/* Subject Tabs */}
-            <div className="student-tabs w-full md:w-auto bg-white/10 rounded-2xl border border-white/20">
-              {["", ...(progressData?.subjects || [])]
-                .filter((subj) => !(subj === "العلوم" && isStudentGrade123))
-                .map((subj) => (
-                  <button
-                    key={subj}
-                    onClick={() => setSubject(subj)}
-                    className={`px-6 py-3 rounded-xl text-sm font-black transition-all ${
-                      subject === subj
-                        ? "bg-white text-indigo-900 shadow-md scale-105"
-                        : "text-white/70 hover:text-white hover:bg-white/5"
-                    }`}
-                  >
-                    {subj || (language === 'ar' ? 'كل المواد' : 'All subjects')}
-                  </button>
-                ))}
-            </div>
-          </div>
-        </div>
-
-        {loadError && <div role="alert" className="p-4 bg-red-50 text-red-700 rounded-xl">{loadError} <button onClick={() => token && fetchProgress(token, subject)} className="underline">{language === 'ar' ? 'إعادة المحاولة' : 'Retry'}</button></div>}
-        {/* ── METRICS SUMMARY BAR ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          
-          {/* Card 1: Total Stars */}
-          <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex items-center gap-5">
-            <div className="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 shadow-inner shrink-0">
-              <Trophy className="w-8 h-8 animate-bounce" />
-            </div>
-            <div className="space-y-1 flex-1 min-w-0">
-              <span className="text-xs font-black text-slate-400 block uppercase">{language === 'ar' ? 'النجوم المكتسبة' : 'Stars Earned'}</span>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-2xl font-black text-slate-800">{totalStars}</span>
-                <span className="text-sm font-bold text-slate-400">/ {maxPossibleStars}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 2: Total XP */}
-          <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex items-center gap-5">
-            <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-500 shadow-inner shrink-0">
-              <Sparkles className="w-8 h-8 animate-pulse" />
-            </div>
-            <div className="space-y-1 flex-1 min-w-0">
-              <span className="text-xs font-black text-slate-400 block uppercase">{language === 'ar' ? 'نقاط الخبرة XP' : 'XP Points'}</span>
-              <span className="text-2xl font-black text-slate-800">{totalXP} XP</span>
-            </div>
-          </div>
-
-          {/* Card 3: Mastery Level */}
-          <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex items-center gap-5">
-            <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-500 shadow-inner shrink-0">
-              <BrainCircuit className="w-8 h-8" />
-            </div>
-            <div className="space-y-1 flex-1 min-w-0">
-              <span className="text-xs font-black text-slate-400 block uppercase">{language === 'ar' ? 'متوسط مستوى الإتقان' : 'Average Mastery'}</span>
-              <span className="text-2xl font-black text-slate-850">{averageMastery}%</span>
-            </div>
-          </div>
-
-          {/* Card 4: Subject Information */}
-          <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex items-center gap-5">
-            <div className="w-14 h-14 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-500 shadow-inner shrink-0">
-              <BookOpen className="w-8 h-8" />
-            </div>
-            <div className="space-y-1 flex-1 min-w-0">
-              <span className="text-xs font-black text-slate-400 block uppercase">{language === 'ar' ? 'الصف الدراسي الحالي' : 'Current Grade'}</span>
-              <span className="text-lg font-black text-slate-800 truncate">{getGradeLabel(progressData?.grade || "—")}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* ── SKILLS MAP & CLUSTERS ── */}
-        <div className="space-y-6">
-          <div className="flex items-center gap-3 px-2">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
-              <Target className="w-4 h-4" />
-            </div>
-            <h2 className="text-2xl font-black text-slate-800">{language === 'ar' ? 'مخطط الأنشطة التفاعلية' : 'Interactive Activities Map'}</h2>
-          </div>
-
-          {isLoading && !activeActivity ? (
-            <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-slate-100 shadow-sm min-h-[300px]">
-              <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4" />
-              <p className="text-slate-500 font-bold">{language === 'ar' ? 'جاري تحميل خريطة المهارات...' : 'Loading skills map...'}</p>
-            </div>
-          ) : progressData?.clusters?.length > 0 ? (
-            <div className="space-y-6">
-              {progressData.clusters.map((cluster: any, cIdx: number) => {
-                const isExpanded = !!expandedClusters[cluster.id];
-                const stats = cluster.stats;
-                return (
-                  <div
-                    key={cluster.id}
-                    className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden transition-all"
-                  >
-                    
-                    {/* Cluster Header */}
-                    <div
-                      role="button" tabIndex={0} aria-expanded={isExpanded} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); toggleCluster(cluster.id); } }}
-                      onClick={() => toggleCluster(cluster.id)}
-                      className={`p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 cursor-pointer hover:bg-slate-50/50 transition-colors border-b ${
-                        isExpanded ? "border-slate-100" : "border-transparent"
-                      }`}
-                    >
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="px-3 py-1 bg-indigo-50 border border-indigo-100 text-indigo-700 text-[10px] font-black rounded-lg uppercase tracking-wider">
-                            {language === 'ar' ? `المحور المهاراتي ${cIdx + 1}` : `Skill Cluster ${cIdx + 1}`}
-                          </span>
-                          {cluster.isCentral && (
-                            <span className="px-2 py-0.5 bg-amber-50 border border-amber-100 text-amber-700 text-[9px] font-black rounded">
-                              {language === 'ar' ? 'منهج مركزي عام' : 'General Central Curriculum'}
-                            </span>
-                          )}
-                        </div>
-                        <h3 className="text-xl font-black text-slate-800">{translateText(cluster.name)}</h3>
-                        {cluster.description && (
-                          <p className="text-slate-400 font-medium text-sm">{translateText(cluster.description)}</p>
-                        )}
-                      </div>
-                      
-                      {/* Cluster Stats & Toggle */}
-                      <div className="flex items-center gap-6 w-full md:w-auto self-stretch md:self-auto justify-between md:justify-end">
-                        <div className="flex items-center gap-8 shrink-0">
-                          {/* Progress Circle or Label */}
-                          <div className="text-right space-y-1">
-                            <span className="text-slate-400 font-black text-[10px] uppercase block">{language === 'ar' ? 'مستوى الإتقان' : 'Mastery Level'}</span>
-                            <span className="text-lg font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-100">
-                              {stats.masteryPercent}%
-                            </span>
-                          </div>
-                          
-                          {/* Stars count */}
-                          <div className="text-right space-y-1">
-                            <span className="text-slate-400 font-black text-[10px] uppercase block">{language === 'ar' ? 'النجوم المحققة' : 'Stars Earned'}</span>
-                            <div className="flex items-center gap-1">
-                              <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                              <span className="text-sm font-black text-slate-700">{stats.totalStarsEarned} / {stats.maxPossibleStars}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
-                          {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Cluster Body (Lessons & Activities) */}
-                    {isExpanded && (
-                      <div className="p-6 bg-slate-50/20 space-y-6">
-                        {cluster.skills?.length > 0 ? (
-                          cluster.skills.map((lesson: any, lIdx: number) => (
-                            <div
-                              key={lesson.id}
-                              className="bg-white rounded-2xl border border-slate-100 p-6 space-y-4 shadow-sm"
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className="w-7 h-7 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center font-black text-sm border border-indigo-100">
-                                  {lIdx + 1}
-                                </div>
-                                <h4 className="text-lg font-black text-slate-800">{translateText(lesson.name)}</h4>
-                                {lesson.description && (
-                                  <span className="text-slate-400 text-xs font-bold">— {translateText(lesson.description)}</span>
-                                )}
-                              </div>
-
-                              {/* Activities grid */}
-                              {lesson.activities?.length > 0 ? (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
-                                  {lesson.activities.map((activity: any) => (
-                                    <div
-                                      key={activity.id}
-                                      className="bg-white rounded-[28px] border border-slate-200/80 p-5 flex flex-col justify-between min-h-[190px] game-card-3d"
-                                    >
-                                      {/* Top: Metadata */}
-                                      <div className="space-y-2">
-                                        <div className="flex justify-between items-start">
-                                          <span className="px-2.5 py-1 bg-slate-100 text-slate-500 font-black rounded-lg text-[9px] uppercase tracking-wider">
-                                            {getActivityTypeLabel(activity.type)}
-                                          </span>
-                                          <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${
-                                            activity.difficulty === "Easy"
-                                              ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
-                                              : activity.difficulty === "Hard"
-                                              ? "bg-rose-50 text-rose-600 border border-rose-100"
-                                              : "bg-amber-50 text-amber-600 border border-amber-100"
-                                          }`}>
-                                            {activity.difficulty === "Easy" ? (language === 'ar' ? "سهل" : "Easy") : activity.difficulty === "Hard" ? (language === 'ar' ? "صعب" : "Hard") : (language === 'ar' ? "متوسط" : "Medium")}
-                                          </span>
-                                        </div>
-                                        <h5 className="font-black text-slate-800 text-base line-clamp-2">{translateText(activity.title)}</h5>
-                                        {activity.learningOutcome && (
-                                          <p className="text-[10px] text-slate-400 font-bold truncate">
-                                            {language === 'ar' ? 'مخرجات التعلم: ' : 'Learning Outcome: '}{questionMetadata(activity, "learningOutcome", language)}
-                                          </p>
-                                        )}
-                                      </div>
-
-                                      {/* Bottom: Stars & Play Button */}
-                                      <div className="flex justify-between items-center mt-4 pt-3 border-t border-slate-100">
-                                        {/* Stars earned */}
-                                        <div className="flex gap-0.5">
-                                          {renderStarIcons(activity.bestAttemptStars || 0)}
-                                        </div>
-                                        
-                                        <button
-                                          onClick={() => startPlayActivity(activity.id)}
-                                          className="w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95 shrink-0"
-                                        >
-                                          <Play className="w-4 h-4 fill-white pr-0.5" />
-                                        </button>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <p className="text-slate-400 font-bold text-xs py-2">
-                                  {language === 'ar' ? 'لا توجد أنشطة مسجلة في هذه المهارة الفرعية.' : 'No activities registered in this sub-skill.'}
-                                </p>
-                              )}
-                            </div>
-                          ))
-                        ) : (
-                          <p className="text-slate-400 font-bold text-center py-4">
-                            {language === 'ar' ? 'لا توجد مهارات فرعية في هذا المحور بعد.' : 'No sub-skills in this cluster yet.'}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="py-20 text-center bg-white rounded-3xl border border-slate-100 shadow-sm">
-              <Award className="w-16 h-16 text-slate-350 mx-auto mb-4" />
-              <p className="text-slate-400 font-black">
-                {language === 'ar' ? 'لا توجد محاور أو أنشطة مهارات مسجلة لهذه المادة بعد.' : 'No clusters or activities registered for this subject yet.'}
-              </p>
-            </div>
-          )}
-        </div>
+      <div className={styles.page} dir={language === 'ar' ? 'rtl' : 'ltr'} inert={activeActivity ? true : undefined}>
+        <LearningBackdrop/>
+        <ActivitiesOverview language={language} data={progressData} subject={subject} onSubject={setSubject} gradeLabel={getGradeLabel(progressData?.grade || userGrade || '—')} loading={isLoading && !activeActivity} openingId={openingId} error={loadErrorMessage} onRetry={()=>void fetchProgress(subject)} hideScience={isStudentGrade123} expanded={expandedClusters} onToggle={toggleCluster} onOpen={startPlayActivity} translate={translateText} typeLabel={getActivityTypeLabel}/>
 
         {/* ── IMMERSIVE FULL-PAGE STUDENT GAME PLAYER OVERLAY ── */}
-        {activeActivity && (
-          <div ref={activityDialog} tabIndex={-1} role="dialog" aria-modal="true" aria-label={language === "ar" ? "النشاط التفاعلي" : "Interactive activity"} className="fixed inset-0 z-[150] bg-slate-50 flex flex-col w-full h-full min-h-screen overflow-hidden text-slate-900 animate-in fade-in duration-200" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+        {activeActivity && createPortal((
+          <div ref={activityDialog} tabIndex={-1} role="dialog" aria-modal="true" aria-label={language === "ar" ? "النشاط التفاعلي" : "Interactive activity"} className={styles.player} data-activity-player dir={language === 'ar' ? 'rtl' : 'ltr'}>
             
             {submitError && <div role="alert" className="report-error m-3 flex flex-wrap items-center gap-3">{submitError}<button className="report-secondary" disabled={isSubmitting} onClick={() => submitAnswer()}>{language === 'ar' ? 'إعادة الإرسال' : 'Retry submission'}</button></div>}
-            {/* Header Bar */}
-            <header className="bg-white px-6 py-4 border-b border-slate-200/80 flex items-center justify-between shadow-xs shrink-0">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 px-3.5 py-1.5 bg-amber-50 border border-amber-200/60 rounded-xl text-amber-800 text-xs font-black">
-                  <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
-                  <span>SKILLS PLAY</span>
-                </div>
-
-                <h3 className="text-base md:text-lg font-black text-slate-800 truncate max-w-md hidden sm:block">
-                  {translateText(activeActivity.title)}
-                </h3>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-50 border border-amber-200/60 rounded-xl text-amber-700 text-xs font-black shadow-2xs">
-                  <Award className="w-4 h-4 text-amber-500" />
-                  <span>+{activeActivity.points ?? "—"} XP</span>
-                </div>
-
-                <div className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border text-xs font-black transition-all ${
-                  timeLeft !== null && timeLeft <= 10 
-                    ? 'bg-rose-50 border-rose-200 text-rose-600 animate-pulse' 
-                    : 'bg-slate-100 border-slate-200 text-slate-700'
-                }`}>
-                  <Clock className={`w-4 h-4 ${timeLeft !== null && timeLeft <= 10 ? 'text-rose-500' : 'text-indigo-600'}`} />
-                  <span>
-                    {timeLeft !== null
-                      ? `${language === 'ar' ? 'الوقت' : 'Time'}: ${Math.floor(timeLeft / 60)}:${(timeLeft % 60).toString().padStart(2, '0')}`
-                      : `${activeActivity.estimatedTime || 60}s`}
-                  </span>
-                </div>
-
-                <button
-                  onClick={closePlayer}
-                  className="p-2.5 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-500 transition-colors border border-slate-200 cursor-pointer flex items-center gap-1.5 font-bold text-xs"
-                  title={language === 'ar' ? 'إغلاق' : 'Close'}
-                >
-                  <X className="w-5 h-5" />
-                  <span className="hidden sm:inline">{language === 'ar' ? 'إغلاق' : 'Close'}</span>
-                </button>
-              </div>
+            <header className={styles.playerHeader}>
+              <div className={styles.playerTitle}><span><BrainCircuit size={24}/></span><div><small>{language === 'ar' ? 'الأنشطة والمهارات' : 'Activities & skills'}</small><h2>{studentContentText(activeActivity,'title',language)}</h2></div></div>
+              <div className={styles.playerTools}><span className={styles.reward}><Sparkles size={14}/>{attemptResult ? (attemptResult.earnedXP ?? 0) : (activeActivity.xpPoints ?? 0)} XP</span><span className={styles.timer} data-urgent={timeLeft !== null && timeLeft <= 10}><Clock size={14}/>{timeLeft !== null ? Math.floor(timeLeft / 60)+':'+(timeLeft % 60).toString().padStart(2,'0') : (language === 'ar' ? 'بدون حد زمني' : 'No time limit')}</span><button onClick={closePlayer} className={styles.close} aria-label={language === 'ar' ? 'إغلاق' : 'Close'}><X size={19}/></button></div>
             </header>
 
             {/* Main Full Page Body */}
-            <main className="flex-1 flex flex-col gap-4 p-2 sm:p-4 md:p-6 overflow-hidden max-w-6xl w-full mx-auto">
+            <div className={styles.playerBody}>
               
               {/* Main Interactive Workspace */}
-              <section className="flex-1 bg-white rounded-3xl border border-slate-200/80 p-4 sm:p-6 flex flex-col shadow-sm overflow-hidden min-h-0">
-                <div className="flex-1 overflow-y-auto min-h-0 pe-2 pb-4 flex flex-col gap-4 w-full">
+              <section className={styles.workspace}>
+                <div className={styles.playerScroll}>
                 
                 {/* Top Metadata & Helpers Bar */}
-                <div className="flex flex-wrap items-center justify-between gap-3 text-start mb-2 w-full p-2.5 sm:p-3 bg-slate-50/80 rounded-2xl border border-slate-200/60 shadow-xs">
-                  {/* Metadata Tags */}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <InteractiveTag 
-                      label={language === 'ar' ? "المستوى" : "Level"}
-                      value={activeActivity.difficulty || "On Level"} 
-                      icon={Layers} 
-                      colorClass="bg-slate-100 text-slate-700 border border-slate-200/60" 
-                    />
-                    <InteractiveTag 
-                      label="DOK" 
-                      value={activeActivity.dok} 
-                      icon={Zap} 
-                      colorClass="bg-indigo-50 text-indigo-700 border border-indigo-100" 
-                    />
-                    <InteractiveTag 
-                      label={language === 'ar' ? 'المعيار' : 'Standard'} 
-                      value={questionMetadata(activeActivity, "standard", language)} 
-                      icon={Target} 
-                      colorClass="bg-rose-50 text-rose-700 border border-rose-100" 
-                    />
-                    <InteractiveTag 
-                      label={language === 'ar' ? 'المؤشر' : 'Indicator'} 
-                      value={questionMetadata(activeActivity, "indicator", language)} 
-                      icon={CheckCircle2} 
-                      colorClass="bg-emerald-50 text-emerald-700 border border-emerald-100" 
-                    />
-                    <InteractiveTag 
-                      label={language === 'ar' ? 'الهدف' : 'Outcome'} 
-                      value={questionMetadata(activeActivity, "learningOutcome", language)} 
-                      icon={GraduationCap} 
-                      colorClass="bg-purple-50 text-purple-700 border border-purple-100" 
-                    />
+                <div className={styles.metadata}>
+                  <div>
+                    {[
+                      {label:language==='ar'?'المستوى':'Level',value:activeActivity.difficulty ? metadataLabel(activeActivity.difficulty,language) : '',Icon:Layers},
+                      {label:language==='ar'?'عمق المعرفة':'DOK',value:activeActivity.dok,Icon:Zap},
+                      {label:language==='ar'?'المعيار':'Standard',value:questionMetadata(activeActivity,'standard',language),Icon:Target},
+                      {label:language==='ar'?'المؤشر':'Indicator',value:questionMetadata(activeActivity,'indicator',language),Icon:CheckCircle2},
+                      {label:language==='ar'?'الهدف':'Outcome',value:questionMetadata(activeActivity,'learningOutcome',language),Icon:GraduationCap}
+                    ].filter(item=>item.value).map(({label,value,Icon})=><button key={label} className={styles.metaButton} onClick={()=>setHelperModal({type:'meta',title:label,content:String(value)})}><Icon size={13}/>{label}</button>)}
                   </div>
 
                   {/* Helper Buttons */}
                   <div className="flex flex-wrap items-center gap-2">
-                    {(() => {
-                      const HelperModalButton = ({ icon: Icon, title, content, bg, border, text }: any) => {
-                        const [isOpen, setIsOpen] = useState(false);
-                        const [mounted, setMounted] = useState(false);
-                        
-                        useEffect(() => {
-                          setMounted(true);
-                        }, []);
-                        
-                        return (
-                          <>
-                            <button
-                              onClick={() => {
-                                setIsOpen(true);
-                                if (title.includes('Hint') || title.includes('تلميح')) setHintsUsed(prev => prev + 1);
-                              }}
-                              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border ${border} ${bg} hover:scale-[1.02] ${text} font-black text-[11px] transition-all cursor-pointer shadow-sm group`}
-                            >
-                              <Icon className="w-3.5 h-3.5" />
-                              <span>{title}</span>
-                            </button>
-                            
-                            {mounted && isOpen && createPortal(
-                              <div className="fixed inset-0 z-[170] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-                                <div className="bg-white w-full max-w-md rounded-[32px] shadow-2xl p-6 border border-slate-100 space-y-4 animate-in zoom-in-95 duration-200">
-                                  <h4 className={`text-base font-black flex items-center gap-2 ${text}`}>
-                                    <Icon className="w-5 h-5" />
-                                    {title}
-                                  </h4>
-                                  <div className="text-slate-600 text-sm font-bold leading-relaxed max-h-[60vh] overflow-y-auto">
-                                    <HtmlRenderer html={content} />
-                                  </div>
-                                  <div className="flex justify-end pt-2">
-                                    <button
-                                      onClick={() => setIsOpen(false)}
-                                      className="px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-black text-sm transition-all cursor-pointer"
-                                    >
-                                      {language === 'ar' ? "إغلاق" : "Close"}
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>,
-                              document.body
-                            )}
-                          </>
-                        );
-                      };
+                    {activeActivity.hint && <button className={styles.secondary} onClick={()=>{setHintsUsed(prev=>prev+1);setHelperModal({type:'hint',content:translateText(activeActivity.hint)});}}><HelpCircle size={14}/>{language === 'ar' ? 'تلميح' : 'Hint'}</button>}
+                    {activeActivity.tip && <button className={styles.secondary} onClick={()=>setHelperModal({type:'tip',content:translateText(activeActivity.tip)})}><Info size={14}/>{language === 'ar' ? 'نصيحة' : 'Tip'}</button>}
+                    {attemptResult && (activeActivity.explanation || attemptResult.explanation) && <button className={styles.secondary} onClick={()=>setHelperModal({type:'explanation',content:translateText(attemptResult.explanation || activeActivity.explanation)})}><BookOpen size={14}/>{language === 'ar' ? 'الشرح' : 'Explanation'}</button>}
 
-                      return (
-                        <>
-                          {activeActivity.hint && (
-                            <HelperModalButton
-                              icon={HelpCircle}
-                              title={language === 'ar' ? 'تلميح' : 'Hint'}
-                              content={translateText(activeActivity.hint)}
-                              bg="bg-amber-50"
-                              border="border-amber-200"
-                              text="text-amber-700"
-                            />
-                          )}
-
-                          {activeActivity.tip && (
-                            <HelperModalButton
-                              icon={Info}
-                              title={language === 'ar' ? 'نصيحة' : 'Tip'}
-                              content={translateText(activeActivity.tip)}
-                              bg="bg-emerald-50"
-                              border="border-emerald-200"
-                              text="text-emerald-700"
-                            />
-                          )}
-
-                          {activeActivity.keyInsight && (
-                            <HelperModalButton
-                              icon={Sparkles}
-                              title={language === 'ar' ? 'فكرة' : 'Insight'}
-                              content={translateText(activeActivity.keyInsight)}
-                              bg="bg-indigo-50"
-                              border="border-indigo-200"
-                              text="text-indigo-700"
-                            />
-                          )}
-
-                          {attemptResult && (activeActivity.explanation || attemptResult.explanation) && (
-                            <HelperModalButton
-                              icon={BookOpen}
-                              title={language === 'ar' ? 'الشرح' : 'Explanation'}
-                              content={translateText(attemptResult?.explanation || activeActivity.explanation)}
-                              bg="bg-rose-50"
-                              border="border-rose-200"
-                              text="text-rose-700"
-                            />
-                          )}
-                        </>
-                      );
-                    })()}
                   </div>
                 </div>
 
 
                 
                 <div className="space-y-6 flex-1 w-full min-w-0">
-                  <div className="border-b border-slate-100 pb-4 flex items-center justify-between">
-                    <h3 className="text-xl md:text-2xl font-black text-slate-900">
-                      {translateText(activeActivity.title)}
-                    </h3>
-                    <span className="text-xs font-black px-3 py-1 bg-sky-50 text-sky-700 rounded-xl border border-sky-100">
-                      {translateText(activeActivity.type)}
-                    </span>
-                  </div>
+                  {helperModal.type && <aside className={styles.helper} aria-live="polite"><div><h3>{helperModal.title || (helperModal.type === 'hint' ? (language === 'ar' ? 'تلميح يساعدك' : 'A hint to help you') : helperModal.type === 'tip' ? (language === 'ar' ? 'نصيحة' : 'Tip') : (language === 'ar' ? 'شرح الإجابة' : 'Answer explanation'))}</h3><button aria-label={language === 'ar' ? 'إغلاق المساعدة' : 'Close help'} onClick={()=>setHelperModal({type:null,content:''})}><X size={16}/></button></div><div><HtmlRenderer html={helperModal.content}/></div></aside>}
+                  <div className={styles.questionIntro}><span>{getActivityTypeLabel(activeActivity.type)}</span>{currentIdx >= 0 && <small dir="ltr">{currentIdx+1} / {allActivities.length}</small>}</div>
 
-                  <div className="w-full min-w-0 overflow-x-auto py-2">
+                  <div className={styles.question}>
                     <InteractiveQuestionRenderer
                       question={activeActivity}
                       value={currentAnswer}
@@ -940,103 +402,25 @@ export default function ActivitiesPage() {
 
                 {/* Footer Bar & Answer Confirm Button */}
                 </div>
-<footer className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t border-slate-100 shrink-0">
-                  <button
-                    onClick={closePlayer}
-                    className="px-6 py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-sm transition-all cursor-pointer w-full sm:w-auto"
-                  >
-                    {language === 'ar' ? 'تراجع' : 'Back'}
-                  </button>
-
-                  <div className="flex items-center gap-3 w-full sm:w-auto justify-center">
-                    <button
-                      type="button"
-                      onClick={handlePrevActivity}
-                      disabled={!hasPrev}
-                      className={`px-5 py-3.5 rounded-2xl border-2 font-bold text-sm transition-all flex items-center gap-2 ${
-                        hasPrev
-                          ? "bg-slate-50 border-slate-200 text-slate-800 hover:bg-slate-100 cursor-pointer"
-                          : "bg-slate-50/50 border-slate-100 text-slate-300 cursor-not-allowed"
-                      }`}
-                    >
-                      {language === 'ar' ? <ArrowRight className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />}
-                      <span>{language === 'ar' ? 'السابق' : 'Previous'}</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleNextActivity}
-                      disabled={!hasNext}
-                      className={`px-5 py-3.5 rounded-2xl border-2 font-bold text-sm transition-all flex items-center gap-2 ${
-                        hasNext
-                          ? "bg-slate-50 border-slate-200 text-slate-800 hover:bg-slate-100 cursor-pointer"
-                          : "bg-slate-50/50 border-slate-100 text-slate-300 cursor-not-allowed"
-                      }`}
-                    >
-                      <span>{language === 'ar' ? 'التالي' : 'Next'}</span>
-                      {language === 'ar' ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
-                    </button>
+<footer className={styles.playerFooter}>
+                  <div className={styles.activityNav}><button className={styles.secondary} onClick={handlePrevActivity} disabled={!hasPrev}>{language === 'ar' ? <ArrowRight size={15}/> : <ArrowLeft size={15}/>} {language === 'ar' ? 'السابق' : 'Previous'}</button><button className={styles.secondary} onClick={handleNextActivity} disabled={!hasNext}>{language === 'ar' ? 'التالي' : 'Next'} {language === 'ar' ? <ArrowLeft size={15}/> : <ArrowRight size={15}/>}</button></div>
+                  <div className={styles.submitActions}><button className={styles.secondary} onClick={closePlayer}>{attemptResult ? (hasNext ? (language === 'ar' ? 'إغلاق' : 'Close') : (language === 'ar' ? 'إنهاء التمارين' : 'Finish Exercises')) : (language === 'ar' ? 'تراجع' : 'Back')}</button>
+                    {attemptResult ? (hasNext && <button className={styles.primary} onClick={()=>{setAttemptResult(null);handleNextActivity();}}>{language === 'ar' ? 'النشاط التالي' : 'Next activity'}<ArrowUpRight size={16}/></button>) : <button className={styles.primary} onClick={()=>submitAnswer()} disabled={(!currentAnswer && activeActivity.type !== 'GEOGEBRA') || isSubmitting || completedLocal.has(activeActivity.id) || hasSavedAttempt(allActivities.find((a:any)=>a.id===activeActivity.id))}>
+                      {isSubmitting ? <><RefreshCw size={15}/>{language === 'ar' ? 'جارٍ التقييم…' : 'Evaluating…'}</> : completedLocal.has(activeActivity.id) || hasSavedAttempt(allActivities.find((a:any)=>a.id===activeActivity.id)) ? (language === 'ar' ? 'تم التقييم مسبقًا' : 'Already Evaluated') : <>{language === 'ar' ? 'تأكيد الإجابة' : 'Confirm Answer'}<CheckCircle2 size={16}/></>}
+                    </button>}
                   </div>
-
-                  {/* Submit Button / Next */}
-                  {attemptResult ? (
-                    <div className="flex gap-2 w-full sm:w-auto">
-                      <button
-                        onClick={closePlayer}
-                        className="px-6 py-3.5 rounded-2xl font-black text-sm transition-all active:scale-95 flex-1 sm:flex-none bg-slate-800 text-white hover:bg-slate-900 shadow-lg cursor-pointer"
-                      >
-                        {hasNext ? (language === 'ar' ? 'إغلاق' : 'Close') : (language === 'ar' ? 'إنهاء التمارين' : 'Finish Exercises')}
-                      </button>
-                      {hasNext && (
-                        <button
-                          onClick={() => {
-                            setAttemptResult(null);
-                            handleNextActivity();
-                          }}
-                          className="px-8 py-3.5 rounded-2xl font-black text-sm transition-all active:scale-95 flex-1 sm:flex-none bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-200 flex items-center gap-2 cursor-pointer"
-                        >
-                          <span>{language === 'ar' ? 'التالي' : 'Next'}</span>
-                          {language === 'ar' ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
-                        </button>
-                      )}
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => submitAnswer()}
-                      disabled={(!currentAnswer && activeActivity?.type !== 'GEOGEBRA') || isSubmitting || (activeActivity && (completedLocal.has(activeActivity.id) || allActivities.find((a: any) => a.id === activeActivity.id)?.bestAttemptStars !== undefined))}
-                      className={`px-10 py-3.5 rounded-2xl font-black text-sm transition-all flex items-center gap-2 active:scale-95 w-full sm:w-auto justify-center cursor-pointer ${
-                        (!currentAnswer && activeActivity?.type !== 'GEOGEBRA') || isSubmitting || (activeActivity && (completedLocal.has(activeActivity.id) || allActivities.find((a: any) => a.id === activeActivity.id)?.bestAttemptStars !== undefined))
-                          ? "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200 shadow-none"
-                          : "bg-sky-500 text-white hover:bg-sky-600 shadow-xl shadow-sky-500/25 border border-sky-500/20"
-                      }`}
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                          {language === 'ar' ? 'جاري التقييم...' : 'Evaluating...'}
-                        </>
-                      ) : (activeActivity && (completedLocal.has(activeActivity.id) || allActivities.find((a: any) => a.id === activeActivity.id)?.bestAttemptStars !== undefined)) ? (
-                        <span>{language === 'ar' ? 'تم التقييم مسبقاً' : 'Already Evaluated'}</span>
-                      ) : (
-                        <>
-                          <span>{language === 'ar' ? 'تأكيد الإجابة' : 'Confirm Answer'}</span>
-                          <CheckCircle2 className="w-4 h-4" />
-                        </>
-                      )}
-                    </button>
-                  )}
                 </footer>
 
               </section>
 
-            </main>
+            </div>
 
             {/* Feedback Result */}
             {showFeedbackAnim && attemptResult && (
               <AnimatedFeedback 
-                key={`${attemptResult.attemptId}-${Date.now()}`}
+                key={attemptResult.attemptId || "expired"}
                 isCorrect={attemptResult.isCorrect === true} 
-                xp={attemptCount === 1 ? (attemptResult.earnedXP || activeActivity?.points || 10) : 0}
+                xp={Number(attemptResult.earnedXP ?? 0)}
                 streak={attemptCount === 1 ? (attemptResult.currentStreak || 0) : 0}
                 onComplete={() => {
                   setShowFeedbackAnim(false);
@@ -1044,34 +428,11 @@ export default function ActivitiesPage() {
               />
             )}
             
-            {/* ── Streak Milestone Celebration Modal ── */}
-            {showStreakMilestone && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-md animate-in fade-in duration-300 rtl" dir="rtl">
-                <div className="fixed inset-0 pointer-events-none z-[100]">
-                  <Confetti recycle={false} numberOfPieces={showStreakMilestone.count >= 10 ? 600 : 300} gravity={0.15} />
-                </div>
-                <div className="bg-white rounded-3xl p-10 max-w-sm w-full mx-4 shadow-2xl relative z-10 flex flex-col items-center text-center animate-in zoom-in-95 duration-500">
-                  <div className="w-24 h-24 rounded-full bg-orange-100 flex items-center justify-center mb-6 shadow-inner relative">
-                    <div className="absolute inset-0 bg-orange-400 rounded-full animate-ping opacity-20" />
-                    <span className="text-5xl drop-shadow-md">🔥</span>
-                  </div>
-                  <h3 className="text-3xl font-black text-slate-800 mb-2">{language === 'ar' ? 'حماس!' : 'On Fire!'}</h3>
-                  <p className="text-slate-500 text-lg mb-6">
-                    {language === 'ar' ? 'لقد أجبت على' : 'You answered'} <strong className="text-orange-500 text-xl">{showStreakMilestone.count}</strong> {language === 'ar' ? 'أسئلة متتالية بشكل صحيح!' : 'questions correctly in a row!'}
-                  </p>
-                  <button 
-                    onClick={() => setShowStreakMilestone(null)}
-                    className="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-black text-lg transition-all active:scale-95 shadow-xl shadow-orange-200"
-                  >
-                    {language === 'ar' ? 'متابعة التميز' : 'Keep it up!'}
-                  </button>
-                </div>
-              </div>
-            )}
+            {showStreakMilestone && <div className={styles.milestone} role="status"><Trophy size={26}/><div><strong>{language === 'ar' ? 'تقدّم رائع!' : 'Keep it going!'}</strong><p>{showStreakMilestone.count} {language === 'ar' ? 'إجابات صحيحة متتالية' : 'correct answers in a row'}</p></div><button onClick={()=>setShowStreakMilestone(null)} aria-label={language === 'ar' ? 'إغلاق التنبيه' : 'Dismiss celebration'}><X size={17}/></button></div>}
 
 
           </div>
-        )}
+        ), document.body)}
 
       </div>
     </DashboardLayout>

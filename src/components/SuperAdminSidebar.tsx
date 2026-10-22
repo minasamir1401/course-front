@@ -89,6 +89,8 @@ export default function SuperAdminSidebar({
             <SidebarLink href="/super-admin/schools" icon={Building2} label={t('superAdmin.sidebar.manageSchools')} active={isActive('/super-admin/schools')} />
             <SidebarLink href="/super-admin/users" icon={Users} label={t('superAdmin.sidebar.manageUsers')} active={isActive('/super-admin/users')} />
             <SidebarLink href="/super-admin/backups" icon={Database} label={language === 'ar' ? "النسخ الاحتياطي" : "System Backups"} active={isActive('/super-admin/backups')} />
+            <SidebarLink href="/super-admin/certificates" icon={BookOpen} label={language === 'ar' ? 'شهادات الطلاب' : 'Student certificates'} active={isActive('/super-admin/certificates')} />
+            <SidebarLink href="/super-admin/competitions" icon={BookOpen} label={language === 'ar' ? 'المسابقات والجوائز' : 'Competitions & prizes'} active={isActive('/super-admin/competitions')} />
             <SidebarLink href="/super-admin/trash" icon={Trash2} label={language === 'ar' ? "سلة المهملات" : "Trash Bin"} active={isActive('/super-admin/trash')} />
           </div>
 

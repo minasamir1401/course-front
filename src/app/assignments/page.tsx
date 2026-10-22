@@ -1,12 +1,6 @@
-import React from "react";
-import type { Metadata } from "next";
-import AssignmentsView from "./AssignmentsView";
+import { redirect } from 'next/navigation';
 
-export const metadata: Metadata = {
-  title: "الواجبات المدرسية | Klevro",
-  description: "متابعة الواجبات المدرسية والمهام وتسليم التكليفات في المواعيد المحددة.",
-};
-
+// Old bookmarks lead to the real assessments workspace.
 export default function AssignmentsPage() {
-  return <AssignmentsView />;
+  redirect('/exams');
 }

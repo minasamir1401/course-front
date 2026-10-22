@@ -17,9 +17,16 @@ export type ExamModuleView = {
 export type ExamWorkflowView = 'full-editor' | 'module-portal' | 'sub-exam-editor';
 export type ExamWorkflowRole = 'SUPER_ADMIN' | 'SCHOOL_ADMIN';
 
-export function getStudentExamTitle(exam: any): string {
+export function getStudentExamTitle(exam: any, language?: string): string {
   const roots = (exam?.modules || []).filter((module: any) => !module.parentModuleId);
-  return (roots.length === 1 ? roots[0].title : exam?.title) || exam?.title || '';
+  const source = roots.length === 1 ? roots[0] : exam;
+  if (!language) return source?.title || exam?.title || '';
+  const value = (language === 'en' ? source?.titleEn : source?.titleAr) || source?.title || exam?.title || '';
+  if (value && typeof value === 'object') return String(value[language] || value.ar || value.en || '');
+  if (String(value).trim().startsWith('{')) {
+    try { const pair = JSON.parse(value); return String(pair[language] || pair.ar || pair.en || value); } catch { /* Plain authored title. */ }
+  }
+  return String(value);
 }
 
 // Use the same inheritance for the details page and the running exam timer.

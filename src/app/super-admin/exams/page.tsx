@@ -63,16 +63,16 @@ export default function SuperAdminExamsPage() {
       const token = localStorage.getItem("super_admin_token") || localStorage.getItem("lms_token") || localStorage.getItem("token");
 
       // Fetch Schools for filter
-      const schoolsRes = await apiFetch(`${API_URL}/admin/schools`, {
+      const schoolsRequest = apiFetch(`${API_URL}/admin/schools?view=options`, {
         headers: { Authorization: `Bearer ${token}` }
-      });
-      if (schoolsRes.ok) {
+      }).then(async schoolsRes => {
+        if (!schoolsRes.ok) throw new Error('School options unavailable');
         const schoolsData = await schoolsRes.json();
         setSchools(Array.isArray(schoolsData) ? schoolsData : (schoolsData.schools || []));
-      } else {
-        console.warn('Failed to fetch schools:', schoolsRes.status);
+      }).catch(error => {
+        console.warn('Failed to fetch schools:', error);
         setSchools([]);
-      }
+      });
 
       // Fetch Exams with filters
       let url = `${API_URL}/exams?`;
@@ -84,9 +84,9 @@ export default function SuperAdminExamsPage() {
         url += (url.includes("?") ? "&" : "") + `grade=${filterType}`;
       }
 
-      const res = await apiFetch(url, {
+      const [res] = await Promise.all([apiFetch(url, {
         headers: { Authorization: `Bearer ${token}` }
-      });
+      }), schoolsRequest]);
       const data = await res.json();
       setExams(Array.isArray(data) ? data : []);
     } catch (error) {

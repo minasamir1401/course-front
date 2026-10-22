@@ -2,7 +2,7 @@ import { test,expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { studentSession,exam,result } from './helpers/studentWorkspace';
 
-const routes=['/dashboard','/courses','/courses/course','/lessons','/lessons/lesson?courseId=course','/exams','/exams/exam/details','/exams/exam','/exams/result/submission','/assignments','/calendar','/reports','/activities','/profile','/settings'];
+const routes=['/dashboard','/courses','/courses/course','/lessons','/lessons/lesson?courseId=course','/exams','/exams/exam/details','/exams/exam','/exams/result/submission','/calendar','/reports','/activities','/profile','/settings'];
 for(const language of ['en','ar'])for(const width of [390,1440]){
  test('student pages render without errors or overflow '+language+' '+width,async({page})=>{
   test.setTimeout(240000);await page.setViewportSize({width,height:900});await studentSession(page,language);
@@ -29,7 +29,7 @@ test('public home and login have usable Arabic/English forms and no dummy links'
 test('mobile navigation reaches every student destination and restores keyboard focus',async({page})=>{
  await page.setViewportSize({width:390,height:844});await studentSession(page);await page.goto('/courses');
  const opener=page.getByRole('button',{name:'Menu & account',exact:true});await opener.click();
- const dialog=page.getByRole('dialog');for(const href of ['/calendar','/assignments','/activities','/reports','/profile','/settings'])await expect(dialog.locator('a[href="'+href+'"]')).toBeVisible();
+ const dialog=page.getByRole('dialog');for(const href of ['/calendar','/activities','/reports','/profile','/settings'])await expect(dialog.locator('a[href="'+href+'"]')).toBeVisible();
  await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);await expect(opener).toBeFocused();
  await page.getByRole('button',{name:'More',exact:true}).click();await page.getByRole('dialog').getByRole('link',{name:'Calendar',exact:true}).click();await expect(page).toHaveURL(/\/calendar$/);
 });
@@ -77,7 +77,7 @@ test('password mismatch blocks submission and visibility control is accessible',
 });
 test('key student pages satisfy WCAG automated checks in English',async({page})=>{
  test.setTimeout(180000);await page.setViewportSize({width:390,height:844});await studentSession(page);await page.emulateMedia({reducedMotion:'reduce'});
- for(const path of ['/dashboard','/courses','/courses/course','/lessons/lesson?courseId=course','/exams','/exams/exam/details','/exams/result/submission','/assignments','/calendar','/reports','/activities','/profile','/settings']){
+ for(const path of ['/dashboard','/courses','/courses/course','/lessons/lesson?courseId=course','/exams','/exams/exam/details','/exams/result/submission','/calendar','/reports','/activities','/profile','/settings']){
   await page.goto(path);await expect(page.locator('h1')).toBeVisible();const audit=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
   expect(audit.violations.map(v=>({path,id:v.id,targets:v.nodes.map(n=>n.target)}))).toEqual([]);
  }
@@ -93,9 +93,9 @@ test('Arabic student accessibility and responsive visual review',async({page})=>
  await page.setViewportSize({width:1440,height:1000});await page.goto('/dashboard');await expect(page.getByRole('heading',{name:/Student/})).toBeVisible();await page.screenshot({path:'../artifacts/student-ui/dashboard-ar-desktop.png',fullPage:true});
  await page.goto('/lessons/lesson?courseId=course');await expect(page.getByRole('heading',{name:'Study lesson',exact:true})).toBeVisible();await page.screenshot({path:'../artifacts/student-ui/lesson-ar-desktop.png',fullPage:true});
 });
-test('calendar presets send the selected range and assignment filters retain actionable links',async({page})=>{
+test('calendar presets and retired assignment links stay actionable',async({page})=>{
  await studentSession(page);await page.goto('/calendar');await page.getByRole('button',{name:'Today',exact:true}).click();
  await expect(page.getByText('Upcoming lesson',{exact:true})).toBeVisible();
- await page.goto('/assignments');await page.getByLabel('Assignment status').selectOption('AVAILABLE');await expect(page.getByRole('heading',{name:'Closed task',exact:true})).toHaveCount(0);await expect(page.getByRole('link',{name:'Open lesson practice',exact:true})).toHaveAttribute('href','/lessons/lesson?courseId=course');
+ await page.goto('/assignments');await expect(page).toHaveURL(/\/exams$/);await expect(page.locator('a[href="/assignments"]')).toHaveCount(0);
 });
 
