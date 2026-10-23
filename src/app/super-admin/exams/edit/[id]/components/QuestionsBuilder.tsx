@@ -1,3 +1,5 @@
+import { useQuestionHintTranslation } from '@/hooks/useQuestionHintTranslation';
+import { updateBilingualRichText } from '@/lib/bilingualRichText';
 import { translateMetadataFields } from '@/lib/questionMetadataTranslation';
 // @ts-nocheck
 import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
@@ -64,6 +66,7 @@ export const QuestionsBuilder = (props: any) => {
   const [questionActiveLang, setQuestionActiveLang] = React.useState<'ar' | 'en'>('en');
   const [cardPreviewLang, setCardPreviewLang] = React.useState<Record<number, 'ar' | 'en'>>({});
   const [isTranslatingQuestion, setIsTranslatingQuestion] = React.useState(false);
+  useQuestionHintTranslation(tempQuestion, setTempQuestion, questionActiveLang, isTranslatingQuestion);
   const [isUploadingImage, setIsUploadingImage] = React.useState(false);
   const [movingQuestion, setMovingQuestion] = React.useState<any | null>(null);
   const lastActiveQKeyRef = React.useRef<any>(null);
@@ -842,16 +845,7 @@ export const QuestionsBuilder = (props: any) => {
                 <RichTextEditor
                   key={`${tempQuestion.id || "draft"}:${questionActiveLang}`}
                   value={(questionActiveLang === 'ar' ? (tempQuestion.text || '') : (tempQuestion.textEn || (tempQuestion.text && !hasArabicChars(tempQuestion.text) ? tempQuestion.text : ''))) || ""}
-                  onChange={(value) => {
-                    if (questionActiveLang === 'en') {
-                      updateCurrentQuestionField("textEn", value);
-                      if (!tempQuestion.text || !hasArabicChars(tempQuestion.text)) {
-                        updateCurrentQuestionField("text", value);
-                      }
-                    } else {
-                      updateCurrentQuestionField("text", value);
-                    }
-                  }}
+                  onChange={(value) => setTempQuestion((previous: any) => updateBilingualRichText(previous, "text", value, questionActiveLang))}
                   availableImages={extractImageUrls([
                     tempQuestion.text,
                     tempQuestion.textEn,
@@ -965,16 +959,7 @@ export const QuestionsBuilder = (props: any) => {
                 <RichTextEditor
                   key={`${tempQuestion.id || "draft"}:${questionActiveLang}`}
                   value={(questionActiveLang === 'ar' ? tempQuestion.hint : (tempQuestion.hintEn ?? "")) || ''}
-                  onChange={(val) => {
-                    if (questionActiveLang === 'ar') {
-                      updateCurrentQuestionField('hint', val);
-                    } else {
-                      updateCurrentQuestionField('hintEn', val);
-                      if (!tempQuestion.hint) {
-                        updateCurrentQuestionField('hint', val);
-                      }
-                    }
-                  }}
+                  onChange={(val) => setTempQuestion((previous: any) => updateBilingualRichText(previous, "hint", val, questionActiveLang))}
                   placeholder={questionActiveLang === 'ar' ? 'اكتب تلميحاً لمساعدة الطالب في الحل هنا...' : 'Write an in-exam solving hint here...'}
                 />
               </div>
@@ -1027,16 +1012,13 @@ export const QuestionsBuilder = (props: any) => {
                         <RichTextEditor
                           key={`${tempQuestion.id || "draft"}:${questionActiveLang}`}
                           value={secVal}
-                          onChange={(value) => {
-                            const sections = [...(tempQuestion.sections || [])];
-                            if (questionActiveLang === 'ar') {
-                              sections[idx] = { ...sections[idx], type: 'EXPLANATION', content: value };
-                              setTempQuestion((prev: any) => ({ ...prev, sections, explanation: value }));
-                            } else {
-                              sections[idx] = { ...sections[idx], type: 'EXPLANATION', contentEn: value };
-                              setTempQuestion((prev: any) => ({ ...prev, sections, explanationEn: value }));
-                            }
-                          }}
+                          onChange={(value) => setTempQuestion((previous: any) => {
+                            const sections = [...(previous.sections || [])];
+                            sections[idx] = { ...updateBilingualRichText(sections[idx], 'content', value, questionActiveLang), type: 'EXPLANATION' };
+                            return { ...previous, sections,
+                              explanation: sections[idx].content ?? previous.explanation,
+                              explanationEn: sections[idx].contentEn ?? previous.explanationEn };
+                          })}
                           placeholder={questionActiveLang === 'ar' ? "اكتب محتوى الشرح والتفسير هنا..." : "Write explanation content here..."}
                           className="!bg-white !border-slate-200"
                         />
