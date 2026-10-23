@@ -806,6 +806,7 @@ export const QuestionsBuilder = (props: any) => {
                   )}
                 </div>
                 <RichTextEditor
+                  key={`${tempQuestion.id || "draft"}:${questionActiveLang}`}
                   value={(questionActiveLang === 'ar' ? (tempQuestion.text || '') : (tempQuestion.textEn || (tempQuestion.text && !hasArabicChars(tempQuestion.text) ? tempQuestion.text : ''))) || ""}
                   onChange={(value) => {
                     if (questionActiveLang === 'en') {
@@ -928,7 +929,8 @@ export const QuestionsBuilder = (props: any) => {
                     : 'Optional assistance tool shown as an in-exam hint button to guide the student towards the answer without revealing it.'}
                 </p>
                 <RichTextEditor
-                  value={(questionActiveLang === 'ar' ? tempQuestion.hint : (tempQuestion.hintEn || tempQuestion.hint)) || ''}
+                  key={`${tempQuestion.id || "draft"}:${questionActiveLang}`}
+                  value={(questionActiveLang === 'ar' ? tempQuestion.hint : (tempQuestion.hintEn ?? "")) || ''}
                   onChange={(val) => {
                     if (questionActiveLang === 'ar') {
                       updateCurrentQuestionField('hint', val);
@@ -971,7 +973,7 @@ export const QuestionsBuilder = (props: any) => {
                     const IconComponent = preset.icon || BookOpen;
                     const secVal = questionActiveLang === 'ar'
                       ? (sec.content || "")
-                      : (sec.contentEn ?? sec.content ?? "");
+                      : (sec.contentEn ?? "");
 
                     return (
                       <div key={idx} className={`p-6 rounded-3xl border-2 flex flex-col gap-4 relative group ${preset.container || 'border-indigo-100 bg-indigo-50/20'}`}>
@@ -989,6 +991,7 @@ export const QuestionsBuilder = (props: any) => {
                           </button>
                         </div>
                         <RichTextEditor
+                          key={`${tempQuestion.id || "draft"}:${questionActiveLang}`}
                           value={secVal}
                           onChange={(value) => {
                             const sections = [...(tempQuestion.sections || [])];
@@ -1103,6 +1106,7 @@ export const QuestionsBuilder = (props: any) => {
                                 {getOptionLetter(oIndex, questionActiveLang)}
                               </span>
                               <MathInput
+                                key={`${tempQuestion.id || "draft"}:${questionActiveLang}`}
                                 placeholder={questionActiveLang === 'ar' ? `الخيار ${oIndex + 1} (بدون أ، ب، ج)` : `Option ${oIndex + 1} in English (no A, B, C)`}
                                 className="bg-transparent flex-1"
                                 value={opt}
