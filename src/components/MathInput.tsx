@@ -6,6 +6,7 @@ import { uploadFileToServer, compressImage } from "@/lib/image-utils";
 import HtmlRenderer from "./HtmlRenderer";
 
 const IMG_REGEX = /<p[^>]*>\s*<img[^>]+>\s*<\/p>|<img[^>]+>/gi;
+const lastMathDraft = { formula: '' };
 
 interface MathInputProps {
   value: string;
@@ -31,7 +32,7 @@ export default function MathInput({ value, onChange, placeholder, className = ""
 
   const textPart = React.useMemo(() => {
     if (!value) return "";
-    return value.replace(IMG_REGEX, "").trim();
+    return value.replace(IMG_REGEX, "");
   }, [value]);
 
   // Image Upload States
@@ -55,7 +56,7 @@ export default function MathInput({ value, onChange, placeholder, className = ""
       onChange(newText);
       return;
     }
-    const combined = newText + (images.length > 0 ? (newText ? " " : "") + images.join("") : "");
+    const combined = newText + images.join("");
     onChange(combined);
   };
 
@@ -110,11 +111,12 @@ export default function MathInput({ value, onChange, placeholder, className = ""
 
   useEffect(() => {
     let mf: any = null;
+    let cancelled = false;
     if (isOpen) {
       const timer = setTimeout(() => {
         if (mathContainerRef.current) {
           import('mathlive').then(({ MathfieldElement }) => {
-            if (!mathContainerRef.current) return;
+            if (cancelled || !mathContainerRef.current) return;
             mf = new MathfieldElement();
             
             const activeVal = isRawView ? value : textPart;
@@ -129,7 +131,7 @@ export default function MathInput({ value, onChange, placeholder, className = ""
               }
             }
             
-            mf.value = initialFormula || "";
+            mf.value = lastMathDraft.formula || initialFormula || "";
             setMathFormula(mf.value);
 
             mf.style.width = '100%';
@@ -144,6 +146,7 @@ export default function MathInput({ value, onChange, placeholder, className = ""
 
             mf.addEventListener('input', () => {
               setMathFormula(mf.value);
+              lastMathDraft.formula = mf.value;
             });
 
             mathContainerRef.current.innerHTML = '';
@@ -152,7 +155,7 @@ export default function MathInput({ value, onChange, placeholder, className = ""
           }).catch(err => console.error("Failed to load mathlive", err));
         }
       }, 50);
-      return () => clearTimeout(timer);
+      return () => { cancelled = true; clearTimeout(timer); mf?.remove(); };
     }
   }, [isOpen, value, isRawView, textPart]);
 
@@ -167,6 +170,17 @@ export default function MathInput({ value, onChange, placeholder, className = ""
         formulaText = `\\({\\huge ${mathFormula}}\\textstyle\\)`;
       } else if (formulaSize === 'display') {
         formulaText = `\\(\\displaystyle ${mathFormula}\\)`;
+      }
+      const input = inputRef.current;
+      if (input) {
+        input.focus();
+        const end = input.value.length;
+        input.setSelectionRange(selectionStart ?? end, selectionEnd ?? end);
+        // Use a native text edit so Ctrl+Z restores the complete previous option.
+        if (document.execCommand('insertText', false, formulaText)) {
+          setIsOpen(false);
+          return;
+        }
       }
       if (isRawView) {
         if (selectionStart !== null && selectionEnd !== null) {

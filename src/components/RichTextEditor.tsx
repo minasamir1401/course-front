@@ -6,7 +6,7 @@ import { Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, Ali
 import { uploadFileToServer } from "@/lib/image-utils";
 import { buildRichTextImageHtml, getRichTextImageStyles } from "@/lib/richTextImage";
 import { convertPlainTextToHtml, shouldPreferPlainTextPaste } from "@/lib/richTextPaste";
-import { buildRichTextMathHtml, isolateRichTextMath, isolateEditorMath } from "@/lib/richTextMath";
+import { buildRichTextMathHtml, isolateRichTextMath } from "@/lib/richTextMath";
 import NextImage from "next/image";
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -157,6 +157,9 @@ const MATH_SIZES = [
   { id: 'huge', labelAr: 'ضخم (200%)', labelEn: 'Huge (200%)', scale: '2em' },
 ];
 
+// Shared across editor instances so moving between questions keeps the draft.
+const lastMathDraft = { formula: "x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}", size: 'large', display: false };
+
 export default function RichTextEditor({ value, onChange, placeholder = "", className = "", availableImages = [] }: RichTextEditorProps) {
   const { language } = useLanguage();
   const { showToast } = useNotification();
@@ -173,36 +176,45 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
   const [imageRect, setImageRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
   const mathContainerRef = useRef<HTMLDivElement>(null);
   const savedSelectionRef = useRef<Range | null>(null);
+  const lastEmittedValueRef = useRef<string | null>(null);
 
   const saveSelection = () => {
     const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0 && editorRef.current?.contains(selection.anchorNode)) {
+    if (selection && selection.rangeCount > 0 && editorRef.current?.contains(selection.anchorNode) && editorRef.current.contains(selection.focusNode)) {
       savedSelectionRef.current = selection.getRangeAt(0).cloneRange();
     }
   };
 
   // Initialize and keep in sync
   useEffect(() => {
-    if (!editorRef.current || document.activeElement === editorRef.current) return;
+    if (!editorRef.current || value === lastEmittedValueRef.current) return;
     // Intercept and fix any legacy/absolute image URLs pointing to the backend domain
-    const cleanValue = isolateRichTextMath(value || "").replace(/https?:\/\/([a-zA-Z0-9.-]+)\/uploads\//g, "/uploads/");
+    const cleanValue = isolateRichTextMath(value || "", false).replace(/https?:\/\/([a-zA-Z0-9.-]+)\/uploads\//g, "/uploads/");
 
     if (editorRef.current && editorRef.current.innerHTML !== cleanValue) {
-      if (document.activeElement !== editorRef.current) {
-        editorRef.current.innerHTML = cleanValue;
-      }
+      editorRef.current.innerHTML = cleanValue;
+      savedSelectionRef.current = null;
     }
-  }, [value, isFocused]);
+  }, [value]);
+
+  useEffect(() => {
+    const trackSelection = () => {
+      if (document.activeElement === editorRef.current) saveSelection();
+    };
+    document.addEventListener('selectionchange', trackSelection);
+    return () => document.removeEventListener('selectionchange', trackSelection);
+  }, []);
 
   // Initialize MathLive visually when modal opens
   useEffect(() => {
     let mf: any = null;
+    let cancelled = false;
     if (activeModal === 'math') {
       // Need a small timeout to ensure the ref is attached to the DOM before appending
       const timer = setTimeout(() => {
         if (mathContainerRef.current) {
           import('mathlive').then(({ MathfieldElement }) => {
-            if (!mathContainerRef.current) return;
+            if (cancelled || !mathContainerRef.current) return;
             mf = new MathfieldElement();
             mf.value = mathFormula;
             
@@ -224,6 +236,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
             
             mf.addEventListener('input', () => {
               setMathFormula(mf.value);
+              lastMathDraft.formula = mf.value;
             });
 
             mathContainerRef.current.innerHTML = '';
@@ -232,50 +245,36 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
           }).catch(err => console.error("Failed to load mathlive", err));
         }
       }, 50);
-      return () => clearTimeout(timer);
+      return () => { cancelled = true; clearTimeout(timer); mf?.remove(); };
     }
   }, [activeModal]);
 
   const execCommand = (command: string, cmdValue?: string, useSavedSelection = false) => {
-    if (editorRef.current) {
-      editorRef.current.focus();
+    const editor = editorRef.current;
+    if (!editor) return;
+    // Capture before focus(): focusing a contenteditable can reset its selection.
+    const saved = savedSelectionRef.current?.cloneRange();
+    editor.focus();
+    const selection = window.getSelection();
+    if (selection && useSavedSelection) {
+      const range = saved && editor.contains(saved.startContainer) && editor.contains(saved.endContainer)
+        ? saved : document.createRange();
+      if (range !== saved) { range.selectNodeContents(editor); range.collapse(false); }
+      selection.removeAllRanges();
+      selection.addRange(range);
     }
-    if (useSavedSelection && savedSelectionRef.current) {
-      const selection = window.getSelection();
-      if (selection) {
-        selection.removeAllRanges();
-        selection.addRange(savedSelectionRef.current);
-      }
-    }
-    
-    // Fallback: if insertHTML fails or selection is broken, try manual insert
-    if (command === 'insertHTML' && useSavedSelection && savedSelectionRef.current) {
-      try {
-        document.execCommand(command, false, cmdValue);
-      } catch(e) {
-        const range = savedSelectionRef.current;
-        range.deleteContents();
-        const el = document.createElement('div');
-        el.innerHTML = cmdValue || '';
-        const frag = document.createDocumentFragment();
-        let node, lastNode;
-        while ((node = el.firstChild)) {
-          lastNode = frag.appendChild(node);
-        }
-        range.insertNode(frag);
-        if (lastNode) {
-          range.setStartAfter(lastNode);
-          range.collapse(true);
-          const sel = window.getSelection();
-          sel?.removeAllRanges();
-          sel?.addRange(range);
-        }
-      }
-    } else {
-      document.execCommand(command, false, cmdValue);
-    }
-    
+    // Native editing transactions keep insert/update/delete in Ctrl+Z history.
+    document.execCommand(command, false, cmdValue);
     handleInput(true);
+    saveSelection();
+  };
+
+  const selectElement = (element: HTMLElement) => {
+    if (!editorRef.current?.contains(element)) return false;
+    const range = document.createRange();
+    range.selectNode(element);
+    savedSelectionRef.current = range;
+    return true;
   };
 
 
@@ -323,7 +322,8 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
 
   const applyImageSettings = (img: HTMLImageElement) => {
     const styles = getRichTextImageStyles(imageSettings.align, imageSettings.width);
-
+    const original = img;
+    img = img.cloneNode(true) as HTMLImageElement;
     img.style.width = styles.width;
     img.style.maxWidth = styles.maxWidth;
     img.style.height = styles.height;
@@ -335,7 +335,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
     img.style.marginRight = styles.marginRight;
     img.style.float = 'none';
     img.dataset.align = imageSettings.align;
-    handleInput(true);
+    if (selectElement(original)) execCommand('insertHTML', img.outerHTML, true);
   };
 
   useEffect(() => {
@@ -444,13 +444,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
       }
       const mathHtml = buildRichTextMathHtml(mathFormula, mathSize, fontSize, mathDisplayMode, renderedMath);
       if (editingMathElement && editingMathElement.parentNode) {
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = mathHtml;
-        const newSpan = tempDiv.firstChild;
-        if (newSpan) {
-          editingMathElement.parentNode.replaceChild(newSpan, editingMathElement);
-          handleInput(true);
-        }
+        if (selectElement(editingMathElement)) execCommand('insertHTML', mathHtml, true);
       } else {
         execCommand('insertHTML', mathHtml, true);
       }
@@ -461,8 +455,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
 
   const handleDeleteMath = () => {
     if (editingMathElement && editingMathElement.parentNode) {
-      editingMathElement.remove();
-      handleInput(true);
+      if (selectElement(editingMathElement)) execCommand('delete', undefined, true);
     }
     setEditingMathElement(null);
     setActiveModal(null);
@@ -470,18 +463,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
 
   const handleDeleteImage = () => {
     if (editingImage) {
-      try {
-        const range = document.createRange();
-        range.selectNode(editingImage);
-        const selection = window.getSelection();
-        if (selection) {
-          selection.removeAllRanges();
-          selection.addRange(range);
-        }
-        document.execCommand('delete', false);
-      } catch (e) {
-        editingImage.remove();
-      }
+      if (selectElement(editingImage)) execCommand('delete', undefined, true);
       setEditingImage(null);
       setActiveModal(null);
       handleInput(true);
@@ -491,18 +473,24 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
   const handleStripAllImages = () => {
     if (confirm(language === 'ar' ? "هل أنت متأكد من حذف جميع الصور من هذا النص؟" : "Are you sure you want to delete all images from this text?")) {
       if (editorRef.current) {
-        const imgs = Array.from(editorRef.current.querySelectorAll('img'));
-        imgs.forEach(img => img.remove());
-        handleInput(true);
+        const copy = editorRef.current.cloneNode(true) as HTMLElement;
+        copy.querySelectorAll('img').forEach(img => img.remove());
+        const range = document.createRange();
+        range.selectNodeContents(editorRef.current);
+        savedSelectionRef.current = range;
+        execCommand('insertHTML', copy.innerHTML, true);
       }
     }
   };
 
   const handleInput = (immediate = false) => {
     if (editorRef.current) {
-      isolateEditorMath(editorRef.current);
+      // Never rebuild live text nodes here: it invalidates native undo records
+      // and saved ranges. HtmlRenderer isolates plain maths for presentation.
       const content = editorRef.current.innerHTML;
+      lastEmittedValueRef.current = content;
       if (content !== value) onChange(content);
+      saveSelection();
     }
   };
 
@@ -510,9 +498,9 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
   const handleBlur = () => {
     setIsFocused(false);
     if (editorRef.current) {
-      // Input already normalized the content. Changing the selection during blur
-      // can focus this editor again while the user is clicking another field.
+      // Publish without touching the DOM or selection while another field gains focus.
       const content = editorRef.current.innerHTML;
+      lastEmittedValueRef.current = content;
       if (content !== value) onChange(content);
     }
   };
@@ -693,9 +681,9 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
           onClick={() => {
             saveSelection();
             setEditingMathElement(null);
-            setMathFormula("x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}");
-            setMathSize("large");
-            setMathDisplayMode(false);
+            setMathFormula(lastMathDraft.formula);
+            setMathSize(lastMathDraft.size);
+            setMathDisplayMode(lastMathDraft.display);
             setActiveModal('math');
           }}
           icon={Sigma}
@@ -955,6 +943,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
                   type="button"
                   onClick={() => {
                     setMathSize(sz.id);
+                    lastMathDraft.size = sz.id;
                     const mf = mathContainerRef.current?.querySelector('math-field') as any || mathContainerRef.current?.firstChild as any;
                     if (mf) {
                       mf.style.fontSize = sz.scale;
@@ -978,7 +967,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
               <input
                 type="checkbox"
                 checked={mathDisplayMode}
-                onChange={(e) => setMathDisplayMode(e.target.checked)}
+                onChange={(e) => { setMathDisplayMode(e.target.checked); lastMathDraft.display = e.target.checked; }}
                 className="w-4 h-4 text-indigo-600 rounded cursor-pointer accent-indigo-600"
               />
             </label>

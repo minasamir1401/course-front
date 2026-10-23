@@ -363,6 +363,7 @@ export default function LessonQuestionForm(props: any) {
                   )}
                 </div>
                 <RichTextEditor
+                  key={`${tempQuestion.id || "draft"}:${questionActiveLang}`}
                   value={(questionActiveLang === 'ar' 
                     ? (tempQuestion.text || '')
                     : (tempQuestion.textEn || (tempQuestion.text && !/[\u0600-\u06FF]/.test(tempQuestion.text) ? tempQuestion.text : ''))
@@ -466,6 +467,7 @@ export default function LessonQuestionForm(props: any) {
                             </button>
                           </div>
                           <RichTextEditor 
+                            key={`${tempQuestion.id || "draft"}:${questionActiveLang}`}
                             value={secVal}
                             onChange={(value) => {
                               const sections = [...(tempQuestion.sections || [])];
@@ -593,6 +595,7 @@ export default function LessonQuestionForm(props: any) {
                                 {getOptionLetter(oIndex, questionActiveLang)}
                               </span>
                               <MathInput 
+                                key={`${tempQuestion.id || "draft"}:${questionActiveLang}`}
                                 value={opt}
                                 onChange={(val) => {
                                   if (questionActiveLang === 'ar') {
