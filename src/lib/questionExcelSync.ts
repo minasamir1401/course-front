@@ -2,6 +2,7 @@ import { questionMetadataFields } from './bilingualMetadata';
 import { metadataColumn } from './lessonMetadataExcel';
 import { isOptionMatch } from './answerEvaluation';
 import { normalizeDok } from './examQuestionMetadata';
+import { normalizeQuestionSections } from './persistedExamQuestion';
 
 type Question = Record<string, any>;
 
@@ -29,6 +30,8 @@ export const bilingualHeaders = [
   'رابط الفيديو (Video URL)',
   'التفسير بالعربية (Explanation - Ar)',
   'التفسير بالإنجليزية (Explanation - En)',
+  'التلميح بالعربية (Hint - Ar)',
+  'التلميح بالإنجليزية (Hint - En)',
 ];
 
 export const syncHeaders = [
@@ -55,6 +58,8 @@ export const syncHeaders = [
   'Video URL',
   'Explanation (Ar)',
   'Explanation (En)',
+  'Hint (Ar)',
+  'Hint (En)',
 ];
 
 const key = (v: unknown) => String(v ?? '').trim();
@@ -110,7 +115,10 @@ export function questionExportRows(questions: Question[], language: string): any
       q.points ?? 1,
       q.videoUrl ?? '',
       q.explanation ?? (q.sections?.length ? JSON.stringify(q.sections) : ''),
-      q.explanationEn ?? '',
+      q.explanationEn || (q.sections?.some((section: any) => section.contentEn || section.textEn)
+        ? JSON.stringify(q.sections.map((section: any) => ({ type: section.type || 'EXPLANATION', content: section.contentEn || section.textEn || '' }))) : ''),
+      q.hint ?? '',
+      q.hintEn ?? '',
     ];
   })];
 }
@@ -127,7 +135,9 @@ export function questionTemplateRows(language: string): any[][] {
       correctAnswerEn: 'Riyadh',
       points: 1,
       explanation: 'الرياض هي العاصمة الرسمية للمملكة العربية السعودية وأكبر مدنها.',
-      explanationEn: 'Riyadh is the official capital and largest city of Saudi Arabia.'
+      explanationEn: 'Riyadh is the official capital and largest city of Saudi Arabia.',
+      hint: 'فكّر في المدينة التي تضم مقر الحكومة.',
+      hintEn: 'Think of the city where the government is based.'
     },
     {
       text: 'تدور الأرض حول الشمس مرة واحدة كل عام.',
@@ -186,7 +196,7 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
     return headersNorm.findIndex((h, idx) => predicate(h, String(rows[0][idx] ?? ''), idx));
   };
 
-  const isEnHeader = (h: string) => /\ben\b/.test(h) || h.includes('إنجل') || h.includes('انجل');
+  const isEnHeader = (h: string) => /\b(?:en|english)\b/.test(h) || /[إا]نجل/.test(h);
   const isIdHeader = (h: string) => h.includes('question id') || h.includes('معرف') || h.includes('رقم السؤال') || h === 'id';
 
   const idIndex = findCol(h => isIdHeader(h));
@@ -259,6 +269,9 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
 
   const pointsIndex = findCol(h => h.includes('point') || h.includes('درجة') || h.includes('نقاط') || h.includes('درجه'));
   const videoIndex = findCol(h => h.includes('video') || h.includes('فيديو'));
+  const isHintHeader = (h: string) => /\b(?:hint|hints)\b/.test(h) || /تلميح|التلميحات/.test(h);
+  const hintEnIndex = findCol(h => isHintHeader(h) && isEnHeader(h));
+  const hintIndex = findCol(h => isHintHeader(h) && !isEnHeader(h));
 
   const expEnIndex = findCol(h => {
     const isExp = h.includes('explanation') || h.includes('التفسير') || h.includes('الشرح');
@@ -479,6 +492,8 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
     }
 
     if (videoIndex >= 0) q.videoUrl = String(row[videoIndex] ?? '');
+    if (hintIndex >= 0) q.hint = String(row[hintIndex] ?? '').trim();
+    if (hintEnIndex >= 0) q.hintEn = String(row[hintEnIndex] ?? '').trim();
 
     const metadataFields: Record<string, string[]> = {
       course: ['course', 'exam', 'الاختبار'], courseEn: ['course en'],
@@ -538,12 +553,16 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
     if (expEnIndex >= 0) {
       const val = String(row[expEnIndex] ?? '').trim();
       q.explanationEn = val || null;
+      const hasSectionEnglish = array(q.sections).some(section => section.contentEn || section.textEn);
+      if (val !== String(previous?.explanationEn ?? '').trim() || (val && !hasSectionEnglish) || (!val && hasSectionEnglish)) {
+        const sections = array(q.sections).map(section => ({ ...section, contentEn: '', textEn: '' }));
+        q.sections = normalizeQuestionSections(q.explanation, sections, val);
+      }
     } else if (q.explanation && /[a-zA-Z]/.test(q.explanation) && !/[\u0600-\u06FF]/.test(q.explanation)) {
       q.explanationEn = q.explanation;
     }
     if (!q.explanation && q.explanationEn) {
-      q.explanation = q.explanationEn;
-      q.sections = [{ type: 'EXPLANATION', content: q.explanation }];
+      q.sections = normalizeQuestionSections(q.explanation, q.sections, q.explanationEn);
     }
 
     if (['MCQ', 'MULTI_SELECT'].includes(type)) {

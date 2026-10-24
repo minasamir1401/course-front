@@ -15,7 +15,7 @@ export default function SubmissionOutcome({ submission, language }: { submission
     <div className="flex items-center gap-3 font-black text-lg text-slate-800">{submission.passed ? <CheckCircle2 className="text-emerald-700" /> : <BookOpen className="text-indigo-700" />}
       {frozen && typeof submission.passed === 'boolean' ? submission.passed ? txt('اجتزت الامتحان، أحسنت!', 'You passed. Well done!') : txt('راجع إجاباتك واستعد للخطوة التالية', 'Review your answers and prepare for your next step') : txt('الدرجة المسجلة', 'Recorded grade')}
     </div>
-    <p className="text-sm text-slate-600 mt-3">{txt('التسليم بتوقيت مصر:', 'Submitted in Egypt time:')} {formatEgyptDateTime(submission.createdAt, language)}</p>
+    <p className="text-sm text-slate-600 mt-3">{txt('موعد التسليم:', 'Submitted:')} {formatEgyptDateTime(submission.createdAt, language)}</p>
     {frozen && <p className="text-sm text-slate-600 mt-2">{txt('حد النجاح وقت التسليم:', 'Pass threshold at submission:')} {submission.exam?.passingScore ?? '—'}% · {txt('الإجابات الصحيحة:', 'Correct answers:')} {submission.correctAnswers ?? '—'} / {submission.totalQuestions ?? '—'}</p>}
     {!frozen && <p className="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-2xl p-4 mt-4">{txt('سجل قديم: نعرض الدرجة المحفوظة. لا تتوفر نسخة مؤكدة من الأسئلة وحد النجاح وقت التسليم، ولا يُعاد تصحيح النتيجة عند فتحها.', 'Legacy record: the saved grade is displayed. Original questions and the pass threshold were not captured; opening this result does not regrade it.')}</p>}
   </section>;

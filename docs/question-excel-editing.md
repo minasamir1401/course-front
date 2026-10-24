@@ -18,12 +18,14 @@
 
 هذا يخص قوالب الأسئلة والواجبات داخل المحررات؛ ملف استيراد الكورسات والدروس الكامل له مسار مستقل.
 
+يتضمن قالب Questions عمودي Hint (Ar) وHint (En) للتلميح بالعربية والإنجليزية، إلى جانب Explanation (Ar) وExplanation (En). يظهر الشرح الإنجليزي المستورد في محرر الشرح عند اختيار English (EN)، ويُحفظ مع السؤال. تظل الملفات القديمة التي لا تحتوي على أعمدة التلميح صالحة، ولا تمسح التلميحات الموجودة. أما إفراغ خلية في عمود موجود في الملف فيحذف محتواها عند الاستيراد.
+
 ## الاختبارات
 
 من مجلد front:
 
 ```sh
-node --test tests/question-excel-sync.test.cjs tests/question-excel-downloads.test.cjs
+node --test tests/question-excel-sync.test.cjs tests/question-excel-downloads.test.cjs tests/question-hints-explanations.test.cjs
 ```
 
 تختبر الملفات الفعلية بصيغة XLSX. لاختبار الحفظ عبر كود الخادم باستخدام محاكاة قاعدة البيانات، شغّل الأمر التالي من جذر الريبو الرئيسي الذي يحتوي على front وback؛ لا يتصل الاختبار ببيانات الإنتاج:

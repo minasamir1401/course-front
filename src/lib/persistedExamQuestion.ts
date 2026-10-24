@@ -1,9 +1,10 @@
 // @ts-ignore Node's strip-types runner needs the explicit extension.
 import { normalizeQuestionOptions } from './questionOptions.ts';
 
-export function normalizeQuestionSections(explanation: unknown, existingSections?: unknown): any[] {
+function readQuestionSections(explanation: unknown, existingSections?: unknown): any[] {
   if (Array.isArray(existingSections) && existingSections.length > 0) {
     return existingSections.map((item: any, idx: number) => ({
+      ...item,
       id: item?.id || Date.now() + idx,
       type: item?.type || 'EXPLANATION',
       content: item?.content || item?.text || '',
@@ -21,6 +22,7 @@ export function normalizeQuestionSections(explanation: unknown, existingSections
         const parsed = JSON.parse(trimmed);
         if (Array.isArray(parsed) && parsed.length > 0) {
           return parsed.map((item: any, idx: number) => ({
+            ...item,
             id: item?.id || Date.now() + idx,
             type: item?.type || 'EXPLANATION',
             content: item?.content || item?.text || '',
@@ -33,6 +35,7 @@ export function normalizeQuestionSections(explanation: unknown, existingSections
   }
   if (Array.isArray(explanation) && explanation.length > 0) {
     return explanation.map((item: any, idx: number) => ({
+      ...item,
       id: item?.id || Date.now() + idx,
       type: item?.type || 'EXPLANATION',
       content: item?.content || item?.text || '',
@@ -42,8 +45,18 @@ export function normalizeQuestionSections(explanation: unknown, existingSections
   return [];
 }
 
+export function normalizeQuestionSections(explanation: unknown, existingSections?: unknown, explanationEn?: unknown): any[] {
+  const sections = readQuestionSections(explanation, existingSections);
+  const english = readQuestionSections(explanationEn);
+  if (!english.length) return sections;
+  return Array.from({ length: Math.max(sections.length, english.length) }, (_, index) => ({
+    ...(sections[index] || { id: Date.now() + index, type: 'EXPLANATION', content: '' }),
+    contentEn: sections[index]?.contentEn || english[index]?.contentEn || english[index]?.content || '',
+  }));
+}
+
 export function normalizePersistedExamQuestion<T extends Record<string, unknown>>(question: T) {
-  const sections = normalizeQuestionSections(question.explanation, (question as any).sections);
+  const sections = normalizeQuestionSections(question.explanation, (question as any).sections, question.explanationEn);
   const qAny = question as any;
   return {
     ...question,

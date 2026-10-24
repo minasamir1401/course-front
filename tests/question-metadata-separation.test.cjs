@@ -21,9 +21,9 @@ const roundtrip = book => XLSX.read(XLSX.write(book, { type: 'buffer', bookType:
 
 for (const language of ['ar', 'en']) {
   test(`question template and export exclude all metadata; editing preserves stored fields (${language})`, () => {
-    assert.equal(questionTemplateRows(language)[0].length, 23);
+    assert.equal(questionTemplateRows(language)[0].length, 25);
     const rows = questionExportRows([question], language);
-    assert.equal(rows[0].length, 23);
+    assert.equal(rows[0].length, 25);
     for (const value of Object.values(metadata)) assert.equal(rows[1].includes(value), false);
     const book = roundtrip(buildQuestionWorkbook([question], language));
     assert.equal(book.Sheets.Metadata, undefined);

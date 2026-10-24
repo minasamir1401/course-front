@@ -125,13 +125,13 @@ export default function ReportWorkspace({ role, examId = '', initialTab = 'overv
 
   return <DashboardLayout mainClassName={role === 'STUDENT' ? `${frame.main} ${styles.main}` : undefined}>
     <div className={`report-workspace max-w-[1500px] mx-auto space-y-6 ${role === 'STUDENT' ? styles.student : ''}`} dir={ar ? 'rtl' : 'ltr'}>
-      {role === 'STUDENT' && <header className={styles.hero}><div><small>{txt('مركز التقارير','Reporting center')}</small><h1><ReferenceIcon name="chart-bars" variant="duotone" size={48}/>{txt('تقدّمك وخطوتك التالية','Your progress & next step')}</h1><p>{txt('بيانات دروسك ونتائجك الفعلية، وجميع المواعيد بتوقيت مصر.','Your lesson progress and recorded results, with dates in Egypt time.')}</p><span className={styles.timeZone} dir="ltr">Africa/Cairo</span></div><div className={styles.referenceHeroArt} aria-hidden="true"/></header>}
+      {role === 'STUDENT' && <header className={styles.hero}><div><small>{txt('مركز التقارير','Reporting center')}</small><h1><ReferenceIcon name="chart-bars" variant="duotone" size={48}/>{txt('تقدّمك وخطوتك التالية','Your progress & next step')}</h1><p>{txt('بيانات دروسك ونتائجك الفعلية.','Your lesson progress and recorded results.')}</p></div><div className={styles.referenceHeroArt} aria-hidden="true"/></header>}
       <div className={role === 'STUDENT' ? styles.toolbar : "flex flex-col md:flex-row gap-5 justify-between md:items-center"}>
         <div className="flex items-start gap-4" aria-hidden={role === 'STUDENT' || undefined}>
           <div className="p-3 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100"><BarChart3 size={26} /></div>
           <div><p className="text-sm font-bold text-indigo-600 mb-1">{txt('مركز التقارير', 'Reporting center')}</p>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900">{txt(role === 'STUDENT' ? 'تقدّمك وخطوتك التالية' : role === 'SUPER_ADMIN' ? 'أداء المنصة والمدارس' : 'أداء المدرسة والطلاب', role === 'STUDENT' ? 'Your progress & next step' : role === 'SUPER_ADMIN' ? 'Platform & school performance' : 'School & student performance')}</h1>
-            <p className="text-slate-500 text-sm mt-2">{txt('بيانات فعلية، فلاتر واضحة، وجميع التواريخ بتوقيت مصر.', 'Real records, explicit filters, all dates in Egypt time.')} <span dir="ltr">Africa/Cairo</span></p>
+            <p className="text-slate-500 text-sm mt-2">{txt('بيانات فعلية وفلاتر واضحة.', 'Real records and clear filters.')} </p>
           </div>
         </div>
         <>{role === 'STUDENT' && <h2 className={styles.scopeTitle}><Filter size={17}/>{txt('نطاق التقرير','Report scope')}</h2>}<div className="flex flex-wrap gap-2 no-print">
@@ -145,7 +145,7 @@ export default function ReportWorkspace({ role, examId = '', initialTab = 'overv
       <form onSubmit={apply} className={`premium-card rounded-[30px] p-5 sm:p-6 space-y-4 no-print ${role === 'STUDENT' ? styles.filters : ''}`}>
         <div className="flex items-center gap-2 font-black text-slate-800"><Filter size={18} />{txt('نطاق التقرير', 'Report scope')}</div>
         <div className={role === 'STUDENT' ? styles.filterGrid : "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"}>
-          {!attendance && <><label className="report-field" htmlFor={`${id}-from`}><span>{txt('من يوم — توقيت مصر', 'From — Egypt time')}</span><input id={`${id}-from`} type="date" value={draft.from} max={draft.to} required onChange={event => update('from', event.target.value)} /></label>
+          {!attendance && <><label className="report-field" htmlFor={`${id}-from`}><span>{txt('من يوم', 'From')}</span><input id={`${id}-from`} type="date" value={draft.from} max={draft.to} required onChange={event => update('from', event.target.value)} /></label>
             <label className="report-field" htmlFor={`${id}-to`}><span>{txt('إلى يوم — شامل', 'Through — inclusive')}</span><input id={`${id}-to`} type="date" value={draft.to} min={draft.from} required onChange={event => update('to', event.target.value)} /></label></>}
           {role === 'SUPER_ADMIN' && select('schoolId', txt('المدرسة', 'School'), (options?.schools || []).map((item: any) => ({ value: item.id, label: item.name })))}
           {role !== 'STUDENT' && <>{select('grade', txt('الصف', 'Grade'), (options?.grades || []).map((grade: string) => ({ value: grade, label: grade })))}
@@ -174,7 +174,7 @@ export default function ReportWorkspace({ role, examId = '', initialTab = 'overv
       {loading && <div role="status" className="premium-card p-10 text-center rounded-[30px] text-indigo-700 font-bold"><RefreshCw className="animate-spin mx-auto mb-3" />{txt('جارٍ حساب التقرير من السجلات…', 'Calculating report from records…')}</div>}
       {!loading && !error && attendance && !report && <div className="premium-card p-8 rounded-[30px] text-center"><CalendarDays className="mx-auto text-indigo-600 mb-3" /><p className="font-bold text-slate-700">{txt('اختر المدرسة والامتحان، ثم طبّق الفلاتر لعرض المشاركة.', 'Select a school and exam, then apply filters to see participation.')}</p></div>}
       {!loading && report && <>
-        <div className={role === 'STUDENT' ? styles.dateLine : "text-xs text-slate-500 flex flex-wrap justify-between gap-2"}><span>{attendance ? report.exam?.title : `${formatEgyptDate(applied.from + 'T12:00Z', language)} — ${formatEgyptDate(applied.to + 'T12:00Z', language)}`}</span><span>{txt('آخر تحديث:', 'Updated:')} {formatEgyptDateTime(report.generatedAt, language)} · {txt('توقيت مصر', 'Egypt time')}</span></div>
+        <div className={role === 'STUDENT' ? styles.dateLine : "text-xs text-slate-500 flex flex-wrap justify-between gap-2"}><span>{attendance ? report.exam?.title : `${formatEgyptDate(applied.from + 'T12:00Z', language)} — ${formatEgyptDate(applied.to + 'T12:00Z', language)}`}</span><span>{txt('آخر تحديث:', 'Updated:')} {formatEgyptDateTime(report.generatedAt, language)}</span></div>
         {attendance ? <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4"><Metric title={txt('المطلوب منهم الامتحان حاليًا', 'Currently assigned')} value={number(report.total)} icon={<Users size={20} />} />
             <Metric title={txt('سلّموا', 'Submitted')} value={number(report.attendedCount)} icon={<GraduationCap size={20} />} />
