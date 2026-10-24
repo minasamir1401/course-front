@@ -11,8 +11,9 @@ import styles from './StudentHeader.module.css';
 import { logout, stopImpersonation } from '@/lib/auth';
 import NotificationBell from '@/components/platform/NotificationBell';
 import { Download } from 'lucide-react';
+import AdminBackButton from '@/components/platform/AdminBackButton';
 
-export default function StudentHeader({ pathname, isFullscreen, onToggleFullscreen }: { pathname: string; isFullscreen?: boolean; onToggleFullscreen?: () => void }) {
+export default function StudentHeader({ pathname, isFullscreen, onToggleFullscreen, adminHome }: { pathname: string; isFullscreen?: boolean; onToggleFullscreen?: () => void; adminHome?: string }) {
   const { language, setLanguage } = useLanguage(); const ar = language === 'ar'; const router = useRouter();
   const [open, setOpen] = useState(false); const modal = useRef<HTMLDivElement>(null);
   useModalFocus(open, modal, () => setOpen(false));
@@ -44,7 +45,7 @@ export default function StudentHeader({ pathname, isFullscreen, onToggleFullscre
         {onToggleFullscreen && <button className="student-icon-button" onClick={onToggleFullscreen} aria-label={ar ? (isFullscreen ? 'تصغير مساحة الدراسة' : 'تكبير مساحة الدراسة') : (isFullscreen ? 'Exit fullscreen' : 'Expand study area')}>{isFullscreen ? <Minimize size={19} /> : <Maximize size={19} />}</button>}
         <button className="student-icon-button" aria-label={ar ? 'القائمة والحساب' : 'Menu & account'} aria-expanded={open} aria-controls="student-menu" onClick={() => setOpen(true)}><Menu size={22} /></button>
       </div>
-    </div></header>
+    </div>{adminHome && <div className="px-4 pb-2"><AdminBackButton pathname={pathname} fallbackHref={adminHome} showLabel/></div>}</header>
     <nav aria-label={ar ? 'التنقل السريع' : 'Quick navigation'} className={`student-dock no-print ${styles.dock}`}>{dockLinks.map(item => navLink(item, true))}<button className={`student-dock-link ${links.some(item => !dockLinks.includes(item) && active(item.href)) ? 'student-nav-active' : ''}`} onClick={() => setOpen(true)} aria-expanded={open} aria-controls="student-menu"><Menu size={20}/><span>{ar ? 'المزيد' : 'More'}</span></button></nav>
     {open && <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center p-3 bg-slate-900/40 backdrop-blur-sm" onClick={() => setOpen(false)}>
       <div id="student-menu" ref={modal} role="dialog" aria-modal="true" aria-labelledby="student-menu-title" tabIndex={-1} className="bg-white rounded-[30px] shadow-xl border border-slate-200 w-full max-w-xl max-h-[85dvh] overflow-y-auto p-5 sm:p-7" onClick={event => event.stopPropagation()}>

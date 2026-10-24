@@ -23,6 +23,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { getOptionLetter, cleanOptionText } from "@/lib/utils";
 import { getAnswerStatusLabel, getInExamQuestionTypeLabel, getSafeCurrentQuestion, resolveTakeExamQuestions, toggleReviewFlag } from '@/lib/takeExamUi';
 import InteractiveQuestionRenderer from '@/components/InteractiveQuestionRenderer';
+import { examArtworkKey } from '@/lib/examArtwork';
 import StudentExamIntro from '@/components/student/StudentExamIntro';
 import styles from './TakeExam.module.css';
 
@@ -538,7 +539,7 @@ function TakeExamPageContent() {
 
 
   // The entry screen shares the student design; starting still uses the same access check.
-  if (!started) return <StudentExamIntro examId={String(id)} title={displayExamTitle} isEn={isEn} setExamLanguage={setStudentQuestionLang} duration={exam.duration} questions={examQuestions.length} type={exam.type} courseTitle={displayCourseTitle} domain={displayDomain} subject={exam.subjects || exam.subject || exam.category || exam.course?.subject} coverImage={exam.course?.coverImage} description={exam.description} passwordRequired={Boolean(exam.password)} password={passwordInput} setPassword={setPasswordInput} previewPassword={isPreviewMode && typeof exam.password === 'string' ? exam.password : undefined} preview={isPreviewMode} verifying={isVerifying} onStart={handleStartExam} opens={exam.selectedSubExam?.publishDate || exam.startDate} closes={exam.selectedSubExam?.cutOffDate || exam.endDate}/>;
+  if (!started) return <StudentExamIntro artworkKey={examArtworkKey(id, subExamId || moduleId)} examId={String(id)} title={displayExamTitle} isEn={isEn} setExamLanguage={setStudentQuestionLang} duration={exam.duration} questions={examQuestions.length} type={exam.type} courseTitle={displayCourseTitle} domain={displayDomain} subject={exam.subjects || exam.subject || exam.category || exam.course?.subject} coverImage={exam.selectedSubExam?.coverImage || exam.coverImage} description={exam.description} passwordRequired={Boolean(exam.password)} password={passwordInput} setPassword={setPasswordInput} previewPassword={isPreviewMode && typeof exam.password === 'string' ? exam.password : undefined} preview={isPreviewMode} verifying={isVerifying} onStart={handleStartExam} opens={exam.selectedSubExam?.publishDate || exam.startDate} closes={exam.selectedSubExam?.cutOffDate || exam.endDate}/>;
 
   // ── Exam Taking Screen ────────────────────────────────────────────────────
   const question = getSafeCurrentQuestion(examQuestions, currentQuestion);

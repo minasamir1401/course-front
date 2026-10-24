@@ -3,7 +3,7 @@
 import { ChangeEvent, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { BookOpen, Calendar, Download, Edit2, Eye, FileCode, HelpCircle, Plus, Trash2, Upload, ArrowRightLeft, FolderInput, X, Loader2, FolderTree, Layers, ArrowUpRight, Settings, CheckCircle2, AlertCircle, Clock, Target } from "lucide-react";
+import { Calendar, Download, Edit2, Eye, FileCode, HelpCircle, Plus, Trash2, Upload, ArrowRightLeft, FolderInput, X, Loader2, FolderTree, Layers, ArrowUpRight, Settings, CheckCircle2, AlertCircle, Clock, Target } from "lucide-react";
 import { API_URL } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";
 import * as XLSX from "xlsx";
@@ -13,6 +13,8 @@ import { collectQuestionsIntoSubExam, getQuestionCollectionTargets } from "@/lib
 import { getCreatedAtLabel, getUpdatedAtLabel } from "@/lib/examModulePresentation";
 import HtmlRenderer from "@/components/HtmlRenderer";
 import MoveModuleModal from "@/components/exams/MoveModuleModal";
+import SubjectArtwork from '@/components/student/SubjectArtwork';
+import { examArtworkKey } from '@/lib/examArtwork';
 import FileUpload from "@/components/FileUpload";
 
 const SETTINGS_CATEGORIES = [
@@ -276,9 +278,7 @@ return (
             <div key={exam.id || index} className="rounded-3xl border border-slate-100 bg-slate-50 p-5 shadow-sm overflow-hidden flex flex-col justify-between">
               <div>
                 <div className="flex items-start justify-between gap-2.5">
-                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-white text-indigo-600 flex items-center justify-center shrink-0 shadow-xs border border-slate-100">
-                    <BookOpen className="w-5 h-5" />
-                  </div>
+                  <SubjectArtwork examKey={examArtworkKey(state.createdIdRef.current || state.createdId, exam.id)} subject={state.examData?.subjects||state.examData?.category} title={examTitle} coverImage={exam.coverImage||state.examData?.coverImage} variant="thumbnail"/>
                   <div className="flex flex-wrap items-center justify-end gap-1.5 flex-1 min-w-0">
                     <Link
                       href={previewHref}
