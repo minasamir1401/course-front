@@ -3,6 +3,12 @@
 .artwork::after { content:''; position:absolute; z-index:-1; width:120%; height:120%; left:-10%; bottom:-33%; background:url('/klevro/waves/wave-hero.svg') center / 100% 100% no-repeat; opacity:.68; transform:scaleY(-1); }
 .illustration { object-fit:contain; padding:8px 14px 2px; filter:drop-shadow(0 5px 5px #5b42861b); }
 .uploaded { object-fit:cover; }
+.exam .illustration { padding:0; }
+.orbit { position:absolute; inset:13% 8%; border:1px solid currentColor; border-radius:48% 32% 45% 28%; opacity:.16; }
+.motif { position:absolute; z-index:1; pointer-events:none; inset-inline-end:7%; top:10%; width:clamp(20px,18%,42px); aspect-ratio:1; display:grid; place-items:center; border:1px solid currentColor; border-radius:28%; background:#ffffffbf; opacity:.8; }
+.motif svg { width:65%; height:65%; }
+.thumbnail.exam .illustration { padding:0; }
+.thumbnail .motif { width:15px; top:5%; inset-inline-end:4%; border-radius:5px; }
 .cover { width:100%; aspect-ratio:2.15; }
 .thumbnail { width:70px; height:58px; border-radius:12px; border:1px solid #ece6f8; }
 .thumbnail .illustration { padding:3px; }

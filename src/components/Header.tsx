@@ -1,6 +1,7 @@
 "use client";
 import EgyptClock from "./EgyptClock";
 import StudentHeader from './student/StudentHeader';
+import AdminBackButton from './platform/AdminBackButton';
 
 import React, { useState, useEffect } from "react";
 import { Search, Menu, ChevronDown, LogOut, Settings, User, ArrowLeftCircle, Sparkles, Globe, Zap, Building2 } from 'lucide-react';
@@ -42,6 +43,7 @@ export default function Header({
   const { t, language, setLanguage } = useLanguage();
   const [userName, setUserName] = useState(language === 'ar' ? "المستخدم" : "User");
   const [userRoleName, setUserRoleName] = useState("");
+  const [adminHome, setAdminHome] = useState('');
   const [userInitials, setUserInitials] = useState(language === 'ar' ? "م" : "U");
   const [showDropdown, setShowDropdown] = useState(false);
   const [isImpersonating, setIsImpersonating] = useState(false);
@@ -95,6 +97,7 @@ export default function Header({
     if (userData) {
       try {
         const user = JSON.parse(userData);
+        setAdminHome(user.role === 'SUPER_ADMIN' ? '/super-admin' : ['SCHOOL_ADMIN', 'TEACHER'].includes(user.role) ? '/school-admin' : '');
         const name = user.name || user.username || (language === 'ar' ? "المستخدم" : "User");
         setUserName(name);
         setUserInitials(name.charAt(0));
@@ -151,7 +154,7 @@ export default function Header({
 
   const handleLogout = () => logout(router, pathname ?? undefined);
 
-  if (isStudent) return <StudentHeader pathname={pathname || ''} isFullscreen={isFullscreen} onToggleFullscreen={onToggleFullscreen} />;
+  if (isStudent) return <StudentHeader pathname={pathname || ''} adminHome={adminHome} isFullscreen={isFullscreen} onToggleFullscreen={onToggleFullscreen} />;
 
   return (
     <header className={`sticky top-0 z-50 w-full transition-all duration-700 ${isFullscreen ? 'pt-1 px-1' : scrolled ? 'pt-2 px-2 md:pt-4 md:px-4' : 'pt-0 px-0 md:pt-6 md:px-6'}`}>
@@ -166,6 +169,8 @@ export default function Header({
       >
         {/* ── RIGHT SIDE: Navigation & Logo ── */}
         <div className="flex items-center gap-1.5 sm:gap-3 xl:gap-8 flex-1 min-w-0">
+
+          <AdminBackButton pathname={pathname || ''}/>
 
           {/* Brand / Title Section */}
           {!isFullscreen && (

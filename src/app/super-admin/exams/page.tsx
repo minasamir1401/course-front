@@ -13,6 +13,8 @@ import { buildExamModuleViews, buildModuleCardSettingsHref, buildModulePortalHre
 import { getCreatedAtLabel, getCreatorLabel, getExamAudienceLabel, getUpdatedAtLabel } from "@/lib/examModulePresentation";
 import { buildStandaloneMoveGroups, buildStandaloneMoveSelectionSummary } from "@/lib/standaloneQuestionMoveView";
 import { getModuleQuestionCardCounts, getStandaloneQuestionsCount } from "@/lib/standaloneQuestionCount";
+import SubjectArtwork from '@/components/student/SubjectArtwork';
+import { examArtworkKey } from '@/lib/examArtwork';
 import MoveModuleModal from "@/components/exams/MoveModuleModal";
 
 export default function SuperAdminExamsPage() {
@@ -473,9 +475,7 @@ export default function SuperAdminExamsPage() {
                 <div key={module.id} className="group bg-white rounded-[32px] border border-slate-100 p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all relative overflow-hidden">
                   <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-fuchsia-500" />
                   <div className="flex items-start justify-between gap-4 mb-6">
-                    <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                      <BookOpen className="w-8 h-8" />
-                    </div>
+                    <SubjectArtwork examKey={examArtworkKey(module.parentExamId, actualModule ? module.id : undefined)} subject={exam.subjects||exam.category} title={module.title} coverImage={exam.coverImage} variant="thumbnail"/>
                     <div className="flex items-center gap-2">
                       {!isSyntheticModuleCard && (
                         <button
