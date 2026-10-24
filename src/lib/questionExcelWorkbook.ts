@@ -15,14 +15,14 @@ export function buildQuestionWorkbook(questions: any[] | null, language: string 
     if (i >= 15 && i <= 18) return { wch: 28 }; // Correct Answers (Ar & En)
     if (i === 19) return { wch: 12 }; // Points
     if (i === 20) return { wch: 25 }; // Video URL
-    return { wch: 40 }; // Explanations (Ar & En)
+    return { wch: 40 }; // Explanations and hints (Ar & En)
   });
 
   XLSX.utils.book_append_sheet(wb, sheet, 'Questions');
 
   const instructionsData = language === 'ar' ? [
     ['دليل إرشادات تعبئة قالب الأسئلة ثنائي اللغة (Bilingual Questions Guide)'],
-    ['1. اللغتان معاً: يمكنك كتابة نص السؤال والخيارات والتفسير بالعربية والإنجليزية في نفس الصف ليتمكن الطالب من التبديل بين اللغتين فورياً.'],
+    ['1. اللغتان معاً: يمكنك كتابة نص السؤال والخيارات والتفسير والتلميح (Hint) بالعربية والإنجليزية في نفس الصف ليتمكن الطالب من التبديل بين اللغتين فورياً.'],
     ['2. نوع السؤال (Question Type): يدعم القالب: MCQ (اختيار من متعدد)، TRUE_FALSE (صح وخطأ)، MULTI_SELECT (اختيارات متعددة)، TEXT (مقالي).'],
     ['3. الإجابة الصحيحة: يمكنك كتابة نص الإجابة مباشرة، أو كتابة رقم الخيار (1 أو 2 أو 3 أو 4) وسيقوم النظام بمطابقة اللغتين تلقائياً.'],
     ['4. صح وخطأ (TRUE_FALSE): اكتب صحيح أو خطأ (أو True / False) في عمود الإجابة الصحيحة.'],
@@ -32,7 +32,7 @@ export function buildQuestionWorkbook(questions: any[] | null, language: string 
     ['8. هذا الشيت للأسئلة فقط. استخدم نموذج الميتا داتا المنفصل للتصنيفات والمهارات والصعوبة وDOK. استورد الأسئلة أولاً، ثم نزّل نموذج الميتا داتا لربطه بمعرفات الأسئلة. تعديل الأسئلة لا يمس الميتا داتا المحفوظة.']
   ] : [
     ['Bilingual Questions Template Guide (دليل تعبئة الأسئلة)'],
-    ['1. Dual Languages: You can fill question text, options, and explanations in both Arabic and English in the same row.'],
+    ['1. Dual Languages: You can fill question text, options, explanations, and hints in both Arabic and English in the same row.'],
     ['2. Question Types: Supports MCQ, TRUE_FALSE, MULTI_SELECT, and TEXT.'],
     ['3. Correct Answer: You can write the answer text or the option number (1, 2, 3, 4) and both languages will be matched automatically.'],
     ['4. TRUE_FALSE: Write True or False (or صحيح / خطأ) in the Correct Answer column.'],

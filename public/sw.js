@@ -1,6 +1,6 @@
 /* Only a public offline fallback is cached. Never store authenticated pages, APIs,
    exam answers or certificate files in Cache Storage. */
-const CACHE = 'klevro-public-offline-v1';
+const CACHE = 'klevro-public-offline-v2';
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(['/offline.html', '/pwa/icon-192.png'])).then(() => self.skipWaiting()));
 });
@@ -9,7 +9,8 @@ self.addEventListener('activate', event => {
 });
 self.addEventListener('fetch', event => {
   if (event.request.mode !== 'navigate' || event.request.method !== 'GET') return;
-  event.respondWith(fetch(event.request).catch(() => caches.match('/offline.html')));
+  // Installed windows must load the current document and its matching CSS chunks.
+  event.respondWith(fetch(event.request, { cache: 'no-store' }).catch(() => caches.match('/offline.html')));
 });
 self.addEventListener('push', event => {
   let data = {};

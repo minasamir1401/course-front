@@ -51,9 +51,7 @@ export const useQuestionLogic = (props: any) => {
   const handleEditStandaloneQuestion = (index: number) => {
     const item = { ...standaloneQuestions[index] };
     item.options = normalizeQuestionOptions(item.options);
-    if (!item.sections || item.sections.length === 0) {
-      item.sections = normalizeQuestionSections(item.explanation);
-    }
+    item.sections = normalizeQuestionSections(item.explanation, item.sections, item.explanationEn);
     if (!item.type) item.type = item.label || "MCQ";
     const outcome = item.standard || item.learningOutcome || "";
     item.standard = outcome;
@@ -147,9 +145,7 @@ export const useQuestionLogic = (props: any) => {
     const item = { ...list[index] };
     item.options = normalizeQuestionOptions(item.options);
     item.optionsEn = normalizeQuestionOptions(item.optionsEn);
-    if (!item.sections || item.sections.length === 0) {
-      item.sections = normalizeQuestionSections(item.explanation);
-    }
+    item.sections = normalizeQuestionSections(item.explanation, item.sections, item.explanationEn);
     if (item.type === 'QUESTION' && item.label) {
       item.type = item.label;
     } else if (!item.type) {

@@ -28,7 +28,14 @@ export default function InstallApp() {
   }, [schedule]);
   useEffect(() => {
     if (!('serviceWorker' in navigator) || !window.isSecureContext) return;
-    navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' }).catch(() => {});
+    let registration: ServiceWorkerRegistration | undefined;
+    const checkForUpdate = () => {
+      if (!document.hidden) void registration?.update().catch(() => {});
+    };
+    navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' })
+      .then(value => { registration = value; checkForUpdate(); }).catch(() => {});
+    window.addEventListener('pageshow', checkForUpdate);
+    document.addEventListener('visibilitychange', checkForUpdate);
     let knownInstalled = false; try { knownInstalled = localStorage.getItem('klevro-app-installed') === 'true'; } catch {}
     const standalone = window.matchMedia('(display-mode: standalone)').matches || !!(navigator as Navigator & { standalone?: boolean }).standalone;
     const isInstalled = standalone || knownInstalled;
@@ -41,7 +48,7 @@ export default function InstallApp() {
     window.addEventListener('beforeinstallprompt', before); window.addEventListener('appinstalled', done); window.addEventListener('klevro-install', show);
     const sync = () => { if (!document.hidden) { try { if (localStorage.getItem('klevro-app-installed') === 'true') { done(); return; } } catch {} setOpen(false); schedule(); } };
     window.addEventListener('storage', sync); document.addEventListener('visibilitychange', sync);
-    return () => { if (timer.current) clearTimeout(timer.current); window.removeEventListener('beforeinstallprompt', before); window.removeEventListener('appinstalled', done); window.removeEventListener('klevro-install', show); window.removeEventListener('storage', sync); document.removeEventListener('visibilitychange', sync); };
+    return () => { if (timer.current) clearTimeout(timer.current); window.removeEventListener('beforeinstallprompt', before); window.removeEventListener('appinstalled', done); window.removeEventListener('klevro-install', show); window.removeEventListener('storage', sync); document.removeEventListener('visibilitychange', sync); window.removeEventListener('pageshow', checkForUpdate); document.removeEventListener('visibilitychange', checkForUpdate); };
   }, [schedule]);
   const install = async () => {
     if (!prompt) { setGuide(true); return; }
