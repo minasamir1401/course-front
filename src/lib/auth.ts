@@ -27,21 +27,22 @@ export const AUTH_KEYS = {
   }
 };
 
-let sessionRequest: Promise<{ authenticated: boolean; user: any | null }> | null = null;
-export const checkAuthSession = (): Promise<{ authenticated: boolean; user: any | null }> => {
+type AuthSession = { authenticated: boolean; user: any | null; unavailable?: boolean };
+let sessionRequest: Promise<AuthSession> | null = null;
+export const checkAuthSession = (): Promise<AuthSession> => {
   // Multiple guards on one page share the current request, never a cached identity.
   if (sessionRequest) return sessionRequest;
   sessionRequest = readAuthSession().finally(() => { sessionRequest = null; });
   return sessionRequest;
 };
-const readAuthSession = async (): Promise<{ authenticated: boolean; user: any | null }> => {
+const readAuthSession = async (): Promise<AuthSession> => {
   try {
     const res = await apiFetch('/api/auth/me');
-    if (!res.ok) return { authenticated: false, user: null };
+    if (!res.ok) return { authenticated: false, user: null, ...(res.status >= 500 || res.status === 429 ? { unavailable: true } : {}) };
     const data = await res.json();
     return { authenticated: Boolean(data.authenticated), user: data.user || null };
   } catch {
-    return { authenticated: false, user: null };
+    return { authenticated: false, user: null, unavailable: true };
   }
 };
 
@@ -50,6 +51,7 @@ export const clearAllAuthData = () => {
   Object.values(AUTH_KEYS).forEach(config => {
     localStorage.removeItem(config.TOKEN);
     localStorage.removeItem(config.USER);
+    localStorage.removeItem(`${config.TOKEN}_expires_at`);
   });
   // Also clear impersonation data
   localStorage.removeItem("is_impersonating");

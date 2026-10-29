@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createRequire} from 'node:module';
 import vm from 'node:vm';
+import { chromium } from '@playwright/test';
 const require = createRequire(import.meta.url);
 const ts = require('typescript');
 function load(file,mocks={}) {
@@ -13,7 +14,64 @@ function load(file,mocks={}) {
   vm.runInThisContext('(function(require,module,exports){'+code+'\n})')(dependencies,module,module.exports);
   return module.exports;
 }
-const {processHtml}=load('../../src/components/HtmlRenderer.tsx',{'../lib/richTextMath':load('../../src/lib/richTextMath.ts'),'../lib/sanitize':{sanitizeHtml:x=>x},'../lib/utils':{resolveMediaUrl:x=>x}});
+const sanitization = load('../../src/lib/sanitize.ts');
+const {processHtml}=load('../../src/components/HtmlRenderer.tsx',{'../lib/richTextMath':load('../../src/lib/richTextMath.ts'),'../lib/sanitize':sanitization,'../lib/utils':{resolveMediaUrl:x=>x}});
+
+test('calculator matrices retain rows, brackets and canonical LaTeX through sanitization and rendering', () => {
+ for (const environment of ['matrix', 'pmatrix', 'bmatrix', 'Bmatrix', 'vmatrix', 'Vmatrix', 'smallmatrix', 'array']) {
+   const formula = `\\begin{${environment}}${environment === 'array' ? '{cc}' : ''}1&-2\\\\3&4\\end{${environment}}`;
+   for (const source of [`\\({\\Large ${formula}}\\textstyle\\)`, `$$${formula}$$`]) {
+     const rendered = processHtml(sanitization.sanitizeHtml(source));
+     assert.match(rendered, /class="katex/);
+     assert.match(rendered, /<mtable/);
+     assert.equal((rendered.match(/<mtr>/g) || []).length, 2);
+     assert.equal((rendered.match(/<mtd>/g) || []).length, 4);
+     assert.doesNotMatch(rendered, /katex-error|\\text\{ (?:bmatrix|array)/);
+     assert.ok(rendered.includes(formula.replace(/&/g, '&amp;')), environment);
+   }
+ }
+});
+
+test('the reported A minus B answer choices retain all four matrix entries after a save round trip', () => {
+ const matrices = [String.raw`2&2\\7&-2`, String.raw`4&-6\\3&4`, String.raw`4&2\\3&-2`, String.raw`2&-6\\3&4`];
+ const choices = matrices.map(entries => `\\({\\Large \\begin{bmatrix}${entries}\\end{bmatrix}}\\textstyle\\)`);
+ const saved = JSON.parse(JSON.stringify({ options: choices, correctAnswer: choices[1] }));
+ assert.equal(saved.correctAnswer, choices[1]);
+ for (const choice of saved.options) {
+   const rendered = processHtml(sanitization.sanitizeHtml(choice));
+   assert.match(rendered, /class="katex"/);
+   assert.equal((rendered.match(/<mtr>/g) || []).length, 2);
+   assert.equal((rendered.match(/<mtd>/g) || []).length, 4);
+   assert.doesNotMatch(rendered, /katex-error/);
+ }
+});
+
+test('browser sanitization keeps complete direct and calculator inequalities and removes executable HTML', async () => {
+ const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH || 'C:/Users/Administrator/AppData/Local/ms-playwright/chromium-1234/chrome-win64/chrome.exe' });
+ try {
+   const page = await browser.newPage();
+   await page.addScriptTag({ path: require.resolve('dompurify/dist/purify.js') });
+   for (const expression of ['x<y', 'x<y>z', 'x<y && y>z', '-10 < x <= -2', 'x>=-10', 'x ≤ -2', 'x>y', 'x < bound > z']) {
+     for (const source of [expression, `<p dir="rtl">${expression}</p>`]) {
+       const clean = await page.evaluate(input => DOMPurify.sanitize(input), sanitization.sanitizeHtml(source));
+       await page.locator('body').evaluate((body, html) => { body.innerHTML = html; }, processHtml(clean));
+       assert.equal(await page.locator('body').textContent(), expression);
+       assert.equal(await page.locator('.math-ltr').first().evaluate(el => getComputedStyle(el).direction), 'ltr');
+     }
+   }
+   for (const formula of ['{\\Large y<-10}\\textstyle', '-10<x\\leq-2', 'x<y<z', 'y', '-10']) {
+     const clean = await page.evaluate(input => DOMPurify.sanitize(input), sanitization.sanitizeHtml(`\\(${formula}\\)`));
+     await page.locator('body').evaluate((body, html) => { body.innerHTML = html; }, processHtml(clean));
+     assert.equal(await page.locator('.katex').count(), 1);
+     assert.equal(await page.locator('annotation').textContent(), formula);
+   }
+   const hostile = '<img src=x onerror="window.mathInjected=true"><script>window.mathInjected=true</script>';
+   const clean = await page.evaluate(input => DOMPurify.sanitize(input), sanitization.sanitizeHtml(hostile));
+   await page.locator('body').evaluate((body, html) => { body.innerHTML = html; }, processHtml(clean));
+   assert.equal(await page.locator('body script,body [onerror]').count(), 0);
+   assert.equal(await page.evaluate(() => window.mathInjected), undefined);
+ } finally { await browser.close(); }
+});
 test('lazy HTML images use responsive optimization while preserving content layout', () => {
  const rendered = processHtml('<img src="/uploads/example.webp" alt="Diagram" data-align="center" style="width:50%;height:auto" />');
  assert.match(rendered, /srcset="[^"]*_next\/image/);

@@ -1,3 +1,4 @@
+import { serverSession } from './helpers/serverSession';
 import { test, expect } from '@playwright/test';
 
 for (const role of ['SUPER_ADMIN', 'SCHOOL_ADMIN']) for (const language of ['ar', 'en']) test(role + ' edits school and grade through full competition settings (' + language + ')', async ({ page }) => {
@@ -7,6 +8,7 @@ for (const role of ['SUPER_ADMIN', 'SCHOOL_ADMIN']) for (const language of ['ar'
   let saved: any;
   const questions = Array.from({ length: 20 }, (_, index) => ({ id: 'q' + index, type: 'MCQ', text: 'Question ' + index, options: ['A', 'B'], correctAnswer: 'B', points: 5, seconds: 30 }));
   await page.route('https://fonts.googleapis.com/**', route => route.abort());
+  await serverSession(page, role);
   await page.addInitScript(({ role, language }) => { const prefix = role === 'SUPER_ADMIN' ? 'super_admin' : 'school_admin'; localStorage.setItem(prefix + '_token', 'cookie_auth'); localStorage.setItem(prefix + '_user', JSON.stringify({ id: 'admin', role, schoolId: 'own' })); localStorage.setItem('lms_lang', language); }, { role, language });
   await page.route('**/api/**', route => {
     const request = route.request(), path = new URL(request.url()).pathname;

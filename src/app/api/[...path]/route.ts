@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getBackendBase } from '@/lib/backendOrigin';
 
 // Runtime proxy: forwards all /api/* requests to the backend
 // This runs at REQUEST TIME (not build time), so env vars are always available
@@ -22,36 +23,6 @@ const BACKEND_UPLOAD_TIMEOUT_MS = Math.max(
 // Give deployment platforms enough time for mobile uploads and large course saves.
 export const maxDuration = 300;
 
-const getBackendBase = () => {
-  // Priority 1: Explicit internal Docker URL, if configured by the deployment (avoids DNS/loopback issues)
-  const internalOrigin = process.env.INTERNAL_BACKEND_URL?.replace(/\/+$/, '')?.trim();
-  if (internalOrigin) return internalOrigin.replace('localhost', '127.0.0.1');
-
-  // Priority 2: Explicit public backend origin when present
-  const publicOrigin = process.env.NEXT_PUBLIC_BACKEND_ORIGIN?.replace(/\/+$/, '')?.trim();
-  if (publicOrigin) return publicOrigin.replace('localhost', '127.0.0.1');
-
-  // Priority 3: BACKEND_ORIGIN env var
-  const origin = process.env.BACKEND_ORIGIN?.replace(/\/+$/, '')?.trim();
-  if (origin) return origin.replace('localhost', '127.0.0.1');
-
-  // Priority 4: Extract origin from NEXT_PUBLIC_API_URL
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/"/g, '').trim();
-  if (apiUrl) {
-    try {
-      return new URL(apiUrl).origin.replace('localhost', '127.0.0.1');
-    } catch {}
-  }
-
-  // Priority 5: Dokploy internal network fallback
-  if (process.env.NODE_ENV === 'production') {
-    // Safest fallback: use the internal Docker hostname Dokploy generated for the backend
-    // Or the public domain which is guaranteed to route correctly through NGINX
-    return 'https://api.klevro.tech';
-  }
-
-  return 'http://127.0.0.1:5000';
-};
 
 const HOP_BY_HOP_HEADERS = new Set([
   'connection',

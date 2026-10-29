@@ -1,3 +1,4 @@
+import { serverSession } from './helpers/serverSession';
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 test.use({ serviceWorkers: 'block' });
@@ -6,6 +7,7 @@ const examQuestion = { text: 'Exam source question', textEn: null, options: ['A'
 const courseQuestion = { text: 'Course source question', textEn: null, options: ['C', 'D'], correctIndex: 0, seconds: 30 };
 for (const role of ['SUPER_ADMIN', 'SCHOOL_ADMIN']) for (const language of ['ar', 'en']) test(`${role} imports selected exam/course questions into a standalone competition ${language}`, async ({ page }) => {
   test.setTimeout(120000); const ar = language === 'ar', base = role === 'SUPER_ADMIN' ? '/super-admin' : '/school-admin'; await page.setViewportSize({ width: 390, height: 920 }); await page.route('https://fonts.googleapis.com/**', route => route.abort());
+  await serverSession(page, role);
   await page.addInitScript(({ role, language }) => { const prefix = role === 'SUPER_ADMIN' ? 'super_admin' : 'school_admin'; localStorage.setItem(`${prefix}_user`, JSON.stringify({ id: 'admin', role, schoolId: 'own', name: 'Admin' })); localStorage.setItem(`${prefix}_token`, 'cookie_auth'); localStorage.setItem('lms_lang', language); localStorage.setItem('klevro-install-dismissed', String(Date.now())); }, { role, language });
   let saved: any = null, published = false, examPages = 0, sourceWrites = 0;
   const summary = () => ({ id: 'room', title: 'Standalone challenge', titleEn: '', status: published ? 'OPEN' : 'DRAFT', mode: 'SELF_PACED', teams: false, currentIndex: -1, participants: 0, capacity: 200, sourceKind: 'GENERAL', questionCount: saved?.questions.length || 0, schoolName: 'School', publicBoard: false });

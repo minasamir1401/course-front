@@ -4,6 +4,8 @@ import "./globals.css";
 import "./student.css";
 import "katex/dist/katex.min.css";
 import InstallApp from '@/components/platform/InstallApp';
+import AiAssistant from '@/components/ai/AiAssistant';
+import PageAccessGate from '@/components/PageAccessGate';
 
 export const metadata: Metadata = {
   metadataBase: siteUrl,
@@ -15,7 +17,7 @@ export const metadata: Metadata = {
   formatDetection: { email: false, address: false, telephone: false },
   other: { google: 'notranslate' },
   robots: { index: false, follow: false },
-  icons: { icon: '/logo.jpeg', shortcut: '/pwa/icon-192.png', apple: '/pwa/apple-180.png' },
+  icons: { icon: { url: '/pwa/icon-192.png', sizes: '192x192', type: 'image/png' }, shortcut: '/favicon.ico', apple: '/pwa/apple-180.png' },
   verification: { google: 'MflyIkcGh9qSgjG20hEVvldZM3whuI_2adk1pL16v7Y' },
 };
 
@@ -43,8 +45,9 @@ export default function RootLayout({
         <LanguageProvider>
           <NotificationProvider>
             <ImpersonationBanner />
-            {children}
+            <PageAccessGate>{children}</PageAccessGate>
             <InstallApp />
+            <AiAssistant />
           </NotificationProvider>
         </LanguageProvider>
       </body>

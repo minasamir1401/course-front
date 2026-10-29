@@ -1,4 +1,5 @@
 import { Page } from '@playwright/test';
+import { serverSession } from './serverSession';
 export const stamp = '2026-10-17T10:00:00Z';
 export const questions = [
  {id:'q1',text:'First question',textEn:'First question',type:'MCQ',options:['Choice A','Choice B'],optionsEn:['Choice A','Choice B'],correctAnswer:'Choice A',points:5,order:0},
@@ -12,10 +13,12 @@ export const result = {id:'submission',createdAt:stamp,totalScore:5,percentage:5
 export const report = {generatedAt:stamp,timeZone:'Africa/Cairo',summary:{totalAttempts:2,selectedAttempts:1,uniqueStudents:1,averageScore:50,passRate:0,legacyAttempts:0,eligibleCount:null},
  students:[{id:'submission',name:'Student',examTitle:'School exam',percentage:50,passingScore:80,passed:false,createdAt:stamp}],timeline:[],skills:[],questions:[],schools:[],modules:[],subExams:[],pagination:{page:1,limit:25,total:1,pages:1}};
 export async function studentSession(page:Page,language='en'){
+ await serverSession(page);
  await page.addInitScript(language=>{localStorage.setItem('lms_token','cookie_auth');localStorage.setItem('lms_token_expires_at',String(Date.now()+86400000));localStorage.setItem('lms_user',JSON.stringify({id:'me',role:'STUDENT',name:'Student',grade:'Grade 3',schoolId:'school'}));localStorage.setItem('lms_lang',language);},language);
  await page.route('**/api/**',async route=>{
   const path=new URL(route.request().url()).pathname;let data:any={};
-  if(path==='/api/student/stats')data={name:'Student',schoolName:'School',grade:'Grade 3',classroomName:'A',teacherName:'Teacher',overallCourseProgress:40,avgScore:50,totalExams:2,xp:20,courseProgresses:[course],upcomingTasks:[],generatedAt:stamp};
+  if(path==='/api/auth/me')data={authenticated:true,user:{id:'me',role:'STUDENT',name:'Student',grade:'Grade 3',schoolId:'school'}};
+  else if(path==='/api/student/stats')data={name:'Student',schoolName:'School',grade:'Grade 3',classroomName:'A',teacherName:'Teacher',overallCourseProgress:40,avgScore:50,totalExams:2,xp:20,courseProgresses:[course],upcomingTasks:[],generatedAt:stamp};
   else if(path==='/api/student/xp-summary')data={totalXP:20,courseXP:[{courseId:'course',xp:10}],skillsXP:{title:'Activities',xp:10}};
   else if(path==='/api/certificates')data={items:[],total:0};
   else if(path==='/api/courses/course')data=course;

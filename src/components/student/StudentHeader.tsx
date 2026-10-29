@@ -37,7 +37,7 @@ export default function StudentHeader({ pathname, isFullscreen, onToggleFullscre
     className={compact ? `student-dock-link ${active(item.href) ? 'student-nav-active' : ''}` : `student-nav-link ${active(item.href) ? 'student-nav-active' : ''}`}><ReferenceIcon name={item.icon} size={18}/><span>{item.label}</span></Link>;
   return <>
     <header className={`student-header no-print ${styles.header}`}><div className={styles.inner}>
-      <Link href="/dashboard" aria-label={ar ? 'Klevro — الرئيسية' : 'Klevro — Home'} className={styles.brand}><Image src="/logo.jpeg" alt="" width={36} height={36} className={styles.logo} /><span className={styles.wordmark}>Klevro</span></Link>
+      <Link href="/dashboard" aria-label={ar ? 'Klevro — الرئيسية' : 'Klevro — Home'} className={styles.brand}><Image src="/klevro/brand/klevro-logo.jpg" alt="" width={64} height={64} sizes="64px" priority className={styles.logo} /></Link>
       {!isFullscreen && <nav aria-label={ar ? 'التنقل الرئيسي' : 'Main navigation'} className={styles.desktopNav}>{primaryLinks.map(item => navLink(item))}</nav>}
       <div className={styles.tools}>
         <NotificationBell />

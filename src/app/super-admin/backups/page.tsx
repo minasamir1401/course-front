@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Database, Plus, Trash2, Download, Upload, RefreshCw, Calendar, HardDrive, ShieldAlert, CheckCircle2, AlertTriangle, FileJson, Loader2, ArrowLeft, ShieldCheck, HelpCircle, Archive, Search } from 'lucide-react';
-import { useRouter } from "next/navigation";
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { apiFetch, API_URL } from "@/lib/api";
 import BackupExplorerModal from "@/components/modals/BackupExplorerModal";
+import styles from './BackupsPage.module.css';
 
 interface BackupFile {
   name: string;
@@ -29,13 +29,13 @@ function isBundledArchiveBackup(backup: BackupFile) {
 }
 
 export default function BackupsPage() {
-  const router = useRouter();
   const { showToast } = useNotification();
   const { t, language } = useLanguage();
   const [backups, setBackups] = useState<BackupFile[]>([]);
   const individualBackups = backups.filter(b => !isBundledArchiveBackup(b));
   const archiveBackups = backups.filter(isBundledArchiveBackup);
   const [loading, setLoading] = useState(true);
+  const [listError, setListError] = useState(false);
   const [creating, setCreating] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -63,7 +63,8 @@ export default function BackupsPage() {
   const [liveCourses, setLiveCourses] = useState<{ id: string; title: string }[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const autoDownloaded = useRef(false);
+  const listRequest = useRef(0);
+  const invalidateList = useCallback(() => { listRequest.current++; }, []);
 
   const fetchLiveCourses = async () => {
     try {
@@ -99,24 +100,15 @@ export default function BackupsPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  useEffect(() => {
-    const token = localStorage.getItem("super_admin_token") || localStorage.getItem("token");
-    if (!token) {
-      router.push("/super-admin/login");
-      return;
-    }
-    fetchBackups();
-  }, []);
-
-  const fetchBackups = async () => {
+  const fetchBackups = useCallback(async () => {
+    const request = ++listRequest.current;
     setLoading(true);
+    setListError(false);
     try {
-      const token = localStorage.getItem("super_admin_token") || localStorage.getItem("token");
       const res = await apiFetch(`${API_URL}/admin/backup/list`, {
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
+        cache: 'no-store', signal: AbortSignal.timeout(20000)
       });
+      if (request !== listRequest.current) return;
       if (res.ok) {
         const data = await res.json();
         // The API returns { backups: [...] } or an array
@@ -127,24 +119,21 @@ export default function BackupsPage() {
         }));
         setBackups(mapped);
 
-        // Auto-download the latest backup once on initial page load
-        if (mapped.length > 0 && !autoDownloaded.current) {
-          autoDownloaded.current = true;
-          const latestBackup = mapped[0];
-          setTimeout(() => {
-            handleDownloadBackup(latestBackup.name, true);
-          }, 1200);
-        }
       } else {
-        showToast(language === 'ar' ? "فشل في تحميل قائمة النسخ الاحتياطية" : "Failed to load backups list", "error");
+        setListError(true);
       }
     } catch (e) {
       console.error(e);
-      showToast(language === 'ar' ? "حدث خطأ في الاتصال بالخادم" : "Server communication error", "error");
+      if (request === listRequest.current) setListError(true);
     } finally {
-      setLoading(false);
+      if (request === listRequest.current) setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void fetchBackups();
+    return invalidateList;
+  }, [fetchBackups, invalidateList]);
 
   const handleCreateBackup = async () => {
     setCreating(true);
@@ -171,10 +160,9 @@ export default function BackupsPage() {
     }
   };
 
-  const handleDownloadBackup = async (filename: string, isAuto: boolean = false) => {
+  const handleDownloadBackup = async (filename: string) => {
     try {
-      const token = localStorage.getItem("super_admin_token") || localStorage.getItem("token");
-      const url = `${API_URL}/admin/backup/download/${filename}?token=${token}`;
+      const url = `${API_URL}/admin/backup/download/${encodeURIComponent(filename)}`;
       
       // Programmatic download using <a> tag to bypass browser popup blockers
       const link = document.createElement("a");
@@ -184,21 +172,12 @@ export default function BackupsPage() {
       link.click();
       document.body.removeChild(link);
 
-      if (isAuto) {
-        showToast(
-          language === 'ar' 
-            ? "يرجى الانتظار، جاري تحميل أحدث نسخة احتياطية تلقائياً..." 
-            : "Please wait, downloading the latest backup automatically...", 
-          "success"
-        );
-      } else {
-        showToast(
+      showToast(
           language === 'ar' 
             ? `جاري تحميل ملف النسخة الاحتياطية: ${filename}` 
             : `Downloading backup file: ${filename}`, 
           "success"
-        );
-      }
+      );
     } catch (e) {
       console.error(e);
       showToast(language === 'ar' ? "فشل تحميل الملف" : "Failed to download file", "error");
@@ -207,8 +186,7 @@ export default function BackupsPage() {
 
   const handleDownloadAllBackups = async () => {
     try {
-      const token = localStorage.getItem("super_admin_token") || localStorage.getItem("token");
-      const url = `${API_URL}/admin/backup/download-all?token=${token}`;
+      const url = `${API_URL}/admin/backup/download-all`;
       
       const link = document.createElement("a");
       link.href = url;
@@ -230,8 +208,7 @@ export default function BackupsPage() {
 
   const handleDownloadFullWithMedia = async () => {
     try {
-      const token = localStorage.getItem("super_admin_token") || localStorage.getItem("token");
-      const url = `${API_URL}/admin/backup/download-full-with-media?token=${token}`;
+      const url = `${API_URL}/admin/backup/download-full-with-media`;
       
       const link = document.createElement("a");
       link.href = url;
@@ -512,7 +489,7 @@ export default function BackupsPage() {
 
   return (
     <DashboardLayout>
-      <div className="p-6 md:p-10 space-y-10" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <div className={`${styles.page} p-6 md:p-10 space-y-10`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
         
         {showSecretInput && (
           <div className="bg-red-50 border border-red-200 rounded-[28px] p-6 flex flex-col md:flex-row items-center gap-4 shadow-sm transition-all duration-500 animate-in fade-in zoom-in">
@@ -536,9 +513,9 @@ export default function BackupsPage() {
         )}
 
         {/* Header Block */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 p-8 md:p-12 rounded-[40px] shadow-2xl relative overflow-hidden border border-slate-700/50">
+        <div className={`${styles.hero} flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 p-8 md:p-12 rounded-[40px] shadow-2xl relative overflow-hidden border border-slate-700/50`}>
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(99,102,241,0.15),transparent)] pointer-events-none"></div>
-          <div className="space-y-3 z-10">
+          <div className={`${styles.heroCopy} space-y-3 z-10`}>
             <h1 className="text-3xl md:text-4xl font-black text-white flex items-center gap-4">
               <Database className="w-10 h-10 text-indigo-400 animate-pulse" />
               <span>{language === 'ar' ? "النسخ الاحتياطي والاستعادة" : "System Backup & Restore"}</span>
@@ -549,7 +526,7 @@ export default function BackupsPage() {
                 : "Manage and safeguard complete system data. Create comprehensive database checkpoints, download files, or securely restore records with multi-factor confirmation modals."}
             </p>
           </div>
-          <div className="flex flex-wrap gap-4 z-10 shrink-0">
+          <div className={`${styles.heroActions} flex flex-wrap gap-4 z-10 shrink-0`}>
             <input 
               type="file" 
               ref={fileInputRef} 
@@ -593,16 +570,16 @@ export default function BackupsPage() {
         </div>
 
         {/* Dashboard Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className={`${styles.workspace} grid grid-cols-1 lg:grid-cols-3 gap-8`}>
           
           {/* Backups List Area */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="flex justify-between items-center px-2">
+          <div className={`${styles.individual} lg:col-span-2 space-y-6`}>
+            <div className={`${styles.listHeading} flex justify-between items-center px-2`}>
               <h3 className="text-xl font-black text-slate-800 flex items-center gap-3">
                 <HardDrive className="w-6 h-6 text-indigo-600" />
                 <span>{language === 'ar' ? "ملفات النسخ المتوفرة" : "Available System Backups"} ({individualBackups.length})</span>
               </h3>
-              <div className="flex items-center gap-2">
+              <div className={`${styles.listTools} flex items-center gap-2`}>
                 {showDeleteButton && selectedBackups.length > 0 && (
                   <button
                     onClick={handleBulkDelete}
@@ -631,6 +608,8 @@ export default function BackupsPage() {
                 )}
                 <button 
                   onClick={fetchBackups} 
+                  disabled={loading}
+                  aria-label={language === 'ar' ? "تحديث القائمة" : "Refresh List"}
                   className="p-3 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-xl transition-all cursor-pointer border border-slate-100 bg-white"
                   title={language === 'ar' ? "تحديث القائمة" : "Refresh List"}
                 >
@@ -639,13 +618,19 @@ export default function BackupsPage() {
               </div>
             </div>
 
-            {loading ? (
-              <div className="bg-white rounded-[35px] border border-slate-100 p-24 flex flex-col justify-center items-center gap-4 shadow-sm">
+            {listError ? (
+              <div role="alert" className={styles.listError}>
+                <AlertTriangle size={24} aria-hidden="true"/>
+                <p>{language === 'ar' ? 'تعذّر تحميل قائمة النسخ الاحتياطية. تحقق من الاتصال وحاول مرة أخرى.' : 'Unable to load the backup list. Check your connection and try again.'}</p>
+                <button type="button" disabled={loading} onClick={() => void fetchBackups()}>{language === 'ar' ? 'إعادة المحاولة' : 'Try again'}</button>
+              </div>
+            ) : loading ? (
+              <div role="status" className={`${styles.state} bg-white rounded-[35px] border border-slate-100 p-24 flex flex-col justify-center items-center gap-4 shadow-sm`}>
                 <Loader2 className="w-12 h-12 text-indigo-600 animate-spin" />
                 <span className="text-slate-400 font-bold">{language === 'ar' ? "جاري تحميل قائمة النسخ..." : "Fetching backups list..."}</span>
               </div>
             ) : individualBackups.length === 0 ? (
-              <div className="bg-white rounded-[35px] border-4 border-dashed border-slate-100 p-24 flex flex-col justify-center items-center text-center gap-6 shadow-sm">
+              <div className={`${styles.state} bg-white rounded-[35px] border-4 border-dashed border-slate-100 p-24 flex flex-col justify-center items-center text-center gap-6 shadow-sm`}>
                 <div className="w-20 h-20 bg-slate-50 rounded-[25px] flex items-center justify-center text-slate-200">
                   <Database className="w-10 h-10" />
                 </div>
@@ -666,15 +651,15 @@ export default function BackupsPage() {
                 </button>
               </div>
             ) : (
-              <div className="flex flex-col gap-4 max-h-[600px] overflow-y-auto custom-scrollbar pr-2">
+              <div className={`${styles.fileList} flex flex-col gap-4 max-h-[600px] overflow-y-auto custom-scrollbar pr-2`}>
                 {individualBackups.map((backup) => {
                   const isArchive = isBundledArchiveBackup(backup);
                   return (
                     <div 
                     key={backup.name} 
-                    className={`bg-white hover:bg-slate-50/50 border ${selectedBackups.includes(backup.name) ? 'border-red-400 ring-2 ring-red-100' : 'border-slate-100'} rounded-[28px] p-6 flex flex-col gap-4 shadow-sm hover:shadow-md transition-all duration-300 relative`}
+                    className={`${styles.fileCard} bg-white hover:bg-slate-50/50 border ${selectedBackups.includes(backup.name) ? 'border-red-400 ring-2 ring-red-100' : 'border-slate-100'} rounded-[28px] p-6 flex flex-col gap-4 shadow-sm hover:shadow-md transition-all duration-300 relative`}
                   >
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 w-full">
+                    <div className={`${styles.fileInfo} flex flex-col sm:flex-row items-start sm:items-center gap-5 w-full`}>
                       {showDeleteButton && (
                         <div className="absolute top-4 right-4 sm:relative sm:top-auto sm:right-auto sm:ml-2">
                           <input 
@@ -708,7 +693,7 @@ export default function BackupsPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 w-full pt-2">
+                    <div className={`${styles.fileActions} flex items-center gap-3 w-full pt-2`}>
                       {!isArchive ? (
                         <>
                           <button
@@ -734,6 +719,7 @@ export default function BackupsPage() {
                       )}
                       <button
                         onClick={() => handleDownloadBackup(backup.name)}
+                        aria-label={language === 'ar' ? `تحميل ملف النسخة: ${backup.name}` : `Download file: ${backup.name}`}
                         className="bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 p-3.5 rounded-xl transition-all cursor-pointer border border-transparent shrink-0"
                         title={language === 'ar' ? "تحميل ملف النسخة" : "Download File"}
                       >
@@ -757,13 +743,13 @@ export default function BackupsPage() {
           </div>
 
           {/* Bundled Archives Area */}
-          <div className="space-y-6">
+          <div className={`${styles.archives} space-y-6`}>
             <h3 className="text-xl font-black text-slate-800 px-2 flex items-center gap-3">
               <Archive className="w-6 h-6 text-purple-600" />
               <span>{language === 'ar' ? "النسخ المجمعة" : "Bundled Archives"} ({archiveBackups.length})</span>
             </h3>
-            <div className="bg-gradient-to-b from-purple-50 to-indigo-50 border border-purple-100 rounded-[35px] p-6 shadow-sm min-h-[400px]">
-              {archiveBackups.length === 0 ? (
+            <div className={`${styles.archiveBody} bg-gradient-to-b from-purple-50 to-indigo-50 border border-purple-100 rounded-[35px] p-6 shadow-sm min-h-[400px]`}>
+              {loading || listError ? <p role="status">{language === 'ar' ? (loading ? 'جارٍ تحميل الأرشيف…' : 'القائمة غير متاحة حاليًا.') : (loading ? 'Loading archives…' : 'The list is currently unavailable.')}</p> : archiveBackups.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center gap-4 text-purple-300 opacity-80 pt-10">
                   <Archive className="w-16 h-16" />
                   <p className="font-bold text-sm text-purple-400">
@@ -771,11 +757,11 @@ export default function BackupsPage() {
                   </p>
                 </div>
               ) : (
-                <div className="flex flex-col gap-4 max-h-[600px] overflow-y-auto custom-scrollbar pr-2">
+                <div className={`${styles.fileList} flex flex-col gap-4 max-h-[600px] overflow-y-auto custom-scrollbar pr-2`}>
                   {archiveBackups.map((backup) => (
                     <div 
                       key={backup.name} 
-                      className={`bg-white hover:bg-purple-50/50 border ${selectedBackups.includes(backup.name) ? 'border-red-400 ring-2 ring-red-100' : 'border-purple-100'} rounded-[24px] p-5 flex flex-col gap-3 shadow-sm transition-all relative`}
+                      className={`${styles.fileCard} bg-white hover:bg-purple-50/50 border ${selectedBackups.includes(backup.name) ? 'border-red-400 ring-2 ring-red-100' : 'border-purple-100'} rounded-[24px] p-5 flex flex-col gap-3 shadow-sm transition-all relative`}
                     >
                       <div className="flex items-center gap-3">
                         {showDeleteButton && (
@@ -839,7 +825,7 @@ export default function BackupsPage() {
 
         {/* 1. First Confirmation Modal */}
         {showConfirmModal && selectedBackup && (
-          <div className="fixed inset-0 bg-[#0f0f1d]/70 backdrop-blur-md flex items-center justify-center p-6 z-[100] animate-in fade-in duration-300">
+          <div className={`${styles.modalOverlay} fixed inset-0 bg-[#0f0f1d]/70 backdrop-blur-md flex items-center justify-center p-6 z-[100] animate-in fade-in duration-300`}>
             <div className="bg-white rounded-[35px] border border-slate-100 w-full max-w-xl p-8 md:p-10 shadow-2xl relative space-y-8 animate-in zoom-in-95 duration-300">
               <div className="flex items-center gap-4 text-rose-600 bg-rose-50 p-6 rounded-[25px] border border-rose-100">
                 <AlertTriangle className="w-10 h-10 shrink-0" />
@@ -883,7 +869,7 @@ export default function BackupsPage() {
 
         {/* 2. Double Confirmation Modal */}
         {showDoubleConfirmModal && selectedBackup && (
-          <div className="fixed inset-0 bg-[#0f0f1d]/85 backdrop-blur-lg flex items-center justify-center p-6 z-[100] animate-in fade-in duration-300">
+          <div className={`${styles.modalOverlay} fixed inset-0 bg-[#0f0f1d]/85 backdrop-blur-lg flex items-center justify-center p-6 z-[100] animate-in fade-in duration-300`}>
             <div className="bg-white rounded-[35px] border border-rose-200 w-full max-w-xl p-8 md:p-10 shadow-2xl relative space-y-8 animate-in zoom-in-95 duration-300">
               <div className="flex items-center gap-4 text-rose-600 bg-rose-50 p-6 rounded-[25px] border border-rose-100">
                 <ShieldAlert className="w-12 h-12 shrink-0 animate-bounce" />

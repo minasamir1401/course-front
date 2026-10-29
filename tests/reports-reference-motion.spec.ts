@@ -28,8 +28,8 @@ for(const language of ['ar','en']) test(`report reference layout, real chart and
 });
 
 for(const reduced of [false,true])test(`landing motion is finite, accessible and reveals content reduced=${reduced}`,async({page})=>{
-  test.setTimeout(60000);await page.route('https://fonts.googleapis.com/**',route=>route.abort());await page.emulateMedia({reducedMotion:reduced?'reduce':'no-preference'});await page.goto('/',{waitUntil:'domcontentloaded'});const root=page.locator('[class*="LandingContent_page"]');await expect(page.getByRole('button',{name:'التبديل للإنجليزية',exact:true})).toBeEnabled();
-  const art=page.locator('[class*="educationArt"]');
+  test.setTimeout(60000);await page.route('https://fonts.googleapis.com/**',route=>route.abort());await page.emulateMedia({reducedMotion:reduced?'reduce':'no-preference'});await page.goto('/',{waitUntil:'domcontentloaded'});const root=page.locator('main').locator('..');await expect(page.getByRole('button',{name:'التبديل للإنجليزية',exact:true})).toBeEnabled();
+  const art=page.locator('[aria-labelledby="landing-title"] img');
   if(reduced){await expect(root).not.toHaveAttribute('data-motion','ready');expect(await art.evaluate(el=>getComputedStyle(el).animationName)).toBe('none');}
   else{await expect(root).toHaveAttribute('data-motion','ready');expect(await art.evaluate(el=>getComputedStyle(el).animationIterationCount)).toBe('1');expect(await art.evaluate(el=>Number.parseFloat(getComputedStyle(el).animationDuration))).toBeLessThanOrEqual(5);
     for(const element of await page.locator('[data-reveal]').all()){await element.scrollIntoViewIfNeeded();await expect(element).toHaveAttribute('data-revealed','true');await expect.poll(()=>element.evaluate(el=>Number(getComputedStyle(el).opacity))).toBe(1);}

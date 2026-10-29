@@ -1,10 +1,12 @@
 "use client";
+import { checkAuthSession, clearAllAuthData } from "@/lib/auth";
 
 import { API_URL } from '@/lib/api';
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, User, Shield, BookOpen, Eye, EyeOff } from 'lucide-react';
 import Link from "next/link";
+import Image from "next/image";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function SuperAdminLoginForm() {
@@ -18,22 +20,21 @@ export default function SuperAdminLoginForm() {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem("super_admin_token");
-    const userString = localStorage.getItem("super_admin_user");
-    
-    if (token && userString) {
-      try {
-        const user = JSON.parse(userString);
-        if (user && user.role === "SUPER_ADMIN") {
-          router.replace("/super-admin");
-          return;
-        }
-      } catch (e) {
-        localStorage.removeItem("super_admin_token");
-        localStorage.removeItem("super_admin_user");
+    let active = true;
+    void checkAuthSession().then(session => {
+      if (!active) return;
+      if (session.authenticated && session.user && (session.user.role === 'SUPER_ADMIN')) {
+        const role = session.user.role;
+        const prefix = role === 'SUPER_ADMIN' ? 'super_admin' : role === 'STUDENT' ? 'lms' : 'school_admin';
+        localStorage.setItem(prefix + '_token', 'cookie_auth');
+        localStorage.setItem(prefix + '_user', JSON.stringify(session.user));
+        router.replace(role === 'SUPER_ADMIN' ? '/super-admin' : role === 'STUDENT' ? '/dashboard' : '/school-admin');
+        return;
       }
-    }
-    setIsChecking(false);
+      if (!session.authenticated && !session.unavailable) clearAllAuthData();
+      setIsChecking(false);
+    });
+    return () => { active = false; };
   }, [router]);
 
   if (isChecking) {
@@ -150,10 +151,9 @@ export default function SuperAdminLoginForm() {
             }}
           >
             <div
-              className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 shadow-lg"
-              style={{ background: "linear-gradient(135deg, #7c3aed, #db2777)" }}
+              className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-4 shadow-lg bg-white overflow-hidden"
             >
-              <Shield className="w-8 h-8 text-white" />
+              <Image src="/klevro/brand/klevro-logo.jpg" alt="Klevro" width={80} height={80} priority className="object-contain" />
             </div>
             <h1 className="text-2xl font-bold text-white mb-1">{t('login.superAdminTitle')}</h1>
             <p className="text-purple-300 text-sm">{t('login.superAdminSubtitle')}</p>

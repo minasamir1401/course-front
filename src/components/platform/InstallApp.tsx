@@ -9,6 +9,13 @@ const REMIND_AFTER = 30 * 60 * 1000;
 export default function InstallApp() {
   const { language } = useLanguage(); const ar = language === 'ar'; const pathname = usePathname();
   const [open, setOpen] = useState(false); const [installed, setInstalled] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const installRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const update = () => setAssistantOpen(document.documentElement.dataset.aiChatOpen === 'true');
+    update(); window.addEventListener('klevro:assistant-open', update);
+    return () => window.removeEventListener('klevro:assistant-open', update);
+  }, []);
   const [prompt, setPrompt] = useState<InstallEvent | null>(null); const [guide, setGuide] = useState(false); const [busy, setBusy] = useState(false); const [ios, setIos] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const installedRef = useRef(false);
@@ -57,10 +64,17 @@ export default function InstallApp() {
     catch { setGuide(true); }
     finally { setBusy(false); }
   };
-  // Do not cover timed assessment answers with a promotional prompt.
-  const takingExam = /^\/(exams|competitions)\/[^/]+$/.test(pathname || '');
-  if (!open || installed || takingExam) return null;
-  return <aside className={styles.install} aria-label={ar ? 'تثبيت تطبيق Klevro' : 'Install Klevro'} dir={ar ? 'rtl' : 'ltr'}>
+  // Keep promotional prompts out of assessments and the focused lesson editor.
+  const takingExam = /^\/(exams|competitions)\/[^/]+$/.test(pathname || '') || /\/courses\/lesson$/.test(pathname || '');
+  useEffect(() => {
+    const element = installRef.current;
+    if (!element) { document.documentElement.style.removeProperty('--klevro-ai-dock-bottom'); return; }
+    const update = () => document.documentElement.style.setProperty('--klevro-ai-dock-bottom', `${element.getBoundingClientRect().height + (Number.parseFloat(getComputedStyle(element).bottom) || 0) + 14}px`);
+    update(); const observer = new ResizeObserver(update); observer.observe(element); window.addEventListener('resize', update);
+    return () => { observer.disconnect(); window.removeEventListener('resize', update); document.documentElement.style.removeProperty('--klevro-ai-dock-bottom'); };
+  }, [open, installed, takingExam, assistantOpen, guide]);
+  if (!open || installed || takingExam || assistantOpen) return null;
+  return <aside ref={installRef} className={styles.install} aria-label={ar ? 'تثبيت تطبيق Klevro' : 'Install Klevro'} dir={ar ? 'rtl' : 'ltr'}>
     <div className={styles.installTop}><Smartphone size={25} aria-hidden="true"/><div><h2>{ar ? 'منصتك أقرب… حمّل التطبيق' : 'Your learning space, one tap away'}</h2><p>{ar ? 'ثبّت Klevro على الموبايل أو الكمبيوتر وافتح دروسك مباشرة.' : 'Install Klevro on your phone or computer for direct access to your learning space.'}</p></div><button className={styles.close} aria-label={ar ? 'إخفاء دعوة التثبيت' : 'Dismiss installation invitation'} onClick={dismiss}><X size={17}/></button></div>
     <div className={styles.actions}><button className={styles.primary} disabled={busy} onClick={install}><Download size={17}/>{ar ? 'حمّل التطبيق' : 'Install app'}</button><button className={styles.secondary} onClick={dismiss}>{ar ? 'لاحقًا' : 'Later'}</button></div>
     {guide && <p className={styles.guide} role="status">{ios ? (ar ? 'في Safari: اضغط مشاركة، ثم «إضافة إلى الشاشة الرئيسية»، ثم افتح التطبيق من أيقونته.' : 'In Safari, tap Share → Add to Home Screen, then open the app from its icon.') : (ar ? 'افتح قائمة المتصفح واختر «تثبيت Klevro» أو «تثبيت هذا الموقع كتطبيق». إذا لم يظهر الخيار، جرّب Chrome أو Edge بعد تحديثهما.' : 'Open your browser menu and choose Install Klevro or Install this site as an app. If unavailable, try an up-to-date Chrome or Edge browser.')}</p>}

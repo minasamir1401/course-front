@@ -1,3 +1,4 @@
+import { serverSession } from './helpers/serverSession';
 import { test, expect } from '@playwright/test';
 import { studentSession, exam } from './helpers/studentWorkspace';
 
@@ -6,6 +7,7 @@ for (const role of ['SUPER_ADMIN', 'SCHOOL_ADMIN', 'TEACHER']) {
     test.setTimeout(90000);
     const prefix = role === 'SUPER_ADMIN' ? 'super-admin' : 'school-admin';
     const user = { id: 'author', name: 'Author', role, schoolId: 'school', status: 'ACTIVE' };
+  await serverSession(page, role);
     await page.addInitScript(({ prefix, user }) => {
       const key = prefix.replace('-', '_');
       localStorage.setItem(key + '_token', 'cookie_auth');

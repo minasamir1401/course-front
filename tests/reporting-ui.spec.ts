@@ -1,3 +1,4 @@
+import { serverSession } from './helpers/serverSession';
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
@@ -11,6 +12,7 @@ const report = {
 };
 
 async function setup(page: any, role: string, fail = false, language = 'en') {
+  await serverSession(page, role);
   await page.addInitScript(({ role, language }: any) => {
     const key = role === 'SUPER_ADMIN' ? 'super_admin' : role === 'SCHOOL_ADMIN' ? 'school_admin' : 'lms';
     localStorage.setItem(`${key}_token`, 'cookie_auth');
@@ -20,6 +22,7 @@ async function setup(page: any, role: string, fail = false, language = 'en') {
   }, { role, language });
   await page.route('**/api/**', async (route: any) => {
     const url = new URL(route.request().url());
+    if (url.pathname === '/api/auth/me') return route.fulfill({ json: { authenticated: true, user: { id: 'me', role, name: 'Test user', schoolId: 'school' } } });
     if (url.pathname === '/api/reports/export') return route.fulfill({ status: 200, contentType: 'application/octet-stream', body: 'test export' });
     let body: any = [];
     if (url.pathname === '/api/reports/options') body = options;

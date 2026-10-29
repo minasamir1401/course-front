@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 };
 export default function LandingPage() {
   const structuredData = { '@context': 'https://schema.org', '@graph': [
-    { '@type': 'Organization', '@id': new URL('/#organization', siteUrl).href, name: 'Klevro', url: siteUrl.href, logo: new URL('/logo.jpeg', siteUrl).href },
+    { '@type': 'Organization', '@id': new URL('/#organization', siteUrl).href, name: 'Klevro', url: siteUrl.href, logo: new URL('/klevro/brand/klevro-logo.jpg', siteUrl).href },
     { '@type': 'WebSite', name: 'Klevro', url: siteUrl.href, description: landingDescription, inLanguage: ['ar', 'en'], publisher: { '@id': new URL('/#organization', siteUrl).href } },
     { '@type': 'WebApplication', name: 'Klevro', url: siteUrl.href, applicationCategory: 'EducationalApplication', operatingSystem: 'Web browser', inLanguage: ['ar', 'en'], description: landingDescription, featureList: ['School courses and lessons', 'Online assessments', 'Interactive activities', 'Academic calendar', 'Progress reports'] },
   ] };

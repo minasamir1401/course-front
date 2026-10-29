@@ -4,12 +4,14 @@ import React, { useState, useRef } from "react";
 import { useCourseEditor } from "./CourseEditorContext";
 import { Layers, Plus, BookOpen, Eye, Clock, Monitor, Edit2, Trash2, X, DownloadCloud, FileSpreadsheet, FileCode, Upload, ArrowUp, ArrowDown, Copy } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useRouter } from 'next/navigation';
 import { apiFetch, API_URL } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";
 import ImportExcelModal from "@/components/modals/ImportExcelModal";
 import CopyLessonModal from "@/components/modals/CopyLessonModal";
 
 export const LessonList: React.FC = () => {
+  const router = useRouter();
   const { language } = useLanguage();
   const { showToast } = useNotification();
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -28,7 +30,8 @@ export const LessonList: React.FC = () => {
     handleSubmit,
     isSettingsHidden,
     setIsSettingsHidden,
-    setLessons
+    setLessons,
+    hasUnsavedChanges,
   } = useCourseEditor();
 
   // Bulk operations visible to SUPER_ADMIN only
@@ -374,7 +377,10 @@ export const LessonList: React.FC = () => {
                     </button>
                   )}
                   <button
-                    onClick={() => openEditLessonModal(index)}
+                    onClick={() => {
+                      if (lesson.id && courseId && !hasUnsavedChanges) router.push(`/${role === 'SUPER_ADMIN' ? 'super-admin' : 'school-admin'}/courses/lesson?id=${encodeURIComponent(courseId)}&lessonId=${encodeURIComponent(lesson.id)}`);
+                      else void openEditLessonModal(index);
+                    }}
                     className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm"
                     title={language === "ar" ? "تعديل" : "Edit"}
                   >

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
+import AiAdminSettings from '@/components/ai/AiAdminSettings';
 import { notifyDeletionPolicyChanged } from '@/hooks/useDeletionPolicy';
 import { Shield, Sparkles, Key, Eye, EyeOff, Settings, Lock, Unlock, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
 import { apiFetch, API_URL } from "@/lib/api";
@@ -216,6 +217,7 @@ export default function SuperAdminSettingsPage() {
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-10 rtl text-slate-800" dir="rtl">
+          <AiAdminSettings />
         
         {/* Premium Command Center Header */}
         <div className="relative bg-[#0f0f1d] rounded-[40px] p-12 overflow-hidden shadow-2xl border border-white/5">

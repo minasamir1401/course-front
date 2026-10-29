@@ -1,0 +1,37 @@
+.chat.chat {
+  font-family: Tahoma, 'Segoe UI', Arial, sans-serif;
+  font-size: 16px;
+  color: #282333;
+  text-rendering: optimizeLegibility;
+}
+.reply.reply {
+  font-family: Tahoma, 'Segoe UI', Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 2.05;
+  color: #282333;
+  letter-spacing: normal;
+  text-align: start;
+}
+.reply.reply :global(.prose) { font: inherit; color: inherit; max-width: none; }
+.reply.reply :is(p, li) { font-size: inherit; line-height: inherit; color: inherit; }
+.reply.reply p { margin-block: 0 16px; }
+.reply.reply li { margin-block: 9px; }
+.reply.reply :is(h1, h2, h3, h4) { font-size: 19px; font-weight: 700; line-height: 1.8; color: #342440; margin-block: 22px 12px; }
+.reply.reply strong { color: #342440; font-weight: 700; }
+.reply.reply :is(a, code, table) { font-size: 14px; }
+.reply.reply blockquote { color: #54465f; font-size: 15px; line-height: 2; }
+.reply.reply th { color: #503e60; }
+.chat .heading h2 { font-size: 18px; }
+.chat .heading p { font-size: 13px; color: #67596f; line-height: 1.8; }
+.chat .intro p { font-size: 15px; color: #65586e; line-height: 2; }
+.chat .prompts button { font: inherit; font-size: 14px; line-height: 1.9; min-height: 46px; color: #503c64; }
+.chat .message { font-size: 16px; line-height: 2.05; }
+.chat .author { font-size: 12px; color: #6c567f; }
+.chat .inputWrap textarea { font: inherit; font-size: 16px; line-height: 1.9; color: #30243c; }
+.chat .send { font: inherit; font-size: 14px; font-weight: 700; }
+.chat .footnote { font-size: 12px; color: #75677e; line-height: 1.8; }
+.chat .sources a { font-size: 13px; }
+.chat .error { font-size: 14px; line-height: 1.9; }
+.chat .inputActions select { font-size: 12px; }
+@media (min-width: 900px) { .reply.reply { font-size: 17px; } }

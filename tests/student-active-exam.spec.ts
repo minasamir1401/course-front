@@ -9,6 +9,51 @@ const assessment={...exam,title:'اللغة العربية — واجب تطبي
  {...questions[1],id:'q4',text:'ما عنوان مناسب لهذا النص؟',textEn:'What is a suitable title for the text?',options:['خطوة نحو النجاح','رحلة إلى البحر'],optionsEn:['A step toward success','A trip to the sea'],correctAnswer:'خطوة نحو النجاح'},
 ]};
 
+for(const language of ['ar','en'])test(`exam arrows follow question language and preserve answers without interrupting fields or dialogs ${language}`,async({page})=>{
+ await studentSession(page,language);await page.route('https://fonts.googleapis.com/**',r=>r.abort());await page.route('**/api/exams/exam',r=>r.fulfill({json:assessment}));
+ let submissions=0;page.on('request',r=>{if(r.url().includes('/submit')&&r.method()==='POST')submissions++;});
+ await page.goto('/exams/exam');await page.getByRole('button',{name:language==='ar'?'ابدأ الامتحان الآن':'Start Exam Now',exact:true}).click();
+ const forward=language==='ar'?'ArrowLeft':'ArrowRight',back=language==='ar'?'ArrowRight':'ArrowLeft';
+ const position=page.locator('[class*="questionPosition"] h2');
+ const ready=async()=>expect(page.locator('[data-exam-question]')).toHaveAttribute('aria-busy','false');
+ const at=async(n:number)=>expect(position).toContainText(new RegExp(`(?:Question|السؤال)\\s+${n}\\b`));
+ await ready();await page.keyboard.press(back);await at(1);
+ await page.getByRole('button').filter({hasText:language==='ar'?'تنظيم الوقت':'Time management'}).first().click();
+ await page.keyboard.press(forward);await at(2);await ready();
+ await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+ await expect(page.locator('[data-exam-question]')).toBeVisible();await at(2);
+ await page.evaluate(()=>{const input=document.createElement('input');input.id='exam-keyboard-answer';input.value='abcd';input.dir='ltr';input.setAttribute('aria-label','Typing test');document.querySelector('[data-exam-question]')?.append(input);input.focus();input.setSelectionRange(2,2);});
+ await page.keyboard.press(forward);await at(2);expect(await page.locator('#exam-keyboard-answer').evaluate((e:HTMLInputElement)=>e.selectionStart)).toBe(language==='ar'?1:3);
+ await page.evaluate(()=>document.getElementById('exam-keyboard-answer')?.remove());
+ await page.getByRole('button',{name:'Open calculator',exact:true}).click();
+ await expect(page.getByRole('dialog',{name:'Scientific Calculator',exact:true})).toBeVisible();
+ await page.keyboard.press(forward);await at(2);await page.keyboard.press('Escape');
+ await expect(page.getByRole('dialog',{name:'Scientific Calculator',exact:true})).toHaveCount(0);
+ await page.keyboard.press(back);await at(1);await ready();
+ await expect(page.getByRole('button').filter({hasText:language==='ar'?'تنظيم الوقت':'Time management'}).first()).toHaveAttribute('aria-pressed','true');
+ for(let n=2;n<=4;n++){await page.keyboard.press(forward);await at(n);await ready();}
+ await page.keyboard.press(forward);await at(4);await expect(page.locator('[aria-modal="true"]')).toHaveCount(0);expect(submissions).toBe(0);
+ await page.getByRole('button',{name:language==='ar'?'تسليم الامتحان النهائي':'Submit Final Exam',exact:true}).click();
+ await expect(page.locator('[aria-modal="true"]')).toBeVisible();await page.keyboard.press(back);await at(4);expect(submissions).toBe(0);
+ await page.keyboard.press('Escape');await expect(page.locator('[aria-modal="true"]')).toHaveCount(0);
+ await page.getByRole('button',{name:language==='ar'?'English':'العربية',exact:true}).click();await ready();
+ await page.keyboard.press(forward);await at(3);expect(submissions).toBe(0);
+});
+
+for(const language of ['ar','en'])test(`calculator stays beside the timer and within desktop and mobile viewports ${language}`,async({page})=>{
+ await studentSession(page,language);await page.route('https://fonts.googleapis.com/**',r=>r.abort());await page.route('**/api/exams/exam',r=>r.fulfill({json:assessment}));
+ await page.goto('/exams/exam');await page.getByRole('button',{name:language==='ar'?'ابدأ الامتحان الآن':'Start Exam Now',exact:true}).click();
+ for(const viewport of [{width:1440,height:900},{width:390,height:844},{width:320,height:568}]){
+  await page.setViewportSize(viewport);const launcher=page.locator('header').getByRole('button',{name:'Open calculator',exact:true});
+  await expect(launcher).toBeInViewport();const button=await launcher.boundingBox();expect(button!.y).toBeLessThan(220);
+  await launcher.click();const dialog=page.getByRole('dialog',{name:'Scientific Calculator',exact:true});await expect(dialog).toBeVisible();
+  const bounds=await dialog.boundingBox();expect(bounds!.x).toBeGreaterThanOrEqual(11);expect(bounds!.x+bounds!.width).toBeLessThanOrEqual(viewport.width-11);expect(bounds!.y+bounds!.height).toBeLessThanOrEqual(viewport.height-11);
+  await dialog.getByRole('button',{name:'AC',exact:true}).click();await dialog.getByRole('button',{name:'2',exact:true}).click();await dialog.getByRole('button',{name:'+',exact:true}).click();await dialog.getByRole('button',{name:'3',exact:true}).click();await dialog.getByRole('button',{name:'=',exact:true}).click();await expect(dialog.getByLabel('Calculation result')).toHaveText('5');
+  if(viewport.width!==320)await page.screenshot({path:`../artifacts/active-exam-ui/calculator-top-${language}-${viewport.width}.png`});
+  await dialog.getByRole('button',{name:'Close calculator',exact:true}).click();await expect(launcher).toBeFocused();
+ }
+});
+
 for(const language of ['ar','en'])test(`active assessment has modern responsive navigation and accessible answers ${language}`,async({page})=>{
  test.setTimeout(180000);await studentSession(page,language);await page.route('https://fonts.googleapis.com/**',r=>r.abort());await page.route('**/api/exams/exam',r=>r.fulfill({json:assessment}));await page.emulateMedia({reducedMotion:'reduce'});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  for(const width of [320,390,768,1011,1264,1536]){

@@ -19,6 +19,7 @@ import VideoPlayer from "@/components/VideoPlayer";
 import HtmlRenderer from "@/components/HtmlRenderer";
 import Watermark from "@/components/Watermark";
 import StudentExamCalculator from "@/components/StudentExamCalculator";
+import { examArrowDelta } from '@/lib/examKeyboard';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getOptionLetter, cleanOptionText } from "@/lib/utils";
 import { getAnswerStatusLabel, getInExamQuestionTypeLabel, getSafeCurrentQuestion, resolveTakeExamQuestions, toggleReviewFlag } from '@/lib/takeExamUi';
@@ -219,6 +220,19 @@ function TakeExamPageContent() {
   const mediaQuestion = getSafeCurrentQuestion(examQuestions, currentQuestion);
   const mediaKey = String(mediaQuestion?.id || currentQuestion) + ':' + studentQuestionLang;
   const questionMedia = useExamMedia(questionWorkspaceRef, mediaKey, started && !loading && !!mediaQuestion, examQuestions[currentQuestion + 1]);
+
+  useEffect(() => {
+    if (!started || loading || submitting || showSubmitModal || !questionMedia.ready || !examQuestions.length) return;
+    const navigate = (event: KeyboardEvent) => {
+      if (document.querySelector('[role="dialog"], [data-exam-calculator-open]') || window.getSelection()?.toString()) return;
+      const delta = examArrowDelta(event, studentQuestionLang);
+      if (!delta) return;
+      event.preventDefault();
+      setCurrentQuestion(current => Math.max(0, Math.min(examQuestions.length - 1, current + delta)));
+    };
+    document.addEventListener('keydown', navigate);
+    return () => document.removeEventListener('keydown', navigate);
+  }, [started, loading, submitting, showSubmitModal, questionMedia.ready, examQuestions.length, studentQuestionLang]);
 
   const getAuthHeaders = React.useCallback((): HeadersInit => {
     const candidateToken = isPreviewMode
@@ -593,7 +607,6 @@ function TakeExamPageContent() {
       <div className={styles.background} aria-hidden="true"/>
       <Watermark text={watermarkText} />
       <OfflineBanner language={language} />
-      <StudentExamCalculator />
 
       {/* Submit Confirmation Modal */}
       {showSubmitModal && (
@@ -635,8 +648,8 @@ function TakeExamPageContent() {
       {isPreviewMode && <div className={styles.previewBanner}>{isEn ? 'Preview mode — answers are not recorded.' : 'وضع المعاينة — لا تُسجّل الإجابات.'}</div>}
 
       <header className={styles.topbar}><div className={styles.headerInner}>
-        <div className={styles.heading}><span className={styles.brand}><Image src="/logo.jpeg" alt="Klevro" width={33} height={36}/></span><div className={styles.headingCopy}><p className={styles.eyebrow}><span aria-hidden="true"/>{isEn ? 'Assessment in progress' : 'اختبار جارٍ'}</p><h1>{displayExamTitle}</h1><div className={styles.headerMeta}><span className={styles.type}>{exam.type === 'Assignment' ? (isEn ? 'Assignment' : 'واجب تطبيقي') : exam.type === 'Quiz' || exam.type === 'Exam' || !exam.type ? (isEn ? 'Exam' : 'امتحان') : exam.type}</span>{currentQuestionSection && <span>{isEn ? 'Section: ' : 'القسم: '}{currentQuestionSection}</span>}</div></div></div>
-        <div className={styles.headerTools}><div className={styles.language} role="group" aria-label={isEn?'Exam language':'لغة الامتحان'}><button type="button" aria-pressed={!isEn} onClick={()=>setStudentQuestionLang('ar')}>العربية</button><button type="button" aria-pressed={isEn} onClick={()=>setStudentQuestionLang('en')}>English</button></div><div className={styles.timer}><p>{!questionMedia.ready ? (isEn ? 'Paused while loading' : 'متوقف أثناء التحميل') : (isEn ? 'Time remaining' : 'الوقت المتبقي')}</p><ExamCountdown initialSeconds={timeLeft} paused={!questionMedia.ready} storageKey={isPreviewMode ? null : `exam_${id}_${subExamId || "root"}_time`} onTick={seconds=>{remainingTimeRef.current=seconds;}} onExpire={()=>{if(!hasAutoSubmitted.current){hasAutoSubmitted.current=true;handleSubmit();}}}/></div></div>
+        <div className={styles.heading}><span className={styles.brand}><Image src="/klevro/brand/klevro-logo.jpg" alt="Klevro" width={33} height={36}/></span><div className={styles.headingCopy}><p className={styles.eyebrow}><span aria-hidden="true"/>{isEn ? 'Assessment in progress' : 'اختبار جارٍ'}</p><h1>{displayExamTitle}</h1><div className={styles.headerMeta}><span className={styles.type}>{exam.type === 'Assignment' ? (isEn ? 'Assignment' : 'واجب تطبيقي') : exam.type === 'Quiz' || exam.type === 'Exam' || !exam.type ? (isEn ? 'Exam' : 'امتحان') : exam.type}</span>{currentQuestionSection && <span>{isEn ? 'Section: ' : 'القسم: '}{currentQuestionSection}</span>}</div></div></div>
+        <div className={styles.headerTools}><div className={styles.language} role="group" aria-label={isEn?'Exam language':'لغة الامتحان'}><button type="button" aria-pressed={!isEn} onClick={()=>setStudentQuestionLang('ar')}>العربية</button><button type="button" aria-pressed={isEn} onClick={()=>setStudentQuestionLang('en')}>English</button></div><StudentExamCalculator/><div className={styles.timer}><p>{!questionMedia.ready ? (isEn ? 'Paused while loading' : 'متوقف أثناء التحميل') : (isEn ? 'Time remaining' : 'الوقت المتبقي')}</p><ExamCountdown initialSeconds={timeLeft} paused={!questionMedia.ready} storageKey={isPreviewMode ? null : `exam_${id}_${subExamId || "root"}_time`} onTick={seconds=>{remainingTimeRef.current=seconds;}} onExpire={()=>{if(!hasAutoSubmitted.current){hasAutoSubmitted.current=true;handleSubmit();}}}/></div></div>
       </div></header>
       <div className={styles.workspace}>
         <aside className={styles.navigator} aria-labelledby="question-navigator-title"><div className={styles.navHeading}><h2 id="question-navigator-title">{isEn ? 'Your progress' : 'تقدمك في الاختبار'}</h2><strong>{completedProgress}%</strong><button type="button" className={styles.mobileToggle} aria-expanded={navigationExpanded} aria-controls="exam-question-navigation" onClick={()=>setNavigationExpanded(value=>!value)}><ListOrdered size={15} aria-hidden="true"/>{navigationExpanded ? (isEn?'Hide questions':'إخفاء الأسئلة') : (isEn?'Show questions':'عرض الأسئلة')}</button></div><progress className={styles.progress} max={100} value={completedProgress} aria-label={isEn?'Assessment progress':'تقدم الاختبار'}/>
@@ -852,7 +865,7 @@ function TakeExamPageContent() {
           </div>
         </div>
 
-        <div className={styles.navigation} aria-label={isEn?'Question actions':'إجراءات السؤال'}><button type="button" className={styles.previous} disabled={currentQuestion===0} onClick={()=>setCurrentQuestion(currentQuestion-1)}>{isEn?<ChevronLeft size={16}/>:<ChevronRight size={16}/>} {isEn?'Previous':'السؤال السابق'}</button><button type="button" className={styles.review} data-flagged={isCurrentQuestionFlagged} aria-pressed={isCurrentQuestionFlagged} onClick={()=>setReviewFlags(currentFlags=>toggleReviewFlag(currentFlags,String(question.id||'')))}><Flag size={15} aria-hidden="true"/>{isEn?'Mark for Review':'وضع علامة للمراجعة'}</button>{currentQuestion===examQuestions.length-1?<button type="button" className={styles.submit} disabled={submitting} onClick={()=>setShowSubmitModal(true)}>{submitting?(isEn?'Submitting...':'جاري الإرسال...'):(isEn?'Submit Final Exam':'تسليم الامتحان النهائي')}<Send size={16}/></button>:<button type="button" className={styles.next} onClick={()=>setCurrentQuestion(currentQuestion+1)}>{isEn?'Next':'السؤال التالي'}{isEn?<ChevronRight size={16}/>:<ChevronLeft size={16}/>}</button>}</div>
+        <div className={styles.navigation} aria-label={isEn?'Question actions':'إجراءات السؤال'}><button type="button" className={styles.previous} aria-keyshortcuts={isEn?'ArrowLeft':'ArrowRight'} disabled={currentQuestion===0} onClick={()=>setCurrentQuestion(currentQuestion-1)}>{isEn?<ChevronLeft size={16}/>:<ChevronRight size={16}/>} {isEn?'Previous':'السؤال السابق'}</button><button type="button" className={styles.review} data-flagged={isCurrentQuestionFlagged} aria-pressed={isCurrentQuestionFlagged} onClick={()=>setReviewFlags(currentFlags=>toggleReviewFlag(currentFlags,String(question.id||'')))}><Flag size={15} aria-hidden="true"/>{isEn?'Mark for Review':'وضع علامة للمراجعة'}</button>{currentQuestion===examQuestions.length-1?<button type="button" className={styles.submit} disabled={submitting} onClick={()=>setShowSubmitModal(true)}>{submitting?(isEn?'Submitting...':'جاري الإرسال...'):(isEn?'Submit Final Exam':'تسليم الامتحان النهائي')}<Send size={16}/></button>:<button type="button" className={styles.next} aria-keyshortcuts={isEn?'ArrowRight':'ArrowLeft'} onClick={()=>setCurrentQuestion(currentQuestion+1)}>{isEn?'Next':'السؤال التالي'}{isEn?<ChevronRight size={16}/>:<ChevronLeft size={16}/>}</button>}</div>
         </main>
       </div>
     </div>

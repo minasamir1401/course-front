@@ -1,10 +1,12 @@
 "use client";
+import { checkAuthSession, clearAllAuthData } from "@/lib/auth";
 
 import { API_URL } from '@/lib/api';
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, User, Building2, BookOpen } from 'lucide-react';
+import { Lock, User, BookOpen } from 'lucide-react';
 import Link from "next/link";
+import Image from "next/image";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function SchoolAdminLoginForm() {
@@ -17,22 +19,21 @@ export default function SchoolAdminLoginForm() {
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("school_admin_token");
-    const userString = localStorage.getItem("school_admin_user");
-    
-    if (token && userString) {
-      try {
-        const user = JSON.parse(userString);
-        if (user && (user.role === "SCHOOL_ADMIN" || user.role === "TEACHER")) {
-          router.replace("/school-admin");
-          return;
-        }
-      } catch {
-        localStorage.removeItem("school_admin_token");
-        localStorage.removeItem("school_admin_user");
+    let active = true;
+    void checkAuthSession().then(session => {
+      if (!active) return;
+      if (session.authenticated && session.user && (['SCHOOL_ADMIN', 'TEACHER', 'SUPER_ADMIN'].includes(session.user.role))) {
+        const role = session.user.role;
+        const prefix = role === 'SUPER_ADMIN' ? 'super_admin' : role === 'STUDENT' ? 'lms' : 'school_admin';
+        localStorage.setItem(prefix + '_token', 'cookie_auth');
+        localStorage.setItem(prefix + '_user', JSON.stringify(session.user));
+        router.replace(role === 'SUPER_ADMIN' ? '/super-admin' : role === 'STUDENT' ? '/dashboard' : '/school-admin');
+        return;
       }
-    }
-    setIsChecking(false);
+      if (!session.authenticated && !session.unavailable) clearAllAuthData();
+      setIsChecking(false);
+    });
+    return () => { active = false; };
   }, [router]);
 
   if (isChecking) {
@@ -115,8 +116,8 @@ export default function SchoolAdminLoginForm() {
       <div className="max-w-md w-full relative z-10">
         <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl overflow-hidden shadow-2xl">
           <div className="p-8 text-center border-b border-white/10">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 bg-gradient-to-br from-emerald-400 to-teal-600 shadow-lg">
-              <Building2 className="w-8 h-8 text-white" />
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-4 bg-white shadow-lg overflow-hidden">
+              <Image src="/klevro/brand/klevro-logo.jpg" alt="Klevro" width={80} height={80} priority className="object-contain" />
             </div>
             <h1 className="text-2xl font-bold text-white mb-1">{t('login.schoolAdminTitle')}</h1>
             <p className="text-emerald-200 text-sm">{t('login.schoolAdminSubtitle')}</p>

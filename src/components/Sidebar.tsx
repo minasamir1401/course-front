@@ -75,6 +75,7 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose, onToggle, rol
       links: [
         { href: "/school-admin/exams", icon: ClipboardList, label: t('schoolAdmin.sidebar.exams') },
         { href: "/school-admin/courses", icon: BookOpen, label: t('schoolAdmin.sidebar.courses') },
+        ...(role === 'TEACHER' ? [] : [{ href: '/school-admin/ai', icon: Settings, label: language === 'ar' ? 'المساعد التعليمي' : 'Learning assistant' }]),
         { href: "/school-admin/skills-hub", icon: BookOpen, label: language === 'ar' ? 'أنشطة ومهارات' : 'Skills Hub' },
         { href: "/school-admin/skills-hub/create", icon: Plus, label: language === 'ar' ? 'إضافة محور مهاراتي' : 'Add Skill Cluster' },
       ]
@@ -99,7 +100,7 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose, onToggle, rol
         <div className="p-8 mb-4 border-b border-slate-50">
           <div className="flex items-center gap-4 group">
             <div className="w-10 h-10 bg-white rounded-xl shadow-sm border border-slate-200 flex items-center justify-center p-2 relative">
-              <Image src="/logo.jpeg" alt="Logo" width={40} sizes="40px" height={40} priority className="w-full h-full object-contain" />
+              <Image src="/klevro/brand/klevro-logo.jpg" alt="Logo" width={40} sizes="40px" height={40} priority className="w-full h-full object-contain" />
             </div>
             <div className="min-w-0">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">

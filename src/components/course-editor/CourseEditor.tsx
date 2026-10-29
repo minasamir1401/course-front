@@ -1,21 +1,25 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { CourseEditorProvider, useCourseEditor } from "./CourseEditorContext";
 import { CourseSettingsForm } from "./CourseSettingsForm";
 import { LessonList } from "./LessonList";
 import { LessonBuilderModal } from "./LessonBuilderModal";
 import DashboardLayout from "@/components/DashboardLayout";
 import { ArrowLeft, Save, Trash2, ShieldCheck, RotateCcw } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import AiGuidanceEditor from '@/components/ai/AiGuidanceEditor';
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface CourseEditorProps {
   role: "SUPER_ADMIN" | "SCHOOL_ADMIN";
+  lessonPage?: boolean;
 }
 
-const InnerCourseEditor: React.FC = () => {
+const InnerCourseEditor: React.FC<{ lessonPage?: boolean }> = ({ lessonPage = false }) => {
   const router = useRouter();
+  const params = useSearchParams();
+  const openedLesson = useRef<string | null>(null);
   const { language } = useLanguage();
   const {
     isLoading,
@@ -37,7 +41,18 @@ const InnerCourseEditor: React.FC = () => {
     clearDraft,
     isSettingsHidden,
     allowContentDeletion,
+    courseId,
+    openEditLessonModal,
+    openAddLessonModal,
   } = useCourseEditor() as any;
+
+  const lessonId = params.get('lessonId');
+  useEffect(() => {
+    if (!lessonPage || isLoading || !lessonId || openedLesson.current === lessonId) return;
+    if (lessonId === 'new') { openedLesson.current = lessonId; openAddLessonModal(); return; }
+    const index = lessons.findIndex((lesson: any) => lesson.id === lessonId);
+    if (index >= 0) { openedLesson.current = lessonId; void openEditLessonModal(index); }
+  }, [lessonPage, isLoading, lessonId, lessons, openEditLessonModal, openAddLessonModal]);
 
   // Save shortly after the user pauses. handleSubmit safely merges an open lesson
   // into the course payload, so slides, questions, and lesson metadata are covered too.
@@ -70,6 +85,8 @@ const InnerCourseEditor: React.FC = () => {
       </div>
     );
   }
+
+  if (lessonPage) return <DashboardLayout>{isLoading ? <p role="status">{language === 'ar' ? 'جارٍ تجهيز الدرس…' : 'Preparing your lesson…'}</p> : isLessonModalOpen ? <LessonBuilderModal fullPage/> : <div className="p-8"><p>{language === 'ar' ? 'اختر درسًا متاحًا من المقرر.' : 'Choose an available lesson from this course.'}</p><button className="mt-4 text-indigo-600" onClick={() => router.push(`../courses/edit?id=${courseId}`)}>{language === 'ar' ? 'العودة للمقرر' : 'Back to course'}</button></div>}</DashboardLayout>;
 
   return (
     <DashboardLayout hideSidebar>
@@ -157,6 +174,7 @@ const InnerCourseEditor: React.FC = () => {
               {/* Right Column: Lessons Builder */}
               <div className={`${isSettingsHidden ? 'lg:col-span-12' : 'lg:col-span-8'} space-y-8 transition-all duration-500`}>
                 <LessonList />
+                <details className="rounded-2xl border border-slate-200 bg-white p-5"><summary className="cursor-pointer font-bold text-sm text-indigo-700">{language === 'ar' ? 'توجيهات المساعد لهذا المقرر' : 'Assistant guidance for this course'}</summary><div className="mt-5"><AiGuidanceEditor scope="course" id={courseId} language={language}/></div></details>
               </div>
             </div>
           </div>
@@ -169,10 +187,10 @@ const InnerCourseEditor: React.FC = () => {
   );
 };
 
-export const CourseEditor: React.FC<CourseEditorProps> = ({ role }) => {
+export const CourseEditor: React.FC<CourseEditorProps> = ({ role, lessonPage = false }) => {
   return (
     <CourseEditorProvider role={role}>
-      <InnerCourseEditor />
+      <InnerCourseEditor lessonPage={lessonPage}/>
     </CourseEditorProvider>
   );
 };

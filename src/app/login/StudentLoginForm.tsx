@@ -1,4 +1,5 @@
 "use client";
+import { checkAuthSession, clearAllAuthData } from "@/lib/auth";
 
 import React, { useState, useEffect, FormEvent } from "react";
 import Link from "next/link";
@@ -20,32 +21,21 @@ export default function StudentLoginForm() {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    const schoolAdminToken = localStorage.getItem("school_admin_token");
-    const schoolAdminUser = localStorage.getItem("school_admin_user");
-    if (schoolAdminToken && schoolAdminUser) {
-      try {
-        const user = JSON.parse(schoolAdminUser);
-        if (user && (user.role === "TEACHER" || user.role === "SCHOOL_ADMIN")) {
-          router.replace("/school-admin");
-          return;
-        }
-      } catch {}
-    }
-    const token = localStorage.getItem("lms_token");
-    const userString = localStorage.getItem("lms_user");
-    if (token && userString) {
-      try {
-        const user = JSON.parse(userString);
-        if (user && user.role === "STUDENT") {
-          router.replace("/dashboard");
-          return;
-        }
-      } catch {
-        localStorage.removeItem("lms_token");
-        localStorage.removeItem("lms_user");
+    let active = true;
+    void checkAuthSession().then(session => {
+      if (!active) return;
+      if (session.authenticated && session.user && (['STUDENT', 'SCHOOL_ADMIN', 'TEACHER', 'SUPER_ADMIN'].includes(session.user.role))) {
+        const role = session.user.role;
+        const prefix = role === 'SUPER_ADMIN' ? 'super_admin' : role === 'STUDENT' ? 'lms' : 'school_admin';
+        localStorage.setItem(prefix + '_token', 'cookie_auth');
+        localStorage.setItem(prefix + '_user', JSON.stringify(session.user));
+        router.replace(role === 'SUPER_ADMIN' ? '/super-admin' : role === 'STUDENT' ? '/dashboard' : '/school-admin');
+        return;
       }
-    }
-    setIsChecking(false);
+      if (!session.authenticated && !session.unavailable) clearAllAuthData();
+      setIsChecking(false);
+    });
+    return () => { active = false; };
   }, [router]);
 
   if (isChecking) {
@@ -104,7 +94,7 @@ export default function StudentLoginForm() {
       <div className={styles.background} aria-hidden="true"/>
       <header className={styles.header} dir="ltr">
         <button type="button" className={styles.language} onClick={()=>setLanguage(ar?'en':'ar')} aria-label={ar?'التبديل للإنجليزية':'Switch to Arabic'}>{ar?'EN':'عربي'}</button>
-        <Link href="/" className={styles.brand} aria-label="Klevro"><span>Klevro</span><Image src="/logo.jpeg" alt="" width={46} height={46} priority/></Link>
+        <Link href="/" className={styles.brand} aria-label="Klevro"><Image src="/klevro/brand/klevro-logo.jpg" alt="" width={64} height={64} sizes="64px" priority/></Link>
       </header>
       <main className={styles.main}>
         <div className={styles.layout} dir="ltr">

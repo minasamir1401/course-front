@@ -1,3 +1,4 @@
+import { serverSession } from './helpers/serverSession';
 import { test, expect } from '@playwright/test';
 
 for (const role of ['SUPER_ADMIN', 'SCHOOL_ADMIN']) for (const language of ['ar', 'en']) test(role + ' opens full student results and edits a published competition (' + language + ')', async ({ page }) => {
@@ -7,6 +8,7 @@ for (const role of ['SUPER_ADMIN', 'SCHOOL_ADMIN']) for (const language of ['ar'
   let questions = [1, 2].map(index => ({ id: 'q' + index, type: 'MCQ', text: 'Question ' + index, options: ['A', 'B'], correctAnswer: 'B', points: 5, seconds: 30 }));
   let saved: any;
   await page.route('https://fonts.googleapis.com/**', route => route.abort());
+  await serverSession(page, role);
   await page.addInitScript(({ role, language }) => { const prefix = role === 'SUPER_ADMIN' ? 'super_admin' : 'school_admin'; localStorage.setItem(prefix + '_token', 'cookie_auth'); localStorage.setItem(prefix + '_user', JSON.stringify({ id: 'admin', role, schoolId: 'own' })); localStorage.setItem('lms_lang', language); }, { role, language });
   await page.addInitScript(() => localStorage.setItem('klevro-install-dismissed', String(Date.now())));
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
@@ -51,6 +53,7 @@ for (const role of ['SUPER_ADMIN', 'SCHOOL_ADMIN']) for (const language of ['ar'
 for (const language of ['ar', 'en']) test('student can select multiple answers and submit (' + language + ')', async ({ page }) => {
   const ar = language === 'ar'; let submitted: any = null;
   await page.route('https://fonts.googleapis.com/**', route => route.abort());
+  await serverSession(page);
   await page.addInitScript(language => { localStorage.setItem('lms_user', JSON.stringify({ id: 'student', role: 'STUDENT', schoolId: 'own' })); localStorage.setItem('lms_token', 'cookie_auth'); localStorage.setItem('lms_lang', language); }, language);
   const state = () => ({ room: { id: 'room', title: 'Math', status: 'OPEN', mode: 'SELF_PACED', questionCount: 1, participants: 1 }, serverNow: new Date().toISOString(), policy: { enabled: true, sound: false, motion: false, leaderboard: false }, entry: { id: 'entry', score: submitted ? 5 : 0, correct: submitted ? 1 : 0, currentIndex: 0, finishedAt: submitted ? new Date().toISOString() : null }, question: submitted ? null : { id: 'q', type: 'MULTI_SELECT', text: 'Choose even numbers', options: ['2', '3', '4'], optionsEn: ['2', '3', '4'], index: 0, startedAt: new Date().toISOString(), seconds: 60 }, leaders: [] });
   await page.route('**/api/**', route => {

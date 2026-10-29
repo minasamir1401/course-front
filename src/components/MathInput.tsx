@@ -218,10 +218,11 @@ export default function MathInput({ value, onChange, placeholder, className = ""
       <input
         ref={inputRef}
         type="text"
+        dir="auto"
         value={isRawView ? value : textPart}
         onChange={(e) => handleTextChange(e.target.value)}
         placeholder={placeholder}
-        className="bg-transparent outline-none font-bold text-slate-700 flex-1 w-full"
+        className="bg-transparent outline-none font-bold text-slate-700 flex-1 min-w-0 w-full"
       />
       {value.includes('<') && (
         <button
@@ -295,11 +296,11 @@ export default function MathInput({ value, onChange, placeholder, className = ""
         </div>
       )}
 
-      {/* Math Preview if input contains LaTeX */}
-      {!isRawView && (textPart.includes('\\(') || textPart.includes('\\[')) && (
-        <div className="p-2.5 bg-indigo-50/60 border border-indigo-100 rounded-xl overflow-hidden mt-1 w-full text-xs text-indigo-950 flex items-center gap-2">
+      {/* Preview direct comparisons as well as calculator and pasted LaTeX. */}
+      {!isRawView && /\\[([]|\$|[<>≤≥≠]|&(?:lt|gt|le|ge);/.test(textPart) && (
+        <div className="p-2.5 bg-indigo-50/60 border border-indigo-100 rounded-xl mt-1 w-full min-w-0 text-xs text-indigo-950 flex items-center gap-2">
           <span className="text-[10px] font-black text-indigo-500 shrink-0">معاينة المعادلة:</span>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0 overflow-x-auto py-1">
             <HtmlRenderer html={textPart} />
           </div>
         </div>

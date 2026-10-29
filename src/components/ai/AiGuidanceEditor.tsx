@@ -1,0 +1,22 @@
+'use client';
+import { useEffect, useState } from 'react';
+import { Sparkles, BookOpen, ShieldCheck } from 'lucide-react';
+import { aiRequest } from '@/lib/aiClient';
+import styles from './AiAdminSettings.module.css';
+
+export default function AiGuidanceEditor({ scope, id, language = 'ar' }: { scope: 'lesson' | 'course' | 'school'; id?: string | null; language?: string }) {
+  const ar = language === 'ar'; const txt = (a: string, b: string) => ar ? a : b;
+  const [guidance, setGuidance] = useState({ enabled: true, instructions: '', referenceText: '', starterPrompts: [] as string[] });
+  const [busy, setBusy] = useState(false), [loading, setLoading] = useState(true), [error, setError] = useState(''), [saved, setSaved] = useState(false);
+  useEffect(() => { let active = true; setLoading(true); setSaved(false); setError(''); if (!id) { setLoading(false); return; } aiRequest(`/guidance/${scope}/${encodeURIComponent(id)}`).then(data => { if (active) setGuidance({ enabled: true, instructions: '', referenceText: '', starterPrompts: [], ...(data.guidance || {}) }); }).catch(cause => { if (active) setError(cause.message); }).finally(() => { if (active) setLoading(false); }); return () => { active = false; }; }, [scope, id]);
+  return <section className={styles.panel} dir={ar ? 'rtl' : 'ltr'}><h3><Sparkles size={20}/>{txt(scope === 'lesson' ? 'مساعد هذا الدرس' : scope === 'course' ? 'مساعد هذا المقرر' : 'مساعد المدرسة', scope === 'lesson' ? 'This lesson’s assistant' : scope === 'course' ? 'This course’s assistant' : 'School assistant')}</h3><p className={styles.hint}>{txt('وجّه طريقة الشرح وحدد المعلومات المرجعية المعتمدة. الطالب يصل فقط إلى محتوى متاح لحسابه، ولا تُرسل مفاتيح الإجابات.', 'Guide the teaching style and add approved reference information. Students can only access content available to their accounts; answer keys are excluded.')}</p>
+    {!id ? <p className={styles.error}>{txt('احفظ الدرس أو المقرر أولًا، ثم افتح توجيهات المساعد.', 'Save this lesson or course first, then open assistant guidance.')}</p> : loading ? <p role="status" className={styles.hint}>{txt('جارٍ تحميل التوجيهات…', 'Loading guidance…')}</p> : <>
+      {error && <p role="alert" className={styles.error}>{error}</p>}
+      <label className={styles.check}><input type="checkbox" checked={guidance.enabled} onChange={e => { setGuidance({ ...guidance, enabled: e.target.checked }); setSaved(false); }}/>{txt('السماح بالمساعد في هذا النطاق', 'Enable assistant in this scope')}</label>
+      <label>{txt('توجيهات الشرح والتعامل مع الطالب', 'Teaching and student support instructions')}<textarea rows={6} maxLength={20000} value={guidance.instructions} onChange={e => { setGuidance({ ...guidance, instructions: e.target.value }); setSaved(false); }} placeholder={txt('اشرح بالعربي عند السؤال بالعربي. ابدأ بفكرة بسيطة، ثم مثال، ثم سؤال يساعد الطالب يفكر. اربط الشرح بأهداف الدرس…', 'Match the student’s language. Start with a simple idea, then an example and a guiding question…')}/></label>
+      <label><BookOpen size={14} className="inline me-2"/>{txt('ملاحظات ومحتوى مرجعي إضافي', 'Additional approved reference material')}<textarea rows={8} maxLength={50000} value={guidance.referenceText} onChange={e => { setGuidance({ ...guidance, referenceText: e.target.value }); setSaved(false); }} placeholder={txt('مصطلحات الدرس، أمثلة محلولة للتعليم، ملاحظات المدرّس، والمعلومات التي يجب أن يعتمد عليها المساعد…', 'Lesson terminology, teaching examples, teacher notes, and approved information…')}/></label>
+      <label>{txt('أسئلة بداية مقترحة — سؤال في كل سطر', 'Starter questions — one per line')}<textarea rows={4} value={guidance.starterPrompts.join('\n')} onChange={e => { setGuidance({ ...guidance, starterPrompts: e.target.value.split('\n').slice(0, 8) }); setSaved(false); }}/></label>
+      <div className="flex items-center gap-4 flex-wrap"><button type="button" className={styles.primary} disabled={busy} onClick={async () => { setBusy(true); setError(''); try { await aiRequest(`/guidance/${scope}/${encodeURIComponent(id)}`, guidance, 'PUT'); setSaved(true); } catch (cause: any) { setError(cause.message); } finally { setBusy(false); } }}>{busy ? txt('جارٍ الحفظ…', 'Saving…') : txt('حفظ توجيهات المساعد', 'Save assistant guidance')}</button>{saved && <span role="status" className={styles.hint}><ShieldCheck size={14} className="inline me-1"/>{txt('تم حفظ التوجيهات', 'Guidance saved')}</span>}</div>
+    </>}
+  </section>;
+}

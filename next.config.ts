@@ -74,7 +74,8 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()',
+            // Dictation still requires the user's browser/OS permission.
+            value: 'camera=(), microphone=(self), geolocation=()',
           },
         ],
       },
