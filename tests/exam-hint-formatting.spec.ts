@@ -1,7 +1,7 @@
 import { serverSession } from './helpers/serverSession';
 import { test, expect, Page, Locator } from '@playwright/test';
 
-async function setup(page: Page, role: string) {
+async function setup(page: Page, role: string, stored = false) {
   const prefix = role === 'SUPER_ADMIN' ? 'super-admin' : 'school-admin';
   const user = { id: 'admin', role, name: 'Author', schoolId: 'school', status: 'ACTIVE' };
   const translations: any[] = [];
@@ -18,6 +18,13 @@ async function setup(page: Page, role: string) {
     const request = route.request(), path = new URL(request.url()).pathname;
     if (path === '/api/auth/me') return route.fulfill({ json: { authenticated: true, user } });
     if (path === '/api/exams/exam') return route.fulfill({ json: { id: 'exam', title: 'Test', schoolId: 'school', duration: 30, type: 'Exam', status: 'DRAFT', questions: [], modules: [{ id: 'module', title: 'Module', questions: [], slides: [], subExams: [{ id: 'sub', title: 'New exam', questions: [] }] }] } });
+    if (path === '/api/exams/exam/questions' && stored) return route.fulfill({ json: [{
+      id: 'stored-question', moduleId: 'module', subExamId: 'sub', type: 'MCQ', label: 'MCQ', points: 1,
+      text: '<p>أوجد <font color="#dc2626">الناتج</font></p>', textEn: '<p>Find the <font color="#dc2626">answer</font></p>',
+      options: ['أ', 'ب'], optionsEn: ['A', 'B'], correctAnswer: 'أ', correctAnswerEn: 'A',
+      hint: '<p>تلميح عربي</p>', hintEn: '<p>English hint</p>',
+      sections: [{ id: 'saved-explanation', type: 'EXPLANATION', content: '<p>شرح عربي</p>', contentEn: '<p>English explanation</p>' }],
+    }] });
     if (path === '/api/translate') {
       const body = request.postDataJSON(); translations.push(body);
       const tr = (text: string) => text.replaceAll('Find the answer', 'أوجد الإجابة').replaceAll('Use the formula', 'استخدم القانون').replaceAll('English explanation', 'الشرح العربي').replaceAll('Late hint', 'تلميح مضاف لاحقًا');
@@ -26,7 +33,8 @@ async function setup(page: Page, role: string) {
     return route.fulfill({ json: path.includes('/metadata') ? { domains: [], standards: [], indicators: [], outcomes: [] } : [] });
   });
   await page.goto(`/${prefix}/exams/edit/exam?moduleId=module&subExamId=sub`);
-  await page.getByRole('button', { name: '+ إضافة سؤال', exact: true }).click();
+  if (stored) await page.getByTitle('Edit', { exact: true }).first().click();
+  else await page.getByRole('button', { name: '+ إضافة سؤال', exact: true }).click();
   await expect(page.locator('.editor-content').first()).toBeVisible();
   return translations;
 }
@@ -63,6 +71,52 @@ async function format(editor: Locator, title: string) {
 }
 
 for (const role of ['SUPER_ADMIN', 'SCHOOL_ADMIN', 'TEACHER']) {
+  for (const stored of [false, true]) test(`${role}: ${stored ? 'saved' : 'new'} question hint/explanation focus preserves document and unsaved text`, async ({ page }) => {
+    test.setTimeout(90000);
+    const errors: string[] = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await setup(page, role, stored);
+    if (!stored) await page.getByRole('button', { name: 'إضافة شرح وتفسير', exact: true }).click();
+    const editors = page.locator('.editor-content');
+    const documentId = await page.evaluate(() => {
+      const id = crypto.randomUUID();
+      (window as any).__editorDocumentId = id;
+      return id;
+    });
+    const documentRequests: string[] = [];
+    page.on('request', request => {
+      if (request.isNavigationRequest() && request.frame() === page.mainFrame()) documentRequests.push(request.url());
+    });
+    const url = page.url();
+    // Click rather than fill: exercise focus/blur, caret and native Enter editing.
+    for (const [language, label] of [['en', 'English (EN)'], ['ar', 'العربية (Arabic)']]) {
+      await page.getByRole('button', { name: label, exact: true }).click();
+      for (let round = 0; round < 2; round++) {
+        for (const [index, text] of [[0, 'Question'], [1, 'Hint'], [2, 'Explanation']] as const) {
+          const editor = editors.nth(index);
+          await editor.click();
+          await expect(editor).toBeFocused();
+          await editor.press('Control+End');
+          await editor.press('Enter');
+          await editor.pressSequentially(`${language} ${text} ${round}`);
+          await expect(editor).toContainText(`${language} ${text} ${round}`);
+        }
+      }
+      // A DOM edit not accompanied by input is published on blur (e.g. an IME).
+      await editors.nth(1).click();
+      await editors.nth(1).evaluate(element => { element.innerHTML += '<p>Committed on blur</p>'; });
+      await editors.nth(2).click();
+      await page.getByRole('button', { name: language === 'en' ? 'العربية (Arabic)' : 'English (EN)', exact: true }).click();
+      await page.getByRole('button', { name: label, exact: true }).click();
+      await expect(editors.nth(1)).toContainText('Committed on blur');
+      await expect(editors.nth(2)).toContainText(`${language} Explanation 1`);
+    }
+    expect(page.url()).toBe(url);
+    expect(await page.evaluate(() => (window as any).__editorDocumentId)).toBe(documentId);
+    expect(documentRequests).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
   test(`${role}: new exam questions translate hints and share formatting while keeping Arabic text`, async ({ page }) => {
     test.setTimeout(120000);
     const translations = await setup(page, role);
