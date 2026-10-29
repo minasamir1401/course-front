@@ -724,7 +724,7 @@ export default function ExamResultPage() {
               ].filter(Boolean);
 
               return (
-                <div key={index} className="bg-white rounded-[32px] shadow-sm border border-slate-200 overflow-hidden group hover:border-indigo-200 transition-all">
+                <div key={answer.id || answer.question.id || index} role="article" aria-label={`${lang === 'ar' ? 'مراجعة السؤال' : 'Review question'} ${index + 1}`} data-question-id={answer.question.id} className="bg-white rounded-[32px] shadow-sm border border-slate-200 overflow-hidden group hover:border-indigo-200 transition-all">
                   <div className="p-8 md:p-10">
                     <div className="flex justify-between items-start gap-4 mb-6">
                       <div className="flex items-start gap-3.5 flex-1 min-w-0">

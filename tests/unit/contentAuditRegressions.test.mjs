@@ -195,3 +195,13 @@ test('legacy math fallback spans render from their canonical LaTeX without expos
  const hostile=processHtml(buildRichTextMathHtml(String.raw`\badcommand <img src=x onerror=alert(1)>`,'normal','1em',false));
  assert.doesNotMatch(hostile,/<img src=x/);
 });
+
+
+test('font tags with color or styling attributes remain intact through sanitization and rendering', () => {
+ const input = 'In the xy-plane, what is the<font color="#dc2626" > radius</font> of the circle?';
+ const sanitized = sanitization.sanitizeHtml(input);
+ const rendered = processHtml(sanitized);
+ assert.doesNotMatch(sanitized, /&lt;font/);
+ assert.match(sanitized, /<font color="#dc2626"\s*>/);
+ assert.match(rendered, /<font color="#dc2626"\s*>/);
+});
