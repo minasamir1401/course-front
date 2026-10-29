@@ -1,3 +1,4 @@
+import { serverSession } from './helpers/serverSession';
 import { test, expect } from '@playwright/test';
 const examId = 'performance-exam';
 const moduleId = 'performance-module';
@@ -10,6 +11,7 @@ function fixture() {
 async function prepare(page: any, role: string) {
   const requests: any[] = [];
   const exam = fixture();
+  await serverSession(page, role);
   await page.addInitScript(({ role }: any) => {
     localStorage.setItem('lms_lang', 'en');
     const prefix = role === 'SUPER_ADMIN' ? 'super_admin' : role === 'SCHOOL_ADMIN' ? 'school_admin' : 'lms';
@@ -26,7 +28,7 @@ async function prepare(page: any, role: string) {
     else if (url.pathname.includes('/submissions/')) data = { id: 'result-test', totalScore: 1, percentage: 100, totalQuestions: 1, correctAnswers: 1, earnedXP: 10, createdAt: new Date().toISOString(), exam: { title: 'Result ready', resultVisibility: 'SHOW_SCORE', totalPoints: 1 }, answers: [] };
     else if (url.pathname.endsWith('/questions')) data = { questions: url.searchParams.get('subExamId') === 'sibling' ? [] : exam.questions };
     else if (url.pathname === `/api/exams/${examId}`) data = req.method() === 'PUT' ? { exam: { id: examId }, modules: exam.modules, questions: exam.questions } : { ...exam, questions: url.searchParams.get('includeQuestions') === 'false' ? [] : exam.questions };
-    else if (url.pathname.includes('/auth/') || url.pathname.endsWith('/me')) data = { id: 'test-user', role, user: { id: 'test-user', role } };
+    else if (url.pathname.includes('/auth/') || url.pathname.endsWith('/me')) data = { authenticated: true, id: 'test-user', role, user: { id: 'test-user', role } };
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(data) });
   });
   return requests;

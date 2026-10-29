@@ -1,3 +1,4 @@
+import { serverSession } from './helpers/serverSession';
 import { test, expect } from '@playwright/test';
 
 for (const role of ['SUPER_ADMIN', 'SCHOOL_ADMIN']) test(`${role}: exam editor focus, translation, complete transfer and save`, async ({ page }) => {
@@ -8,6 +9,7 @@ for (const role of ['SUPER_ADMIN', 'SCHOOL_ADMIN']) test(`${role}: exam editor f
   let saved: any;
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await page.route('https://fonts.googleapis.com/**', route => route.abort());
+  await serverSession(page, role);
   await page.addInitScript(({ role }) => {
     const prefix = role === 'SUPER_ADMIN' ? 'super_admin' : 'school_admin';
     localStorage.setItem(prefix + '_token', 'cookie_auth'); localStorage.setItem(prefix + '_user', JSON.stringify({ id: 'admin', role, schoolId: 'own', name: 'Admin' }));
@@ -53,6 +55,7 @@ for (const role of ['SUPER_ADMIN', 'SCHOOL_ADMIN']) test(`${role}: exam editor f
 });
 
 test('competition details instant translation is editable before saving', async ({ page }) => {
+  await serverSession(page, 'SUPER_ADMIN');
   await page.addInitScript(() => { localStorage.setItem('super_admin_token', 'cookie_auth'); localStorage.setItem('super_admin_user', JSON.stringify({ id: 'admin', role: 'SUPER_ADMIN' })); localStorage.setItem('lms_lang', 'ar'); });
   await page.route('https://fonts.googleapis.com/**', route => route.abort());
   await page.route('**/api/**', route => {

@@ -1,0 +1,18 @@
+'use client';
+import { useEffect, useRef, useState } from 'react';
+import { Users, Search } from 'lucide-react';
+import { aiRequest } from '@/lib/aiClient';
+import { useLanguage } from '@/contexts/LanguageContext';
+import AiReply from './AiReply';
+import styles from './AiAdminSettings.module.css';
+export default function AiStaffInsights() {
+  const { language } = useLanguage(); const ar = language === 'ar'; const txt = (a: string, b: string) => ar ? a : b;
+  const [students, setStudents] = useState<any[]>([]), [search, setSearch] = useState(''), [selected, setSelected] = useState(''), [data, setData] = useState<any>(null), [error, setError] = useState(''), [busy, setBusy] = useState(false);
+  const request = useRef(0);
+  useEffect(() => { let active = true; const timer = setTimeout(() => { aiRequest(`/admin/students?search=${encodeURIComponent(search)}`).then(value => { if (active) setStudents(value.students || []); }).catch(cause => { if (active) setError(cause.message); }); }, 250); return () => { active = false; clearTimeout(timer); }; }, [search]);
+  return <section className={styles.panel} dir={ar ? 'rtl' : 'ltr'}><h3><Users size={19}/>{txt('قراءة تقدم الطلاب', 'Student learning insights')}</h3><p className={styles.hint}>{txt('تظهر حسابات الطلاب المسموح لك بإدارتهم فقط. التقييم مبني على النتائج المعلنة وتقدّم الدروس، مع خطة الطالب المحفوظة إن توفرت.', 'Only students you are authorised to manage are listed. Insights use released results, lesson progress and any saved study plan.')}</p>
+    <div className={styles.grid}><label><Search size={13} className="inline me-2"/>{txt('ابحث عن طالب', 'Find a student')}<input value={search} onChange={event => setSearch(event.target.value)} placeholder={txt('اسم الطالب', 'Student name')}/></label><label>{txt('الطالب', 'Student')}<select value={selected} onChange={async event => { const id = event.target.value; setSelected(id); setData(null); setError(''); const epoch = ++request.current; if (!id) return; setBusy(true); try { const result = await aiRequest(`/admin/students/${encodeURIComponent(id)}/insight`); if (epoch === request.current) setData(result); } catch (cause: any) { if (epoch === request.current) setError(cause.message); } finally { if (epoch === request.current) setBusy(false); } }}><option value="">{txt('اختر طالبًا', 'Choose a student')}</option>{students.map(student => <option key={student.id} value={student.id}>{student.name} — {student.grade || ''}</option>)}</select></label></div>
+    {busy && <p role="status" className={styles.hint}>{txt('جارٍ قراءة التقدم…', 'Reading learning progress…')}</p>}{error && <p role="alert" className={styles.error}>{error}</p>}
+    {data?.insight?.evidence && <div><h4 className="font-bold text-base my-4">{data.student.name}</h4><div className={styles.grid}><div><h5 className="text-sm font-bold">{txt('نقاط قوة مثبتة', 'Evidence-based strengths')}</h5>{data.insight.evidence.strengths.map((skill: any) => <p key={skill.name} className={styles.hint}>{skill.name} · {skill.percent}% · {skill.total} {txt('إجابات', 'answers')}</p>)}</div><div><h5 className="text-sm font-bold">{txt('مجالات للمراجعة', 'Areas to practise')}</h5>{data.insight.evidence.needsPractice.map((skill: any) => <p key={skill.name} className={styles.hint}>{skill.name} · {skill.percent}% · {skill.total} {txt('إجابات', 'answers')}</p>)}</div></div><p className={styles.hint}>{txt(`عينة من ${data.insight.evidence.sampleSize} تقييمًا.`, `Sample: ${data.insight.evidence.sampleSize} assessments.`)}</p>{data.insight.narrative && <AiReply content={data.insight.narrative}/>}</div>}
+  </section>;
+}

@@ -222,9 +222,16 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       try {
         const response = await originalFetch(input, init);
 
+        // A structured AI provider failure means our backend answered. It must
+        // not label the whole site offline or imply edits need to be queued.
+        let handledAiFailure = false;
+        if (isApiCall && !response.ok && /\/api\/ai(?:\/|$)/.test(urlStr)) {
+          try { const payload = await response.clone().json(); handledAiFailure = typeof payload.code === 'string' && /^(?:AI_|SPEECH_)/.test(payload.code); } catch { /* A real proxy outage is still handled below. */ }
+        }
+
         // Only API failures indicate backend availability. A missing image, video, or
         // other static asset must not make the entire application look offline.
-        if (isApiCall && response.status >= 500) {
+        if (isApiCall && response.status >= 500 && !handledAiFailure) {
           await queueFailure();
           if (response.status === 502 || response.status === 503 || response.status === 504) {
             consecutive502Ref.current++;
@@ -263,7 +270,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         }
 
         // Show server error messages for 4xx errors (not 502+)
-        if (!response.ok && response.status >= 400 && response.status < 502 && isApiCall) {
+        if (!response.ok && response.status >= 400 && response.status < 502 && isApiCall && !handledAiFailure) {
           const cloned = response.clone();
           try {
             const errorJson = await cloned.json();

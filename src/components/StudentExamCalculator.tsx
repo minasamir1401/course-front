@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import styles from "./StudentExamCalculator.module.css";
 import {
   Calculator,
@@ -38,6 +39,32 @@ export default function StudentExamCalculator() {
   const [expression, setExpression] = useState("");
   const [result, setResult] = useState("");
   const [angleMode, setAngleMode] = useState<CalculatorAngleMode>("DEG");
+  const panelId = useId(), launcherRef = useRef<HTMLButtonElement>(null), panelRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({ top: 100, left: 12, width: 360, maxHeight: 600 });
+  const close = useCallback(() => { setIsOpen(false); launcherRef.current?.focus({ preventScroll: true }); }, []);
+  const positionPanel = useCallback(() => {
+    const anchor = launcherRef.current?.getBoundingClientRect();
+    if (!anchor) return;
+    const width = Math.max(0, Math.min(360, window.innerWidth - 24));
+    const top = Math.max(12, Math.min(anchor.bottom + 10, window.innerHeight - 100));
+    const left = Math.max(12, Math.min(anchor.right - width, window.innerWidth - width - 12));
+    const next = { top, left, width, maxHeight: Math.max(0, window.innerHeight - top - 12) };
+    setPosition(previous => Object.keys(next).every(key => next[key as keyof typeof next] === previous[key as keyof typeof previous]) ? previous : next);
+  }, []);
+  useEffect(() => {
+    if (!isOpen) return;
+    positionPanel(); panelRef.current?.focus({ preventScroll: true });
+    const keyboard = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !event.defaultPrevented && !(event.target instanceof Element && event.target.closest('[aria-modal="true"]'))) { event.preventDefault(); close(); }
+    };
+    window.addEventListener('resize', positionPanel);
+    window.addEventListener('scroll', positionPanel, true);
+    window.addEventListener('keydown', keyboard);
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(positionPanel);
+    const header = launcherRef.current?.closest('header');
+    if (header) observer?.observe(header);
+    return () => { window.removeEventListener('resize', positionPanel); window.removeEventListener('scroll', positionPanel, true); window.removeEventListener('keydown', keyboard); observer?.disconnect(); };
+  }, [isOpen, close, positionPanel]);
 
   const operatorLabels = useMemo(
     () => ({
@@ -105,6 +132,7 @@ export default function StudentExamCalculator() {
     <button
       key={buttonValue}
       type="button"
+      aria-label={buttonValue}
       onClick={() => appendValue(buttonValue)}
       className={`h-11 rounded-xl font-black transition-colors flex items-center justify-center text-xs ${
         ["+", "-", "*", "/", "^", "%"].includes(buttonValue)
@@ -122,15 +150,19 @@ export default function StudentExamCalculator() {
     <>
       <button
         type="button"
-        onClick={() => setIsOpen((current) => !current)}
+        ref={launcherRef}
+        onClick={() => { if (isOpen) close(); else { positionPanel(); setIsOpen(true); } }}
         className={styles.launcher}
         aria-label="Open calculator"
+        title="Calculator / الآلة الحاسبة"
+        aria-expanded={isOpen}
+        aria-controls={panelId}
       >
         <Calculator className="w-5 h-5 md:w-6 md:h-6" />
       </button>
 
-      {isOpen && (
-        <div className="fixed inset-x-2 bottom-20 md:inset-x-auto md:bottom-24 md:right-6 z-30 w-auto md:w-[360px] md:max-w-[calc(100vw-1.5rem)] max-h-[calc(100vh-6rem)] md:max-h-[min(760px,calc(100vh-7rem))] rounded-[24px] md:rounded-[28px] border border-slate-200 bg-white shadow-2xl shadow-slate-300 overflow-hidden">
+      {isOpen && createPortal(
+        <div ref={panelRef} id={panelId} role="dialog" aria-modal={false} aria-label="Scientific Calculator" tabIndex={-1} data-exam-calculator-open dir="ltr" className={styles.panel} style={position}>
           <div className={styles.header}>
             <div className="flex items-center gap-2 font-black text-sm">
               <Calculator className="w-4 h-4" />
@@ -146,7 +178,7 @@ export default function StudentExamCalculator() {
               </button>
               <button
                 type="button"
-                onClick={() => setIsOpen(false)}
+                onClick={close}
                 className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 transition-colors flex items-center justify-center"
                 aria-label="Close calculator"
               >
@@ -155,7 +187,7 @@ export default function StudentExamCalculator() {
             </div>
           </div>
 
-          <div className="p-3 md:p-4 space-y-3 md:space-y-4 overflow-y-auto max-h-[calc(100vh-10rem)] md:max-h-[min(660px,calc(100vh-11rem))]">
+          <div className={styles.body}>
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 min-h-[110px]">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">
@@ -168,9 +200,9 @@ export default function StudentExamCalculator() {
               <div className="text-right break-all text-slate-700 font-mono text-lg min-h-[32px]">
                 {formatDisplayValue(expression)}
               </div>
-              <div className="text-right break-all text-indigo-600 font-black text-2xl min-h-[32px] mt-2">
+              <output aria-label="Calculation result" className="block text-right break-all text-indigo-600 font-black text-2xl min-h-[32px] mt-2">
                 {result || " "}
-              </div>
+              </output>
             </div>
 
             <div className="grid grid-cols-4 gap-2">
@@ -184,6 +216,7 @@ export default function StudentExamCalculator() {
               <button
                 type="button"
                 onClick={removeLast}
+                aria-label="Delete last character"
                 className="h-11 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors flex items-center justify-center"
               >
                 <Delete className="w-4 h-4" />
@@ -260,7 +293,7 @@ export default function StudentExamCalculator() {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
     </>
   );
 }

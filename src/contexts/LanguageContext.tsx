@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { usePathname } from 'next/navigation';
 import arTranslations from "@/locales/ar.json";
 import enTranslations from "@/locales/en.json";
@@ -26,30 +26,49 @@ const LanguageContext = createContext<LanguageContextType>({
   t: () => ""
 });
 
+function storedLanguage(): Language | undefined {
+  try { return localStorage.getItem('lms_lang') === 'en' ? 'en' : 'ar'; }
+  catch { return undefined; }
+}
+
 export const LanguageProvider = ({ children }: { children: React.ReactNode }) => {
   const [language, setLanguageState] = useState<Language>("ar");
   const [ready, setReady] = useState(false);
   const pathname = usePathname();
 
-  useEffect(() => {
-    const stored = localStorage.getItem("lms_lang") as Language;
-    if (stored === "ar" || stored === "en") {
-      setLanguageState(stored);
-      document.documentElement.dir = stored === 'ar' ? 'rtl' : 'ltr';
-      document.documentElement.lang = stored;
-    } else {
-      document.documentElement.dir = 'rtl';
-      document.documentElement.lang = 'ar';
-    }
-    setReady(true);
-  }, []);
-
-  const setLanguage = (lang: Language) => {
+  const applyLanguage = useCallback((lang: Language) => {
     setLanguageState(lang);
-    localStorage.setItem("lms_lang", lang);
     document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
     document.documentElement.lang = lang;
-  };
+  }, []);
+
+  useEffect(() => {
+    const sync = () => { const stored = storedLanguage(); if (stored) applyLanguage(stored); };
+    const onStorage = (event: StorageEvent) => { if (event.key === 'lms_lang' || event.key === null) sync(); };
+    const onVisible = () => { if (document.visibilityState === 'visible') sync(); };
+    sync(); setReady(true);
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('focus', sync);
+    window.addEventListener('pageshow', sync);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('focus', sync);
+      window.removeEventListener('pageshow', sync);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [applyLanguage]);
+
+  useEffect(() => {
+    document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.lang = language;
+  }, [language, pathname]);
+
+  const setLanguage = useCallback((lang: Language) => {
+    applyLanguage(lang);
+    // Browser storage can be blocked; this must not disable language switching.
+    try { localStorage.setItem('lms_lang', lang); } catch {}
+  }, [applyLanguage]);
 
   const t = (key: string) => {
     const keys = key.split('.');

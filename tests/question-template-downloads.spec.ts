@@ -1,3 +1,4 @@
+import { serverSession } from './helpers/serverSession';
 import { test, expect } from '@playwright/test';
 import * as XLSX from 'xlsx';
 
@@ -5,6 +6,7 @@ for (const language of ['ar', 'en']) test(`competition downloads separate questi
   test.setTimeout(60000);
   const ar = language === 'ar';
   await page.route('https://fonts.googleapis.com/**', route => route.abort());
+  await serverSession(page, 'SUPER_ADMIN');
   await page.addInitScript(language => {
     localStorage.setItem('super_admin_token', 'cookie_auth');
     localStorage.setItem('super_admin_user', JSON.stringify({ id: 'admin', role: 'SUPER_ADMIN' }));

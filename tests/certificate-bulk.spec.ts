@@ -1,3 +1,4 @@
+import { serverSession } from './helpers/serverSession';
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 test.use({ serviceWorkers: 'block' });
@@ -7,6 +8,7 @@ for (const role of ['SCHOOL_ADMIN', 'SUPER_ADMIN']) for (const language of ['ar'
   const ar = language === 'ar'; const superAdmin = role === 'SUPER_ADMIN';
   await page.setViewportSize({ width: 390, height: 920 });
   await page.route('https://fonts.googleapis.com/**', route => route.abort());
+  await serverSession(page, role as 'SUPER_ADMIN' | 'SCHOOL_ADMIN');
   await page.addInitScript(({ role, language }) => {
     const prefix = role === 'SUPER_ADMIN' ? 'super_admin' : 'school_admin';
     localStorage.setItem(`${prefix}_user`, JSON.stringify({ id: 'admin', role, name: 'Admin', schoolId: role === 'SCHOOL_ADMIN' ? 'one' : null }));
@@ -74,6 +76,7 @@ for (const role of ['SCHOOL_ADMIN', 'SUPER_ADMIN']) for (const language of ['ar'
 
 test('large grade sends preserve completed batches and retry only the remaining students', async ({ page }) => {
   test.setTimeout(90000); await page.route('https://fonts.googleapis.com/**', route => route.abort());
+  await serverSession(page, 'SCHOOL_ADMIN');
   await page.addInitScript(() => {
     localStorage.setItem('school_admin_user', JSON.stringify({ id: 'admin', role: 'SCHOOL_ADMIN', name: 'Admin', schoolId: 'one' })); localStorage.setItem('school_admin_token', 'cookie_auth'); localStorage.setItem('lms_lang', 'en'); localStorage.setItem('klevro-install-dismissed', String(Date.now()));
   });

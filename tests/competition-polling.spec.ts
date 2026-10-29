@@ -1,6 +1,8 @@
+import { serverSession } from './helpers/serverSession';
 import { test, expect } from '@playwright/test';
 
 test('interactive answers retain their edits through automatic room refreshes', async ({ page }) => {
+  await serverSession(page);
   await page.addInitScript(() => {
     localStorage.setItem('lms_user', JSON.stringify({ id: 'student', role: 'STUDENT', schoolId: 'own' }));
     localStorage.setItem('lms_token', 'cookie_auth');
@@ -38,6 +40,7 @@ test('interactive answers retain their edits through automatic room refreshes', 
 });
 
 test('a disabled competition room offers no participation or answering controls', async ({ page }) => {
+  await serverSession(page);
   await page.addInitScript(() => {
     localStorage.setItem('lms_user', JSON.stringify({ id: 'student', role: 'STUDENT' }));
     localStorage.setItem('lms_token', 'cookie_auth'); localStorage.setItem('lms_lang', 'en');

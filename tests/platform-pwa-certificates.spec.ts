@@ -47,7 +47,7 @@ test('PWA manifest, service worker, install invitation and private offline bound
   await expect(page.getByRole('heading', { name: 'منصتك أقرب… حمّل التطبيق' })).toBeVisible(); await page.getByRole('button', { name: 'حمّل التطبيق', exact: true }).click();
   await expect(page.getByRole('status').filter({ hasText: 'قائمة المتصفح' })).toBeVisible();
   const manifest = await (await page.request.get('/manifest.webmanifest')).json(); expect(manifest.display).toBe('standalone'); expect(manifest.icons).toHaveLength(3); expect(manifest.start_url).toBe('/dashboard');
-  const result = await page.evaluate(async () => { await navigator.serviceWorker.ready; const cache = await caches.open('klevro-public-offline-v1'); return (await cache.keys()).map(r => new URL(r.url).pathname); });
+  const result = await page.evaluate(async () => { await navigator.serviceWorker.ready; const name = (await caches.keys()).find(key => key.startsWith('klevro-public-offline-')); if (!name) throw new Error('Offline cache is missing'); const cache = await caches.open(name); return (await cache.keys()).map(r => new URL(r.url).pathname); });
   expect(result.sort()).toEqual(['/offline.html', '/pwa/icon-192.png']);
   await context.setOffline(true); await page.goto('/notifications'); await expect(page.getByRole('heading', { name: 'نرجع نكمل أول ما تتصل' })).toBeVisible(); await context.setOffline(false);
 });

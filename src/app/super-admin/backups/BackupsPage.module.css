@@ -1,0 +1,45 @@
+.page.page { width:100%; max-width:1520px; min-width:0; margin-inline:auto; padding:clamp(12px,2.2vw,32px); }
+.page > * { min-width:0; }
+.hero.hero { display:grid; grid-template-columns:minmax(0,1fr); gap:25px; padding:clamp(20px,3vw,38px); border-radius:27px; }
+.heroCopy { min-width:0; }
+.heroCopy h1 { align-items:flex-start; gap:12px; font-size:clamp(23px,2.4vw,34px); line-height:1.65; }
+.heroCopy h1 svg { flex-shrink:0; margin-top:8px; width:30px; height:30px; }
+.heroCopy h1 span,.heroCopy p { overflow-wrap:anywhere; }
+.heroCopy p { font-weight:500; line-height:1.95; }
+.heroActions.heroActions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; width:100%; min-width:0; }
+.heroActions button { min-width:0; min-height:48px; justify-content:center; padding:12px 15px; font-size:13px; line-height:1.85; }
+.heroActions button svg { flex-shrink:0; }
+.workspace.workspace { grid-template-columns:minmax(0,1.8fr) minmax(0,1fr); gap:22px; align-items:start; }
+.individual.individual { grid-column:auto; min-width:0; }
+.archives { min-width:0; }
+.listHeading.listHeading { flex-wrap:wrap; gap:14px; padding-inline:0; }
+.listHeading h3,.archives>h3 { font-size:18px; line-height:1.8; }
+.listHeading h3 { min-width:0; flex:1; }
+.listHeading h3 svg,.archives>h3 svg { flex-shrink:0; }
+.listTools.listTools { flex-wrap:wrap; gap:7px; }
+.listTools button { min-height:44px; min-width:44px; }
+.fileList.fileList { padding-inline:0; scrollbar-gutter:stable; }
+.fileCard.fileCard { min-width:0; padding:20px; border-radius:20px; }
+.fileCard h4 { overflow-wrap:anywhere; word-break:break-word; font-size:15px; line-height:1.8; }
+.fileCard h4[title] { unicode-bidi:plaintext; text-align:start; }
+.fileCard span { min-width:0; overflow-wrap:anywhere; }
+.fileInfo.fileInfo { flex-direction:row; align-items:flex-start; gap:13px; }
+.fileInfo>div:first-of-type:not(:last-child) { flex-shrink:0; }
+.fileActions.fileActions { display:flex; flex-wrap:wrap; gap:8px; }
+.fileActions>button { min-width:0; min-height:44px; padding:10px 12px; line-height:1.8; font-size:12px; }
+.fileActions>button svg { flex-shrink:0; }
+.fileActions>button[aria-label] { flex:0 0 44px; padding:10px; display:grid; place-items:center; }
+.archiveBody.archiveBody { min-width:0; min-height:220px; padding:20px; border-radius:22px; }
+.state.state { padding:clamp(28px,6vw,70px) 20px; border-radius:22px; }
+.state>span { text-align:center; }
+.listError { display:flex; flex-direction:column; align-items:center; gap:14px; text-align:center; padding:35px 20px; border:1px solid #f0d9c7; background:#fff9f4; color:#8a4f27; border-radius:20px; }
+.listError p { max-width:430px; line-height:1.9; margin:0; }
+.listError button { border:1px solid #d9bc9f; background:#fff; border-radius:10px; padding:10px 18px; min-height:44px; cursor:pointer; }
+.modalOverlay.modalOverlay { overflow-y:auto; padding:16px; }
+.modalOverlay>div { max-height:calc(100dvh - 32px); overflow-y:auto; min-width:0; }
+.modalOverlay h4,.modalOverlay p { overflow-wrap:anywhere; }
+@media(min-width:1500px) { .hero.hero { grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:30px; } }
+@media(max-width:1200px) { .workspace.workspace { grid-template-columns:minmax(0,1fr); } .archiveBody.archiveBody { min-height:0; } }
+@media(max-width:700px) { .page.page { margin-block:0; } .page.page>*+* { margin-top:24px; } .fileList.fileList { max-height:none; overflow:visible; } .heroCopy h1 { font-size:24px; } .fileCard.fileCard { padding:16px; } .modalOverlay>div { padding:22px; border-radius:22px; } }
+@media(max-width:540px) { .hero.hero { padding:20px 16px; border-radius:22px; } .heroCopy h1 { font-size:22px; gap:9px; } .heroCopy h1 svg { width:25px; height:25px; } .heroActions.heroActions { grid-template-columns:minmax(0,1fr); gap:10px; } .heroActions button { font-size:12px; } .fileCard.fileCard { padding:15px 12px; } .fileInfo.fileInfo { flex-direction:column; gap:12px; } .fileInfo>div { width:100%; } .fileInfo>div:first-child { width:42px; height:42px; border-radius:13px; } .fileCard h4 { font-size:13px; } .fileActions.fileActions { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px; } .fileActions>button { width:100%; padding:8px; font-size:11px; } .fileActions>button:not([aria-label]) svg { display:none; } .fileActions>button[aria-label] { width:44px; } .fileActions>button:last-child:not([aria-label]) { grid-column:auto; } .listHeading h3,.archives>h3 { font-size:16px; } .listHeading h3 { flex-basis:calc(100% - 62px); } .archiveBody.archiveBody { padding:14px; } .modalOverlay>div>div { min-width:0; } .modalOverlay>div>div:last-child { flex-wrap:wrap; } .modalOverlay>div>div:last-child button { flex-basis:100%; } }
+@media(prefers-reduced-motion:reduce) { .page * { animation:none!important; transition:none!important; } }

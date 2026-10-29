@@ -1,9 +1,11 @@
+import { serverSession } from './helpers/serverSession';
 import { test, expect, Page, Locator } from '@playwright/test';
 
 async function setup(page: Page, role: string) {
   const prefix = role === 'SUPER_ADMIN' ? 'super-admin' : 'school-admin';
   const user = { id: 'admin', role, name: 'Author', schoolId: 'school', status: 'ACTIVE' };
   const translations: any[] = [];
+  await serverSession(page, role);
   await page.addInitScript(({ prefix, user }) => {
     const key = prefix.replace('-', '_');
     localStorage.setItem(key + '_token', 'cookie_auth');

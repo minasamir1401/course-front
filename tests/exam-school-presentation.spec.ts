@@ -1,3 +1,4 @@
+import { serverSession } from './helpers/serverSession';
 import { test, expect } from '@playwright/test';
 
 const examId = '8df54865-b677-4ca4-9686-b6cbd909942c';
@@ -22,6 +23,7 @@ const makeExam = () => {
 
 async function prepare(page: any, role: string) {
   const user = { id: 'test-user', name: 'اختبار', role, schoolId: school.id, status: 'ACTIVE' };
+  await serverSession(page, role);
   await page.addInitScript(({ user, role }: any) => {
     localStorage.setItem('lms_lang', 'ar');
     const prefix = role === 'SUPER_ADMIN' ? 'super_admin' : role === 'SCHOOL_ADMIN' ? 'school_admin' : 'lms';
@@ -46,7 +48,7 @@ async function prepare(page: any, role: string) {
     else if (url.pathname.endsWith('/questions') || url.searchParams.has('onlyQuestions')) data = { questions: [] };
     else if (url.pathname === `/api/exams/${examId}`) data = exam;
     else if (url.pathname.includes('/schools')) data = [school];
-    else if (url.pathname.includes('/auth/') || url.pathname.endsWith('/me')) data = { ...user, user };
+    else if (url.pathname.includes('/auth/') || url.pathname.endsWith('/me')) data = { authenticated: true, ...user, user };
     else if (url.pathname.includes('/portfolio')) data = null;
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(data) });
   });

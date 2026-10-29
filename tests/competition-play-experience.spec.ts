@@ -1,3 +1,4 @@
+import { serverSession } from './helpers/serverSession';
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import fs from 'node:fs';
@@ -8,6 +9,7 @@ for (const language of ['ar', 'en']) test('modern student arena: audible outcome
   const ar = language === 'ar', text = (a: string, e: string) => ar ? a : e;
   await page.setViewportSize({ width: 1480, height: 676 });
   await page.route('https://fonts.googleapis.com/**', route => route.abort());
+  await serverSession(page);
   await page.addInitScript(language => {
     localStorage.setItem('lms_user', JSON.stringify({ id: 'student', role: 'STUDENT', schoolId: 'own' }));
     localStorage.setItem('lms_token', 'cookie_auth'); localStorage.setItem('lms_lang', language);
@@ -130,6 +132,7 @@ test('game sound engine renders distinct non-silent, unclipped audio for every o
 
 test('last five seconds play warning tones and submit a timed-out answer once', async ({ page }) => {
   let answerCalls = 0, start = 0;
+  await serverSession(page);
   await page.addInitScript(() => {
     localStorage.setItem('lms_user', JSON.stringify({ id: 'student', role: 'STUDENT' })); localStorage.setItem('lms_token', 'cookie_auth'); localStorage.setItem('lms_lang', 'en'); localStorage.setItem('klevro-install-dismissed', String(Date.now()));
     (window as any).__warningTones = [];

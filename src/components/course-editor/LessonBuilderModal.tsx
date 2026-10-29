@@ -17,9 +17,13 @@ import { LessonQuestionsBuilder } from "./lesson-builder/LessonQuestionsBuilder"
 import { LessonSchedulingTab } from "./lesson-builder/LessonSchedulingTab";
 import { LessonAttachmentsTab } from "./lesson-builder/LessonAttachmentsTab";
 import ExportLessonDataModal from "@/components/modals/ExportLessonDataModal";
-import { Copy } from "lucide-react";
+import { Copy, Sparkles } from "lucide-react";
+import AiGuidanceEditor from '@/components/ai/AiGuidanceEditor';
+import workspace from './LessonWorkspace.module.css';
+import { useRouter } from 'next/navigation';
 
-export const LessonBuilderModal: React.FC = () => {
+export const LessonBuilderModal: React.FC<{ fullPage?: boolean }> = ({ fullPage = false }) => {
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
@@ -29,6 +33,8 @@ export const LessonBuilderModal: React.FC = () => {
   const { showToast } = useNotification();
   const {
     role,
+    courseId,
+    courseData,
     allowContentDeletion,
     currentLesson,
     setCurrentLesson,
@@ -52,7 +58,7 @@ export const LessonBuilderModal: React.FC = () => {
     setOpenDropdownId,
   } = useCourseEditor();
 
-  const [activeTab, setActiveTab] = useState<'info' | 'slides' | 'exercises' | 'assignments' | 'attachments' | 'scheduling'>(contextActiveTab || 'info');
+  const [activeTab, setActiveTab] = useState<'info' | 'slides' | 'exercises' | 'assignments' | 'attachments' | 'scheduling' | 'ai'>(contextActiveTab || 'info');
 
   useEffect(() => {
     if (isLessonModalOpen) {
@@ -86,10 +92,20 @@ export const LessonBuilderModal: React.FC = () => {
 
   if (!isLessonModalOpen || !mounted || !currentLesson) return null;
 
-  return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-sm overflow-hidden">
-      <div className="max-w-6xl mx-auto w-full h-[100dvh] sm:h-[calc(100dvh-3rem)] animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="relative bg-white border border-slate-200 w-full h-full rounded-none sm:rounded-[40px] shadow-2xl overflow-hidden flex flex-col">
+  const closeEditor = () => {
+    setIsLessonModalOpen(false);
+    if (fullPage) router.push(`/${role === 'SUPER_ADMIN' ? 'super-admin' : 'school-admin'}/courses/edit?id=${courseId}`);
+  };
+  const tabTitles: Record<string, string[]> = {
+    info: ['الأهداف والبيانات', 'Goals & information'], scheduling: ['الجدولة والظهور', 'Scheduling & visibility'],
+    slides: ['محتوى الشرح', 'Explanation content'], assignments: ['الواجبات والتكليفات', 'Assignments'],
+    exercises: ['التدريبات والتقييمات', 'Practice & assessments'], attachments: ['المرفقات والمراجع', 'Attachments & resources'],
+    ai: ['توجيهات المساعد التعليمي', 'Learning assistant guidance'],
+  };
+  const content = (
+    <div className={`${workspace.shell} ${fullPage ? workspace.inline : ''}`} role={fullPage ? undefined : 'dialog'} aria-modal={fullPage ? undefined : true} aria-label={language === 'ar' ? 'مساحة تعديل الدرس' : 'Lesson editing workspace'} dir={language === 'ar' ? 'rtl' : 'ltr'}>
+      <div className={workspace.frame}>
+        <div className={`relative ${workspace.surface}`}>
           {isLessonContentLoading && (
             <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 bg-white/90 text-slate-700">
               <div className="w-12 h-12 rounded-full border-4 border-indigo-600 border-t-transparent animate-spin" />
@@ -97,9 +113,11 @@ export const LessonBuilderModal: React.FC = () => {
             </div>
           )}
           {/* Header */}
-          <div className="flex justify-between items-center gap-2 p-3 sm:p-4 shrink-0 bg-white border-b border-slate-100">
+          <div className={workspace.header}>
             <div>
-              {/* Optional: Add a subtle title here if needed */}
+              <small>{language === 'ar' ? 'مساحة إعداد الدرس' : 'LESSON WORKSPACE'} / {courseData.title}</small>
+              <h1>{currentLesson.title || (language === 'ar' ? 'درس جديد' : 'New lesson')}</h1>
+              <p>{language === 'ar' ? 'رتّب المحتوى والتدريبات ووجّه المساعد في تجربة واحدة.' : 'Organise content, practice and assistant guidance in one place.'}</p>
             </div>
             <div className="flex items-center gap-2 min-w-0">
               <button 
@@ -110,8 +128,8 @@ export const LessonBuilderModal: React.FC = () => {
                 <span className="truncate">{language === 'ar' ? 'تصدير بيانات الدرس' : 'Export Lesson Data'}</span>
               </button>
               <button 
-                onClick={() => setIsLessonModalOpen(false)} 
-                className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-rose-100 hover:text-rose-600 transition-all cursor-pointer"
+                onClick={closeEditor}
+                className={workspace.close} aria-label={language === 'ar' ? 'العودة للمقرر' : 'Back to course'}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -119,32 +137,34 @@ export const LessonBuilderModal: React.FC = () => {
           </div>
 
           {/* Tab Navigation */}
-          <div className="flex border-b border-slate-100 bg-slate-50 overflow-x-auto shrink-0 custom-scrollbar">
+          <div className={workspace.layout}>
+          <nav className={workspace.navigation} role="tablist" aria-label={language === 'ar' ? 'أقسام إعداد الدرس' : 'Lesson sections'}>
+            <p className={workspace.navIntro}>{language === 'ar' ? 'محتوى الدرس وإعداداته' : 'CONTENT & SETTINGS'}</p>
             {[
               { id: 'info', label: language === 'ar' ? 'الأهداف والبيانات' : 'Goals & Info', icon: Target },
               { id: 'scheduling', label: language === 'ar' ? 'الجدولة والظهور' : 'Scheduling & Visibility', icon: Clock },
               { id: 'slides', label: language === 'ar' ? 'محتوى الشرح' : 'Explanation Content', icon: Layout },
               { id: 'assignments', label: language === 'ar' ? "واجبات وتكليفات الدرس (Assignments)" : "Assignments", icon: FileText },
               { id: 'exercises', label: language === 'ar' ? "تدريبات وتقييمات الدرس (Quiz Me)" : "Quiz Me", icon: HelpCircle },
+              { id: 'ai', label: language === 'ar' ? 'المساعد التعليمي' : 'AI assistant', icon: Sparkles },
               { id: 'attachments', label: language === 'ar' ? 'المرفقات' : 'Attachments', icon: FileJson },
             ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex-1 py-5 flex items-center justify-center gap-3 font-black text-sm transition-all cursor-pointer ${
-                  activeTab === tab.id 
-                    ? 'text-indigo-600 bg-white border-b-2 border-indigo-600 shadow-[0_4px_20px_-10px_rgba(79,70,229,0.4)]' 
-                    : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100/50'
-                }`}
+                className={workspace.tab}
+                role="tab" aria-selected={activeTab === tab.id} aria-controls={`lesson-tab-${tab.id}`} id={`lesson-nav-${tab.id}`}
               >
                 <tab.icon className="w-5 h-5" />
-                <span className="hidden sm:inline">{tab.label}</span>
+                <span>{tab.label}</span>
               </button>
             ))}
-          </div>
+          </nav>
 
           {/* Tab Body Content */}
-          <div className="p-3 sm:p-8 overflow-y-auto overflow-x-hidden flex-1 custom-scrollbar overscroll-contain">
+          <div className={workspace.content} role="tabpanel" id={`lesson-tab-${activeTab}`} aria-labelledby={`lesson-nav-${activeTab}`}>
+            <div className={workspace.topic}><h2>{tabTitles[activeTab][language === 'ar' ? 0 : 1]}</h2><p>{language === 'ar' ? 'تعديلات المحتوى تُحفظ مع الدرس. توجيهات المساعد لها زر حفظ مستقل.' : 'Content is saved with the lesson. Assistant guidance has its own save action.'}</p></div>
+            <div hidden={activeTab !== 'ai'}><AiGuidanceEditor scope="lesson" id={currentLesson.id} language={language}/></div>
             {activeTab === 'info' && (
               <LessonInfoTab 
                 currentLesson={currentLesson}
@@ -235,10 +255,14 @@ export const LessonBuilderModal: React.FC = () => {
             )}
           </div>
 
-          {/* Modal Footer */}
-          <div className="p-3 sm:p-4 border-t border-slate-100 bg-slate-50 grid grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] sm:flex sm:justify-end gap-2 sm:gap-3 shrink-0">
+          </div>
+
+          {/* Workspace Footer */}
+          <div className={workspace.footer}>
+            <p>{language === 'ar' ? 'مساحة أوسع لدرس أوضح.' : 'More room for a clearer lesson.'}</p>
+            <div className={workspace.footerActions}>
             <button 
-              onClick={() => setIsLessonModalOpen(false)} 
+              onClick={closeEditor}
               className="min-w-0 px-3 sm:px-6 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-500 font-bold text-sm hover:bg-slate-50 transition-all cursor-pointer"
             >
               {language === 'ar' ? "إلغاء" : "Cancel"}
@@ -250,6 +274,7 @@ export const LessonBuilderModal: React.FC = () => {
               {language === 'ar' ? "تحديث وحفظ" : "Update & Save"} 
               <CheckCircle2 className="w-4 h-4" />
             </button>
+            </div>
           </div>
         </div>
       </div>
@@ -260,7 +285,7 @@ export const LessonBuilderModal: React.FC = () => {
         sourceLesson={currentLesson}
         onSuccess={() => setIsExportModalOpen(false)}
       />
-    </div>,
-    document.body
+    </div>
   );
+  return fullPage ? content : createPortal(content, document.body);
 };

@@ -1,6 +1,6 @@
 /* Only a public offline fallback is cached. Never store authenticated pages, APIs,
    exam answers or certificate files in Cache Storage. */
-const CACHE = 'klevro-public-offline-v2';
+const CACHE = 'klevro-public-offline-v3';
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(['/offline.html', '/pwa/icon-192.png'])).then(() => self.skipWaiting()));
 });

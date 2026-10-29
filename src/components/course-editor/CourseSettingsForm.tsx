@@ -143,11 +143,11 @@ export const CourseSettingsForm: React.FC = () => {
           {courseData.coverImage && (
             <div className="aspect-video w-full rounded-2xl overflow-hidden border border-slate-100 mb-2 relative">
               <Image
-                src={getFullImageUrl(courseData.coverImage) || "/logo.jpeg"}
+                src={getFullImageUrl(courseData.coverImage) || "/klevro/brand/klevro-logo.jpg"}
                 alt="Cover"
                 fill
                 className="object-cover"
-                unoptimized={shouldSkipImageOptimization(getFullImageUrl(courseData.coverImage) || "/logo.jpeg")}
+                unoptimized={shouldSkipImageOptimization(getFullImageUrl(courseData.coverImage) || "/klevro/brand/klevro-logo.jpg")}
               />
             </div>
           )}
@@ -178,11 +178,11 @@ export const CourseSettingsForm: React.FC = () => {
               {courseData.coverImage ? (
                 <div className="relative aspect-video w-full rounded-2xl overflow-hidden border-2 border-slate-100 group-hover:border-indigo-400 transition-all">
                   <Image
-                    src={getFullImageUrl(courseData.coverImage) || "/logo.jpeg"}
+                    src={getFullImageUrl(courseData.coverImage) || "/klevro/brand/klevro-logo.jpg"}
                     alt="Cover"
                     fill
                     className="object-cover"
-                    unoptimized={shouldSkipImageOptimization(getFullImageUrl(courseData.coverImage) || "/logo.jpeg")}
+                    unoptimized={shouldSkipImageOptimization(getFullImageUrl(courseData.coverImage) || "/klevro/brand/klevro-logo.jpg")}
                   />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-3 z-10">
                     <button

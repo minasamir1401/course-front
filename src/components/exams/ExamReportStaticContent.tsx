@@ -4,7 +4,7 @@ import { BarChart3 } from 'lucide-react';
 export function ExamReportLogo() {
   return (
     <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-sm bg-white flex items-center justify-center p-1 border border-slate-100">
-      <Image src="/logo.jpeg" alt="Klevro Logo" width={56} height={56} className="object-contain" />
+      <Image src="/klevro/brand/klevro-logo.jpg" alt="Klevro Logo" width={56} height={56} className="object-contain" />
     </div>
   );
 }

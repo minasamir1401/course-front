@@ -1,8 +1,7 @@
 .header.header { height:auto; min-height:60px; border-color:#e9e7f0; background:#ffffffef; }
 .inner { display:flex; align-items:center; justify-content:space-between; gap:18px; width:100%; max-width:1400px; margin-inline:auto; padding:8px 32px; }
-.brand { display:flex; align-items:center; gap:8px; flex-shrink:0; }
-.logo { width:36px; height:36px; object-fit:contain; }
-.wordmark { font-family:Arial,sans-serif; font-size:23px; font-weight:900; color:#171128; letter-spacing:-.7px; }
+.brand { display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.logo { width:64px; height:64px; object-fit:contain; }
 .desktopNav { display:none; align-items:center; gap:3px; }
 .desktopNav :global(.student-nav-link) { min-height:44px; gap:7px; padding:8px 11px; border-radius:12px; font-size:12px; font-weight:700; color:#4d4859; }
 .desktopNav :global(.student-nav-active) { color:#4f337a; background:#ece6f9; }
@@ -15,6 +14,6 @@
 .dock :global(.student-dock-link) span { white-space:nowrap; }
 .dock a[href="/competitions"] { flex:1.45; }
 @media(min-width:1024px) { .desktopNav { display:flex; } .dock { display:none; } }
-@media(max-width:1279px) and (min-width:1024px) { .inner { padding-inline:24px; gap:6px 10px; flex-wrap:wrap; } .desktopNav { order:3; flex-basis:100%; justify-content:center; } .desktopNav :global(.student-nav-link) { font-size:12px; padding-inline:8px; } .desktopNav img { width:16px; height:16px; } .wordmark { font-size:21px; } .tools { gap:5px; } }
-@media(max-width:600px) { .inner { padding:8px 14px; gap:12px; } .wordmark { font-size:21px; } .logo { width:34px; height:34px; } .tools { gap:6px; } .tools :global(.student-icon-button) { min-width:40px; } }
+@media(max-width:1279px) and (min-width:1024px) { .inner { padding-inline:24px; gap:6px 10px; flex-wrap:wrap; } .desktopNav { order:3; flex-basis:100%; justify-content:center; } .desktopNav :global(.student-nav-link) { font-size:12px; padding-inline:8px; } .desktopNav img { width:16px; height:16px; } .tools { gap:5px; } }
+@media(max-width:600px) { .inner { padding:6px 14px; gap:12px; } .logo { width:56px; height:56px; } .tools { gap:6px; } .tools :global(.student-icon-button) { min-width:40px; } }
 @media print { .header,.dock { display:none!important; } }

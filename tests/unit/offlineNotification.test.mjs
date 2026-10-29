@@ -15,7 +15,7 @@ function harness() {
   new Function('require', 'module', 'exports', 'window', 'navigator', 'localStorage', 'setTimeout', code)(id => id === 'react' ? react : id === '@/hooks/useModalFocus' ? { useModalFocus() {} } : id === '@/contexts/LanguageContext' ? { useLanguage: () => ({ language: 'en' }) } : id === '@/lib/offlineSync' ? { offlineSync, captureOfflineOwner: () => owner } : id === 'lucide-react' ? {} : require(id), mod, mod.exports, window, { onLine: true }, { getItem: () => 'en' }, () => 0);
   mod.exports.NotificationProvider({ children: null });
   effects.forEach(fn => fn());
-  return { window, queued, states, switchOwner: () => { owner = { userId: 'account-b', schoolId: 'school-b' }; }, failStorage: () => { rejectStorage = true; }, resolve: () => resolveFetch(new Response('{}', { status: 503 })) };
+  return { window, queued, states, switchOwner: () => { owner = { userId: 'account-b', schoolId: 'school-b' }; }, failStorage: () => { rejectStorage = true; }, resolve: (status = 503, body = {}) => resolveFetch(new Response(JSON.stringify(body), { status })) };
 }
 test('failed request retains owner from before fetch despite account switch', async () => {
   const h = harness();
@@ -34,4 +34,25 @@ test('replay requests are never queued a second time', async () => {
   const pending = h.window.fetch('/api/courses', { method: 'PUT', body: '{}', headers: { 'X-Offline-User-Id': 'account-a' } });
   h.resolve(); await pending;
   assert.equal(h.queued.length, 0);
+});
+
+test('structured AI failures do not mark a reachable backend down or suggest queued edits', async () => {
+  const h = harness();
+  for (let i = 0; i < 2; i++) {
+    const pending = h.window.fetch('/api/ai/chat', { method: 'POST', body: '{}' });
+    h.resolve(503, { code: 'AI_UNAVAILABLE', error: 'Provider unavailable' });
+    assert.equal((await pending).status, 503);
+  }
+  assert.equal(h.queued.length, 0);
+  assert.equal(h.states[3], false);
+  assert.equal(h.states[0].length, 0);
+});
+
+test('real proxy failures on AI routes still trigger the server availability warning', async () => {
+  const h = harness();
+  for (let i = 0; i < 2; i++) {
+    const pending = h.window.fetch('/api/ai/chat', { method: 'POST', body: '{}' });
+    h.resolve(502, { error: 'Failed to reach backend' }); await pending;
+  }
+  assert.ok(h.states[0].some(toast => /server unreachable/i.test(toast.message)));
 });

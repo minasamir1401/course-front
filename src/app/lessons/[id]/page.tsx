@@ -69,6 +69,13 @@ export default function LessonPlayerPage() {
   const [confirmation, setConfirmation] = useState<{ message: string; resolve: (value: boolean) => void } | null>(null);
   const requestConfirmation = (message: string) => new Promise<boolean>(resolve => setConfirmation({ message, resolve }));
   const milestoneDialog = useRef<HTMLDivElement>(null), warningDialog = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const slide = lesson?.slides?.[currentSlideIndex];
+    const blocked = currentStage === 'assignments' || currentStage === 'exercises' || (currentStage === 'slides' && (slide?.type === 'QUESTION' || slide?.correctAnswer !== undefined));
+    document.documentElement.dataset.aiAssessment = String(blocked);
+    window.dispatchEvent(new Event('klevro:ai-context'));
+    return () => { delete document.documentElement.dataset.aiAssessment; window.dispatchEvent(new Event('klevro:ai-context')); };
+  }, [currentStage, currentSlideIndex, lesson]);
   useModalFocus(!!showStreakMilestone, milestoneDialog, () => setShowStreakMilestone(null));
   useModalFocus(!!unansweredWarning, warningDialog, () => setUnansweredWarning(null));
   const previousSlideButton = useRef<HTMLButtonElement>(null), nextSlideButton = useRef<HTMLButtonElement>(null);

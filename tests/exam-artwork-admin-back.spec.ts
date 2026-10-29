@@ -1,3 +1,4 @@
+import { serverSession } from './helpers/serverSession';
 import { test, expect, Page } from '@playwright/test';
 import { studentSession, exam } from './helpers/studentWorkspace';
 
@@ -5,6 +6,7 @@ const exams = Array.from({ length: 5 }, (_, index) => ({ ...exam, id: `assessmen
 async function admin(page: Page, role: string, language: string) {
   const prefix = role === 'SUPER_ADMIN' ? 'super-admin' : 'school-admin';
   const user = { id: 'admin', name: 'Author', role, schoolId: 'school', status: 'ACTIVE' };
+  await serverSession(page, role);
   await page.addInitScript(({ prefix, user, language }) => {
     const key = prefix.replace('-', '_');
     localStorage.setItem(`${key}_user`, JSON.stringify(user));

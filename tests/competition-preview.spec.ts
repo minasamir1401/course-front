@@ -1,9 +1,11 @@
+import { serverSession } from './helpers/serverSession';
 import { test, expect } from '@playwright/test';
 test.use({ serviceWorkers: 'block' });
 
 for (const role of ['SUPER_ADMIN', 'SCHOOL_ADMIN']) for (const language of ['ar', 'en']) test(role + ' previews a finished competition as a student without real participation (' + language + ')', async ({ page }) => {
   const ar = language === 'ar', base = role === 'SUPER_ADMIN' ? '/super-admin' : '/school-admin';
   const text = (a: string, e: string) => ar ? a : e;
+  await serverSession(page, role);
   await page.addInitScript(({ role, language }) => {
     const prefix = role === 'SUPER_ADMIN' ? 'super_admin' : 'school_admin';
     localStorage.setItem(prefix + '_token', 'cookie_auth');
@@ -52,6 +54,7 @@ for (const role of ['SUPER_ADMIN', 'SCHOOL_ADMIN']) for (const language of ['ar'
 });
 
 test('empty drafts offer the question editor instead of a zero-question attempt', async ({ page }) => {
+  await serverSession(page, 'SUPER_ADMIN');
   await page.addInitScript(() => {
     localStorage.setItem('super_admin_token', 'cookie_auth'); localStorage.setItem('super_admin_user', JSON.stringify({ id: 'admin', role: 'SUPER_ADMIN' })); localStorage.setItem('lms_lang', 'en');
   });
@@ -66,6 +69,7 @@ test('empty drafts offer the question editor instead of a zero-question attempt'
 });
 
 test('preview timeouts grade once without creating a real attempt', async ({ page }) => {
+  await serverSession(page, 'SCHOOL_ADMIN');
   await page.addInitScript(() => {
     localStorage.setItem('school_admin_token', 'cookie_auth'); localStorage.setItem('school_admin_user', JSON.stringify({ id: 'admin', role: 'SCHOOL_ADMIN', schoolId: 'own' })); localStorage.setItem('lms_lang', 'en');
   });

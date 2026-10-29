@@ -1,4 +1,5 @@
 "use client";
+import StudentAiInsight from '@/components/ai/StudentAiInsight';
 import { questionMetadata } from "@/lib/bilingualMetadata";
 
 import React, { useEffect, useId, useState } from 'react';
@@ -124,7 +125,8 @@ export default function ReportWorkspace({ role, examId = '', initialTab = 'overv
   );
 
   return <DashboardLayout mainClassName={role === 'STUDENT' ? `${frame.main} ${styles.main}` : undefined}>
-    <div className={`report-workspace max-w-[1500px] mx-auto space-y-6 ${role === 'STUDENT' ? styles.student : ''}`} dir={ar ? 'rtl' : 'ltr'}>
+      <div className={`report-workspace max-w-[1500px] mx-auto space-y-6 ${role === 'STUDENT' ? styles.student : ''}`} dir={ar ? 'rtl' : 'ltr'}>
+        {role === 'STUDENT' && <StudentAiInsight />}
       {role === 'STUDENT' && <header className={styles.hero}><div><small>{txt('مركز التقارير','Reporting center')}</small><h1><ReferenceIcon name="chart-bars" variant="duotone" size={48}/>{txt('تقدّمك وخطوتك التالية','Your progress & next step')}</h1><p>{txt('بيانات دروسك ونتائجك الفعلية.','Your lesson progress and recorded results.')}</p></div><div className={styles.referenceHeroArt} aria-hidden="true"/></header>}
       <div className={role === 'STUDENT' ? styles.toolbar : "flex flex-col md:flex-row gap-5 justify-between md:items-center"}>
         <div className="flex items-start gap-4" aria-hidden={role === 'STUDENT' || undefined}>
