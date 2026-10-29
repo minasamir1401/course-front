@@ -13,6 +13,7 @@ const HTML_ELEMENT_NAMES = new Set(`
   mmultiscripts mprescripts mtable mtr mtd
   svg g path circle ellipse line polyline polygon rect text tspan defs use symbol clippath
   mask pattern lineargradient radialgradient stop filter foreignobject
+  font mark center strike
 `.trim().split(/\s+/));
 
 /** Escape text comparisons before an HTML parser can mistake x<y for a tag.
