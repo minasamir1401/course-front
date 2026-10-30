@@ -6,6 +6,9 @@ export function shouldPreferPlainTextPaste(html: string, plainText: string): boo
 
   const normalizedHtml = html.trim();
   if (!normalizedHtml) return plainText.length > LARGE_PASTE_TEXT_THRESHOLD;
+  // Rendered maths and embedded images can have large HTML with very little
+  // actual text. Falling back would discard their content and formatting.
+  if (plainText.length < LARGE_PASTE_TEXT_THRESHOLD && /\bdata-latex\s*=|\bclass\s*=\s*["'][^"']*\b(?:math-tex|katex)\b|<(?:math|img|table)\b/i.test(normalizedHtml)) return false;
 
   return (
     plainText.length >= LARGE_PASTE_TEXT_THRESHOLD ||

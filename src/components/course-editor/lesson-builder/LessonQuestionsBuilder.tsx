@@ -1,5 +1,6 @@
 "use client";
 import LessonQuestionForm from "./LessonQuestionForm";
+import QuestionSummary from '@/components/QuestionSummary';
 import { translateMetadataFields } from '@/lib/questionMetadataTranslation';
 
 
@@ -831,10 +832,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                           </span>
                           {q.standard && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">{q.standard}</span>}
                         </div>
-                        <div 
-                          className="text-slate-700 font-bold truncate text-sm"
-                          dangerouslySetInnerHTML={{ __html: (q.text || "").replace(/<[^>]*>?/gm, '').substring(0, 120) + '...' }}
-                        />
+                        <QuestionSummary html={q.text || q.textEn || ''} className="text-slate-700 font-bold truncate text-sm" />
                       </div>
                     </div>
 

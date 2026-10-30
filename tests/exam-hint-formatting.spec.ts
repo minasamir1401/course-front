@@ -1,7 +1,8 @@
 import { serverSession } from './helpers/serverSession';
 import { test, expect, Page, Locator } from '@playwright/test';
 
-async function setup(page: Page, role: string, stored = false) {
+const copiedQuestion = '<p>أوجد المجموع: <span class="math-tex inline-block mx-1 align-middle cursor-pointer hover:ring-2 hover:ring-indigo-400 rounded px-1 transition-all" contenteditable="false" data-latex="1+2">\\(1+2\\)</span></p>';
+async function setup(page: Page, role: string, stored = false, open = true) {
   const prefix = role === 'SUPER_ADMIN' ? 'super-admin' : 'school-admin';
   const user = { id: 'admin', role, name: 'Author', schoolId: 'school', status: 'ACTIVE' };
   const translations: any[] = [];
@@ -20,7 +21,7 @@ async function setup(page: Page, role: string, stored = false) {
     if (path === '/api/exams/exam') return route.fulfill({ json: { id: 'exam', title: 'Test', schoolId: 'school', duration: 30, type: 'Exam', status: 'DRAFT', questions: [], modules: [{ id: 'module', title: 'Module', questions: [], slides: [], subExams: [{ id: 'sub', title: 'New exam', questions: [] }] }] } });
     if (path === '/api/exams/exam/questions' && stored) return route.fulfill({ json: [{
       id: 'stored-question', moduleId: 'module', subExamId: 'sub', type: 'MCQ', label: 'MCQ', points: 1,
-      text: '<p>أوجد <font color="#dc2626">الناتج</font></p>', textEn: '<p>Find the <font color="#dc2626">answer</font></p>',
+      text: copiedQuestion, textEn: '<p>Find the <font color="#dc2626">answer</font></p>',
       options: ['أ', 'ب'], optionsEn: ['A', 'B'], correctAnswer: 'أ', correctAnswerEn: 'A',
       hint: '<p>تلميح عربي</p>', hintEn: '<p>English hint</p>',
       sections: [{ id: 'saved-explanation', type: 'EXPLANATION', content: '<p>شرح عربي</p>', contentEn: '<p>English explanation</p>' }],
@@ -33,9 +34,11 @@ async function setup(page: Page, role: string, stored = false) {
     return route.fulfill({ json: path.includes('/metadata') ? { domains: [], standards: [], indicators: [], outcomes: [] } : [] });
   });
   await page.goto(`/${prefix}/exams/edit/exam?moduleId=module&subExamId=sub`);
-  if (stored) await page.getByTitle('Edit', { exact: true }).first().click();
-  else await page.getByRole('button', { name: '+ إضافة سؤال', exact: true }).click();
-  await expect(page.locator('.editor-content').first()).toBeVisible();
+  if (open) {
+    if (stored) await page.getByTitle('Edit', { exact: true }).first().click();
+    else await page.getByRole('button', { name: '+ إضافة سؤال', exact: true }).click();
+    await expect(page.locator('.editor-content').first()).toBeVisible();
+  }
   return translations;
 }
 
@@ -71,6 +74,42 @@ async function format(editor: Locator, title: string) {
 }
 
 for (const role of ['SUPER_ADMIN', 'SCHOOL_ADMIN', 'TEACHER']) {
+  test(`${role}: collapsed question summaries never cut through a long math tag`, async ({ page }) => {
+    await setup(page, role, true, false);
+    await expect(page.getByTitle('Edit', { exact: true }).first()).toBeVisible();
+    await expect(page.locator('main')).toContainText('أوجد المجموع');
+    await expect(page.locator('main')).not.toContainText('<span');
+    await expect(page.locator('main .katex').first()).toBeVisible();
+  });
+  test(`${role}: external HTML pasted into hints and explanations stays content and does not navigate`, async ({ page }) => {
+    test.setTimeout(90000);
+    const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+    await setup(page, role, true);
+    const url = page.url(); const navigations: string[] = [];
+    page.on('request', request => { if (request.isNavigationRequest() && request.frame() === page.mainFrame()) navigations.push(request.url()); });
+    const editors = page.locator('.editor-content');
+    const html = '<html><head><style>body{display:none}</style></head><body><form action="/unexpected-submit"><div class="fixed inset-0 editor-content" style="position:fixed;z-index:999999;color:rgb(220,38,38)"><font color="#dc2626">Copied coloured explanation</font><input onfocus="window.pasteCallback=1"><button type="submit">Submit</button><a href="/unexpected-navigation">Copied link</a><table><tr><td>Useful table</td></tr></table>' + copiedQuestion + '</div></form></body></html>';
+    for (const index of [1, 2]) {
+      await editors.nth(index).click();
+      await editors.nth(index).evaluate((element, html) => {
+        const data = new DataTransfer(); data.setData('text/html', html); data.setData('text/plain', 'Copied coloured explanation');
+        element.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+      }, html);
+      await expect(editors.nth(index)).toContainText('Copied coloured explanation');
+      await expect(editors.nth(index)).toContainText('Useful table');
+      await expect(editors.nth(index).locator('form,input,button,style,meta,a[href],[onfocus]')).toHaveCount(0);
+      await expect(editors.nth(index).locator('font')).toHaveAttribute('color', '#dc2626');
+      await expect(editors.nth(index).locator('.fixed, .editor-content')).toHaveCount(0);
+      await expect(editors.nth(index).locator('.math-tex')).toHaveAttribute('data-latex', '1+2');
+      await expect(editors.nth(index).locator('.math-tex')).toHaveAttribute('contenteditable', 'false');
+      expect(await editors.nth(index).evaluate(el => Array.from(el.querySelectorAll<HTMLElement>('[style]')).some(node => node.style.position === 'fixed'))).toBe(false);
+    }
+    for (let i = 0; i < 3; i++) {
+      await editors.nth(1).click(); await editors.nth(1).press('End'); await editors.nth(1).pressSequentially(' hint');
+      await editors.nth(2).click(); await editors.nth(2).press('End'); await editors.nth(2).pressSequentially(' explanation');
+    }
+    expect(page.url()).toBe(url); expect(navigations).toEqual([]); expect(errors).toEqual([]);
+  });
   for (const stored of [false, true]) test(`${role}: ${stored ? 'saved' : 'new'} question hint/explanation focus preserves document and unsaved text`, async ({ page }) => {
     test.setTimeout(90000);
     const errors: string[] = [];

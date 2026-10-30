@@ -1,5 +1,6 @@
 // @ts-nocheck
 import React from 'react';
+import QuestionSummary from '@/components/QuestionSummary';
 import { sanitizeHtml } from '@/lib/sanitize';
 import { Edit2, Trash2 } from 'lucide-react';
 
@@ -25,7 +26,7 @@ export const StandaloneQuestions = (props: any) => {
                   <button onClick={(e) => { e.preventDefault(); removeStandaloneQuestion(index); }} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button>
                 </div>
             </div>
-            <div className="text-slate-800 font-bold line-clamp-3 text-sm flex-1" dangerouslySetInnerHTML={{ __html: sanitizeHtml(q.text) }} />
+            <QuestionSummary html={q.text || q.textEn || ''} className="text-slate-800 font-bold line-clamp-3 text-sm flex-1" />
             <div className="text-xs font-bold text-slate-400 bg-slate-50 p-3 rounded-xl border border-slate-100 mt-auto">
               {language === 'ar' ? 'الإجابة:' : 'Answer:'} <span className="text-emerald-600 ml-1">{q.correctAnswer || (q.correctAnswers?.join(', ') || '-')}</span>
             </div>
