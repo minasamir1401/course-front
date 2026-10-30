@@ -1,10 +1,10 @@
 import { test, expect, Page } from '@playwright/test';
 import { serverSession } from './helpers/serverSession';
 
-async function setup(page: Page, language = 'ar', kind = 'GROQ') {
+async function setup(page: Page, language = 'ar', kind = 'GROQ', count = 2) {
   await serverSession(page, 'SUPER_ADMIN');
   await page.addInitScript(language => { localStorage.setItem('lms_lang', language); localStorage.setItem('super_admin_token', 'cookie_auth'); localStorage.setItem('super_admin_user', JSON.stringify({ id: 'admin', role: 'SUPER_ADMIN' })); localStorage.setItem('klevro-install-dismissed', String(Date.now())); }, language);
-  const providers = [1, 2].map(id => ({ id: `p${id}`, name: `Connection ${id}`, kind, model: kind === 'GEMINI' ? 'gemini-3.1-flash-lite' : 'openai/gpt-oss-120b', baseUrl: kind === 'GEMINI' ? 'https://generativelanguage.googleapis.com/v1beta/openai' : 'https://api.groq.com/openai/v1', allowPublic: true, allowStudent: false, enabled: true, requestCount: 1, failureCount: 0 }));
+  const providers = Array.from({ length: count }, (_, i) => i + 1).map(id => ({ id: `p${id}`, name: `Connection ${id}`, kind, model: kind === 'GEMINI' ? 'gemini-3.1-flash-lite' : 'openai/gpt-oss-120b', baseUrl: kind === 'GEMINI' ? 'https://generativelanguage.googleapis.com/v1beta/openai' : 'https://api.groq.com/openai/v1', allowPublic: true, allowStudent: false, enabled: true, requestCount: 1, failureCount: 0 }));
   const requests: { path: string; method: string; body?: Record<string, unknown> }[] = [];
   await page.route('**/api/**', async route => {
     const path = new URL(route.request().url()).pathname, method = route.request().method();
@@ -171,4 +171,45 @@ test('copy from a connection card validates the new key model and supports cance
   await expect(workspace.getByLabel('المفتاح السري', { exact: true })).toBeEmpty();
   await expect(workspace.getByLabel('المزوّد', { exact: true })).toHaveValue('GROQ');
   expect(requests.filter(item => item.method === 'PATCH' || item.path === '/api/ai/admin/providers' && item.method === 'POST')).toHaveLength(0);
+});
+
+test('a Gemini key cannot be sent to Groq and can switch to the matching provider without retyping', async ({ page }) => {
+  const { workspace, requests } = await setup(page, 'ar', 'GEMINI');
+  await workspace.getByLabel('المفتاح السري', { exact: true }).fill('AIza-synthetic-only');
+  await expect(workspace.getByRole('alert')).toContainText('GEMINI');
+  await expect(workspace.getByRole('button', { name: 'جلب النماذج المتاحة', exact: true })).toBeDisabled();
+  // Let the automatic catalogue timer expire: no key goes to the wrong provider.
+  await page.waitForTimeout(1000);
+  expect(requests.filter(item => item.path === '/api/ai/admin/models')).toHaveLength(0);
+  await workspace.getByRole('button', { name: 'استخدام GEMINI', exact: true }).click();
+  await expect(workspace.getByLabel('المفتاح السري', { exact: true })).toHaveValue('AIza-synthetic-only');
+  await expect(workspace.getByLabel('المزوّد', { exact: true })).toHaveValue('GEMINI');
+  const models = workspace.getByRole('combobox', { name: 'اختر نموذجًا من قائمة المزوّد', exact: true });
+  await expect(models).toBeEnabled();
+  expect(requests.find(item => item.path === '/api/ai/admin/models')!.body).toMatchObject({ kind: 'GEMINI', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai' });
+});
+
+test('catalogue rejection is visible by the key and retry recovers without losing copied settings', async ({ page }) => {
+  await page.setViewportSize({ width: 935, height: 546 });
+  const { workspace, requests } = await setup(page, 'ar', 'GEMINI', 4);
+  let calls = 0;
+  await page.route('**/api/ai/admin/models', route => ++calls === 1
+    ? route.fulfill({ status: 400, json: { code: 'AI_PROVIDER_AUTH_FAILED', error: 'المزوّد رفض المفتاح أو صلاحية عرض النماذج.' } })
+    : route.fulfill({ json: { models: [{ id: 'gemini-3.1-flash-lite', name: 'Gemini Lite', free: null }] } }));
+  const panel = workspace.locator('form').locator('..');
+  // The form must not stretch to the height of all connection cards.
+  expect(await panel.evaluate(el => el.getBoundingClientRect().height)).toBeLessThan(await workspace.locator('article').last().evaluate(el => el.parentElement!.getBoundingClientRect().height));
+  await workspace.getByRole('button', { name: 'إضافة مفتاح آخر', exact: true }).last().click();
+  await expect(workspace.getByLabel('المفتاح السري', { exact: true })).toBeInViewport();
+  await workspace.getByLabel('المفتاح السري', { exact: true }).fill('synthetic-new-gemini');
+  const error = panel.getByRole('alert');
+  await expect(error).toContainText('المزوّد رفض المفتاح');
+  await expect(error).toContainText('لم يُحفظ الاتصال');
+  await expect(workspace.getByRole('button', { name: 'حفظ الاتصال المشفّر', exact: true })).toBeDisabled();
+  expect(requests.some(item => item.path === '/api/ai/admin/providers' && item.method === 'POST')).toBe(false);
+  await workspace.getByRole('button', { name: 'جلب النماذج المتاحة', exact: true }).click();
+  await expect(workspace.getByRole('combobox', { name: 'اختر نموذجًا من قائمة المزوّد', exact: true })).toHaveValue('gemini-3.1-flash-lite');
+  await expect(error).toHaveCount(0);
+  await expect(workspace.getByRole('button', { name: 'حفظ الاتصال المشفّر', exact: true })).toBeEnabled();
+  await panel.screenshot({ path: '../artifacts/ai-admin-credentials/additional-key-ready.png' });
 });
