@@ -1,4 +1,5 @@
 import { useQuestionHintTranslation } from '@/hooks/useQuestionHintTranslation';
+import QuestionSummary from '@/components/QuestionSummary';
 import { updateBilingualRichText } from '@/lib/bilingualRichText';
 import { translateMetadataFields } from '@/lib/questionMetadataTranslation';
 import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
@@ -364,10 +365,7 @@ export const QuestionsBuilder = (props: any) => {
                               </div>
                             );
                           })()}
-                          <div
-                            className="text-slate-700 font-bold truncate text-sm flex-1 min-w-0"
-                            dangerouslySetInnerHTML={{ __html: sanitizeHtml((q.text || q.textEn || '').substring(0, 120)) }}
-                          />
+                          <QuestionSummary html={q.text || q.textEn || ''} className="text-slate-700 font-bold line-clamp-2 text-sm flex-1 min-w-0" />
                         </div>
                       </div>
                     </div>

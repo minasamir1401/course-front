@@ -63,12 +63,14 @@ export const sanitizeHtml = (input: string): string => {
     sanitized = sanitized.replace(/\son\w+\s*=\s*[^\s>]+/gi, "");
     sanitized = sanitized.replace(/javascript:/gi, "");
     sanitized = sanitized.replace(/data:text\/html/gi, "");
+    sanitized = sanitized.replace(/<\/?(?:form|input|button|textarea|select|option|meta|link|base|object|embed)\b[^>]*>/gi, '');
     return sanitized;
   }
 
   return DOMPurify.sanitize(decoded, {
     ADD_TAGS: ["font", "mark"],
     ADD_ATTR: ["color", "size", "face", "style"],
+    FORBID_TAGS: ['form', 'input', 'button', 'textarea', 'select', 'option', 'meta', 'link', 'base', 'object', 'embed', 'style'],
     ALLOW_DATA_ATTR: true
   });
 };

@@ -25,3 +25,10 @@ test("plain text fallback escapes markup and preserves line breaks", () => {
 
   assert.equal(html, "&lt;b&gt;unsafe&lt;/b&gt;<br>second line");
 });
+
+test('large rendered maths and embedded media retain the HTML representation', () => {
+  const metadata = 'x'.repeat(14000);
+  assert.equal(shouldPreferPlainTextPaste(`<span class="math-tex ${metadata}" data-latex="x+2">x+2</span>`, 'x+2'), false);
+  assert.equal(shouldPreferPlainTextPaste(`<img src="data:image/png;base64,${metadata}">`, 'Image'), false);
+  assert.equal(shouldPreferPlainTextPaste(`<table><tr><td style="${metadata}">A</td></tr></table>`, 'A'), false);
+});

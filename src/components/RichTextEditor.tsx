@@ -6,6 +6,7 @@ import { Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, Ali
 import { uploadFileToServer } from "@/lib/image-utils";
 import { buildRichTextImageHtml, getRichTextImageStyles } from "@/lib/richTextImage";
 import { convertPlainTextToHtml, shouldPreferPlainTextPaste } from "@/lib/richTextPaste";
+import { sanitizeEditorHtml } from "@/lib/editorHtml";
 import { buildRichTextMathHtml, isolateRichTextMath } from "@/lib/richTextMath";
 import NextImage from "next/image";
 import { useNotification } from "@/context/NotificationContext";
@@ -189,7 +190,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
   useEffect(() => {
     if (!editorRef.current || value === lastEmittedValueRef.current) return;
     // Intercept and fix any legacy/absolute image URLs pointing to the backend domain
-    const cleanValue = isolateRichTextMath(value || "", false).replace(/https?:\/\/([a-zA-Z0-9.-]+)\/uploads\//g, "/uploads/");
+    const cleanValue = isolateRichTextMath(sanitizeEditorHtml(value || ""), false).replace(/https?:\/\/([a-zA-Z0-9.-]+)\/uploads\//g, "/uploads/");
 
     if (editorRef.current && editorRef.current.innerHTML !== cleanValue) {
       editorRef.current.innerHTML = cleanValue;
@@ -506,8 +507,9 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
   };
 
   const handlePaste = async (e: React.ClipboardEvent) => {
-    const items = e.clipboardData?.items;
-    if (!items) return;
+    if (!e.clipboardData) return;
+    const items = e.clipboardData.items || [];
+    saveSelection();
 
     let handled = false;
     for (let i = 0; i < items.length; i++) {
@@ -519,7 +521,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
         
         try {
           const uploadedUrl = await uploadFileToServer(file);
-          execCommand('insertHTML', `<img loading="lazy" decoding="async" src="${uploadedUrl}" style="max-width: 100%; height: auto; border-radius: 12px; margin: 10px auto; display: block;" />&nbsp;`);
+          execCommand('insertHTML', buildRichTextImageHtml(uploadedUrl, '100', 'center'), true);
         } catch (err) {
           console.error("Failed to upload pasted image:", err);
           showToast(err instanceof Error ? err.message : "Failed to upload image", "error");
@@ -541,7 +543,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
           e.preventDefault();
           
           const parser = new DOMParser();
-          const doc = parser.parseFromString(htmlData, "text/html");
+          const doc = parser.parseFromString(sanitizeEditorHtml(cleanWordPaste(htmlData)), "text/html");
           const images = Array.from(doc.querySelectorAll('img[src^="data:image/"]')) as HTMLImageElement[];
           
           if (images.length > 0) {
@@ -568,10 +570,9 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
             
             // Replace processing text with actual HTML
             if (editorRef.current) {
-              const processingNode = editorRef.current.querySelector(`#${processingId}`);
+              const processingNode = editorRef.current.querySelector<HTMLElement>(`#${processingId}`);
               if (processingNode) {
-                processingNode.outerHTML = doc.body.innerHTML;
-                handleInput(true);
+                if (selectElement(processingNode)) execCommand('insertHTML', sanitizeEditorHtml(doc.body.innerHTML), true);
               }
             }
           }
@@ -579,10 +580,10 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
           // Standard HTML Paste without images
           // Intercept to clean MS Word styles and bad math symbols!
           e.preventDefault();
-          const cleanedHtml = cleanWordPaste(htmlData);
-          execCommand('insertHTML', cleanedHtml);
+          const cleanedHtml = sanitizeEditorHtml(cleanWordPaste(htmlData));
+          execCommand('insertHTML', cleanedHtml, true);
         }
-      } else if (plainTextData && shouldPreferPlainTextPaste("", plainTextData)) {
+      } else if (plainTextData) {
         e.preventDefault();
         execCommand('insertHTML', convertPlainTextToHtml(plainTextData));
       }
@@ -617,6 +618,9 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
           }
         }
       }
+    } else if (e.dataTransfer.getData('text/html')) {
+      e.preventDefault(); saveSelection();
+      execCommand('insertHTML', sanitizeEditorHtml(cleanWordPaste(e.dataTransfer.getData('text/html'))), true);
     }
   };
 
