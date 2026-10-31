@@ -1,8 +1,9 @@
 /* Only a public offline fallback is cached. Never store authenticated pages, APIs,
    exam answers or certificate files in Cache Storage. */
-const CACHE = 'klevro-public-offline-v3';
+const CACHE = 'klevro-public-offline-v4';
+const APP_ICON = '/pwa/klevro-v2-192.png';
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(['/offline.html', '/pwa/icon-192.png'])).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(['/offline.html', APP_ICON])).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', event => {
   event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith('klevro-public-offline-') && key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim()));
@@ -17,7 +18,7 @@ self.addEventListener('push', event => {
   try { data = event.data ? event.data.json() : {}; } catch { /* Malformed payload gets a generic notification. */ }
   event.waitUntil(self.registration.showNotification('Klevro', {
     body: typeof data.body === 'string' ? data.body.slice(0, 200) : 'لديك تحديث جديد في المنصة',
-    icon: '/pwa/icon-192.png', badge: '/pwa/badge-96.png', tag: String(data.tag || 'klevro-update'),
+    icon: APP_ICON, badge: '/pwa/badge-96.png', tag: String(data.tag || 'klevro-update'),
     data: { url: '/notifications' },
   }));
 });

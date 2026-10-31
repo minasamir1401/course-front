@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { siteUrl } from "@/lib/siteSeo";
+import { appBrand } from '@/lib/appBrand';
 import "./globals.css";
 import "./student.css";
 import "katex/dist/katex.min.css";
@@ -17,7 +18,11 @@ export const metadata: Metadata = {
   formatDetection: { email: false, address: false, telephone: false },
   other: { google: 'notranslate' },
   robots: { index: false, follow: false },
-  icons: { icon: { url: '/pwa/icon-192.png', sizes: '192x192', type: 'image/png' }, shortcut: '/favicon.ico', apple: '/pwa/apple-180.png' },
+  icons: {
+    icon: { url: appBrand.icon192, sizes: '192x192', type: 'image/png' },
+    shortcut: appBrand.favicon,
+    apple: { url: appBrand.apple180, sizes: '180x180', type: 'image/png' },
+  },
   verification: { google: 'MflyIkcGh9qSgjG20hEVvldZM3whuI_2adk1pL16v7Y' },
 };
 
