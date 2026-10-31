@@ -15,13 +15,17 @@ export default function PageAccessGate({ children }: { children: React.ReactNode
   useEffect(() => {
     const policy = pageAccess(path);
     if (!policy) return;
-    let active = true, version = 0;
+    let active = true, version = 0, verified = false;
     const verify = async () => {
       const current = ++version;
-      setStatus('checking');
+      // Returning to an already verified page must not hide the workspace,
+      // blur editors or move its scroll position while the request is pending.
+      if (!verified) setStatus('checking');
       const session = await checkAuthSession();
       if (!active || current !== version) return;
-      if (session.unavailable) { setStatus('unavailable'); return; }
+      // A temporary network failure does not revoke an existing approval.
+      // New routes still stay blocked until their first successful check.
+      if (session.unavailable) { if (!verified) setStatus('unavailable'); return; }
       if (!session.authenticated || !session.user?.id) {
         setApprovedPath(null); clearAllAuthData(); router.replace(loginForPage(path, window.location.search)); return;
       }
@@ -36,6 +40,7 @@ export default function PageAccessGate({ children }: { children: React.ReactNode
         for (const config of Object.values(AUTH_KEYS)) if (config !== key) { localStorage.removeItem(config.TOKEN); localStorage.removeItem(config.USER); localStorage.removeItem(`${config.TOKEN}_expires_at`); }
         localStorage.setItem(key.TOKEN, 'cookie_auth'); localStorage.setItem(key.USER, JSON.stringify(session.user));
       } catch { /* Cookie verification remains authoritative. */ }
+      verified = true;
       setApprovedPath(path); setStatus('ready');
     };
     const visible = () => { if (document.visibilityState === 'visible') void verify(); };
