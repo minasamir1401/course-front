@@ -141,14 +141,14 @@ export default function ExamModulesManager({ isOpen, onClose }: { isOpen: boolea
             </div>
             <h2 className="text-xl font-bold text-gray-800">إدارة موديولات الاختبارات</h2>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500">
+          <button type="button" onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500">
             <X className="w-6 h-6" />
           </button>
         </div>
 
         <div className="flex-1 overflow-auto p-6 flex gap-6">
           <div className="w-1/3 flex flex-col gap-4 border-l pl-6">
-            <button 
+            <button type="button"
               onClick={() => setEditingModule({ title: "", description: "", isCentral: true })}
               className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium flex items-center justify-center gap-2 transition-all shadow-sm"
             >
@@ -165,10 +165,10 @@ export default function ExamModulesManager({ isOpen, onClose }: { isOpen: boolea
                 >
                   <span className="font-semibold text-gray-800">{m.title}</span>
                   <div className="flex gap-2">
-                    <button onClick={(e) => { e.stopPropagation(); setEditingModule(m); }} className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors">
+                    <button type="button" onClick={(e) => { e.stopPropagation(); setEditingModule(m); }} className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors">
                       <Edit2 className="w-4 h-4" />
                     </button>
-                    <button onClick={(e) => { e.stopPropagation(); handleDeleteModule(m.id); }} className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg transition-colors">
+                    <button type="button" onClick={(e) => { e.stopPropagation(); handleDeleteModule(m.id); }} className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg transition-colors">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -213,7 +213,7 @@ export default function ExamModulesManager({ isOpen, onClose }: { isOpen: boolea
                         <div className="text-xs text-gray-500 mt-1">{s.exams?.length || 0} اختبارات مسجلة</div>
                       </div>
                       <div className="flex gap-2">
-                        <button 
+                        <button type="button"
                           onClick={() => {
                             setAssigningSectionId(s.id);
                             setSelectedExamIds(s.exams?.map((e: any) => e.id) || []);
@@ -222,7 +222,7 @@ export default function ExamModulesManager({ isOpen, onClose }: { isOpen: boolea
                         >
                           تعيين اختبارات
                         </button>
-                        <button onClick={() => handleDeleteSection(s.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                        <button type="button" onClick={() => handleDeleteSection(s.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -237,7 +237,7 @@ export default function ExamModulesManager({ isOpen, onClose }: { isOpen: boolea
                       onChange={e => setNewSectionTitle(e.target.value)}
                       className="flex-1 p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none"
                     />
-                    <button onClick={() => handleAddSection(activeModuleId)} className="py-3 px-6 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 transition-colors flex items-center gap-2">
+                    <button type="button" onClick={() => handleAddSection(activeModuleId)} className="py-3 px-6 bg-green-600 text-white rounded-xl font-medium hover:bg-green-700 transition-colors flex items-center gap-2">
                       <Plus className="w-5 h-5" /> إضافة
                     </button>
                   </div>
@@ -258,7 +258,7 @@ export default function ExamModulesManager({ isOpen, onClose }: { isOpen: boolea
           <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl" dir="rtl">
             <div className="p-6 border-b border-gray-100 flex justify-between items-center">
               <h3 className="text-lg font-bold">تحديد الاختبارات للقسم</h3>
-              <button onClick={() => setAssigningSectionId(null)} className="text-gray-500 hover:bg-gray-100 p-2 rounded-full">
+              <button type="button" onClick={() => setAssigningSectionId(null)} className="text-gray-500 hover:bg-gray-100 p-2 rounded-full">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -285,10 +285,10 @@ export default function ExamModulesManager({ isOpen, onClose }: { isOpen: boolea
               )}
             </div>
             <div className="p-6 border-t border-gray-100 flex gap-3">
-              <button onClick={handleSaveAssignments} className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-medium hover:bg-indigo-700">
+              <button type="button" onClick={handleSaveAssignments} className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-medium hover:bg-indigo-700">
                 حفظ التعيينات
               </button>
-              <button onClick={() => setAssigningSectionId(null)} className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-300">
+              <button type="button" onClick={() => setAssigningSectionId(null)} className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-300">
                 إلغاء
               </button>
             </div>

@@ -594,7 +594,7 @@ export default function SuperAdminExamsPage() {
                 <FolderOutput className="w-6 h-6 text-indigo-600" />
                 {language === 'ar' ? 'نقل الامتحان إلى الموديولات - اختر الوجهة' : 'Move Exam to Modules - Select Destination'}
               </h3>
-              <button
+              <button type="button"
                 onClick={() => setShowMoveModal(false)}
                 className="w-10 h-10 bg-white hover:bg-slate-100 text-slate-500 rounded-2xl flex items-center justify-center transition-all shadow-sm border border-slate-200/50 cursor-pointer"
               >
@@ -642,7 +642,7 @@ export default function SuperAdminExamsPage() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
-                          <button
+                          <button type="button"
                             disabled={isMoving}
                             onClick={() => handleMoveToModule(mod.examId, mod.id)}
                             className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl font-bold text-sm transition-all shadow-md shadow-indigo-200 cursor-pointer"
@@ -661,7 +661,7 @@ export default function SuperAdminExamsPage() {
                                 <FileText className="w-4 h-4 text-slate-400 shrink-0" />
                                 <span className="font-bold text-sm text-slate-700 truncate">{subExam.title}</span>
                               </div>
-                              <button
+                              <button type="button"
                                 disabled={isMoving}
                                 onClick={() => handleMoveToModule(mod.examId, mod.id, subExam.id)}
                                 className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 border border-slate-200 rounded-xl font-bold text-xs transition-all cursor-pointer disabled:opacity-50"

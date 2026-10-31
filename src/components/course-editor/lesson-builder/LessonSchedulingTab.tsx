@@ -21,7 +21,7 @@ export const LessonSchedulingTab: React.FC<LessonSchedulingTabProps> = ({
                           <h4 className="text-xl font-black text-indigo-900">{language === 'ar' ? "حالة ظهور الدرس" : "Lesson Visibility"}</h4>
                           <p className="text-indigo-600/60 font-bold text-sm">{language === 'ar' ? "تحكم في ما إذا كان الطالب يستطيع رؤية هذا الدرس حالياً" : "Control whether the student can see this lesson currently"}</p>
                        </div>
-                       <button 
+                       <button type="button"
                         onClick={() => setCurrentLesson({...currentLesson, isVisible: !currentLesson.isVisible})}
                         className={`w-20 h-10 rounded-full relative transition-all duration-300 ${currentLesson.isVisible ? 'bg-indigo-600' : 'bg-slate-300'}`}
                        >

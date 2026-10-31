@@ -61,7 +61,7 @@ test('student list and details show the module name and all four inherited durat
   await expect(page.getByRole('heading', { name: 'ميا', exact: true })).toBeVisible();
   await expect(page.getByText('قسم بدون عنوان', { exact: true })).toHaveCount(0);
   await page.getByRole('link', { name: /ميا/ }).click();
-  await expect(page.getByText('60 دقيقة', { exact: false })).toHaveCount(4);
+  await expect(page.getByText(/^(?:60|٦٠) دقيقة$/)).toHaveCount(4);
   await expect(page.getByText('الهندسه', { exact: true })).toBeVisible();
   await expect(page.getByText('34434', { exact: true })).toBeVisible();
 });

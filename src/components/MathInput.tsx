@@ -1,4 +1,5 @@
 "use client";
+import { useEditorFormProtection } from '@/hooks/useEditorFormProtection';
 
 import React, { useState, useRef, useEffect } from "react";
 import { Sigma, X, Check, Image as ImageIcon, AlignLeft, AlignCenter, AlignRight, Loader2, Trash2, Code } from 'lucide-react';
@@ -16,6 +17,7 @@ interface MathInputProps {
 }
 
 export default function MathInput({ value, onChange, placeholder, className = "" }: MathInputProps) {
+  const formProtectionRef = useEditorFormProtection();
   const [isOpen, setIsOpen] = useState(false);
   const [mathFormula, setMathFormula] = useState("");
   const [formulaSize, setFormulaSize] = useState<'normal' | 'large' | 'huge' | 'display'>('large');
@@ -213,7 +215,7 @@ export default function MathInput({ value, onChange, placeholder, className = ""
   };
 
   return (
-    <div className={`relative flex-1 flex flex-col gap-1 ${className}`}>
+    <div ref={formProtectionRef} data-editor-control="math" className={`relative flex-1 flex flex-col gap-1 ${className}`}>
       <div className="flex items-center gap-2">
       <input
         ref={inputRef}

@@ -86,7 +86,7 @@ const InnerCourseEditor: React.FC<{ lessonPage?: boolean }> = ({ lessonPage = fa
     );
   }
 
-  if (lessonPage) return <DashboardLayout>{isLoading ? <p role="status">{language === 'ar' ? 'جارٍ تجهيز الدرس…' : 'Preparing your lesson…'}</p> : isLessonModalOpen ? <LessonBuilderModal fullPage/> : <div className="p-8"><p>{language === 'ar' ? 'اختر درسًا متاحًا من المقرر.' : 'Choose an available lesson from this course.'}</p><button className="mt-4 text-indigo-600" onClick={() => router.push(`../courses/edit?id=${courseId}`)}>{language === 'ar' ? 'العودة للمقرر' : 'Back to course'}</button></div>}</DashboardLayout>;
+  if (lessonPage) return <DashboardLayout>{isLoading ? <p role="status">{language === 'ar' ? 'جارٍ تجهيز الدرس…' : 'Preparing your lesson…'}</p> : isLessonModalOpen ? <LessonBuilderModal fullPage/> : <div className="p-8"><p>{language === 'ar' ? 'اختر درسًا متاحًا من المقرر.' : 'Choose an available lesson from this course.'}</p><button type="button" className="mt-4 text-indigo-600" onClick={() => router.push(`../courses/edit?id=${courseId}`)}>{language === 'ar' ? 'العودة للمقرر' : 'Back to course'}</button></div>}</DashboardLayout>;
 
   return (
     <DashboardLayout hideSidebar>
@@ -100,7 +100,7 @@ const InnerCourseEditor: React.FC<{ lessonPage?: boolean }> = ({ lessonPage = fa
           {/* Header Block */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-12 gap-6 bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
               <div className="flex items-center gap-6">
-                <button
+                <button type="button"
                   onClick={() => router.back()}
                   className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 hover:text-indigo-600 border border-slate-100 hover:border-indigo-100 transition-all"
                 >
@@ -137,7 +137,7 @@ const InnerCourseEditor: React.FC<{ lessonPage?: boolean }> = ({ lessonPage = fa
                   </span>
                 )}
 
-                <button
+                <button type="button"
                   onClick={(e) => handleSubmit(e)}
                   disabled={isSubmitting}
                   className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-10 py-4 rounded-2xl font-black flex items-center gap-3 hover:scale-105 shadow-xl shadow-indigo-600/20 disabled:opacity-50 transition-all whitespace-nowrap shrink-0"

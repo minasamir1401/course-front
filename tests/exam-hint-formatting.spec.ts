@@ -74,6 +74,39 @@ async function format(editor: Locator, title: string) {
 }
 
 for (const role of ['SUPER_ADMIN', 'SCHOOL_ADMIN', 'TEACHER']) {
+  test(`${role}: editor Enter and implicit actions cannot submit or reload the page, explicit save still submits`, async ({ page }) => {
+    test.setTimeout(90000);
+    await setup(page, role, true);
+    const editors=page.locator('.editor-content');
+    const form=editors.first().locator('xpath=ancestor::form[1]');
+    const errors:string[]=[], navigations:string[]=[];
+    page.on('pageerror', e=>errors.push(e.message));
+    page.on('request', r=>{if(r.isNavigationRequest()&&r.frame()===page.mainFrame())navigations.push(r.url());});
+    const marker=await form.evaluate(el=>{
+      const state={submits:0,actions:0,marker:crypto.randomUUID()};
+      (window as any).__editorSubmitTest=state;
+      // Observe native submission without actually writing an exam in this fixture.
+      el.addEventListener('submit',event=>{event.preventDefault();event.stopPropagation();state.submits++;});
+      return state.marker;
+    });
+    for(const index of [1,2]){
+      const editor=editors.nth(index); await editor.click();
+      await editor.evaluate(el=>{const data=new DataTransfer();data.setData('text/html','<p class="MsoNormal"><b>Hint 💡:</b> Use the two coordinate points to calculate the rate of change.</p>');data.setData('text/plain','Hint 💡: Use the two coordinate points to calculate the rate of change.');el.dispatchEvent(new ClipboardEvent('paste',{clipboardData:data,bubbles:true,cancelable:true}));});
+      await editor.press('Control+End');await editor.press('Enter');await editor.pressSequentially('Kept after Enter');
+      await expect(editor).toContainText('Kept after Enter');
+    }
+    const option=page.locator('[data-editor-control="math"] input[type="text"]').first();
+    await option.focus();await option.press('End');await option.press('Enter');
+    await form.evaluate(el=>{
+      const button=document.createElement('button');button.textContent='Legacy editing action';
+      button.onclick=()=>{(window as any).__editorSubmitTest.actions++;};el.append(button);button.click();button.remove();
+      (el as HTMLFormElement).requestSubmit();
+    });
+    expect(await page.evaluate(()=>(window as any).__editorSubmitTest)).toEqual({submits:0,actions:1,marker});
+    await page.getByRole('button',{name:'حفظ الاختبار',exact:true}).click();
+    expect(await page.evaluate(()=>(window as any).__editorSubmitTest.submits)).toBe(1);
+    expect(errors).toEqual([]);expect(navigations).toEqual([]);
+  });
   test(`${role}: collapsed question summaries never cut through a long math tag`, async ({ page }) => {
     await setup(page, role, true, false);
     await expect(page.getByTitle('Edit', { exact: true }).first()).toBeVisible();

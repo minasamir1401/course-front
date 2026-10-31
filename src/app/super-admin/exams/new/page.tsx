@@ -379,7 +379,7 @@ export default function SuperAdminNewExamPage() {
         <div className="animate-in fade-in duration-500">
           <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between mb-12 gap-6 bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm ${language === 'ar' ? 'text-right' : 'text-left'}`}>
             <div className="flex items-center gap-6">
-              <button onClick={() => router.back()} className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all border border-slate-100">
+              <button type="button" onClick={() => router.back()} className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all border border-slate-100">
                 <ArrowLeft className="w-7 h-7" />
               </button>
               <div>
@@ -387,7 +387,7 @@ export default function SuperAdminNewExamPage() {
                 <p className="text-slate-400 text-lg mt-1 font-bold">{moduleMode ? (language === 'ar' ? 'أنشئ بوابة الاختبارات وإعداداتها الأساسية' : 'Create the exam module portal and its core settings') : (language === 'ar' ? 'صمم تجربة تقييم متكاملة لطلابك' : 'Design a complete assessment experience for your students')}</p>
               </div>
             </div>
-            <button 
+            <button type="button"
               onClick={handleSubmit}
               disabled={isLoading}
               className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-12 py-5 rounded-[22px] font-black flex items-center gap-3 hover:scale-105 hover:shadow-2xl hover:shadow-indigo-500/20 transition-all disabled:opacity-50"

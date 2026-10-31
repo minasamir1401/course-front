@@ -66,3 +66,38 @@ test('standalone app keeps the exam title readable in a narrow card inside a wid
   expect(errors).toEqual([]);
   await page.screenshot({ path: '../artifacts/editor-regressions/standalone-narrow-card.png', fullPage: true });
 });
+
+for (const language of ['ar', 'en']) test(`exam intro remains readable without container queries in narrow app panes ${language}`, async ({ page }) => {
+  test.setTimeout(90000);
+  await studentSession(page, language);
+  await page.route('https://fonts.googleapis.com/**', r => r.abort());
+  await page.route('**/api/exams/exam', r => r.fulfill({ json: { ...exam, title: 'العلاقات والدوال الرياضية', titleEn: 'Relations and functions examination' } }));
+  await page.setViewportSize({ width:1080, height:800 });
+  await page.goto('/exams/exam?preview=true');
+  const title = page.locator('#exam-intro-title');
+  await expect(title).toBeVisible();
+  await page.getByRole('button', { name: language === 'ar' ? 'العربية' : 'English', exact:true }).click();
+  // Simulate an older installed browser engine that ignores container queries.
+  await page.evaluate(() => {
+    const remove = (sheet: CSSStyleSheet | CSSGroupingRule) => {
+      for (let i=sheet.cssRules.length-1; i>=0; i--) {
+        const rule=sheet.cssRules[i];
+        if (rule.cssText.startsWith('@container')) sheet.deleteRule(i);
+        else if ('cssRules' in rule) remove(rule as CSSGroupingRule);
+      }
+    };
+    for (const sheet of Array.from(document.styleSheets)) { try { remove(sheet); } catch {} }
+  });
+  const card = page.locator('section[aria-labelledby="exam-intro-title"]');
+  for (const width of [320,380,620,900]) {
+    await card.evaluate((el,width) => { (el as HTMLElement).style.width=`${width}px`; }, width);
+    await expect.poll(async () => (await title.boundingBox())!.width).toBeGreaterThan(230);
+    expect((await title.boundingBox())!.height).toBeLessThan(210);
+    const start=page.getByRole('button', { name:language==='ar'?'ابدأ الامتحان الآن':'Start Exam Now', exact:true });
+    await expect(start).toBeVisible();
+    expect(await card.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
+    if(width===380) await page.screenshot({path:`../artifacts/editor-regressions/intro-no-container-${language}.png`,fullPage:true});
+  }
+  await page.getByRole('button', { name:language==='ar'?'ابدأ الامتحان الآن':'Start Exam Now', exact:true }).click();
+  await expect(title).toHaveCount(0);
+});

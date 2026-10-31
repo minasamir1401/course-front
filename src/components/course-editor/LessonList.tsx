@@ -190,7 +190,7 @@ export const LessonList: React.FC = () => {
 
       {/* Content Navigation Tabs */}
       <div className="bg-white p-2 rounded-[30px] border border-slate-100 shadow-sm flex gap-2">
-        <button className="flex-1 flex items-center justify-center gap-3 py-4 rounded-2xl font-black transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-600/20">
+        <button type="button" className="flex-1 flex items-center justify-center gap-3 py-4 rounded-2xl font-black transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-600/20">
           <Layers className="w-5 h-5" />
           {language === "ar" ? "الدروس والمحاضرات" : "Lessons & Lectures"}
         </button>
@@ -202,7 +202,7 @@ export const LessonList: React.FC = () => {
             <Layers className="w-8 h-8 text-indigo-600" /> {language === "ar" ? "الدروس والمحاضرات" : "Lessons & Lectures"}
           </h3>
           {isSettingsHidden && (
-            <button
+            <button type="button"
               onClick={() => setIsSettingsHidden(false)}
               className="text-xs font-black text-indigo-600 hover:text-indigo-800 flex items-center gap-1 w-fit bg-indigo-50 px-3 py-1.5 rounded-lg transition-all"
             >
@@ -214,28 +214,28 @@ export const LessonList: React.FC = () => {
         <div className="flex flex-wrap items-center gap-3">
           {isSuperAdmin && (
             <>
-              <button
+              <button type="button"
                 onClick={() => setIsImportModalOpen(true)}
                 className="px-4 sm:px-6 py-3 sm:py-4 rounded-2xl font-black flex items-center gap-2 sm:gap-3 transition-all border-2 border-indigo-100 text-indigo-600 hover:border-indigo-600 hover:bg-indigo-50 bg-white text-xs sm:text-base"
               >
                 <FileSpreadsheet size={20} />
                 <span className="hidden sm:inline">{language === "ar" ? "استيراد Excel" : "Import Excel"}</span>
               </button>
-              <button
+              <button type="button"
                 onClick={handleExportCourse}
                 className="px-4 sm:px-6 py-3 sm:py-4 rounded-2xl font-black flex items-center gap-2 sm:gap-3 transition-all border-2 border-slate-200 text-slate-600 hover:border-slate-400 hover:bg-slate-50 bg-white text-xs sm:text-base"
               >
                 <DownloadCloud size={20} />
                 <span className="hidden sm:inline">{language === "ar" ? "تصدير Excel" : "Export Excel"}</span>
               </button>
-              <button
+              <button type="button"
                 onClick={() => jsonInputRef.current?.click()}
                 className="px-4 sm:px-6 py-3 sm:py-4 rounded-2xl font-black flex items-center gap-2 sm:gap-3 transition-all border-2 border-emerald-100 text-emerald-600 hover:border-emerald-600 hover:bg-emerald-50 bg-white text-xs sm:text-base"
               >
                 <Upload size={20} />
                 <span className="hidden sm:inline">{language === "ar" ? "استعادة JSON" : "Restore JSON"}</span>
               </button>
-              <button
+              <button type="button"
                 onClick={handleExportJson}
                 className="px-4 sm:px-6 py-3 sm:py-4 rounded-2xl font-black flex items-center gap-2 sm:gap-3 transition-all border-2 border-emerald-200 text-emerald-700 hover:border-emerald-400 hover:bg-emerald-50 bg-white text-xs sm:text-base"
               >
@@ -244,14 +244,14 @@ export const LessonList: React.FC = () => {
               </button>
             </>
           )}
-          <button
+          <button type="button"
             onClick={sortLessonsByDate}
             className="px-4 sm:px-6 py-3 sm:py-4 rounded-2xl font-black flex items-center gap-2 sm:gap-3 transition-all border-2 border-orange-100 text-orange-600 hover:border-orange-600 hover:bg-orange-50 bg-white text-xs sm:text-base"
           >
             <Clock size={20} />
             <span className="hidden sm:inline">{language === "ar" ? "ترتيب بالتاريخ" : "Sort by Date"}</span>
           </button>
-          <button
+          <button type="button"
             onClick={openAddLessonModal}
             className="px-5 sm:px-8 py-3 sm:py-4 rounded-2xl font-black flex items-center gap-2 sm:gap-3 transition-all shadow-xl bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20 text-white text-xs sm:text-base"
           >
@@ -269,7 +269,7 @@ export const LessonList: React.FC = () => {
                 <BookOpen className="w-10 h-10" />
               </div>
               <p className="font-black text-xl">{language === "ar" ? "لا يوجد دروس في هذا الكورس بعد" : "No lessons in this course yet"}</p>
-              <button onClick={openAddLessonModal} className="text-indigo-600 font-bold hover:underline">
+              <button type="button" onClick={openAddLessonModal} className="text-indigo-600 font-bold hover:underline">
                 {language === "ar" ? "أضف درسك الأول الآن" : "Add your first lesson now"}
               </button>
             </div>
@@ -329,7 +329,7 @@ export const LessonList: React.FC = () => {
                 <div className="flex items-center gap-2 w-full md:w-auto justify-end shrink-0">
                   <div className="h-8 w-[1px] bg-slate-100 mx-2 hidden md:block"></div>
                   <div className="flex flex-col gap-1 items-center justify-center me-2">
-                    <button
+                    <button type="button"
                       onClick={() => moveLessonUp(index)}
                       disabled={index === 0}
                       className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition-all"
@@ -337,7 +337,7 @@ export const LessonList: React.FC = () => {
                     >
                       <ArrowUp className="w-4 h-4" />
                     </button>
-                    <button
+                    <button type="button"
                       onClick={() => moveLessonDown(index)}
                       disabled={index === lessons.length - 1}
                       className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition-all"
@@ -348,14 +348,14 @@ export const LessonList: React.FC = () => {
                   </div>
                   {lesson.id && (
                     <>
-                      <button
+                      <button type="button"
                         onClick={() => handleExportLesson(lesson.id as string)}
                         className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
                         title={language === "ar" ? "تصدير الدرس" : "Export Lesson"}
                       >
                         <DownloadCloud className="w-5 h-5" />
                       </button>
-                      <button
+                      <button type="button"
                         onClick={() => window.open(`/lessons/${lesson.id}?preview=true`, "_blank")}
                         className="w-10 h-10 bg-slate-50 text-slate-500 rounded-xl flex items-center justify-center hover:bg-slate-600 hover:text-white transition-all shadow-sm"
                         title={language === "ar" ? "معاينة الدرس" : "Preview Lesson"}
@@ -365,7 +365,7 @@ export const LessonList: React.FC = () => {
                     </>
                   )}
                   {lesson.id && isSuperAdmin && (
-                    <button
+                    <button type="button"
                       onClick={() => {
                         setLessonToCopy({ id: lesson.id as string, title: lesson.title });
                         setIsCopyModalOpen(true);
@@ -376,7 +376,7 @@ export const LessonList: React.FC = () => {
                       <Copy className="w-5 h-5" />
                     </button>
                   )}
-                  <button
+                  <button type="button"
                     onClick={() => {
                       if (lesson.id && courseId && !hasUnsavedChanges) router.push(`/${role === 'SUPER_ADMIN' ? 'super-admin' : 'school-admin'}/courses/lesson?id=${encodeURIComponent(courseId)}&lessonId=${encodeURIComponent(lesson.id)}`);
                       else void openEditLessonModal(index);
@@ -386,7 +386,7 @@ export const LessonList: React.FC = () => {
                   >
                     <Edit2 className="w-5 h-5" />
                   </button>
-                  <button
+                  <button type="button"
                     onClick={() => handleRemoveLesson(index)}
                     className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center hover:bg-red-600 hover:text-white transition-all shadow-sm"
                     title={language === "ar" ? "حذف" : "Delete"}

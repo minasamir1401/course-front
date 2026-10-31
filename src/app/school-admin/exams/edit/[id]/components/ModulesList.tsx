@@ -30,7 +30,7 @@ export const ModulesList = (props: any) => {
           </div>
           <h3 className="text-2xl font-black text-slate-900 mb-3">{language === 'ar' ? 'إبدأ بناء امتحانك!' : 'Start Building Your Exam!'}</h3>
           <p className="text-slate-400 font-bold max-w-sm mx-auto mb-10 leading-relaxed text-lg">{language === 'ar' ? 'لم يتم إضافة أي موديولات بعد' : 'No modules added yet'}</p>
-          <button className="bg-indigo-600 text-white px-10 py-4 rounded-2xl font-black transition-all shadow-xl shadow-indigo-600/20">
+          <button type="button" className="bg-indigo-600 text-white px-10 py-4 rounded-2xl font-black transition-all shadow-xl shadow-indigo-600/20">
             {language === 'ar' ? 'إنشاء موديول' : 'Create Module'}
           </button>
         </div>
@@ -63,13 +63,13 @@ export const ModulesList = (props: any) => {
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
-                <button 
+                <button type="button"
                   onClick={(e) => { e.stopPropagation(); openEditModuleModal(index); }}
                   className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-all border border-blue-100"
                 >
                   <Edit2 className="w-4 h-4" />
                 </button>
-                <button 
+                <button type="button"
                   onClick={(e) => { e.stopPropagation(); handleRemoveModule(index); }}
                   className="w-10 h-10 rounded-xl bg-red-50 text-red-600 hover:bg-red-600 hover:text-white flex items-center justify-center transition-all border border-red-100"
                 >

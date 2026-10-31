@@ -7,6 +7,7 @@ import { uploadFileToServer } from "@/lib/image-utils";
 import { buildRichTextImageHtml, getRichTextImageStyles } from "@/lib/richTextImage";
 import { convertPlainTextToHtml, shouldPreferPlainTextPaste } from "@/lib/richTextPaste";
 import { sanitizeEditorHtml } from "@/lib/editorHtml";
+import { useEditorFormProtection } from '@/hooks/useEditorFormProtection';
 import { buildRichTextMathHtml, isolateRichTextMath } from "@/lib/richTextMath";
 import NextImage from "next/image";
 import { useNotification } from "@/context/NotificationContext";
@@ -162,6 +163,7 @@ const MATH_SIZES = [
 const lastMathDraft = { formula: "x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}", size: 'large', display: false };
 
 export default function RichTextEditor({ value, onChange, placeholder = "", className = "", availableImages = [] }: RichTextEditorProps) {
+  const formProtectionRef = useEditorFormProtection();
   const { language } = useLanguage();
   const { showToast } = useNotification();
   const editorRef = useRef<HTMLDivElement>(null);
@@ -625,7 +627,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
   };
 
   return (
-    <div className={`w-full max-w-full flex flex-col border-2 rounded-[30px] transition-all duration-300 bg-white ${isFocused
+    <div ref={formProtectionRef} data-editor-control="rich-text" className={`w-full max-w-full flex flex-col border-2 rounded-[30px] transition-all duration-300 bg-white ${isFocused
         ? 'border-indigo-500 ring-8 ring-indigo-500/5 shadow-2xl'
         : 'border-slate-100 hover:border-slate-200 shadow-sm'
       } ${className} relative`}>
