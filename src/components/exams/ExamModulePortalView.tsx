@@ -115,7 +115,7 @@ return (
     <div className="space-y-8" dir={language === "ar" ? "rtl" : "ltr"}>
     <div className="rounded-[36px] bg-white border border-slate-100 shadow-sm p-7 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
       <div className="flex items-center gap-4">
-        <button onClick={() => router.back()} className="w-12 h-12 rounded-2xl bg-slate-50 text-slate-500 hover:bg-slate-100 transition-colors">←</button>
+        <button type="button" onClick={() => router.back()} className="w-12 h-12 rounded-2xl bg-slate-50 text-slate-500 hover:bg-slate-100 transition-colors">←</button>
         <div>
           {parentModule && (
             <div className="flex items-center gap-2 text-xs font-black text-indigo-600 mb-1">
@@ -261,7 +261,7 @@ return (
 
     <div className="rounded-[36px] bg-white border border-slate-100 shadow-sm p-7">
       <input ref={jsonInputRef} type="file" accept=".json,application/json" onChange={importExamJson} className="hidden" />
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6"><div><h2 className="text-2xl font-black text-slate-900">{language === "ar" ? "الاختبارات" : "Exams"}</h2><p className="text-slate-400 font-bold mt-1 flex items-center flex-wrap gap-2"><span>{exams.length} {language === "ar" ? "اختبارات" : "exams"} · {questions} {language === "ar" ? "سؤال" : "questions"}</span>{state.isLoadingQuestions && (<span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 border border-indigo-100/80 px-2.5 py-0.5 text-xs font-black text-indigo-600 animate-pulse"><Loader2 className="w-3 h-3 animate-spin text-indigo-600" /><span>{language === "ar" ? "جارٍ مزامنة الأسئلة في الخلفية..." : "Loading questions in background..."}</span></span>)}</p></div><div className="flex flex-wrap gap-2 w-full md:w-auto">{exams.length > 0 && <button type="button" onClick={openMoveAllModal} className="inline-flex items-center gap-2 rounded-2xl border border-purple-200 bg-purple-50 px-4 py-3 text-sm font-black text-purple-700 transition-all hover:bg-purple-100 shadow-xs"><ArrowRightLeft className="w-4 h-4" /><span>{language === "ar" ? "نقل كل الاختبارات إلى موديول آخر" : "Move All Exams"}</span><span className="rounded-lg bg-purple-200/70 px-2 py-0.5 text-xs font-black text-purple-900">{exams.length}</span></button>}{role === "SUPER_ADMIN" && <button onClick={() => jsonInputRef.current?.click()} className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-700 transition-all hover:bg-emerald-100"><Upload className="w-4 h-4" />{language === "ar" ? "استعادة JSON" : "Restore JSON"}</button>}<input ref={titleInputRef} value={title} onChange={e => setTitle(e.target.value)} onKeyDown={e => { if (e.key === "Enter") createExam(); }} placeholder={language === "ar" ? "اسم الاختبار الجديد" : "New exam name"} className="min-w-0 flex-1 md:w-56 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold outline-none focus:border-indigo-500" /><button disabled={creating} onClick={createExam} className="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-white font-black disabled:opacity-50"><Plus className="w-5 h-5" />{language === "ar" ? "إنشاء اختبار" : "Create Exam"}</button></div></div>
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6"><div><h2 className="text-2xl font-black text-slate-900">{language === "ar" ? "الاختبارات" : "Exams"}</h2><p className="text-slate-400 font-bold mt-1 flex items-center flex-wrap gap-2"><span>{exams.length} {language === "ar" ? "اختبارات" : "exams"} · {questions} {language === "ar" ? "سؤال" : "questions"}</span>{state.isLoadingQuestions && (<span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 border border-indigo-100/80 px-2.5 py-0.5 text-xs font-black text-indigo-600 animate-pulse"><Loader2 className="w-3 h-3 animate-spin text-indigo-600" /><span>{language === "ar" ? "جارٍ مزامنة الأسئلة في الخلفية..." : "Loading questions in background..."}</span></span>)}</p></div><div className="flex flex-wrap gap-2 w-full md:w-auto">{exams.length > 0 && <button type="button" onClick={openMoveAllModal} className="inline-flex items-center gap-2 rounded-2xl border border-purple-200 bg-purple-50 px-4 py-3 text-sm font-black text-purple-700 transition-all hover:bg-purple-100 shadow-xs"><ArrowRightLeft className="w-4 h-4" /><span>{language === "ar" ? "نقل كل الاختبارات إلى موديول آخر" : "Move All Exams"}</span><span className="rounded-lg bg-purple-200/70 px-2 py-0.5 text-xs font-black text-purple-900">{exams.length}</span></button>}{role === "SUPER_ADMIN" && <button type="button" onClick={() => jsonInputRef.current?.click()} className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-700 transition-all hover:bg-emerald-100"><Upload className="w-4 h-4" />{language === "ar" ? "استعادة JSON" : "Restore JSON"}</button>}<input ref={titleInputRef} value={title} onChange={e => setTitle(e.target.value)} onKeyDown={e => { if (e.key === "Enter") createExam(); }} placeholder={language === "ar" ? "اسم الاختبار الجديد" : "New exam name"} className="min-w-0 flex-1 md:w-56 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold outline-none focus:border-indigo-500" /><button type="button" disabled={creating} onClick={createExam} className="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-white font-black disabled:opacity-50"><Plus className="w-5 h-5" />{language === "ar" ? "إنشاء اختبار" : "Create Exam"}</button></div></div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {exams.map((exam: any, index: number) => {
           const editHref = buildSubExamEditorHref(
@@ -470,7 +470,7 @@ return (
                 </p>
               </div>
             </div>
-            <button
+            <button type="button"
               onClick={() => setMovingSubExam(null)}
               className="w-9 h-9 rounded-xl bg-slate-100 text-slate-400 hover:text-slate-600 hover:bg-slate-200 flex items-center justify-center transition-colors"
             >
@@ -684,7 +684,7 @@ return (
                 </p>
               </div>
             </div>
-            <button
+            <button type="button"
               onClick={() => setIsMoveAllModalOpen(false)}
               className="w-9 h-9 rounded-xl bg-slate-100 text-slate-400 hover:text-slate-600 hover:bg-slate-200 flex items-center justify-center transition-colors"
             >

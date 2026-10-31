@@ -120,14 +120,14 @@ export const LessonBuilderModal: React.FC<{ fullPage?: boolean }> = ({ fullPage 
               <p>{language === 'ar' ? 'رتّب المحتوى والتدريبات ووجّه المساعد في تجربة واحدة.' : 'Organise content, practice and assistant guidance in one place.'}</p>
             </div>
             <div className="flex items-center gap-2 min-w-0">
-              <button 
+              <button type="button"
                 onClick={() => setIsExportModalOpen(true)}
                 className="min-w-0 px-3 sm:px-4 py-2 rounded-xl bg-indigo-50 text-indigo-600 font-bold text-xs sm:text-sm flex items-center gap-2 hover:bg-indigo-100 transition-colors"
               >
                 <Copy className="w-4 h-4" />
                 <span className="truncate">{language === 'ar' ? 'تصدير بيانات الدرس' : 'Export Lesson Data'}</span>
               </button>
-              <button 
+              <button type="button"
                 onClick={closeEditor}
                 className={workspace.close} aria-label={language === 'ar' ? 'العودة للمقرر' : 'Back to course'}
               >
@@ -149,7 +149,7 @@ export const LessonBuilderModal: React.FC<{ fullPage?: boolean }> = ({ fullPage 
               { id: 'ai', label: language === 'ar' ? 'المساعد التعليمي' : 'AI assistant', icon: Sparkles },
               { id: 'attachments', label: language === 'ar' ? 'المرفقات' : 'Attachments', icon: FileJson },
             ].map(tab => (
-              <button
+              <button type="button"
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
                 className={workspace.tab}
@@ -261,13 +261,13 @@ export const LessonBuilderModal: React.FC<{ fullPage?: boolean }> = ({ fullPage 
           <div className={workspace.footer}>
             <p>{language === 'ar' ? 'مساحة أوسع لدرس أوضح.' : 'More room for a clearer lesson.'}</p>
             <div className={workspace.footerActions}>
-            <button 
+            <button type="button"
               onClick={closeEditor}
               className="min-w-0 px-3 sm:px-6 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-500 font-bold text-sm hover:bg-slate-50 transition-all cursor-pointer"
             >
               {language === 'ar' ? "إلغاء" : "Cancel"}
             </button>
-            <button 
+            <button type="button"
               onClick={saveLesson} 
               className="min-w-0 px-3 sm:px-8 py-2.5 rounded-xl bg-indigo-600 text-white font-black text-sm hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
             >

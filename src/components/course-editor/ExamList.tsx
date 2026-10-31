@@ -23,7 +23,7 @@ export const ExamList: React.FC = () => {
           <HelpCircle className="w-8 h-8 text-indigo-600" />
           {language === "ar" ? "الامتحانات والتقييمات المرتبطة" : "Linked Exams & Quizzes"}
         </h3>
-        <button
+        <button type="button"
           onClick={openBankModal}
           className="px-8 py-4 rounded-2xl font-black flex items-center gap-3 transition-all shadow-xl bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20 text-white"
         >
@@ -70,7 +70,7 @@ export const ExamList: React.FC = () => {
                   {language === "ar" ? "اختر المحتوى الذي ترغب في ربطه بهذا الكورس" : "Select content you want to link to this course"}
                 </p>
               </div>
-              <button onClick={() => setIsBankModalOpen(false)} className="p-3 hover:bg-slate-200 rounded-2xl transition-all">
+              <button type="button" onClick={() => setIsBankModalOpen(false)} className="p-3 hover:bg-slate-200 rounded-2xl transition-all">
                 <X size={24} />
               </button>
             </div>
@@ -102,7 +102,7 @@ export const ExamList: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                    <button
+                    <button type="button"
                       onClick={() => {
                         linkExamToCourse(item.id);
                         setIsBankModalOpen(false);

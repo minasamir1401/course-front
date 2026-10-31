@@ -75,7 +75,7 @@ export default function LessonQuestionForm(props: any) {
                 <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest">
                   {language === 'ar' ? 'بيانات الميتا داتا' : 'Metadata Fields'}
                 </h4>
-                <button 
+                <button type="button"
                   onClick={() => {
                     const worksheet = XLSX.utils.aoa_to_sheet(buildAdvancedMetadataTemplateRows(language, [tempQuestion]));
                     const workbook = XLSX.utils.book_new();

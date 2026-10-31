@@ -22,8 +22,8 @@ export const StandaloneQuestions = (props: any) => {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={(e) => { e.preventDefault(); handleEditStandaloneQuestion(index); }} className="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-all"><Edit2 className="w-4 h-4" /></button>
-                  <button onClick={(e) => { e.preventDefault(); removeStandaloneQuestion(index); }} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button>
+                  <button type="button" onClick={(e) => { e.preventDefault(); handleEditStandaloneQuestion(index); }} className="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-all"><Edit2 className="w-4 h-4" /></button>
+                  <button type="button" onClick={(e) => { e.preventDefault(); removeStandaloneQuestion(index); }} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button>
                 </div>
             </div>
             <QuestionSummary html={q.text || q.textEn || ''} className="text-slate-800 font-bold line-clamp-3 text-sm flex-1" />
@@ -34,7 +34,7 @@ export const StandaloneQuestions = (props: any) => {
         ))}
         {standaloneQuestions.length > visibleStandaloneCount && (
           <div className="col-span-1 md:col-span-2 flex justify-center mt-6">
-            <button
+            <button type="button"
               onClick={(e) => { e.preventDefault(); setVisibleStandaloneCount((prev: number) => prev + 50); }}
               className="bg-indigo-50 text-indigo-600 px-8 py-3 rounded-2xl font-black hover:bg-indigo-100 hover:scale-105 transition-all shadow-sm"
             >

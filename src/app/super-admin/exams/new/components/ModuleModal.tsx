@@ -70,7 +70,7 @@ export const ModuleModal = (props: any) => {
                   : (language === 'ar' ? "بناء محتوى الموديول والأسئلة" : "Build module content and questions")}
               </p>
             </div>
-            <button onClick={() => setIsModuleModalOpen(false)} className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-all">
+            <button type="button" onClick={() => setIsModuleModalOpen(false)} className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-all">
               <X className="w-6 h-6" />
             </button>
           </div>
@@ -78,7 +78,7 @@ export const ModuleModal = (props: any) => {
           {/* Modal Tabs */}
           <div className="flex border-b border-slate-100 bg-slate-50/50 overflow-x-auto shrink-0 custom-scrollbar">
             {visibleTabs.map(tab => (
-              <button
+              <button type="button"
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`flex-1 py-5 flex items-center justify-center gap-3 font-black text-sm transition-all ${activeTab === tab.id ? 'text-indigo-600 bg-white border-b-2 border-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
@@ -224,7 +224,7 @@ export const ModuleModal = (props: any) => {
                         <Settings className="w-5 h-5" />
                         {language === 'ar' ? 'إعدادات الاختبار' : 'Exam Settings'}
                       </h4>
-                      <button
+                      <button type="button"
                         onClick={() => setActiveSubExamIndex(null)}
                         className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-bold hover:bg-slate-100 transition-all flex items-center gap-2"
                       >
@@ -358,7 +358,7 @@ export const ModuleModal = (props: any) => {
                 <div className="space-y-6 animate-in fade-in p-2 sm:p-6">
                   <div className="flex justify-between items-center mb-6">
                     <h4 className="text-xl font-black text-slate-900">{language === 'ar' ? "الاختبارات (Exams)" : "Exams"}</h4>
-                    <button
+                    <button type="button"
                       onClick={() => {
                         const newSubExams = [...(currentModule.subExams || [])];
                         newSubExams.push({ id: String(Date.now()), title: language === 'ar' ? "اختبار جديد" : "New Exam", questions: [] });
@@ -413,7 +413,7 @@ export const ModuleModal = (props: any) => {
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <button
+                            <button type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setEditingTitleIndex(idx);
@@ -423,7 +423,7 @@ export const ModuleModal = (props: any) => {
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
-                            <button
+                            <button type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 if (confirm(language === 'ar' ? "هل أنت متأكد من حذف هذا الاختبار؟" : "Are you sure you want to delete this exam?")) {
@@ -449,7 +449,7 @@ export const ModuleModal = (props: any) => {
               <div className="space-y-8">
                 <div className="flex justify-between items-center mb-6">
                   <h4 className="text-xl font-black text-slate-900">{t('courseCreate.attachments') || "Files & Attachments"}</h4>
-                  <button
+                  <button type="button"
                     onClick={() => setCurrentModule({ ...currentModule, attachments: [...(currentModule.attachments || []), { name: "", url: "", type: "PDF" }] })}
                     className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black flex items-center gap-2"
                   >
@@ -464,7 +464,7 @@ export const ModuleModal = (props: any) => {
                         <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center">
                           <FileText className="w-6 h-6" />
                         </div>
-                        <button
+                        <button type="button"
                           onClick={() => {
                             const atts = [...currentModule.attachments];
                             atts.splice(attIdx, 1);
@@ -572,8 +572,8 @@ export const ModuleModal = (props: any) => {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={(e) => { e.preventDefault(); handleEditStandaloneQuestion(index); }} className="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-all"><Edit2 className="w-4 h-4" /></button>
-                        <button onClick={(e) => { e.preventDefault(); removeStandaloneQuestion(index); }} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button>
+                        <button type="button" onClick={(e) => { e.preventDefault(); handleEditStandaloneQuestion(index); }} className="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-all"><Edit2 className="w-4 h-4" /></button>
+                        <button type="button" onClick={(e) => { e.preventDefault(); removeStandaloneQuestion(index); }} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </div>
                     <QuestionSummary html={q.text || q.textEn || ''} className="text-slate-800 font-bold line-clamp-3 text-sm flex-1" />
@@ -584,7 +584,7 @@ export const ModuleModal = (props: any) => {
                 ))}
                 {standaloneQuestions.length > visibleStandaloneCount && (
                   <div className="col-span-1 md:col-span-2 flex justify-center mt-6">
-                    <button
+                    <button type="button"
                       onClick={(e) => { e.preventDefault(); setVisibleStandaloneCount(prev => prev + 50); }}
                       className="bg-indigo-50 text-indigo-600 px-8 py-3 rounded-2xl font-black hover:bg-indigo-100 hover:scale-105 transition-all shadow-sm"
                     >
@@ -599,13 +599,13 @@ export const ModuleModal = (props: any) => {
 
           {/* Modal Footer */}
           <div className="p-8 border-t border-slate-100 bg-slate-50 flex justify-end gap-4">
-            <button
+            <button type="button"
               onClick={() => setIsModuleModalOpen(false)}
               className="px-10 py-4 rounded-2xl bg-white border border-slate-200 text-slate-500 font-bold hover:bg-slate-50 transition-all"
             >
               {t('courseCreate.cancelChanges') || "Cancel Changes"}
             </button>
-            <button
+            <button type="button"
               onClick={saveModule}
               className="px-12 py-4 rounded-2xl bg-indigo-600 text-white font-black hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-900/20 flex items-center gap-3"
             >
