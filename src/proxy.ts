@@ -18,7 +18,10 @@ export async function proxy(request: NextRequest) {
   if (!cookies) return signIn();
   try {
     const endpoint = `${getBackendBase()}/api/auth`;
-    const init = { headers: { Cookie: cookies }, cache: 'no-store' as const, redirect: 'manual' as const, signal: AbortSignal.timeout(8000) };
+    const sessionHeaders = new Headers({ Cookie: cookies });
+    const forwardedFor = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip');
+    if (forwardedFor) sessionHeaders.set('x-forwarded-for', forwardedFor);
+    const init = { headers: sessionHeaders, cache: 'no-store' as const, redirect: 'manual' as const, signal: AbortSignal.timeout(8000) };
     let session: { authenticated?: boolean; refreshed?: boolean; user?: { id?: string; role?: string } } = {};
     let response = await fetch(`${endpoint}/me`, init);
     let refreshed: string[] = [];

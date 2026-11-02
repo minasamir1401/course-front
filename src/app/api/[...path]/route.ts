@@ -3,9 +3,7 @@ import { getBackendBase } from '@/lib/backendOrigin';
 
 // Runtime proxy: forwards all /api/* requests to the backend
 // This runs at REQUEST TIME (not build time), so env vars are always available
-import fs from 'node:fs';
-import nodePath from 'node:path';
-import { ProxyBodyTooLargeError, proxyBodyLimit, proxyLifetime, readProxyBody, proxyResponseBody } from '../../../lib/apiProxy';
+import { ProxyBodyTooLargeError, acceptsLargeBody, proxyPathBodyLimit, proxyLifetime, readProxyBody, proxyResponseBody } from '../../../lib/apiProxy';
 
 const BACKEND_REQUEST_TIMEOUT_MS = Math.max(
   1_000,
@@ -84,7 +82,24 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
       if (isStream) {
         bodyData = req.body;
       } else {
-        const limit = proxyBodyLimit();
+        const apiPath = `/api/${(path || []).join('/')}`;
+        const limit = proxyPathBodyLimit(apiPath, req.method);
+        if (acceptsLargeBody(apiPath, req.method)) {
+          const session = await fetch(`${backendBase}/api/auth/me`, { headers, cache: 'no-store', redirect: 'manual', signal: lifetime.signal });
+          if (!session.ok) {
+            void session.body?.cancel().catch(() => {});
+            void req.body.cancel().catch(() => {});
+            lifetime.dispose();
+            return NextResponse.json({ error: 'Unable to authorize content request' }, { status: [400, 401, 403].includes(session.status) ? 401 : 503 });
+          }
+          const identity = await session.json();
+          const roles = apiPath.startsWith('/api/admin/backup/') ? ['SUPER_ADMIN'] : ['SUPER_ADMIN', 'SCHOOL_ADMIN', 'TEACHER'];
+          if (!roles.includes(identity.user?.role)) {
+            void req.body.cancel().catch(() => {});
+            lifetime.dispose();
+            return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+          }
+        }
         const declaredLength = Number(req.headers.get('content-length'));
         if (Number.isFinite(declaredLength) && declaredLength > limit) {
           void req.body.cancel().catch(() => {});
@@ -170,14 +185,10 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
     }
 
     console.error('[API Proxy Error]', targetUrl, error?.message);
-    try {
-      fs.appendFileSync(nodePath.join(process.cwd(), 'proxy_error.log'), new Date().toISOString() + ' ' + targetUrl + ' ' + (error?.message || error) + '\n');
-    } catch {}
 
     return NextResponse.json(
       {
         error: isTimeout ? 'Backend request timed out' : 'Failed to reach backend',
-        details: error?.message,
       },
       { status: isTimeout ? 504 : 502 }
     );

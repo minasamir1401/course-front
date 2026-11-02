@@ -1,7 +1,17 @@
-/** Match the backend's existing 100 MiB JSON/form limit unless explicitly configured. */
+export function acceptsLargeBody(path: string, method: string): boolean {
+  if (!['POST', 'PUT', 'PATCH'].includes(method)) return false;
+  return /^\/api\/(?:lessons\/[^/]+(?:\/(?:slides|questions|assignments|attachments))?|school\/courses(?:\/[^/]+)?|exams(?:\/[^/]+(?:\/modules(?:\/[^/]+(?:\/exams(?:\/[^/]+)?)?)?)?)|skills-hub\/(?:clusters|lessons|activities)(?:\/[^/]+)?|admin\/backup\/(?:restore|restore-course|selective-restore|restore-lesson|restore-lesson-content))\/?$/.test(path);
+}
+
+
+/** Configuration can lower the default cap; raising it requires an allowed route. */
 export function proxyBodyLimit(value = process.env.PROXY_MAX_BODY_BYTES): number {
   const parsed = Number(value);
-  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : 100 * 1024 * 1024;
+  return Number.isSafeInteger(parsed) && parsed > 0 ? Math.min(parsed, 2 * 1024 * 1024) : 2 * 1024 * 1024;
+}
+
+export function proxyPathBodyLimit(path: string, method: string): number {
+  return acceptsLargeBody(path, method) ? 100 * 1024 * 1024 : proxyBodyLimit();
 }
 
 export class ProxyBodyTooLargeError extends Error {

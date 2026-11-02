@@ -8,7 +8,7 @@ const require = createRequire(import.meta.url);
 const ts = require('typescript');
 const routePath = fileURLToPath(new URL('../../src/app/api/[...path]/route.ts', import.meta.url));
 
-function loadRoute(fetch, env = {}) {
+function loadRoute(fetch, env = {}, entryPath = routePath) {
   const cache = new Map();
   function load(filename) {
     if (cache.has(filename)) return cache.get(filename).exports;
@@ -19,12 +19,12 @@ function loadRoute(fetch, env = {}) {
     }).outputText;
     const localRequire = createRequire(filename);
     new Function('require', 'module', 'exports', 'fetch', 'process', 'console', code)(
-      (id) => id === 'node:fs' ? { appendFileSync() {} } : id.startsWith('.') ? load(path.resolve(path.dirname(filename), `${id}.ts`)) : localRequire(id),
+      (id) => id === 'node:fs' ? { appendFileSync() {} } : id.startsWith('@/') ? load(fileURLToPath(new URL(`../../src/${id.slice(2)}.ts`, import.meta.url))) : id.startsWith('.') ? load(path.resolve(path.dirname(filename), `${id}.ts`)) : localRequire(id),
       mod, mod.exports, fetch, { env: { INTERNAL_BACKEND_URL: 'http://127.0.0.1:5000', PROXY_MAX_BODY_BYTES: '8', ...env }, cwd: process.cwd }, { error() {}, warn() {} },
     );
     return mod.exports;
   }
-  return load(routePath);
+  return load(entryPath);
 }
 function req(method = 'GET', body = null, headers = {}, signal = new AbortController().signal) {
   return { method, body, headers: new Headers(headers), signal, nextUrl: { search: '?a=1' }, arrayBuffer: () => new Response(body).arrayBuffer() };
@@ -139,4 +139,60 @@ test('GET timeout returns 504 without loopback retry', async () => {
   try { assert.equal((await route.GET(req(), context)).status, 504); }
   finally { clearTimeout(keepAlive); }
   assert.equal(calls, 1);
+});
+
+
+test('default body cap stays at 2MiB even if an old deployment sets a larger global cap', async () => {
+  let calls = 0;
+  const route = loadRoute(async () => { calls++; return new Response('unexpected'); }, { PROXY_MAX_BODY_BYTES: String(100 * 1024 * 1024) });
+  const response = await route.POST(req('POST', chunks('tiny actual body'), { 'content-length': String(2 * 1024 * 1024 + 1) }), context);
+  assert.equal(response.status, 413); assert.equal(calls, 0);
+});
+
+test('large content body authenticates before reading bytes and rejects student roles', async () => {
+  let reads = 0, calls = 0;
+  const body = new ReadableStream({ pull(c) { reads++; c.enqueue(bytes('content')); c.close(); } }, { highWaterMark: 0 });
+  const route = loadRoute(async (url) => {
+    calls++; assert.equal(reads, 0); assert.match(url, /api\/auth\/me$/);
+    return Response.json({ authenticated: true, user: { id: 's', role: 'STUDENT' } });
+  });
+  const response = await route.PUT(req('PUT', body), { params: Promise.resolve({ path: ['lessons', 'l'] }) });
+  assert.equal(response.status, 403); assert.equal(reads, 0); assert.equal(calls, 1);
+});
+
+test('authorized content save accepts a body above the small default', async () => {
+  const urls = [];
+  const route = loadRoute(async (url, init) => {
+    urls.push(url);
+    if (url.endsWith('/api/auth/me')) return Response.json({ authenticated: true, user: { id: 't', role: 'TEACHER' } });
+    assert.equal(new Uint8Array(init.body).length, 16);
+    return Response.json({ saved: true });
+  });
+  const response = await route.PUT(req('PUT', chunks('1234567890abcdef')), { params: Promise.resolve({ path: ['lessons', 'l'] }) });
+  assert.equal(response.status, 200); assert.deepEqual(await response.json(), { saved: true }); assert.equal(urls.length, 2);
+});
+
+test('proxy error responses never expose internal exception details', async () => {
+  const route = loadRoute(async () => { throw new Error('private-db-host secret database field'); });
+  const response = await route.POST(req('POST'), context);
+  assert.equal(response.status, 502);
+  assert.deepEqual(await response.json(), { error: 'Failed to reach backend' });
+});
+
+test('session proxy preserves client forwarding for both verification and refresh', async () => {
+  const calls = [];
+  const entry = fileURLToPath(new URL('../../src/proxy.ts', import.meta.url));
+  const sessionProxy = loadRoute(async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/me')) return new Response('{}', { status: 401 });
+    return Response.json({ refreshed: true, user: { id: 's', role: 'STUDENT' } }, { headers: { 'set-cookie': 'auth_token=new; HttpOnly' } });
+  }, {}, entry);
+  const response = await sessionProxy.proxy({
+    nextUrl: { pathname: '/dashboard', search: '' }, url: 'https://school.example/dashboard',
+    headers: new Headers({ 'x-forwarded-for': '203.0.113.10, 10.0.0.2' }),
+    cookies: { get: name => ({ value: name === 'auth_token' ? 'old' : 'refresh' }), has: () => true },
+  });
+  assert.equal(response.status, 200); assert.equal(calls.length, 2);
+  for (const call of calls) assert.equal(call.init.headers.get('x-forwarded-for'), '203.0.113.10, 10.0.0.2');
+  assert.ok(response.headers.getSetCookie().some(value => value.startsWith('auth_token=new')));
 });
