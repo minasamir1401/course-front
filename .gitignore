@@ -41,3 +41,7 @@ yarn-error.log*
 next-env.d.ts
 scratch/
 
+# Superseded source copies and runtime logs in the standalone frontend repo
+/src_backup/
+*.log
+
