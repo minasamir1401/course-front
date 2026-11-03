@@ -14,7 +14,7 @@ test('installed-app metadata uses the supplied logo through new URLs and retires
   expect(manifest.id).toBe('/'); expect(manifest.scope).toBe('/');
   expect(manifest.start_url).toBe('/dashboard');
   expect(manifest.icons.map((icon: { src: string }) => icon.src)).toEqual([
-    '/pwa/klevro-v2-192.png', '/pwa/klevro-v2-512.png', '/pwa/klevro-v2-maskable-512.png',
+    '/pwa/klevro-v3-192.png', '/pwa/klevro-v3-512.png', '/pwa/klevro-v3-maskable-512.png',
   ]);
   for (const icon of manifest.icons) {
     const asset = await page.request.get(icon.src); expect(asset.ok()).toBe(true);
@@ -24,31 +24,30 @@ test('installed-app metadata uses the supplied logo through new URLs and retires
     expect((await sharp(await asset.body()).stats()).isOpaque).toBe(true);
   }
   // Pixel comparison prevents a placeholder/old logo from passing by filename alone.
-  const expected = await sharp(source).rotate().resize(512, 512, { fit: 'contain', background: '#fff' }).flatten({ background: '#fff' }).raw().toBuffer();
+  const expected = await sharp(source).rotate().resize(512, 512).raw().toBuffer();
   const actual = await sharp(await (await page.request.get(manifest.icons[1].src)).body()).raw().toBuffer();
   expect(actual.equals(expected)).toBe(true);
 
   // Seed an old installation before visiting the app that registers the new worker.
   await page.goto('/offline.html');
   await page.evaluate(async () => {
-    const cache = await caches.open('klevro-public-offline-v3');
-    await cache.put('/pwa/icon-192.png', new Response('old installed icon'));
+    const cache = await caches.open('klevro-public-offline-v4');
+    await cache.put('/pwa/klevro-v2-192.png', new Response('old installed icon'));
   });
   await page.route('https://fonts.googleapis.com/**', route => route.abort());
   await page.addInitScript(() => localStorage.setItem('klevro-install-dismissed', String(Date.now())));
   await page.goto('/');
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', '/manifest.webmanifest');
-  await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute('href', '/pwa/klevro-v2-apple-180.png');
-  await expect(page.locator('link[rel="icon"][type="image/png"]')).toHaveAttribute('href', '/pwa/klevro-v2-192.png');
+  await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute('href', '/pwa/klevro-v3-apple-180.png');
+  await expect(page.locator('link[rel="icon"][type="image/png"]')).toHaveAttribute('href', '/pwa/klevro-v3-192.png');
   expect(await page.locator('link[href*="icon.jpeg"], link[href*="apple-icon.jpeg"]').count()).toBe(0);
-  await expect.poll(() => page.evaluate(async () => (await caches.keys()).filter(key => key.startsWith('klevro-public-offline-')))).toEqual(['klevro-public-offline-v4']);
+  await expect.poll(() => page.evaluate(async () => (await caches.keys()).filter(key => key.startsWith('klevro-public-offline-')))).toEqual(['klevro-public-offline-v5']);
   const cached = await page.evaluate(async () => {
-    const cache = await caches.open('klevro-public-offline-v4');
+    const cache = await caches.open('klevro-public-offline-v5');
     return (await cache.keys()).map(request => new URL(request.url).pathname).sort();
   });
-  expect(cached).toEqual(['/offline.html', '/pwa/klevro-v2-192.png']);
+  expect(cached).toEqual(['/offline.html', '/pwa/klevro-v3-192.png']);
   const offline = await fs.readFile(path.resolve(__dirname, '../public/offline.html'), 'utf8');
-  expect(offline).toContain('/pwa/klevro-v2-192.png');
-  // The homepage keeps its existing separate neon artwork.
+  expect(offline).toContain('/pwa/klevro-v3-192.png');
   await expect(page.getByRole('img', { name: 'شعار Klevro المضيء بالبنفسجي والأزرق', exact: true })).toHaveAttribute('src', /klevro-neon/);
 });

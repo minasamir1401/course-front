@@ -1,4 +1,4 @@
-// Uses the supplied official logo unchanged, apart from resizing/padding.
+// Generate installed-app icons from the supplied Klevro logo.
 // sharp is installed with Next.js for image optimization.
 const fs = require('node:fs/promises');
 const path = require('node:path');
@@ -7,18 +7,17 @@ const root = path.resolve(__dirname, '..');
 const source = path.join(root, 'public/klevro/brand/klevro-logo.jpg');
 const output = path.join(root, 'public/pwa');
 
-const png = size => sharp(source).rotate().resize(size, size, { fit: 'contain', background: '#fff' }).flatten({ background: '#fff' }).png({ compressionLevel: 9 }).toBuffer();
+const png = size => sharp(source).rotate().resize(size, size).png({ compressionLevel: 9 }).toBuffer();
 
 async function main() {
   await fs.mkdir(output, { recursive: true });
-  for (const [size, name] of [[192, 'klevro-v2-192.png'], [512, 'klevro-v2-512.png'], [180, 'klevro-v2-apple-180.png']]) {
+  for (const [size, name] of [[192, 'klevro-v3-192.png'], [512, 'klevro-v3-512.png'], [180, 'klevro-v3-apple-180.png']]) {
     await fs.writeFile(path.join(output, name), await png(size));
   }
   // Keep the complete K and wordmark inside the maskable icon's safe circle.
-  const padded = await sharp(source).rotate().resize(358, 358).png().toBuffer();
-  await sharp({ create: { width: 512, height: 512, channels: 3, background: '#fff' } })
-    .composite([{ input: padded, left: 77, top: 77 }]).flatten({ background: '#fff' }).png({ compressionLevel: 9 })
-    .toFile(path.join(output, 'klevro-v2-maskable-512.png'));
+  await sharp(source).rotate().resize(368, 368)
+    .extend({ top: 72, right: 72, bottom: 72, left: 72, extendWith: 'copy' })
+    .png({ compressionLevel: 9 }).toFile(path.join(output, 'klevro-v3-maskable-512.png'));
 
   // Modern ICO container with PNG entries for desktop/taskbar and browser tabs.
   const sizes = [32, 48, 256];
@@ -35,7 +34,7 @@ async function main() {
     offset += entry.length;
   });
   const ico = Buffer.concat([header, ...entries]);
-  await fs.writeFile(path.join(output, 'klevro-v2.ico'), ico);
+  await fs.writeFile(path.join(output, 'klevro-v3.ico'), ico);
   await fs.writeFile(path.join(root, 'src/app/favicon.ico'), ico);
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

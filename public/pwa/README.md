@@ -1,18 +1,18 @@
 # Installed-app branding
 
 The source is the supplied white-background logo at
-`public/klevro/brand/klevro-logo.jpg`. The homepage's neon artwork is separate.
+`public/klevro/brand/klevro-logo.jpg`.
 
 Run `node scripts/generate-app-icons.cjs` from the frontend to rebuild the PNG
-and ICO assets. The maskable icon includes white padding to keep the whole logo
-and wordmark inside the safe area. No artwork is cropped or redrawn.
+and ICO assets. The maskable icon extends the artwork's background to keep the
+whole logo and wordmark inside the safe area.
 
 `src/lib/appBrand.ts`, the offline page and `sw.js` use revisioned asset URLs.
 When changing the artwork, bump the revision in those references and the
 generator, and increment the service worker's public offline cache version.
 Keep the manifest URL, id, scope and start URL stable: this is an update to the
-existing installed app, not a second app. The old unversioned PNGs remain for
-older clients until their app metadata updates.
+existing installed app. Previous icon URLs remain available to older clients
+until their app metadata updates.
 
 The manifest must revalidate, and service worker updates do not reload open
 editors. The worker caches only the public offline page and its icon. Launcher
