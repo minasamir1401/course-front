@@ -32,8 +32,8 @@ export default function AdminOverview({ superAdmin = false }: { superAdmin?: boo
     { title: txt('المعلمون', 'Teachers'), value: stats?.teachersCount, icon: Users, href: '/super-admin/users?role=TEACHER' },
     { title: txt('الامتحانات المتاحة الآن', 'Exams available now'), value: stats?.activeExams, icon: ClipboardList, href: '/super-admin/exams' },
   ] : [
-    { title: txt('الطلاب', 'Students'), value: stats?.studentsCount, icon: GraduationCap, href: '/school-admin/students' },
-    { title: txt('المعلمون', 'Teachers'), value: stats?.teachersCount, icon: Users, href: '/school-admin/teachers' },
+    { title: txt('الطلاب', 'Students'), value: stats?.studentsCount, icon: GraduationCap, href: stats?.teacher ? '/school-admin/reports' : '/school-admin/students' },
+    { title: stats?.teacher ? txt('كورساتي', 'My courses') : txt('المعلمون', 'Teachers'), value: stats?.teacher ? stats.coursesCount : stats?.teachersCount, icon: Users, href: stats?.teacher ? '/school-admin/courses' : '/school-admin/teachers' },
     { title: txt('متوسط الدرجات — آخر 30 يومًا', 'Average score — last 30 days'), value: stats?.averageScore, unit: '%', icon: BarChart3, href: '/school-admin/reports' },
     { title: txt('نسبة النجاح — آخر 30 يومًا', 'Pass rate — last 30 days'), value: stats?.passRate, unit: '%', icon: ClipboardList, href: '/school-admin/reports' },
   ];
@@ -56,7 +56,7 @@ export default function AdminOverview({ superAdmin = false }: { superAdmin?: boo
           })}</div><p className="mt-5 text-xs text-slate-500">{txt(superAdmin ? 'عدد تسليمات الطلاب يوميًا، بعد استبعاد حسابات الإدارة.' : 'غياب البيانات يظهر بشرطة، ولا يُحسب كدرجة صفر.', superAdmin ? 'Daily student submissions, excluding admin accounts.' : 'Missing data is shown as a dash and is not a zero score.')}</p>
         </section>
         <section className="premium-card p-6 rounded-[30px]"><h2 className="font-black text-lg text-slate-900 mb-5">{txt('إجراءات مباشرة', 'Quick actions')}</h2><div className="grid gap-3">{[
-          [superAdmin ? '/super-admin/schools?action=add' : '/school-admin/students', txt(superAdmin ? 'إدارة المدارس' : 'متابعة الطلاب', superAdmin ? 'Manage schools' : 'Follow up students')],
+          [superAdmin ? '/super-admin/schools?action=add' : stats?.teacher ? '/school-admin/reports' : '/school-admin/students', txt(superAdmin ? 'إدارة المدارس' : 'متابعة الطلاب', superAdmin ? 'Manage schools' : 'Follow up students')],
           [`${prefix}/exams/new`, txt('إنشاء امتحان', 'Create exam')], [`${prefix}/courses`, txt('إدارة الدروس والكورسات', 'Manage lessons & courses')], [`${prefix}/skills-hub`, txt('إدارة المهارات والأنشطة', 'Manage skills & activities')],
         ].map(([href, title]) => <Link className="report-secondary justify-between" key={href} href={href}><span>{title}</span><Plus size={17} /></Link>)}</div>
           {superAdmin && <div className="mt-6 rounded-2xl bg-indigo-50 p-4 text-sm text-indigo-900 space-y-2"><p>{txt('مدارس أُضيفت آخر 30 يومًا:', 'Schools added in 30 days:')} <strong>{metric(stats.newSchools)}</strong></p><p>{txt('طلاب أُضيفوا آخر 30 يومًا:', 'Students added in 30 days:')} <strong>{metric(stats.newStudents)}</strong></p><p>{txt('طلاب نشطون آخر 30 يومًا:', 'Active students in 30 days:')} <strong>{metric(stats.activeStudents)}</strong></p></div>}

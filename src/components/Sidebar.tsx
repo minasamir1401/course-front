@@ -65,9 +65,9 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose, onToggle, rol
           { href: "/school-admin/teachers", icon: UserCheck, label: t('schoolAdmin.sidebar.teachers') },
           { href: "/school-admin/classes", icon: Users, label: t('schoolAdmin.sidebar.classes') },
         ]),
-        { href: "/school-admin/students", icon: GraduationCap, label: t('schoolAdmin.sidebar.students') },
-        ...(role === 'TEACHER' ? [] : [{ href: '/school-admin/certificates', icon: GraduationCap, label: language === 'ar' ? 'شهادات الطلاب' : 'Student certificates' }]),
-        ...(role === 'TEACHER' ? [] : [{ href: '/school-admin/competitions', icon: GraduationCap, label: language === 'ar' ? 'المسابقات والجوائز' : 'Competitions & prizes' }]),
+        ...(role === 'TEACHER' ? [] : [{ href: '/school-admin/students', icon: GraduationCap, label: t('schoolAdmin.sidebar.students') }]),
+        { href: '/school-admin/certificates', icon: GraduationCap, label: language === 'ar' ? 'شهادات الطلاب' : 'Student certificates' },
+        { href: '/school-admin/competitions', icon: GraduationCap, label: language === 'ar' ? 'المسابقات والجوائز' : 'Competitions & prizes' },
       ]
     },
     {

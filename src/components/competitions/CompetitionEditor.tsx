@@ -28,7 +28,7 @@ export default function CompetitionEditor() {
     setLoading(true); setError('');
     try {
       const session = await checkAuthSession(); if (!session.authenticated) { router.replace(base + '/login'); return; }
-      if (!['SUPER_ADMIN', 'SCHOOL_ADMIN'].includes(session.user.role) || (base === '/super-admin' && session.user.role !== 'SUPER_ADMIN')) throw new Error('ADMIN_REQUIRED');
+      if (!['SUPER_ADMIN', 'SCHOOL_ADMIN', 'TEACHER'].includes(session.user.role) || (base === '/super-admin' && session.user.role !== 'SUPER_ADMIN')) throw new Error('ADMIN_REQUIRED');
       const [data, sources] = await Promise.all([competitionRequest('/' + id), competitionRequest('/manage/options')]);
       if (!data.admin) throw new Error('ADMIN_REQUIRED');
       setRoom(data.room); setQuestions(data.questions.map(normalizeCompetitionQuestion)); setOptions(sources); setDirty(false);

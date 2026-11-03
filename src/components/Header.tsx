@@ -1,4 +1,5 @@
 "use client";
+import { useNotification } from '@/context/NotificationContext';
 import EgyptClock from "./EgyptClock";
 import StudentHeader from './student/StudentHeader';
 import AdminBackButton from './platform/AdminBackButton';
@@ -46,6 +47,8 @@ export default function Header({
   const [adminHome, setAdminHome] = useState('');
   const [userInitials, setUserInitials] = useState(language === 'ar' ? "م" : "U");
   const [showDropdown, setShowDropdown] = useState(false);
+  const { showToast } = useNotification();
+  const returnToAdmin = async () => { try { await stopImpersonation(); } catch { showToast(language === 'ar' ? 'تعذر الرجوع لحساب الإدارة. أعد المحاولة.' : 'Could not return to admin. Please retry.', 'error'); } };
   const [isImpersonating, setIsImpersonating] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -335,7 +338,7 @@ export default function Header({
           {/* Impersonation Return Button */}
           {isImpersonating && (
             <button
-              onClick={() => stopImpersonation()}
+              aria-label={t('header.returnAdmin')} onClick={() => void returnToAdmin()}
               className="flex items-center gap-2 bg-rose-50 border border-rose-200 text-rose-600 px-3 py-1.5 rounded-xl hover:bg-rose-100 transition-all font-bold text-xs"
             >
               <ArrowLeftCircle className="w-4 h-4" />
@@ -408,7 +411,7 @@ export default function Header({
                       <DropdownItem
                         icon={ArrowLeftCircle}
                         label={t('header.returnAdmin')}
-                        onClick={() => { setShowDropdown(false); stopImpersonation(); }}
+                        onClick={() => { setShowDropdown(false); void returnToAdmin(); }}
                         color="indigo"
                       />
                     )}

@@ -20,6 +20,7 @@ export default function CompetitionAdmin({ view = 'list' }: { view?: 'list' | 'n
   const { language } = useLanguage(); const ar = language === 'ar'; const text = (a: string, e: string) => ar ? a : e;
   const [loading, setLoading] = useState(true), [allowed, setAllowed] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState(''), [message, setMessage] = useState('');
   const [items, setItems] = useState<any[]>([]), [policy, setPolicy] = useState<any>(null), [form, setForm] = useState(blankCompetition);
+  const [teacher, setTeacher] = useState(false);
   const [options, setOptions] = useState<CompetitionOptions>({ schools: [], subjects: [], grades: [], courses: [], exams: [] }), [questions, setQuestions] = useState<any[]>([]);
   const [audience, setAudience] = useState('GENERAL');
   const [translating, setTranslating] = useState(false);
@@ -36,7 +37,8 @@ export default function CompetitionAdmin({ view = 'list' }: { view?: 'list' | 'n
     try {
       const session = await checkAuthSession();
       if (!session.authenticated) { router.replace(base + '/login'); return; }
-      if (!['SUPER_ADMIN', 'SCHOOL_ADMIN'].includes(session.user.role) || (superAdmin && session.user.role !== 'SUPER_ADMIN')) throw new Error('ADMIN_REQUIRED');
+      if (!['SUPER_ADMIN', 'SCHOOL_ADMIN', 'TEACHER'].includes(session.user.role) || (superAdmin && session.user.role !== 'SUPER_ADMIN')) throw new Error('ADMIN_REQUIRED');
+      setTeacher(session.user.role === 'TEACHER');
       setAllowed(true);
       if (view === 'list') { const data = await competitionRequest('/manage'); setItems(data.items); }
       if (view === 'settings') setPolicy(await competitionRequest('/manage/policy'));
@@ -68,7 +70,7 @@ export default function CompetitionAdmin({ view = 'list' }: { view?: 'list' | 'n
   };
   const title = view === 'list' ? text('إدارة المسابقات', 'Competition management') : view === 'settings' ? text('إعدادات المسابقات', 'Competition settings') : id ? text('إعدادات المسابقة', 'Competition details') : text('إنشاء مسابقة', 'Create competition');
   return <DashboardLayout mainClassName={styles.main}><div className={styles.page} dir={ar ? 'rtl' : 'ltr'}><LearningBackdrop/>
-    <section className={styles.hero}><div><span className={styles.eyebrow}><Trophy size={17}/>{text('مسابقات المنصة', 'Platform competitions')}</span><h1>{title}</h1><p>{view === 'list' ? text('أنشئ مسابقة، جهّز أسئلتها، ثم انشرها وتابع المشاركين والنتائج.', 'Create a competition, prepare its questions, then publish and follow participation and results.') : view === 'settings' ? text('تحكم في إتاحة المسابقات والترتيب والمؤثرات.', 'Manage competition access, rankings and effects.') : text('ابدأ بتحديد بيانات المسابقة والجمهور. تضيف الأسئلة في الخطوة التالية.', 'Start with the details and audience. Add questions in the next step.')}</p></div><div className={styles.actions}>{view === 'list' ? <><Link className={styles.secondary} href={base + '/competitions/settings'}><Settings size={17}/>{text('الإعدادات', 'Settings')}</Link><Link className={styles.primary} href={base + '/competitions/new'}><Plus size={18}/>{text('إنشاء مسابقة', 'Create competition')}</Link></> : <Link className={styles.secondary} href={base + '/competitions'}><ArrowRight size={17}/>{text('كل المسابقات', 'All competitions')}</Link>}</div></section>
+    <section className={styles.hero}><div><span className={styles.eyebrow}><Trophy size={17}/>{text('مسابقات المنصة', 'Platform competitions')}</span><h1>{title}</h1><p>{view === 'list' ? text('أنشئ مسابقة، جهّز أسئلتها، ثم انشرها وتابع المشاركين والنتائج.', 'Create a competition, prepare its questions, then publish and follow participation and results.') : view === 'settings' ? text('تحكم في إتاحة المسابقات والترتيب والمؤثرات.', 'Manage competition access, rankings and effects.') : text('ابدأ بتحديد بيانات المسابقة والجمهور. تضيف الأسئلة في الخطوة التالية.', 'Start with the details and audience. Add questions in the next step.')}</p></div><div className={styles.actions}>{view === 'list' ? <>{!teacher && <Link className={styles.secondary} href={base + '/competitions/settings'}><Settings size={17}/>{text('الإعدادات', 'Settings')}</Link>}<Link className={styles.primary} href={base + '/competitions/new'}><Plus size={18}/>{text('إنشاء مسابقة', 'Create competition')}</Link></> : <Link className={styles.secondary} href={base + '/competitions'}><ArrowRight size={17}/>{text('كل المسابقات', 'All competitions')}</Link>}</div></section>
     {error && <div role="alert" className={styles.error}>{competitionError(error, ar)} <button type="button" className={styles.secondary} onClick={() => void load()}>{text('تحديث البيانات', 'Reload data')}</button></div>}{message && <p role="status" className={styles.success}>{message}</p>}
     {loading ? <p role="status">{text('جارٍ التحميل…', 'Loading…')}</p> : allowed && <>
       {view === 'setup' && !!(form as any).participants && <p className={styles.notice}>{text('يمكنك تعديل الأسئلة وعددها وباقي بيانات المسابقة. تظل المدرسة والصف وطريقة اللعب والنقاط والفرق ثابتة بعد انضمام الطلاب، وكل طالب سابق يحتفظ بنسخة محاولته ونتائجه.', 'Edit the questions, question count and competition details. School, grade, play mode, scoring and teams stay fixed after students join. Previous participants keep their original attempts and results.')}</p>}

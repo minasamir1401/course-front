@@ -50,7 +50,7 @@ export default function CompetitionHub() {
     try {
       const session = await checkAuthSession();
       if (!session.authenticated) { router.replace('/login'); return; }
-      if (['SUPER_ADMIN', 'SCHOOL_ADMIN'].includes(session.user.role)) { router.replace((session.user.role === 'SUPER_ADMIN' ? '/super-admin' : '/school-admin') + '/competitions'); return; }
+      if (['SUPER_ADMIN', 'SCHOOL_ADMIN', 'TEACHER'].includes(session.user.role)) { router.replace((session.user.role === 'SUPER_ADMIN' ? '/super-admin' : '/school-admin') + '/competitions'); return; }
       if (session.user.role !== 'STUDENT') { setError(ar ? 'المشاركة في المنافسات متاحة لحساب الطالب.' : 'Use a student account to participate.'); return; }
       const [list, settings] = await Promise.all([competitionRequest('?sourceKind=' + encodeURIComponent(sourceKind)), competitionRequest('/profile')]);
       setItems(list.items); setPolicy(list.policy); setProfile(settings.profile); changedPreferences.current = {}; setReady(true); setNow(Date.now());

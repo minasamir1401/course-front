@@ -34,7 +34,7 @@ export default function CertificatesPage() {
     checkAuthSession().then(session => {
       if (!active) return;
       if (!session.authenticated) { router.replace(admin ? (pathname.startsWith('/super-admin') ? '/super-admin/login' : '/school-admin/login') : '/login'); return; }
-      if (admin ? !['SCHOOL_ADMIN', 'SUPER_ADMIN'].includes(session.user.role) : session.user.role !== 'STUDENT') { setLoading(false); setError(ar ? 'هذه الصفحة غير متاحة لهذا الحساب.' : 'This page is not available for this account.'); return; }
+      if (admin ? !['SCHOOL_ADMIN', 'SUPER_ADMIN', 'TEACHER'].includes(session.user.role) : session.user.role !== 'STUDENT') { setLoading(false); setError(ar ? 'هذه الصفحة غير متاحة لهذا الحساب.' : 'This page is not available for this account.'); return; }
       setSuperAdmin(session.user.role === 'SUPER_ADMIN'); setAuthorized(true); void load();
     }); return () => { active = false; };
   }, [admin, ar, load, pathname, router]);

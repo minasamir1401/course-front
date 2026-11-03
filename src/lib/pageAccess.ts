@@ -3,6 +3,7 @@ export function pageAccess(pathname: string): PageAccess | null {
   const path = pathname.replace(/\/+$/, '') || '/';
   if (path === '/' || path === '/login' || path === '/super-admin/login' || path === '/school-admin/login') return null;
   if (path === '/super-admin' || path.startsWith('/super-admin/')) return { login: '/super-admin/login', roles: ['SUPER_ADMIN'] };
+  if (/^\/school-admin\/(?:teachers|students|classes|settings|competitions\/settings)(?:\/|$)/.test(path)) return { login: '/school-admin/login', roles: ['SUPER_ADMIN', 'SCHOOL_ADMIN'] };
   if (path === '/school-admin' || path.startsWith('/school-admin/')) return { login: '/school-admin/login', roles: ['SUPER_ADMIN', 'SCHOOL_ADMIN', 'TEACHER'] };
   if (/^\/(?:dashboard|courses|lessons|exams|reports|assignments|activities|competitions|calendar|certificates|messages|notifications|profile|settings|assistant|skills|skills-hub|games|quizzes|assessments|evaluations)(?:\/|$)/.test(path)) {
     // Staff can still open the existing teaching/preview flows. Backend resource

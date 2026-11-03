@@ -109,8 +109,9 @@ export const startImpersonation = (targetUserOrLegacyToken: any, targetRoleOrUse
   const targetUser = legacyRole ? targetRoleOrUser : targetUserOrLegacyToken;
   const targetRole = legacyRole || targetRoleOrUser;
   // 1. Capture current admin display data (no raw JWT)
-  const adminUser = localStorage.getItem(AUTH_KEYS.SUPER_ADMIN.USER) || localStorage.getItem(AUTH_KEYS.SCHOOL_ADMIN.USER);
-  const adminType = localStorage.getItem(AUTH_KEYS.SUPER_ADMIN.USER) ? 'SUPER' : 'SCHOOL';
+  const source = window.location.pathname.startsWith('/super-admin') ? AUTH_KEYS.SUPER_ADMIN : AUTH_KEYS.SCHOOL_ADMIN;
+  const adminUser = localStorage.getItem(source.USER);
+  const adminType = source === AUTH_KEYS.SUPER_ADMIN ? 'SUPER' : 'SCHOOL';
 
   // 2. Clear previous session display state
   clearAllAuthData();
@@ -131,36 +132,12 @@ export const startImpersonation = (targetUserOrLegacyToken: any, targetRoleOrUse
 };
 
 export const stopImpersonation = async () => {
-  const adminUser = localStorage.getItem("original_admin_user");
-  const adminType = localStorage.getItem("original_admin_type");
-
-  try {
-    await fetch('/api/admin/stop-impersonate', {
-      method: 'POST',
-      credentials: 'include'
-    });
-  } catch {
-    // Non-fatal, server might be offline
-  }
-
-  // Clear current impersonation session
-  localStorage.removeItem("lms_token");
-  localStorage.removeItem("lms_user");
-  localStorage.removeItem("school_admin_token");
-  localStorage.removeItem("school_admin_user");
-  localStorage.removeItem("is_impersonating");
-  localStorage.removeItem("original_admin_token");
-  localStorage.removeItem("original_admin_user");
-  localStorage.removeItem("original_admin_type");
-
-  if (adminType) {
-    const key = adminType === 'SUPER' ? AUTH_KEYS.SUPER_ADMIN : AUTH_KEYS.SCHOOL_ADMIN;
-    localStorage.setItem(key.TOKEN, 'cookie_auth');
-    if (adminUser) {
-      localStorage.setItem(key.USER, adminUser);
-    }
-    window.location.href = key.DASHBOARD_PATH;
-  } else {
-    window.location.href = AUTH_KEYS.STUDENT.LOGIN_PATH;
-  }
+  const response = await apiFetch('/api/admin/stop-impersonate', { method: 'POST' });
+  if (!response.ok) throw new Error('تعذر الرجوع لحساب الإدارة. أعد المحاولة.');
+  const { user } = await response.json();
+  const key = user.role === 'SUPER_ADMIN' ? AUTH_KEYS.SUPER_ADMIN : AUTH_KEYS.SCHOOL_ADMIN;
+  clearAllAuthData();
+  localStorage.setItem(key.TOKEN, 'cookie_auth');
+  localStorage.setItem(key.USER, JSON.stringify(user));
+  window.location.assign(key.DASHBOARD_PATH);
 };
