@@ -15,7 +15,8 @@ ENV INTERNAL_BACKEND_URL=$INTERNAL_BACKEND_URL
 ENV NEXT_PUBLIC_BACKEND_ORIGIN=$NEXT_PUBLIC_BACKEND_ORIGIN
 
 COPY package*.json ./
-RUN npm install
+COPY vendor ./vendor/
+RUN npm ci
 
 COPY . .
 RUN npm run build
@@ -27,8 +28,9 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Install PM2 globally
-RUN npm install -g pm2
+# Reuse the exact PM2 dependency tree installed by npm ci.
+COPY --from=builder /app/node_modules ./node_modules
+ENV PATH="/app/node_modules/.bin:$PATH"
 
 # Pass runtime environment variables needed by Next.js rewrites (next.config.ts)
 ARG NEXT_PUBLIC_API_URL

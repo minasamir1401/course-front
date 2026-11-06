@@ -29,6 +29,8 @@ export default function StudentHeader({ pathname, isFullscreen, onToggleFullscre
     { href: '/notifications', label: ar ? 'الإشعارات' : 'Notifications', icon: 'calendar' },
     { href: '/profile', label: ar ? 'ملفي الشخصي' : 'My profile', icon: 'user' },
     { href: '/settings', label: ar ? 'الإعدادات' : 'Settings', icon: 'filter' },
+    { href: '/messages', label: ar ? 'رسائل المعلم' : 'Teacher messages', icon: 'user' },
+    { href: '/assignments', label: ar ? 'الواجبات والمهام' : 'Assignments & tasks', icon: 'clipboard' },
   ];
   const primaryLinks = [...links.slice(0, 6), links[7]];
   const dockLinks = [links[0], links[1], links[2], links[7]];

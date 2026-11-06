@@ -19,10 +19,10 @@ import ReportBreakdown from './ReportBreakdown';
 import ReportRecordCards from './ReportRecordCards';
 
 type Role = 'STUDENT' | 'SCHOOL_ADMIN' | 'SUPER_ADMIN';
-type Filters = { from: string; to: string; schoolId: string; grade: string; classroomId: string; courseId: string; examId: string; subExamId: string; subject: string; attemptPolicy: string; search: string };
+type Filters = { studentId: string; from: string; to: string; schoolId: string; grade: string; classroomId: string; courseId: string; examId: string; subExamId: string; subject: string; attemptPolicy: string; search: string };
 const initialFilters = (examId = ''): Filters => {
   const to = egyptDay();
-  return { from: addCalendarDays(to, -29), to, schoolId: '', grade: '', classroomId: '', courseId: '', examId, subExamId: '', subject: '', attemptPolicy: 'latest', search: '' };
+  return { studentId: '', from: addCalendarDays(to, -29), to, schoolId: '', grade: '', classroomId: '', courseId: '', examId, subExamId: '', subject: '', attemptPolicy: 'latest', search: '' };
 };
 
 export default function ReportWorkspace({ role, examId = '', initialTab = 'overview' }: { role: Role; examId?: string; initialTab?: string }) {
@@ -157,6 +157,7 @@ export default function ReportWorkspace({ role, examId = '', initialTab = 'overv
           {select('examId', txt('الامتحان', 'Exam'), exams.map((item: any) => ({ value: item.id, label: item.title })))}
           {children.length > 0 && select('subExamId', txt('الاختبار الفرعي', 'Exam section'), children.map((item: any) => ({ value: item.id, label: item.title })), txt('الامتحان الرئيسي', 'Parent exam'))}
           {!attendance && select('subject', txt('المادة', 'Subject'), (options?.subjects || []).map((subject: string) => ({ value: subject, label: role==='STUDENT'?studentSubjectLabel(subject,language):subject })))}
+          {role !== 'STUDENT' && !attendance && <label className="report-field" htmlFor={`${id}-student`}><span>{txt('طالب محدد — كل مؤشرات التقرير', 'Specific student — all report metrics')}</span><select id={`${id}-student`} value={draft.studentId} onChange={event => update('studentId', event.target.value)}><option value="">{txt('كل الطلاب', 'All students')}</option>{(options?.students || []).filter((student: any) => student.id).map((student: any) => <option key={student.id} value={student.id}>{student.name} — {student.username}</option>)}</select></label>}
           <label className="report-field" htmlFor={`${id}-policy`}><span>{txt(role === 'STUDENT' ? 'المحاولة المستخدمة في التقرير' : 'المحاولة المعتمدة لكل طالب واختبار', role === 'STUDENT' ? 'Attempt used in report' : 'Attempt per student & exam section')}</span>
             <select id={`${id}-policy`} value={draft.attemptPolicy} onChange={event => update('attemptPolicy', event.target.value)}>
               <option value="latest">{txt('آخر محاولة', 'Latest attempt')}</option><option value="first">{txt('أول محاولة', 'First attempt')}</option><option value="best">{txt('أفضل محاولة', 'Best attempt')}</option>

@@ -7,6 +7,7 @@ import "katex/dist/katex.min.css";
 import InstallApp from '@/components/platform/InstallApp';
 import AiAssistant from '@/components/ai/AiAssistant';
 import PageAccessGate from '@/components/PageAccessGate';
+import StudentActivityReporter from '@/components/platform/StudentActivityReporter';
 
 export const metadata: Metadata = {
   metadataBase: siteUrl,
@@ -51,6 +52,7 @@ export default function RootLayout({
           <NotificationProvider>
             <ImpersonationBanner />
             <PageAccessGate>{children}</PageAccessGate>
+            <StudentActivityReporter />
             <InstallApp />
             <AiAssistant />
           </NotificationProvider>

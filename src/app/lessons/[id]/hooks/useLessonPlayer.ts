@@ -57,6 +57,21 @@ export function useLessonPlayer() {
   const [quizTimer, setQuizTimer] = useState(0);
   const [assignmentTimer, setAssignmentTimer] = useState(0);
   const [currentAssignmentIndex, setCurrentAssignmentIndex] = useState(0);
+  const answerSeconds = useRef<Record<string, number>>({});
+  const answerRequests = useRef<Record<string, { id: string; answer: string }>>({});
+  useEffect(() => {
+    const type = currentStage === 'exercises' ? 'questions' : currentStage === 'assignments' ? 'assignments' : 'slides';
+    const index = type === 'questions' ? currentQuestionIndex : type === 'assignments' ? currentAssignmentIndex : currentSlideIndex;
+    const block = lesson?.[type]?.[index];
+    if (!block || !['slides', 'assignments', 'exercises'].includes(currentStage)) return;
+    const key = `${type}:${block.id ?? index}`; let interactedAt = Date.now();
+    const interact = () => { interactedAt = Date.now(); };
+    for (const event of ['pointerdown', 'keydown']) window.addEventListener(event, interact, { passive: true });
+    const timer = setInterval(() => {
+      if (!document.hidden && document.hasFocus() && Date.now() - interactedAt < 120000) answerSeconds.current[key] = (answerSeconds.current[key] || 0) + 1;
+    }, 1000);
+    return () => { clearInterval(timer); for (const event of ['pointerdown', 'keydown']) window.removeEventListener(event, interact); };
+  }, [lesson, currentStage, currentQuestionIndex, currentAssignmentIndex, currentSlideIndex]);
 
   const [slideAnswers, setSlideAnswers] = useState<Record<number, any>>({});
   const [slideSubmitted, setSlideSubmitted] = useState<Record<number, boolean>>({});
@@ -155,6 +170,9 @@ export function useLessonPlayer() {
                     localStorage.getItem("school_admin_token");
       if (!token) return;
 
+      const timingKey = `${blockType}:${questionId}`;
+      const serialized = JSON.stringify(selectedAnswer);
+      if (!answerRequests.current[timingKey] || answerRequests.current[timingKey].answer !== serialized) answerRequests.current[timingKey] = { id: crypto.randomUUID(), answer: serialized };
       const res = await apiFetch(`${API_URL}/progress/lesson/${lessonId}/submit-answer`, {
         method: 'POST',
         headers: {
@@ -164,11 +182,15 @@ export function useLessonPlayer() {
           questionId,
           blockType,
           selectedAnswer,
+          requestId: answerRequests.current[timingKey].id,
+          elapsedSeconds: answerSeconds.current[timingKey] || 0,
           isCompleted: true
         })
       });
 
       if (res.ok) {
+        delete answerRequests.current[timingKey];
+        answerSeconds.current[timingKey] = 0;
         const data = await res.json();
         
         let currentLevel = 'Medium';
@@ -221,7 +243,7 @@ export function useLessonPlayer() {
             }
           };
         });
-      }
+      } else showToast(language === 'ar' ? 'تعذر حفظ المحاولة. أعد المحاولة عند استقرار الاتصال.' : 'Attempt could not be saved. Please retry.', 'error');
     } catch (error) {
       console.error("Failed to submit answer progress:", error);
     }

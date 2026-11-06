@@ -1,2 +1,2 @@
-import AdminOverview from '@/components/dashboard/AdminOverview';
-export default function DashboardPage() { return <AdminOverview />; }
+import SchoolHome from '@/components/teaching/SchoolHome';
+export default function DashboardPage() { return <SchoolHome />; }

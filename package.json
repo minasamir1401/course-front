@@ -10,6 +10,7 @@
     "lint": "eslint src/app src/components src/contexts src/lib",
     "audit:rendering": "node scripts/audit-rendering.mjs",
     "test:e2e": "playwright test",
+    "test:teaching-ui": "node scripts/test-teaching-ui.cjs",
     "test:a11y": "playwright test tests/accessibility",
     "test:report": "playwright show-report ../artifacts/quality-report/playwright"
   },
@@ -31,7 +32,7 @@
     "recharts": "^3.8.1",
     "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7",
-    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+    "xlsx": "file:vendor/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.2",

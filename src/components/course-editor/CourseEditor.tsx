@@ -9,6 +9,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { ArrowLeft, Save, Trash2, ShieldCheck, RotateCcw } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AiGuidanceEditor from '@/components/ai/AiGuidanceEditor';
+import Link from 'next/link';
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface CourseEditorProps {
@@ -86,7 +87,7 @@ const InnerCourseEditor: React.FC<{ lessonPage?: boolean }> = ({ lessonPage = fa
     );
   }
 
-  if (lessonPage) return <DashboardLayout>{isLoading ? <p role="status">{language === 'ar' ? 'جارٍ تجهيز الدرس…' : 'Preparing your lesson…'}</p> : isLessonModalOpen ? <LessonBuilderModal fullPage/> : <div className="p-8"><p>{language === 'ar' ? 'اختر درسًا متاحًا من المقرر.' : 'Choose an available lesson from this course.'}</p><button type="button" className="mt-4 text-indigo-600" onClick={() => router.push(`../courses/edit?id=${courseId}`)}>{language === 'ar' ? 'العودة للمقرر' : 'Back to course'}</button></div>}</DashboardLayout>;
+  if (lessonPage) return <DashboardLayout>{lessonId && lessonId !== 'new' && <div className="mb-4 flex justify-end"><Link className="report-primary" href={`/school-admin/follow-up/lessons/${lessonId}`}>{language === 'ar' ? 'متابعة الطلاب في هذا الدرس' : 'Follow up students in this lesson'}</Link></div>}{isLoading ? <p role="status">{language === 'ar' ? 'جارٍ تجهيز الدرس…' : 'Preparing your lesson…'}</p> : isLessonModalOpen ? <LessonBuilderModal fullPage/> : <div className="p-8"><p>{language === 'ar' ? 'اختر درسًا متاحًا من المقرر.' : 'Choose an available lesson from this course.'}</p><button type="button" className="mt-4 text-indigo-600" onClick={() => router.push(`../courses/edit?id=${courseId}`)}>{language === 'ar' ? 'العودة للمقرر' : 'Back to course'}</button></div>}</DashboardLayout>;
 
   return (
     <DashboardLayout hideSidebar>

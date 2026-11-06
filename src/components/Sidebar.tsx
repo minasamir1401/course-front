@@ -56,6 +56,10 @@ export default function Sidebar({ isOpen: externalIsOpen, onClose, onToggle, rol
       title: t('schoolAdmin.sidebar.main'),
       links: [
         { href: "/school-admin", icon: LayoutDashboard, label: t('schoolAdmin.sidebar.dashboard') },
+        { href: '/school-admin/follow-up', icon: Users, label: language === 'ar' ? 'متابعة الطلاب والدروس' : 'Learning follow-up' },
+        { href: '/school-admin/schedule', icon: ClipboardList, label: language === 'ar' ? 'جدول المعلم' : 'Teaching schedule' },
+        { href: '/school-admin/messages', icon: BookOpen, label: language === 'ar' ? 'رسائل الطلاب' : 'Student messages' },
+        { href: '/school-admin/reminders', icon: Plus, label: language === 'ar' ? 'التنبيهات والتذكيرات' : 'Notices & reminders' },
       ]
     },
     {

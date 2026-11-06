@@ -1,6 +1,6 @@
 export function acceptsLargeBody(path: string, method: string): boolean {
   if (!['POST', 'PUT', 'PATCH'].includes(method)) return false;
-  return /^\/api\/(?:lessons\/[^/]+(?:\/(?:slides|questions|assignments|attachments))?|school\/courses(?:\/[^/]+)?|exams(?:\/[^/]+(?:\/modules(?:\/[^/]+(?:\/exams(?:\/[^/]+)?)?)?)?)|skills-hub\/(?:clusters|lessons|activities)(?:\/[^/]+)?|admin\/backup\/(?:restore|restore-course|selective-restore|restore-lesson|restore-lesson-content))\/?$/.test(path);
+  return /^\/api\/(?:lessons\/[^/]+(?:\/(?:slides|questions|assignments|attachments))?|school\/courses(?:\/[^/]+)?|school\/users(?:\/[^/]+)?|exams(?:\/[^/]+(?:\/modules(?:\/[^/]+(?:\/exams(?:\/[^/]+)?)?)?)?)?|skills-hub\/(?:clusters|lessons|activities)(?:\/[^/]+(?:\/upload-excel)?)?|admin\/backup\/(?:restore|restore-course|selective-restore|restore-lesson|restore-lesson-content))\/?$/.test(path);
 }
 
 

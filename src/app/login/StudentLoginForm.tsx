@@ -9,6 +9,17 @@ import { AlertCircle } from "lucide-react";
 import styles from "./StudentLoginForm.module.css";
 import { API_URL } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { safeLoginNext } from "@/lib/loginRedirect";
+
+function getSafeNextRedirect(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const next = params.get('next');
+    return safeLoginNext(next, window.location.origin);
+  } catch {}
+  return null;
+}
 
 export default function StudentLoginForm() {
   const router = useRouter();
@@ -66,16 +77,17 @@ export default function StudentLoginForm() {
         setError('role');
         return;
       }
+      const safeNext = getSafeNextRedirect();
       if (data.user?.role === "TEACHER") {
         localStorage.setItem("school_admin_token", "cookie_auth");
         localStorage.setItem("school_admin_token_expires_at", String(data.expiresAt || Date.now() + 28800000));
         localStorage.setItem("school_admin_user", JSON.stringify({ id: data.user.id, role: data.user.role, name: data.user.name, schoolId: data.user.schoolId, schoolName: data.user.schoolName, username }));
-        router.push("/school-admin");
+        router.push(safeNext && safeNext.startsWith("/school-admin") ? safeNext : "/school-admin");
       } else {
         localStorage.setItem("lms_token", "cookie_auth");
         localStorage.setItem("lms_token_expires_at", String(data.expiresAt || Date.now() + 28800000));
         localStorage.setItem("lms_user", JSON.stringify({ id: data.user.id, role: data.user.role, name: data.user.name, schoolId: data.user.schoolId, schoolName: data.user.schoolName, username }));
-        router.push("/dashboard");
+        router.push(safeNext && !safeNext.startsWith("/super-admin") ? safeNext : "/dashboard");
       }
     } catch {
       setError('connection');

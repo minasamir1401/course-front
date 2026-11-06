@@ -33,6 +33,22 @@ const context = { params: Promise.resolve({ path: ['test'] }) };
 const bytes = (s) => new TextEncoder().encode(s);
 const chunks = (...values) => new ReadableStream({ start(c) { values.forEach(v => c.enqueue(bytes(v))); c.close(); } });
 
+test('frontend and backend classify the three large import routes identically', () => {
+  function policy(relative) {
+    const filename = fileURLToPath(new URL(relative, import.meta.url));
+    const source = ts.createSourceFile(filename, fs.readFileSync(filename, 'utf8'), ts.ScriptTarget.Latest, true);
+    const declaration = source.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === 'acceptsLargeBody');
+    assert.ok(declaration);
+    return declaration.getText(source).replace(/^export /, '').replace(/\r/g, '');
+  }
+  const frontend = policy('../../src/lib/apiProxy.ts');
+  assert.equal(frontend, policy('../../../back/src/lib/requestBodyPolicy.ts'));
+  const code = ts.transpileModule(frontend, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+  const accepts = new Function(`${code}; return acceptsLargeBody;`)();
+  for (const path of ['/api/exams', '/api/skills-hub/lessons/l/upload-excel', '/api/school/users']) assert.equal(accepts(path, 'POST'), true);
+  assert.equal(accepts('/api/auth/login', 'POST'), false);
+});
+
 test('proxy forwards access and refresh cookies as separate Set-Cookie headers', async () => {
   const headers = new Headers();
   headers.append('set-cookie', 'auth_token=access; HttpOnly; Path=/; Expires=Thu, 01 Oct 2026 12:00:00 GMT');

@@ -23,7 +23,7 @@ export default function MindMapRenderer({ question, value, onChange, language }:
     }
   };
 
-  const blanksList = nodes.filter((n: any) => n.isBlank).map((n: any) => n.label);
+  const blanksList = Array.isArray(opts.choices) ? opts.choices : nodes.filter((n: any) => n.isBlank).map((n: any) => n.label);
   const rootNodes = nodes.filter((n: any) => !n.parent);
 
   const renderTreeNode = (node: any) => {

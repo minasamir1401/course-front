@@ -1,6 +1,5 @@
-import { redirect } from 'next/navigation';
+import AssignmentsView from './AssignmentsView';
 
-// Old bookmarks lead to the real assessments workspace.
 export default function AssignmentsPage() {
-  redirect('/exams');
+  return <AssignmentsView />;
 }
