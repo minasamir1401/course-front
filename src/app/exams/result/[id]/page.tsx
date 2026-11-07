@@ -437,15 +437,23 @@ export default function ExamResultPage() {
     ? (submission?.subExam?.titleEn || submission?.exam?.titleEn)
     : (submission?.subExam?.title || submission?.exam?.title || t('result', lang));
 
-  // Language Toggle Button
-  const LangToggle = () => (
-    <button
-      onClick={toggleLang}
-      className="fixed top-4 left-4 z-50 flex items-center gap-2 bg-white/90 backdrop-blur-md border border-slate-200 shadow-lg px-4 py-2 rounded-full font-black text-sm text-slate-700 hover:bg-slate-50 transition-all hover:scale-105 active:scale-95"
-    >
-      <Globe className="w-4 h-4 text-indigo-500" />
-      {lang === 'ar' ? 'English' : 'عربي'}
-    </button>
+  const TopNavActions = () => (
+    <>
+      <button
+        onClick={toggleLang}
+        className="fixed top-4 left-4 z-50 flex items-center gap-2 bg-white/95 backdrop-blur-md border border-slate-200 shadow-lg px-4 py-2 rounded-full font-black text-sm text-slate-700 hover:bg-slate-50 transition-all hover:scale-105 active:scale-95"
+      >
+        <Globe className="w-4 h-4 text-indigo-500" />
+        {lang === 'ar' ? 'English' : 'عربي'}
+      </button>
+      <Link
+        href="/exams"
+        className="fixed top-4 right-4 z-50 flex items-center gap-2 bg-white/95 backdrop-blur-md border border-slate-200 shadow-lg px-4 py-2 rounded-full font-black text-sm text-slate-700 hover:bg-slate-50 transition-all hover:scale-105 active:scale-95"
+      >
+        {lang === 'ar' ? <ChevronRight className="w-4 h-4 text-indigo-600" /> : <ChevronLeft className="w-4 h-4 text-indigo-600" />}
+        <span>{lang === 'ar' ? 'رجوع للامتحانات' : 'Back to Exams'}</span>
+      </Link>
+    </>
   );
 
   if (loading) {
@@ -471,7 +479,7 @@ export default function ExamResultPage() {
   if (visibility === "HIDE_ALL" && !isAdmin) {
     return (
       <div className="student-result-page min-h-screen bg-slate-50 flex items-center justify-center p-6" dir={dir}>
-        <LangToggle />
+        <TopNavActions />
         <div className="max-w-xl w-full bg-white rounded-[40px] shadow-2xl shadow-slate-200 p-12 text-center border border-slate-100">
           <div className="w-24 h-24 bg-amber-50 text-amber-500 rounded-3xl flex items-center justify-center mx-auto mb-8 border border-amber-100">
             <EyeOff className="w-12 h-12" />
@@ -494,7 +502,7 @@ export default function ExamResultPage() {
   return (
     <main className="student-result-page min-h-screen bg-slate-50 pb-20" dir={dir}>
       <Watermark text={watermarkText} />
-      <LangToggle />
+      <TopNavActions />
 
       {/* Premium Header */}
       <div className="relative pt-16 pb-36 px-6 bg-indigo-600 text-white text-center overflow-hidden">

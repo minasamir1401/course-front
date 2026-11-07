@@ -95,7 +95,7 @@ const InnerCourseEditor: React.FC<{ lessonPage?: boolean }> = ({ lessonPage = fa
       <div className="min-h-screen bg-[#f8fafc] text-slate-900" dir={language === "ar" ? "rtl" : "ltr"}>
         <div className="p-4 sm:p-6 lg:p-8 pt-20 lg:pt-8">
           <div className="animate-in fade-in duration-500">
-            {/* 🗡️ Draft Recovery Banner */}
+            {/* Draft Recovery Banner */}
             {/* Draft recovery banner removed per user request */}
 
           {/* Header Block */}

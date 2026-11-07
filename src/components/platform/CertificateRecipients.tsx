@@ -7,8 +7,8 @@ import styles from './CertificateRecipients.module.css';
 export type CertificateAudience = { schoolId: string; grade: string; studentIds: string[] };
 type Student = { id: string; name: string; username: string };
 type Options = { schools: { id: string; name: string }[]; schoolId: string | null; grades: { value: string; count: number }[] };
-export default function CertificateRecipients({ ar, superAdmin, value, onChange, disabled }: {
-  ar: boolean; superAdmin: boolean; value: CertificateAudience; onChange: (value: CertificateAudience) => void; disabled: boolean;
+export default function CertificateRecipients({ ar, superAdmin, value, onChange, onSelectedStudentsChange, disabled }: {
+  ar: boolean; superAdmin: boolean; value: CertificateAudience; onChange: (value: CertificateAudience) => void; onSelectedStudentsChange?: (students: Student[], schoolName: string) => void; disabled: boolean;
 }) {
   const [options, setOptions] = useState<Options>({ schools: [], schoolId: null, grades: [] });
   const [optionsReady, setOptionsReady] = useState(false);
@@ -24,6 +24,12 @@ export default function CertificateRecipients({ ar, superAdmin, value, onChange,
   const visible = students.filter(student => `${student.name} ${student.username}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   const allSelected = students.length > 0 && students.every(student => selected.has(student.id));
   useEffect(() => { if (allCheckbox.current) allCheckbox.current.indeterminate = selected.size > 0 && !allSelected; }, [selected, allSelected]);
+  useEffect(() => {
+    if (!onSelectedStudentsChange) return;
+    const schoolName = options.schools.find(s => s.id === value.schoolId)?.name || '';
+    const picked = students.filter(s => selected.has(s.id));
+    onSelectedStudentsChange(picked, schoolName);
+  }, [students, selected, options.schools, value.schoolId, onSelectedStudentsChange]);
   useEffect(() => {
     const controller = new AbortController();
     const schoolQuery = value.schoolId ? `?schoolId=${encodeURIComponent(value.schoolId)}` : '';

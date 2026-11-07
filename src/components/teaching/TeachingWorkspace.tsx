@@ -1,7 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { RefreshCw, Download, Printer, ArrowRight } from 'lucide-react';
+import { RefreshCw, Download, Printer, ArrowRight, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import HtmlRenderer from '@/components/HtmlRenderer';
 import { API_URL, apiFetch } from '@/lib/api';
@@ -75,14 +75,14 @@ export default function TeachingWorkspace({ mode = 'overview', entityId = '' }: 
         ].map(([label, value, detail]) => <div className={styles.metric} key={label}><span>{label}</span><strong>{value}</strong><small>{detail}</small></div>)}</div>
         <p className={styles.policy}>{txt('المتفوق ≥85%، المتوسط ≥60%، ويحتاج الدعم أقل من 60%. غير المقيّم لا يُحسب صفرًا. التقييم يشمل أحدث امتحان/قسم، وكويزات وواجبات الدرس المكتملة. المحاولات الجزئية تظهر بتقدمها منفصلة. الوقت المسجل لا يفرض مهلة للحل.', 'Excellent ≥85%, average ≥60%, support below 60%. Unassessed is not zero. Scores use latest exams/sections and completed lesson quizzes/assignments. Partial attempts remain separate. Recorded time is not a time limit.')}</p>
       </>}
-      {mode !== 'student' && <section className={styles.panel}><div className={styles.actions} style={{ justifyContent: 'space-between', marginBottom: 12 }}><h2>{mode === 'lesson' ? txt('حالة الطلاب في الدرس', 'Students in this lesson') : txt('الطلاب وخطوة المتابعة', 'Students & follow-up')}</h2><span className={styles.muted}>{selected.length} {txt('محددون', 'selected')}</span></div>
+      {mode === 'calendar' && <CalendarManager query={query} reload={reload} data={data} ids={selected} ar={ar} busy={busy} act={act}/>}
+      {mode !== 'student' && <section className={styles.panel}><div className={styles.actions} style={{ justifyContent: 'space-between', marginBottom: 12 }}><h2>{mode === 'lesson' ? txt('حالة الطلاب في الدرس', 'Students in this lesson') : mode === 'calendar' ? txt('اختيار الطلاب لإسناد المهام في التقويم', 'Select students for task assignment') : txt('الطلاب وخطوة المتابعة', 'Students & follow-up')}</h2><span className={styles.muted}>{selected.length} {txt('محددون', 'selected')}</span></div>
         <div className={styles.tableWrap}><table className={styles.table}><thead><tr><th><input className={styles.check} type="checkbox" aria-label={txt('اختيار الطلاب المعروضين النشطين', 'Select visible active accounts')} checked={!!allVisible.length && allVisible.every((id: string) => selected.includes(id))} onChange={event => setSelected(event.target.checked ? [...new Set([...selected, ...allVisible])].slice(0, 200) : selected.filter(id => !allVisible.includes(id)))}/></th><th>{txt('الطالب', 'Student')}</th><th>{txt('النشاط', 'Activity')}</th><th>{txt('المستوى', 'Achievement')}</th><th>{mode === 'lesson' ? txt('حالة الدرس', 'Lesson status') : txt('الدروس المكتملة', 'Completed lessons')}</th><th>{txt('التفاصيل', 'Details')}</th></tr></thead><tbody>
           {studentRows.map((row: any) => <tr key={row.id}><td><input className={styles.check} type="checkbox" disabled={row.status !== 'ACTIVE'} aria-label={`${txt('اختيار', 'Select')} ${row.name}`} checked={selected.includes(row.id)} onChange={() => toggle(row.id)}/></td><td><Link href={`/school-admin/follow-up/students/${row.id}`}>{row.name}</Link><small>{row.grade || '—'} · {row.classroom?.name || row.username}</small></td><td><span className={`${styles.badge} ${row.active ? styles.good : styles.warning}`}>{row.active ? txt('نشط', 'Active') : txt('متابعة', 'Follow up')}</span><small>{date(row.lastSeenAt)}</small><small>{number(row.activeDays)} {txt('يوم نشاط في الفترة', 'active days in range')}</small></td><td>{tier(row.tier)} <b>{number(row.averageScore, '%')}</b><small>{number(row.assessedCount)} {txt('تقييمات مكتملة', 'completed assessments')}</small></td><td>{mode === 'lesson' ? row.progress?.isCompleted ? txt('أكمل الدرس', 'Completed') : row.progress || row.assessments?.length ? txt('بدأ ولم يكمل', 'In progress') : txt('لم يبدأ', 'Not started') : number(row.completedLessons)}<small>{number((row.progress?.activeStudySeconds ?? row.activeStudySeconds) / 60)} {txt('دقيقة دراسة', 'study minutes')}</small></td><td>{mode === 'lesson' ? <details><summary>{txt('المحاولات والأسئلة', 'Attempts & questions')}</summary><AssessmentDetails rows={row.assessments} ar={ar}/></details> : <Link href={`/school-admin/follow-up/students/${row.id}`}>{txt('فتح ملف الطالب', 'Open profile')}</Link>}</td></tr>)}
         </tbody></table></div>{!studentRows.length && <p className={styles.empty}>{txt('لا يوجد طلاب مطابقون للفلاتر. جرّب فترة أوسع أو راجع الإسناد.', 'No matching students. Broaden filters or check assignments.')}</p>}
         {mode !== 'lesson' && data.pagination.pages > 1 && <div className={styles.pagination}><button className={styles.button} disabled={data.pagination.page <= 1} onClick={() => setApplied({ ...applied, page: String(data.pagination.page - 1) })}>{txt('السابق', 'Previous')}</button><span>{number(data.pagination.page)} / {number(data.pagination.pages)} · {number(data.pagination.total)}</span><button className={styles.button} disabled={data.pagination.page >= data.pagination.pages} onClick={() => setApplied({ ...applied, page: String(data.pagination.page + 1) })}>{txt('التالي', 'Next')}</button></div>}
       </section>}
       {selected.length > 0 && <Composer ids={selected} ar={ar} busy={busy} act={act} onClear={() => setSelected([])}/>}
-      {mode === 'calendar' && <CalendarManager query={query} reload={reload} data={data} ids={selected} ar={ar} busy={busy} act={act}/>}
       {mode === 'notices' && <NoticeHistory reload={reload} ar={ar} busy={busy} act={act}/>}
       {mode === 'student' && <section className={styles.panel}><h2>{txt('تقييمات الدروس والمحاولات', 'Lesson assessments & attempts')}</h2><AssessmentDetails rows={data.assessments} ar={ar}/>{!data.assessments?.length && <p className={styles.empty}>{txt('لا توجد محاولات تفصيلية مسجلة في الفترة. يبدأ التتبع التفصيلي عند تفعيل الميزة، ولا نختلق درجات من XP قديم.', 'No detailed attempts in range. Detailed tracking begins with this feature; historical XP is not fabricated into grades.')}</p>}</section>}
       {['overview', 'student'].includes(mode) && <div className={styles.split}><section className={styles.panel}><h2>{txt('الأداء في كل درس', 'Performance by lesson')}</h2><div className={styles.tableWrap}><table className={styles.table}><thead><tr><th>{txt('الدرس', 'Lesson')}</th><th>{txt('بدأ / أكمل / لم يبدأ', 'Started / completed / not started')}</th><th>{txt('متوسط الكويز', 'Quiz average')}</th><th>{txt('متوسط الواجب', 'Assignment average')}</th></tr></thead><tbody>{data.lessons.map((lesson: any) => <tr key={lesson.id}><td><Link href={`/school-admin/follow-up/lessons/${lesson.id}`}>{lesson.title}</Link><small>{lesson.courseTitle}</small></td><td>{number(lesson.started)} / {number(lesson.completed)} / {number(lesson.notStarted)}</td><td>{number(lesson.quizAverage, '%')}<small>{number(lesson.quizSubmitted)} {txt('تسليم مكتمل', 'completed')}</small></td><td>{number(lesson.assignmentAverage, '%')}<small>{number(lesson.assignmentSubmitted)} {txt('تسليم مكتمل', 'completed')}</small></td></tr>)}</tbody></table></div>{!data.lessons.length && <p className={styles.empty}>{txt('لا توجد دروس ضمن النطاق.', 'No lessons in scope.')}</p>}</section><section className={styles.panel}><h2>{txt('مهارات تحتاج توجيهًا', 'Skills to guide')}</h2><Skills rows={data.skills} ar={ar}/></section></div>}
@@ -112,14 +112,212 @@ function CalendarManager({ query, reload, data: overview, ids, ar, busy, act }: 
   const { data, error } = useTeachingData('/teaching/calendar?' + query, reload);
   const fresh = () => ({ id: '', source: 'TASK', kind: 'ASSIGNMENT', title: '', startsAt: '', dueAt: '', courseId: '', lessonId: '', revision: 0, expectedUpdatedAt: '' });
   const [form, setForm] = useState<any>(fresh), [editingIds, setEditingIds] = useState<string[] | null>(null);
-  const edit = (item: any) => { setForm({ ...fresh(), ...item, startsAt: toEgyptInput(item.startsAt), dueAt: toEgyptInput(item.dueAt) }); setEditingIds(item.recipientIds || null); };
-  return <div className={styles.split}><section className={styles.panel}><h2>{ar ? 'مواعيد الدروس والامتحانات والمهام' : 'Lessons, assessments & tasks'}</h2><p className={styles.muted}>{ar ? 'المواعيد كلها بتوقيت مصر. تعديل درس أو امتحان يحدّث مصدره، والمهمة المستقلة تظهر للطلاب المحددين.' : 'All dates use Egypt time. Source edits update the lesson/exam; tasks appear for selected students.'}</p>{error && <p role="alert" className={styles.error}>{error}</p>}{data?.events.map((item: any) => <div className={styles.event} key={item.source + item.id}><div><span className={styles.badge}>{kindNames[item.kind]?.[ar ? 0 : 1]}</span><h3>{item.title}</h3><p>{item.startsAt ? formatEgyptDateTime(item.startsAt, ar ? 'ar' : 'en') : '—'} ← {item.dueAt ? formatEgyptDateTime(item.dueAt, ar ? 'ar' : 'en') : '—'}</p></div><div className={styles.actions}><button className={styles.button} onClick={() => edit(item)}>{ar ? 'تعديل الموعد' : 'Edit schedule'}</button>{item.source === 'TASK' && <button className={styles.button} disabled={busy} onClick={() => act(() => teachingRequest('/teaching/tasks/' + item.id, { method: 'DELETE', body: JSON.stringify({ revision: item.revision }) }), ar ? 'تم إلغاء المهمة' : 'Task cancelled')}>{ar ? 'إلغاء' : 'Cancel'}</button>}</div></div>)}{data && !data.events.length && <p className={styles.empty}>{ar ? 'لا توجد مواعيد ضمن الفترة المختارة.' : 'No events in this range.'}</p>}</section>
-    <section className={styles.panel}><h2>{form.id ? ar ? 'تعديل الموعد' : 'Edit schedule' : ar ? 'إضافة مهمة للطلاب المحددين' : 'Create a task for selected students'}</h2><form className={styles.stack} onSubmit={event => { event.preventDefault(); void act(async () => {
-      const payload = { ...form, startsAt: form.startsAt ? parseEgyptDate(form.startsAt).toISOString() : null, dueAt: parseEgyptDate(form.dueAt).toISOString(), recipientIds: editingIds || ids };
-      await teachingRequest(form.source !== 'TASK' ? `/teaching/calendar/${form.source}/${form.id}` : '/teaching/tasks' + (form.id ? '/' + form.id : ''), { method: form.source !== 'TASK' ? 'PATCH' : form.id ? 'PUT' : 'POST', body: JSON.stringify(payload) });
-      setForm(fresh()); setEditingIds(null);
-    }, ar ? 'تم حفظ الجدول' : 'Schedule saved'); }}>
-      {form.source === 'TASK' && <><label className={styles.field}>{ar ? 'عنوان المهمة' : 'Task title'}<input required maxLength={160} value={form.title} onChange={event => setForm({ ...form, title: event.target.value })}/></label><label className={styles.field}>{ar ? 'النوع' : 'Type'}<select value={form.kind} onChange={event => setForm({ ...form, kind: event.target.value })}>{['LESSON', 'QUIZ', 'ASSIGNMENT', 'EXAM', 'OTHER'].map(key => <option key={key} value={key}>{kindNames[key][ar ? 0 : 1]}</option>)}</select></label><label className={styles.field}>{ar ? 'ربط بكورس — اختياري' : 'Course — optional'}<select value={form.courseId} onChange={event => setForm({ ...form, courseId: event.target.value, lessonId: '' })}><option value="">—</option>{overview.courses.map((course: any) => <option key={course.id} value={course.id}>{course.title}</option>)}</select></label><label className={styles.field}>{ar ? 'ربط بدرس — اختياري' : 'Lesson — optional'}<select value={form.lessonId} onChange={event => setForm({ ...form, lessonId: event.target.value })}><option value="">—</option>{overview.lessons.filter((lesson: any) => !form.courseId || lesson.courseId === form.courseId).map((lesson: any) => <option key={lesson.id} value={lesson.id}>{lesson.title}</option>)}</select></label><p className={styles.muted}>{ar ? 'عدد الطلاب المحددين:' : 'Selected recipients:'} {(editingIds || ids).length}</p></>}
-      <label className={styles.field}>{ar ? 'البداية — مصر' : 'Starts — Egypt'}<input type="datetime-local" value={form.startsAt} onChange={event => setForm({ ...form, startsAt: event.target.value })}/></label><label className={styles.field}>{ar ? 'الإغلاق أو التسليم — مصر' : 'Closes / due — Egypt'}<input required type="datetime-local" value={form.dueAt} onChange={event => setForm({ ...form, dueAt: event.target.value })}/></label><button className={`${styles.button} ${styles.primary}`} disabled={busy || form.source === 'TASK' && !(editingIds || ids).length}>{ar ? 'حفظ الموعد' : 'Save schedule'}</button>{form.id && <button type="button" className={styles.button} onClick={() => { setForm(fresh()); setEditingIds(null); }}>{ar ? 'إضافة مهمة جديدة بدل التعديل' : 'Create a new task instead'}</button>}
-    </form></section></div>;
+  const todayStr = egyptDay();
+  const [monthCursor, setMonthCursor] = useState(() => todayStr.slice(0, 7));
+  const [selectedDay, setSelectedDay] = useState('');
+
+  const edit = (item: any) => {
+    setForm({ ...fresh(), ...item, startsAt: toEgyptInput(item.startsAt), dueAt: toEgyptInput(item.dueAt) });
+    setEditingIds(item.recipientIds || null);
+  };
+
+  const shiftMonth = (delta: number) => {
+    const [y, m] = monthCursor.split('-').map(Number);
+    const d = new Date(Date.UTC(y, m - 1 + delta, 1, 12, 0, 0));
+    setMonthCursor(d.toISOString().slice(0, 7));
+  };
+
+  const calendarCells = useMemo(() => {
+    const [y, m] = monthCursor.split('-').map(Number);
+    const firstOfMonth = new Date(Date.UTC(y, m - 1, 1, 12, 0, 0));
+    // Week starts on Saturday (day 6 in JS UTCDay: 0=Sun..6=Sat -> offset = (day + 1) % 7)
+    const startOffset = (firstOfMonth.getUTCDay() + 1) % 7;
+    const gridStart = addCalendarDays(`${monthCursor}-01`, -startOffset);
+    const eventsByDay: Record<string, any[]> = {};
+    for (const ev of data?.events || []) {
+      const dayKey = egyptDay(ev.dueAt || ev.startsAt);
+      if (dayKey) {
+        (eventsByDay[dayKey] ||= []).push(ev);
+      }
+      if (ev.startsAt) {
+        const startKey = egyptDay(ev.startsAt);
+        if (startKey && startKey !== dayKey) {
+          (eventsByDay[startKey] ||= []).push(ev);
+        }
+      }
+    }
+    return Array.from({ length: 42 }, (_, idx) => {
+      const dateStr = addCalendarDays(gridStart, idx);
+      return {
+        dateStr,
+        dayNum: Number(dateStr.slice(8, 10)),
+        inMonth: dateStr.startsWith(monthCursor),
+        isToday: dateStr === todayStr,
+        events: eventsByDay[dateStr] || [],
+      };
+    });
+  }, [monthCursor, data?.events, todayStr]);
+
+  const monthLabel = useMemo(() => {
+    const [y, m] = monthCursor.split('-').map(Number);
+    const d = new Date(Date.UTC(y, m - 1, 15, 12, 0, 0));
+    return d.toLocaleDateString(ar ? 'ar-EG' : 'en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  }, [monthCursor, ar]);
+
+  const weekdays = ar
+    ? ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة']
+    : ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+
+  const visibleEvents = useMemo(() => {
+    const all = data?.events || [];
+    if (!selectedDay) return all;
+    const filtered = all.filter((ev: any) => egyptDay(ev.dueAt || ev.startsAt) === selectedDay || (ev.startsAt && egyptDay(ev.startsAt) === selectedDay));
+    return filtered.length ? filtered : all;
+  }, [data?.events, selectedDay]);
+
+  return (
+    <div className={styles.stack}>
+      <section className={styles.calendarCard}>
+        <div className={styles.calendarHeader}>
+          <div>
+            <h2 className={styles.calendarMonthTitle} style={{ display: 'flex', alignItems: 'center', gap: 10, margin: 0 }}>
+              <CalendarDays size={22} color="#4f46e5" />
+              <span>{monthLabel}</span>
+            </h2>
+            <p className={styles.muted} style={{ marginTop: 4 }}>
+              {ar ? 'اضغط على أي يوم في التقويم لإضافة مهمة في هذا التاريخ أو استعراض مواعيده.' : 'Click any day on the calendar to schedule a task on that date or inspect its events.'}
+            </p>
+          </div>
+          <div className={styles.actions}>
+            {selectedDay && (
+              <button type="button" className={styles.button} onClick={() => setSelectedDay('')}>
+                {ar ? `عرض كل الشهر (${selectedDay})` : `Show all month (${selectedDay})`}
+              </button>
+            )}
+            <button type="button" className={styles.button} onClick={() => shiftMonth(-1)} aria-label={ar ? 'الشهر السابق' : 'Previous month'}>
+              {ar ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+              <span>{ar ? 'السابق' : 'Prev'}</span>
+            </button>
+            <button
+              type="button"
+              className={styles.button}
+              onClick={() => {
+                setMonthCursor(todayStr.slice(0, 7));
+                setSelectedDay('');
+              }}
+            >
+              {ar ? 'اليوم' : 'Today'}
+            </button>
+            <button type="button" className={styles.button} onClick={() => shiftMonth(1)} aria-label={ar ? 'الشهر التالي' : 'Next month'}>
+              <span>{ar ? 'التالي' : 'Next'}</span>
+              {ar ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+            </button>
+          </div>
+        </div>
+
+        <div className={styles.calendarWeekdays}>
+          {weekdays.map(day => (
+            <div key={day} className={styles.calendarWeekday}>{day}</div>
+          ))}
+        </div>
+
+        <div className={styles.calendarGrid}>
+          {calendarCells.map(cell => (
+            <div
+              key={cell.dateStr}
+              onClick={() => {
+                setSelectedDay(prev => (prev === cell.dateStr ? '' : cell.dateStr));
+                if (!form.id) {
+                  setForm((prev: any) => ({ ...prev, dueAt: `${cell.dateStr}T18:00` }));
+                }
+              }}
+              className={`${styles.calendarCell} ${!cell.inMonth ? styles.calendarCellMuted : ''} ${cell.isToday ? styles.calendarCellToday : ''} ${selectedDay === cell.dateStr ? styles.calendarCellSelected : ''}`}
+            >
+              <div className={styles.calendarDayNumber}>
+                <span>{cell.dayNum.toLocaleString(ar ? 'ar-EG' : 'en-GB')}</span>
+                {cell.events.length > 0 && (
+                  <span className={styles.badge} style={{ padding: '1px 6px', fontSize: 10 }}>
+                    {cell.events.length}
+                  </span>
+                )}
+              </div>
+              <div className={styles.calendarPills}>
+                {cell.events.slice(0, 3).map((ev: any) => (
+                  <div
+                    key={ev.source + ev.id}
+                    onClick={e => {
+                      e.stopPropagation();
+                      edit(ev);
+                    }}
+                    title={`${kindNames[ev.kind]?.[ar ? 0 : 1] || ev.kind}: ${ev.title}`}
+                    className={`${styles.calendarPill} ${ev.kind === 'EXAM' ? styles.calendarPillExam : ev.source === 'TASK' ? styles.calendarPillTask : ''}`}
+                  >
+                    {ev.title}
+                  </div>
+                ))}
+                {cell.events.length > 3 && (
+                  <small className={styles.muted} style={{ fontSize: 10 }}>
+                    +{cell.events.length - 3} {ar ? 'أخرى' : 'more'}
+                  </small>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div className={styles.split}>
+        <section className={styles.panel}>
+          <h2>{ar ? 'مواعيد الدروس والامتحانات والمهام' : 'Lessons, assessments & tasks'}</h2>
+          <p className={styles.muted}>{ar ? 'المواعيد كلها بتوقيت مصر. تعديل درس أو امتحان يحدّث مصدره، والمهمة المستقلة تظهر للطلاب المحددين.' : 'All dates use Egypt time. Source edits update the lesson/exam; tasks appear for selected students.'}</p>
+          {error && <p role="alert" className={styles.error}>{error}</p>}
+          {visibleEvents.map((item: any) => (
+            <div className={styles.event} key={item.source + item.id}>
+              <div>
+                <span className={styles.badge}>{kindNames[item.kind]?.[ar ? 0 : 1]}</span>
+                <h3>{item.title}</h3>
+                <p>{item.startsAt ? formatEgyptDateTime(item.startsAt, ar ? 'ar' : 'en') : '—'} ← {item.dueAt ? formatEgyptDateTime(item.dueAt, ar ? 'ar' : 'en') : '—'}</p>
+              </div>
+              <div className={styles.actions}>
+                <button className={styles.button} onClick={() => edit(item)}>{ar ? 'تعديل الموعد' : 'Edit schedule'}</button>
+                {item.source === 'TASK' && (
+                  <button className={styles.button} disabled={busy} onClick={() => act(() => teachingRequest('/teaching/tasks/' + item.id, { method: 'DELETE', body: JSON.stringify({ revision: item.revision }) }), ar ? 'تم إلغاء المهمة' : 'Task cancelled')}>
+                    {ar ? 'إلغاء' : 'Cancel'}
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+          {data && !visibleEvents.length && <p className={styles.empty}>{ar ? 'لا توجد مواعيد ضمن الفترة المختارة.' : 'No events in this range.'}</p>}
+        </section>
+
+        <section className={styles.panel}>
+          <h2>{form.id ? (ar ? 'تعديل الموعد' : 'Edit schedule') : (ar ? 'إضافة مهمة للطلاب المحددين' : 'Create a task for selected students')}</h2>
+          <form className={styles.stack} onSubmit={event => {
+            event.preventDefault();
+            void act(async () => {
+              const payload = { ...form, startsAt: form.startsAt ? parseEgyptDate(form.startsAt).toISOString() : null, dueAt: parseEgyptDate(form.dueAt).toISOString(), recipientIds: editingIds || ids };
+              await teachingRequest(form.source !== 'TASK' ? `/teaching/calendar/${form.source}/${form.id}` : '/teaching/tasks' + (form.id ? '/' + form.id : ''), { method: form.source !== 'TASK' ? 'PATCH' : form.id ? 'PUT' : 'POST', body: JSON.stringify(payload) });
+              setForm(fresh());
+              setEditingIds(null);
+            }, ar ? 'تم حفظ الجدول' : 'Schedule saved');
+          }}>
+            {form.source === 'TASK' && (
+              <>
+                <label className={styles.field}>{ar ? 'عنوان المهمة' : 'Task title'}<input required maxLength={160} value={form.title} onChange={event => setForm({ ...form, title: event.target.value })}/></label>
+                <label className={styles.field}>{ar ? 'النوع' : 'Type'}<select value={form.kind} onChange={event => setForm({ ...form, kind: event.target.value })}>{['LESSON', 'QUIZ', 'ASSIGNMENT', 'EXAM', 'OTHER'].map(key => <option key={key} value={key}>{kindNames[key][ar ? 0 : 1]}</option>)}</select></label>
+                <label className={styles.field}>{ar ? 'ربط بكورس — اختياري' : 'Course — optional'}<select value={form.courseId} onChange={event => setForm({ ...form, courseId: event.target.value, lessonId: '' })}><option value="">—</option>{overview.courses.map((course: any) => <option key={course.id} value={course.id}>{course.title}</option>)}</select></label>
+                <label className={styles.field}>{ar ? 'ربط بدرس — اختياري' : 'Lesson — optional'}<select value={form.lessonId} onChange={event => setForm({ ...form, lessonId: event.target.value })}><option value="">—</option>{overview.lessons.filter((lesson: any) => !form.courseId || lesson.courseId === form.courseId).map((lesson: any) => <option key={lesson.id} value={lesson.id}>{lesson.title}</option>)}</select></label>
+                <p className={styles.muted}>{ar ? 'عدد الطلاب المحددين:' : 'Selected recipients:'} {(editingIds || ids).length}</p>
+              </>
+            )}
+            <label className={styles.field}>{ar ? 'البداية — مصر' : 'Starts — Egypt'}<input type="datetime-local" value={form.startsAt} onChange={event => setForm({ ...form, startsAt: event.target.value })}/></label>
+            <label className={styles.field}>{ar ? 'الإغلاق أو التسليم — مصر' : 'Closes / due — Egypt'}<input required type="datetime-local" value={form.dueAt} onChange={event => setForm({ ...form, dueAt: event.target.value })}/></label>
+            <button className={`${styles.button} ${styles.primary}`} disabled={busy || form.source === 'TASK' && !(editingIds || ids).length}>{ar ? 'حفظ الموعد' : 'Save schedule'}</button>
+            {form.id && <button type="button" className={styles.button} onClick={() => { setForm(fresh()); setEditingIds(null); }}>{ar ? 'إضافة مهمة جديدة بدل التعديل' : 'Create a new task instead'}</button>}
+          </form>
+        </section>
+      </div>
+    </div>
+  );
 }

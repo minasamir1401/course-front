@@ -32,15 +32,15 @@ export default function AdminOverview({ superAdmin = false }: { superAdmin?: boo
     { title: txt('المعلمون', 'Teachers'), value: stats?.teachersCount, icon: Users, href: '/super-admin/users?role=TEACHER' },
     { title: txt('الامتحانات المتاحة الآن', 'Exams available now'), value: stats?.activeExams, icon: ClipboardList, href: '/super-admin/exams' },
   ] : [
-    { title: txt('الطلاب', 'Students'), value: stats?.studentsCount, icon: GraduationCap, href: stats?.teacher ? '/school-admin/reports' : '/school-admin/students' },
+    { title: txt('الطلاب', 'Students'), value: stats?.studentsCount, icon: GraduationCap, href: stats?.teacher ? '/school-admin/follow-up' : '/school-admin/students' },
     { title: stats?.teacher ? txt('كورساتي', 'My courses') : txt('المعلمون', 'Teachers'), value: stats?.teacher ? stats.coursesCount : stats?.teachersCount, icon: Users, href: stats?.teacher ? '/school-admin/courses' : '/school-admin/teachers' },
     { title: txt('متوسط الدرجات — آخر 30 يومًا', 'Average score — last 30 days'), value: stats?.averageScore, unit: '%', icon: BarChart3, href: '/school-admin/reports' },
     { title: txt('نسبة النجاح — آخر 30 يومًا', 'Pass rate — last 30 days'), value: stats?.passRate, unit: '%', icon: ClipboardList, href: '/school-admin/reports' },
   ];
   return <DashboardLayout><div className="max-w-[1500px] mx-auto space-y-6" dir={ar ? 'rtl' : 'ltr'}>
     <div className="bg-white p-6 sm:p-8 rounded-[30px] border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between gap-5">
-      <div><p className="text-indigo-600 font-bold text-sm mb-2">{txt('لوحة المتابعة', 'Activity dashboard')}</p><h1 className="text-2xl sm:text-3xl font-black text-slate-900">{txt(superAdmin ? 'المنصة في نظرة واحدة' : 'متابعة المدرسة واتخاذ القرار', superAdmin ? 'Your platform at a glance' : 'School follow-up & decisions')}</h1><p className="text-sm text-slate-500 mt-3">{txt('مؤشرات محسوبة من السجلات الفعلية', 'Metrics calculated from real records')}</p></div>
-      <div className="flex flex-wrap gap-2 items-center"><button onClick={() => setReload(value => value + 1)} className="report-secondary" aria-label={txt('تحديث اللوحة', 'Refresh dashboard')}><RefreshCw size={17} /></button><Link href={`${prefix}/reports`} className="report-primary"><BarChart3 size={18} />{txt('فتح التقارير', 'Open reports')}</Link></div>
+      <div><p className="text-indigo-600 font-bold text-sm mb-2">{txt('لوحة المتابعة العامة', 'Executive dashboard')}</p><h1 className="text-2xl sm:text-3xl font-black text-slate-900">{txt(superAdmin ? 'المنصة في نظرة واحدة' : stats?.teacher ? 'لوحة المعلم الرئيسية' : 'متابعة المدرسة واتخاذ القرار', superAdmin ? 'Your platform at a glance' : stats?.teacher ? 'Teacher overview dashboard' : 'School follow-up & decisions')}</h1><p className="text-sm text-slate-500 mt-3">{txt('مؤشرات محسوبة من السجلات الفعلية', 'Metrics calculated from real records')}</p></div>
+      <div className="flex flex-wrap gap-2 items-center"><button onClick={() => setReload(value => value + 1)} className="report-secondary" aria-label={txt('تحديث اللوحة', 'Refresh dashboard')}><RefreshCw size={17} /></button>{!superAdmin && <Link href="/school-admin/follow-up" className="report-secondary"><GraduationCap size={18} />{txt('متابعة التعلّم التفصيلية', 'Detailed learning follow-up')}</Link>}<Link href={`${prefix}/reports`} className="report-primary"><BarChart3 size={18} />{txt('فتح التقارير', 'Open reports')}</Link></div>
     </div>
     {loading && <p role="status" className="premium-card p-8 rounded-[30px] font-bold text-indigo-700 text-center">{txt('جارٍ تحميل البيانات…', 'Loading records…')}</p>}
     {error && <div role="alert" className="report-error">{error} <button className="underline" onClick={() => setReload(value => value + 1)}>{txt('إعادة المحاولة', 'Retry')}</button></div>}
@@ -55,10 +55,18 @@ export default function AdminOverview({ superAdmin = false }: { superAdmin?: boo
             return <div key={item.date} className="grid grid-cols-[90px_1fr_55px] gap-3 items-center"><span className="text-xs font-bold text-slate-600">{formatEgyptDate(item.date, language, superAdmin ? { year: undefined } : { day: undefined })}</span><div className="h-2.5 rounded-full bg-slate-100 overflow-hidden" role="img" aria-label={`${value ?? '—'}${superAdmin ? '' : '%'}`}><div className="h-full bg-gradient-to-r from-indigo-600 to-violet-500 rounded-full" style={{ width: `${value == null ? 0 : value / max * 100}%` }} /></div><span className="text-sm font-black text-slate-700">{metric(value, superAdmin ? '' : '%')}</span></div>;
           })}</div><p className="mt-5 text-xs text-slate-500">{txt(superAdmin ? 'عدد تسليمات الطلاب يوميًا، بعد استبعاد حسابات الإدارة.' : 'غياب البيانات يظهر بشرطة، ولا يُحسب كدرجة صفر.', superAdmin ? 'Daily student submissions, excluding admin accounts.' : 'Missing data is shown as a dash and is not a zero score.')}</p>
         </section>
-        <section className="premium-card p-6 rounded-[30px]"><h2 className="font-black text-lg text-slate-900 mb-5">{txt('إجراءات مباشرة', 'Quick actions')}</h2><div className="grid gap-3">{[
-          [superAdmin ? '/super-admin/schools?action=add' : stats?.teacher ? '/school-admin/reports' : '/school-admin/students', txt(superAdmin ? 'إدارة المدارس' : 'متابعة الطلاب', superAdmin ? 'Manage schools' : 'Follow up students')],
-          [`${prefix}/exams/new`, txt('إنشاء امتحان', 'Create exam')], [`${prefix}/courses`, txt('إدارة الدروس والكورسات', 'Manage lessons & courses')], [`${prefix}/skills-hub`, txt('إدارة المهارات والأنشطة', 'Manage skills & activities')],
-        ].map(([href, title]) => <Link className="report-secondary justify-between" key={href} href={href}><span>{title}</span><Plus size={17} /></Link>)}</div>
+        <section className="premium-card p-6 rounded-[30px]"><h2 className="font-black text-lg text-slate-900 mb-5">{txt('إجراءات مباشرة', 'Quick actions')}</h2><div className="grid gap-3">{(superAdmin ? [
+          ['/super-admin/schools?action=add', txt('إدارة المدارس', 'Manage schools')],
+          [`${prefix}/exams/new`, txt('إنشاء امتحان', 'Create exam')],
+          [`${prefix}/courses`, txt('إدارة الدروس والكورسات', 'Manage lessons & courses')],
+          [`${prefix}/skills-hub`, txt('إدارة المهارات والأنشطة', 'Manage skills & activities')],
+        ] : [
+          ['/school-admin/follow-up', txt('متابعة التعلّم والدروس', 'Learning & lesson follow-up')],
+          ['/school-admin/schedule', txt('تقويم وجدولة المهام', 'Schedule & calendar')],
+          ['/school-admin/messages', txt('محادثات الطلاب', 'Student chat messages')],
+          [`${prefix}/courses`, txt('إدارة الدروس والكورسات', 'Manage lessons & courses')],
+          [`${prefix}/exams/new`, txt('إنشاء امتحان', 'Create exam')],
+        ]).map(([href, title]) => <Link className="report-secondary justify-between" key={href} href={href}><span>{title}</span><ArrowUpRight size={17} /></Link>)}</div>
           {superAdmin && <div className="mt-6 rounded-2xl bg-indigo-50 p-4 text-sm text-indigo-900 space-y-2"><p>{txt('مدارس أُضيفت آخر 30 يومًا:', 'Schools added in 30 days:')} <strong>{metric(stats.newSchools)}</strong></p><p>{txt('طلاب أُضيفوا آخر 30 يومًا:', 'Students added in 30 days:')} <strong>{metric(stats.newStudents)}</strong></p><p>{txt('طلاب نشطون آخر 30 يومًا:', 'Active students in 30 days:')} <strong>{metric(stats.activeStudents)}</strong></p></div>}
         </section>
       </div>

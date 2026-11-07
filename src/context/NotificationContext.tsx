@@ -270,7 +270,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         }
 
         // Show server error messages for 4xx errors (not 502+)
-        if (!response.ok && response.status >= 400 && response.status < 502 && isApiCall && !handledAiFailure) {
+        const isSilentBackgroundCheck = urlStr.includes('/api/notifications') || urlStr.includes('/api/learning/activity');
+        if (!response.ok && response.status >= 400 && response.status < 502 && isApiCall && !handledAiFailure && !isSilentBackgroundCheck) {
           const cloned = response.clone();
           try {
             const errorJson = await cloned.json();
