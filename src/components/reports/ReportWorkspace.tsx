@@ -184,6 +184,7 @@ export default function ReportWorkspace({ role, examId = '', initialTab = 'overv
             <Metric title={txt('لم يسلّموا والموعد انتهى', 'Missed after deadline')} value={number(report.missedCount)} icon={<CalendarDays size={20} />} />
             <Metric title={txt('بانتظار الموعد أو التسليم', 'Upcoming or pending')} value={number(report.pendingCount)} icon={<Target size={20} />} /></div>
           <ReportRecordCards rows={report.rows} attendance role={role} language={language} />
+          {role !== 'STUDENT' && <ExamCertificatePicker rows={report.rows} examTitle={report.exam?.title || ''} ar={ar} language={language} />}
           <div className="report-table-wrap hidden sm:block"><table><caption>{txt('مشاركة الطلاب — جميع محاولات الامتحان', 'Student participation — all exam attempts')}</caption><thead><tr><th>{txt('الطالب', 'Student')}</th><th>{txt('الصف', 'Grade')}</th><th>{txt('الحالة', 'Status')}</th><th>{txt('النتيجة', 'Score')}</th><th>{txt('التسليم — مصر', 'Submitted — Egypt')}</th></tr></thead>
             <tbody>{report.rows.map((row: any) => <tr key={row.id}><td><span className="font-bold">{row.name}</span><small className="block text-slate-500">{row.username}</small></td><td>{row.grade || '—'}</td><td><Status value={row.status} ar={ar} /></td><td>{row.percentage == null ? '—' : <Link className="text-indigo-700 font-bold underline" href={`${prefix}/exams/submissions/${row.submissionId}`}>{number(row.percentage, '%')}</Link>}</td><td>{formatEgyptDateTime(row.submittedAt, language)}</td></tr>)}</tbody></table>
             {!report.rows.length && <Empty ar={ar} />}</div>
@@ -207,6 +208,19 @@ export default function ReportWorkspace({ role, examId = '', initialTab = 'overv
       </>}
     </div>
   </DashboardLayout>;
+}
+
+function ExamCertificatePicker({ rows, examTitle, ar, language }: { rows: any[]; examTitle: string; ar: boolean; language: string }) {
+  const qualified = rows.filter(row => row.status === 'SUBMITTED' && row.percentage != null && row.passed === true);
+  const [studentId, setStudentId] = useState(qualified[0]?.id || '');
+  const [show, setShow] = useState(false);
+  const student = qualified.find(row => row.id === studentId);
+  if (!qualified.length) return null;
+  return <section className="premium-card rounded-[28px] p-5 space-y-4">
+    <div><h2 className="font-black text-lg text-slate-900">{ar ? 'شهادات اجتياز الامتحان' : 'Exam completion certificates'}</h2><p className="text-sm text-slate-500 mt-1">{ar ? 'اختر طالبًا اجتاز الامتحان لعرض شهادة تشجيعية قابلة للطباعة.' : 'Choose a student who passed to view a printable achievement certificate.'}</p></div>
+    <div className="flex flex-wrap gap-3 items-end"><label className="report-field min-w-[240px] flex-1"><span>{ar ? 'الطالب المجتاز' : 'Student who passed'}</span><select value={studentId} onChange={event => { setStudentId(event.target.value); setShow(false); }}>{qualified.map(row => <option key={row.id} value={row.id}>{row.name} — {number(row.percentage, '%')}</option>)}</select></label><button type="button" className="report-primary" onClick={() => setShow(true)}>{ar ? 'عرض الشهادة' : 'View certificate'}</button></div>
+    {show && student && <div className="examCertificatePrint rounded-2xl border-[3px] border-double border-violet-500 bg-gradient-to-br from-violet-50 via-white to-indigo-50 p-7 sm:p-10 text-center text-slate-800"><div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-indigo-600 text-xl font-black text-white shadow-lg">K</div><p className="mt-4 text-xs font-black tracking-[.18em] text-indigo-700">KLEVRO · {ar ? 'شهادة اجتياز' : 'CERTIFICATE OF ACHIEVEMENT'}</p><h3 className="mt-2 text-2xl sm:text-3xl font-black text-slate-900">{ar ? 'شهادة إنجاز أكاديمي' : 'Certificate of Academic Achievement'}</h3><p className="mt-5 text-sm text-slate-600">{ar ? 'تُمنح هذه الشهادة إلى' : 'This certificate is proudly presented to'}</p><strong className="mt-2 block text-2xl sm:text-3xl font-black text-indigo-700">{student.name}</strong><p className="mt-4 text-sm text-slate-600">{ar ? 'لاجتياز امتحان' : 'For successfully passing'} <b>{examTitle}</b></p><p className="mt-2 text-lg font-black text-violet-700">{ar ? 'نسبة النجاح' : 'Pass score'}: {number(student.percentage, '%')}</p><div className="mt-8 flex flex-wrap justify-between gap-4 border-t border-violet-200 pt-4 text-start text-xs font-bold text-slate-600"><span>{ar ? `التاريخ: ${formatEgyptDateTime(student.submittedAt, language)}` : `Date: ${formatEgyptDateTime(student.submittedAt, language)}`}</span><span>{ar ? 'اعتماد المدرس / منصة كليفرو' : 'Authorized by instructor / Klevro'}</span></div><button type="button" className="report-primary mt-6 no-print" onClick={() => window.print()}>{ar ? 'طباعة الشهادة' : 'Print certificate'}</button></div>}
+  </section>;
 }
 
 function Metric({ title, value, icon }: { title: string; value: string; icon: React.ReactNode }) {

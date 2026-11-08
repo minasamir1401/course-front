@@ -38,6 +38,12 @@
 @media print{.next>img,.next:before{display:none}.chart,.priority,.next,.metricCard{break-inside:avoid;box-shadow:none}.chartCanvas{height:240px}.tabs,.dateLine{margin-block:5px!important}}
 .student .filters .filterGrid{margin-top:0!important}
 @media print{.student .toolbar,.student .filters,.student .tabs{display:none!important}}
+@media print{
+  :global(body:has(.examCertificatePrint) *){visibility:hidden!important}
+  :global(body:has(.examCertificatePrint) .examCertificatePrint),:global(body:has(.examCertificatePrint) .examCertificatePrint *){visibility:visible!important}
+  :global(body:has(.examCertificatePrint) .examCertificatePrint){position:fixed!important;inset:12mm!important;width:calc(100% - 24mm)!important;min-height:calc(100% - 24mm)!important;display:flex!important;flex-direction:column!important;justify-content:center!important;border-color:#6652d9!important;box-shadow:none!important}
+  :global(body:has(.examCertificatePrint) .examCertificatePrint .no-print){display:none!important}
+}
 /* Exact reference palette and optical alignment, scoped to student reports. */
 .student{--report-primary:#5028E8;--report-deep:#54248C;--report-cyan:#25BDD1;--report-ink:#15152B;--report-muted:#646874;color:var(--report-ink)}
 :global(.student-workspace) main.main:global(#main-content){background:#F4F7FC;padding-inline:clamp(16px,2.2vw,30px)}
