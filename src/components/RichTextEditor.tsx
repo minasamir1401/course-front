@@ -8,7 +8,7 @@ import { buildRichTextImageHtml, getRichTextImageStyles } from "@/lib/richTextIm
 import { convertPlainTextToHtml, shouldPreferPlainTextPaste } from "@/lib/richTextPaste";
 import { sanitizeEditorHtml } from "@/lib/editorHtml";
 import { useEditorFormProtection } from '@/hooks/useEditorFormProtection';
-import { buildRichTextMathHtml, isolateRichTextMath } from "@/lib/richTextMath";
+import { buildRichTextMathHtml, isolateRichTextMath, normalizeMathFormula } from "@/lib/richTextMath";
 import NextImage from "next/image";
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -431,21 +431,27 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
   };
 
   const handleInsertMath = async () => {
-    if (mathFormula) {
+    // MathLive may dispatch its final input event after the user clicks Insert.
+    // Read the field itself so the last typed character is never dropped.
+    const liveFormula = (mathContainerRef.current?.querySelector('math-field') as any)?.value;
+    const formula = normalizeMathFormula(typeof liveFormula === 'string' ? liveFormula : mathFormula);
+    if (formula) {
+      setMathFormula(formula);
+      lastMathDraft.formula = formula;
       const sizeObj = MATH_SIZES.find(s => s.id === mathSize) || MATH_SIZES[2];
       const fontSize = sizeObj.scale;
       let renderedMath: string | undefined;
       try {
         const katexModule = await import("katex");
         const katex = katexModule.default || katexModule;
-        renderedMath = katex.renderToString(mathFormula, {
+        renderedMath = katex.renderToString(formula, {
           throwOnError: false,
           displayMode: mathDisplayMode,
         });
       } catch (err) {
         console.error("KaTeX rendering error", err);
       }
-      const mathHtml = buildRichTextMathHtml(mathFormula, mathSize, fontSize, mathDisplayMode, renderedMath);
+      const mathHtml = buildRichTextMathHtml(formula, mathSize, fontSize, mathDisplayMode, renderedMath);
       if (editingMathElement && editingMathElement.parentNode) {
         if (selectElement(editingMathElement)) execCommand('insertHTML', mathHtml, true);
       } else {

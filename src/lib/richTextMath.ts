@@ -3,6 +3,18 @@ export function escapeMathHtml(value: string): string {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+/** Accept pasted, already-delimited LaTeX without nesting another delimiter pair. */
+export function normalizeMathFormula(value: string): string {
+  const formula = value.trim();
+  const pairs: Array<[string, string]> = [["\\(", "\\)"], ["\\[", "\\]"], ["$$", "$$"], ["$", "$"]];
+  for (const [open, close] of pairs) {
+    if (formula.startsWith(open) && formula.endsWith(close) && formula.length >= open.length + close.length) {
+      return formula.slice(open.length, formula.length - close.length).trim();
+    }
+  }
+  return value;
+}
+
 export function buildRichTextMathHtml(
   formula: string,
   size: string,

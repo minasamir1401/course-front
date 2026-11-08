@@ -5,6 +5,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Sigma, X, Check, Image as ImageIcon, AlignLeft, AlignCenter, AlignRight, Loader2, Trash2, Code } from 'lucide-react';
 import { uploadFileToServer, compressImage } from "@/lib/image-utils";
 import HtmlRenderer from "./HtmlRenderer";
+import { normalizeMathFormula } from "@/lib/richTextMath";
 
 const IMG_REGEX = /<p[^>]*>\s*<img[^>]+>\s*<\/p>|<img[^>]+>/gi;
 interface MathInputProps {
@@ -163,7 +164,8 @@ export default function MathInput({ value, onChange, placeholder, className = ""
   const handleConfirm = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const activeFormula = (mathContainerRef.current?.firstChild as any)?.value ?? mathFormula;
+    const liveFormula = (mathContainerRef.current?.firstChild as any)?.value;
+    const activeFormula = normalizeMathFormula(typeof liveFormula === 'string' ? liveFormula : mathFormula);
     if (activeFormula) {
       let formulaText = `\\(${activeFormula}\\)`;
       if (formulaSize === 'large') {
