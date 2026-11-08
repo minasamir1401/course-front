@@ -7,8 +7,6 @@ import { uploadFileToServer, compressImage } from "@/lib/image-utils";
 import HtmlRenderer from "./HtmlRenderer";
 
 const IMG_REGEX = /<p[^>]*>\s*<img[^>]+>\s*<\/p>|<img[^>]+>/gi;
-const lastMathDraft = { formula: '' };
-
 interface MathInputProps {
   value: string;
   onChange: (val: string) => void;
@@ -133,8 +131,10 @@ export default function MathInput({ value, onChange, placeholder, className = ""
               }
             }
             
-            mf.value = lastMathDraft.formula || initialFormula || "";
-            setMathFormula(mf.value);
+            // Seed each editor from the value currently being edited. A module
+            // global here leaked the previous field's draft into later dialogs.
+            mf.value = initialFormula;
+            setMathFormula(initialFormula);
 
             mf.style.width = '100%';
             mf.style.padding = '12px 16px';
@@ -148,7 +148,6 @@ export default function MathInput({ value, onChange, placeholder, className = ""
 
             mf.addEventListener('input', () => {
               setMathFormula(mf.value);
-              lastMathDraft.formula = mf.value;
             });
 
             mathContainerRef.current.innerHTML = '';
@@ -164,25 +163,15 @@ export default function MathInput({ value, onChange, placeholder, className = ""
   const handleConfirm = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (mathFormula) {
-      let formulaText = `\\(${mathFormula}\\)`;
+    const activeFormula = (mathContainerRef.current?.firstChild as any)?.value ?? mathFormula;
+    if (activeFormula) {
+      let formulaText = `\\(${activeFormula}\\)`;
       if (formulaSize === 'large') {
-        formulaText = `\\({\\Large ${mathFormula}}\\textstyle\\)`;
+        formulaText = `\\({\\Large ${activeFormula}}\\textstyle\\)`;
       } else if (formulaSize === 'huge') {
-        formulaText = `\\({\\huge ${mathFormula}}\\textstyle\\)`;
+        formulaText = `\\({\\huge ${activeFormula}}\\textstyle\\)`;
       } else if (formulaSize === 'display') {
-        formulaText = `\\(\\displaystyle ${mathFormula}\\)`;
-      }
-      const input = inputRef.current;
-      if (input) {
-        input.focus();
-        const end = input.value.length;
-        input.setSelectionRange(selectionStart ?? end, selectionEnd ?? end);
-        // Use a native text edit so Ctrl+Z restores the complete previous option.
-        if (document.execCommand('insertText', false, formulaText)) {
-          setIsOpen(false);
-          return;
-        }
+        formulaText = `\\(\\displaystyle ${activeFormula}\\)`;
       }
       if (isRawView) {
         if (selectionStart !== null && selectionEnd !== null) {
