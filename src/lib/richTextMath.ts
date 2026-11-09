@@ -1,10 +1,11 @@
+import type { MathfieldElement } from 'mathlive';
+
 export function escapeMathHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-/** Accept pasted, already-delimited LaTeX without nesting another delimiter pair. */
-export function normalizeMathFormula(value: string): string {
+function unwrapMathFormula(value: string): string {
   const formula = value.trim();
   const pairs: Array<[string, string]> = [["\\(", "\\)"], ["\\[", "\\]"], ["$$", "$$"], ["$", "$"]];
   for (const [open, close] of pairs) {
@@ -13,6 +14,40 @@ export function normalizeMathFormula(value: string): string {
     }
   }
   return value;
+}
+
+const mathLiveTextEscapes = new Map([
+  ['textbackslash', '\\'],
+  ['lbrack', '['],
+  ['rbrack', ']'],
+  ['textbraceleft', '{'],
+  ['textbraceright', '}'],
+  ['textasciicircum', '^'],
+  ['textasciitilde', '~'],
+]);
+
+export function normalizeMathFormula(value: string): string {
+  // MathLive may serialize a delimited formula pasted in text mode as escaped prose.
+  return unwrapMathFormula(value).replace(/\\text\{([^{}]*)\}/g, (block, text: string) => {
+    if (!text.includes('\\textbackslash')) return block;
+    const literal = text.replace(/\\([a-zA-Z]+) *|\\([#$%&_])/g, (match, command, symbol) =>
+      symbol ?? mathLiveTextEscapes.get(command) ?? match,
+    );
+    const recovered = unwrapMathFormula(literal);
+    return recovered && recovered !== literal ? '{' + recovered + '}' : block;
+  });
+}
+
+export function pasteDelimitedMath(field: MathfieldElement, event: ClipboardEvent): void {
+  const clipboard = event.clipboardData;
+  if (!clipboard || clipboard.types.includes('application/json+mathlive') || clipboard.types.includes('application/x-latex')) return;
+
+  const text = clipboard.getData('text/plain');
+  const formula = unwrapMathFormula(text);
+  if (!formula || formula === text) return;
+
+  event.preventDefault();
+  field.insert(formula, { mode: 'math', format: 'latex', selectionMode: 'after' });
 }
 
 export function buildRichTextMathHtml(
