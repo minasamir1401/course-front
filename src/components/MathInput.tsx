@@ -5,7 +5,8 @@ import React, { useState, useRef, useEffect } from "react";
 import { Sigma, X, Check, Image as ImageIcon, AlignLeft, AlignCenter, AlignRight, Loader2, Trash2, Code } from 'lucide-react';
 import { uploadFileToServer, compressImage } from "@/lib/image-utils";
 import HtmlRenderer from "./HtmlRenderer";
-import { normalizeMathFormula } from "@/lib/richTextMath";
+import { normalizeMathFormula, pasteDelimitedMath } from "@/lib/richTextMath";
+import type { MathfieldElement } from 'mathlive';
 
 const IMG_REGEX = /<p[^>]*>\s*<img[^>]+>\s*<\/p>|<img[^>]+>/gi;
 interface MathInputProps {
@@ -111,14 +112,15 @@ export default function MathInput({ value, onChange, placeholder, className = ""
   };
 
   useEffect(() => {
-    let mf: any = null;
+    let field: MathfieldElement | undefined;
     let cancelled = false;
     if (isOpen) {
       const timer = setTimeout(() => {
         if (mathContainerRef.current) {
           import('mathlive').then(({ MathfieldElement }) => {
             if (cancelled || !mathContainerRef.current) return;
-            mf = new MathfieldElement();
+            const mf = new MathfieldElement();
+            field = mf;
             
             const activeVal = isRawView ? value : textPart;
             let initialFormula = "";
@@ -134,8 +136,8 @@ export default function MathInput({ value, onChange, placeholder, className = ""
             
             // Seed each editor from the value currently being edited. A module
             // global here leaked the previous field's draft into later dialogs.
-            mf.value = initialFormula;
-            setMathFormula(initialFormula);
+            mf.value = normalizeMathFormula(initialFormula);
+            setMathFormula(mf.value);
 
             mf.style.width = '100%';
             mf.style.padding = '12px 16px';
@@ -147,6 +149,7 @@ export default function MathInput({ value, onChange, placeholder, className = ""
             mf.style.fontSize = '20px';
             mf.mathVirtualKeyboardPolicy = 'manual';
 
+            mf.addEventListener('paste', event => pasteDelimitedMath(mf, event));
             mf.addEventListener('input', () => {
               setMathFormula(mf.value);
             });
@@ -157,7 +160,7 @@ export default function MathInput({ value, onChange, placeholder, className = ""
           }).catch(err => console.error("Failed to load mathlive", err));
         }
       }, 50);
-      return () => { cancelled = true; clearTimeout(timer); mf?.remove(); };
+      return () => { cancelled = true; clearTimeout(timer); field?.remove(); };
     }
   }, [isOpen, value, isRawView, textPart]);
 

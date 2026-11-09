@@ -8,7 +8,8 @@ import { buildRichTextImageHtml, getRichTextImageStyles } from "@/lib/richTextIm
 import { convertPlainTextToHtml, shouldPreferPlainTextPaste } from "@/lib/richTextPaste";
 import { sanitizeEditorHtml } from "@/lib/editorHtml";
 import { useEditorFormProtection } from '@/hooks/useEditorFormProtection';
-import { buildRichTextMathHtml, isolateRichTextMath, normalizeMathFormula } from "@/lib/richTextMath";
+import { buildRichTextMathHtml, isolateRichTextMath, normalizeMathFormula, pasteDelimitedMath } from "@/lib/richTextMath";
+import type { MathfieldElement } from 'mathlive';
 import NextImage from "next/image";
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -210,7 +211,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
 
   // Initialize MathLive visually when modal opens
   useEffect(() => {
-    let mf: any = null;
+    let field: MathfieldElement | undefined;
     let cancelled = false;
     if (activeModal === 'math') {
       // Need a small timeout to ensure the ref is attached to the DOM before appending
@@ -218,8 +219,9 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
         if (mathContainerRef.current) {
           import('mathlive').then(({ MathfieldElement }) => {
             if (cancelled || !mathContainerRef.current) return;
-            mf = new MathfieldElement();
-            mf.value = mathFormula;
+            const mf = new MathfieldElement();
+            field = mf;
+            mf.value = normalizeMathFormula(mathFormula);
             
             // Match the styles of the previous textarea
             mf.style.width = '100%';
@@ -234,8 +236,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
             const currentSize = MATH_SIZES.find(s => s.id === mathSize) || MATH_SIZES[2];
             mf.style.fontSize = currentSize.scale;
             mf.mathVirtualKeyboardPolicy = 'manual';
-            
-            mf.mathVirtualKeyboardPolicy = 'manual';
+            mf.addEventListener('paste', event => pasteDelimitedMath(mf, event));
             
             mf.addEventListener('input', () => {
               setMathFormula(mf.value);
@@ -248,7 +249,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
           }).catch(err => console.error("Failed to load mathlive", err));
         }
       }, 50);
-      return () => { cancelled = true; clearTimeout(timer); mf?.remove(); };
+      return () => { cancelled = true; clearTimeout(timer); field?.remove(); };
     }
   }, [activeModal]);
 

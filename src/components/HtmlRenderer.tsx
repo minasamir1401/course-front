@@ -7,7 +7,7 @@ import 'katex/dist/katex.min.css';
 import { escapeMathComparisons, sanitizeHtml } from '../lib/sanitize';
 import { resolveMediaUrl } from '../lib/utils';
 
-import { escapeMathHtml, isolateRichTextMath, protectRenderedMath } from "../lib/richTextMath";
+import { escapeMathHtml, isolateRichTextMath, normalizeMathFormula, protectRenderedMath } from "../lib/richTextMath";
 
 interface HtmlRendererProps {
   html: string;
@@ -17,10 +17,9 @@ interface HtmlRendererProps {
 }
 
 function renderKatex(inner: string, display: boolean): string {
-  // Decode text entities once. Never rewrite commands, environment names or
-  // alignment markers: MathLive emits canonical LaTeX, including matrix rows.
-  const formula = inner.replace(/&lt;/gi, '<').replace(/&gt;/gi, '>')
-    .replace(/&quot;/gi, '"').replace(/&#39;/g, "'").replace(/&amp;/gi, '&');
+  // Decode HTML entities once before recovering any legacy text-mode formula.
+  const formula = normalizeMathFormula(inner.replace(/&lt;/gi, '<').replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"').replace(/&#39;/g, "'").replace(/&amp;/gi, '&'));
   try {
     let rendered: string;
     try {
@@ -127,10 +126,9 @@ export function processHtml(html: string, imageLoading: "lazy" | "eager" = "lazy
 
   return isolateRichTextMath(result.replace(/\x00RENDERED(\d+)\x00/g, (_, i) => {
     const block = protectedMath.blocks[Number(i)];
-    // Older editor fallbacks retain canonical LaTeX even when KaTeX was unavailable.
-    const formula = block.match(/\bdata-latex=(["'])(.*?)\1/i);
-    if (!formula || /class=["'][^"']*\bkatex(?:[\s"'])/i.test(block)) return block;
-    const latex = formula[2].replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+    // Re-render saved text-mode formulas even if they already contain a KaTeX tree.
+    const latex = block.match(/\bdata-latex=(["'])([\s\S]*?)\1/i)?.[2];
+    if (!latex || (normalizeMathFormula(latex) === latex && /class=["'][^"']*\bkatex(?:[\s"'])/i.test(block))) return block;
     return block.replace(/^(<span\b[^>]*>)[\s\S]*<\/span>$/i, (_block, opening) => `${opening}${renderKatex(latex, /data-display=["']true["']/i.test(block))}</span>`);
   }));
 }

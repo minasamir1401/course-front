@@ -1,6 +1,9 @@
 import { serverSession } from './helpers/serverSession';
 import { test, expect, Page } from '@playwright/test';
 import { studentSession, exam } from './helpers/studentWorkspace';
+import katex from 'katex';
+import type { MathfieldElement } from 'mathlive';
+import { buildRichTextMathHtml } from '../src/lib/richTextMath';
 
 async function openEditor(page: Page, prefix = 'super-admin') {
   const user = { id: 'editor', name: 'Editor', role: prefix === 'super-admin' ? 'SUPER_ADMIN' : 'SCHOOL_ADMIN', schoolId: 'school', status: 'ACTIVE' };
@@ -32,6 +35,56 @@ async function setFormula(page: Page, formula: string) {
     field.dispatchEvent(new InputEvent('input', { bubbles: true }));
   }, formula);
 }
+
+test('pasting a delimited fraction into calculator text renders it as math', async ({ page }) => {
+  test.setTimeout(120000);
+  await openEditor(page);
+  await page.getByRole('button', { name: 'English (EN)', exact: true }).click();
+  const editor = page.locator('.editor-content').first();
+  const richTextButton = editor.locator('..').locator('..').getByTitle('إدراج معادلة رياضية', { exact: true });
+  const option = page.getByPlaceholder('Option 1 in English (no A, B, C)', { exact: true });
+  const optionButton = option.locator('..').getByTitle('إدراج معادلة رياضية (Insert Math Equation)', { exact: true });
+  const formula = 'A=\\frac{10+18}{2}\\times6';
+
+  for (const [button, insertLabel, output] of [
+    [richTextButton, 'إدراج المعادلة', editor],
+    [optionButton, 'تأكيد وإدراج', option.locator('..').locator('..')],
+  ] as const) {
+    await button.click();
+    const field = page.locator('math-field');
+    await field.evaluate((element, source) => {
+      const math = element as MathfieldElement;
+      math.value = '\\text{ab}';
+      math.position = 1;
+      const clipboardData = new DataTransfer();
+      clipboardData.setData('text/plain', source);
+      math.shadowRoot!.querySelector('textarea, [contenteditable]')!.dispatchEvent(new ClipboardEvent('paste', {
+        clipboardData, bubbles: true, composed: true, cancelable: true,
+      }));
+    }, '\\[ ' + formula + ' \\]');
+    await expect.poll(() => field.evaluate(element => (element as MathfieldElement).getValue('math-ml'))).toContain('<mfrac>');
+    await page.getByRole('button', { name: insertLabel, exact: true }).click();
+    await expect(output.locator('mfrac')).toHaveCount(1);
+    await expect(output.locator('annotation')).toContainText(formula);
+  }
+});
+
+test('student exam renders fractions saved as literal calculator text', async ({ page }) => {
+  test.setTimeout(120000);
+  await studentSession(page, 'ar');
+  await page.route('https://fonts.googleapis.com/**', r => r.abort());
+  const legacy = String.raw`\text{\textbackslash\lbrack A=\textbackslash frac\textbraceleft10+18\textbraceright\textbraceleft2\textbraceright\textbackslash times6 \textbackslash\rbrack}`;
+  const text = buildRichTextMathHtml(legacy, 'normal', '1em', false, katex.renderToString(legacy));
+  const options = ['\\({\\Large ' + legacy + '}\\textstyle\\)', '42'];
+  const question = { ...exam.questions[0], text, textEn: text, options, optionsEn: options, correctAnswer: options[0] };
+  await page.route('**/api/exams/exam', route => route.fulfill({ json: { ...exam, questions: [question] } }));
+  await page.setViewportSize({ width: 390, height: 850 });
+  await page.goto('/exams/exam');
+  await page.getByRole('button', { name: 'ابدأ الامتحان الآن', exact: true }).click();
+  await expect(page.locator('[data-exam-question] .math-tex mfrac')).toHaveCount(1);
+  await expect(page.locator('.exam-option-content').first().locator('mfrac')).toHaveCount(1);
+  await expect(page.locator('[data-exam-question]')).not.toContainText('textbackslash');
+});
 
 for (const prefix of ['super-admin', 'school-admin']) {
   test(`${prefix}: math keeps insertion range and draft; insert, edit, delete and typing undo correctly`, async ({ page }) => {
