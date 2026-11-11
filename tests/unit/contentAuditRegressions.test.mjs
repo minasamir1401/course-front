@@ -205,3 +205,13 @@ test('font tags with color or styling attributes remain intact through sanitizat
  assert.match(sanitized, /<font color="#dc2626"\s*>/);
  assert.match(rendered, /<font color="#dc2626"\s*>/);
 });
+
+test('HtmlRenderer bounds KaTeX rule dimensions and macro expansions via maxSize and maxExpand', () => {
+ const hugeRule = processHtml(String.raw`\(\rule{100em}{100em}\)`);
+ assert.match(hugeRule, /class="katex"/);
+ assert.match(hugeRule, /border-right-width:15em/);
+ assert.match(hugeRule, /border-top-width:15em/);
+ const recursiveMacro = processHtml(String.raw`\(\def\a{\a\a}\a\)`);
+ assert.doesNotMatch(recursiveMacro, /class="katex"/);
+ assert.match(recursiveMacro, /\\def\\a\{\\a\\a\}\\a/);
+});

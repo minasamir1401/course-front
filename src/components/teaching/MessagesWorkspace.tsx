@@ -78,7 +78,7 @@ export default function MessagesWorkspace({ staff = false }: { staff?: boolean }
     const q = search.trim().toLowerCase();
     const list = [...convMap.values()].filter(c => !q || c.name.toLowerCase().includes(q) || c.lastBody.toLowerCase().includes(q));
     return { peers: peerMap, conversations: list };
-  }, [inbox?.items, roster?.students, profile?.profile, myId, search]);
+  }, [inbox?.items, roster?.students, profile, myId, search]);
 
   const activePeerId = peer || conversations.find(c => c.messages.length > 0)?.id || conversations[0]?.id || '';
   const activePeerName = (activePeerId && peers.get(activePeerId)) || '';

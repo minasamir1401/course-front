@@ -448,6 +448,8 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
         renderedMath = katex.renderToString(formula, {
           throwOnError: false,
           displayMode: mathDisplayMode,
+          maxExpand: 500,
+          maxSize: 15,
         });
       } catch (err) {
         console.error("KaTeX rendering error", err);
