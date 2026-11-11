@@ -20,15 +20,16 @@ function renderKatex(inner: string, display: boolean): string {
   // Decode HTML entities once before recovering any legacy text-mode formula.
   const formula = normalizeMathFormula(inner.replace(/&lt;/gi, '<').replace(/&gt;/gi, '>')
     .replace(/&quot;/gi, '"').replace(/&#39;/g, "'").replace(/&amp;/gi, '&'));
+  const options = { throwOnError: true, displayMode: display, maxExpand: 500, maxSize: 15 };
   try {
     let rendered: string;
     try {
-      rendered = katex.renderToString(formula, { throwOnError: true, displayMode: display });
+      rendered = katex.renderToString(formula, options);
     } catch (error) {
       // Support older saved formulas containing accidental nested delimiters.
       const repaired = formula.replace(/\\[()[\]]/g, '').replace(/\$\$/g, '');
       if (repaired === formula) throw error;
-      rendered = katex.renderToString(repaired, { throwOnError: true, displayMode: display });
+      rendered = katex.renderToString(repaired, options);
     }
     return `<span dir="ltr" style="unicode-bidi:isolate;display:inline-block">${rendered}</span>`;
   } catch {
@@ -126,9 +127,8 @@ export function processHtml(html: string, imageLoading: "lazy" | "eager" = "lazy
 
   return isolateRichTextMath(result.replace(/\x00RENDERED(\d+)\x00/g, (_, i) => {
     const block = protectedMath.blocks[Number(i)];
-    // Re-render saved text-mode formulas even if they already contain a KaTeX tree.
     const latex = block.match(/\bdata-latex=(["'])([\s\S]*?)\1/i)?.[2];
-    if (!latex || (normalizeMathFormula(latex) === latex && /class=["'][^"']*\bkatex(?:[\s"'])/i.test(block))) return block;
+    if (!latex) return block;
     return block.replace(/^(<span\b[^>]*>)[\s\S]*<\/span>$/i, (_block, opening) => `${opening}${renderKatex(latex, /data-display=["']true["']/i.test(block))}</span>`);
   }));
 }
