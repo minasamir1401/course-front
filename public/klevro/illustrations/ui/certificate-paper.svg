@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="1000" viewBox="0 0 1500 1000">
+  <defs>
+    <linearGradient id="paper" x2="0.88" y2="1" gradientUnits="objectBoundingBox"><stop stop-color="#fff"/><stop offset=".55" stop-color="#fdfbff"/><stop offset="1" stop-color="#f2eeff"/></linearGradient>
+    <linearGradient id="ribbon" x2="1" y2="0.76" gradientUnits="objectBoundingBox"><stop stop-color="#a658ff"/><stop offset=".25" stop-color="#6230e9"/><stop offset=".54" stop-color="#241887"/><stop offset=".81" stop-color="#255ff1"/><stop offset="1" stop-color="#0ebcfa"/></linearGradient>
+    <linearGradient id="wash" x2="1" y2="1" gradientUnits="objectBoundingBox"><stop stop-color="#a980ff" stop-opacity=".56"/><stop offset="1" stop-color="#aaeaff" stop-opacity=".15"/></linearGradient>
+    <linearGradient id="gold" x2=".88" y2="1" gradientUnits="objectBoundingBox"><stop stop-color="#fff6b5"/><stop offset=".3" stop-color="#ffd971"/><stop offset=".53" stop-color="#d58b1f"/><stop offset=".73" stop-color="#ffdc74"/><stop offset="1" stop-color="#b8761b"/></linearGradient>
+    <radialGradient id="medal" cx=".35" cy=".25" r=".76"><stop stop-color="#45278d"/><stop offset="1" stop-color="#170d43"/></radialGradient>
+    <linearGradient id="logo" x2=".72" y2="1" gradientUnits="objectBoundingBox"><stop stop-color="#fa8df7"/><stop offset=".34" stop-color="#a34ff3"/><stop offset=".63" stop-color="#5127e5"/><stop offset="1" stop-color="#00c6ff"/></linearGradient>
+    <linearGradient id="tabs" x2=".7" y2="1" gradientUnits="objectBoundingBox"><stop stop-color="#21075b"/><stop offset="1" stop-color="#833cf5"/></linearGradient>
+    <path id="mark" d="M6 15 18 3q6-5 9 2v24L55 4q4-4 9 0l10 10q4 4 0 9L48 48l27 25q6 6-3 10H54q-3 0-6-3L31 62l-9 18q-4 6-9 1L3 71Q0 68 0 62V27q0-7 6-12Z"/>
+    <path id="star" d="m0-11 2.8 7.2 7.7.6-5.9 5 1.9 7.5L0 5.3l-6.5 4 1.9-7.5-5.9-5 7.7-.6Z"/>
+    <path id="spark" d="M0-12Q1.7-1.7 12 0 1.7 1.7 0 12-1.7 1.7-12 0-1.7-1.7 0-12Z"/>
+    <g id="laurel">
+      <path d="M0 0Q-31-25-15-66" fill="none" stroke="#ffd979" stroke-width="2"/>
+      <path d="M-15-59q-3-12 8-20 2 12-8 20Zm-5 10q-12-4-13-16 11 4 13 16Zm0 4q3-12 13-13-1 11-13 13Zm0 11q-14-3-17-15 12 2 17 15Zm1 4q1-11 10-14 1 11-10 14Zm3 10q-14 0-20-12 13 0 20 12Zm2 4q-3-11 6-16 5 9-6 16Zm7 9q-13 3-23-8 15-3 23 8Zm4 3q-5-11 2-17 6 9-2 17Z" fill="#ffdb79"/>
+    </g>
+  </defs>
+  <rect width="1500" height="1000" fill="url(#paper)"/>
+  <path d="M0 0h395C289 46 101 105 0 273Z" fill="url(#wash)"/>
+  <path d="M0 0h297C203 58 105 61 0 181Z" fill="url(#ribbon)"/>
+  <path d="M0 0h142C76 51 43 89 0 132Z" fill="#a987ff" opacity=".5"/>
+  <path d="M0 170C96 71 191 57 285 4" fill="none" stroke="#dfc0ff" stroke-width="2" opacity=".8"/>
+  <path d="M0 822C160 1014 390 954 609 1000H0Zm1500-41c-127 204-343 138-579 219h579Z" fill="url(#wash)"/>
+  <path d="M0 853c136 123 282 115 505 147H0Zm1500-25c-100 161-297 126-414 172h414Z" fill="url(#ribbon)"/>
+  <path d="M0 898c153 101 243 71 412 102H0Zm1500-36c-98 119-207 89-334 138h334Z" fill="#7365ff" opacity=".42"/>
+  <g fill="#d9ccfa" opacity=".82">
+    <use href="#spark" x="159" y="230"/><use href="#spark" x="102" y="429" transform="rotate(12 102 429)"/>
+    <use href="#spark" x="215" y="511"/><use href="#spark" x="1394" y="549"/><use href="#spark" x="1292" y="639"/><use href="#spark" x="1399" y="169"/>
+  </g>
+  <g fill="none" stroke="#d9ccf7" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity=".8">
+    <path d="m70 337 66-34 69 30-70 34-65-30Zm24 13 5 36q38 20 74-4l-2-32m27-12v38l7 13h-14l7-13"/>
+    <path d="M76 579q33-18 57-6 18-22 51-22l18 53q-39 3-58 23-29-8-58 7Zm57-6 11 54m-55-39q16-8 33-6m-29 18q16-8 32-6m-29 19q16-8 32-6m16-23q11-11 28-14m-25 25q12-11 29-14m-25 25q11-10 29-14"/>
+    <path d="m1333 688 80 18-14 58-80-18 14-58Zm-14 58-18 13 104 24-6-19m-56-53 26 21-32 7Z"/>
+  </g>
+  <g transform="translate(531 70)">
+    <use href="#mark" fill="url(#logo)"/>
+    <path d="m27 31 26-23M28 38v25" fill="none" stroke="#f2b8ff" stroke-width="1.3" opacity=".72"/>
+  </g>
+  <g transform="translate(1322 346)">
+    <path d="m-67 60-23 132 49-19 32 32L7 84l15-19 13 140 31-32 47 19L83 60Z" fill="#2a1264" opacity=".12" transform="translate(2 7) scale(.86)"/>
+    <path d="m-67 60-23 132 49-19 32 32L7 84l15-19 13 140 31-32 47 19L83 60Z" fill="url(#tabs)" stroke="url(#gold)" stroke-width="3" transform="scale(.86)"/>
+    <path d="M-13-104Q0-113 13-104t25 6q16-2 25 12t22 16q14 4 17 20t10 23q11 11 6 27t-1 24q3 16-10 25t-16 21q-4 16-21 19t-22 12q-9 13-26 11t-25 4q-13 9-27-1t-25-6q-15 1-23-13t-20-16q-15-4-17-20t-9-23q-11-11-6-26t1-25q-3-16 10-25t16-21q4-15 21-19t22-12q9-13 26-11t25-2Z" fill="#2f125d" opacity=".15" transform="translate(1 6)"/>
+    <path d="M-13-104Q0-113 13-104t25 6q16-2 25 12t22 16q14 4 17 20t10 23q11 11 6 27t-1 24q3 16-10 25t-16 21q-4 16-21 19t-22 12q-9 13-26 11t-25 4q-13 9-27-1t-25-6q-15 1-23-13t-20-16q-15-4-17-20t-9-23q-11-11-6-26t1-25q-3-16 10-25t16-21q4-15 21-19t22-12q9-13 26-11t25-2Z" fill="url(#gold)" stroke="#d49229" stroke-width="2"/>
+    <circle r="94" fill="url(#medal)" stroke="#6d3b98" stroke-width="4"/><circle r="87" fill="none" stroke="#e5b759" stroke-width="1" opacity=".65"/>
+    <use href="#mark" transform="translate(-27 -56) scale(.72)" fill="url(#logo)"/>
+    <use href="#laurel" x="-48" y="47"/><use href="#laurel" x="-48" y="47" transform="scale(-1 1)"/>
+    <use href="#star" x="-23" y="55" fill="#ffda76" transform="translate(-6 12) scale(.8)"/><use href="#star" x="0" y="60" fill="#ffe494"/><use href="#star" x="23" y="55" fill="#ffda76" transform="translate(6 12) scale(.8)"/>
+  </g>
+  <rect x="1.5" y="1.5" width="1497" height="997" rx="26" fill="none" stroke="#8c61df" stroke-width="3"/>
+</svg>

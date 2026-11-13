@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="352" height="172" viewBox="0 0 352 172" fill="none">
+  <defs>
+    <linearGradient id="bubble" x1="157" y1="16" x2="258" y2="124" gradientUnits="userSpaceOnUse"><stop stop-color="#c7a5ff"/><stop offset=".55" stop-color="#8b5df2"/><stop offset="1" stop-color="#5830c9"/></linearGradient>
+    <linearGradient id="mail" x1="52" y1="82" x2="149" y2="156" gradientUnits="userSpaceOnUse"><stop stop-color="#f2e6ff"/><stop offset=".55" stop-color="#d1b7ff"/><stop offset="1" stop-color="#a786ed"/></linearGradient>
+    <linearGradient id="mini" x1="233" y1="104" x2="299" y2="161" gradientUnits="userSpaceOnUse"><stop stop-color="#fff"/><stop offset="1" stop-color="#e0d4ff"/></linearGradient>
+  </defs>
+  <path d="M3 151C92 120 133 149 198 131c62-17 104-51 154-34v75H3Z" fill="#eeebff"/>
+  <path d="M42 161c87-9 136-34 205-27 38 4 71 4 104-5v43H42Z" fill="#e6dfff" opacity=".6"/>
+  <g fill="#8d63d9"><path d="M46 38q1 8 9 9-8 1-9 9-1-8-9-9 8-1 9-9Z"/><path d="M83 25q1 6 7 7-6 1-7 7-1-6-7-7 6-1 7-7Z"/><path d="M320 67q1 8 9 9-8 1-9 9-1-8-9-9 8-1 9-9Z"/></g>
+  <path d="M144 15h93c19 0 32 13 32 31v35c0 17-13 30-32 30h-54l-33 25 6-25h-12c-18 0-31-13-31-30V46c0-18 13-31 31-31Z" fill="#6845b9" opacity=".14" transform="translate(1 5)"/>
+  <path d="M144 15h93c19 0 32 13 32 31v35c0 17-13 30-32 30h-54l-33 25 6-25h-12c-18 0-31-13-31-30V46c0-18 13-31 31-31Z" fill="url(#bubble)" stroke="#7652d6" stroke-width="2"/>
+  <path d="M121 47c0-14 10-24 25-24h90c13 0 22 5 25 15" stroke="#e8d9ff" stroke-width="2" stroke-linecap="round" opacity=".7"/>
+  <path d="M140 48h33m13 0h38m-84 22h57" stroke="#f5eeff" stroke-width="8" stroke-linecap="round"/>
+  <rect x="59" y="94" width="94" height="62" rx="12" fill="#8560cf" opacity=".15" transform="translate(0 4)"/>
+  <rect x="59" y="94" width="94" height="62" rx="12" fill="url(#mail)" stroke="#b499eb" stroke-width="2"/>
+  <path d="m62 151 33-30m55 30-34-30" stroke="#aa8bdf" stroke-width="2"/>
+  <path d="m63 100 36 29a10 10 0 0 0 14 0l36-29" fill="#ece0ff" stroke="#f8f1ff" stroke-width="2" stroke-linejoin="round"/>
+  <rect x="229" y="119" width="71" height="38" rx="19" fill="url(#mini)" stroke="#c1abec" stroke-width="2.5"/>
+  <g fill="#8054d9"><circle cx="248" cy="138" r="4.6"/><circle cx="264.5" cy="138" r="4.6"/><circle cx="281" cy="138" r="4.6"/></g>
+</svg>
