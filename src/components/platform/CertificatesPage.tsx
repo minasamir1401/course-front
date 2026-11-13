@@ -11,6 +11,9 @@ import { useModalFocus } from '@/hooks/useModalFocus';
 import styles from './Platform.module.css';
 import LearningBackdrop from '@/components/student/LearningBackdrop';
 import CertificateRecipients, { type CertificateAudience } from './CertificateRecipients';
+import { egyptDay } from '@/lib/egyptTime';
+import CertificatePreview, { CertificateThumbnail } from './CertificatePreview';
+import { certificateFile, certificatePlaceholder, certificateTitle, printCertificateImage, printCertificates, type CertificateArtwork } from './certificateArtwork';
 
 type Certificate = {
   id: string;
@@ -25,88 +28,6 @@ type Certificate = {
   school: { name: string };
   issuer: { name: string };
 };
-
-async function renderCertificateTemplateBlob(opts: {
-  ar: boolean;
-  schoolName: string;
-  title: string;
-  studentName: string;
-  courseName: string;
-  message: string;
-  issueDate: string;
-  issuerName: string;
-}): Promise<File> {
-  const canvas = document.createElement('canvas');
-  canvas.width = 1400;
-  canvas.height = 990;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) {
-    return new File([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])], 'certificate.png', { type: 'image/png' });
-  }
-
-  const grad = ctx.createLinearGradient(0, 0, 1400, 990);
-  grad.addColorStop(0, '#ffffff');
-  grad.addColorStop(0.5, '#f8f7ff');
-  grad.addColorStop(1, '#eef2ff');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, 1400, 990);
-
-  ctx.strokeStyle = '#3730a3';
-  ctx.lineWidth = 8;
-  ctx.strokeRect(42, 42, 1316, 906);
-  ctx.strokeStyle = '#818cf8';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(58, 58, 1284, 874);
-
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#4338ca';
-  ctx.font = 'bold 26px Cairo, Segoe UI, Arial, sans-serif';
-  ctx.fillText(opts.schoolName || 'Klevro Learning Platform', 700, 150);
-
-  ctx.fillStyle = '#0f172a';
-  ctx.font = '900 54px Cairo, Segoe UI, Arial, sans-serif';
-  ctx.fillText(opts.title || (opts.ar ? 'شهادة تقدير وتميز' : 'Certificate of Achievement'), 700, 260);
-
-  ctx.fillStyle = '#475569';
-  ctx.font = 'bold 26px Cairo, Segoe UI, Arial, sans-serif';
-  ctx.fillText(opts.ar ? 'تُمنح هذه الشهادة بكل فخر واعتزاز إلى الطالب / الطالبة:' : 'This certificate is proudly presented to:', 700, 355);
-
-  ctx.fillStyle = '#3730a3';
-  ctx.font = '900 60px Cairo, Segoe UI, Arial, sans-serif';
-  ctx.fillText(opts.studentName || (opts.ar ? 'الطالب المتميز' : 'Distinguished Student'), 700, 455);
-
-  ctx.strokeStyle = '#c7d2fe';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(350, 485);
-  ctx.lineTo(1050, 485);
-  ctx.stroke();
-
-  if (opts.courseName) {
-    ctx.fillStyle = '#1e293b';
-    ctx.font = 'bold 30px Cairo, Segoe UI, Arial, sans-serif';
-    ctx.fillText(`${opts.ar ? 'المادة / المقرر:' : 'Course / Subject:'} ${opts.courseName}`, 700, 565);
-  }
-
-  ctx.fillStyle = '#334155';
-  ctx.font = '600 26px Cairo, Segoe UI, Arial, sans-serif';
-  const bodyText = opts.message || (opts.ar ? 'تقديرًا للالتزام والتفوق الدراسي والأداء المتميز خلال الفترة الدراسية.' : 'In recognition of outstanding academic dedication, progress, and achievement.');
-  ctx.fillText(bodyText.slice(0, 110), 700, 645);
-  if (bodyText.length > 110) {
-    ctx.fillText(bodyText.slice(110, 220), 700, 690);
-  }
-
-  ctx.fillStyle = '#475569';
-  ctx.font = 'bold 24px Cairo, Segoe UI, Arial, sans-serif';
-  ctx.fillText(`${opts.ar ? 'التاريخ:' : 'Date:'} ${opts.issueDate}`, 340, 845);
-  ctx.fillText(`${opts.ar ? 'إشراف واعتماد:' : 'Authorized by:'} ${opts.issuerName}`, 1060, 845);
-
-  const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
-  if (!blob) {
-    return new File([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])], 'certificate.png', { type: 'image/png' });
-  }
-  return new File([blob], 'certificate-template.png', { type: 'image/png' });
-}
 
 export default function CertificatesPage() {
   const { language } = useLanguage();
@@ -136,8 +57,11 @@ export default function CertificatesPage() {
   const [certCourse, setCertCourse] = useState('');
   const [certMessage, setCertMessage] = useState('');
   const [certCustomStudent, setCertCustomStudent] = useState('');
-  const [certDate, setCertDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [certDate, setCertDate] = useState(egyptDay);
   const [certIssuer, setCertIssuer] = useState('');
+  const [certDuration, setCertDuration] = useState('');
+  const [certScore, setCertScore] = useState('');
+  const [printing, setPrinting] = useState(false);
 
   const closePreview = useCallback(() => {
     setPreview(old => {
@@ -188,8 +112,32 @@ export default function CertificatesPage() {
 
   const handleSelectedStudentsChange = useCallback((students: { id: string; name: string; username: string }[], sName: string) => {
     setSelectedStudents(students);
-    if (sName) setSchoolName(sName);
+    setSchoolName(sName);
   }, []);
+
+  const artwork: CertificateArtwork = {
+    ar,
+    title: certTitle.trim() || certificateTitle(ar),
+    schoolName,
+    studentName: selectedStudents[0]?.name || certCustomStudent.trim() || certificatePlaceholder(ar),
+    course: certCourse.trim(),
+    message: certMessage.trim(),
+    date: certDate,
+    issuer: certIssuer.trim() || issuerDefault || 'Klevro',
+    duration: certDuration.trim(),
+    score: certScore.trim(),
+  };
+  const print = async () => {
+    setPrinting(true);
+    setError('');
+    try {
+      await printCertificates(selectedStudents.length ? selectedStudents.map(({ name }) => ({ ...artwork, studentName: name })) : [artwork]);
+    } catch {
+      setError(ar ? 'تعذر تجهيز الشهادة للطباعة. حاول مرة أخرى.' : 'Could not prepare the certificate for printing. Please try again.');
+    } finally {
+      setPrinting(false);
+    }
+  };
 
   const issue = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -200,10 +148,10 @@ export default function CertificatesPage() {
     const form = event.currentTarget;
     const original = new FormData(form);
     const uploadedFile = original.get('file') as File | null;
-    const titleVal = String(original.get('title') || certTitle || '').trim();
-    const msgVal = String(original.get('message') || certMessage || '').trim();
+    const titleVal = artwork.title;
+    const msgVal = artwork.message;
 
-    let fileToSend: File | null = uploadedFile && uploadedFile.size > 0 ? uploadedFile : null;
+    const fileToSend = uploadedFile && uploadedFile.size > 0 ? uploadedFile : null;
     if (fileToSend && fileToSend.size > 8 * 1024 * 1024) {
       setError(ar ? 'اختر ملف شهادة بحجم لا يزيد عن 8 ميجابايت.' : 'Choose a certificate file up to 8 MB.');
       return;
@@ -216,34 +164,27 @@ export default function CertificatesPage() {
     let created = 0;
     let duplicates = 0;
     try {
-      if (!fileToSend) {
-        const displayStudentName =
-          selectedStudents.length === 1
-            ? selectedStudents[0].name
-            : certCustomStudent.trim() || (ar ? 'طالب متفوق' : 'Honored Student');
-        fileToSend = await renderCertificateTemplateBlob({
-          ar,
-          schoolName: schoolName || 'Klevro',
-          title: titleVal,
-          studentName: displayStudentName,
-          courseName: certCourse.trim(),
-          message: msgVal,
-          issueDate: certDate,
-          issuerName: certIssuer.trim() || issuerDefault || 'Klevro',
-        });
-      }
-
-      for (let offset = 0; offset < audience.studentIds.length; offset += 100) {
-        const ids = audience.studentIds.slice(offset, offset + 100);
+      const names = new Map(selectedStudents.map(student => [student.id, student.name]));
+      const batchSize = fileToSend ? 100 : 16;
+      for (let offset = 0; offset < audience.studentIds.length; offset += batchSize) {
+        const ids = audience.studentIds.slice(offset, offset + batchSize);
         setProgress(ar ? 'جارٍ الإرسال: ' + offset + ' من ' + audience.studentIds.length : 'Sending: ' + offset + ' of ' + audience.studentIds.length);
         const data = new FormData();
-        data.set('file', fileToSend);
+        if (fileToSend) {
+          data.set('file', fileToSend);
+        } else {
+          for (const id of ids) {
+            const name = names.get(id);
+            if (!name) throw new Error('audience');
+            data.append('personalized', await certificateFile({ ...artwork, studentName: name }));
+          }
+        }
         data.set('title', titleVal);
         data.set('message', msgVal);
         data.set('schoolId', audience.schoolId);
         data.set('grade', audience.grade);
         data.set('studentIds', JSON.stringify(ids));
-        const response = await apiFetch('/api/certificates', { method: 'POST', body: data });
+        const response = await apiFetch(fileToSend ? '/api/certificates' : '/api/certificates?personalized=1', { method: 'POST', body: data });
         if (!response.ok) throw new Error(response.status === 400 ? 'file' : response.status === 409 ? 'audience' : 'save');
         const saved: { created: number; duplicates: number } = await response.json();
         created += saved.created;
@@ -253,6 +194,10 @@ export default function CertificatesPage() {
       form.reset();
       setCertTitle('');
       setCertMessage('');
+      setCertCourse('');
+      setCertCustomStudent('');
+      setCertDuration('');
+      setCertScore('');
       setAudience(old => ({ ...old, studentIds: [] }));
       await load();
       setMessage(
@@ -290,7 +235,7 @@ export default function CertificatesPage() {
       if (!response.ok) throw new Error();
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
-      if (showImage && ['image/png', 'image/webp'].includes(item.mimeType)) {
+      if (showImage && item.mimeType.startsWith('image/')) {
         closePreview();
         setPreview({ url, title: item.title });
       } else {
@@ -325,14 +270,9 @@ export default function CertificatesPage() {
     }
   };
 
-  const previewStudentList =
-    selectedStudents.length > 0
-      ? selectedStudents.map(s => s.name)
-      : [certCustomStudent.trim() || (ar ? 'اسم الطالب يظهر هنا' : 'Student Name Here')];
-
   return (
     <DashboardLayout mainClassName={styles.main}>
-      <div className={styles.page} dir={ar ? 'rtl' : 'ltr'}>
+      <div className={`${styles.page} ${styles.certificatePage}`} dir={ar ? 'rtl' : 'ltr'}>
         <LearningBackdrop />
         <section className={styles.hero}>
           <div>
@@ -344,7 +284,7 @@ export default function CertificatesPage() {
                 : (ar ? 'كل شهادة من مدرستك، محفوظة لك في مكان واحد.' : 'Every certificate from your school, saved for you in one place.')}
             </p>
           </div>
-          <Award size={48} className={styles.heroIcon} />
+          <Award size={33} className={styles.heroIcon} aria-hidden="true" />
         </section>
 
         {error && <p role="alert" className={`${styles.status} ${styles.error}`}>{error}</p>}
@@ -352,8 +292,8 @@ export default function CertificatesPage() {
 
         {authorized && admin && (
           <>
-            <section className={styles.card}>
-              <h2>{ar ? 'إصدار وطباعة شهادة (قالب جاهز ثابت)' : 'Issue & print certificate (Fixed template)'}</h2>
+            <section className={`${styles.card} ${styles.issuerCard}`}>
+              <h2>{ar ? 'إصدار وطباعة شهادة' : 'Issue & print certificate'}</h2>
               <p className={styles.muted}>
                 <ShieldCheck size={17} style={{ display: 'inline', verticalAlign: 'middle' }} />{' '}
                 {ar
@@ -374,13 +314,15 @@ export default function CertificatesPage() {
                 <div className={styles.presetBar} role="group" aria-label={ar ? 'قوالب سريعة للعنوان' : 'Quick title presets'}>
                   {[
                     ar ? 'شهادة تقدير للتميز الدراسي' : 'Certificate of Academic Excellence',
-                    ar ? 'شهادة إتمام المقرر بنجاح' : 'Course Completion Certificate',
+                    certificateTitle(ar),
                     ar ? 'شهادة التزام وتفوق' : 'Dedication & Achievement Award',
                   ].map(preset => (
                     <button
                       key={preset}
                       type="button"
                       className={styles.presetBtn}
+                      aria-pressed={artwork.title === preset}
+                      disabled={busy}
                       onClick={() => setCertTitle(preset)}
                     >
                       {preset}
@@ -393,11 +335,10 @@ export default function CertificatesPage() {
                   <input
                     className={styles.input}
                     name="title"
-                    required
                     maxLength={160}
                     value={certTitle}
                     onChange={e => setCertTitle(e.target.value)}
-                    placeholder={ar ? 'مثال: شهادة تقدير للتميز الدراسي' : 'e.g. Certificate of academic achievement'}
+                    placeholder={certificateTitle(ar)}
                     disabled={busy}
                   />
                 </label>
@@ -437,6 +378,17 @@ export default function CertificatesPage() {
                   </label>
                 </div>
 
+                <div className={`${styles.formRow} ${styles.optionalFields}`}>
+                  <label>
+                    {ar ? 'مدة التعلّم (اختياري)' : 'Total duration (optional)'}
+                    <input className={styles.input} value={certDuration} onChange={event => setCertDuration(event.target.value)} maxLength={32} placeholder={ar ? 'مثال: ٨ ساعات' : 'e.g. 8 hours'} disabled={busy} />
+                  </label>
+                  <label>
+                    {ar ? 'النتيجة النهائية (اختياري)' : 'Final score (optional)'}
+                    <input className={styles.input} value={certScore} onChange={event => setCertScore(event.target.value)} maxLength={32} placeholder={ar ? 'مثال: ٩٥٪' : 'e.g. 95%'} disabled={busy} />
+                  </label>
+                </div>
+
                 {!selectedStudents.length && (
                   <label>
                     {ar ? 'اسم الطالب للمعاينة أو الطباعة السريعة (اختياري عند تحديد الطلاب أعلاه)' : 'Student name for quick print preview (optional when students are selected above)'}
@@ -459,43 +411,25 @@ export default function CertificatesPage() {
                     maxLength={1000}
                     rows={2}
                     value={certMessage}
+                    disabled={busy}
                     onChange={e => setCertMessage(e.target.value)}
                     placeholder={ar ? 'تقديرًا لجهودك المتميزة وتفوقك المستمر...' : 'In recognition of your dedication and outstanding progress...'}
                   />
                 </label>
 
-                {/* Live Fixed Certificate Template Preview */}
-                <div className={styles.templateSheet} aria-label={ar ? 'معاينة قالب الشهادة الجاهز' : 'Certificate template preview'}>
-                  <div className={styles.templateHeader}>{schoolName || 'Klevro Learning Platform'}</div>
-                  <div className={styles.templateTitle}>{certTitle || (ar ? 'شهادة تقدير للتميز الدراسي' : 'Certificate of Academic Achievement')}</div>
-                  <div className={styles.templateSubtitle}>
-                    {ar ? 'تُمنح هذه الشهادة بكل فخر واعتزاز إلى الطالب / الطالبة:' : 'This certificate is proudly presented to:'}
+                <div className={styles.proof}>
+                  <div className={styles.proofCaption}>
+                    <span><Award size={16} aria-hidden="true" />{ar ? 'معاينة الشهادة' : 'Certificate preview'}</span>
+                    {selectedStudents.length > 1 && <small>{ar ? 'تُنشأ شهادة مستقلة باسم كل طالب محدد' : 'A separate certificate is created for each selected student'}</small>}
                   </div>
-                  <div className={styles.templateStudent}>
-                    {previewStudentList[0]}
-                    {previewStudentList.length > 1 ? ` (+${previewStudentList.length - 1})` : ''}
-                  </div>
-                  {certCourse && (
-                    <div className={styles.templateSubtitle} style={{ fontWeight: 800, color: '#1e293b' }}>
-                      {ar ? 'المادة / المقرر: ' : 'Course / Subject: '}
-                      {certCourse}
-                    </div>
-                  )}
-                  <p className={styles.templateBody}>
-                    {certMessage || (ar ? 'تقديرًا للالتزام والتفوق الدراسي والأداء المتميز خلال الفترة الدراسية.' : 'In recognition of outstanding academic dedication, progress, and achievement.')}
-                  </p>
-                  <div className={styles.templateFooter}>
-                    <span>{ar ? 'التاريخ: ' : 'Date: '}{certDate}</span>
-                    <span>{ar ? 'إشراف واعتماد: ' : 'Authorized by: '}{certIssuer || issuerDefault || 'Klevro'}</span>
-                  </div>
+                  <CertificatePreview artwork={artwork} />
                 </div>
-
                 <label className={styles.file}>
                   <span>
                     <UploadCloud size={21} style={{ display: 'inline', verticalAlign: 'middle' }} />{' '}
                     {ar ? 'ملف الشهادة (اختياري — يُحفظ القالب الثابت أعلاه تلقائيًا عند تركه فارغًا)' : 'Certificate file (optional — fixed template above is used automatically if left blank)'}
                   </span>
-                  <input type="file" name="file" accept="application/pdf,image/png,image/jpeg,image/webp" />
+                  <input type="file" name="file" accept="application/pdf,image/png,image/jpeg,image/webp" disabled={busy} />
                   <span className={styles.muted}>PDF · PNG · JPG · WebP — {ar ? 'حتى 8 ميجابايت، أو اتركه فارغًا لاستخدام القالب الجاهز' : 'up to 8 MB, or leave blank to use the built-in template'}</span>
                 </label>
 
@@ -504,43 +438,15 @@ export default function CertificatesPage() {
                     <Award size={18} />
                     {busy ? (ar ? 'جارٍ الحفظ…' : 'Saving…') : (ar ? `حفظ وإرسال إلى ${audience.studentIds.length} طالب` : `Save & send to ${audience.studentIds.length} students`)}
                   </button>
-                  <button type="button" className={styles.secondary} onClick={() => window.print()}>
+                  <button type="button" className={styles.secondary} onClick={() => void print()} disabled={busy || printing}>
                     <Printer size={18} />
-                    {ar ? `طباعة القالب الآن (${previewStudentList.length})` : `Print certificate template (${previewStudentList.length})`}
+                    {ar ? `طباعة القالب الآن (${selectedStudents.length || 1})` : `Print certificate template (${selectedStudents.length || 1})`}
                   </button>
                   {progress && <p role="status" aria-live="polite">{progress}</p>}
                 </div>
               </form>
             </section>
 
-            {/* Printable pages for each selected student when printing */}
-            <div className={styles.printOnlyCertificates} aria-hidden="true">
-              {previewStudentList.map((stName, idx) => (
-                <div key={`${stName}-${idx}`} className={styles.printCertPage}>
-                  <div className={styles.templateSheet}>
-                    <div className={styles.templateHeader}>{schoolName || 'Klevro Learning Platform'}</div>
-                    <div className={styles.templateTitle}>{certTitle || (ar ? 'شهادة تقدير للتميز الدراسي' : 'Certificate of Academic Achievement')}</div>
-                    <div className={styles.templateSubtitle}>
-                      {ar ? 'تُمنح هذه الشهادة بكل فخر واعتزاز إلى الطالب / الطالبة:' : 'This certificate is proudly presented to:'}
-                    </div>
-                    <div className={styles.templateStudent}>{stName}</div>
-                    {certCourse && (
-                      <div className={styles.templateSubtitle} style={{ fontWeight: 800, color: '#1e293b' }}>
-                        {ar ? 'المادة / المقرر: ' : 'Course / Subject: '}
-                        {certCourse}
-                      </div>
-                    )}
-                    <p className={styles.templateBody}>
-                      {certMessage || (ar ? 'تقديرًا للالتزام والتفوق الدراسي والأداء المتميز خلال الفترة الدراسية.' : 'In recognition of outstanding academic dedication, progress, and achievement.')}
-                    </p>
-                    <div className={styles.templateFooter}>
-                      <span>{ar ? 'التاريخ: ' : 'Date: '}{certDate}</span>
-                      <span>{ar ? 'إشراف واعتماد: ' : 'Authorized by: '}{certIssuer || issuerDefault || 'Klevro'}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
           </>
         )}
 
@@ -565,7 +471,7 @@ export default function CertificatesPage() {
           <div className={styles.grid}>
             {items.map(item => (
               <article key={item.id} className={`${styles.card} ${styles.certificate}`}>
-                <div className={styles.preview}><Award size={72} strokeWidth={1.4} /></div>
+                <CertificateThumbnail certificateId={item.id} title={item.title} showImage={!admin && !item.revokedAt && item.mimeType.startsWith('image/')} />
                 <small>{item.school.name}</small>
                 <h2>{item.title}</h2>
                 {admin && <p>{item.student.name} · <bdi>{item.student.username}</bdi></p>}
@@ -584,7 +490,7 @@ export default function CertificatesPage() {
                     <button className={styles.primary} disabled={busy} onClick={() => openFile(item)}>
                       <Download size={17} />{ar ? 'تحميل الشهادة' : 'Download certificate'}
                     </button>
-                    {['image/png', 'image/webp'].includes(item.mimeType) && (
+                    {item.mimeType.startsWith('image/') && (
                       <button className={styles.secondary} disabled={busy} onClick={() => openFile(item, true)}>
                         {ar ? 'معاينة' : 'Preview'}
                       </button>
@@ -625,7 +531,12 @@ export default function CertificatesPage() {
                   <X size={20} />
                 </button>
               </div>
-              <img src={preview.url} alt={preview.title} style={{ width: '100%', height: 'auto', marginTop: 16 }} />
+              <img src={preview.url} alt={preview.title} className={styles.previewImage} />
+              <div className={styles.actions}>
+                <button className={styles.secondary} onClick={() => void printCertificateImage(preview.url, preview.title).catch(() => setError(ar ? 'تعذرت طباعة الشهادة.' : 'Could not print the certificate.'))}>
+                  <Printer size={17} />{ar ? 'طباعة الشهادة' : 'Print certificate'}
+                </button>
+              </div>
             </div>
           </div>
         )}

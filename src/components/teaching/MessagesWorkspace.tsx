@@ -1,371 +1,297 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { RefreshCw, Send, CheckCheck, User, MessageSquare, ArrowRight } from 'lucide-react';
+import { ArrowLeft, Bell, CalendarDays, Check, CheckCheck, ChevronDown, MessageCircle, MoreVertical, Plus, RefreshCw, Search, Send, Star, User, Users, X } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { formatEgyptDateTime } from '@/lib/egyptTime';
+import { egyptDay, formatEgyptDate } from '@/lib/egyptTime';
 import { teachingRequest } from '@/lib/teachingClient';
 import { useTeachingData } from './useTeachingData';
-import styles from './TeachingWorkspace.module.css';
+import styles from './MessagesWorkspace.module.css';
+
+type Person = { id: string; name: string; grade?: string | null };
+type Message = { id: string; senderId: string; recipientId: string; sender: Person; recipient: Person; body: string; createdAt: string; readAt: string | null };
+type Inbox = { items: Message[]; unread: number; pagination: { pages: number } };
+type Conversation = { person: Person; last?: Message; unread: number };
+type Filter = 'all' | 'unread' | 'starred';
+
+function Avatar({ person }: { person?: Person }) {
+  const initials = person?.name.match(/[\p{L}\p{N}]+/gu)?.slice(0, 2).map(word => Array.from(word)[0]).join('');
+  const tone = person ? Array.from(person.id).reduce((sum, char) => sum + char.charCodeAt(0), 0) % 4 : 0;
+  return <span className={styles.avatar} data-tone={tone} aria-hidden="true">{initials || <MessageCircle size={19} />}</span>;
+}
+
+function errorText(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
 
 export default function MessagesWorkspace({ staff = false }: { staff?: boolean }) {
-  const params = useSearchParams(), { language } = useLanguage(), ar = language === 'ar';
-  const [reload, setReload] = useState(0), [page, setPage] = useState(1), [peer, setPeer] = useState(params.get('studentId') || ''), [body, setBody] = useState('');
-  const [search, setSearch] = useState(''), [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false), [requestId, setRequestId] = useState(() => crypto.randomUUID());
+  const params = useSearchParams();
+  const { language } = useLanguage();
+  const ar = language === 'ar';
+  const t = (arabic: string, english: string) => ar ? arabic : english;
+  const [reload, setReload] = useState(0);
+  const [page, setPage] = useState(1);
+  const [peer, setPeer] = useState(params.get('studentId') || '');
+  const [threadPage, setThreadPage] = useState(1);
+  const [body, setBody] = useState('');
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<Filter>('all');
+  const [newChat, setNewChat] = useState(false);
+  const [starredState, setStarredState] = useState<{ owner: string; ids: string[] }>();
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [requestId, setRequestId] = useState('');
+  const thread = useRef<HTMLDivElement>(null);
+  const menu = useRef<HTMLDetailsElement>(null);
+  const rosterSearch = useRef<HTMLInputElement>(null);
   const { data: session } = useTeachingData('/auth/me');
-  const { data: inbox, error: loadError, loading } = useTeachingData('/messages?page=' + page, reload);
-  const { data: roster } = useTeachingData(staff ? '/teaching/overview?limit=100&search=' + encodeURIComponent(search) : '');
-  const { data: profile } = useTeachingData(staff && peer ? '/teaching/students/' + encodeURIComponent(peer) : '');
+  const myId: string = session?.user?.id || '';
+  const { data: inboxData, error: loadError, loading } = useTeachingData('/messages?page=' + page, reload);
+  const inbox = inboxData as Inbox | undefined;
+  const { data: roster, loading: rosterLoading, error: rosterError } = useTeachingData(staff && newChat ? '/teaching/overview?limit=100&search=' + encodeURIComponent(search) : '');
+  const { data: profileData } = useTeachingData(staff && peer ? '/teaching/students/' + encodeURIComponent(peer) : '');
+  const profile = profileData?.profile as Person | undefined;
+  const starKey = myId ? 'klevro-message-stars:' + myId : '';
+  const starred = starredState?.owner === myId ? starredState.ids : [];
 
-  const myId = session?.user?.id || '';
-
-  const { peers, conversations } = useMemo(() => {
-    const peerMap = new Map<string, string>();
-    const convMap = new Map<string, { id: string; name: string; lastBody: string; lastAt: string; unread: number; messages: any[] }>();
-
-    for (const message of inbox?.items || []) {
-      const incoming = message.recipientId === myId || message.sender?.id !== myId;
-      const person = message.sender?.id === myId ? message.recipient : message.sender;
-      if (!person?.id) continue;
-      peerMap.set(person.id, person.name);
-      const existing = convMap.get(person.id);
-      const isUnread = incoming && !message.readAt;
-      if (!existing) {
-        convMap.set(person.id, {
-          id: person.id,
-          name: person.name,
-          lastBody: message.body,
-          lastAt: message.createdAt,
-          unread: isUnread ? 1 : 0,
-          messages: [message],
-        });
-      } else {
-        existing.messages.push(message);
-        if (isUnread) existing.unread += 1;
-      }
-    }
-
-    for (const student of roster?.students || []) {
-      peerMap.set(student.id, student.name);
-      if (!convMap.has(student.id)) {
-        convMap.set(student.id, {
-          id: student.id,
-          name: student.name,
-          lastBody: '',
-          lastAt: '',
-          unread: 0,
-          messages: [],
-        });
-      }
-    }
-
-    if (profile?.profile) {
-      peerMap.set(profile.profile.id, profile.profile.name);
-      if (!convMap.has(profile.profile.id)) {
-        convMap.set(profile.profile.id, {
-          id: profile.profile.id,
-          name: profile.profile.name,
-          lastBody: '',
-          lastAt: '',
-          unread: 0,
-          messages: [],
-        });
-      }
-    }
-
-    const q = search.trim().toLowerCase();
-    const list = [...convMap.values()].filter(c => !q || c.name.toLowerCase().includes(q) || c.lastBody.toLowerCase().includes(q));
-    return { peers: peerMap, conversations: list };
-  }, [inbox?.items, roster?.students, profile, myId, search]);
-
-  const activePeerId = peer || conversations.find(c => c.messages.length > 0)?.id || conversations[0]?.id || '';
-  const activePeerName = (activePeerId && peers.get(activePeerId)) || '';
-  const activeMessages = useMemo(() => {
-    const all = inbox?.items || [];
-    const filtered = activePeerId
-      ? all.filter((m: any) => m.sender?.id === activePeerId || m.recipient?.id === activePeerId || m.senderId === activePeerId || m.recipientId === activePeerId)
-      : all;
-    const list = filtered.length > 0 ? filtered : all;
-    return [...list].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-  }, [inbox?.items, activePeerId]);
-
-  async function read(id: string) {
+  useEffect(() => {
+    if (!starKey) return;
+    // This preference belongs to this signed-in account on this browser.
+    let ids: string[] = [];
     try {
-      await teachingRequest('/messages/' + id + '/read', { method: 'PATCH' });
-      setReload(value => value + 1);
-    } catch (cause: any) {
-      setError(cause.message);
+      const stored: unknown = JSON.parse(localStorage.getItem(starKey) || '[]');
+      if (Array.isArray(stored)) ids = stored.filter((id): id is string => typeof id === 'string');
+    } catch {}
+    setStarredState({ owner: myId, ids });
+  }, [myId, starKey]);
+  useEffect(() => { if (newChat) rosterSearch.current?.focus(); }, [newChat]);
+
+  const conversations = useMemo(() => {
+    const results = new Map<string, Conversation>();
+    if (!myId) return results;
+    for (const message of inbox?.items || []) {
+      const person = message.senderId === myId ? message.recipient : message.sender;
+      if (!person?.id) continue;
+      const existing = results.get(person.id);
+      const unread = message.recipientId === myId && !message.readAt ? 1 : 0;
+      if (existing) existing.unread += unread;
+      else results.set(person.id, { person, last: message, unread });
     }
+    return results;
+  }, [inbox, myId]);
+  const activeId = peer || conversations.keys().next().value || '';
+  const { data: threadData, loading: threadLoading, error: threadError } = useTeachingData(activeId ? '/messages?peerId=' + encodeURIComponent(activeId) + '&page=' + threadPage : '', reload);
+  const activeThread = threadData as Inbox | undefined;
+  const messages = useMemo(() => (activeThread?.items || []).filter(message =>
+    (message.senderId === myId && message.recipientId === activeId) || (message.recipientId === myId && message.senderId === activeId)
+  ).slice().reverse(), [activeThread, activeId, myId]);
+  const active = conversations.get(activeId)?.person || profile
+    || (messages[0] ? (messages[0].senderId === myId ? messages[0].recipient : messages[0].sender) : undefined);
+  const [chosen, setChosen] = useState<Person>();
+  const activePerson = chosen?.id === activeId ? { ...chosen, ...active } : active;
+  const activeGrade = profile?.id === activeId ? profile.grade || activePerson?.grade : activePerson?.grade;
+
+  useEffect(() => {
+    if (thread.current && !threadLoading) thread.current.scrollTop = threadPage === 1 ? thread.current.scrollHeight : 0;
+  }, [threadPage, messages, threadLoading]);
+
+  const query = search.trim().toLocaleLowerCase();
+  const filtered = Array.from(conversations.values()).filter(({ person, last, unread }) =>
+    (filter === 'all' || (filter === 'unread' ? unread > 0 : starred.includes(person.id)))
+    && (!query || person.name.toLocaleLowerCase().includes(query) || last?.body.toLocaleLowerCase().includes(query))
+  );
+  const students = (roster?.students || []) as Person[];
+  const labelDate = (value: string) => egyptDay(value) === egyptDay() ? t('اليوم', 'Today') : formatEgyptDate(value, language, { weekday: 'short' });
+  const labelTime = (value: string) => new Intl.DateTimeFormat(ar ? 'ar-EG' : 'en-GB', { timeStyle: 'short', timeZone: 'Africa/Cairo' }).format(new Date(value));
+
+  function select(person: Person) {
+    if (busy) return;
+    setChosen(person);
+    setPeer(person.id);
+    setThreadPage(1);
+    setRequestId('');
+    setBody('');
+    setNotice('');
+    setError('');
+    setNewChat(false);
+    if (newChat) { setSearch(''); setFilter('all'); }
+    if (menu.current) menu.current.open = false;
   }
 
-  const getInitials = (name: string) => {
-    const parts = (name || '').trim().split(/\s+/);
-    return parts.slice(0, 2).map(p => p[0] || '').join('').toUpperCase() || 'U';
-  };
+  function toggleStar() {
+    if (!activeId || !starKey) return;
+    const ids = starred.includes(activeId) ? starred.filter(id => id !== activeId) : [...starred, activeId];
+    setStarredState({ owner: myId, ids });
+    try { localStorage.setItem(starKey, JSON.stringify(ids)); } catch {}
+    if (menu.current) menu.current.open = false;
+  }
 
-  return (
-    <DashboardLayout>
-      <div className={styles.page} dir={ar ? 'rtl' : 'ltr'}>
-        <header className={styles.hero}>
-          <div>
-            <p className={styles.eyebrow}>{ar ? 'التواصل والمحادثات المباشرة' : 'Direct chat & guidance'}</p>
-            <h1>{ar ? 'المحادثات والرسائل' : 'Chat & Messages'}</h1>
-            <p className={styles.muted}>{ar ? 'تواصل مباشر ومنظم في شكل محادثات بين الطالب والمعلم.' : 'Organized chat threads between students and their teaching staff.'}</p>
-          </div>
-          <div className={styles.actions}>
-            <span className={`${styles.badge} ${inbox?.unread ? styles.warning : styles.good}`}>
-              {inbox?.unread || 0} {ar ? 'غير مقروءة' : 'unread'}
-            </span>
-            <button className={styles.button} onClick={() => setReload(value => value + 1)}>
-              <RefreshCw size={15} />
-              {ar ? 'تحديث الرسائل' : 'Refresh messages'}
-            </button>
-            <Link className={styles.button} href={staff ? '/school-admin/follow-up' : '/dashboard'}>
-              <ArrowRight size={15} />
-              {ar ? 'العودة' : 'Back'}
-            </Link>
-          </div>
-        </header>
+  async function read(ids: string[]) {
+    if (!ids.length) return;
+    setPeer(activeId);
+    setBusy(true);
+    setError('');
+    if (menu.current) menu.current.open = false;
+    try {
+      for (const id of ids) await teachingRequest('/messages/' + encodeURIComponent(id) + '/read', { method: 'PATCH' });
+    } catch (cause) {
+      setError(errorText(cause, t('تعذر تحديث الرسالة.', 'Could not update the message.')));
+    } finally {
+      setBusy(false);
+      setReload(value => value + 1);
+    }
+  }
+  const unreadIds = messages.filter(message => message.recipientId === myId && !message.readAt).map(message => message.id);
+  const nav = [
+    { href: '/school-admin/follow-up', label: t('الطلاب والدروس', 'Students & lessons'), icon: Users },
+    { href: '/school-admin/schedule', label: t('الجدول والتقويم', 'Schedule & calendar'), icon: CalendarDays },
+    { href: '/school-admin/messages', label: t('المحادثات والرسائل', 'Chat & messages'), icon: MessageCircle },
+    { href: '/school-admin/reminders', label: t('التنبيهات والتذكيرات', 'Notices & reminders'), icon: Bell },
+  ];
 
-        {staff && (
-          <nav className={styles.nav} aria-label={ar ? 'متابعة المعلم' : 'Teacher follow-up'}>
-            {[
-              ['/school-admin/follow-up', ar ? 'الطلاب والدروس' : 'Students & lessons', false],
-              ['/school-admin/schedule', ar ? 'الجدول والتقويم' : 'Schedule & calendar', false],
-              ['/school-admin/messages', ar ? 'المحادثات والرسائل' : 'Chat & messages', true],
-              ['/school-admin/reminders', ar ? 'التنبيهات والتذكيرات' : 'Notices & reminders', false],
-            ].map(([href, label, active]) => (
-              <Link key={String(href)} href={String(href)} aria-current={active ? 'page' : undefined}>
-                {label}
-              </Link>
-            ))}
-          </nav>
-        )}
-
-        {(error || loadError) && <p role="alert" className={styles.error}>{error || loadError}</p>}
-        {notice && <p role="status" className={styles.success}>{notice}</p>}
-
-        <div className={styles.chatLayout}>
-          {/* Conversations Sidebar */}
-          <aside className={styles.chatSidebar}>
-            <div className={styles.chatSidebarHeader}>
-              {staff && (
-                <label className={styles.field}>
-                  {ar ? 'البحث في الطلاب والمحادثات' : 'Find a student or chat'}
-                  <input
-                    type="search"
-                    placeholder={ar ? 'ابحث بالاسم...' : 'Search by name...'}
-                    value={search}
-                    onChange={event => setSearch(event.target.value)}
-                  />
-                </label>
-              )}
-              <label className={styles.field}>
-                {ar ? 'المستلم / المحادثة النشطة' : 'Recipient / Active chat'}
-                <select
-                  required
-                  value={peer || activePeerId}
-                  onChange={event => {
-                    setPeer(event.target.value);
-                    setRequestId(crypto.randomUUID());
-                    setNotice('');
-                    setError('');
-                  }}
-                >
-                  <option value="">{ar ? 'اختر المستلم' : 'Choose recipient'}</option>
-                  {[...peers.entries()].map(([id, name]) => (
-                    <option key={id} value={id}>{name}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <div className={styles.chatContactList}>
-              {conversations.map(conv => {
-                const isSelected = conv.id === activePeerId;
-                return (
-                  <button
-                    key={conv.id}
-                    type="button"
-                    onClick={() => {
-                      setPeer(conv.id);
-                      setRequestId(crypto.randomUUID());
-                      setNotice('');
-                      setError('');
-                    }}
-                    className={`${styles.chatContactItem} ${isSelected ? styles.chatContactActive : ''}`}
-                  >
-                    <div className={styles.chatAvatar}>{getInitials(conv.name)}</div>
-                    <div className={styles.chatContactMeta}>
-                      <div className={styles.chatContactTop}>
-                        <strong>{conv.name}</strong>
-                        {conv.unread > 0 && (
-                          <span className={`${styles.badge} ${styles.primary}`} style={{ padding: '2px 7px', fontSize: 10 }}>
-                            {conv.unread}
-                          </span>
-                        )}
-                      </div>
-                      <p className={styles.chatContactPreview}>
-                        {conv.lastBody || (ar ? 'اضغط لبدء محادثة جديدة' : 'Click to start a conversation')}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
-              {!conversations.length && !loading && (
-                <p className={styles.empty}>{ar ? 'لا توجد جهات اتصال مطابقة.' : 'No matching contacts.'}</p>
-              )}
-            </div>
-
-            {inbox?.pagination?.pages > 1 && (
-              <div className={styles.pagination} style={{ padding: '12px 16px', borderTop: '1px solid #e2e8f0' }}>
-                <button className={styles.button} disabled={page <= 1} onClick={() => setPage(value => value - 1)}>
-                  {ar ? 'السابق' : 'Previous'}
-                </button>
-                <span>{page} / {inbox.pagination.pages}</span>
-                <button className={styles.button} disabled={page >= inbox.pagination.pages} onClick={() => setPage(value => value + 1)}>
-                  {ar ? 'التالي' : 'Next'}
-                </button>
-              </div>
-            )}
-          </aside>
-
-          {/* Active Chat Thread Window */}
-          <section className={styles.chatWindow}>
-            <div className={styles.chatHeader}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div className={styles.chatAvatar}>
-                  {activePeerName ? getInitials(activePeerName) : <MessageSquare size={18} />}
-                </div>
-                <div>
-                  <h2 style={{ marginBottom: 2, fontSize: 16 }}>
-                    {activePeerName || (ar ? 'كل المحادثات' : 'All conversations')}
-                  </h2>
-                  <p className={styles.muted} style={{ fontSize: 12 }}>
-                    {activePeerId
-                      ? (ar ? 'محادثة مباشرة ومؤمنة داخل المنصة' : 'Direct private thread')
-                      : (ar ? 'اختر محادثة من القائمة الجانبية للرد' : 'Select a conversation from the sidebar to reply')}
-                  </p>
-                </div>
-              </div>
-              {staff && activePeerId && (
-                <Link className={styles.button} href={`/school-admin/follow-up/students/${encodeURIComponent(activePeerId)}`}>
-                  <User size={15} />
-                  {ar ? 'ملف متابعة الطالب' : 'Student follow-up'}
-                </Link>
-              )}
-            </div>
-
-            <div className={styles.chatThread}>
-              {loading && <p role="status" className={styles.empty}>{ar ? 'جارٍ تحميل المحادثة…' : 'Loading conversation…'}</p>}
-              {activeMessages.map((message: any) => {
-                const incoming = message.recipientId === myId || (myId && message.sender?.id !== myId);
-                const person = incoming ? message.sender : message.recipient;
-                return (
-                  <article
-                    key={message.id}
-                    className={`${styles.chatBubbleRow} ${incoming ? styles.chatBubbleTheirs : styles.chatBubbleMine} ${incoming && !message.readAt ? styles.unread : ''}`}
-                  >
-                    <div className={styles.chatBubbleCard}>
-                      <div style={{ fontWeight: 800, fontSize: 12, marginBottom: 4, opacity: incoming ? 0.75 : 0.9 }}>
-                        {incoming ? `${ar ? 'من' : 'From'} ${person?.name || ''}` : `${ar ? 'أنت إلى' : 'You to'} ${person?.name || ''}`}
-                      </div>
-                      <p style={{ margin: 0, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{message.body}</p>
-                    </div>
-                    <div className={styles.chatBubbleMeta}>
-                      <span>{formatEgyptDateTime(message.createdAt, language)}</span>
-                      <span>·</span>
-                      <span>
-                        <CheckCheck size={13} style={{ display: 'inline', verticalAlign: 'middle', marginInlineEnd: 3 }} />
-                        {message.readAt ? (ar ? 'مقروءة' : 'Read') : (ar ? 'لم تُقرأ بعد' : 'Unread')}
-                      </span>
-                      {incoming && !message.readAt && (
-                        <button
-                          type="button"
-                          className={styles.button}
-                          style={{ padding: '2px 8px', fontSize: 11, borderRadius: 8 }}
-                          onClick={() => void read(message.id)}
-                        >
-                          {ar ? 'تعليم كمقروءة' : 'Mark as read'}
-                        </button>
-                      )}
-                      {person?.id && peer !== person.id && (
-                        <button
-                          type="button"
-                          className={styles.button}
-                          style={{ padding: '2px 8px', fontSize: 11, borderRadius: 8 }}
-                          onClick={() => { setPeer(person.id); setNotice(''); setError(''); }}
-                        >
-                          {ar ? 'كتابة رد' : 'Reply'}
-                        </button>
-                      )}
-                    </div>
-                  </article>
-                );
-              })}
-
-              {inbox && !activeMessages.length && (
-                <div className={styles.empty}>
-                  <p>{ar ? 'لا توجد رسائل في هذه المحادثة بعد. ابدأ بإرسال أول رسالة بالأسفل.' : 'No messages in this conversation yet. Send the first message below.'}</p>
-                </div>
-              )}
-            </div>
-
-            <form
-              className={styles.chatComposerBar}
-              onSubmit={async event => {
-                event.preventDefault();
-                const targetRecipient = peer || activePeerId;
-                if (!targetRecipient) return;
-                setBusy(true);
-                setError('');
-                setNotice('');
-                try {
-                  await teachingRequest('/messages', {
-                    method: 'POST',
-                    body: JSON.stringify({ recipientIds: [targetRecipient], body, requestId }),
-                  });
-                  setBody('');
-                  setRequestId(crypto.randomUUID());
-                  setReload(value => value + 1);
-                  setNotice(ar ? 'تم إرسال الرسالة' : 'Message sent');
-                } catch (cause: any) {
-                  setError(cause.message);
-                } finally {
-                  setBusy(false);
-                }
-              }}
-            >
-              {!staff && !peers.size && (
-                <p className={styles.muted}>{ar ? 'تقدر ترد على معلمك عندما يصلك توجيه منه.' : 'You can reply when your teacher sends you guidance.'}</p>
-              )}
-              <div className={styles.chatComposerRow}>
-                <label className={styles.field} style={{ margin: 0 }}>
-                  <span className="sr-only">{ar ? 'نص الرسالة' : 'Message'}</span>
-                  <textarea
-                    required
-                    maxLength={4000}
-                    placeholder={ar ? 'اكتب رسالتك هنا...' : 'Write your message here...'}
-                    value={body}
-                    onChange={event => setBody(event.target.value)}
-                  />
-                </label>
-                <button
-                  type="submit"
-                  className={`${styles.button} ${styles.primary}`}
-                  style={{ minHeight: 54, paddingInline: 22 }}
-                  disabled={busy || !(peer || activePeerId)}
-                >
-                  <Send size={16} />
-                  <span>{busy ? (ar ? 'جارٍ الإرسال…' : 'Sending…') : (ar ? 'إرسال الرسالة' : 'Send message')}</span>
-                </button>
-              </div>
-            </form>
-          </section>
+  return <DashboardLayout>
+    <div className={styles.page} dir={ar ? 'rtl' : 'ltr'}>
+      <header className={styles.hero}>
+        <div>
+          <p className={styles.eyebrow}>{t('التواصل والتوجيه المباشر', 'Direct chat & guidance')}</p>
+          <h1>{t('الرسائل', 'Messages')}</h1>
+          <p>{staff ? t('تابع محادثاتك مع الطلاب وقدّم لهم التوجيه والدعم.', 'Manage conversations with students and follow up on their progress.') : t('تواصل مع معلميك وتابع رسائلك في مكان واحد.', 'Keep up with your teachers and their guidance in one place.')}</p>
         </div>
+      </header>
+
+      {staff && <nav className={styles.nav} aria-label={t('متابعة المعلم', 'Teacher follow-up')}>
+        {nav.map(({ href, label, icon: Icon }) => <Link key={href} href={href} aria-current={href.endsWith('/messages') ? 'page' : undefined}><Icon size={19} aria-hidden="true" />{label}</Link>)}
+      </nav>}
+      {(error || loadError || threadError) && <p role="alert" className={styles.error}>{error || loadError || threadError}</p>}
+      {notice && <p role="status" className="sr-only">{notice}</p>}
+
+      <div className={styles.layout}>
+        <aside className={styles.sidebar} aria-label={t('قائمة المحادثات', 'Conversation list')}>
+          <div className={styles.sidebarHead}>
+            <div className={styles.sidebarTitle}>
+              <h2>{newChat ? t('اختيار طالب', 'Choose a student') : t('المحادثات', 'Conversations')}</h2>
+              {!newChat && <span className={styles.count}>{conversations.size}</span>}
+              {staff && <button type="button" className={newChat ? styles.iconButton : styles.primary} onClick={() => { setNewChat(value => !value); setSearch(''); }} aria-label={newChat ? t('إغلاق اختيار الطالب', 'Close student picker') : undefined}>
+                {newChat ? <X size={18} /> : <><Plus size={17} aria-hidden="true" />{t('محادثة جديدة', 'New chat')}</>}
+              </button>}
+            </div>
+            <label className={styles.search}>
+              <Search size={18} aria-hidden="true" />
+              <input ref={rosterSearch} type="search" aria-label={newChat ? t('البحث عن طالب', 'Search for a student') : t('البحث في المحادثات', 'Search conversations')} placeholder={t('ابحث بالاسم…', 'Search by name…')} value={search} onChange={event => setSearch(event.target.value)} />
+            </label>
+            {!newChat && <div className={styles.filters} role="group" aria-label={t('تصفية المحادثات', 'Filter conversations')}>
+              <button type="button" aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>{t('الكل', 'All')}</button>
+              <button type="button" aria-pressed={filter === 'unread'} onClick={() => setFilter('unread')}>{t('غير مقروءة', 'Unread')}{!!inbox?.unread && <span>{inbox.unread}</span>}</button>
+              <button type="button" aria-pressed={filter === 'starred'} onClick={() => setFilter('starred')}><Star size={15} aria-hidden="true" />{t('المفضلة', 'Starred')}</button>
+            </div>}
+          </div>
+          <div className={styles.contacts}>
+            {newChat ? <>
+              {rosterLoading && <p role="status" className={styles.empty}>{t('جارٍ تحميل الطلاب…', 'Loading students…')}</p>}
+              {rosterError && <p role="alert" className={styles.empty}>{rosterError}</p>}
+              {students.map(person => <button key={person.id} className={styles.contact} type="button" onClick={() => select(person)}><Avatar person={person} /><span className={styles.contactText}><strong>{person.name}</strong><small>{person.grade || t('بدء محادثة', 'Start a conversation')}</small></span></button>)}
+              {!rosterLoading && !rosterError && !students.length && <p className={styles.empty}>{t('لا يوجد طلاب يطابقون البحث.', 'No students match your search.')}</p>}
+            </> : <>
+              {filtered.map(({ person, last, unread }) => <button key={person.id} className={styles.contact} type="button" aria-pressed={person.id === activeId} onClick={() => { if (person.id !== activeId) select(person); }}>
+                <Avatar person={person} />
+                <span className={styles.contactText}><strong>{person.name}</strong><small dir="auto">{last?.body}</small></span>
+                <span className={styles.contactMeta}>
+                  {last && <time dateTime={last.createdAt}>{egyptDay(last.createdAt) === egyptDay() ? labelTime(last.createdAt) : formatEgyptDate(last.createdAt, language, { year: undefined })}</time>}
+                  {unread > 0 ? <span className={styles.unread}>{unread}<span className="sr-only"> {t('غير مقروءة', 'unread')}</span></span> : starred.includes(person.id) ? <Star className={styles.star} size={15} aria-label={t('مفضلة', 'Starred')} /> : null}
+                </span>
+              </button>)}
+              {!filtered.length && <p className={styles.empty} role={loading ? 'status' : undefined}>{loading ? t('جارٍ تحميل المحادثات…', 'Loading conversations…') : t('لا توجد محادثات هنا.', 'No conversations here.')}</p>}
+            </>}
+          </div>
+          {!newChat && !!inbox?.pagination && inbox.pagination.pages > 1 && <div className={styles.pagination}>
+            <button type="button" disabled={page <= 1} onClick={() => setPage(value => value - 1)}>{t('السابق', 'Previous')}</button>
+            <span>{page} / {inbox.pagination.pages}</span>
+            <button type="button" disabled={page >= inbox.pagination.pages} onClick={() => setPage(value => value + 1)}>{t('التالي', 'Next')}</button>
+          </div>}
+        </aside>
+
+        <section className={styles.window} aria-label={t('المحادثة الحالية', 'Active conversation')}>
+          <header className={styles.windowHead}>
+            <Avatar person={activePerson} />
+            <div className={styles.activePerson}>
+              <h2>{activePerson?.name || t('محادثة مباشرة', 'Direct conversation')}</h2>
+              <p>{activeGrade || (activeId ? t('رسائل خاصة داخل كليفرو', 'Private messages on Klevro') : t('اختر محادثة من القائمة', 'Choose a conversation from the list'))}</p>
+            </div>
+            <button type="button" className={styles.iconButton} disabled={busy} onClick={() => { if (activeId) setPeer(activeId); setReload(value => value + 1); }} aria-label={t('تحديث الرسائل', 'Refresh messages')} title={t('تحديث الرسائل', 'Refresh messages')}><RefreshCw size={17} /></button>
+            {activeId ? <details ref={menu} className={styles.menu} onKeyDown={event => {
+              if (event.key === 'Escape' && menu.current?.open) { menu.current.open = false; menu.current.querySelector('summary')?.focus(); }
+            }}>
+              <summary className={styles.iconButton} aria-label={t('خيارات المحادثة', 'Conversation options')}><MoreVertical size={19} /></summary>
+              <div className={styles.menuPanel}>
+                <button type="button" onClick={toggleStar}><Star size={17} />{starred.includes(activeId) ? t('إزالة من المفضلة', 'Unstar conversation') : t('إضافة إلى المفضلة', 'Star conversation')}</button>
+                {staff && <Link href={'/school-admin/follow-up/students/' + encodeURIComponent(activeId)}><User size={17} />{t('ملف متابعة الطالب', 'Student follow-up')}</Link>}
+                {!!unreadIds.length && <button type="button" disabled={busy} onClick={() => void read(unreadIds)}><CheckCheck size={17} />{t('تعليم الرسائل الظاهرة كمقروءة', 'Mark visible messages as read')}</button>}
+              </div>
+            </details> : <Link className={styles.iconButton} href={staff ? '/school-admin/follow-up' : '/dashboard'} aria-label={t('العودة', 'Back')}><ArrowLeft size={18} /></Link>}
+          </header>
+
+          <div className={styles.thread} ref={thread}>
+            {threadLoading && <p role="status" className={styles.empty}>{t('جارٍ تحميل المحادثة…', 'Loading conversation…')}</p>}
+            {!threadLoading && !!activeThread?.pagination && activeThread.pagination.pages > 1 && <div className={styles.threadPagination}>
+              {threadPage < activeThread.pagination.pages && <button type="button" onClick={() => setThreadPage(value => value + 1)}>{t('رسائل أقدم', 'Older messages')}</button>}
+              {threadPage > 1 && <button type="button" onClick={() => setThreadPage(value => value - 1)}><ChevronDown size={14} />{t('رسائل أحدث', 'Newer messages')}</button>}
+            </div>}
+            {messages.map((message, index) => {
+              const incoming = message.recipientId === myId;
+              const newDay = !index || egyptDay(message.createdAt) !== egyptDay(messages[index - 1].createdAt);
+              return <Fragment key={message.id}>
+                {newDay && <div className={styles.day}><time dateTime={egyptDay(message.createdAt)}>{labelDate(message.createdAt)}</time></div>}
+                <article className={`${styles.message} ${incoming ? styles.incoming : styles.outgoing}`} aria-label={incoming ? message.sender.name : t('أنت', 'You')}>
+                  {incoming && <Avatar person={message.sender} />}
+                  <div className={styles.messageContent}>
+                    <p dir="auto" className={styles.bubble}>{message.body}</p>
+                    <div className={styles.messageMeta}>
+                      <time dateTime={message.createdAt}>{labelTime(message.createdAt)}</time>
+                      {!incoming && (message.readAt ? <CheckCheck size={15} aria-label={t('مقروءة', 'Read')} /> : <Check size={15} aria-label={t('تم الإرسال', 'Sent')} />)}
+                      {incoming && !message.readAt && <button type="button" onClick={() => void read([message.id])} disabled={busy}>{t('تعليم كمقروءة', 'Mark as read')}</button>}
+                    </div>
+                  </div>
+                </article>
+              </Fragment>;
+            })}
+            {!threadLoading && !threadError && !messages.length && <div className={styles.threadEmpty}>
+              <span><MessageCircle size={29} aria-hidden="true" /></span>
+              <h3>{activeId ? t('بداية المحادثة', 'Start the conversation') : t('رسائلك في مكان واحد', 'Your messages in one place')}</h3>
+              <p>{activeId ? t('اكتب أول رسالة بالأسفل.', 'Write the first message below.') : t('اختر محادثة لعرض الرسائل هنا.', 'Select a conversation to see its messages here.')}</p>
+            </div>}
+          </div>
+
+          <form className={styles.composer} onSubmit={async event => {
+            event.preventDefault();
+            if (!activeId || !body.trim() || busy) return;
+            setBusy(true);
+            setError('');
+            setNotice('');
+            const id = requestId || crypto.randomUUID();
+            setRequestId(id);
+            try {
+              await teachingRequest('/messages', { method: 'POST', body: JSON.stringify({ recipientIds: [activeId], body, requestId: id }) });
+              setPeer(activeId);
+              setBody('');
+              setRequestId('');
+              setThreadPage(1);
+              setPage(1);
+              setReload(value => value + 1);
+              setNotice(t('تم إرسال الرسالة', 'Message sent'));
+            } catch (cause) {
+              setError(errorText(cause, t('تعذر إرسال الرسالة.', 'Could not send the message.')));
+            } finally {
+              setBusy(false);
+            }
+          }}>
+            <textarea rows={1} dir="auto" aria-label={t('نص الرسالة', 'Message')} maxLength={4000} placeholder={t('اكتب رسالتك هنا…', 'Write your message here…')} value={body} disabled={!activeId || busy} onChange={event => { setPeer(activeId); setBody(event.target.value); setRequestId(''); }} />
+            <button type="submit" className={styles.send} disabled={!activeId || busy || !body.trim()} aria-label={t('إرسال الرسالة', 'Send message')} title={t('إرسال الرسالة', 'Send message')}><Send size={21} /></button>
+          </form>
+        </section>
       </div>
-    </DashboardLayout>
-  );
+    </div>
+  </DashboardLayout>;
 }
