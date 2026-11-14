@@ -6,7 +6,8 @@ import React, { useState, useMemo } from "react";
 import { Plus, Upload, Download, Layout, Copy } from "lucide-react";
 import { useLessonBlocks } from "./useLessonBlocks";
 import { getSectionStylePresets } from "./constants";
-import { useCourseEditor } from "../CourseEditorContext";
+import { useOptionalCourseEditor } from "../CourseEditorContext";
+import { downloadSlidesWorkbook, importLessonSlides } from "@/lib/slidesExcelWorkbook";
 import CopySlidesModal from "@/components/modals/CopySlidesModal";
 import { translateBatch } from "@/lib/translationService";
 import { useNotification } from "@/context/NotificationContext";
@@ -48,10 +49,11 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
     0: true
   }));
 
-  const { role } = useCourseEditor();
-  const { allowContentDeletion } = useCourseEditor() as any;
+  const editorCtx = (useOptionalCourseEditor() || {}) as any;
+  const role = editorCtx.role;
+  const allowContentDeletion = Boolean(editorCtx.allowContentDeletion);
   const isSuperAdmin = role === "SUPER_ADMIN";
-  const canDeleteContent = isSuperAdmin || allowContentDeletion;
+  const canDeleteContent = !role || isSuperAdmin || allowContentDeletion;
 
   const [customSkills, setCustomSkills] = useState<string[]>([]);
 
@@ -321,6 +323,15 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
 
   return (
     <SlideKeyboardRegion language={language} onNavigate={index => setExpandedSlides(prev => ({ ...prev, [index]: true, [list[index]?.id ?? index]: true }))}>
+      {source === 'slides' && (
+        <input
+          id="slides-excel-upload-input"
+          type="file"
+          style={{ display: 'none' }}
+          accept=".xlsx,.xls"
+          onChange={(e) => importLessonSlides(e, () => ({ currentLesson, setCurrentLesson, language, showToast }), Boolean(canDeleteContent))}
+        />
+      )}
       {source !== 'slides' && (
         <input 
           type="file" 
@@ -377,7 +388,34 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
               </button>
             </>
           )}
-          {source === 'slides' && isSuperAdmin && (
+          {source === 'slides' && (
+            <>
+              <label
+                htmlFor="slides-excel-upload-input"
+                className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-4 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
+              >
+                <Upload className="w-4 h-4" />
+                {language === 'ar' ? 'استيراد الشرح Excel' : 'Import Slides Excel'}
+              </label>
+              <button
+                type="button"
+                onClick={() => downloadSlidesWorkbook(Array.isArray(currentLesson?.slides) ? currentLesson.slides : [], language, currentLesson?.title)}
+                className="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 px-4 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
+              >
+                <Download className="w-4 h-4" />
+                {language === 'ar' ? 'تصدير الشرح Excel' : 'Export Slides Excel'}
+              </button>
+              <button
+                type="button"
+                onClick={() => downloadSlidesWorkbook(null, language, currentLesson?.title)}
+                className="bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 px-4 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
+              >
+                <Download className="w-4 h-4" />
+                {language === 'ar' ? 'قالب ودليل الشرح والجداول' : 'Slides & Tables Template'}
+              </button>
+            </>
+          )}
+          {source === 'slides' && Boolean(currentLesson?.id) && (
             <button 
               type="button"
               onClick={() => setIsCopyModalOpen(true)}

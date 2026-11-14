@@ -11,6 +11,7 @@ import { apiFetch, API_URL, getFullImageUrl } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import ImportExcelModal from "@/components/modals/ImportExcelModal";
+import { downloadFullLessonWorkbook } from "@/lib/slidesExcelWorkbook";
 
 export default function SuperAdminCoursesPage() {
   const router = useRouter();
@@ -276,6 +277,13 @@ export default function SuperAdminCoursesPage() {
                     <DownloadCloud className="w-5 h-5 shrink-0" />
                     {language === 'ar' ? "استرجاع السحابة" : "Restore Cloud"}
                   </button>
+                  <button
+                    onClick={() => downloadFullLessonWorkbook(null, language)}
+                    className="group min-w-0 min-h-12 bg-sky-50 text-sky-700 border border-sky-200 px-4 py-3 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base shadow-sm hover:bg-sky-100 transition-colors flex items-center gap-2 justify-center text-center"
+                  >
+                    <DownloadCloud className="w-5 h-5 shrink-0" />
+                    {language === 'ar' ? "قالب ودليل الإكسيل" : "Excel Guide & Template"}
+                  </button>
                   <button 
                     onClick={() => setIsImportModalOpen(true)}
                     className="group min-w-0 min-h-12 bg-indigo-50 text-indigo-600 px-4 py-3 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base shadow-sm hover:bg-indigo-100 transition-colors flex items-center gap-2 justify-center text-center"
@@ -349,7 +357,7 @@ export default function SuperAdminCoursesPage() {
 
           {/* Main Grid */}
 
-          {/* ☁️ Subtle cloud sync indicator — shows only during background 3s refresh (Removed as per user request) */}
+          {/* Subtle cloud sync indicator - shows only during background 3s refresh (Removed as per user request) */}
 
           {loading ? (
              <div className="flex flex-col gap-4 sm:gap-6">
@@ -396,15 +404,15 @@ export default function SuperAdminCoursesPage() {
                               <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md uppercase tracking-widest shrink-0">{getGradeName(course.grade) || (language === 'ar' ? "عام" : "General")}</span>
                               {course._source === 'both' ? (
                                 <span className="text-[10px] font-black text-purple-700 bg-purple-100 border border-purple-200 px-2.5 py-1 rounded-md shrink-0 flex items-center gap-1 shadow-xs">
-                                  ⚡ {language === 'ar' ? 'الاثنين (الأساسية + الاحتياطية)' : 'Both (Primary + Backup DB)'}
+                                  {language === 'ar' ? 'الاثنين (الأساسية + الاحتياطية)' : 'Both (Primary + Backup DB)'}
                                 </span>
                               ) : course._source === 'cloud' ? (
                                 <span className="text-[10px] font-black text-sky-700 bg-sky-100 border border-sky-200 px-2.5 py-1 rounded-md shrink-0 flex items-center gap-1 shadow-xs">
-                                  ☁️ {language === 'ar' ? 'الاحتياطية فقط' : 'Backup DB Only'}
+                                  {language === 'ar' ? 'الاحتياطية فقط' : 'Backup DB Only'}
                                 </span>
                               ) : (
                                 <span className="text-[10px] font-black text-slate-700 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md shrink-0 flex items-center gap-1">
-                                  🖥️ {language === 'ar' ? 'الأساسية فقط (PostgreSQL)' : 'Primary DB Only'}
+                                  {language === 'ar' ? 'الأساسية فقط (PostgreSQL)' : 'Primary DB Only'}
                                 </span>
                               )}
                            </div>

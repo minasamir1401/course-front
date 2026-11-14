@@ -50,4 +50,49 @@ test('reloaded queue replays chronological order rather than storage key order',
 test('a rejected earlier update prevents newer writes overtaking it',async()=>{const h=harness({write:async()=>new Response('{}',{status:409})});await ready();await h.queue.enqueue(item('old'));await h.queue.enqueue(item('new'));await h.queue.flush();assert.deepEqual(h.sent.map(s=>s.init.body),['old']);assert.equal(h.queue.getPending().length,2);});
 test('a second tab does not resend an entry acknowledged by the first tab',async()=>{const first=harness();await ready();await first.queue.enqueue(item());const second=harness({storage:first.storage});await ready();await first.queue.flush();await second.queue.flush();assert.equal(second.sent.length,0);assert.equal(second.queue.getPending().length,0);});
 test('explicit forceAll flush replays pending POST request after user confirmation',async()=>{const h=harness();await ready();await h.queue.enqueue(item('create','POST'));await h.queue.flush({forceAll:true});assert.equal(h.sent.length,1);assert.equal(h.queue.getPending().length,0);assert.equal(h.queue.getState().lastError,null);});
+test('enqueue with supersedeKey replaces older snapshot for same owner and preserves unkeyed partial PUTs',async()=>{
+  const h=harness();await ready();
+  await h.queue.enqueue({...item('{"v":1}'),url:'https://lms.test/api/school/courses/c1',supersedeKey:'course-put:c1'});
+  await h.queue.enqueue({...item('{"partial":true}'),url:'https://lms.test/api/school/courses/c1'});
+  await h.queue.enqueue({...item('{"v":2}'),url:'https://lms.test/api/school/courses/c1',supersedeKey:'course-put:c1'});
+  h.setUser(userB);
+  await h.queue.enqueue({...item('{"v":3}'),url:'https://lms.test/api/school/courses/c1',supersedeKey:'course-put:c1'});
+  assert.deepEqual(Array.from(h.queue.getPending(),e=>e.body),['{"partial":true}','{"v":2}','{"v":3}']);
+});
+test('removeByUrl clears superseded PUT entries for course and survives reload',async()=>{
+  const h=harness();await ready();
+  await h.queue.enqueue({...item('stale-c1'),url:'https://lms.test/api/school/courses/c1',supersedeKey:'course-put:c1'});
+  await h.queue.enqueue({...item('keep-c2'),url:'https://lms.test/api/school/courses/c2',supersedeKey:'course-put:c2'});
+  await h.queue.enqueue({...item('post-c1','POST'),url:'https://lms.test/api/school/courses/c1'});
+  await h.queue.removeByUrl('https://lms.test/api/school/courses/c1','PUT');
+  assert.deepEqual(Array.from(h.queue.getPending(),e=>e.body),['keep-c2','post-c1']);
+  const reloaded=harness({storage:h.storage});await ready();
+  assert.deepEqual(Array.from(reloaded.queue.getPending(),e=>e.body),['keep-c2','post-c1']);
+});
+test('successful create clears only the matching draft for the request owner',async()=>{
+  const h=harness();await ready();
+  await h.queue.enqueue({...item('alice-first','POST'),supersedeKey:'course-create:first'});
+  await h.queue.enqueue({...item('alice-second','POST'),supersedeKey:'course-create:second'});
+  h.setUser(userB);
+  await h.queue.enqueue({...item('bob-first','POST'),supersedeKey:'course-create:first'});
+  await h.queue.removeByUrl(item().url,'POST',{userId:userA.id,schoolId:userA.schoolId},'course-create:first');
+  assert.deepEqual(Array.from(h.queue.getPending(),entry=>entry.body),['alice-second','bob-first']);
+});
+test('flush skips item if removeByUrl cancels it while verifying session',async()=>{
+  const storage=new Map();storage.set('school_admin_user',JSON.stringify(userA));storage.set('school_admin_token','cookie_auth');
+  const sent=[],localStorage={getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)};
+  let queueRef;
+  const fetch=async(url,init)=>{
+    if(String(url).endsWith('/auth/session')){await queueRef.removeByUrl('https://lms.test/api/school/courses/c1','PUT');return Response.json({user:userA});}
+    sent.push({url,init});return new Response('{}');
+  };
+  const window={location:{origin:'https://lms.test',pathname:'/school-admin/courses'},addEventListener:()=>{},fetch};
+  const module={exports:{}};
+  vm.runInNewContext(source,{module,exports:module.exports,console,window,localStorage,navigator:{onLine:true},fetch,Headers,Response,Request,URL,AbortSignal,crypto,atob:s=>Buffer.from(s,'base64').toString('binary'),setTimeout:()=>1,clearTimeout:()=>{}});
+  queueRef=module.exports.offlineSync;await ready();
+  await queueRef.enqueue({...item('stale-c1'),url:'https://lms.test/api/school/courses/c1',supersedeKey:'course-put:c1'});
+  await queueRef.flush();
+  assert.equal(sent.length,0);
+  assert.equal(queueRef.getPending().length,0);
+});
 

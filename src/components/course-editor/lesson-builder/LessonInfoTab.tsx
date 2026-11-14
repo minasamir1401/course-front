@@ -1,5 +1,5 @@
 "use client";
-import { parseLessonMetadataRows } from "@/lib/lessonMetadataExcel";
+import { exportLessonMetadataWorkbook, parseLessonMetadataRows } from "@/lib/lessonMetadataExcel";
 
 import BilingualMetadataEditor from "@/components/BilingualMetadataEditor";
 import React from "react";
@@ -107,6 +107,7 @@ export const LessonInfoTab: React.FC<LessonInfoTabProps> = ({
         <input type="file" ref={metadataExcelRef} accept=".xlsx,.xls" className="hidden" onChange={handleMetadataExcelChange} />
         <div className="flex flex-wrap gap-3">
           <button type="button" onClick={() => handleExcelUpload('metadata')} className="flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-5 py-3 text-sm font-bold text-emerald-700 shadow-sm hover:bg-emerald-100"><Upload size={16} />{language === 'ar' ? 'استيراد Metadata' : 'Import metadata'}</button>
+          <button type="button" onClick={() => exportLessonMetadataWorkbook(currentLesson, language, XLSX)} className="flex items-center gap-2 rounded-xl border border-amber-100 bg-amber-50 px-5 py-3 text-sm font-bold text-amber-700 shadow-sm hover:bg-amber-100"><Download size={16} />{language === 'ar' ? 'تصدير المعايير Excel' : 'Export Metadata'}</button>
           <button type="button" onClick={downloadMetadataTemplate} className="flex items-center gap-2 rounded-xl border border-indigo-100 bg-indigo-50 px-5 py-3 text-sm font-bold text-indigo-700 shadow-sm hover:bg-indigo-100"><Download size={16} />{language === 'ar' ? 'قالب Excel باللغتين' : 'Bilingual Excel template'}</button>
         </div>
         <p className="text-xs text-slate-500">{language === 'ar' ? 'اكتب عنوان هذا الدرس في القالب لربط المعايير به.' : 'Use this lesson’s title in the template to match its metadata.'}</p>

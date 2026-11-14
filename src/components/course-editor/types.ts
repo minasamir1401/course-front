@@ -34,6 +34,7 @@ export interface Lesson {
   assignments: any[];
   attachments: any[];
   createdAt?: string | Date;
+  updatedAt?: string;
   slidesCount?: number;
   isContentLoaded?: boolean;
 }

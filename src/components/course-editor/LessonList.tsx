@@ -23,6 +23,7 @@ export const LessonList: React.FC = () => {
   const {
     role,
     courseId,
+    courseData,
     lessons,
     activeContentTab,
     openAddLessonModal,
@@ -36,8 +37,14 @@ export const LessonList: React.FC = () => {
     hasUnsavedChanges,
   } = useCourseEditor();
 
-  // Bulk operations visible to SUPER_ADMIN only
   const isSuperAdmin = role === "SUPER_ADMIN";
+  const canBulkManage = ["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER"].includes(role || "");
+  const effectiveCourseSchoolId = !courseData?.isCentral
+    ? (courseData?.schoolId || (courseData?.schoolIds?.length === 1 ? courseData.schoolIds[0] : "") || "")
+    : "";
+  const schoolQuery = role === "SUPER_ADMIN" && effectiveCourseSchoolId
+    ? `&schoolId=${encodeURIComponent(effectiveCourseSchoolId)}`
+    : "";
   const ar = language === "ar";
   const [courseLessonStats, setCourseLessonStats] = useState<Record<string, any>>({});
   const [expandedLessonKey, setExpandedLessonKey] = useState<string | null>(null);
@@ -47,7 +54,7 @@ export const LessonList: React.FC = () => {
   useEffect(() => {
     if (!courseId) return;
     let active = true;
-    apiFetch(`${API_URL}/teaching/overview?courseId=${encodeURIComponent(courseId)}&limit=100`, { cache: "no-store" })
+    apiFetch(`${API_URL}/teaching/overview?courseId=${encodeURIComponent(courseId)}&limit=100${schoolQuery}`, { cache: "no-store" })
       .then(async (res) => {
         if (!res.ok) return;
         const data = await res.json();
@@ -60,7 +67,7 @@ export const LessonList: React.FC = () => {
       })
       .catch(() => {});
     return () => { active = false; };
-  }, [courseId, lessons.length]);
+  }, [courseId, lessons.length, role, effectiveCourseSchoolId, schoolQuery]);
 
   const toggleLessonDashboard = async (lesson: any, index: number) => {
     const key = lesson.id ? String(lesson.id) : `idx-${index}`;
@@ -72,7 +79,7 @@ export const LessonList: React.FC = () => {
     if (lesson.id && !lessonDashboards[lesson.id]) {
       setLoadingLessonId(lesson.id);
       try {
-        const res = await apiFetch(`${API_URL}/teaching/lessons/${encodeURIComponent(lesson.id)}?limit=50`, { cache: "no-store" });
+        const res = await apiFetch(`${API_URL}/teaching/lessons/${encodeURIComponent(lesson.id)}?limit=50${schoolQuery}`, { cache: "no-store" });
         if (res.ok) {
           const data = await res.json();
           setLessonDashboards((prev) => ({ ...prev, [lesson.id]: data }));
@@ -122,6 +129,28 @@ export const LessonList: React.FC = () => {
       showToast(language === 'ar' ? "تم التصدير بنجاح" : "Exported successfully", "success");
     } catch (err) {
       showToast(language === 'ar' ? "فشل التصدير" : "Export failed", "error");
+    }
+  };
+
+  const handleDownloadCourseTemplate = async () => {
+    try {
+      const token = localStorage.getItem("super_admin_token") || localStorage.getItem("school_admin_token");
+      const res = await apiFetch(`${API_URL}/school/import/template?lang=${language === 'ar' ? 'ar' : 'en'}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      if (!res.ok) throw new Error("Template download failed");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "course_master_template.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      showToast(language === 'ar' ? "تم تحميل قالب ودليل الإكسيل بنجاح" : "Excel guide & template downloaded successfully", "success");
+    } catch {
+      showToast(language === 'ar' ? "فشل تحميل القالب" : "Failed to download template", "error");
     }
   };
 
@@ -271,8 +300,15 @@ export const LessonList: React.FC = () => {
           )}
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          {isSuperAdmin && (
+          {canBulkManage && (
             <>
+              <button type="button"
+                onClick={handleDownloadCourseTemplate}
+                className="px-4 sm:px-6 py-3 sm:py-4 rounded-2xl font-black flex items-center gap-2 sm:gap-3 transition-all border-2 border-indigo-200 text-indigo-700 hover:border-indigo-600 hover:bg-indigo-50 bg-white text-xs sm:text-base"
+              >
+                <FileSpreadsheet size={20} />
+                <span className="hidden sm:inline">{language === "ar" ? "قالب ودليل الإكسيل" : "Excel Guide & Template"}</span>
+              </button>
               <button type="button"
                 onClick={() => setIsImportModalOpen(true)}
                 className="px-4 sm:px-6 py-3 sm:py-4 rounded-2xl font-black flex items-center gap-2 sm:gap-3 transition-all border-2 border-indigo-100 text-indigo-600 hover:border-indigo-600 hover:bg-indigo-50 bg-white text-xs sm:text-base"
@@ -467,7 +503,7 @@ export const LessonList: React.FC = () => {
                           </button>
                         </>
                       )}
-                      {lesson.id && isSuperAdmin && (
+                      {lesson.id && canBulkManage && (
                         <button type="button"
                           onClick={() => {
                             setLessonToCopy({ id: lesson.id as string, title: lesson.title });

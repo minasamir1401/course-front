@@ -39,6 +39,13 @@ export default function PageAccessGate({ children }: { children: React.ReactNode
         const key = role === 'SUPER_ADMIN' ? AUTH_KEYS.SUPER_ADMIN : role === 'STUDENT' ? AUTH_KEYS.STUDENT : AUTH_KEYS.SCHOOL_ADMIN;
         for (const config of Object.values(AUTH_KEYS)) if (config !== key) { localStorage.removeItem(config.TOKEN); localStorage.removeItem(config.USER); localStorage.removeItem(`${config.TOKEN}_expires_at`); }
         localStorage.setItem(key.TOKEN, 'cookie_auth'); localStorage.setItem(key.USER, JSON.stringify(session.user));
+        if (!session.user.isImpersonated && localStorage.getItem('is_impersonating') === 'true') {
+          localStorage.removeItem('is_impersonating');
+          localStorage.removeItem('original_admin_token');
+          localStorage.removeItem('original_admin_user');
+          localStorage.removeItem('impersonated_school_name');
+          window.dispatchEvent(new Event('impersonation-changed'));
+        }
       } catch { /* Cookie verification remains authoritative. */ }
       verified = true;
       setApprovedPath(path); setStatus('ready');

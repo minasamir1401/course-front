@@ -20,6 +20,7 @@ export function buildCourseLessonSummary(lesson: any) {
     publishDate: lesson.publishDate || "",
     cutOffDate: lesson.cutOffDate || "",
     order: lesson.order,
+    duration: lesson.duration ?? 0,
     createdAt: lesson.createdAt,
     updatedAt: lesson.updatedAt,
     slidesCount,

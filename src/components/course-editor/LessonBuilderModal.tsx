@@ -1,4 +1,6 @@
 "use client";
+import { downloadFullLessonWorkbook, handleFullLessonExcelImport } from "@/lib/slidesExcelWorkbook";
+import { Download as ExcelDownloadIcon, Upload as ExcelUploadIcon, FileSpreadsheet as ExcelTemplateIcon } from "lucide-react";
 import { buildQuestionWorkbook, importModuleQuestions } from '@/lib/questionExcelWorkbook';
 
 import React, { useState, useEffect, useRef } from "react";
@@ -119,7 +121,45 @@ export const LessonBuilderModal: React.FC<{ fullPage?: boolean }> = ({ fullPage 
               <h1>{currentLesson.title || (language === 'ar' ? 'درس جديد' : 'New lesson')}</h1>
               <p>{language === 'ar' ? 'رتّب المحتوى والتدريبات ووجّه المساعد في تجربة واحدة.' : 'Organise content, practice and assistant guidance in one place.'}</p>
             </div>
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 min-w-0">
+              <input
+                id="full-lesson-excel-input"
+                type="file"
+                accept=".xlsx,.xls"
+                className="hidden"
+                onChange={(e) =>
+                  handleFullLessonExcelImport(
+                    e,
+                    () => currentLesson,
+                    (nextLesson) => setCurrentLesson(nextLesson),
+                    language,
+                    showToast,
+                  )
+                }
+              />
+              <button
+                type="button"
+                onClick={() => downloadFullLessonWorkbook(null, language, currentLesson.title)}
+                className="min-w-0 px-3 py-2 rounded-xl bg-sky-50 text-sky-700 border border-sky-200 font-bold text-xs flex items-center gap-1.5 hover:bg-sky-100 transition-colors"
+              >
+                <ExcelTemplateIcon className="w-4 h-4 shrink-0" />
+                <span className="truncate">{language === 'ar' ? 'قالب ودليل الدرس' : 'Full Lesson Template & Guide'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => downloadFullLessonWorkbook(currentLesson, language, currentLesson.title)}
+                className="min-w-0 px-3 py-2 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 font-bold text-xs flex items-center gap-1.5 hover:bg-amber-100 transition-colors"
+              >
+                <ExcelDownloadIcon className="w-4 h-4 shrink-0" />
+                <span className="truncate">{language === 'ar' ? 'تصدير الدرس Excel' : 'Export Full Lesson'}</span>
+              </button>
+              <label
+                htmlFor="full-lesson-excel-input"
+                className="min-w-0 px-3 py-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-xs flex items-center gap-1.5 hover:bg-emerald-100 transition-colors cursor-pointer"
+              >
+                <ExcelUploadIcon className="w-4 h-4 shrink-0" />
+                <span className="truncate">{language === 'ar' ? 'استيراد الدرس Excel' : 'Import Full Lesson'}</span>
+              </label>
               <button type="button"
                 onClick={() => setIsExportModalOpen(true)}
                 className="min-w-0 px-3 sm:px-4 py-2 rounded-xl bg-indigo-50 text-indigo-600 font-bold text-xs sm:text-sm flex items-center gap-2 hover:bg-indigo-100 transition-colors"

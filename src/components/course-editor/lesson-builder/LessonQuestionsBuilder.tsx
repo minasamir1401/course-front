@@ -22,7 +22,7 @@ import HtmlRenderer from "@/components/HtmlRenderer";
 import { parseJson } from "./parseJson";
 import { getSectionStylePresets } from "./constants";
 import CopySlidesModal from "@/components/modals/CopySlidesModal";
-import { useCourseEditor } from "../CourseEditorContext";
+import { useOptionalCourseEditor } from "../CourseEditorContext";
 import * as XLSX from "xlsx";
 import { QuestionExcelExportButton } from '@/components/QuestionExcelExportButton';
 import QuestionMetadataExcelTools from '@/components/QuestionMetadataExcelTools';
@@ -71,7 +71,11 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
   setOpenDropdownId
 }) => {
   const { showToast } = useNotification();
-  const { availableMetadata, allowContentDeletion, role, lessons } = useCourseEditor() as any;
+  const editorCtx = (useOptionalCourseEditor() || {}) as any;
+  const availableMetadata = editorCtx.availableMetadata || { domains: [], standards: [], indicators: [], outcomes: [] };
+  const allowContentDeletion = Boolean(editorCtx.allowContentDeletion);
+  const role = editorCtx.role;
+  const lessons = editorCtx.lessons || [];
   const [expandedQuestionIndex, setExpandedQuestionIndex] = useState<number | null>(null);
   const [isQuestionStandardOpen, setIsQuestionStandardOpen] = useState(false);
   const [isQuestionIndicatorOpen, setIsQuestionIndicatorOpen] = useState(false);
@@ -80,9 +84,9 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
   const [showQuestionSections, setShowQuestionSections] = useState(false);
   const [questionSource, setQuestionSource] = useState<'assignments' | 'questions'>(source);
   const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
-  
+
   const isSuperAdmin = role === 'SUPER_ADMIN';
-  const canDeleteContent = allowContentDeletion;
+  const canDeleteContent = !role || isSuperAdmin || allowContentDeletion;
 
   const [customSkills, setCustomSkills] = useState<string[]>([]);
   const [questionActiveLang, setQuestionActiveLang] = useState<'ar' | 'en'>('en');
@@ -770,7 +774,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
               <Plus className="w-5 h-5" />
               {language === 'ar' ? '+ إضافة سؤال' : '+ Add Question'}
             </button>
-            {isSuperAdmin && (
+            {Boolean(currentLesson?.id) && (
               <button 
                 type="button"
                 onClick={() => setIsCopyModalOpen(true)}

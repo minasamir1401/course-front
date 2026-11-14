@@ -83,8 +83,17 @@ export default function Header({
   }, []);
 
   useEffect(() => {
-    setIsImpersonating(localStorage.getItem("is_impersonating") === "true");
+    const syncImpersonation = () => setIsImpersonating(localStorage.getItem("is_impersonating") === "true");
+    syncImpersonation();
+    window.addEventListener("impersonation-changed", syncImpersonation);
+    window.addEventListener("storage", syncImpersonation);
+    return () => {
+      window.removeEventListener("impersonation-changed", syncImpersonation);
+      window.removeEventListener("storage", syncImpersonation);
+    };
+  }, [pathname]);
 
+  useEffect(() => {
     const pathKey = pathname?.startsWith("/super-admin")
       ? "super_admin_user"
       : pathname?.startsWith("/school-admin")
@@ -118,7 +127,13 @@ export default function Header({
   useEffect(() => {
     const isSuperAdmin = pathname?.startsWith("/super-admin");
     const token = localStorage.getItem("super_admin_token");
-    if (isSuperAdmin && token) {
+    const rawSuperAdminUser = localStorage.getItem("super_admin_user");
+    let parsedRole = "";
+    try {
+      parsedRole = rawSuperAdminUser ? JSON.parse(rawSuperAdminUser)?.role || "" : "";
+    } catch {}
+    const impersonating = localStorage.getItem("is_impersonating") === "true";
+    if (isSuperAdmin && token && !impersonating && parsedRole === "SUPER_ADMIN") {
       const fetchSchools = async () => {
         try {
           const res = await apiFetch(API_URL + "/admin/schools?view=options", {
@@ -138,7 +153,7 @@ export default function Header({
     } else {
       setSchools([]);
     }
-  }, [pathname]);
+  }, [pathname, isImpersonating]);
 
   useEffect(() => {
     if (pathname && schools.length > 0) {

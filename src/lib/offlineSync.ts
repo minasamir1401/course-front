@@ -16,6 +16,7 @@ export interface PendingSave {
   attempts: number;
   owner?: OfflineOwner | null;
   label?: string;
+  supersedeKey?: string;
 }
 export interface OfflineSyncState {
   isOnline: boolean;
@@ -121,18 +122,61 @@ class OfflineSyncManager {
     }
   }
 
+  private normalizeUrl(url: string): string {
+    try {
+      const base = typeof window !== "undefined" && window.location?.origin ? window.location.origin : "http://localhost";
+      const parsed = new URL(url, base);
+      return `${parsed.origin}${parsed.pathname}`.replace(/\/+$/, "");
+    } catch {
+      return String(url || "").split("?")[0].replace(/\/+$/, "");
+    }
+  }
+
   async enqueue(item: Omit<PendingSave, "id" | "enqueuedAt" | "attempts">): Promise<void> {
     // Capture before the first await: a login switch during storage initialization must not change ownership.
     const owner = item.owner === undefined ? captureOfflineOwner(item.headers) : item.owner;
     await this.ready;
     const method = item.method.toUpperCase();
-    // PUT endpoints also accept sparse updates. Never infer replacement semantics from the verb.
+    // PUT endpoints also accept sparse updates. Never infer replacement semantics from the verb
+    // unless the caller explicitly sets a supersedeKey for full-snapshot writes.
+    let supersededIds: string[] = [];
+    if (item.supersedeKey) {
+      supersededIds = this.queue
+        .filter((existing) =>
+          existing.supersedeKey === item.supersedeKey &&
+          (sameOwner(existing.owner, owner) || (!existing.owner && !owner))
+        )
+        .map((existing) => existing.id);
+      if (supersededIds.length > 0) {
+        const dropSet = new Set(supersededIds);
+        this.queue = this.queue.filter((existing) => !dropSet.has(existing.id));
+      }
+    }
     const latest = Math.max(0, ...this.queue.map(entry => Date.parse(entry.enqueuedAt) || 0));
     const entry: PendingSave = { ...item, owner, method, headers: safeHeaders(item.headers), id: newId(), enqueuedAt: new Date(Math.max(Date.now(), latest + 1)).toISOString(), attempts: 0 };
     this.queue.push(entry);
     this.notify();
-    await this.persistMutation([entry], []);
+    await this.persistMutation([entry], supersededIds);
     if (this.isOnline) this.scheduleFlush(1500);
+  }
+
+  async removeByUrl(url: string, method?: string, owner = captureOfflineOwner(), supersedeKey?: string): Promise<void> {
+    await this.ready;
+    const targetUrl = this.normalizeUrl(url);
+    const targetMethod = method ? method.toUpperCase() : null;
+    const matchingIds = this.queue
+      .filter((entry) => {
+        const sameUrl = this.normalizeUrl(entry.url) === targetUrl;
+        const sameMethod = !targetMethod || entry.method.toUpperCase() === targetMethod;
+        return sameUrl && sameMethod && sameOwner(entry.owner, owner) &&
+          (supersedeKey === undefined || entry.supersedeKey === supersedeKey);
+      })
+      .map((entry) => entry.id);
+    if (matchingIds.length === 0) return;
+    const removeSet = new Set(matchingIds);
+    this.queue = this.queue.filter((entry) => !removeSet.has(entry.id));
+    this.notify();
+    await this.persistMutation([], matchingIds);
   }
 
   async dequeue(id: string): Promise<void> {
@@ -335,6 +379,7 @@ class OfflineSyncManager {
         if (!sameOwner(ownerFromUser(session.user), item.owner) && !forceAll) {
           this.lastError = "جلسة المتصفح تخص حساباً آخر. لم تُرسل التغييرات."; continue;
         }
+        if (!this.queue.some(entry => entry.id === item.id)) continue;
         headers.set("X-Offline-User-Id", item.owner.userId);
         headers.set("X-Offline-School-Id", item.owner.schoolId || "");
         const response = await this.send(target.href, { method: item.method, headers, body: item.body, credentials: "include", signal: AbortSignal.timeout(120000) });
@@ -345,6 +390,7 @@ class OfflineSyncManager {
           if (current) { current.attempts += 1; await this.persistMutation([current], []); }
 
           this.lastError = `تعذر مزامنة التغييرات (${response.status}). تم الاحتفاظ بها للمراجعة وإعادة المحاولة.`;
+          if (response.status === 409 && item.supersedeKey?.startsWith("course-put:")) continue;
           if (response.status >= 500 || response.status === 408 || response.status === 429) {
             const value = response.headers.get("Retry-After");
             const wait = value ? (/^\d+$/.test(value) ? Number(value) * 1000 : Date.parse(value) - Date.now()) : 30000;

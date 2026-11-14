@@ -31,6 +31,7 @@ export const CourseEditorProvider: React.FC<{
   const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const initialLoadDoneRef = useRef(false);
+  const suppressUnsavedTrackingRef = useRef(false);
   const userEditedRef = useRef(false);
   const [isSettingsHidden, setIsSettingsHidden] = useState(true);
   const [courseData, setCourseData] = useState<CourseData>({
@@ -45,11 +46,37 @@ export const CourseEditorProvider: React.FC<{
     schoolIds: (schoolIdParam ? [schoolIdParam] : []) as string[],
   });
   const [lessons, setLessons] = useState<Lesson[]>([]);
+  const courseVersionRef = useRef<string | undefined>(undefined);
+  const initialSchoolIdsRef = useRef<string[]>([]);
   const serializeLessonContent = (lesson: Lesson, field: "attachments" | "slides" | "questions" | "assignments") => {
     // Existing lessons from the fast list are summaries. Never overwrite their
     // stored JSON with the empty placeholder arrays before opening that lesson.
     if (lesson.id && lesson.isContentLoaded !== true) return undefined;
     return JSON.stringify(lesson[field] || []);
+  };
+  const serializeLessonForPut = (l: Lesson) => {
+    const isUnloaded = Boolean(l.id && l.isContentLoaded !== true);
+    return {
+      id: l.id,
+      expectedUpdatedAt: l.updatedAt,
+      ...lessonTranslationPayload(l),
+      title: l.title,
+      domain: isUnloaded && !l.domain ? undefined : (l.domain || null),
+      videoUrl: isUnloaded && !l.videoUrl ? undefined : (l.videoUrl || null),
+      summary: isUnloaded && !l.summary ? undefined : (l.summary || null),
+      notes: isUnloaded && !l.notes ? undefined : (l.notes || null),
+      standards: isUnloaded && !l.standards ? undefined : (l.standards || null),
+      indicators: isUnloaded && !l.indicators ? undefined : (l.indicators || null),
+      learningOutcomes: isUnloaded && !l.learningOutcomes ? undefined : (l.learningOutcomes || null),
+      isVisible: l.isVisible !== undefined ? l.isVisible : true,
+      publishDate: l.publishDate ? parseEgyptDate(l.publishDate).toISOString() : null,
+      cutOffDate: l.cutOffDate ? parseEgyptDate(l.cutOffDate).toISOString() : null,
+      isContentLoaded: Boolean(l.isContentLoaded),
+      attachments: serializeLessonContent(l, "attachments"),
+      slides: serializeLessonContent(l, "slides"),
+      questions: serializeLessonContent(l, "questions"),
+      assignments: serializeLessonContent(l, "assignments"),
+    };
   };
   const lessonsRef = useRef<Lesson[]>([]);
   const [exams, setExams] = useState<any[]>([]);
@@ -168,8 +195,12 @@ export const CourseEditorProvider: React.FC<{
   }, [role, isSettingsHidden, schools.length, tokenKey]);
 
   useEffect(() => {
-    // Don't flag unsaved changes during initial data load
+    // Don't flag unsaved changes during initial load or programmatic state hydration
     if (!isLoading && initialLoadDoneRef.current) {
+      if (suppressUnsavedTrackingRef.current) {
+        suppressUnsavedTrackingRef.current = false;
+        return;
+      }
       setHasUnsavedChanges(true);
     }
   }, [courseData, lessons, currentLesson, isLoading]);
@@ -192,6 +223,7 @@ export const CourseEditorProvider: React.FC<{
         try {
         const draft = {
           savedAt: new Date().toISOString(),
+          expectedUpdatedAt: courseVersionRef.current,
           courseId,
           lessons,
           currentLesson,
@@ -251,6 +283,12 @@ export const CourseEditorProvider: React.FC<{
       const draft = stored?.payload || JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
       if (!draft) return;
       if (draft?.lessons?.length > 0 || draft?.currentLesson) {
+        if (!draft.expectedUpdatedAt || draft.expectedUpdatedAt !== courseVersionRef.current) {
+          showToast(language === "ar"
+            ? "المسودة مبنية على نسخة قديمة من الكورس. احتفظنا بيها للمراجعة."
+            : "This draft is based on an older course version and has been kept for review.", "error");
+          return;
+        }
         justRestoredRef.current = true;
         if (draft.lessons?.length > 0) setLessons(draft.lessons);
         if (draft.currentLesson) setCurrentLesson(draft.currentLesson);
@@ -313,17 +351,19 @@ export const CourseEditorProvider: React.FC<{
       });
       if (res.ok) {
         const data = await res.json();
-        let parsedGrades = ["High School"];
+        courseVersionRef.current = data.updatedAt;
+        let parsedGrades: string[] = data.grade ? [data.grade] : [];
         try {
           if (data.grades && typeof data.grades === "string") {
-            parsedGrades = JSON.parse(data.grades);
+            const values = JSON.parse(data.grades);
+            if (Array.isArray(values)) parsedGrades = values;
           } else if (Array.isArray(data.grades)) {
             parsedGrades = data.grades;
           } else if (data.grade) {
             parsedGrades = [data.grade];
           }
         } catch (e) {
-          parsedGrades = data.grade ? [data.grade] : ["High School"];
+          parsedGrades = data.grade ? [data.grade] : [];
         }
 
         const forwardGradeMap: { [key: string]: string } = {
@@ -363,6 +403,10 @@ export const CourseEditorProvider: React.FC<{
         });
         parsedGrades = Array.from(new Set(expandedGrades));
 
+        const schoolIds = data.schools?.length
+          ? data.schools.map((school: { id: string }) => school.id).filter(Boolean)
+          : data.schoolId ? [data.schoolId] : [];
+        initialSchoolIdsRef.current = schoolIds;
         setCourseData({
           title: data.title,
           description: data.description || "",
@@ -372,9 +416,7 @@ export const CourseEditorProvider: React.FC<{
           country: data.country || "مصر",
           isCentral: data.isCentral,
           schoolId: data.schoolId || "",
-          schoolIds: data.schools && data.schools.length > 0
-            ? data.schools.map((s: any) => (typeof s === "object" && s ? s.id : s)).filter((sid: any) => Boolean(sid && sid !== "null" && sid !== "undefined"))
-            : (data.schoolId && data.schoolId !== "null" && data.schoolId !== "undefined" ? [data.schoolId] : []),
+          schoolIds,
         });
 
         setExams(data.exams || []);
@@ -402,6 +444,7 @@ export const CourseEditorProvider: React.FC<{
                 ]),
               );
               if (countsByLessonId.size === 0) return;
+              suppressUnsavedTrackingRef.current = true;
               setLessons((currentLessons) => currentLessons.map((lesson) => (
                 lesson.id && countsByLessonId.has(lesson.id)
                   ? { ...lesson, slidesCount: countsByLessonId.get(lesson.id)! }
@@ -445,6 +488,7 @@ export const CourseEditorProvider: React.FC<{
             return {
               ...l,
               id: l.id || l._id,
+              isContentLoaded: true,
               isVisible: l.isVisible !== undefined ? l.isVisible : true,
               publishDate: l.publishDate && !isNaN(new Date(l.publishDate).getTime()) ? toEgyptInput(l.publishDate) : "",
               cutOffDate: l.cutOffDate && !isNaN(new Date(l.cutOffDate).getTime()) ? toEgyptInput(l.cutOffDate) : "",
@@ -598,8 +642,7 @@ export const CourseEditorProvider: React.FC<{
 
   const openAddLessonModal = () => {
     setEditingLessonIndex(null);
-    // ✅ FIX: Always reset currentLesson to a clean blank state for a NEW lesson.
-    // We use a unique timestamp-based ID for the intro slide to avoid conflicts.
+    suppressUnsavedTrackingRef.current = true;
     setCurrentLesson({
       title: "",
       domain: "",
@@ -625,6 +668,7 @@ export const CourseEditorProvider: React.FC<{
       questions: [],
       assignments: [],
       attachments: [],
+      isContentLoaded: true,
     });
     setActiveTab("info");
     setIsLessonModalOpen(true);
@@ -638,6 +682,7 @@ export const CourseEditorProvider: React.FC<{
 
     if (lessonSummary.id && !lessonSummary.isContentLoaded) {
       // Open immediately so the user gets visible feedback while large lessons load.
+      suppressUnsavedTrackingRef.current = true;
       setCurrentLesson({ ...lessonSummary, slides: [], questions: [], assignments: [], attachments: [] });
       setActiveTab("info");
       setIsLessonModalOpen(true);
@@ -682,6 +727,12 @@ export const CourseEditorProvider: React.FC<{
           sections: [],
         },
       ];
+    }
+    suppressUnsavedTrackingRef.current = true;
+    if (lessonToEdit.isContentLoaded && !lessonSummary.isContentLoaded) {
+      setLessons((prev) =>
+        prev.map((item, i) => (i === index ? { ...item, ...lessonToEdit, isContentLoaded: true } : item))
+      );
     }
     setCurrentLesson(lessonToEdit);
     setActiveTab("info");
@@ -755,7 +806,8 @@ export const CourseEditorProvider: React.FC<{
       .filter((s: any): s is string => Boolean(s && typeof s === "string" && s !== "null" && s !== "undefined" && s.trim() !== ""))
       .map((s: string) => s.trim());
 
-    if (role === "SUPER_ADMIN") {
+    if (role === "SUPER_ADMIN" &&
+        JSON.stringify([...sanitizedTargetSchoolIds].sort()) !== JSON.stringify([...initialSchoolIdsRef.current].sort())) {
       return {
         isCentral: sanitizedTargetSchoolIds.length === 0,
         schoolId: sanitizedTargetSchoolIds.length > 0 ? sanitizedTargetSchoolIds[0] : null,
@@ -763,20 +815,22 @@ export const CourseEditorProvider: React.FC<{
       };
     }
 
-    return {};
+    return { isCentral: undefined, schoolId: undefined, schoolIds: undefined };
   };
 
   const saveLesson = async () => {
+    if (isLessonContentLoading || (currentLesson.id && currentLesson.isContentLoaded !== true)) return;
     if (!currentLesson.title) {
       showToast(language === "ar" ? "يجب إدخال عنوان الدرس" : "Lesson title is required", "error");
       return;
     }
+    const loadedCurrentLesson: Lesson = { ...currentLesson, isContentLoaded: true };
     const token = localStorage.getItem(tokenKey) || localStorage.getItem("token");
     if (!token || !courseId) {
       setLessons((prev) => {
         const next = [...prev];
-        if (editingLessonIndex !== null) next[editingLessonIndex] = currentLesson;
-        else next.push(currentLesson);
+        if (editingLessonIndex !== null) next[editingLessonIndex] = loadedCurrentLesson;
+        else next.push(loadedCurrentLesson);
         return next;
       });
       setIsLessonModalOpen(false);
@@ -785,15 +839,14 @@ export const CourseEditorProvider: React.FC<{
 
     await acquireSaveLock(true);
 
-    // 🔒 FIX: Force-sync the ref to current state immediately before snapshotting.
-    // lessonsRef updates via useEffect which fires AFTER render, so it can be
-    // one cycle stale. Syncing here prevents old snapshots that miss lessons.
     lessonsRef.current = lessons;
 
     const requestOwner = captureOfflineOwner({ Authorization: `Bearer ${token}` });
     const snapshotLessons = [...lessonsRef.current];
-    if (editingLessonIndex !== null) snapshotLessons[editingLessonIndex] = currentLesson;
-    else snapshotLessons.push(currentLesson);
+    if (editingLessonIndex !== null) snapshotLessons[editingLessonIndex] = loadedCurrentLesson;
+    else snapshotLessons.push(loadedCurrentLesson);
+
+    const expectedUpdatedAt = courseVersionRef.current;
 
     try {
       const deduplicatedLessons = snapshotLessons.filter((l, idx, arr) => {
@@ -811,34 +864,18 @@ export const CourseEditorProvider: React.FC<{
         body: JSON.stringify({
           ...courseData,
           ...getSchoolPayload(),
-          lessons: deduplicatedLessons.map((l) => ({
-            id: l.id, ...lessonTranslationPayload(l),
-            title: l.title,
-            domain: l.domain || null,
-            videoUrl: l.videoUrl || null,
-            summary: l.summary || null,
-            notes: l.notes || null,
-            standards: l.standards || null,
-            indicators: l.indicators || null,
-            learningOutcomes: l.learningOutcomes || null,
-            isVisible: l.isVisible !== undefined ? l.isVisible : true,
-            publishDate: l.publishDate ? parseEgyptDate(l.publishDate).toISOString() : null,
-            cutOffDate: l.cutOffDate ? parseEgyptDate(l.cutOffDate).toISOString() : null,
-            attachments: serializeLessonContent(l, "attachments"),
-            slides: serializeLessonContent(l, "slides"),
-            questions: serializeLessonContent(l, "questions"),
-            assignments: serializeLessonContent(l, "assignments"),
-          })),
+          expectedUpdatedAt,
+          lessons: deduplicatedLessons.map(serializeLessonForPut),
         }),
       });
 
       if (res.ok) {
-        clearDraft(); // clear emergency draft after successful save
+        void offlineSync.removeByUrl(`${API_URL}/school/courses/${courseId}`, "PUT", requestOwner);
+        clearDraft();
         const data = await res.json().catch(() => ({}));
+        courseVersionRef.current = data.updatedAt;
 
-        // ✅ SAFE MERGE: Update local lessons with server data.
-        // We do NOT blindly replace — we merge server IDs into local state
-        // and preserve any local lessons not returned by server (race condition guard).
+        suppressUnsavedTrackingRef.current = true;
         if (data && data.lessons && Array.isArray(data.lessons)) {
           const parsed = data.lessons.map((pl: any) => {
             let parsedSlides: any[] = [];
@@ -858,28 +895,27 @@ export const CourseEditorProvider: React.FC<{
             };
           });
 
-          const currentLessonId = currentLesson.id;
-          const currentLessonTitle = currentLesson.title;
+          const currentLessonId = loadedCurrentLesson.id;
+          const currentLessonTitle = loadedCurrentLesson.title;
 
-          // Find the server lesson matching the one we just saved
           const matchedServerLesson = parsed.find((pl: any) => {
             if (currentLessonId && pl.id === currentLessonId) return true;
             if (!currentLessonId && pl.title === currentLessonTitle) return true;
             return false;
           });
 
-          // Sync server-assigned ID back to currentLesson (prevents duplicate creation on next save)
-          if (matchedServerLesson?.id && matchedServerLesson.id !== currentLessonId) {
+          if (matchedServerLesson?.id || loadedCurrentLesson.isContentLoaded) {
             setCurrentLesson((prev: any) => ({
               ...prev,
-              id: matchedServerLesson.id,
-              slides: prev.slides?.length > 0 ? prev.slides : matchedServerLesson.slides,
-              questions: prev.questions?.length > 0 ? prev.questions : matchedServerLesson.questions,
-              assignments: prev.assignments?.length > 0 ? prev.assignments : matchedServerLesson.assignments,
+              id: matchedServerLesson?.id || prev.id,
+              updatedAt: matchedServerLesson?.updatedAt || prev.updatedAt,
+              isContentLoaded: true,
+              slides: prev.slides?.length > 0 ? prev.slides : (matchedServerLesson?.slides || []),
+              questions: prev.questions?.length > 0 ? prev.questions : (matchedServerLesson?.questions || []),
+              assignments: prev.assignments?.length > 0 ? prev.assignments : (matchedServerLesson?.assignments || []),
             }));
           }
 
-          // Update lessons ref and state using safe merge
           setLessons((prevLessons: Lesson[]) => {
             const serverIds = new Set(parsed.map((pl: any) => pl.id).filter(Boolean));
 
@@ -889,33 +925,34 @@ export const CourseEditorProvider: React.FC<{
                 (!currentLessonId && pl.title === currentLessonTitle);
 
               if (isEditedLesson) {
-                // Prefer local content (always fresher), fall back to server
                 return {
                   ...pl,
                   id: pl.id,
-                  slides: currentLesson.slides?.length > 0 ? currentLesson.slides : pl.slides,
-                  questions: currentLesson.questions?.length > 0 ? currentLesson.questions : pl.questions,
-                  assignments: currentLesson.assignments?.length > 0 ? currentLesson.assignments : pl.assignments,
-                  attachments: currentLesson.attachments?.length > 0 ? currentLesson.attachments : pl.attachments,
+                  isContentLoaded: true,
+                  slides: loadedCurrentLesson.slides?.length > 0 ? loadedCurrentLesson.slides : pl.slides,
+                  questions: loadedCurrentLesson.questions?.length > 0 ? loadedCurrentLesson.questions : pl.questions,
+                  assignments: loadedCurrentLesson.assignments?.length > 0 ? loadedCurrentLesson.assignments : pl.assignments,
+                  attachments: loadedCurrentLesson.attachments?.length > 0 ? loadedCurrentLesson.attachments : pl.attachments,
                 };
               }
 
-              // For other lessons: keep local content if richer than server snapshot
               const localLesson = prevLessons.find((ll: Lesson) => ll.id && ll.id === pl.id);
               if (localLesson) {
                 return {
                   ...pl,
+                  isContentLoaded: Boolean(localLesson.isContentLoaded),
                   slides: localLesson.slides?.length > 0 ? localLesson.slides : pl.slides,
                   questions: localLesson.questions?.length > 0 ? localLesson.questions : pl.questions,
                   assignments: localLesson.assignments?.length > 0 ? localLesson.assignments : pl.assignments,
                   attachments: localLesson.attachments?.length > 0 ? localLesson.attachments : pl.attachments,
                 };
               }
-              return pl;
+              return {
+                ...pl,
+                isContentLoaded: false,
+              };
             });
 
-            // ✅ KEY FIX: Preserve local lessons NOT in the server response
-            // (they may have been omitted due to timing / race conditions)
             const localOnlyLessons = prevLessons.filter(
               (ll: Lesson) => ll.id && !serverIds.has(ll.id)
             );
@@ -925,15 +962,14 @@ export const CourseEditorProvider: React.FC<{
             return merged;
           });
         } else {
-          // Server returned no lessons array — update local state from snapshot
           lessonsRef.current = snapshotLessons;
           setLessons(snapshotLessons);
         }
 
-        showToast(language === "ar" ? "تم حفظ الدرس ونشره تلقائياً ✅" : "Lesson saved and published automatically ✅", "success");
+        setHasUnsavedChanges(false);
+        showToast(language === "ar" ? "تم حفظ الدرس ونشره تلقائياً" : "Lesson saved and published automatically", "success");
       } else {
         const errBody = await res.json().catch(() => ({}));
-        // ── Offline / server-down: enqueue for auto-retry ────────────────────
         if (res.status >= 500 || !navigator.onLine) {
           const tokenOffline = localStorage.getItem(tokenKey) || localStorage.getItem("token") || "";
           const deduplicatedLessons2 = snapshotLessons.filter((l, idx, arr) => {
@@ -944,26 +980,16 @@ export const CourseEditorProvider: React.FC<{
             owner: requestOwner,
             url: `${API_URL}/school/courses/${courseId}`,
             method: "PUT",
+            supersedeKey: `course-put:${courseId}`,
             headers: { Authorization: `Bearer ${tokenOffline}`, "Content-Type": "application/json" },
             body: JSON.stringify({
               ...courseData,
               ...getSchoolPayload(),
-              lessons: deduplicatedLessons2.map((l) => ({
-                id: l.id, ...lessonTranslationPayload(l), title: l.title, domain: l.domain || null, videoUrl: l.videoUrl || null,
-                summary: l.summary || null, notes: l.notes || null, standards: l.standards || null,
-                indicators: l.indicators || null, learningOutcomes: l.learningOutcomes || null,
-                isVisible: l.isVisible !== undefined ? l.isVisible : true,
-                publishDate: l.publishDate ? parseEgyptDate(l.publishDate).toISOString() : null,
-                cutOffDate: l.cutOffDate ? parseEgyptDate(l.cutOffDate).toISOString() : null,
-            attachments: serializeLessonContent(l, "attachments"),
-            slides: serializeLessonContent(l, "slides"),
-            questions: serializeLessonContent(l, "questions"),
-            assignments: serializeLessonContent(l, "assignments"),
-              })),
+              expectedUpdatedAt,
+              lessons: deduplicatedLessons2.map(serializeLessonForPut),
             }),
             label: language === "ar" ? `درس: ${currentLesson.title}` : `Lesson: ${currentLesson.title}`,
           })) return;
-          // Update local state so UI reflects the snapshot
           lessonsRef.current = snapshotLessons;
           setLessons(snapshotLessons);
           showToast(
@@ -980,7 +1006,6 @@ export const CourseEditorProvider: React.FC<{
       }
     } catch (error: any) {
       console.error("Auto-save error:", error);
-      // Network error — enqueue for later retry
       if (!navigator.onLine || error?.message?.includes('fetch')) {
         const tokenOffline2 = localStorage.getItem(tokenKey) || localStorage.getItem("token") || "";
         const deduplicatedLessons3 = snapshotLessons.filter((l, idx, arr) => {
@@ -988,29 +1013,19 @@ export const CourseEditorProvider: React.FC<{
           return arr.findIndex(other => other.id === l.id) === idx;
         });
         if (!await persistFailedWrite({
-            owner: requestOwner,
+          owner: requestOwner,
           url: `${API_URL}/school/courses/${courseId}`,
           method: "PUT",
+          supersedeKey: `course-put:${courseId}`,
           headers: { Authorization: `Bearer ${tokenOffline2}`, "Content-Type": "application/json" },
           body: JSON.stringify({
             ...courseData,
             ...getSchoolPayload(),
-            lessons: deduplicatedLessons3.map((l) => ({
-              id: l.id, ...lessonTranslationPayload(l), title: l.title, domain: l.domain || null, videoUrl: l.videoUrl || null,
-              summary: l.summary || null, notes: l.notes || null, standards: l.standards || null,
-              indicators: l.indicators || null, learningOutcomes: l.learningOutcomes || null,
-              isVisible: l.isVisible !== undefined ? l.isVisible : true,
-              publishDate: l.publishDate ? parseEgyptDate(l.publishDate).toISOString() : null,
-              cutOffDate: l.cutOffDate ? parseEgyptDate(l.cutOffDate).toISOString() : null,
-            attachments: serializeLessonContent(l, "attachments"),
-            slides: serializeLessonContent(l, "slides"),
-            questions: serializeLessonContent(l, "questions"),
-            assignments: serializeLessonContent(l, "assignments"),
-            })),
+            expectedUpdatedAt,
+            lessons: deduplicatedLessons3.map(serializeLessonForPut),
           }),
           label: language === "ar" ? `درس: ${currentLesson.title}` : `Lesson: ${currentLesson.title}`,
         })) return;
-        // Reflect snapshot in local state
         lessonsRef.current = snapshotLessons;
         setLessons(snapshotLessons);
         showToast(
@@ -1039,38 +1054,32 @@ export const CourseEditorProvider: React.FC<{
     setIsSubmitting(true);
     const token = localStorage.getItem(tokenKey) || localStorage.getItem("token");
     const requestOwner = captureOfflineOwner({ Authorization: `Bearer ${token}` });
+    const expectedUpdatedAt = courseVersionRef.current;
+    const prevLoadedIds = new Set(lessonsRef.current.filter((l) => l.isContentLoaded).map((l) => l.id).filter(Boolean));
+    const loadedNewTitles = new Set(lessonsRef.current.filter((l) => !l.id && l.isContentLoaded).map((l) => l.title).filter(Boolean));
+
+    const lessonsToSend = [...lessons];
+    if (isLessonModalOpen && !isLessonContentLoading && currentLesson.title &&
+        (!currentLesson.id || currentLesson.isContentLoaded === true)) {
+      const loadedCurrentLesson: Lesson = { ...currentLesson, isContentLoaded: true };
+      if (editingLessonIndex !== null && editingLessonIndex < lessonsToSend.length) {
+        lessonsToSend[editingLessonIndex] = loadedCurrentLesson;
+      } else if (editingLessonIndex === null && !isAutoSave) {
+        const alreadyPresent = lessonsToSend.some(l => !l.id && l.title === currentLesson.title);
+        if (!alreadyPresent) {
+          lessonsToSend.push(loadedCurrentLesson);
+          loadedNewTitles.add(currentLesson.title);
+        }
+      }
+    }
+
+    const deduplicatedLessonsToSend = lessonsToSend.filter((l, idx, arr) => {
+      if (!l.id) return true;
+      return arr.findIndex(other => other.id === l.id) === idx;
+    });
 
     try {
-      // 🔒 FIX: Force-sync the ref to current state immediately before snapshotting.
       lessonsRef.current = lessons;
-
-      // 🛡️ SAFETY: If lesson modal is open, merge currentLesson into lessons before saving
-      // BUT during autosave, do NOT include NEW lessons (no ID) - they should only be saved
-      // when the user explicitly clicks Save Lesson. This prevents ghost lessons on Cancel.
-      const lessonsToSend = [...lessons];
-      if (isLessonModalOpen && currentLesson.title) {
-        if (editingLessonIndex !== null && editingLessonIndex < lessonsToSend.length) {
-          // Editing existing lesson - safe to merge during autosave
-          lessonsToSend[editingLessonIndex] = currentLesson;
-        } else if (editingLessonIndex === null && !isAutoSave) {
-          // New lesson during manual save only - push if not already present
-          const alreadyPresent = lessonsToSend.some(l => !l.id && l.title === currentLesson.title);
-          if (!alreadyPresent) {
-            lessonsToSend.push(currentLesson);
-          }
-        }
-        // If editingLessonIndex === null && isAutoSave: skip - don't send new unsaved lesson
-      }
-
-      // ✅ ROOT CAUSE FIX: Deduplicate lessons by ID to prevent sending the same lesson twice.
-      // If a lesson was just saved via autosave and is in the `lessons` array, but the modal
-      // is still open, the above logic might push it again. Deduplication prevents this.
-      const deduplicatedLessonsToSend = lessonsToSend.filter((l, idx, arr) => {
-        if (!l.id) return true; // keep new (no-ID) lessons
-        return arr.findIndex(other => other.id === l.id) === idx;
-      });
-
-      // 🛡️ SAFETY: Backend disabled deletion during course update, so empty lessons array is safe.
 
       const res = await apiFetch(`${API_URL}/school/courses/${courseId}`, {
         method: "PUT",
@@ -1082,30 +1091,16 @@ export const CourseEditorProvider: React.FC<{
         body: JSON.stringify({
           ...courseData,
           ...getSchoolPayload(),
-          lessons: deduplicatedLessonsToSend.map((l) => ({
-            id: l.id, ...lessonTranslationPayload(l),
-            title: l.title,
-            domain: l.domain || null,
-            videoUrl: l.videoUrl || null,
-            summary: l.summary || null,
-            notes: l.notes || null,
-            standards: l.standards || null,
-            indicators: l.indicators || null,
-            learningOutcomes: l.learningOutcomes || null,
-            isVisible: l.isVisible !== undefined ? l.isVisible : true,
-            publishDate: l.publishDate ? parseEgyptDate(l.publishDate).toISOString() : null,
-            cutOffDate: l.cutOffDate ? parseEgyptDate(l.cutOffDate).toISOString() : null,
-            attachments: serializeLessonContent(l, "attachments"),
-            slides: serializeLessonContent(l, "slides"),
-            questions: serializeLessonContent(l, "questions"),
-            assignments: serializeLessonContent(l, "assignments"),
-          })),
+          expectedUpdatedAt,
+          lessons: deduplicatedLessonsToSend.map(serializeLessonForPut),
         }),
       });
 
       if (res.ok) {
+        void offlineSync.removeByUrl(`${API_URL}/school/courses/${courseId}`, "PUT", requestOwner);
         const data = await res.json();
-        const parsedLessons = data.lessons.map((l: any) => {
+        courseVersionRef.current = data.updatedAt;
+        const parsedLessons = (data.lessons || []).map((l: any) => {
           let parsedQuestions = [];
           let parsedAssignments = [];
           let parsedAttachments = [];
@@ -1132,9 +1127,19 @@ export const CourseEditorProvider: React.FC<{
             parsedSlides = [{ id: Date.now(), type: "TEXT", label: "CONTENT", title: language === "ar" ? "المقدمة" : "Introduction", content: "", sections: [] }];
           }
 
+          const resolvedId = l.id || l._id;
+          const wasLoaded = Boolean(
+            (resolvedId && prevLoadedIds.has(resolvedId)) ||
+            (!l.id ? false : loadedNewTitles.has(l.title)) ||
+            (isLessonModalOpen &&
+              ((currentLesson.id && resolvedId === currentLesson.id) ||
+                (!currentLesson.id && l.title === currentLesson.title)))
+          );
+
           return {
             ...l,
-            id: l.id || l._id,
+            id: resolvedId,
+            isContentLoaded: wasLoaded,
             isVisible: l.isVisible !== undefined ? l.isVisible : true,
             publishDate: l.publishDate && !isNaN(new Date(l.publishDate).getTime()) ? toEgyptInput(l.publishDate) : "",
             cutOffDate: l.cutOffDate && !isNaN(new Date(l.cutOffDate).getTime()) ? toEgyptInput(l.cutOffDate) : "",
@@ -1167,9 +1172,8 @@ export const CourseEditorProvider: React.FC<{
           };
         }).sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
 
+        suppressUnsavedTrackingRef.current = true;
         if (isLessonModalOpen) {
-          // 🔒 FIX: Find the server lesson by ID or title, NOT by positional index.
-          // Using parsedLessons.length - 1 is unreliable because server orders by `order` field.
           const matchedServerLesson = parsedLessons.find((pl: any) => {
             if (currentLesson.id && pl.id === currentLesson.id) return true;
             if (!currentLesson.id && pl.title === currentLesson.title) return true;
@@ -1185,6 +1189,8 @@ export const CourseEditorProvider: React.FC<{
             setCurrentLesson((prev: any) => ({
               ...prev,
               id: matchedServerLesson.id,
+              updatedAt: matchedServerLesson.updatedAt,
+              isContentLoaded: true,
               slides: prev.slides.map((s: any, sIdx: number) => {
                 const serverSlide = matchedServerLesson.slides?.[sIdx];
                 return serverSlide ? { ...s, id: serverSlide.id } : s;
@@ -1199,14 +1205,13 @@ export const CourseEditorProvider: React.FC<{
               }),
             }));
           } else if (idx >= 0 && idx < parsedLessons.length) {
-            // Fallback to positional if no title/ID match found
             setCurrentLesson((prev: any) => ({
               ...prev,
               id: parsedLessons[idx].id,
+              updatedAt: parsedLessons[idx].updatedAt,
+              isContentLoaded: true,
             }));
           }
-          // 🔒 FIX: Match edited lesson by ID or title, NOT by positional index.
-          // This prevents overwriting the wrong lesson when server returns lessons in a different order.
           const editedLessonId = matchedServerLesson?.id || currentLesson.id;
           setLessons(
             parsedLessons.map((pl: any) => {
@@ -1217,6 +1222,7 @@ export const CourseEditorProvider: React.FC<{
               if (isEditedLesson) {
                 return {
                   ...pl,
+                  isContentLoaded: true,
                   title: currentLesson.title,
                   domain: currentLesson.domain,
                   videoUrl: currentLesson.videoUrl,
@@ -1247,18 +1253,31 @@ export const CourseEditorProvider: React.FC<{
             })
           );
         } else {
-          // ✅ SAFE MERGE: Preserve local lessons not returned by server
           setLessons((prevLessons: Lesson[]) => {
             const serverIds = new Set(parsedLessons.map((pl: any) => pl.id).filter(Boolean));
+            const prevById = new Map(prevLessons.filter((ll) => ll.id).map((ll) => [ll.id, ll]));
+            const mergedParsed = parsedLessons.map((pl: any) => {
+              const prevLocal = pl.id ? prevById.get(pl.id) : undefined;
+              if (prevLocal && !pl.isContentLoaded) {
+                return {
+                  ...pl,
+                  slides: prevLocal.slides,
+                  questions: prevLocal.questions,
+                  assignments: prevLocal.assignments,
+                  attachments: prevLocal.attachments,
+                };
+              }
+              return pl;
+            });
             const localOnlyLessons = prevLessons.filter(
               (ll: Lesson) => ll.id && !serverIds.has(ll.id)
             );
-            return [...parsedLessons, ...localOnlyLessons];
+            return [...mergedParsed, ...localOnlyLessons];
           });
         }
 
-        clearDraft(); // clear emergency draft after successful save
-        setTimeout(() => setHasUnsavedChanges(false), 1000);
+        clearDraft();
+        setHasUnsavedChanges(false);
 
         if (!isAutoSave) {
           showToast(language === "ar" ? "تم تحديث الكورس بنجاح" : "Course updated successfully", "success");
@@ -1269,33 +1288,19 @@ export const CourseEditorProvider: React.FC<{
       } else {
         if (!isAutoSave) {
           const data = await res.json().catch(() => ({}));
-          // Server error during course update — enqueue for auto-retry
           if (res.status >= 500) {
             const token = localStorage.getItem(tokenKey) || localStorage.getItem("token") || "";
-            const deduplicatedLessons4 = [...lessons].filter((l, idx, arr) => {
-              if (!l.id) return true;
-              return arr.findIndex(other => other.id === l.id) === idx;
-            });
             if (!await persistFailedWrite({
-            owner: requestOwner,
+              owner: requestOwner,
               url: `${API_URL}/school/courses/${courseId}`,
               method: "PUT",
+              supersedeKey: `course-put:${courseId}`,
               headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
               body: JSON.stringify({
                 ...courseData,
                 ...getSchoolPayload(),
-                lessons: deduplicatedLessons4.map((l) => ({
-                  id: l.id, ...lessonTranslationPayload(l), title: l.title, domain: l.domain || null, videoUrl: l.videoUrl || null,
-                  summary: l.summary || null, notes: l.notes || null, standards: l.standards || null,
-                  indicators: l.indicators || null, learningOutcomes: l.learningOutcomes || null,
-                  isVisible: l.isVisible !== undefined ? l.isVisible : true,
-                  publishDate: l.publishDate ? parseEgyptDate(l.publishDate).toISOString() : null,
-                  cutOffDate: l.cutOffDate ? parseEgyptDate(l.cutOffDate).toISOString() : null,
-            attachments: serializeLessonContent(l, "attachments"),
-            slides: serializeLessonContent(l, "slides"),
-            questions: serializeLessonContent(l, "questions"),
-            assignments: serializeLessonContent(l, "assignments"),
-                })),
+                expectedUpdatedAt,
+                lessons: deduplicatedLessonsToSend.map(serializeLessonForPut),
               }),
               label: language === "ar" ? `كورس: ${courseData.title}` : `Course: ${courseData.title}`,
             })) return;
@@ -1320,32 +1325,18 @@ export const CourseEditorProvider: React.FC<{
       }
     } catch (error: any) {
       console.error("Course update error:", error);
-      // Network failure — enqueue for offline sync
       const token = localStorage.getItem(tokenKey) || localStorage.getItem("token") || "";
-      const deduplicatedLessons5 = [...lessons].filter((l, idx, arr) => {
-        if (!l.id) return true;
-        return arr.findIndex(other => other.id === l.id) === idx;
-      });
       if (!await persistFailedWrite({
-            owner: requestOwner,
+        owner: requestOwner,
         url: `${API_URL}/school/courses/${courseId}`,
         method: "PUT",
+        supersedeKey: `course-put:${courseId}`,
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           ...courseData,
           ...getSchoolPayload(),
-          lessons: deduplicatedLessons5.map((l) => ({
-            id: l.id, ...lessonTranslationPayload(l), title: l.title, domain: l.domain || null, videoUrl: l.videoUrl || null,
-            summary: l.summary || null, notes: l.notes || null, standards: l.standards || null,
-            indicators: l.indicators || null, learningOutcomes: l.learningOutcomes || null,
-            isVisible: l.isVisible !== undefined ? l.isVisible : true,
-            publishDate: l.publishDate ? parseEgyptDate(l.publishDate).toISOString() : null,
-            cutOffDate: l.cutOffDate ? parseEgyptDate(l.cutOffDate).toISOString() : null,
-            attachments: serializeLessonContent(l, "attachments"),
-            slides: serializeLessonContent(l, "slides"),
-            questions: serializeLessonContent(l, "questions"),
-            assignments: serializeLessonContent(l, "assignments"),
-          })),
+          expectedUpdatedAt,
+          lessons: deduplicatedLessonsToSend.map(serializeLessonForPut),
         }),
         label: language === "ar" ? `كورس: ${courseData.title}` : `Course: ${courseData.title}`,
       })) return;
@@ -1489,6 +1480,8 @@ export const CourseEditorProvider: React.FC<{
     </CourseEditorContext.Provider>
   );
 };
+
+export const useOptionalCourseEditor = () => useContext(CourseEditorContext);
 
 export const useCourseEditor = () => {
   const context = useContext(CourseEditorContext);

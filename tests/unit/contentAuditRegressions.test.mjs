@@ -215,3 +215,90 @@ test('HtmlRenderer bounds KaTeX rule dimensions and macro expansions via maxSize
  assert.doesNotMatch(recursiveMacro, /class="katex"/);
  assert.match(recursiveMacro, /\\def\\a\{\\a\\a\}\\a/);
 });
+
+test('buildCourseLessonSummary preserves videoUrl, duration, metadata, and English translations', () => {
+ const bilingual = load('../../src/lib/bilingualMetadata.ts');
+ const { buildCourseLessonSummary } = load('../../src/lib/courseLessonSummary.ts', { './bilingualMetadata': bilingual });
+ const summary = buildCourseLessonSummary({
+  id: 'lesson-1',
+  courseId: 'course-1',
+  title: 'Algebra Basics',
+  domain: 'Algebra',
+  videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+  summary: 'Intro summary',
+  notes: 'Teacher notes',
+  standards: 'S1',
+  indicators: 'I1',
+  learningOutcomes: 'LO1',
+  domainEn: 'Algebra EN',
+  standardsEn: 'S1 EN',
+  indicatorsEn: 'I1 EN',
+  learningOutcomesEn: 'LO1 EN',
+  duration: 420,
+  slides: [{ id: 's1' }, { id: 's2' }],
+ });
+ assert.equal(summary.videoUrl, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+ assert.equal(summary.duration, 420);
+ assert.equal(summary.notes, 'Teacher notes');
+ assert.equal(summary.standards, 'S1');
+ assert.equal(summary.indicators, 'I1');
+ assert.equal(summary.learningOutcomes, 'LO1');
+ assert.equal(summary.domainEn, 'Algebra EN');
+ assert.equal(summary.standardsEn, 'S1 EN');
+ assert.equal(summary.indicatorsEn, 'I1 EN');
+ assert.equal(summary.learningOutcomesEn, 'LO1 EN');
+ assert.equal(summary.slidesCount, 2);
+ assert.equal(summary.isContentLoaded, false);
+});
+
+test('courseCreatePersistence serializes lessons with isContentLoaded, enforces non-central school-admin payloads, and merges server IDs', () => {
+ const bilingual = load('../../src/lib/bilingualMetadata.ts');
+ const egyptTime = load('../../src/lib/egyptTime.ts');
+ const persistence = load('../../src/lib/courseCreatePersistence.ts', {
+  './bilingualMetadata': bilingual,
+  './egyptTime': egyptTime,
+ });
+
+ assert.equal(persistence.toSafeCourseDateIso('invalid-date'), null);
+ assert.ok(persistence.toSafeCourseDateIso('2026-05-01T10:00'));
+
+ const serialized = persistence.serializeCourseLessonForSave({
+  title: 'Lesson 1',
+  videoUrl: 'https://youtu.be/abc',
+  notes: 'Notes',
+  standards: 'Std 1',
+  indicators: 'Ind 1',
+  learningOutcomes: 'LO 1',
+  slides: [{ id: 1, title: 'Slide 1', content: 'Hello' }],
+  questions: [{ text: 'Q1?' }],
+ }, 0);
+ assert.equal(serialized.isContentLoaded, true);
+ assert.equal(serialized.videoUrl, 'https://youtu.be/abc');
+ assert.equal(serialized.notes, 'Notes');
+ assert.equal(JSON.parse(serialized.slides).length, 1);
+ assert.equal(JSON.parse(serialized.questions).length, 1);
+
+ const schoolAdminPayload = persistence.buildCourseSavePayload(
+  { title: 'School Course', grades: ['G1'], subjects: ['Math'], isCentral: true, schoolIds: [] },
+  [{ title: 'Lesson 1', slides: [{ id: 1 }] }],
+  'SCHOOL_ADMIN'
+ );
+ assert.equal(schoolAdminPayload.isCentral, false);
+ assert.equal('schoolId' in schoolAdminPayload, false);
+
+ const superAdminCentralPayload = persistence.buildCourseSavePayload(
+  { title: 'Central Course', grades: ['G1'], subjects: ['Math'], isCentral: true, schoolIds: [] },
+  [{ title: 'Lesson 1', slides: [{ id: 1 }] }],
+  'SUPER_ADMIN'
+ );
+ assert.equal(superAdminCentralPayload.isCentral, true);
+
+ const merged = persistence.mergeServerSavedLessons(
+  [{ title: 'Lesson 1', slides: [{ id: 1, title: 'Slide 1' }], questions: [], assignments: [], attachments: [] }],
+  [{ id: 'srv-lesson-1', title: 'Lesson 1', slides: '[{"id":1,"title":"Slide 1"}]', questions: '[]', assignments: '[]', attachments: '[]' }]
+ );
+ assert.equal(merged.length, 1);
+ assert.equal(merged[0].id, 'srv-lesson-1');
+ assert.equal(merged[0].isContentLoaded, true);
+ assert.equal(merged[0].slides.length, 1);
+});

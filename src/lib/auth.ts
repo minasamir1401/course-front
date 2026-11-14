@@ -133,7 +133,19 @@ export const startImpersonation = (targetUserOrLegacyToken: any, targetRoleOrUse
 
 export const stopImpersonation = async () => {
   const response = await apiFetch('/api/admin/stop-impersonate', { method: 'POST' });
-  if (!response.ok) throw new Error('تعذر الرجوع لحساب الإدارة. أعد المحاولة.');
+  if (!response.ok) {
+    if (response.status === 400) {
+      const hasSuperAdmin = Boolean(localStorage.getItem('super_admin_user'));
+      localStorage.removeItem('is_impersonating');
+      localStorage.removeItem('original_admin_token');
+      localStorage.removeItem('original_admin_user');
+      localStorage.removeItem('impersonated_school_name');
+      window.dispatchEvent(new Event('impersonation-changed'));
+      window.location.assign(hasSuperAdmin ? '/super-admin' : '/school-admin');
+      return;
+    }
+    throw new Error('تعذر الرجوع لحساب الإدارة. أعد المحاولة.');
+  }
   const { user } = await response.json();
   const key = user.role === 'SUPER_ADMIN' ? AUTH_KEYS.SUPER_ADMIN : AUTH_KEYS.SCHOOL_ADMIN;
   clearAllAuthData();

@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import { buildMasterReferenceGuideRows } from './excelReferenceGuide';
 import { planQuestionImport, questionExportRows, questionTemplateRows } from './questionExcelSync';
 
 export function buildQuestionWorkbook(questions: any[] | null, language: string = 'ar') {
@@ -46,6 +47,11 @@ export function buildQuestionWorkbook(questions: any[] | null, language: string 
   instructionsSheet['!cols'] = [{ wch: 120 }];
   instructionsSheet['!rows'] = Array.from({ length: instructionsData.length }, () => ({ hpt: 26 }));
   XLSX.utils.book_append_sheet(wb, instructionsSheet, 'Instructions');
+
+  const guideRows = buildMasterReferenceGuideRows(language);
+  const guideSheet = XLSX.utils.aoa_to_sheet(guideRows);
+  guideSheet['!cols'] = [{ wch: 32 }, { wch: 62 }, { wch: 58 }];
+  XLSX.utils.book_append_sheet(wb, guideSheet, 'Reference Guide');
 
   if (questions) {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([

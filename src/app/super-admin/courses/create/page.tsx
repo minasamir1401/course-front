@@ -8,12 +8,17 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { apiFetch, API_URL } from '@/lib/api';
 import { normalizeDok } from '@/lib/examQuestionMetadata';
 import { useNotification } from "@/context/NotificationContext";
+import { useCourseCreatePersistence } from "@/hooks/useCourseCreatePersistence";
+import { CourseCreateHeader } from "@/components/course-editor/CourseCreateHeader";
 import DashboardLayout from "@/components/DashboardLayout";
 import { SubjectPreview } from "@/components/student/SubjectArtwork";
 import { LessonInfoTab } from "@/components/course-editor/lesson-builder/LessonInfoTab";
+import { LessonSchedulingTab } from "@/components/course-editor/lesson-builder/LessonSchedulingTab";
 import { LessonSlidesBuilder } from "@/components/course-editor/lesson-builder/LessonSlidesBuilder";
 import { LessonQuestionsBuilder } from "@/components/course-editor/lesson-builder/LessonQuestionsBuilder";
 import { LessonAttachmentsTab } from "@/components/course-editor/lesson-builder/LessonAttachmentsTab";
+import { CourseCoverUploadField } from "@/components/course-editor/CourseCoverUploadField";
+import { downloadFullLessonWorkbook, handleFullLessonExcelImport } from "@/lib/slidesExcelWorkbook";
 
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ArrowLeft, Plus, Trash2, Video, FileText, HelpCircle, BookOpen, Save, Layers, Edit2, X, ChevronDown, ChevronUp, Play, Layout, Target, CheckCircle2, AlertCircle, Upload, Download, Settings, Eye, Monitor, ListOrdered, FileJson, FileDown, Clock, Lightbulb, MessageSquareQuote, TriangleAlert, Search } from 'lucide-react';
@@ -210,16 +215,6 @@ export default function CreateCoursePage() {
     return translations[subject] || subject;
   };
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [isAutoSaveEnabled, setIsAutoSaveEnabled] = useState(true);
-  const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
-  const [createdId, setCreatedId] = useState<string | null>(null);
-  const createdIdRef = useRef<string | null>(null);
-  const autoSaveWriteQueueRef = useRef<Promise<void>>(Promise.resolve());
-  const autoSaveGenerationRef = useRef(0);
-  const lastAutoSaveSnapshotRef = useRef("");
-  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const manualSubmitRef = useRef(false);
   const [schools, setSchools] = useState<any[]>([]);
   const [availableMetadata, setAvailableMetadata] = useState<{ domains: string[]; standards: string[]; indicators: string[]; outcomes: string[] }>({ domains: [], standards: [], indicators: [], outcomes: [] });
 
@@ -258,6 +253,32 @@ export default function CreateCoursePage() {
     questions: [],
     assignments: [],
     attachments: []
+  });
+
+  const {
+    isLoading,
+    isAutoSaveEnabled,
+    setIsAutoSaveEnabled,
+    lastAutoSave,
+    createdId,
+    saveLesson,
+    handleSubmit,
+  } = useCourseCreatePersistence({
+    role: "SUPER_ADMIN",
+    tokenKey: "super_admin_token",
+    redirectPath: "/super-admin/courses",
+    courseData,
+    lessons,
+    setLessons,
+    currentLesson,
+    setCurrentLesson,
+    editingLessonIndex,
+    isLessonModalOpen,
+    setIsLessonModalOpen,
+    showToast,
+    t,
+    language,
+    router,
   });
 
   // UI States for Lesson Modal
@@ -455,20 +476,6 @@ export default function CreateCoursePage() {
     setIsLessonModalOpen(true);
   };
 
-  const saveLesson = () => {
-    if (!currentLesson.title) {
-      showToast(t('courseCreate.lessonTitleRequired') || "Lesson title is required", "error");
-      return;
-    }
-    const newLessons = [...lessons];
-    if (editingLessonIndex !== null) {
-      newLessons[editingLessonIndex] = currentLesson;
-    } else {
-      newLessons.push(currentLesson);
-    }
-    setLessons(newLessons);
-    setIsLessonModalOpen(false);
-  };
 
   const metadataExcelRef = useRef<HTMLInputElement>(null);
   const questionsExcelRef = useRef<HTMLInputElement>(null);
@@ -795,16 +802,56 @@ export default function CreateCoursePage() {
       {isLessonModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 overflow-y-auto">
           <div className="bg-white rounded-[40px] w-full max-w-6xl my-auto relative shadow-2xl flex flex-col max-h-[90vh]">
-            <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-[40px] shrink-0">
+            <div className="p-8 border-b border-slate-100 flex flex-wrap justify-between items-center gap-3 bg-slate-50 rounded-t-[40px] shrink-0">
                <h2 className="text-2xl font-black text-slate-900">{t('courseCreate.lessonDetails') || "Lesson Details"}</h2>
-               <button onClick={() => setIsLessonModalOpen(false)} className="p-3 bg-white rounded-xl hover:bg-red-50 text-slate-400 hover:text-red-500 transition-all shadow-sm">
-                 <X className="w-6 h-6" />
-               </button>
+               <div className="flex flex-wrap items-center gap-2">
+                 <input
+                   id="create-modal-full-lesson-excel"
+                   type="file"
+                   accept=".xlsx,.xls"
+                   className="hidden"
+                   onChange={(e) =>
+                     handleFullLessonExcelImport(
+                       e,
+                       () => currentLesson,
+                       (nextLesson) => setCurrentLesson(nextLesson),
+                       language,
+                       showToast
+                     )
+                   }
+                 />
+                 <button
+                   type="button"
+                   onClick={() => downloadFullLessonWorkbook(null, language, currentLesson?.title)}
+                   className="px-3.5 py-2 rounded-xl bg-sky-50 text-sky-700 border border-sky-200 font-bold text-xs flex items-center gap-1.5 hover:bg-sky-100 transition-colors"
+                 >
+                   <Download className="w-4 h-4 shrink-0" />
+                   <span>{language === 'ar' ? 'قالب ودليل الدرس' : 'Full Lesson Template & Guide'}</span>
+                 </button>
+                 <button
+                   type="button"
+                   onClick={() => downloadFullLessonWorkbook(currentLesson, language, currentLesson?.title)}
+                   className="px-3.5 py-2 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 font-bold text-xs flex items-center gap-1.5 hover:bg-amber-100 transition-colors"
+                 >
+                   <FileDown className="w-4 h-4 shrink-0" />
+                   <span>{language === 'ar' ? 'تصدير الدرس Excel' : 'Export Full Lesson'}</span>
+                 </button>
+                 <label
+                   htmlFor="create-modal-full-lesson-excel"
+                   className="px-3.5 py-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-xs flex items-center gap-1.5 hover:bg-emerald-100 transition-colors cursor-pointer"
+                 >
+                   <Upload className="w-4 h-4 shrink-0" />
+                   <span>{language === 'ar' ? 'استيراد الدرس Excel' : 'Import Full Lesson'}</span>
+                 </label>
+                 <button onClick={() => setIsLessonModalOpen(false)} className="p-3 bg-white rounded-xl hover:bg-red-50 text-slate-400 hover:text-red-500 transition-all shadow-sm">
+                   <X className="w-6 h-6" />
+                 </button>
+               </div>
             </div>
             
             <div className="flex-1 overflow-y-auto p-8 bg-slate-50/50">
               <div className="flex gap-4 mb-8 overflow-x-auto pb-4 custom-scrollbar">
-                {['info', 'slides', 'assignments', 'exercises', 'attachments'].map((tab) => (
+                {['info', 'scheduling', 'slides', 'assignments', 'exercises', 'attachments'].map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab as any)}
@@ -815,11 +862,14 @@ export default function CreateCoursePage() {
                     }`}
                   >
                     {tab === 'info' && <BookOpen className="w-5 h-5" />}
+                    {tab === 'scheduling' && <Clock className="w-5 h-5" />}
                     {tab === 'slides' && <Layout className="w-5 h-5" />}
                     {tab === 'assignments' && <FileText className="w-5 h-5" />}
                     {tab === 'exercises' && <Target className="w-5 h-5" />}
                     {tab === 'attachments' && <Upload className="w-5 h-5" />}
-                    {t(`courseCreate.tab_${tab}`) || tab.toUpperCase()}
+                    {tab === 'scheduling'
+                      ? (language === 'ar' ? 'الجدولة والظهور' : 'Scheduling')
+                      : (t(`courseCreate.tab_${tab}`) || tab.toUpperCase())}
                   </button>
                 ))}
               </div>
@@ -827,6 +877,9 @@ export default function CreateCoursePage() {
               <div className="bg-white p-8 rounded-[35px] border border-slate-200 shadow-sm">
                 {activeTab === 'info' && (
                    <LessonInfoTab currentLesson={currentLesson} setCurrentLesson={setCurrentLesson} language={language} showToast={showToast} metadataExcelRef={metadataExcelRef} handleExcelUpload={handleExcelUpload} />
+                )}
+                {activeTab === 'scheduling' && (
+                   <LessonSchedulingTab currentLesson={currentLesson} setCurrentLesson={setCurrentLesson} language={language} />
                 )}
                 {activeTab === 'slides' && (
                    <LessonSlidesBuilder source="slides" currentLesson={currentLesson} setCurrentLesson={setCurrentLesson} language={language} assignmentsExcelRef={assignmentsExcelRef} questionsExcelRef={questionsExcelRef} handleAssignmentsExcelChange={handleAssignmentsExcelChange} handleQuestionsExcelChange={handleQuestionsExcelChange} handleExcelUpload={handleExcelUpload} downloadQuestionsTemplate={downloadQuestionsTemplate} />
@@ -847,7 +900,12 @@ export default function CreateCoursePage() {
               <button onClick={() => setIsLessonModalOpen(false)} className="px-10 py-4 rounded-2xl bg-white border border-slate-200 text-slate-500 font-bold hover:bg-slate-50 transition-all">
                 {t('courseCreate.cancelChanges') || "Cancel Changes"}
               </button>
-              <button onClick={saveLesson} className="px-12 py-4 rounded-2xl bg-indigo-600 text-white font-black hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-900/20 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => void saveLesson()}
+                disabled={isLoading}
+                className="px-12 py-4 rounded-2xl bg-indigo-600 text-white font-black hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-900/20 flex items-center gap-3 disabled:opacity-50"
+              >
                 {t('courseCreate.saveLesson') || "Confirm & Save Lesson"}
                 <CheckCircle2 className="w-5 h-5" />
               </button>
@@ -855,6 +913,21 @@ export default function CreateCoursePage() {
           </div>
         </div>
       )}
+
+      <CourseCreateHeader
+        language={language}
+        title={t('courseCreate.title') || (language === 'ar' ? "إنشاء كورس تعليمي" : "Create Educational Course")}
+        subtitle={t('courseCreate.subtitle') || (language === 'ar' ? "صمم تجربة تعليمية متكاملة لطلابك" : "Design a complete learning experience for your students")}
+        saveLabel={t('courseCreate.savePublish') || (language === 'ar' ? "حفظ ونشر الكورس" : "Save & Publish Course")}
+        savingLabel={t('courseCreate.saving') || (language === 'ar' ? "جاري الحفظ..." : "Publishing...")}
+        isAutoSaveEnabled={isAutoSaveEnabled}
+        setIsAutoSaveEnabled={setIsAutoSaveEnabled}
+        lastAutoSave={lastAutoSave}
+        createdId={createdId}
+        isLoading={isLoading}
+        onBack={() => router.back()}
+        onSave={() => void handleSubmit()}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 relative max-w-[1600px] mx-auto p-4 md:p-8">
         {/* Left Side: Course Info */}
@@ -872,10 +945,13 @@ export default function CreateCoursePage() {
               <textarea value={courseData.description} onChange={e => setCourseData({...courseData, description: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all min-h-[120px]" placeholder={t('courseCreate.courseDescriptionPlaceholder') || "Describe the course"} />
             </div>
             
-            <div className="space-y-2">
-              <label className="text-xs font-black text-slate-400 uppercase tracking-widest">{t('courseCreate.coverImage') || "Cover Image"}</label>
-              <input type="text" value={courseData.coverImage} onChange={e => setCourseData({...courseData, coverImage: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-6 font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all" placeholder="https://..." />
-            </div>
+            <CourseCoverUploadField
+              coverImage={courseData.coverImage}
+              language={language}
+              label={t('courseCreate.coverImage') || "Cover Image"}
+              onChange={(coverImage) => setCourseData({ ...courseData, coverImage })}
+              showToast={showToast}
+            />
             <SubjectPreview subject={courseData.subjects} title={courseData.title} coverImage={courseData.coverImage} language={language} />
 
 
@@ -1005,8 +1081,22 @@ export default function CreateCoursePage() {
                 </>
               )}
             </div>
+
+            <button
+              type="button"
+              onClick={() => void handleSubmit()}
+              disabled={isLoading}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 px-6 rounded-2xl font-black flex items-center justify-center gap-3 transition-all shadow-xl shadow-indigo-600/20 disabled:opacity-50"
+            >
+              <Save className="w-5 h-5" />
+              <span>
+                {isLoading
+                  ? (t('courseCreate.saving') || (language === 'ar' ? "جاري الحفظ..." : "Publishing..."))
+                  : (t('courseCreate.savePublish') || (language === 'ar' ? "حفظ ونشر الكورس" : "Save & Publish Course"))}
+              </span>
+            </button>
           </div>
-          
+
           <div className="bg-indigo-50 border border-indigo-100 p-8 rounded-[40px] flex items-center gap-6">
             <div className="w-16 h-16 bg-indigo-600 rounded-3xl flex items-center justify-center text-white shadow-xl shadow-indigo-600/20">
               <ListOrdered className="w-8 h-8" />
@@ -1020,18 +1110,55 @@ export default function CreateCoursePage() {
 
         {/* Right Side: Lessons Management */}
       <div className="lg:col-span-8 space-y-8">
-        <div className="flex justify-between items-center bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
+        <div className="flex flex-wrap justify-between items-center gap-4 bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
           <h3 className="text-2xl font-black text-slate-900 flex items-center gap-4">
             <Layers className="w-8 h-8 text-indigo-600" />
             {t('courseCreate.curriculumStructure')}
           </h3>
-          <button
-            onClick={openAddLessonModal}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-2xl font-black flex items-center gap-3 transition-all shadow-xl shadow-indigo-600/20"
-          >
-            <Plus className="w-6 h-6" />
-            {t('courseCreate.addNewLesson')}
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <input
+              id="create-curriculum-full-lesson-excel"
+              type="file"
+              accept=".xlsx,.xls"
+              className="hidden"
+              onChange={(e) =>
+                handleFullLessonExcelImport(
+                  e,
+                  () => ({
+                    title: "", domain: "", content: "", videoUrl: "", summary: "", notes: "",
+                    standards: "", indicators: "", learningOutcomes: "", isVisible: true,
+                    publishDate: "", cutOffDate: "", slides: [], questions: [], assignments: [], attachments: []
+                  }),
+                  (nextLesson) => setLessons((prev: any[]) => [...prev, { ...nextLesson, isContentLoaded: true, order: prev.length + 1 }]),
+                  language,
+                  showToast
+                )
+              }
+            />
+            <button
+              type="button"
+              onClick={() => downloadFullLessonWorkbook(null, language)}
+              className="bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 px-5 py-3.5 rounded-2xl font-black text-sm flex items-center gap-2 transition-all"
+            >
+              <Download className="w-5 h-5" />
+              <span>{language === 'ar' ? 'قالب ودليل الدرس Excel' : 'Lesson Excel Template & Guide'}</span>
+            </button>
+            <label
+              htmlFor="create-curriculum-full-lesson-excel"
+              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-5 py-3.5 rounded-2xl font-black text-sm flex items-center gap-2 transition-all cursor-pointer"
+            >
+              <Upload className="w-5 h-5" />
+              <span>{language === 'ar' ? 'استيراد درس Excel' : 'Import Lesson Excel'}</span>
+            </label>
+            <button
+              type="button"
+              onClick={openAddLessonModal}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-4 rounded-2xl font-black flex items-center gap-3 transition-all shadow-xl shadow-indigo-600/20"
+            >
+              <Plus className="w-6 h-6" />
+              {t('courseCreate.addNewLesson')}
+            </button>
+          </div>
         </div>
 
         {lessons.length === 0 ? (

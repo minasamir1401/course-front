@@ -5,11 +5,22 @@ import { fetchAllPages } from "@/lib/paginatedFetch";
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import DashboardLayout from "@/components/DashboardLayout";
-import { BookOpen, Plus, Search, Edit2, Trash2, Monitor, CheckCircle2, Layout, GraduationCap } from 'lucide-react';
+import { BookOpen, Plus, Search, Edit2, Trash2, Monitor, CheckCircle2, Layout, GraduationCap, FileSpreadsheet, DownloadCloud, FileCode, Upload } from 'lucide-react';
 import { useRouter } from "next/navigation";
 import { apiFetch, API_URL, getFullImageUrl } from "@/lib/api";
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import ImportExcelModal from "@/components/modals/ImportExcelModal";
+import { downloadFullLessonWorkbook } from "@/lib/slidesExcelWorkbook";
+import { downloadCourseBackupFile, restoreCourseFromJsonFile } from "@/lib/courseBackupActions";
+
+const matchesCourseStage = (course: any, stage: 'all' | 'primary' | 'preparatory' | 'secondary'): boolean => {
+  if (stage === 'all') return true;
+  const text = `${course?.grade || ''} ${course?.grades || ''}`.toLowerCase();
+  if (stage === 'primary') return /ابتدائي|elementary|primary|grade\s*[1-6]\b|gr\.?\s*[1-6]\b/.test(text);
+  if (stage === 'preparatory') return /إعدادي|اعدادي|middle|prep|grade\s*[7-9]\b/.test(text);
+  return /ثانوي|high|secondary|grade\s*1[0-2]\b/.test(text);
+};
 
 export default function SchoolCoursesView() {
   const router = useRouter();
@@ -18,8 +29,45 @@ export default function SchoolCoursesView() {
   
   const [courses, setCourses] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [_schoolId, setSchoolId] = useState<string>("");
+  const [schoolId, setSchoolId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [stageFilter, setStageFilter] = useState<'all' | 'primary' | 'preparatory' | 'secondary'>('all');
+  const [sortBy, setSortBy] = useState<'latest' | 'alpha'>('latest');
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+
+  const reloadCourses = () => {
+    const token = localStorage.getItem("school_admin_token");
+    if (token && schoolId) {
+      fetchCourses(token, schoolId);
+    }
+  };
+
+  const handleJsonRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const res = await restoreCourseFromJsonFile(file, "school_admin_token");
+      showToast(res.message || (language === 'ar' ? 'تمت استعادة الكورس بنجاح' : 'Course restored successfully'), 'success');
+      reloadCourses();
+    } catch (err: any) {
+      showToast(err?.message || (language === 'ar' ? 'فشل استعادة ملف JSON' : 'Failed to restore JSON backup'), 'error');
+    }
+  };
+
+  const handleCourseExport = async (course: any, format: 'excel' | 'json') => {
+    try {
+      await downloadCourseBackupFile(course.id, format, "school_admin_token", course.title);
+      showToast(
+        language === 'ar'
+          ? `تم تحميل النسخة الاحتياطية (${format === 'excel' ? 'Excel' : 'JSON'}) بنجاح`
+          : `${format.toUpperCase()} backup downloaded successfully`,
+        'success',
+      );
+    } catch (err: any) {
+      showToast(err?.message || (language === 'ar' ? 'فشل تصدير الكورس' : 'Failed to export course'), 'error');
+    }
+  };
 
   useEffect(() => {
     const userData = localStorage.getItem("school_admin_user");
@@ -67,10 +115,17 @@ export default function SchoolCoursesView() {
     }
   };
 
-  const filteredCourses = courses.filter(c => 
-    c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (c.subject && c.subject.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredCourses = courses
+    .filter((c) => {
+      const matchesText =
+        c.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (c.subject && c.subject.toLowerCase().includes(searchQuery.toLowerCase()));
+      return matchesText && matchesCourseStage(c, stageFilter);
+    })
+    .sort((a, b) => {
+      if (sortBy === 'alpha') return String(a.title || '').localeCompare(String(b.title || ''));
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    });
 
   return (
     <DashboardLayout>
@@ -78,7 +133,7 @@ export default function SchoolCoursesView() {
         <main className="max-w-[1600px] mx-auto">
           
           {/* Top Header Section */}
-          <div className="mb-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 bg-white p-8 rounded-[40px] shadow-sm border border-slate-100">
+          <div className="mb-10 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 bg-white p-8 rounded-[40px] shadow-sm border border-slate-100">
             <div className={language === 'ar' ? 'text-right' : 'text-left'}>
               <div className="flex items-center gap-2 text-indigo-600 font-bold mb-2 text-sm">
                 <span className="w-8 h-1 bg-indigo-600 rounded-full"></span>
@@ -88,13 +143,36 @@ export default function SchoolCoursesView() {
               <p className="text-slate-500 font-medium opacity-80">{t('schoolAdmin.coursesPage.subtitle')}</p>
             </div>
             
-            <button 
-              onClick={() => router.push('/school-admin/courses/create')}
-              className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black flex items-center gap-3 hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/20 hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <Plus className="w-6 h-6" />
-              {t('schoolAdmin.coursesPage.createCourse')}
-            </button>
+            <div className="flex flex-wrap gap-3 items-center">
+              <button
+                type="button"
+                onClick={() => downloadFullLessonWorkbook(null, language)}
+                className="bg-sky-50 text-sky-700 border border-sky-200 px-5 py-3.5 rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-sky-100 transition-all"
+              >
+                <DownloadCloud className="w-5 h-5" />
+                {language === 'ar' ? 'قالب ودليل الإكسيل' : 'Excel Guide & Template'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsImportModalOpen(true)}
+                className="bg-indigo-50 text-indigo-700 border border-indigo-200 px-5 py-3.5 rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-indigo-100 transition-all"
+              >
+                <FileSpreadsheet className="w-5 h-5" />
+                {language === 'ar' ? 'استيراد Excel' : 'Import Excel'}
+              </button>
+              <label className="bg-amber-50 text-amber-700 border border-amber-200 px-5 py-3.5 rounded-2xl font-black text-sm flex items-center gap-2 hover:bg-amber-100 transition-all cursor-pointer">
+                <Upload className="w-5 h-5" />
+                {language === 'ar' ? 'استعادة JSON' : 'Restore JSON'}
+                <input type="file" accept=".json" className="hidden" onChange={handleJsonRestore} />
+              </label>
+              <button
+                onClick={() => router.push('/school-admin/courses/create')}
+                className="bg-indigo-600 text-white px-7 py-3.5 rounded-2xl font-black text-sm flex items-center gap-2.5 hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-600/20"
+              >
+                <Plus className="w-5 h-5" />
+                {t('schoolAdmin.coursesPage.createCourse')}
+              </button>
+            </div>
           </div>
 
           {/* Stats Overview */}
@@ -129,8 +207,8 @@ export default function SchoolCoursesView() {
           </div>
 
           {/* Filters and Search */}
-          <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm mb-8 flex flex-col md:flex-row gap-4 justify-between items-center">
-             <div className="relative w-full md:w-96">
+          <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm mb-8 flex flex-col lg:flex-row gap-4 justify-between items-center">
+             <div className="relative w-full lg:w-96">
                 <input 
                   type="text" 
                   placeholder={t('schoolAdmin.coursesPage.searchPlaceholder')}
@@ -144,9 +222,44 @@ export default function SchoolCoursesView() {
                   language === 'ar' ? 'right-4' : 'left-4'
                 }`} />
              </div>
+             <div className="flex flex-wrap gap-2">
+                {(
+                  [
+                    { id: 'all', label: language === 'ar' ? 'جميع المراحل' : 'All Stages' },
+                    { id: 'primary', label: language === 'ar' ? 'الابتدائية' : 'Primary' },
+                    { id: 'preparatory', label: language === 'ar' ? 'الإعدادية' : 'Preparatory' },
+                    { id: 'secondary', label: language === 'ar' ? 'الثانوية' : 'Secondary' },
+                  ] as const
+                ).map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setStageFilter(tab.id)}
+                    className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${
+                      stageFilter === tab.id
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'bg-slate-50 border border-slate-100 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+             </div>
              <div className="flex gap-2">
-                <button className="px-5 py-2 rounded-xl bg-slate-50 border border-slate-100 text-slate-600 text-xs font-black hover:bg-slate-100 transition-all">{t('schoolAdmin.coursesPage.latestFirst')}</button>
-                <button className="px-5 py-2 rounded-xl bg-slate-50 border border-slate-100 text-slate-600 text-xs font-black hover:bg-slate-100 transition-all">{t('schoolAdmin.coursesPage.alphabetical')}</button>
+                <button
+                  type="button"
+                  onClick={() => setSortBy('latest')}
+                  className={`px-5 py-2 rounded-xl text-xs font-black transition-all ${sortBy === 'latest' ? 'bg-slate-900 text-white' : 'bg-slate-50 border border-slate-100 text-slate-600 hover:bg-slate-100'}`}
+                >
+                  {t('schoolAdmin.coursesPage.latestFirst')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSortBy('alpha')}
+                  className={`px-5 py-2 rounded-xl text-xs font-black transition-all ${sortBy === 'alpha' ? 'bg-slate-900 text-white' : 'bg-slate-50 border border-slate-100 text-slate-600 hover:bg-slate-100'}`}
+                >
+                  {t('schoolAdmin.coursesPage.alphabetical')}
+                </button>
              </div>
           </div>
 
@@ -191,6 +304,22 @@ export default function SchoolCoursesView() {
                          )}
                        </div>
                        <div className="flex gap-2">
+                         <button
+                           type="button"
+                           title={language === 'ar' ? 'تصدير Excel احتياطي' : 'Export Excel Backup'}
+                           onClick={() => handleCourseExport(course, 'excel')}
+                           className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white flex items-center justify-center transition-all border border-emerald-100"
+                         >
+                           <FileSpreadsheet className="w-4 h-4" />
+                         </button>
+                         <button
+                           type="button"
+                           title={language === 'ar' ? 'تصدير JSON احتياطي' : 'Export JSON Backup'}
+                           onClick={() => handleCourseExport(course, 'json')}
+                           className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white flex items-center justify-center transition-all border border-amber-100"
+                         >
+                           <FileCode className="w-4 h-4" />
+                         </button>
                          <button 
                            onClick={() => router.push(`/school-admin/courses/edit?id=${course.id}`)}
                            className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-all border border-slate-100"
@@ -231,6 +360,11 @@ export default function SchoolCoursesView() {
 
         </main>
       </div>
+      <ImportExcelModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onSuccess={reloadCourses}
+      />
     </DashboardLayout>
   );
 }
