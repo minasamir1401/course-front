@@ -23,6 +23,7 @@ const {
   buildSlidesWorkbook,
   planSlidesImport,
   readSlidesImport,
+  importLessonSlides,
   buildFullLessonWorkbook,
   importFullLessonWorkbook,
   handleFullLessonExcelImport,
@@ -268,4 +269,108 @@ test('handleFullLessonExcelImport protects existing open lesson when importing a
   assert.equal(appliedLesson.isContentLoaded, true);
   assert.equal(openExistingLesson.id, 'wep-existing-id');
   assert.equal(openExistingLesson.title, 'Work, Energy & Power');
+});
+
+test('English-only metadata workbooks resolve titleEn into title and never overwrite renamed open lessons', async () => {
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
+    ['Lesson Title (Ar)', 'Lesson Title (En)', 'Domain (En)', 'Standard (En)', 'Summary (En)'],
+    ['', 'Gravitation', 'Physics', 'Law of universal gravitation', 'Gravity overview'],
+  ]), 'Metadata');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
+    ['Order', 'Slide Type', 'Title (En)', 'Content (En)'],
+    [1, 'TEXT', 'Universal Law', '<p>F = G*m1*m2/r^2</p>'],
+  ]), 'Slides');
+
+  const direct = importFullLessonWorkbook(wb, { title: '', slides: [], questions: [], assignments: [] }, 'en');
+  assert.equal(direct.title, 'Gravitation');
+  assert.equal(direct.titleEn, 'Gravitation');
+
+  const fileBuffer = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+  const renamedOpenLesson = {
+    id: 'wep-existing-id',
+    updatedAt: '2026-11-15T10:00:00.000Z',
+    originalTitle: 'Work, Energy & Power',
+    title: 'Gravitation',
+    slides: [{ id: 'wep-1', title: 'Kinetic Energy' }],
+  };
+
+  let applied = null;
+  const originalWindow = global.window;
+  global.window = { confirm: () => false };
+  try {
+    await handleFullLessonExcelImport(
+      { target: { files: [{ name: 'gravitation.xlsx', arrayBuffer: async () => fileBuffer }], value: 'gravitation.xlsx' } },
+      () => renamedOpenLesson,
+      (nextLesson) => { applied = nextLesson; },
+      'en',
+    );
+    assert.equal(applied, null);
+
+    global.window = { confirm: () => true };
+    await handleFullLessonExcelImport(
+      { target: { files: [{ name: 'gravitation.xlsx', arrayBuffer: async () => fileBuffer }], value: 'gravitation.xlsx' } },
+      () => renamedOpenLesson,
+      (nextLesson) => { applied = nextLesson; },
+      'en',
+    );
+  } finally {
+    global.window = originalWindow;
+  }
+
+  assert.ok(applied);
+  assert.equal(applied.title, 'Gravitation');
+  assert.equal(applied.id, undefined);
+  assert.equal(applied.originalTitle, undefined);
+  assert.ok(applied.newLessonId);
+  assert.equal(renamedOpenLesson.id, 'wep-existing-id');
+});
+
+test('importLessonSlides detaches lesson identity instead of merging into an open differently titled lesson', async () => {
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
+    ['Lesson Title (Ar)', 'Lesson Title (En)', 'Domain (En)'],
+    ['', 'Gravitation', 'Physics'],
+  ]), 'Metadata');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
+    ['Order', 'Slide Type', 'Title (En)', 'Content (En)'],
+    [1, 'TEXT', 'Orbital Velocity', '<p>v = sqrt(GM/r)</p>'],
+  ]), 'Slides');
+
+  const fileBuffer = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+  let currentLesson = {
+    id: 'wep-id',
+    updatedAt: '2026-11-15T10:00:00.000Z',
+    originalTitle: 'Work, Energy & Power',
+    title: 'Work, Energy & Power',
+    slides: [{ id: 'wep-s1', type: 'TEXT', title: 'Work', content: '<p>W = F*d</p>' }],
+    questions: [{ id: 'wep-q1', text: 'Define Joule' }],
+  };
+
+  const originalWindow = global.window;
+  global.window = { confirm: () => true };
+  try {
+    await importLessonSlides(
+      { target: { files: [{ name: 'gravitation-slides.xlsx', arrayBuffer: async () => fileBuffer }], value: 'gravitation-slides.xlsx' } },
+      () => ({
+        language: 'en',
+        isLoadingContent: false,
+        currentLesson,
+        setCurrentLesson: updater => {
+          currentLesson = typeof updater === 'function' ? updater(currentLesson) : updater;
+        },
+      }),
+      false,
+    );
+  } finally {
+    global.window = originalWindow;
+  }
+
+  assert.equal(currentLesson.id, undefined);
+  assert.equal(currentLesson.originalTitle, undefined);
+  assert.ok(currentLesson.newLessonId);
+  assert.equal(currentLesson.title, 'Gravitation');
+  assert.equal(currentLesson.slides.length, 1);
+  assert.equal(currentLesson.slides[0].title, 'Orbital Velocity');
+  assert.deepEqual(currentLesson.questions, []);
 });

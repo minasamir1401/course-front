@@ -15,6 +15,7 @@ export interface CourseData {
 export interface Lesson {
   id?: string;
   newLessonId?: string;
+  originalTitle?: string;
   title: string;
   domain: string;
   domainEn?: string;

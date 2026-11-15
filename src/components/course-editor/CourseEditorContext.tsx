@@ -231,29 +231,29 @@ export const CourseEditorProvider: React.FC<{
     const timer = setTimeout(() => {
       void (async () => {
         try {
-        const draft = {
-          savedAt: new Date().toISOString(),
-          expectedUpdatedAt: courseVersionRef.current,
-          courseId,
-          lessons,
-          currentLesson,
-          isLessonModalOpen,
-          courseData
-        };
-        const savedToIndexedDb = await offlineSync.saveDraft(DRAFT_KEY, draft);
+          const draft = {
+            savedAt: new Date().toISOString(),
+            expectedUpdatedAt: courseVersionRef.current,
+            courseId,
+            lessons,
+            currentLesson,
+            isLessonModalOpen,
+            courseData
+          };
+          const savedToIndexedDb = await offlineSync.saveDraft(DRAFT_KEY, draft);
 
-        if (savedToIndexedDb) {
-          // Do not duplicate large slide payloads in quota-limited localStorage.
-          try {
-            localStorage.setItem(DRAFT_KEY, JSON.stringify({ savedAt: draft.savedAt, courseId }));
-          } catch {
-            // IndexedDB already has the recoverable draft.
+          if (savedToIndexedDb) {
+            // Do not duplicate large slide payloads in quota-limited localStorage.
+            try {
+              localStorage.setItem(DRAFT_KEY, JSON.stringify({ savedAt: draft.savedAt, courseId }));
+            } catch {
+              // IndexedDB already has the recoverable draft.
+            }
+            return;
           }
-          return;
-        }
 
-        localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-      } catch (error) {
+          localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+        } catch (error) {
           console.warn("[CourseEditor] Failed to save local draft", error);
           if (!draftStorageWarningShownRef.current) {
             draftStorageWarningShownRef.current = true;
@@ -283,7 +283,7 @@ export const CourseEditorProvider: React.FC<{
           setHasDraft(true);
           setDraftSavedAt(legacy.savedAt || stored?.savedAt || null);
         }
-      } catch {}
+      } catch { }
     })();
   }, [DRAFT_KEY]);
 
@@ -303,7 +303,7 @@ export const CourseEditorProvider: React.FC<{
         justRestoredRef.current = true;
         if (Array.isArray(draft.lessons)) setLessons(draft.lessons.map(withCourseLessonKey));
         if (draft.currentLesson?.title && (draft.isLessonModalOpen === true ||
-            (draft.isLessonModalOpen === undefined && !draft.currentLesson.id))) {
+          (draft.isLessonModalOpen === undefined && !draft.currentLesson.id))) {
           lessonSessionRef.current += 1;
           setCurrentLesson(withCourseLessonKey(draft.currentLesson));
           setLessonModalOpen(true);
@@ -316,7 +316,7 @@ export const CourseEditorProvider: React.FC<{
         );
         setHasDraft(false);
       }
-    } catch {}
+    } catch { }
   }, [DRAFT_KEY, language, showToast]);
 
   const clearDraft = useCallback(() => {
@@ -526,91 +526,91 @@ export const CourseEditorProvider: React.FC<{
               cutOffDate: l.cutOffDate && !isNaN(new Date(l.cutOffDate).getTime()) ? toEgyptInput(l.cutOffDate) : "",
               questions: Array.isArray(parsedQuestions)
                 ? parsedQuestions.filter(Boolean).map((q) => {
-                    let parsedExps = [""];
-                    try {
-                      parsedExps = typeof q.explanation === "string" && q.explanation.startsWith("[") ? JSON.parse(q.explanation) : q.explanations || [""];
-                      if (!Array.isArray(parsedExps)) parsedExps = [q.explanation || ""];
-                    } catch (e) {
-                      parsedExps = [q.explanation || ""];
-                    }
-                    let parsedSections = q.sections;
-                    if (typeof parsedSections === "string") {
-                      try { parsedSections = JSON.parse(parsedSections); } catch(e) { parsedSections = []; }
-                    }
-                    if (!Array.isArray(parsedSections)) parsedSections = [];
+                  let parsedExps = [""];
+                  try {
+                    parsedExps = typeof q.explanation === "string" && q.explanation.startsWith("[") ? JSON.parse(q.explanation) : q.explanations || [""];
+                    if (!Array.isArray(parsedExps)) parsedExps = [q.explanation || ""];
+                  } catch (e) {
+                    parsedExps = [q.explanation || ""];
+                  }
+                  let parsedSections = q.sections;
+                  if (typeof parsedSections === "string") {
+                    try { parsedSections = JSON.parse(parsedSections); } catch (e) { parsedSections = []; }
+                  }
+                  if (!Array.isArray(parsedSections)) parsedSections = [];
 
-                    let parsedOptions = q.options;
-                    if (typeof parsedOptions === "string") {
-                      try { parsedOptions = JSON.parse(parsedOptions); } catch(e) { parsedOptions = []; }
-                    }
-                    if (!Array.isArray(parsedOptions)) parsedOptions = [];
+                  let parsedOptions = q.options;
+                  if (typeof parsedOptions === "string") {
+                    try { parsedOptions = JSON.parse(parsedOptions); } catch (e) { parsedOptions = []; }
+                  }
+                  if (!Array.isArray(parsedOptions)) parsedOptions = [];
 
-                    let parsedCorrectAnswers = q.correctAnswers;
-                    if (typeof parsedCorrectAnswers === "string") {
-                      try { parsedCorrectAnswers = JSON.parse(parsedCorrectAnswers); } catch(e) { parsedCorrectAnswers = []; }
-                    }
-                    if (!Array.isArray(parsedCorrectAnswers) || parsedCorrectAnswers.length === 0) {
-                      if (q.type === 'MULTI_SELECT' && q.correctAnswer) {
-                        try {
-                          parsedCorrectAnswers = typeof q.correctAnswer === 'string' ? JSON.parse(q.correctAnswer) : q.correctAnswer;
-                        } catch(e) {
-                          parsedCorrectAnswers = typeof q.correctAnswer === 'string' ? q.correctAnswer.split(',').map((s: string) => s.trim()) : [];
-                        }
-                      } else {
-                        parsedCorrectAnswers = [];
+                  let parsedCorrectAnswers = q.correctAnswers;
+                  if (typeof parsedCorrectAnswers === "string") {
+                    try { parsedCorrectAnswers = JSON.parse(parsedCorrectAnswers); } catch (e) { parsedCorrectAnswers = []; }
+                  }
+                  if (!Array.isArray(parsedCorrectAnswers) || parsedCorrectAnswers.length === 0) {
+                    if (q.type === 'MULTI_SELECT' && q.correctAnswer) {
+                      try {
+                        parsedCorrectAnswers = typeof q.correctAnswer === 'string' ? JSON.parse(q.correctAnswer) : q.correctAnswer;
+                      } catch (e) {
+                        parsedCorrectAnswers = typeof q.correctAnswer === 'string' ? q.correctAnswer.split(',').map((s: string) => s.trim()) : [];
                       }
+                    } else {
+                      parsedCorrectAnswers = [];
                     }
-                    if (!Array.isArray(parsedCorrectAnswers)) parsedCorrectAnswers = [];
+                  }
+                  if (!Array.isArray(parsedCorrectAnswers)) parsedCorrectAnswers = [];
 
-                    return { ...q, explanations: parsedExps, sections: parsedSections, options: parsedOptions, correctAnswers: parsedCorrectAnswers };
-                  })
+                  return { ...q, explanations: parsedExps, sections: parsedSections, options: parsedOptions, correctAnswers: parsedCorrectAnswers };
+                })
                 : [],
               assignments: Array.isArray(parsedAssignments)
                 ? parsedAssignments.filter(Boolean).map((q) => {
-                    let parsedExps = [""];
-                    try {
-                      parsedExps = typeof q.explanation === "string" && q.explanation.startsWith("[") ? JSON.parse(q.explanation) : q.explanations || [""];
-                      if (!Array.isArray(parsedExps)) parsedExps = [q.explanation || ""];
-                    } catch (e) {
-                      parsedExps = [q.explanation || ""];
-                    }
-                    let parsedSections = q.sections;
-                    if (typeof parsedSections === "string") {
-                      try { parsedSections = JSON.parse(parsedSections); } catch(e) { parsedSections = []; }
-                    }
-                    if (!Array.isArray(parsedSections)) parsedSections = [];
+                  let parsedExps = [""];
+                  try {
+                    parsedExps = typeof q.explanation === "string" && q.explanation.startsWith("[") ? JSON.parse(q.explanation) : q.explanations || [""];
+                    if (!Array.isArray(parsedExps)) parsedExps = [q.explanation || ""];
+                  } catch (e) {
+                    parsedExps = [q.explanation || ""];
+                  }
+                  let parsedSections = q.sections;
+                  if (typeof parsedSections === "string") {
+                    try { parsedSections = JSON.parse(parsedSections); } catch (e) { parsedSections = []; }
+                  }
+                  if (!Array.isArray(parsedSections)) parsedSections = [];
 
-                    let parsedOptions = q.options;
-                    if (typeof parsedOptions === "string") {
-                      try { parsedOptions = JSON.parse(parsedOptions); } catch(e) { parsedOptions = []; }
-                    }
-                    if (!Array.isArray(parsedOptions)) parsedOptions = [];
+                  let parsedOptions = q.options;
+                  if (typeof parsedOptions === "string") {
+                    try { parsedOptions = JSON.parse(parsedOptions); } catch (e) { parsedOptions = []; }
+                  }
+                  if (!Array.isArray(parsedOptions)) parsedOptions = [];
 
-                    let parsedCorrectAnswers = q.correctAnswers;
-                    if (typeof parsedCorrectAnswers === "string") {
-                      try { parsedCorrectAnswers = JSON.parse(parsedCorrectAnswers); } catch(e) { parsedCorrectAnswers = []; }
-                    }
-                    if (!Array.isArray(parsedCorrectAnswers) || parsedCorrectAnswers.length === 0) {
-                      if (q.type === 'MULTI_SELECT' && q.correctAnswer) {
-                        try {
-                          parsedCorrectAnswers = typeof q.correctAnswer === 'string' ? JSON.parse(q.correctAnswer) : q.correctAnswer;
-                        } catch(e) {
-                          parsedCorrectAnswers = typeof q.correctAnswer === 'string' ? q.correctAnswer.split(',').map((s: string) => s.trim()) : [];
-                        }
-                      } else {
-                        parsedCorrectAnswers = [];
+                  let parsedCorrectAnswers = q.correctAnswers;
+                  if (typeof parsedCorrectAnswers === "string") {
+                    try { parsedCorrectAnswers = JSON.parse(parsedCorrectAnswers); } catch (e) { parsedCorrectAnswers = []; }
+                  }
+                  if (!Array.isArray(parsedCorrectAnswers) || parsedCorrectAnswers.length === 0) {
+                    if (q.type === 'MULTI_SELECT' && q.correctAnswer) {
+                      try {
+                        parsedCorrectAnswers = typeof q.correctAnswer === 'string' ? JSON.parse(q.correctAnswer) : q.correctAnswer;
+                      } catch (e) {
+                        parsedCorrectAnswers = typeof q.correctAnswer === 'string' ? q.correctAnswer.split(',').map((s: string) => s.trim()) : [];
                       }
+                    } else {
+                      parsedCorrectAnswers = [];
                     }
-                    if (!Array.isArray(parsedCorrectAnswers)) parsedCorrectAnswers = [];
+                  }
+                  if (!Array.isArray(parsedCorrectAnswers)) parsedCorrectAnswers = [];
 
-                    return { ...q, explanations: parsedExps, sections: parsedSections, options: parsedOptions, correctAnswers: parsedCorrectAnswers };
-                  })
+                  return { ...q, explanations: parsedExps, sections: parsedSections, options: parsedOptions, correctAnswers: parsedCorrectAnswers };
+                })
                 : [],
               attachments: Array.isArray(parsedAttachments) ? parsedAttachments : [],
               slides: (Array.isArray(parsedSlides) && parsedSlides.length ? parsedSlides : [{ id: Date.now(), type: "TEXT", label: "CONTENT", title: language === "ar" ? "المقدمة" : "Introduction", content: "", sections: [] }]).filter(Boolean).map((slide: any) => {
                 let parsedSections = slide.sections;
                 if (typeof parsedSections === "string") {
-                  try { parsedSections = JSON.parse(parsedSections); } catch(e) { parsedSections = []; }
+                  try { parsedSections = JSON.parse(parsedSections); } catch (e) { parsedSections = []; }
                 }
                 if (!Array.isArray(parsedSections)) parsedSections = [];
                 return { ...slide, id: slide.id || slide._id, sections: parsedSections };
@@ -639,7 +639,7 @@ export const CourseEditorProvider: React.FC<{
   const handleRemoveLesson = async (index: number) => {
     const lesson = lessons[index];
     if (!lesson) return;
-    
+
     // 1. If it's a new, unsaved lesson, just remove it locally
     if (!lesson.id || String(lesson.id).length < 5) {
       const newLessons = [...lessons];
@@ -647,22 +647,22 @@ export const CourseEditorProvider: React.FC<{
       setLessons(newLessons);
       return;
     }
-    
+
     // 2. If it's an existing lesson, it requires an API call to delete
     if (role !== "SUPER_ADMIN" && role !== "SCHOOL_ADMIN" && role !== "TEACHER") {
       showToast(language === "ar" ? "ليس لديك صلاحية لحذف الدروس" : "You do not have permission to delete lessons", "error");
       return;
     }
-    
+
     if (!window.confirm(language === "ar" ? "هل أنت متأكد من حذف هذا الدرس نهائياً؟" : "Are you sure you want to delete this lesson permanently?")) return;
-    
+
     try {
       const token = localStorage.getItem(tokenKey) || localStorage.getItem("token");
       const res = await apiFetch(`${API_URL}/lessons/${lesson.id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       if (res.ok) {
         showToast(language === "ar" ? "تم حذف الدرس بنجاح" : "Lesson deleted successfully", "success");
         setLessons(current => current.filter(item => item.id !== lesson.id));
@@ -708,12 +708,15 @@ export const CourseEditorProvider: React.FC<{
     const lessonSummary = lessons[index];
     if (!lessonSummary) return;
     const session = ++lessonSessionRef.current;
-    let lessonToEdit: Lesson = withCourseLessonKey({ ...lessonSummary });
+    let lessonToEdit: Lesson = withCourseLessonKey({
+      ...lessonSummary,
+      originalTitle: lessonSummary.title || "",
+    });
 
     if (lessonSummary.id && !lessonSummary.isContentLoaded) {
       // Open immediately so the user gets visible feedback while large lessons load.
       suppressUnsavedTrackingRef.current = true;
-      setCurrentLesson({ ...lessonSummary, slides: [], questions: [], assignments: [], attachments: [] });
+      setCurrentLesson({ ...lessonToEdit, slides: [], questions: [], assignments: [], attachments: [] });
       setActiveTab("info");
       setIsLessonModalOpen(true);
       setIsLessonContentLoading(true);
@@ -727,6 +730,7 @@ export const CourseEditorProvider: React.FC<{
         if (session !== lessonSessionRef.current) return;
         lessonToEdit = {
           ...lesson,
+          originalTitle: lesson.title || lessonSummary.title || "",
           isContentLoaded: true,
           publishDate: lesson.publishDate ? toEgyptInput(lesson.publishDate) : "",
           cutOffDate: lesson.cutOffDate ? toEgyptInput(lesson.cutOffDate) : "",
@@ -836,7 +840,7 @@ export const CourseEditorProvider: React.FC<{
       .map((s: string) => s.trim());
 
     if (role === "SUPER_ADMIN" &&
-        JSON.stringify([...sanitizedTargetSchoolIds].sort()) !== JSON.stringify([...initialSchoolIdsRef.current].sort())) {
+      JSON.stringify([...sanitizedTargetSchoolIds].sort()) !== JSON.stringify([...initialSchoolIdsRef.current].sort())) {
       return {
         isCentral: sanitizedTargetSchoolIds.length === 0,
         schoolId: sanitizedTargetSchoolIds.length > 0 ? sanitizedTargetSchoolIds[0] : null,
@@ -881,6 +885,13 @@ export const CourseEditorProvider: React.FC<{
         return;
       }
       const baselineLessons = mode === "lesson" && draft ? submitted : beforeSave;
+      const rollbackOptimisticLessons = () => {
+        if (mode === "lesson" && draft && lessonsRef.current === submitted) {
+          suppressUnsavedTrackingRef.current = true;
+          lessonsRef.current = beforeSave;
+          setLessons(beforeSave);
+        }
+      };
       if (mode === "lesson" && draft) {
         suppressUnsavedTrackingRef.current = true;
         lessonsRef.current = submitted;
@@ -950,6 +961,7 @@ export const CourseEditorProvider: React.FC<{
           await queueSave();
           return;
         }
+        rollbackOptimisticLessons();
         failedSaveBodyRef.current = body;
         const error = await response.json().catch(() => ({}));
         showToast(error.error || (language === "ar" ? "تعذر حفظ الكورس." : "Unable to save the course."), "error");
@@ -964,6 +976,7 @@ export const CourseEditorProvider: React.FC<{
       const acknowledgedDraft = draftKey ? savedById.get(draftKey) : undefined;
       const acknowledgedAllNew = submitted.every(lesson => !lesson.newLessonId || savedById.has(lesson.newLessonId));
       if (!saved?.updatedAt || !Array.isArray(saved.lessons) || (draftKey && !acknowledgedDraft) || !acknowledgedAllNew) {
+        rollbackOptimisticLessons();
         failedSaveBodyRef.current = body;
         showToast(language === "ar" ? "تعذر تأكيد الحفظ بنفس معرّفات الدروس. تم الاحتفاظ بالمسودة." : "The server did not confirm the same lesson IDs. Your draft was kept.", "error");
         return;
@@ -1010,11 +1023,11 @@ export const CourseEditorProvider: React.FC<{
       const mergedById = new Map(merged.map(lesson => [lesson.id, lesson]));
       const localOrder = listChanged
         ? latestLessons.flatMap(lesson => {
-            const key = courseLessonKey(lesson);
-            const persisted = mergedById.get(key);
-            mergedById.delete(key);
-            return persisted ? [persisted] : lesson.id ? [] : [lesson];
-          })
+          const key = courseLessonKey(lesson);
+          const persisted = mergedById.get(key);
+          mergedById.delete(key);
+          return persisted ? [persisted] : lesson.id ? [] : [lesson];
+        })
         : [];
       const nextLessons = listChanged ? [...localOrder, ...mergedById.values()] : merged;
 

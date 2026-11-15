@@ -440,26 +440,33 @@ export default function CreateCoursePage() {
     setLessons(newLessons);
   };
 
+  const buildBlankLessonDraft = () => ({
+    newLessonId: crypto.randomUUID(),
+    title: "",
+    domain: "",
+    content: "",
+    videoUrl: "",
+    summary: "",
+    notes: "",
+    standards: "",
+    indicators: "",
+    learningOutcomes: "",
+    isVisible: true,
+    publishDate: "",
+    cutOffDate: "",
+    slides: [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? "المقدمة" : "Introduction", content: "", videoUrl: "", sections: [] }],
+    questions: [],
+    assignments: [],
+    attachments: []
+  });
+
+  const closeLessonModal = () => {
+    setIsLessonModalOpen(false);
+    setCurrentLesson(buildBlankLessonDraft());
+  };
+
   const openAddLessonModal = () => {
-    setCurrentLesson({
-      newLessonId: crypto.randomUUID(),
-      title: "",
-      domain: "",
-      content: "",
-      videoUrl: "",
-      summary: "",
-      notes: "",
-      standards: "",
-      indicators: "",
-      learningOutcomes: "",
-      isVisible: true,
-      publishDate: "",
-      cutOffDate: "",
-      slides: [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? "المقدمة" : "Introduction", content: "", videoUrl: "", sections: [] }],
-      questions: [],
-      assignments: [],
-      attachments: []
-    });
+    setCurrentLesson(buildBlankLessonDraft());
     setActiveTab('info');
     setIsLessonModalOpen(true);
   };
@@ -467,7 +474,10 @@ export default function CreateCoursePage() {
   const openEditLessonModal = (index: number) => {
     const rawLesson = lessons[index];
     if (!rawLesson) return;
-    const lessonToEdit = withCourseLessonKey({ ...rawLesson });
+    const lessonToEdit = withCourseLessonKey({
+      ...rawLesson,
+      originalTitle: rawLesson.title || "",
+    });
     if (!rawLesson.id && !rawLesson.newLessonId && lessonToEdit.newLessonId) {
       setLessons((prev: any[]) => prev.map((item, i) => (i === index ? { ...item, newLessonId: lessonToEdit.newLessonId } : item)));
     }
@@ -846,7 +856,7 @@ export default function CreateCoursePage() {
                    <Upload className="w-4 h-4 shrink-0" />
                    <span>{language === 'ar' ? 'استيراد الدرس Excel' : 'Import Full Lesson'}</span>
                  </label>
-                 <button onClick={() => setIsLessonModalOpen(false)} className="p-3 bg-white rounded-xl hover:bg-red-50 text-slate-400 hover:text-red-500 transition-all shadow-sm">
+                 <button onClick={closeLessonModal} className="p-3 bg-white rounded-xl hover:bg-red-50 text-slate-400 hover:text-red-500 transition-all shadow-sm">
                    <X className="w-6 h-6" />
                  </button>
                </div>
@@ -900,7 +910,7 @@ export default function CreateCoursePage() {
             </div>
             
             <div className="p-8 border-t border-slate-100 bg-slate-50 flex justify-end gap-4">
-              <button onClick={() => setIsLessonModalOpen(false)} className="px-10 py-4 rounded-2xl bg-white border border-slate-200 text-slate-500 font-bold hover:bg-slate-50 transition-all">
+              <button onClick={closeLessonModal} className="px-10 py-4 rounded-2xl bg-white border border-slate-200 text-slate-500 font-bold hover:bg-slate-50 transition-all">
                 {t('courseCreate.cancelChanges') || "Cancel Changes"}
               </button>
               <button

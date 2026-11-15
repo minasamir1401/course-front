@@ -512,3 +512,76 @@ test('saving a lesson closes and resets the modal, blocks autosave on open modal
  assert.equal(editor.lessons[0].title, 'Work, Energy & Power');
  assert.equal(editor.lessons[1].title, 'Gravitation');
 });
+
+test('CourseEditorContext sets originalTitle on openEditLessonModal and rolls back optimistic lessons on 400 error', async t => {
+ const state = [];
+ let slot = 0;
+ const react = {
+  createContext: () => ({ Provider: () => null }),
+  useState(value) {
+   const index = slot++;
+   if (!(index in state)) state[index] = typeof value === 'function' ? value() : value;
+   return [state[index], next => { state[index] = typeof next === 'function' ? next(state[index]) : next; }];
+  },
+  useRef(value) {
+   const index = slot++;
+   return state[index] ??= { current: value };
+  },
+  useCallback: value => value,
+  useEffect: () => {},
+ };
+ let failNextSave = false;
+ const { CourseEditorProvider } = load('../../src/components/course-editor/CourseEditorContext.tsx', {
+  react,
+  'next/navigation': { useSearchParams: () => new URLSearchParams('id=physics-course'), useRouter: () => ({ push() {} }) },
+  '@/lib/bilingualMetadata': bilingual,
+  '@/lib/egyptTime': egyptTime,
+  '@/lib/courseCreatePersistence': persistence,
+  '@/lib/courseLessonSummary': lessonSummary,
+  '@/hooks/useDeletionPolicy': { useDeletionPolicy: () => true },
+  '@/context/NotificationContext': { useNotification: () => ({ showToast: () => {} }) },
+  '@/contexts/LanguageContext': { useLanguage: () => ({ language: 'en' }) },
+  '@/lib/offlineSync': { captureOfflineOwner: () => null, offlineSync: { getDraftStorageKey: () => null, removeByUrl: async () => {} } },
+  '@/lib/api': { API_URL: '/api', apiFetch: async (_url, options) => {
+   if (!options?.method) {
+    return new Response(JSON.stringify({
+     id: 'physics-course',
+     title: 'Physics',
+     updatedAt: '2026-11-15T10:00:00.000Z',
+     lessons: [{ id: 'wep-id', title: 'Work, Energy & Power', slides: [], questions: [], assignments: [], attachments: [] }],
+    }));
+   }
+   if (failNextSave) {
+    return new Response(JSON.stringify({ error: 'Rejected by server' }), { status: 400 });
+   }
+   const body = JSON.parse(options.body);
+   return new Response(JSON.stringify({ updatedAt: '2026-11-15T10:01:00.000Z', lessons: body.lessons }));
+  } },
+ });
+ const originalStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+ Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: { getItem: () => 'fixture-session' } });
+ t.after(() => {
+  if (originalStorage) Object.defineProperty(globalThis, 'localStorage', originalStorage);
+  else delete globalThis.localStorage;
+ });
+
+ const render = () => { slot = 0; return CourseEditorProvider({ role: 'SUPER_ADMIN', children: null }).props.value; };
+ let editor = render();
+ await editor.fetchCourseData('fixture-session', 'physics-course');
+ editor = render();
+
+ await editor.openEditLessonModal(0);
+ editor = render();
+ assert.equal(editor.currentLesson.originalTitle, 'Work, Energy & Power');
+
+ failNextSave = true;
+ editor.openAddLessonModal();
+ editor = render();
+ editor.setCurrentLesson(prev => ({ ...prev, title: 'Gravitation' }));
+ editor = render();
+ await editor.saveLesson();
+ editor = render();
+
+ assert.equal(editor.lessons.length, 1);
+ assert.equal(editor.lessons[0].title, 'Work, Energy & Power');
+});

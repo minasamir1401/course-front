@@ -67,6 +67,9 @@ export function parseLessonMetadataRows(rows: unknown[][], title = ''): Record<s
       }
     }
   }
+  if (!result.title && result.titleEn && !title) {
+    result.title = result.titleEn;
+  }
 
   const videoIdx = metadataColumn(headers, 'videoUrl', false);
   if (videoIdx >= 0) {

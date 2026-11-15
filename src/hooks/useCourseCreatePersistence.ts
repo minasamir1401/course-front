@@ -261,7 +261,7 @@ export function useCourseCreatePersistence({
   }, []);
 
   useEffect(() => {
-    if (!isAutoSaveEnabled || isLoading || manualSubmitRef.current) return;
+    if (!isAutoSaveEnabled || isLoading || manualSubmitRef.current || isLessonModalOpen) return;
     if (!courseData?.title?.trim()) return;
     if (!createdIdRef.current && !createdId && lessons.length === 0) return;
 
@@ -290,7 +290,7 @@ export function useCourseCreatePersistence({
         autoSaveTimerRef.current = null;
       }
     };
-  }, [courseData, createdId, isAutoSaveEnabled, isLoading, lessons, persistCourseToServer, role]);
+  }, [courseData, createdId, isAutoSaveEnabled, isLessonModalOpen, isLoading, lessons, persistCourseToServer, role]);
 
   const saveLesson = useCallback(async () => {
     if (!currentLesson?.title?.trim()) {

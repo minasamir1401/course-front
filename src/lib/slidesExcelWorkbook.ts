@@ -930,6 +930,82 @@ export function readSlidesImport(
   return planSlidesImport(rows, currentSlides, { canDelete, exportedIds, language, importAsNew });
 }
 
+const GENERIC_EXCEL_FILENAME_RE = /^(?:template|sample|lesson|slides|questions|assignments|workbook|export|backup|import|نموذج|قالب|الدرس|شرائح|اسئلة|أسئلة)$/i;
+
+function extractTitleFromExcelFileName(fileName?: string): string {
+  if (!fileName) return '';
+  const base = fileName
+    .replace(/^.*[\\/]/, '')
+    .replace(/\.(?:xlsx|xls|csv)$/i, '')
+    .replace(/\s*[-_]\s*(?:full[-_\s]*lesson|lesson[-_\s]*workbook|slides|questions|metadata|template)$/i, '')
+    .trim();
+  if (!base || GENERIC_EXCEL_FILENAME_RE.test(base)) return '';
+  return base;
+}
+
+function extractWorkbookLessonTitle(wb: XLSX.WorkBook): string {
+  const metaSheetName = wb.SheetNames.find(n => /meta|البيانات|المعايير/i.test(n));
+  if (metaSheetName) {
+    const metaRows = XLSX.utils.sheet_to_json<any[]>(wb.Sheets[metaSheetName], { header: 1, defval: '' });
+    if (metaRows.length >= 2) {
+      try {
+        const parsed = parseLessonMetadataRows(metaRows, '');
+        const metaTitle = String(parsed.title || parsed.titleEn || '').trim();
+        if (metaTitle) return metaTitle;
+      } catch {
+        // Metadata sheet without expected headers does not define a lesson title.
+      }
+    }
+  }
+
+  for (const sheetName of wb.SheetNames) {
+    if (!/^(?:courses and lessons|export|course)$/i.test(sheetName.trim()) && sheetName !== wb.SheetNames[0]) {
+      continue;
+    }
+    const rows = XLSX.utils.sheet_to_json<Record<string, any>>(wb.Sheets[sheetName], { defval: '' });
+    for (const row of rows) {
+      const candidate = String(
+        row['Lesson Title'] ||
+        row['Lesson Title (Ar)'] ||
+        row['Lesson Title (En)'] ||
+        row['عنوان الدرس'] ||
+        row['عنوان الدرس بالعربية'] ||
+        row['عنوان الدرس بالإنجليزية'] ||
+        '',
+      ).trim();
+      if (candidate) return candidate;
+    }
+  }
+
+  return '';
+}
+
+function getLessonTitleIdentity(lesson: any) {
+  const persistedTitle = String(lesson?.originalTitle || lesson?.title || '').trim();
+  const persistedTitleEn = String(lesson?.titleEn || '').trim();
+  const currentTitle = String(lesson?.title || '').trim();
+  const hasExistingLesson = Boolean(
+    lesson?.id || (lesson?.newLessonId && (persistedTitle || persistedTitleEn || currentTitle)),
+  );
+  const wasRenamedFromSaved = Boolean(
+    hasExistingLesson &&
+    persistedTitle &&
+    currentTitle &&
+    persistedTitle.toLowerCase() !== currentTitle.toLowerCase(),
+  );
+  return { persistedTitle, persistedTitleEn, currentTitle, hasExistingLesson, wasRenamedFromSaved };
+}
+
+function titlesMatchLesson(importedTitle: string, identity: ReturnType<typeof getLessonTitleIdentity>): boolean {
+  if (!importedTitle) return false;
+  const norm = importedTitle.toLowerCase();
+  if (identity.persistedTitle && identity.persistedTitle.toLowerCase() === norm) return true;
+  if (identity.persistedTitleEn && identity.persistedTitleEn.toLowerCase() === norm && !identity.wasRenamedFromSaved) {
+    return true;
+  }
+  return false;
+}
+
 export async function importLessonSlides(
   e: { target: HTMLInputElement },
   getContext: () => any,
@@ -947,6 +1023,56 @@ export async function importLessonSlides(
     if (ctx.isLoadingContent || JSON.stringify(ctx.currentLesson) !== snapshot) {
       throw new Error(language === 'ar' ? 'تغيرت بيانات الدرس أثناء القراءة. أعد المحاولة.' : 'Lesson changed while reading file. Import again.');
     }
+
+    const identity = getLessonTitleIdentity(ctx.currentLesson);
+    const workbookTitle = extractWorkbookLessonTitle(wb);
+    const titleConflict = Boolean(
+      identity.hasExistingLesson &&
+      workbookTitle &&
+      (identity.wasRenamedFromSaved || !titlesMatchLesson(workbookTitle, identity)),
+    );
+
+    if (titleConflict) {
+      const displayOpen = identity.persistedTitle || identity.currentTitle;
+      const shouldImportAsNew = typeof window === 'undefined' || typeof window.confirm !== 'function'
+        ? true
+        : window.confirm(
+            language === 'ar'
+              ? `عنوان الدرس في الملف ("${workbookTitle}") يختلف عن الدرس المفتوح حالياً ("${displayOpen}").\n\nاضغط موافق لفصله كدرس جديد منفصل بدون المساس بالدرس القديم، أو إلغاء للتراجع.`
+              : `The Excel file belongs to a different lesson ("${workbookTitle}") than the open lesson ("${displayOpen}").\n\nClick OK to detach into a separate new lesson without modifying the existing one, or Cancel to abort.`,
+          );
+      if (!shouldImportAsNew) {
+        showToast?.(
+          language === 'ar' ? 'تم إلغاء استيراد الشرائح للحفاظ على الدرس الحالي' : 'Slides import cancelled to keep the existing lesson',
+          'info',
+        );
+        return;
+      }
+
+      const newPlan = readSlidesImport(wb, [], false, language, true);
+      const freshId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : undefined;
+      ctx.setCurrentLesson((prev: any) => ({
+        ...prev,
+        id: undefined,
+        updatedAt: undefined,
+        originalTitle: undefined,
+        newLessonId: freshId,
+        title: workbookTitle,
+        slides: newPlan.slides,
+        questions: [],
+        assignments: [],
+        attachments: [],
+        isContentLoaded: true,
+      }));
+      showToast?.(
+        language === 'ar'
+          ? `تم فصل "${workbookTitle}" كدرس جديد بدون استبدال الدرس القديم — اضغط تحديث وحفظ لإضافته.`
+          : `"${workbookTitle}" detached as a new lesson — click Update & Save to add it without replacing "${displayOpen}".`,
+        'info',
+      );
+      return;
+    }
+
     const existingSlides = Array.isArray(ctx.currentLesson?.slides) ? ctx.currentLesson.slides : [];
     const plan = readSlidesImport(wb, existingSlides, canDelete, language);
     const summary = language === 'ar'
@@ -1082,10 +1208,15 @@ const parseQuestionSheet = (sheet: XLSX.WorkSheet, currentList: any[], language:
   return planQuestionImport(rows, currentList, { canDelete: false, language, importAsNew: currentList.length === 0 }).questions;
 };
 
-export function importFullLessonWorkbook(wb: XLSX.WorkBook, currentLesson: any, language: string = 'ar'): any {
+export function importFullLessonWorkbook(
+  wb: XLSX.WorkBook,
+  currentLesson: any,
+  language: string = 'ar',
+  fileName?: string,
+): any {
   const next = { ...(currentLesson || {}) };
 
-  const metaSheetName = wb.SheetNames.find(n => /meta/i.test(n) || /البيانات/i.test(n));
+  const metaSheetName = wb.SheetNames.find(n => /meta/i.test(n) || /البيانات|المعايير/i.test(n));
   if (metaSheetName) {
     const metaRows = XLSX.utils.sheet_to_json<any[]>(wb.Sheets[metaSheetName], { header: 1, defval: '' });
     if (metaRows.length >= 2) {
@@ -1124,10 +1255,12 @@ export function importFullLessonWorkbook(wb: XLSX.WorkBook, currentLesson: any, 
   // Fallback for single-sheet Course/Lesson Export format (from /api/school/export/lesson/:id)
   if (!slidesSheetName && !questionsSheetName && wb.SheetNames[0]) {
     const rows = XLSX.utils.sheet_to_json<any>(wb.Sheets[wb.SheetNames[0]], { defval: '' });
-    if (rows.length > 0 && ('Lesson Title' in rows[0] || 'Lesson Slides' in rows[0])) {
+    if (rows.length > 0 && ('Lesson Title' in rows[0] || 'Lesson Title (En)' in rows[0] || 'Lesson Slides' in rows[0])) {
       const first = rows[0];
-      if (first['Lesson Title']) next.title = String(first['Lesson Title']);
-      if (first['Lesson Title (En)']) next.titleEn = String(first['Lesson Title (En)']);
+      const titleAr = first['Lesson Title'] || first['Lesson Title (Ar)'] || first['عنوان الدرس'] || first['عنوان الدرس بالعربية'];
+      const titleEn = first['Lesson Title (En)'] || first['عنوان الدرس بالإنجليزية'];
+      if (titleAr) next.title = String(titleAr);
+      if (titleEn) next.titleEn = String(titleEn);
       if (first['Lesson Domain']) next.domain = String(first['Lesson Domain']);
       if (first['Lesson Domain (En)']) next.domainEn = String(first['Lesson Domain (En)']);
       if (first['Lesson Summary']) next.summary = String(first['Lesson Summary']);
@@ -1152,6 +1285,14 @@ export function importFullLessonWorkbook(wb: XLSX.WorkBook, currentLesson: any, 
         if (Array.isArray(parsed)) next.assignments = parsed;
       }
     }
+  }
+
+  if (!String(next.title || '').trim() && String(next.titleEn || '').trim()) {
+    next.title = String(next.titleEn).trim();
+  }
+  if (!String(next.title || '').trim() && fileName) {
+    const fallbackTitle = extractTitleFromExcelFileName(fileName);
+    if (fallbackTitle) next.title = fallbackTitle;
   }
 
   next.isContentLoaded = true;
@@ -1203,19 +1344,26 @@ export async function handleFullLessonExcelImport(
       attachments: [],
     };
 
-    const currentTitle = String(baseLesson?.title || '').trim();
-    const hasExistingLesson = Boolean(baseLesson?.id || (baseLesson?.newLessonId && currentTitle));
-    const asNewLesson = importFullLessonWorkbook(wb, blankBase, language);
-    const importedTitle = String(asNewLesson?.title || '').trim();
+    const identity = getLessonTitleIdentity(baseLesson);
+    const asNewLesson = importFullLessonWorkbook(wb, blankBase, language, file.name);
+    const importedTitle = String(asNewLesson?.title || asNewLesson?.titleEn || '').trim();
+    const shouldDetachNew = Boolean(
+      identity.hasExistingLesson &&
+      (!importedTitle || identity.wasRenamedFromSaved || !titlesMatchLesson(importedTitle, identity)),
+    );
 
-    if (hasExistingLesson && importedTitle && currentTitle && importedTitle.toLowerCase() !== currentTitle.toLowerCase()) {
+    if (shouldDetachNew) {
+      const displayOpen = identity.persistedTitle || identity.currentTitle;
+      const confirmPrompt = !importedTitle
+        ? (language === 'ar'
+            ? `ملف الإكسيل لا يحتوي على عنوان درس بينما الدرس "${displayOpen}" مفتوح حالياً.\n\nاضغط موافق لتحميله كدرس جديد منفصل بدون المساس بالدرس القديم، أو إلغاء للتراجع.`
+            : `The Excel file has no lesson title while "${displayOpen}" is open.\n\nClick OK to load it as a separate new lesson without modifying the existing one, or Cancel to abort.`)
+        : (language === 'ar'
+            ? `عنوان الدرس في الملف ("${importedTitle}") يختلف عن الدرس المفتوح حالياً ("${displayOpen}").\n\nاضغط موافق لتحميله كدرس جديد منفصل بدون المساس بالدرس القديم، أو إلغاء للتراجع.`
+            : `The Excel file is for a different lesson ("${importedTitle}") than the open lesson ("${displayOpen}").\n\nClick OK to load it as a separate new lesson without modifying the existing one, or Cancel to abort.`);
       const shouldImportAsNew = typeof window === 'undefined' || typeof window.confirm !== 'function'
         ? true
-        : window.confirm(
-            language === 'ar'
-              ? `عنوان الدرس في الملف ("${importedTitle}") يختلف عن الدرس المفتوح حالياً ("${currentTitle}").\n\nاضغط موافق لتحميله كدرس جديد منفصل بدون المساس بالدرس القديم، أو إلغاء للتراجع.`
-              : `The Excel file is for a different lesson ("${importedTitle}") than the open lesson ("${currentTitle}").\n\nClick OK to load it as a separate new lesson without modifying the existing one, or Cancel to abort.`
-          );
+        : window.confirm(confirmPrompt);
       if (!shouldImportAsNew) {
         showToast?.(
           language === 'ar' ? 'تم إلغاء الاستيراد للحفاظ على الدرس الحالي' : 'Import cancelled to keep the existing lesson',
@@ -1227,19 +1375,21 @@ export async function handleFullLessonExcelImport(
         ...asNewLesson,
         id: undefined,
         updatedAt: undefined,
+        originalTitle: undefined,
         newLessonId: typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : undefined,
         isContentLoaded: true,
       });
+      const displayImported = importedTitle || (language === 'ar' ? 'درس جديد' : 'New Lesson');
       showToast?.(
         language === 'ar'
-          ? `تم تجهيز "${importedTitle}" كدرس جديد بدون استبدال الدرس القديم — اضغط تحديث وحفظ لإضافته.`
-          : `"${importedTitle}" loaded as a new lesson — click Update & Save to add it without replacing "${currentTitle}".`,
+          ? `تم تجهيز "${displayImported}" كدرس جديد بدون استبدال الدرس القديم — اضغط تحديث وحفظ لإضافته.`
+          : `"${displayImported}" loaded as a new lesson — click Update & Save to add it without replacing "${displayOpen}".`,
         'info',
       );
       return;
     }
 
-    const nextLesson = importFullLessonWorkbook(wb, baseLesson, language);
+    const nextLesson = importFullLessonWorkbook(wb, baseLesson, language, file.name);
     applyLesson(nextLesson);
     showToast?.(
       language === 'ar'
