@@ -1,5 +1,6 @@
 "use client";
-import { exportLessonMetadataWorkbook, parseLessonMetadataRows } from "@/lib/lessonMetadataExcel";
+import { exportLessonMetadataWorkbook } from "@/lib/lessonMetadataExcel";
+import { importLessonMetadataFromExcelFile } from "@/lib/excelAutoTranslate";
 
 import BilingualMetadataEditor from "@/components/BilingualMetadataEditor";
 import React from "react";
@@ -27,36 +28,22 @@ export const LessonInfoTab: React.FC<LessonInfoTabProps> = ({
   const latestLesson = React.useRef(currentLesson);
   React.useEffect(() => { latestLesson.current = currentLesson; }, [currentLesson]);
 
-  const handleMetadataExcelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMetadataExcelChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { showToast(language === "ar" ? "الحد الأقصى 5 ميجابايت" : "Maximum file size: 5 MB", "error"); e.target.value = ""; return; }
-
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        if (latestLesson.current !== currentLesson) throw new Error(language === "ar" ? "تغير الدرس أثناء قراءة الملف. أعد الاستيراد." : "The lesson changed while reading the file. Import again.");
-        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-        const wb = XLSX.read(data, { type: "array" });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
-
-        if (rows.length < 2) {
-          showToast(language === 'ar' ? "الملف فارغ أو لا يحتوي على صفوف بيانات" : "File is empty or does not contain data rows", "error");
-          return;
-        }
-
-        const metadata = parseLessonMetadataRows(rows, currentLesson.title);
-        setCurrentLesson((prev: any) => ({ ...prev, ...metadata }));
-
-        showToast(language === 'ar' ? 'تم استيراد البيانات باللغتين' : 'Bilingual metadata imported', 'success');
-      } catch (err: any) {
-        console.error(err);
-        showToast(err.message || (language === 'ar' ? 'تعذرت قراءة الملف' : 'Could not read workbook'), 'error');
-      }
-    };
-    reader.readAsArrayBuffer(file);
     e.target.value = "";
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { showToast(language === "ar" ? "الحد الأقصى 5 ميجابايت" : "Maximum file size: 5 MB", "error"); return; }
+
+    try {
+      showToast(language === 'ar' ? 'جارٍ قراءة وترجمة الميتا داتا تلقائياً للعربية...' : 'Reading and translating metadata to Arabic...', 'info');
+      const metadata = await importLessonMetadataFromExcelFile(file, currentLesson.title);
+      if (latestLesson.current !== currentLesson) throw new Error(language === "ar" ? "تغير الدرس أثناء قراءة الملف. أعد الاستيراد." : "The lesson changed while reading the file. Import again.");
+      setCurrentLesson((prev: any) => ({ ...prev, ...metadata }));
+      showToast(language === 'ar' ? 'تم استيراد البيانات باللغتين' : 'Bilingual metadata imported', 'success');
+    } catch (err: any) {
+      console.error(err);
+      showToast(err.message || (language === 'ar' ? 'تعذرت قراءة الملف' : 'Could not read workbook'), 'error');
+    }
   };
 
   const downloadMetadataTemplate = () => {

@@ -1,5 +1,10 @@
 import { applyQuestionMetadataRows } from '@/lib/questionMetadataExcel';
-import { metadataColumn, parseLessonMetadataRows } from '@/lib/lessonMetadataExcel';
+import { metadataColumn } from '@/lib/lessonMetadataExcel';
+import {
+  autoTranslateQuestionsList,
+  importLessonMetadataFromExcelFile,
+  mergeTranslatedQuestionMetadata,
+} from '@/lib/excelAutoTranslate';
 // @ts-nocheck
 import { buildQuestionWorkbook, importModuleQuestions } from '@/lib/questionExcelWorkbook';
 import { planQuestionImport } from '@/lib/questionExcelSync';
@@ -61,28 +66,23 @@ const openAddModuleModal = () => {
 
   const parseQuestionsFromExcel = (rows: any[][]) => planQuestionImport(rows, [], { canDelete: false, language }).questions;
 
-  const handleMetadataExcelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMetadataExcelChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = evt => {
-      try {
-        if (latestMetadataModule.current !== currentModule) throw new Error(language === "ar" ? "تغير الموديول. أعد الاستيراد." : "The module changed. Import again.");
-        const wb = XLSX.read(new Uint8Array(evt.target?.result as ArrayBuffer), { type: 'array' });
-        const rows = XLSX.utils.sheet_to_json<any[]>(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
-        const imported = parseLessonMetadataRows(rows, currentModule.title);
-        setAvailableMetadata((prev: any) => mergeAvailableMetadata(prev, {
-          domains: [imported.domain, imported.domainEn].filter(Boolean),
-          standards: [imported.standards, imported.standardsEn].filter(Boolean),
-          indicators: [imported.indicators, imported.indicatorsEn].filter(Boolean),
-          outcomes: [imported.learningOutcomes, imported.learningOutcomesEn].filter(Boolean)
-        }));
-        setCurrentModule((prev: any) => ({ ...prev, ...imported }));
-        showToast(language === 'ar' ? 'تم استيراد البيانات باللغتين' : 'Bilingual metadata imported', 'success');
-      } catch (error: any) { showToast(error.message, 'error'); }
-    };
-    reader.readAsArrayBuffer(file);
     e.target.value = '';
+    if (!file) return;
+    try {
+      showToast(language === 'ar' ? 'جارٍ قراءة وترجمة الميتا داتا تلقائياً للعربية...' : 'Reading and translating metadata to Arabic...', 'info');
+      const imported = await importLessonMetadataFromExcelFile(file, currentModule.title);
+      if (latestMetadataModule.current !== currentModule) throw new Error(language === "ar" ? "تغير الموديول. أعد الاستيراد." : "The module changed. Import again.");
+      setAvailableMetadata((prev: any) => mergeAvailableMetadata(prev, {
+        domains: [imported.domain, imported.domainEn].filter(Boolean),
+        standards: [imported.standards, imported.standardsEn].filter(Boolean),
+        indicators: [imported.indicators, imported.indicatorsEn].filter(Boolean),
+        outcomes: [imported.learningOutcomes, imported.learningOutcomesEn].filter(Boolean)
+      }));
+      setCurrentModule((prev: any) => ({ ...prev, ...imported }));
+      showToast(language === 'ar' ? 'تم استيراد البيانات باللغتين' : 'Bilingual metadata imported', 'success');
+    } catch (error: any) { showToast(error.message, 'error'); }
   };
 
   const excelContext = useRef(props);
@@ -141,10 +141,12 @@ const openAddModuleModal = () => {
       const rows = XLSX.utils.sheet_to_json<any[]>(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
       const child = source === 'questions' && activeSubExamIndex !== null ? currentModule.subExams?.[activeSubExamIndex] : null;
       const target = child?.questions || currentModule[source] || [];
-      const imported = applyQuestionMetadataRows(rows, target);
+      showToast(language === 'ar' ? 'جارٍ ترجمة الميتا داتا تلقائياً للعربية...' : 'Translating metadata to Arabic automatically...', 'info');
+      const imported = await autoTranslateQuestionsList(applyQuestionMetadataRows(rows, target));
+      if (latestMetadataModule.current !== currentModule) throw new Error(language === 'ar' ? 'تغير الموديول. أعد الاستيراد.' : 'The module changed. Import again.');
       setCurrentModule((prev: any) => {
         const live = child ? prev.subExams?.[activeSubExamIndex!]?.questions || [] : prev[source] || [];
-        const updated = applyQuestionMetadataRows(rows, live);
+        const updated = mergeTranslatedQuestionMetadata(applyQuestionMetadataRows(rows, live), imported);
         return child ? { ...prev, subExams: prev.subExams.map((item: any, i: number) => i === activeSubExamIndex ? { ...item, questions: updated } : item) } : { ...prev, [source]: updated };
       });
       setAvailableMetadata((prev: any) => mergeAvailableMetadata(prev, collectMetadataFromQuestions(imported)));

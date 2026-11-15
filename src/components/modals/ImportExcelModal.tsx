@@ -120,6 +120,7 @@ export default function ImportExcelModal({ isOpen, onClose, onSuccess }: Props) 
               <li>{language === 'ar' ? "قم بتحميل نموذج الإكسيل أدناه وقم بتعبئته." : "Download the Excel template below and fill it out."}</li>
               <li>{language === 'ar' ? "عمود 'Course Title' مطلوب. إذا كان اسم الكورس موجوداً، ستُضاف الدروس له، وإلا سيُنشأ كورس جديد." : "The 'Course Title' is required. Existing courses will get new lessons, new names will create new courses."}</li>
               <li>{language === 'ar' ? "يمكنك كتابة نص عادي في أعمدة الواجبات والاختبارات، وسيقوم النظام بتحويلها تلقائياً، أو استخدم JSON." : "You can write plain text in assignments/questions columns and the system will auto-format them."}</li>
+              <li>{language === 'ar' ? "إذا كان الشيت باللغة الإنجليزية فقط، يقوم النظام تلقائياً بترجمة النصوص والأسئلة والجداول والميتا داتا للعربية مع الحفاظ على المعادلات (LaTeX)." : "English-only workbooks are automatically translated to Arabic while keeping English fields and LaTeX equations intact."}</li>
             </ul>
             <button 
               onClick={handleDownloadTemplate}
@@ -183,7 +184,9 @@ export default function ImportExcelModal({ isOpen, onClose, onSuccess }: Props) 
             className="flex items-center gap-2 px-8 py-3 rounded-xl bg-indigo-600 text-white font-black hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:bg-slate-300"
           >
             {isUploading && <Loader2 className="w-5 h-5 animate-spin" />}
-            {language === 'ar' ? "بدء الاستيراد" : "Start Import"}
+            {isUploading
+              ? (language === 'ar' ? "جارٍ الاستيراد والترجمة..." : "Importing & Translating...")
+              : (language === 'ar' ? "بدء الاستيراد" : "Start Import")}
           </button>
         </div>
       </div>

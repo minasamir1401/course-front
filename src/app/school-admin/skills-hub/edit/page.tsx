@@ -23,6 +23,7 @@ import RichTextEditor from "@/components/RichTextEditor";
 import QuestionImageGallery from "@/components/QuestionImageGallery";
 import { extractImageUrls } from "@/lib/image-utils";
 import { translateBatch } from "@/lib/translationService";
+import { autoTranslateSkillMetadata } from "@/lib/excelAutoTranslate";
 
 
 import { useClusterInfo } from './hooks/useClusterInfo';
@@ -344,7 +345,10 @@ export default function EditSchoolSkillClusterPage() {
   const handleMetadataExcelChange = async (e: React.ChangeEvent<HTMLInputElement>, lesson: any) => {
     const file = e.target.files?.[0]; if (!file || !lesson) return;
     try {
-      const metadata = { ...getLessonMetadata(lesson), ...await readSkillMetadata(file) };
+      const parsedMetadata = await readSkillMetadata(file);
+      showToast(language === 'ar' ? 'جارٍ ترجمة المعايير تلقائياً للعربية...' : 'Translating standards to Arabic automatically...', 'info');
+      const translatedMetadata = await autoTranslateSkillMetadata(parsedMetadata);
+      const metadata = { ...getLessonMetadata(lesson), ...translatedMetadata };
       const res = await apiFetch(`${API_URL}/skills-hub/lessons/${lesson.id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({metadata})});
       if (!res.ok) throw new Error((await res.json()).error || 'Import failed');
       await lessonsMgr.fetchLessons();

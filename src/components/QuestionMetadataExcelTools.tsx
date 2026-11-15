@@ -5,6 +5,7 @@ import { Download, Upload } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { buildAdvancedMetadataTemplateRows } from '@/lib/examExcelTemplates';
 import { applyQuestionMetadataRows } from '@/lib/questionMetadataExcel';
+import { autoTranslateQuestionsList } from '@/lib/excelAutoTranslate';
 import { useNotification } from '@/context/NotificationContext';
 
 export default function QuestionMetadataExcelTools({ questions, scope, language, disabled = false, onChange }: {
@@ -27,8 +28,13 @@ export default function QuestionMetadataExcelTools({ questions, scope, language,
       const current = latest.current;
       if (current.disabled || current.scope !== start.scope || JSON.stringify(current.questions) !== snapshot) throw new Error(ar ? 'تغيرت القائمة أثناء قراءة الملف. أعد الاستيراد.' : 'The list changed while reading. Import again.');
       const sheet = book.Sheets.Metadata || book.Sheets[book.SheetNames[0]];
-      const updated = applyQuestionMetadataRows(XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: '' }), current.questions);
-      current.onChange(updated);
+      const parsedUpdated = applyQuestionMetadataRows(XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: '' }), current.questions);
+      showToast(ar ? 'جارٍ ترجمة الميتا داتا تلقائياً للعربية...' : 'Translating metadata to Arabic automatically...', 'info');
+      const updated = await autoTranslateQuestionsList(parsedUpdated);
+      if (!mounted.current || latest.current.disabled || latest.current.scope !== start.scope || JSON.stringify(latest.current.questions) !== snapshot) {
+        throw new Error(ar ? 'تغيرت القائمة أثناء الترجمة. أعد الاستيراد.' : 'The list changed while translating. Import again.');
+      }
+      latest.current.onChange(updated);
       showToast(ar ? 'تم تطبيق الميتا داتا. احفظ الدرس لتثبيت التغييرات.' : 'Metadata applied. Save the lesson to keep the changes.', 'success');
     } catch (error) { showToast(error instanceof Error ? error.message : String(error), 'error'); }
   };

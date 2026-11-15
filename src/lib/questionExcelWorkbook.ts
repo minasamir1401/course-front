@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import { buildMasterReferenceGuideRows } from './excelReferenceGuide';
 import { planQuestionImport, questionExportRows, questionTemplateRows } from './questionExcelSync';
+import { autoTranslateQuestionsList } from './excelAutoTranslate';
 
 export function buildQuestionWorkbook(questions: any[] | null, language: string = 'ar') {
   const wb = XLSX.utils.book_new();
@@ -133,9 +134,14 @@ export async function importModuleQuestions(
       ? `مراجعة الاستيراد: إضافة ${plan.added}، تعديل ${plan.updated}، حذف ${plan.deletedIds.length}، بدون تغيير ${plan.unchanged}.\nهل تريد تطبيق هذه التغييرات؟`
       : `Import preview: ${plan.added} added, ${plan.updated} updated, ${plan.deletedIds.length} deleted, ${plan.unchanged} unchanged.\nApply these changes?`);
     if (!window.confirm(summary)) return;
+    let importedQuestions = plan.questions;
+    if (importedQuestions.length) {
+      showToast(language === 'ar' ? 'جارٍ ترجمة الأسئلة تلقائياً للعربية...' : 'Translating questions to Arabic automatically...', 'info');
+      importedQuestions = await autoTranslateQuestionsList(importedQuestions);
+    }
     ctx.setCurrentModule((prev: any) => child
-      ? { ...prev, subExams: prev.subExams.map((s: any, i: number) => i === subIndex ? { ...s, [source]: plan.questions } : s) }
-      : { ...prev, [source]: plan.questions });
+      ? { ...prev, subExams: prev.subExams.map((s: any, i: number) => i === subIndex ? { ...s, [source]: importedQuestions } : s) }
+      : { ...prev, [source]: importedQuestions });
     if (source === 'questions' && plan.deletedIds.length) {
       ctx.setDeletedQuestionIds?.((prev: string[]) => [...new Set([...prev, ...plan.deletedIds])]);
     }

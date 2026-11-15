@@ -2,6 +2,7 @@ import * as XLSX from 'xlsx';
 import { buildMasterReferenceGuideRows } from './excelReferenceGuide';
 import { questionExportRows, questionTemplateRows, planQuestionImport } from './questionExcelSync';
 import { buildLessonMetadataExportRows, parseLessonMetadataRows } from './lessonMetadataExcel';
+import { autoTranslateLessonWorkbook, autoTranslateSlidesList } from './excelAutoTranslate';
 
 export type SlideBlock = Record<string, any>;
 
@@ -715,7 +716,7 @@ export function planSlidesImport(
     dok: findCol(h => h.includes('dok') || h.includes('عمق المعرفة')),
   };
 
-  if (titleIdx < 0 && titleEnIdx < 0 && contentIdx < 0 && contentEnIdx < 0 && tableIdx < 0) {
+  if (titleIdx < 0 && titleEnIdx < 0 && contentIdx < 0 && contentEnIdx < 0 && tableIdx < 0 && tableEnIdx < 0) {
     fail('Missing Slide Title or Content columns.', 'أعمدة عنوان الشريحة أو محتوى الشرح غير موجودة.');
   }
 
@@ -789,7 +790,7 @@ export function planSlidesImport(
 
     slide.content = mergedContentAr || mergedContentEn || '';
     slide.text = slide.content;
-    if (mergedContentEn || contentEnIdx >= 0) {
+    if (mergedContentEn || contentEnIdx >= 0 || tableEnIdx >= 0) {
       slide.contentEn = mergedContentEn || '';
       slide.textEn = slide.contentEn;
     }
@@ -1050,6 +1051,10 @@ export async function importLessonSlides(
       }
 
       const newPlan = readSlidesImport(wb, [], false, language, true);
+      if (newPlan.slides.length) {
+        showToast?.(language === 'ar' ? 'جارٍ ترجمة الشرائح تلقائياً للعربية...' : 'Translating slides to Arabic automatically...', 'info');
+        newPlan.slides = await autoTranslateSlidesList(newPlan.slides);
+      }
       const freshId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : undefined;
       ctx.setCurrentLesson((prev: any) => ({
         ...prev,
@@ -1079,7 +1084,12 @@ export async function importLessonSlides(
       ? `مراجعة استيراد الشرائح: إضافة ${plan.added}، تعديل ${plan.updated}، حذف ${plan.deletedIds.length}، بدون تغيير ${plan.unchanged}.\nهل تريد التطبيق؟`
       : `Slides import preview: ${plan.added} added, ${plan.updated} updated, ${plan.deletedIds.length} deleted, ${plan.unchanged} unchanged.\nApply changes?`;
     if (typeof window !== 'undefined' && typeof window.confirm === 'function' && !window.confirm(summary)) return;
-    ctx.setCurrentLesson((prev: any) => ({ ...prev, slides: plan.slides }));
+    let importedSlides = plan.slides;
+    if (importedSlides.length) {
+      showToast?.(language === 'ar' ? 'جارٍ ترجمة الشرائح تلقائياً للعربية...' : 'Translating slides to Arabic automatically...', 'info');
+      importedSlides = await autoTranslateSlidesList(importedSlides);
+    }
+    ctx.setCurrentLesson((prev: any) => ({ ...prev, slides: importedSlides }));
     showToast?.(language === 'ar' ? 'تم استيراد شرائح الشرح بنجاح' : 'Explanation slides imported successfully', 'success');
   } catch (error) {
     showToast?.(error instanceof Error ? error.message : String(error), 'error');
@@ -1371,8 +1381,15 @@ export async function handleFullLessonExcelImport(
         );
         return;
       }
+      showToast?.(
+        language === 'ar'
+          ? 'جارٍ ترجمة بيانات الدرس والشرائح والأسئلة تلقائياً للعربية...'
+          : 'Translating lesson metadata, slides, and questions to Arabic...',
+        'info',
+      );
+      const translatedNewLesson = await autoTranslateLessonWorkbook(asNewLesson);
       applyLesson({
-        ...asNewLesson,
+        ...translatedNewLesson,
         id: undefined,
         updatedAt: undefined,
         originalTitle: undefined,
@@ -1390,7 +1407,14 @@ export async function handleFullLessonExcelImport(
     }
 
     const nextLesson = importFullLessonWorkbook(wb, baseLesson, language, file.name);
-    applyLesson(nextLesson);
+    showToast?.(
+      language === 'ar'
+        ? 'جارٍ ترجمة بيانات الدرس والشرائح والأسئلة تلقائياً للعربية...'
+        : 'Translating lesson metadata, slides, and questions to Arabic...',
+      'info',
+    );
+    const translatedLesson = await autoTranslateLessonWorkbook(nextLesson);
+    applyLesson(translatedLesson);
     showToast?.(
       language === 'ar'
         ? 'تم استيراد بيانات الدرس والشرائح والأسئلة من الإكسيل بنجاح'

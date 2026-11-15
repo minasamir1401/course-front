@@ -9,6 +9,7 @@ import HtmlRenderer from '@/components/HtmlRenderer';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { checkAuthSession } from '@/lib/auth';
 import { validateExamQuestionForSave } from '@/lib/examQuestionValidation';
+import { autoTranslateQuestionsList } from '@/lib/excelAutoTranslate';
 import { competitionRequest, competitionError } from './api';
 import { competitionTypes, newCompetitionQuestion, normalizeCompetitionQuestion, questionForSave, competitionLocalDate, type CompetitionQuestion, type CompetitionOptions } from './authoring';
 import CompetitionQuestionImport from './CompetitionQuestionImport';
@@ -71,7 +72,12 @@ export default function CompetitionEditor() {
       const [XLSX, { importCompetitionMetadata, importCompetitionWorkbook }] = await Promise.all([import('xlsx'), import('./competitionWorkbook')]);
       const workbook = XLSX.read(await upload.arrayBuffer(), { type: 'array' });
       if (snapshot !== JSON.stringify(current.current)) throw new Error(text('تغيرت الأسئلة أثناء قراءة الملف. أعد الاستيراد.', 'Questions changed while reading the file. Import again.'));
-      const next = metadata ? importCompetitionMetadata(workbook, current.current) : importCompetitionWorkbook(workbook, current.current, language);
+      const rawNext = metadata ? importCompetitionMetadata(workbook, current.current) : importCompetitionWorkbook(workbook, current.current, language);
+      if (rawNext.length) {
+        setMessage(text('جارٍ ترجمة الأسئلة والميتا داتا تلقائياً للعربية...', 'Translating questions and metadata to Arabic automatically...'));
+      }
+      const next = (await autoTranslateQuestionsList(rawNext)).map((q) => normalizeCompetitionQuestion(q));
+      if (snapshot !== JSON.stringify(current.current)) throw new Error(text('تغيرت الأسئلة أثناء قراءة الملف. أعد الاستيراد.', 'Questions changed while reading the file. Import again.'));
       changeQuestions(next); setMessage(text('تم تطبيق الملف في المحرر. راجع الأسئلة ثم احفظ المسابقة.', 'Workbook applied in the editor. Review the questions, then save the competition.'));
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };

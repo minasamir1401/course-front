@@ -1,5 +1,5 @@
 "use client";
-import { parseLessonMetadataRows } from "@/lib/lessonMetadataExcel";
+import { importLessonMetadataFromExcelFile } from "@/lib/excelAutoTranslate";
 import { useDeletionPolicy } from '@/hooks/useDeletionPolicy';
 import { buildQuestionWorkbook, importModuleQuestions } from '@/lib/questionExcelWorkbook';
 import { buildCourseMetadataTemplateRows } from '@/lib/examExcelTemplates';
@@ -564,34 +564,20 @@ export default function CreateCoursePage() {
     return parsed;
   };
 
-  const handleMetadataExcelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMetadataExcelChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-        const wb = XLSX.read(data, { type: "array" });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
-
-        if (rows.length < 2) {
-          showToast(t('courseCreate.excelNoDataError') || "Excel file is empty or does not contain data rows", "error");
-          return;
-        }
-
-        const metadata = parseLessonMetadataRows(rows, currentLesson.title);
-        setCurrentLesson((prev: any) => ({ ...prev, ...metadata }));
-
-        showToast(t('courseCreate.excelMetadataSuccess') || "Standards, indicator and domain successfully imported from Excel", "success");
-      } catch (err) {
-        console.error(err);
-        showToast(t('courseCreate.excelMetadataError') || "Error reading Excel file", "error");
-      }
-    };
-    reader.readAsArrayBuffer(file);
-    e.target.value = "";
+    try {
+      showToast(language === 'ar' ? 'جارٍ قراءة وترجمة الميتا داتا تلقائياً للعربية...' : 'Reading and translating metadata to Arabic...', 'info');
+      const metadata = await importLessonMetadataFromExcelFile(file, currentLesson.title);
+      setCurrentLesson((prev: any) => ({ ...prev, ...metadata }));
+      showToast(t('courseCreate.excelMetadataSuccess') || "Standards, indicator and domain successfully imported from Excel", "success");
+    } catch (err: any) {
+      console.error(err);
+      showToast(err?.message || t('courseCreate.excelMetadataError') || "Error reading Excel file", "error");
+    }
   };
 
   const excelContext = useRef<any>(null);
