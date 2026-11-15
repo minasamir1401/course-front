@@ -45,7 +45,6 @@ export const LessonBuilderModal: React.FC<{ fullPage?: boolean }> = ({ fullPage 
     isLessonModalOpen,
     isLessonContentLoading,
     setIsLessonModalOpen,
-    editingLessonIndex,
     metadataExcelRef,
     questionsExcelRef,
     assignmentsExcelRef,

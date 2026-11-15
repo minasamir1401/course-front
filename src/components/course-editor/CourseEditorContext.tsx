@@ -9,6 +9,7 @@ import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { offlineSync, captureOfflineOwner } from "@/lib/offlineSync";
 import { buildCourseLessonSummary } from "@/lib/courseLessonSummary";
+import { courseLessonKey, parseLessonJsonArray, stageCourseLesson, withCourseLessonKey } from "@/lib/courseCreatePersistence";
 import { useDeletionPolicy } from "@/hooks/useDeletionPolicy";
 import type { CourseData, Lesson, CourseEditorContextType } from './types';
 export type { CourseData, Lesson } from './types';
@@ -47,6 +48,8 @@ export const CourseEditorProvider: React.FC<{
   });
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const courseVersionRef = useRef<string | undefined>(undefined);
+  const loadedCourseRef = useRef<string | null>(null);
+  const courseLoadRef = useRef(0);
   const initialSchoolIdsRef = useRef<string[]>([]);
   const serializeLessonContent = (lesson: Lesson, field: "attachments" | "slides" | "questions" | "assignments") => {
     // Existing lessons from the fast list are summaries. Never overwrite their
@@ -57,8 +60,7 @@ export const CourseEditorProvider: React.FC<{
   const serializeLessonForPut = (l: Lesson) => {
     const isUnloaded = Boolean(l.id && l.isContentLoaded !== true);
     return {
-      id: l.id,
-      expectedUpdatedAt: l.updatedAt,
+      ...(l.id ? { id: l.id, expectedUpdatedAt: l.updatedAt } : { newLessonId: l.newLessonId }),
       ...lessonTranslationPayload(l),
       title: l.title,
       domain: isUnloaded && !l.domain ? undefined : (l.domain || null),
@@ -79,16 +81,21 @@ export const CourseEditorProvider: React.FC<{
     };
   };
   const lessonsRef = useRef<Lesson[]>([]);
+  lessonsRef.current = lessons;
   const [exams, setExams] = useState<any[]>([]);
   const [activeContentTab] = useState<"lessons">("lessons");
-  const [isLessonModalOpen, setIsLessonModalOpen] = useState(false);
+  const [isLessonModalOpen, setLessonModalOpen] = useState(false);
+  const lessonSessionRef = useRef(0);
+  const setIsLessonModalOpen = (open: boolean) => {
+    if (!open) lessonSessionRef.current += 1;
+    setLessonModalOpen(open);
+  };
   const [isLessonContentLoading, setIsLessonContentLoading] = useState(false);
   const [availableMetadata, setAvailableMetadata] = useState({ domains: [] as string[], standards: [] as string[], indicators: [] as string[], outcomes: [] as string[] });
   const [isBankModalOpen, setIsBankModalOpen] = useState(false);
   const [isQuestionBankModalOpen, setIsQuestionBankModalOpen] = useState(false);
   const [bankItems, setBankItems] = useState<any[]>([]);
   const [bankQuestions, setBankQuestions] = useState<any[]>([]);
-  const [editingLessonIndex, setEditingLessonIndex] = useState<number | null>(null);
   const [currentLesson, setCurrentLesson] = useState<Lesson>({
     title: "",
     domain: "",
@@ -115,6 +122,9 @@ export const CourseEditorProvider: React.FC<{
     assignments: [],
     attachments: [],
   });
+  const liveEditor = useRef({ courseId, courseData, currentLesson, isLessonModalOpen, isLessonContentLoading });
+  liveEditor.current = { courseId, courseData, currentLesson, isLessonModalOpen, isLessonContentLoading };
+  const failedSaveBodyRef = useRef<string | undefined>(undefined);
 
   const [activeTab, setActiveTab] = useState<"info" | "slides" | "exercises" | "assignments" | "attachments" | "scheduling">("info");
   const [showQuestionForm, setShowQuestionForm] = useState(false);
@@ -158,10 +168,6 @@ export const CourseEditorProvider: React.FC<{
     isSavingRef.current = true;
     return true;
   };
-
-  useEffect(() => {
-    lessonsRef.current = lessons;
-  }, [lessons]);
 
   useEffect(() => {
     const handleGlobalClick = (event: MouseEvent) => {
@@ -227,6 +233,7 @@ export const CourseEditorProvider: React.FC<{
           courseId,
           lessons,
           currentLesson,
+          isLessonModalOpen,
           courseData
         };
         const savedToIndexedDb = await offlineSync.saveDraft(DRAFT_KEY, draft);
@@ -257,7 +264,7 @@ export const CourseEditorProvider: React.FC<{
       })();
     }, 5_000); // 5 seconds debounce
     return () => clearTimeout(timer);
-  }, [lessons, currentLesson, courseData, DRAFT_KEY, isLoading, language, showToast]);
+  }, [lessons, currentLesson, courseData, DRAFT_KEY, isLoading, isLessonModalOpen, language, showToast]);
 
   // Offer to restore draft if page was closed without saving
   const [hasDraft, setHasDraft] = useState(false);
@@ -290,8 +297,13 @@ export const CourseEditorProvider: React.FC<{
           return;
         }
         justRestoredRef.current = true;
-        if (draft.lessons?.length > 0) setLessons(draft.lessons);
-        if (draft.currentLesson) setCurrentLesson(draft.currentLesson);
+        if (Array.isArray(draft.lessons)) setLessons(draft.lessons.map(withCourseLessonKey));
+        if (draft.currentLesson?.title && (draft.isLessonModalOpen === true ||
+            (draft.isLessonModalOpen === undefined && !draft.currentLesson.id))) {
+          lessonSessionRef.current += 1;
+          setCurrentLesson(withCourseLessonKey(draft.currentLesson));
+          setLessonModalOpen(true);
+        }
         localStorage.removeItem(DRAFT_KEY);
         void offlineSync.removeDraft(DRAFT_KEY);
         showToast(
@@ -345,12 +357,18 @@ export const CourseEditorProvider: React.FC<{
   };
 
   const fetchCourseData = async (token: string, id: string) => {
+    const request = ++courseLoadRef.current;
+    const isCurrent = () => courseLoadRef.current === request && liveEditor.current.courseId === id;
     try {
       const res = await apiFetch(`${API_URL}/courses/${id}?summary=true`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (!isCurrent()) return;
       if (res.ok) {
         const data = await res.json();
+        if (!isCurrent() || data.id !== id) return;
+        if (loadedCourseRef.current === id && Date.parse(data.updatedAt) < Date.parse(courseVersionRef.current || "")) return;
+        loadedCourseRef.current = id;
         courseVersionRef.current = data.updatedAt;
         let parsedGrades: string[] = data.grade ? [data.grade] : [];
         try {
@@ -443,7 +461,7 @@ export const CourseEditorProvider: React.FC<{
                   Number(item.slidesCount) || 0,
                 ]),
               );
-              if (countsByLessonId.size === 0) return;
+              if (!isCurrent() || countsByLessonId.size === 0) return;
               suppressUnsavedTrackingRef.current = true;
               setLessons((currentLessons) => currentLessons.map((lesson) => (
                 lesson.id && countsByLessonId.has(lesson.id)
@@ -591,17 +609,22 @@ export const CourseEditorProvider: React.FC<{
         showToast(errData.error || errData.message || (language === "ar" ? "فشل تحميل بيانات الكورس" : "Failed to load course details"), "error");
       }
     } catch (error) {
-      console.error("[fetchCourseData] Detailed Error:", error);
-      showToast(language === "ar" ? "خطأ في الاتصال" : "Connection error", "error");
+      if (isCurrent()) {
+        console.error("[fetchCourseData] Detailed Error:", error);
+        showToast(language === "ar" ? "خطأ في الاتصال" : "Connection error", "error");
+      }
     } finally {
-      setIsLoading(false);
-      // Mark initial load complete after a brief delay so state updates from fetch are settled
-      setTimeout(() => { initialLoadDoneRef.current = true; }, 200);
+      if (isCurrent()) {
+        setIsLoading(false);
+        // Mark initial load complete after state updates from this request are settled.
+        setTimeout(() => { if (isCurrent()) initialLoadDoneRef.current = true; }, 200);
+      }
     }
   };
 
   const handleRemoveLesson = async (index: number) => {
     const lesson = lessons[index];
+    if (!lesson) return;
     
     // 1. If it's a new, unsaved lesson, just remove it locally
     if (!lesson.id || String(lesson.id).length < 5) {
@@ -628,9 +651,7 @@ export const CourseEditorProvider: React.FC<{
       
       if (res.ok) {
         showToast(language === "ar" ? "تم حذف الدرس بنجاح" : "Lesson deleted successfully", "success");
-        const newLessons = [...lessons];
-        newLessons.splice(index, 1);
-        setLessons(newLessons);
+        setLessons(current => current.filter(item => item.id !== lesson.id));
       } else {
         const data = await res.json().catch(() => ({}));
         showToast(data.error || (language === "ar" ? "فشل حذف الدرس" : "Failed to delete lesson"), "error");
@@ -641,9 +662,11 @@ export const CourseEditorProvider: React.FC<{
   };
 
   const openAddLessonModal = () => {
-    setEditingLessonIndex(null);
+    lessonSessionRef.current += 1;
+    setIsLessonContentLoading(false);
     suppressUnsavedTrackingRef.current = true;
     setCurrentLesson({
+      newLessonId: crypto.randomUUID(),
       title: "",
       domain: "",
       videoUrl: "",
@@ -675,10 +698,10 @@ export const CourseEditorProvider: React.FC<{
   };
 
   const openEditLessonModal = async (index: number) => {
-    setEditingLessonIndex(index);
     const lessonSummary = lessons[index];
     if (!lessonSummary) return;
-    let lessonToEdit: any = { ...lessonSummary };
+    const session = ++lessonSessionRef.current;
+    let lessonToEdit: Lesson = withCourseLessonKey({ ...lessonSummary });
 
     if (lessonSummary.id && !lessonSummary.isContentLoaded) {
       // Open immediately so the user gets visible feedback while large lessons load.
@@ -694,26 +717,25 @@ export const CourseEditorProvider: React.FC<{
         });
         if (!response.ok) throw new Error("lesson fetch failed");
         const lesson = await response.json();
-        const parseArray = (value: any) => {
-          if (Array.isArray(value)) return value;
-          try { return JSON.parse(value || "[]"); } catch { return []; }
-        };
+        if (session !== lessonSessionRef.current) return;
         lessonToEdit = {
           ...lesson,
           isContentLoaded: true,
           publishDate: lesson.publishDate ? toEgyptInput(lesson.publishDate) : "",
           cutOffDate: lesson.cutOffDate ? toEgyptInput(lesson.cutOffDate) : "",
-          slides: parseArray(lesson.slides),
-          questions: parseArray(lesson.questions),
-          assignments: parseArray(lesson.assignments),
-          attachments: parseArray(lesson.attachments),
+          slides: parseLessonJsonArray(lesson.slides),
+          questions: parseLessonJsonArray(lesson.questions),
+          assignments: parseLessonJsonArray(lesson.assignments),
+          attachments: parseLessonJsonArray(lesson.attachments),
         };
       } catch (error) {
+        if (session !== lessonSessionRef.current) return;
         showToast(language === "ar" ? "تعذر تحميل محتوى الدرس" : "Failed to load lesson content", "error");
         setIsLessonModalOpen(false);
+        setIsLessonContentLoading(false);
         return;
       } finally {
-        setIsLessonContentLoading(false);
+        if (session === lessonSessionRef.current) setIsLessonContentLoading(false);
       }
     }
     if (!lessonToEdit.slides || lessonToEdit.slides.length === 0) {
@@ -731,7 +753,7 @@ export const CourseEditorProvider: React.FC<{
     suppressUnsavedTrackingRef.current = true;
     if (lessonToEdit.isContentLoaded && !lessonSummary.isContentLoaded) {
       setLessons((prev) =>
-        prev.map((item, i) => (i === index ? { ...item, ...lessonToEdit, isContentLoaded: true } : item))
+        prev.map(item => item.id === lessonSummary.id ? { ...item, ...lessonToEdit, isContentLoaded: true } : item)
       );
     }
     setCurrentLesson(lessonToEdit);
@@ -800,8 +822,8 @@ export const CourseEditorProvider: React.FC<{
     }
   };
 
-  const getSchoolPayload = () => {
-    const sanitizedTargetSchoolIds = (courseData.schoolIds || [])
+  const getSchoolPayload = (data: CourseData) => {
+    const sanitizedTargetSchoolIds = (data.schoolIds || [])
       .map((s: any) => (typeof s === "object" && s ? s.id : s))
       .filter((s: any): s is string => Boolean(s && typeof s === "string" && s !== "null" && s !== "undefined" && s.trim() !== ""))
       .map((s: string) => s.trim());
@@ -818,547 +840,195 @@ export const CourseEditorProvider: React.FC<{
     return { isCentral: undefined, schoolId: undefined, schoolIds: undefined };
   };
 
-  const saveLesson = async () => {
-    if (isLessonContentLoading || (currentLesson.id && currentLesson.isContentLoaded !== true)) return;
-    if (!currentLesson.title) {
-      showToast(language === "ar" ? "يجب إدخال عنوان الدرس" : "Lesson title is required", "error");
-      return;
-    }
-    const loadedCurrentLesson: Lesson = { ...currentLesson, isContentLoaded: true };
-    const token = localStorage.getItem(tokenKey) || localStorage.getItem("token");
-    if (!token || !courseId) {
-      setLessons((prev) => {
-        const next = [...prev];
-        if (editingLessonIndex !== null) next[editingLessonIndex] = loadedCurrentLesson;
-        else next.push(loadedCurrentLesson);
-        return next;
-      });
-      setIsLessonModalOpen(false);
-      return;
-    }
+  const saveCourse = async (mode: "lesson" | "course" | "auto") => {
+    const requestedSession = lessonSessionRef.current;
+    if (!(await acquireSaveLock(mode !== "auto"))) return;
 
-    await acquireSaveLock(true);
-
-    lessonsRef.current = lessons;
-
-    const requestOwner = captureOfflineOwner({ Authorization: `Bearer ${token}` });
-    const snapshotLessons = [...lessonsRef.current];
-    if (editingLessonIndex !== null) snapshotLessons[editingLessonIndex] = loadedCurrentLesson;
-    else snapshotLessons.push(loadedCurrentLesson);
-
-    const expectedUpdatedAt = courseVersionRef.current;
-
+    let submitting = false;
     try {
-      const deduplicatedLessons = snapshotLessons.filter((l, idx, arr) => {
-        if (!l.id) return true;
-        return arr.findIndex(other => other.id === l.id) === idx;
-      });
+      const editor = liveEditor.current;
+      if (editor.courseId !== courseId || (mode === "lesson" && requestedSession !== lessonSessionRef.current)) return;
+      if (courseId && loadedCourseRef.current !== courseId) return;
+      if (mode === "auto" && editor.isLessonModalOpen && !editor.currentLesson.id) return;
+      if (mode === "lesson" && (!editor.isLessonModalOpen || editor.isLessonContentLoading)) return;
+      if (editor.isLessonModalOpen && editor.currentLesson.id && editor.currentLesson.isContentLoaded !== true) return;
 
-      const res = await apiFetch(`${API_URL}/school/courses/${courseId}`, {
-        method: "PUT",
-        headers: {
-          "X-Offline-Queue-Managed": "1",
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...courseData,
-          ...getSchoolPayload(),
-          expectedUpdatedAt,
-          lessons: deduplicatedLessons.map(serializeLessonForPut),
-        }),
-      });
-
-      if (res.ok) {
-        void offlineSync.removeByUrl(`${API_URL}/school/courses/${courseId}`, "PUT", requestOwner);
-        clearDraft();
-        const data = await res.json().catch(() => ({}));
-        courseVersionRef.current = data.updatedAt;
-
-        suppressUnsavedTrackingRef.current = true;
-        if (data && data.lessons && Array.isArray(data.lessons)) {
-          const parsed = data.lessons.map((pl: any) => {
-            let parsedSlides: any[] = [];
-            let parsedQuestions: any[] = [];
-            let parsedAssignments: any[] = [];
-            let parsedAttachments: any[] = [];
-            try { parsedSlides = typeof pl.slides === 'string' ? JSON.parse(pl.slides) : (pl.slides || []); } catch { parsedSlides = []; }
-            try { parsedQuestions = typeof pl.questions === 'string' ? JSON.parse(pl.questions) : (pl.questions || []); } catch { parsedQuestions = []; }
-            try { parsedAssignments = typeof pl.assignments === 'string' ? JSON.parse(pl.assignments) : (pl.assignments || []); } catch { parsedAssignments = []; }
-            try { parsedAttachments = typeof pl.attachments === 'string' ? JSON.parse(pl.attachments) : (pl.attachments || []); } catch { parsedAttachments = []; }
-            return {
-              ...pl,
-              slides: Array.isArray(parsedSlides) ? parsedSlides : [],
-              questions: Array.isArray(parsedQuestions) ? parsedQuestions : [],
-              assignments: Array.isArray(parsedAssignments) ? parsedAssignments : [],
-              attachments: Array.isArray(parsedAttachments) ? parsedAttachments : [],
-            };
-          });
-
-          const currentLessonId = loadedCurrentLesson.id;
-          const currentLessonTitle = loadedCurrentLesson.title;
-
-          const matchedServerLesson = parsed.find((pl: any) => {
-            if (currentLessonId && pl.id === currentLessonId) return true;
-            if (!currentLessonId && pl.title === currentLessonTitle) return true;
-            return false;
-          });
-
-          if (matchedServerLesson?.id || loadedCurrentLesson.isContentLoaded) {
-            setCurrentLesson((prev: any) => ({
-              ...prev,
-              id: matchedServerLesson?.id || prev.id,
-              updatedAt: matchedServerLesson?.updatedAt || prev.updatedAt,
-              isContentLoaded: true,
-              slides: prev.slides?.length > 0 ? prev.slides : (matchedServerLesson?.slides || []),
-              questions: prev.questions?.length > 0 ? prev.questions : (matchedServerLesson?.questions || []),
-              assignments: prev.assignments?.length > 0 ? prev.assignments : (matchedServerLesson?.assignments || []),
-            }));
-          }
-
-          setLessons((prevLessons: Lesson[]) => {
-            const serverIds = new Set(parsed.map((pl: any) => pl.id).filter(Boolean));
-
-            const serverMapped = parsed.map((pl: any) => {
-              const isEditedLesson =
-                (currentLessonId && pl.id === currentLessonId) ||
-                (!currentLessonId && pl.title === currentLessonTitle);
-
-              if (isEditedLesson) {
-                return {
-                  ...pl,
-                  id: pl.id,
-                  isContentLoaded: true,
-                  slides: loadedCurrentLesson.slides?.length > 0 ? loadedCurrentLesson.slides : pl.slides,
-                  questions: loadedCurrentLesson.questions?.length > 0 ? loadedCurrentLesson.questions : pl.questions,
-                  assignments: loadedCurrentLesson.assignments?.length > 0 ? loadedCurrentLesson.assignments : pl.assignments,
-                  attachments: loadedCurrentLesson.attachments?.length > 0 ? loadedCurrentLesson.attachments : pl.attachments,
-                };
-              }
-
-              const localLesson = prevLessons.find((ll: Lesson) => ll.id && ll.id === pl.id);
-              if (localLesson) {
-                return {
-                  ...pl,
-                  isContentLoaded: Boolean(localLesson.isContentLoaded),
-                  slides: localLesson.slides?.length > 0 ? localLesson.slides : pl.slides,
-                  questions: localLesson.questions?.length > 0 ? localLesson.questions : pl.questions,
-                  assignments: localLesson.assignments?.length > 0 ? localLesson.assignments : pl.assignments,
-                  attachments: localLesson.attachments?.length > 0 ? localLesson.attachments : pl.attachments,
-                };
-              }
-              return {
-                ...pl,
-                isContentLoaded: false,
-              };
-            });
-
-            const localOnlyLessons = prevLessons.filter(
-              (ll: Lesson) => ll.id && !serverIds.has(ll.id)
-            );
-
-            const merged = [...serverMapped, ...localOnlyLessons];
-            lessonsRef.current = merged;
-            return merged;
-          });
-        } else {
-          lessonsRef.current = snapshotLessons;
-          setLessons(snapshotLessons);
-        }
-
-        setHasUnsavedChanges(false);
-        showToast(language === "ar" ? "تم حفظ الدرس ونشره تلقائياً" : "Lesson saved and published automatically", "success");
-      } else {
-        const errBody = await res.json().catch(() => ({}));
-        if (res.status >= 500 || !navigator.onLine) {
-          const tokenOffline = localStorage.getItem(tokenKey) || localStorage.getItem("token") || "";
-          const deduplicatedLessons2 = snapshotLessons.filter((l, idx, arr) => {
-            if (!l.id) return true;
-            return arr.findIndex(other => other.id === l.id) === idx;
-          });
-          if (!await persistFailedWrite({
-            owner: requestOwner,
-            url: `${API_URL}/school/courses/${courseId}`,
-            method: "PUT",
-            supersedeKey: `course-put:${courseId}`,
-            headers: { Authorization: `Bearer ${tokenOffline}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              ...courseData,
-              ...getSchoolPayload(),
-              expectedUpdatedAt,
-              lessons: deduplicatedLessons2.map(serializeLessonForPut),
-            }),
-            label: language === "ar" ? `درس: ${currentLesson.title}` : `Lesson: ${currentLesson.title}`,
-          })) return;
-          lessonsRef.current = snapshotLessons;
-          setLessons(snapshotLessons);
-          showToast(
-            language === "ar"
-              ? "السيرفر غير متاح - تم حفظ التغييرات محلياً؛ راجع حالة المزامنة في التغييرات المعلقة"
-              : "Server unavailable - changes saved locally; check pending saves for sync status",
-            "info"
-          );
-        } else if (errBody?.details?.includes('SAFETY_BLOCK')) {
-          showToast(language === "ar" ? "حدث خطأ في بيانات الدروس - تم الحفظ محلياً" : "Data integrity error - saved locally only", "error");
-        } else {
-          showToast(language === "ar" ? "تم الحفظ محلياً لكن فشل النشر - تأكد من الاتصال" : "Saved locally but publication failed - check connection", "error");
-        }
+      const lessonTitle = editor.currentLesson.title.trim();
+      if (editor.isLessonModalOpen && !lessonTitle) {
+        if (mode !== "auto") showToast(language === "ar" ? "يجب إدخال عنوان الدرس" : "Lesson title is required", "error");
+        return;
       }
-    } catch (error: any) {
-      console.error("Auto-save error:", error);
-      if (!navigator.onLine || error?.message?.includes('fetch')) {
-        const tokenOffline2 = localStorage.getItem(tokenKey) || localStorage.getItem("token") || "";
-        const deduplicatedLessons3 = snapshotLessons.filter((l, idx, arr) => {
-          if (!l.id) return true;
-          return arr.findIndex(other => other.id === l.id) === idx;
-        });
+      if (!editor.courseData.title.trim()) {
+        if (mode !== "auto") showToast(language === "ar" ? "عنوان الكورس مطلوب" : "Course title is required", "error");
+        return;
+      }
+
+      const session = lessonSessionRef.current;
+      const draft = editor.isLessonModalOpen && lessonTitle && !editor.isLessonContentLoading
+        ? withCourseLessonKey({ ...editor.currentLesson, isContentLoaded: true })
+        : undefined;
+      const beforeSave = lessonsRef.current;
+      const submitted = draft ? stageCourseLesson(beforeSave, draft) : beforeSave;
+      if (!submitted) {
+        showToast(language === "ar" ? "الدرس لم يعد موجودًا في الكورس. حدّث الصفحة وراجع المسودة." : "The lesson is no longer in this course. Refresh and review the draft.", "error");
+        return;
+      }
+
+      const token = localStorage.getItem(tokenKey) || localStorage.getItem("token");
+      if (!courseId || !token) {
+        if (mode === "lesson") {
+          setLessons(submitted);
+          setIsLessonModalOpen(false);
+        }
+        return;
+      }
+
+      const url = API_URL + "/school/courses/" + courseId;
+      const headers = { Authorization: "Bearer " + token, "Content-Type": "application/json" };
+      const requestOwner = captureOfflineOwner(headers);
+      const body = JSON.stringify({
+        ...editor.courseData,
+        ...getSchoolPayload(editor.courseData),
+        expectedUpdatedAt: courseVersionRef.current,
+        lessons: submitted.map(serializeLessonForPut),
+      });
+      if (mode === "auto" && failedSaveBodyRef.current === body) return;
+      submitting = true;
+      setIsSubmitting(true);
+
+      const queueSave = async () => {
+        failedSaveBodyRef.current = body;
         if (!await persistFailedWrite({
-          owner: requestOwner,
-          url: `${API_URL}/school/courses/${courseId}`,
-          method: "PUT",
-          supersedeKey: `course-put:${courseId}`,
-          headers: { Authorization: `Bearer ${tokenOffline2}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...courseData,
-            ...getSchoolPayload(),
-            expectedUpdatedAt,
-            lessons: deduplicatedLessons3.map(serializeLessonForPut),
-          }),
-          label: language === "ar" ? `درس: ${currentLesson.title}` : `Lesson: ${currentLesson.title}`,
+          owner: requestOwner, url, method: "PUT", headers, body,
+          supersedeKey: "course-put:" + courseId,
+          label: mode === "lesson" ? lessonTitle : editor.courseData.title,
         })) return;
-        lessonsRef.current = snapshotLessons;
-        setLessons(snapshotLessons);
+        if (draft && session === lessonSessionRef.current) {
+          const latest = liveEditor.current.currentLesson;
+          setLessons(current => stageCourseLesson(current, withCourseLessonKey(latest)) ?? current);
+        }
         showToast(
-          language === "ar"
-            ? "لا يوجد اتصال - تم حفظ التغييرات محلياً؛ راجع حالة المزامنة في التغييرات المعلقة"
-            : "No connection - changes saved locally; check pending saves for sync status",
+          language === "ar" ? "تم حفظ التغييرات محلياً في قائمة المزامنة." : "Changes were saved locally in the sync queue.",
           "info"
         );
-      } else {
-        showToast(language === "ar" ? "تم الحفظ محلياً لكن فشل النشر" : "Saved locally but publication failed", "error");
+      };
+
+      let response: Response;
+      try {
+        response = await apiFetch(url, {
+          method: "PUT",
+          headers: { ...headers, "X-Offline-Queue-Managed": "1" },
+          body,
+        });
+      } catch {
+        await queueSave();
+        return;
       }
+
+      if (!response.ok) {
+        if (response.status >= 500) {
+          await queueSave();
+          return;
+        }
+        failedSaveBodyRef.current = body;
+        const error = await response.json().catch(() => ({}));
+        showToast(error.error || (language === "ar" ? "تعذر حفظ الكورس." : "Unable to save the course."), "error");
+        return;
+      }
+
+      const saved = await response.json().catch(() => null);
+      if (liveEditor.current.courseId !== courseId) return;
+      const savedLessons: Lesson[] = Array.isArray(saved?.lessons) ? saved.lessons : [];
+      const savedById = new Map(savedLessons.map(lesson => [lesson.id, lesson]));
+      const draftKey = draft && courseLessonKey(draft);
+      const acknowledgedDraft = draftKey ? savedById.get(draftKey) : undefined;
+      const acknowledgedAllNew = submitted.every(lesson => !lesson.newLessonId || savedById.has(lesson.newLessonId));
+      if (!saved?.updatedAt || !Array.isArray(saved.lessons) || (draftKey && !acknowledgedDraft) || !acknowledgedAllNew) {
+        failedSaveBodyRef.current = body;
+        showToast(language === "ar" ? "تعذر تأكيد الحفظ بنفس معرّفات الدروس. تم الاحتفاظ بالمسودة." : "The server did not confirm the same lesson IDs. Your draft was kept.", "error");
+        return;
+      }
+
+      failedSaveBodyRef.current = undefined;
+      courseVersionRef.current = saved.updatedAt;
+      void offlineSync.removeByUrl(url, "PUT", requestOwner);
+
+      const currentEditor = liveEditor.current;
+      const latestLessons = lessonsRef.current;
+      const listChanged = latestLessons !== beforeSave;
+      const draftStillOpen = session === lessonSessionRef.current && currentEditor.isLessonModalOpen;
+      const editedDuringSave = currentEditor.courseData !== editor.courseData || listChanged ||
+        ((editor.isLessonModalOpen || currentEditor.isLessonModalOpen) && currentEditor.currentLesson !== editor.currentLesson) ||
+        (currentEditor.isLessonModalOpen && !draftStillOpen);
+      const initialById = new Map(beforeSave.map(lesson => [courseLessonKey(lesson), lesson]));
+      const submittedById = new Map(submitted.map(lesson => [courseLessonKey(lesson), lesson]));
+
+      const reconcile = (server: Lesson, local?: Lesson): Lesson => {
+        const sent = submittedById.get(server.id);
+        if (local && local !== initialById.get(server.id)) {
+          return { ...local, id: server.id, newLessonId: undefined, updatedAt: server.updatedAt };
+        }
+        const isContentLoaded = Boolean(sent?.isContentLoaded);
+        return {
+          ...(isContentLoaded ? server : buildCourseLessonSummary(server)),
+          isContentLoaded,
+          publishDate: server.publishDate ? toEgyptInput(server.publishDate) : "",
+          cutOffDate: server.cutOffDate ? toEgyptInput(server.cutOffDate) : "",
+          slides: isContentLoaded ? parseLessonJsonArray(server.slides) : [],
+          questions: isContentLoaded ? parseLessonJsonArray(server.questions) : [],
+          assignments: isContentLoaded ? parseLessonJsonArray(server.assignments) : [],
+          attachments: isContentLoaded ? parseLessonJsonArray(server.attachments) : [],
+        } as Lesson;
+      };
+      const localById = new Map(latestLessons.map(lesson => [courseLessonKey(lesson), lesson]));
+      const merged = savedLessons
+        .filter(lesson => !listChanged || !initialById.has(lesson.id) || localById.has(lesson.id))
+        .map(lesson => reconcile(lesson, localById.get(lesson.id)));
+      const mergedById = new Map(merged.map(lesson => [lesson.id, lesson]));
+      const localOrder = listChanged
+        ? latestLessons.flatMap(lesson => {
+            const key = courseLessonKey(lesson);
+            const persisted = mergedById.get(key);
+            mergedById.delete(key);
+            return persisted ? [persisted] : lesson.id ? [] : [lesson];
+          })
+        : [];
+      const nextLessons = listChanged ? [...localOrder, ...mergedById.values()] : merged;
+
+      suppressUnsavedTrackingRef.current = !editedDuringSave;
+      lessonsRef.current = nextLessons;
+      setLessons(nextLessons);
+      if (acknowledgedDraft && draftStillOpen) {
+        setCurrentLesson(previous => {
+          if (session !== lessonSessionRef.current || courseLessonKey(previous) !== draftKey) return previous;
+          return { ...previous, id: acknowledgedDraft.id, newLessonId: undefined, updatedAt: acknowledgedDraft.updatedAt };
+        });
+      }
+
+      if (!editedDuringSave) clearDraft();
+      setHasUnsavedChanges(editedDuringSave);
+      if (mode === "auto") {
+        setLastAutoSave(new Date());
+      } else if (mode === "lesson") {
+        showToast(language === "ar" ? "تم حفظ الدرس بنجاح" : "Lesson saved successfully", "success");
+      } else {
+        showToast(language === "ar" ? "تم تحديث الكورس بنجاح" : "Course updated successfully", "success");
+        if (!editedDuringSave) router.push(role === "SUPER_ADMIN" ? "/super-admin/courses" : "/school-admin/courses");
+      }
+    } catch (error) {
+      console.error("Course save failed:", error);
+      showToast(language === "ar" ? "تعذر تأكيد الحفظ. تم الاحتفاظ بالتغييرات في المحرر." : "The save could not be confirmed. Your changes are still in the editor.", "error");
     } finally {
       isSavingRef.current = false;
+      if (submitting) setIsSubmitting(false);
     }
   };
 
-  const handleSubmit = async (e?: React.FormEvent, isAutoSave = false) => {
-    if (e) e.preventDefault();
-    if (!courseData.title) {
-      if (!isAutoSave) showToast(language === "ar" ? "عنوان الكورس مطلوب" : "Course title is required", "error");
-      return;
-    }
-    // Autosave can be coalesced while another write is active. An explicit save
-    // must wait, otherwise the click appears to do nothing and the latest data is lost.
-    if (!(await acquireSaveLock(!isAutoSave))) return;
-    setIsSubmitting(true);
-    const token = localStorage.getItem(tokenKey) || localStorage.getItem("token");
-    const requestOwner = captureOfflineOwner({ Authorization: `Bearer ${token}` });
-    const expectedUpdatedAt = courseVersionRef.current;
-    const prevLoadedIds = new Set(lessonsRef.current.filter((l) => l.isContentLoaded).map((l) => l.id).filter(Boolean));
-    const loadedNewTitles = new Set(lessonsRef.current.filter((l) => !l.id && l.isContentLoaded).map((l) => l.title).filter(Boolean));
+  const saveLesson = () => saveCourse("lesson");
 
-    const lessonsToSend = [...lessons];
-    if (isLessonModalOpen && !isLessonContentLoading && currentLesson.title &&
-        (!currentLesson.id || currentLesson.isContentLoaded === true)) {
-      const loadedCurrentLesson: Lesson = { ...currentLesson, isContentLoaded: true };
-      if (editingLessonIndex !== null && editingLessonIndex < lessonsToSend.length) {
-        lessonsToSend[editingLessonIndex] = loadedCurrentLesson;
-      } else if (editingLessonIndex === null && !isAutoSave) {
-        const alreadyPresent = lessonsToSend.some(l => !l.id && l.title === currentLesson.title);
-        if (!alreadyPresent) {
-          lessonsToSend.push(loadedCurrentLesson);
-          loadedNewTitles.add(currentLesson.title);
-        }
-      }
-    }
-
-    const deduplicatedLessonsToSend = lessonsToSend.filter((l, idx, arr) => {
-      if (!l.id) return true;
-      return arr.findIndex(other => other.id === l.id) === idx;
-    });
-
-    try {
-      lessonsRef.current = lessons;
-
-      const res = await apiFetch(`${API_URL}/school/courses/${courseId}`, {
-        method: "PUT",
-        headers: {
-          "X-Offline-Queue-Managed": "1",
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...courseData,
-          ...getSchoolPayload(),
-          expectedUpdatedAt,
-          lessons: deduplicatedLessonsToSend.map(serializeLessonForPut),
-        }),
-      });
-
-      if (res.ok) {
-        void offlineSync.removeByUrl(`${API_URL}/school/courses/${courseId}`, "PUT", requestOwner);
-        const data = await res.json();
-        courseVersionRef.current = data.updatedAt;
-        const parsedLessons = (data.lessons || []).map((l: any) => {
-          let parsedQuestions = [];
-          let parsedAssignments = [];
-          let parsedAttachments = [];
-          let parsedSlides = [];
-
-          try {
-            parsedQuestions = typeof l.questions === "string" ? JSON.parse(l.questions) : l.questions || [];
-          } catch (e) {
-            parsedQuestions = [];
-          }
-          try {
-            parsedAssignments = typeof l.assignments === "string" ? JSON.parse(l.assignments) : l.assignments || [];
-          } catch (e) {
-            parsedAssignments = [];
-          }
-          try {
-            parsedAttachments = typeof l.attachments === "string" ? JSON.parse(l.attachments) : l.attachments || [];
-          } catch (e) {
-            parsedAttachments = [];
-          }
-          try {
-            parsedSlides = typeof l.slides === "string" ? JSON.parse(l.slides) : l.slides || [];
-          } catch (e) {
-            parsedSlides = [{ id: Date.now(), type: "TEXT", label: "CONTENT", title: language === "ar" ? "المقدمة" : "Introduction", content: "", sections: [] }];
-          }
-
-          const resolvedId = l.id || l._id;
-          const wasLoaded = Boolean(
-            (resolvedId && prevLoadedIds.has(resolvedId)) ||
-            (!l.id ? false : loadedNewTitles.has(l.title)) ||
-            (isLessonModalOpen &&
-              ((currentLesson.id && resolvedId === currentLesson.id) ||
-                (!currentLesson.id && l.title === currentLesson.title)))
-          );
-
-          return {
-            ...l,
-            id: resolvedId,
-            isContentLoaded: wasLoaded,
-            isVisible: l.isVisible !== undefined ? l.isVisible : true,
-            publishDate: l.publishDate && !isNaN(new Date(l.publishDate).getTime()) ? toEgyptInput(l.publishDate) : "",
-            cutOffDate: l.cutOffDate && !isNaN(new Date(l.cutOffDate).getTime()) ? toEgyptInput(l.cutOffDate) : "",
-            questions: Array.isArray(parsedQuestions)
-              ? parsedQuestions.map((q) => {
-                  let parsedExps = [""];
-                  try {
-                    parsedExps = typeof q.explanation === "string" && q.explanation.startsWith("[") ? JSON.parse(q.explanation) : q.explanations || [""];
-                    if (!Array.isArray(parsedExps)) parsedExps = [q.explanation || ""];
-                  } catch (e) {
-                    parsedExps = [q.explanation || ""];
-                  }
-                  return { ...q, explanations: parsedExps };
-                })
-              : [],
-            assignments: Array.isArray(parsedAssignments)
-              ? parsedAssignments.map((q) => {
-                  let parsedExps = [""];
-                  try {
-                    parsedExps = typeof q.explanation === "string" && q.explanation.startsWith("[") ? JSON.parse(q.explanation) : q.explanations || [""];
-                    if (!Array.isArray(parsedExps)) parsedExps = [q.explanation || ""];
-                  } catch (e) {
-                    parsedExps = [q.explanation || ""];
-                  }
-                  return { ...q, explanations: parsedExps };
-                })
-              : [],
-            attachments: Array.isArray(parsedAttachments) ? parsedAttachments : [],
-            slides: Array.isArray(parsedSlides) ? parsedSlides.map((slide: any) => ({ ...slide, id: slide.id || slide._id })) : [],
-          };
-        }).sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
-
-        suppressUnsavedTrackingRef.current = true;
-        if (isLessonModalOpen) {
-          const matchedServerLesson = parsedLessons.find((pl: any) => {
-            if (currentLesson.id && pl.id === currentLesson.id) return true;
-            if (!currentLesson.id && pl.title === currentLesson.title) return true;
-            return false;
-          });
-          const idx = matchedServerLesson
-            ? parsedLessons.findIndex((pl: any) => pl.id === matchedServerLesson.id)
-            : (editingLessonIndex !== null ? editingLessonIndex : parsedLessons.length - 1);
-          if (idx !== editingLessonIndex && editingLessonIndex === null) {
-            setEditingLessonIndex(idx);
-          }
-          if (matchedServerLesson) {
-            setCurrentLesson((prev: any) => ({
-              ...prev,
-              id: matchedServerLesson.id,
-              updatedAt: matchedServerLesson.updatedAt,
-              isContentLoaded: true,
-              slides: prev.slides.map((s: any, sIdx: number) => {
-                const serverSlide = matchedServerLesson.slides?.[sIdx];
-                return serverSlide ? { ...s, id: serverSlide.id } : s;
-              }),
-              questions: prev.questions.map((q: any, qIdx: number) => {
-                const serverQ = matchedServerLesson.questions?.[qIdx];
-                return serverQ ? { ...q, id: serverQ.id } : q;
-              }),
-              assignments: prev.assignments.map((a: any, aIdx: number) => {
-                const serverA = matchedServerLesson.assignments?.[aIdx];
-                return serverA ? { ...a, id: serverA.id } : a;
-              }),
-            }));
-          } else if (idx >= 0 && idx < parsedLessons.length) {
-            setCurrentLesson((prev: any) => ({
-              ...prev,
-              id: parsedLessons[idx].id,
-              updatedAt: parsedLessons[idx].updatedAt,
-              isContentLoaded: true,
-            }));
-          }
-          const editedLessonId = matchedServerLesson?.id || currentLesson.id;
-          setLessons(
-            parsedLessons.map((pl: any) => {
-              const isEditedLesson = editedLessonId
-                ? pl.id === editedLessonId
-                : pl.title === currentLesson.title;
-
-              if (isEditedLesson) {
-                return {
-                  ...pl,
-                  isContentLoaded: true,
-                  title: currentLesson.title,
-                  domain: currentLesson.domain,
-                  videoUrl: currentLesson.videoUrl,
-                  summary: currentLesson.summary,
-                  notes: currentLesson.notes,
-                  ...lessonTranslationPayload(currentLesson),
-                  standards: currentLesson.standards,
-                  indicators: currentLesson.indicators,
-                  learningOutcomes: currentLesson.learningOutcomes,
-                  isVisible: currentLesson.isVisible,
-                  publishDate: currentLesson.publishDate,
-                  cutOffDate: currentLesson.cutOffDate,
-                  slides: currentLesson.slides.map((s: any, sIdx: number) => {
-                    const serverSlide = pl.slides?.[sIdx];
-                    return serverSlide ? { ...s, id: serverSlide.id } : s;
-                  }),
-                  questions: currentLesson.questions.map((q: any, qIdx: number) => {
-                    const serverQ = pl.questions?.[qIdx];
-                    return serverQ ? { ...q, id: serverQ.id } : q;
-                  }),
-                  assignments: currentLesson.assignments.map((a: any, aIdx: number) => {
-                    const serverA = pl.assignments?.[aIdx];
-                    return serverA ? { ...a, id: serverA.id } : a;
-                  }),
-                };
-              }
-              return pl;
-            })
-          );
-        } else {
-          setLessons((prevLessons: Lesson[]) => {
-            const serverIds = new Set(parsedLessons.map((pl: any) => pl.id).filter(Boolean));
-            const prevById = new Map(prevLessons.filter((ll) => ll.id).map((ll) => [ll.id, ll]));
-            const mergedParsed = parsedLessons.map((pl: any) => {
-              const prevLocal = pl.id ? prevById.get(pl.id) : undefined;
-              if (prevLocal && !pl.isContentLoaded) {
-                return {
-                  ...pl,
-                  slides: prevLocal.slides,
-                  questions: prevLocal.questions,
-                  assignments: prevLocal.assignments,
-                  attachments: prevLocal.attachments,
-                };
-              }
-              return pl;
-            });
-            const localOnlyLessons = prevLessons.filter(
-              (ll: Lesson) => ll.id && !serverIds.has(ll.id)
-            );
-            return [...mergedParsed, ...localOnlyLessons];
-          });
-        }
-
-        clearDraft();
-        setHasUnsavedChanges(false);
-
-        if (!isAutoSave) {
-          showToast(language === "ar" ? "تم تحديث الكورس بنجاح" : "Course updated successfully", "success");
-          router.push(role === "SUPER_ADMIN" ? "/super-admin/courses" : "/school-admin/courses");
-        } else {
-          setLastAutoSave(new Date());
-        }
-      } else {
-        if (!isAutoSave) {
-          const data = await res.json().catch(() => ({}));
-          if (res.status >= 500) {
-            const token = localStorage.getItem(tokenKey) || localStorage.getItem("token") || "";
-            if (!await persistFailedWrite({
-              owner: requestOwner,
-              url: `${API_URL}/school/courses/${courseId}`,
-              method: "PUT",
-              supersedeKey: `course-put:${courseId}`,
-              headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-              body: JSON.stringify({
-                ...courseData,
-                ...getSchoolPayload(),
-                expectedUpdatedAt,
-                lessons: deduplicatedLessonsToSend.map(serializeLessonForPut),
-              }),
-              label: language === "ar" ? `كورس: ${courseData.title}` : `Course: ${courseData.title}`,
-            })) return;
-            showToast(
-              language === "ar"
-                ? "السيرفر غير متاح - تم حفظ التغييرات محلياً؛ راجع حالة المزامنة في التغييرات المعلقة"
-                : "Server unavailable - changes saved locally; check pending saves for sync status",
-              "info"
-            );
-          } else {
-            showToast(data.error || data.details || (language === "ar" ? "فشل تحديث الكورس" : "Failed to update course"), "error");
-          }
-        } else {
-          console.error("Auto-save failed:", await res.text());
-          showToast(
-            language === "ar"
-              ? "فشل الحفظ التلقائي. تأكد من الاتصال ثم احفظ يدوياً."
-              : "Auto-save failed. Check your connection, then save manually.",
-            "error"
-          );
-        }
-      }
-    } catch (error: any) {
-      console.error("Course update error:", error);
-      const token = localStorage.getItem(tokenKey) || localStorage.getItem("token") || "";
-      if (!await persistFailedWrite({
-        owner: requestOwner,
-        url: `${API_URL}/school/courses/${courseId}`,
-        method: "PUT",
-        supersedeKey: `course-put:${courseId}`,
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...courseData,
-          ...getSchoolPayload(),
-          expectedUpdatedAt,
-          lessons: deduplicatedLessonsToSend.map(serializeLessonForPut),
-        }),
-        label: language === "ar" ? `كورس: ${courseData.title}` : `Course: ${courseData.title}`,
-      })) return;
-      if (!isAutoSave) {
-        showToast(
-          language === "ar"
-            ? "لا يوجد اتصال - تم حفظ التغييرات محلياً؛ راجع حالة المزامنة في التغييرات المعلقة"
-            : "No connection - changes saved locally; check pending saves for sync status",
-          "info"
-        );
-      } else {
-        showToast(
-          language === "ar"
-            ? "انقطع الاتصال - تم حفظ التغييرات في قائمة الانتظار"
-            : "Connection lost - changes saved to the pending queue",
-          "info"
-        );
-      }
-    } finally {
-      isSavingRef.current = false;
-      setIsSubmitting(false);
-    }
+  const handleSubmit = async (event?: React.FormEvent, isAutoSave = false) => {
+    event?.preventDefault();
+    await saveCourse(isAutoSave ? "auto" : "course");
   };
 
   const handleDeleteCourse = async () => {
@@ -1433,8 +1103,6 @@ export const CourseEditorProvider: React.FC<{
         setBankItems,
         bankQuestions,
         setBankQuestions,
-        editingLessonIndex,
-        setEditingLessonIndex,
         currentLesson,
         setCurrentLesson,
         activeTab,

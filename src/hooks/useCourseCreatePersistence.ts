@@ -6,6 +6,7 @@ import {
   CourseCreateRole,
   buildCourseSavePayload,
   mergeServerSavedLessons,
+  stageCourseLesson,
 } from "@/lib/courseCreatePersistence";
 import { captureOfflineOwner, offlineSync } from "@/lib/offlineSync";
 
@@ -18,7 +19,6 @@ interface UseCourseCreatePersistenceParams {
   setLessons: React.Dispatch<React.SetStateAction<any[]>>;
   currentLesson: any;
   setCurrentLesson: React.Dispatch<React.SetStateAction<any>>;
-  editingLessonIndex: number | null;
   isLessonModalOpen: boolean;
   setIsLessonModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   showToast: (message: string, type?: any) => void;
@@ -27,16 +27,11 @@ interface UseCourseCreatePersistenceParams {
   router: { push: (url: string) => void };
 }
 
-interface PersistOptions {
-  courseDataOverride?: any;
-  lessonsOverride?: any[];
-  isAutoSave?: boolean;
-}
-
 interface PersistResult {
   ok: boolean;
   courseId: string | null;
   offlineQueued?: boolean;
+  newerEdits?: boolean;
 }
 
 export function useCourseCreatePersistence({
@@ -48,7 +43,6 @@ export function useCourseCreatePersistence({
   setLessons,
   currentLesson,
   setCurrentLesson,
-  editingLessonIndex,
   isLessonModalOpen,
   setIsLessonModalOpen,
   showToast,
@@ -91,11 +85,7 @@ export function useCourseCreatePersistence({
   }, []);
 
   const persistCourseToServer = useCallback(
-    async ({
-      courseDataOverride,
-      lessonsOverride,
-      isAutoSave = false,
-    }: PersistOptions = {}): Promise<PersistResult> => {
+    async (isAutoSave = false): Promise<PersistResult> => {
       if (!isAutoSave) {
         autoSaveGenerationRef.current += 1;
         if (autoSaveTimerRef.current) {
@@ -106,8 +96,8 @@ export function useCourseCreatePersistence({
       const scheduledGeneration = autoSaveGenerationRef.current;
 
       return runQueuedSave(async () => {
-        const activeCourseData = courseDataOverride ?? courseDataRef.current;
-        const activeLessons = lessonsOverride ?? lessonsRef.current;
+        const activeCourseData = courseDataRef.current;
+        const activeLessons = lessonsRef.current;
 
         if (!activeCourseData?.title?.trim()) {
           return { ok: false, courseId: createdIdRef.current };
@@ -176,6 +166,7 @@ export function useCourseCreatePersistence({
             const data = await res.json().catch(() => ({}));
             const savedCourseId: string | null = data?.id || activeCourseId || null;
             if (!savedCourseId || !data.updatedAt) throw new Error("Missing saved course version");
+            const newerEdits = courseDataRef.current !== activeCourseData || lessonsRef.current !== activeLessons;
             courseVersionRef.current = data.updatedAt;
 
             if (activeCourseId) {
@@ -203,7 +194,7 @@ export function useCourseCreatePersistence({
             }
 
             setLastAutoSave(new Date());
-            return { ok: true, courseId: savedCourseId };
+            return { ok: true, courseId: savedCourseId, newerEdits };
           }
 
           if (res.status >= 500) {
@@ -284,7 +275,7 @@ export function useCourseCreatePersistence({
       ) {
         return;
       }
-      void persistCourseToServer({ isAutoSave: true });
+      void persistCourseToServer(true);
     }, 1500);
 
     return () => {
@@ -305,15 +296,10 @@ export function useCourseCreatePersistence({
     }
 
     const updatedLesson = { ...currentLesson, isContentLoaded: true };
-    const newLessons = [...lessonsRef.current];
-    if (
-      editingLessonIndex !== null &&
-      editingLessonIndex >= 0 &&
-      editingLessonIndex < newLessons.length
-    ) {
-      newLessons[editingLessonIndex] = updatedLesson;
-    } else {
-      newLessons.push(updatedLesson);
+    const newLessons = stageCourseLesson(lessonsRef.current, updatedLesson);
+    if (!newLessons) {
+      showToast(language === "ar" ? "لم يعد الدرس موجودًا في الكورس." : "The lesson is no longer in the course.", "error");
+      return;
     }
 
     lessonsRef.current = newLessons;
@@ -322,10 +308,7 @@ export function useCourseCreatePersistence({
     setIsLessonModalOpen(false);
 
     if (courseDataRef.current?.title?.trim() || createdIdRef.current) {
-      const result = await persistCourseToServer({
-        lessonsOverride: newLessons,
-        isAutoSave: false,
-      });
+      const result = await persistCourseToServer();
       if (result.ok) {
         showToast(
           language === "ar"
@@ -344,7 +327,6 @@ export function useCourseCreatePersistence({
     }
   }, [
     currentLesson,
-    editingLessonIndex,
     language,
     persistCourseToServer,
     setCurrentLesson,
@@ -385,29 +367,25 @@ export function useCourseCreatePersistence({
         return;
       }
 
-      let lessonsToSave = [...lessonsRef.current];
-      if (isLessonModalOpen && currentLesson?.title?.trim()) {
-        const updatedOpenLesson = { ...currentLesson, isContentLoaded: true };
-        if (
-          editingLessonIndex !== null &&
-          editingLessonIndex >= 0 &&
-          editingLessonIndex < lessonsToSave.length
-        ) {
-          lessonsToSave[editingLessonIndex] = updatedOpenLesson;
-        } else {
-          lessonsToSave.push(updatedOpenLesson);
+      if (isLessonModalOpen) {
+        if (!currentLesson?.title?.trim()) {
+          showToast(t("courseCreate.lessonTitleRequired") || "Lesson title is required", "error");
+          return;
         }
-        lessonsRef.current = lessonsToSave;
-        setLessons(lessonsToSave);
+        const updatedOpenLesson = { ...currentLesson, isContentLoaded: true };
+        const staged = stageCourseLesson(lessonsRef.current, updatedOpenLesson);
+        if (!staged) {
+          showToast(language === "ar" ? "لم يعد الدرس موجودًا في الكورس." : "The lesson is no longer in the course.", "error");
+          return;
+        }
+        lessonsRef.current = staged;
+        setLessons(staged);
         setIsLessonModalOpen(false);
       }
 
       manualSubmitRef.current = true;
       try {
-        const result = await persistCourseToServer({
-          lessonsOverride: lessonsToSave,
-          isAutoSave: false,
-        });
+        const result = await persistCourseToServer();
 
         if (result.ok) {
           const hasAssignedSchools =
@@ -422,7 +400,7 @@ export function useCourseCreatePersistence({
               : t("courseCreate.publishSuccess") || "Course created successfully",
             "success"
           );
-          router.push(redirectPath);
+          if (!result.newerEdits) router.push(redirectPath);
         }
       } finally {
         manualSubmitRef.current = false;
@@ -430,7 +408,6 @@ export function useCourseCreatePersistence({
     },
     [
       currentLesson,
-      editingLessonIndex,
       isLessonModalOpen,
       language,
       persistCourseToServer,

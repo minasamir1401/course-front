@@ -232,7 +232,6 @@ export default function CreateCoursePage() {
 
   const [lessons, setLessons] = useState<any[]>([]);
   const [isLessonModalOpen, setIsLessonModalOpen] = useState(false);
-  const [editingLessonIndex, setEditingLessonIndex] = useState<number | null>(null);
 
   // Lesson State
   const [currentLesson, setCurrentLesson] = useState<any>({
@@ -273,7 +272,6 @@ export default function CreateCoursePage() {
     setLessons,
     currentLesson,
     setCurrentLesson,
-    editingLessonIndex,
     isLessonModalOpen,
     setIsLessonModalOpen,
     showToast,
@@ -412,8 +410,8 @@ export default function CreateCoursePage() {
   };
 
   const openAddLessonModal = () => {
-    setEditingLessonIndex(null);
     setCurrentLesson({
+      newLessonId: crypto.randomUUID(),
       title: "",
       domain: "",
       content: "",
@@ -436,7 +434,6 @@ export default function CreateCoursePage() {
   };
 
   const openEditLessonModal = (index: number) => {
-    setEditingLessonIndex(index);
     const lessonToEdit = { ...lessons[index] };
     if (lessonToEdit.content === undefined || lessonToEdit.content === null) lessonToEdit.content = "";
     if (!lessonToEdit.slides || lessonToEdit.slides.length === 0) lessonToEdit.slides = [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? "المقدمة" : "Introduction", content: "", sections: [] }];

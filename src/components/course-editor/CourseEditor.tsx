@@ -35,7 +35,6 @@ const InnerCourseEditor: React.FC<{ lessonPage?: boolean }> = ({ lessonPage = fa
     lessons,
     currentLesson,
     isLessonModalOpen,
-    editingLessonIndex,
     hasDraft,
     draftSavedAt,
     restoreFromDraft,
@@ -65,7 +64,7 @@ const InnerCourseEditor: React.FC<{ lessonPage?: boolean }> = ({ lessonPage = fa
     }, 1_500);
 
     return () => clearTimeout(timer);
-  }, [hasUnsavedChanges, isSubmitting, isLoading, courseData, lessons, isAutoSaveEnabled, isLessonModalOpen, currentLesson, editingLessonIndex]);
+  }, [hasUnsavedChanges, isSubmitting, isLoading, courseData, lessons, isAutoSaveEnabled, isLessonModalOpen, currentLesson]);
 
   // Prevent closing page if unsaved changes exist
   useEffect(() => {

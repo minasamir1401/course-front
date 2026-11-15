@@ -3,6 +3,28 @@ import { parseEgyptDate } from "./egyptTime";
 
 export type CourseCreateRole = "SUPER_ADMIN" | "SCHOOL_ADMIN";
 
+type LessonIdentity = { id?: string; newLessonId?: string };
+
+export function courseLessonKey(lesson: LessonIdentity) {
+  return lesson.id || lesson.newLessonId;
+}
+
+export function withCourseLessonKey<T extends LessonIdentity>(lesson: T): T {
+  return courseLessonKey(lesson) ? lesson : { ...lesson, newLessonId: crypto.randomUUID() };
+}
+
+export function stageCourseLesson<T extends LessonIdentity>(lessons: T[], lesson: T): T[] | null {
+  const key = courseLessonKey(lesson);
+  const index = key ? lessons.findIndex(item => courseLessonKey(item) === key) : -1;
+  if (index < 0) return lesson.id ? null : [...lessons, withCourseLessonKey(lesson)];
+  const next = [...lessons];
+  const persisted = lessons[index];
+  next[index] = persisted.id && !lesson.id
+    ? { ...lesson, id: persisted.id, newLessonId: undefined }
+    : lesson;
+  return next;
+}
+
 export function toSafeCourseDateIso(value: any): string | null {
   if (value === undefined || value === null || value === "") return null;
   try {
@@ -39,7 +61,7 @@ function serializeJsonArrayField(value: unknown): string {
 
 export function serializeCourseLessonForSave(lesson: any, index?: number) {
   return {
-    ...(lesson?.id ? { id: lesson.id, expectedUpdatedAt: lesson.updatedAt } : {}),
+    ...(lesson?.id ? { id: lesson.id, expectedUpdatedAt: lesson.updatedAt } : { newLessonId: lesson?.newLessonId }),
     ...lessonTranslationPayload(lesson),
     title: lesson?.title || "",
     domain: lesson?.domain || null,
@@ -85,9 +107,10 @@ export function buildCourseSavePayload(
 
   const seenLessonIds = new Set<string>();
   const deduplicatedLessons = (Array.isArray(lessons) ? lessons : []).filter((lesson) => {
-    if (!lesson?.id) return true;
-    if (seenLessonIds.has(lesson.id)) return false;
-    seenLessonIds.add(lesson.id);
+    const identity = lesson && courseLessonKey(lesson);
+    if (!identity) return true;
+    if (seenLessonIds.has(identity)) return false;
+    seenLessonIds.add(identity);
     return true;
   });
 
@@ -148,38 +171,14 @@ export function mergeServerSavedLessons(localLessons: any[], serverLessons: any[
     return safeLocal.map((lesson) => ({ ...lesson, isContentLoaded: true }));
   }
 
-  const matchedLocalIndices = new Set<number>();
-
-  const merged = serverLessons.map((serverLesson, idx) => {
-    let matchedIndex = serverLesson?.id
-      ? safeLocal.findIndex(
-          (local, localIdx) =>
-            !matchedLocalIndices.has(localIdx) &&
-            local?.id &&
-            local.id === serverLesson.id
-        )
-      : -1;
-
-    if (matchedIndex === -1) {
-      matchedIndex = safeLocal.findIndex(
-        (local, localIdx) =>
-          !matchedLocalIndices.has(localIdx) &&
-          !local?.id &&
-          local?.title === serverLesson?.title
-      );
-    }
-
-    if (matchedIndex === -1 && idx < safeLocal.length && !matchedLocalIndices.has(idx) && !safeLocal[idx]?.id) {
-      matchedIndex = idx;
-    }
-
-    const matchedLocal = matchedIndex >= 0 ? safeLocal[matchedIndex] : undefined;
-    if (matchedIndex >= 0) matchedLocalIndices.add(matchedIndex);
-    const submittedLesson = matchedLocal?.id
-      ? submittedLessons.find(lesson => lesson.id === matchedLocal.id)
-      : submittedLessons[matchedIndex];
+  const localById = new Map(safeLocal.map(lesson => [courseLessonKey(lesson), lesson]));
+  const submittedById = new Map(submittedLessons.map(lesson => [courseLessonKey(lesson), lesson]));
+  const serverIds = new Set(serverLessons.map(lesson => lesson.id));
+  const merged = serverLessons.map(serverLesson => {
+    const matchedLocal = serverLesson.id ? localById.get(serverLesson.id) : undefined;
+    const submittedLesson = submittedById.get(serverLesson.id);
     if (matchedLocal && matchedLocal !== submittedLesson) {
-      return { ...matchedLocal, id: serverLesson.id, updatedAt: serverLesson.updatedAt, isContentLoaded: true };
+      return { ...matchedLocal, id: serverLesson.id, newLessonId: undefined, updatedAt: serverLesson.updatedAt, isContentLoaded: true };
     }
 
     const serverSlides = parseLessonJsonArray(serverLesson?.slides);
@@ -191,32 +190,33 @@ export function mergeServerSavedLessons(localLessons: any[], serverLessons: any[
       ...matchedLocal,
       ...serverLesson,
       id: serverLesson?.id || matchedLocal?.id,
+      newLessonId: undefined,
       isContentLoaded: true,
       slides:
-        serverSlides.length > 0
+        serverLesson.slides !== undefined
           ? serverSlides
           : Array.isArray(matchedLocal?.slides)
             ? matchedLocal.slides
             : [],
       questions:
-        serverQuestions.length > 0
+        serverLesson.questions !== undefined
           ? serverQuestions
           : Array.isArray(matchedLocal?.questions)
             ? matchedLocal.questions
             : [],
       assignments:
-        serverAssignments.length > 0
+        serverLesson.assignments !== undefined
           ? serverAssignments
           : Array.isArray(matchedLocal?.assignments)
             ? matchedLocal.assignments
             : [],
       attachments:
-        serverAttachments.length > 0
+        serverLesson.attachments !== undefined
           ? serverAttachments
           : Array.isArray(matchedLocal?.attachments)
             ? matchedLocal.attachments
             : [],
     };
   });
-  return [...merged, ...safeLocal.filter((_, index) => !matchedLocalIndices.has(index))];
+  return [...merged, ...safeLocal.filter(lesson => !lesson.id && !serverIds.has(courseLessonKey(lesson)))];
 }

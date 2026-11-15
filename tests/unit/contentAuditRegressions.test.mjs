@@ -216,9 +216,13 @@ test('HtmlRenderer bounds KaTeX rule dimensions and macro expansions via maxSize
  assert.match(recursiveMacro, /\\def\\a\{\\a\\a\}\\a/);
 });
 
+const bilingual = load('../../src/lib/bilingualMetadata.ts');
+const egyptTime = load('../../src/lib/egyptTime.ts');
+const persistence = load('../../src/lib/courseCreatePersistence.ts', { './bilingualMetadata': bilingual, './egyptTime': egyptTime });
+const lessonSummary = load('../../src/lib/courseLessonSummary.ts', { './bilingualMetadata': bilingual, './courseCreatePersistence': persistence });
+
 test('buildCourseLessonSummary preserves videoUrl, duration, metadata, and English translations', () => {
- const bilingual = load('../../src/lib/bilingualMetadata.ts');
- const { buildCourseLessonSummary } = load('../../src/lib/courseLessonSummary.ts', { './bilingualMetadata': bilingual });
+ const { buildCourseLessonSummary } = lessonSummary;
  const summary = buildCourseLessonSummary({
   id: 'lesson-1',
   courseId: 'course-1',
@@ -249,16 +253,10 @@ test('buildCourseLessonSummary preserves videoUrl, duration, metadata, and Engli
  assert.equal(summary.learningOutcomesEn, 'LO1 EN');
  assert.equal(summary.slidesCount, 2);
  assert.equal(summary.isContentLoaded, false);
+ assert.equal(buildCourseLessonSummary({ slides: '[{"id":"slide","sections":[{"id":"section"}]}]' }).slidesCount, 1);
 });
 
 test('courseCreatePersistence serializes lessons with isContentLoaded, enforces non-central school-admin payloads, and merges server IDs', () => {
- const bilingual = load('../../src/lib/bilingualMetadata.ts');
- const egyptTime = load('../../src/lib/egyptTime.ts');
- const persistence = load('../../src/lib/courseCreatePersistence.ts', {
-  './bilingualMetadata': bilingual,
-  './egyptTime': egyptTime,
- });
-
  assert.equal(persistence.toSafeCourseDateIso('invalid-date'), null);
  assert.ok(persistence.toSafeCourseDateIso('2026-05-01T10:00'));
 
@@ -294,11 +292,112 @@ test('courseCreatePersistence serializes lessons with isContentLoaded, enforces 
  assert.equal(superAdminCentralPayload.isCentral, true);
 
  const merged = persistence.mergeServerSavedLessons(
-  [{ title: 'Lesson 1', slides: [{ id: 1, title: 'Slide 1' }], questions: [], assignments: [], attachments: [] }],
+  [{ newLessonId: 'srv-lesson-1', title: 'Lesson 1', slides: [{ id: 1, title: 'Slide 1' }], questions: [], assignments: [], attachments: [] }],
   [{ id: 'srv-lesson-1', title: 'Lesson 1', slides: '[{"id":1,"title":"Slide 1"}]', questions: '[]', assignments: '[]', attachments: '[]' }]
  );
  assert.equal(merged.length, 1);
  assert.equal(merged[0].id, 'srv-lesson-1');
  assert.equal(merged[0].isContentLoaded, true);
  assert.equal(merged[0].slides.length, 1);
+});
+
+test('lesson identity stays stable across a reorder, identical names, and late save responses', () => {
+ const old = { id: 'old', title: 'Physics', slides: Array.from({ length: 97 }, (_, id) => ({ id })) };
+ const draft = persistence.withCourseLessonKey({ title: old.title, slides: [{ id: 'intro' }] });
+ const submitted = persistence.stageCourseLesson([old], draft);
+ assert.deepEqual(submitted, [old, draft]);
+ assert.equal(persistence.serializeCourseLessonForSave(draft).newLessonId, draft.newLessonId);
+ assert.equal(persistence.serializeCourseLessonForSave(draft).id, undefined);
+ const changed = { ...draft, title: 'Saved again while the first request was pending' };
+ const merged = persistence.mergeServerSavedLessons([changed, old], [
+  { ...old, updatedAt: '2026-11-15T10:40:00Z' },
+  { id: draft.newLessonId, title: old.title, slides: draft.slides },
+ ], submitted);
+ assert.equal(merged[0].slides.length, 97);
+ assert.equal(merged[1].id, draft.newLessonId);
+ assert.equal(merged[1].title, changed.title);
+ assert.equal(merged[1].newLessonId, undefined);
+ const summaryOnly = persistence.mergeServerSavedLessons([draft], [old], submitted);
+ assert.equal(summaryOnly[0].id, old.id);
+ assert.equal(summaryOnly[0].slides.length, 97);
+ assert.equal(summaryOnly[1], draft);
+ assert.equal(persistence.stageCourseLesson([draft], old), null);
+});
+
+test('the course editor never assigns the last saved lesson ID to an open new draft', async t => {
+ const state = [];
+ let slot = 0;
+ const react = {
+  createContext: () => ({ Provider: () => null }),
+  useState(value) {
+   const index = slot++;
+   if (!(index in state)) state[index] = typeof value === 'function' ? value() : value;
+   return [state[index], next => { state[index] = typeof next === 'function' ? next(state[index]) : next; }];
+  },
+  useRef(value) {
+   const index = slot++;
+   return state[index] ??= { current: value };
+  },
+  useCallback: value => value,
+  useEffect: () => {},
+ };
+ const requests = [];
+ const oldLesson = { id: 'old-id', title: 'Work, Energy & Power', slidesCount: 97, isContentLoaded: false, slides: [], questions: [], assignments: [], attachments: [] };
+ let respond;
+ const { CourseEditorProvider } = load('../../src/components/course-editor/CourseEditorContext.tsx', {
+  react,
+  'next/navigation': { useSearchParams: () => new URLSearchParams('id=course-1'), useRouter: () => ({ push() {} }) },
+  '@/lib/bilingualMetadata': bilingual,
+  '@/lib/egyptTime': egyptTime,
+  '@/lib/courseCreatePersistence': persistence,
+  '@/lib/courseLessonSummary': lessonSummary,
+  '@/hooks/useDeletionPolicy': { useDeletionPolicy: () => true },
+  '@/context/NotificationContext': { useNotification: () => ({ showToast: (_, level) => assert.notEqual(level, 'error') }) },
+  '@/contexts/LanguageContext': { useLanguage: () => ({ language: 'en' }) },
+  '@/lib/offlineSync': { captureOfflineOwner: () => null, offlineSync: { getDraftStorageKey: () => null, removeByUrl: async () => {} } },
+  '@/lib/api': { API_URL: '/api', apiFetch: async (url, options) => {
+   if (!options.method) return new Response(JSON.stringify({ id: 'course-1', title: 'Physics', updatedAt: '2026-11-15T10:00:00Z', lessons: [] }));
+   requests.push({ url, body: JSON.parse(options.body) });
+   return new Promise(resolve => { respond = resolve; });
+  } },
+ });
+ const originalStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+ Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: { getItem: () => 'fixture-session' } });
+ t.after(() => {
+  if (originalStorage) Object.defineProperty(globalThis, 'localStorage', originalStorage);
+  else delete globalThis.localStorage;
+ });
+ const render = () => { slot = 0; return CourseEditorProvider({ role: 'SUPER_ADMIN', children: null }).props.value; };
+ let editor = render();
+ await editor.fetchCourseData('fixture-session', 'course-1');
+ editor.setLessons([oldLesson]);
+ editor.openAddLessonModal();
+ editor = render();
+ editor.setCurrentLesson(lesson => ({ ...lesson, title: 'Gravitation' }));
+ editor = render();
+ await editor.handleSubmit(undefined, true);
+ assert.equal(requests.length, 0);
+ assert.equal(render().currentLesson.id, undefined);
+
+ const saving = editor.saveLesson();
+ await Promise.resolve();
+ const sent = requests[0].body.lessons;
+ assert.equal(sent[0].id, oldLesson.id);
+ assert.equal(sent[0].slides, undefined);
+ assert.equal(sent[1].id, undefined);
+ assert.equal(sent[1].title, 'Gravitation');
+ assert.ok(sent[1].newLessonId);
+ editor.setCurrentLesson(lesson => ({ ...lesson, title: 'Updated during save' }));
+ editor = render();
+ respond(new Response(JSON.stringify({ updatedAt: '2026-11-15T10:40:00Z', lessons: [
+  { ...oldLesson, slides: Array.from({ length: 97 }, (_, id) => ({ id })) },
+  { id: sent[1].newLessonId, title: 'Gravitation', slides: sent[1].slides },
+ ] })));
+ await saving;
+ editor = render();
+ assert.equal(editor.lessons[0].title, oldLesson.title);
+ assert.equal(editor.lessons[0].slidesCount, 97);
+ assert.equal(editor.currentLesson.id, sent[1].newLessonId);
+ assert.equal(editor.currentLesson.title, 'Updated during save');
+ assert.equal(editor.hasUnsavedChanges, true);
 });

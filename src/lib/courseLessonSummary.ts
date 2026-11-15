@@ -1,8 +1,9 @@
 import { lessonTranslationPayload } from './bilingualMetadata';
+import { parseLessonJsonArray } from './courseCreatePersistence';
 export function buildCourseLessonSummary(lesson: any) {
-  const slidesCount = Number(lesson.slidesCount)
-    || (Array.isArray(lesson.slides) ? lesson.slides.length : 0)
-    || (typeof lesson.slides === "string" ? (lesson.slides.match(/"id"\s*:/g) || []).length : 0);
+  const slidesCount = lesson.slidesCount == null
+    ? parseLessonJsonArray(lesson.slides).length
+    : Number(lesson.slidesCount) || 0;
 
   return {
     id: lesson.id || lesson._id,

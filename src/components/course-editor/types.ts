@@ -14,6 +14,7 @@ export interface CourseData {
 
 export interface Lesson {
   id?: string;
+  newLessonId?: string;
   title: string;
   domain: string;
   domainEn?: string;
@@ -64,7 +65,7 @@ export interface CourseEditorContextType {
   isLessonContentLoading: boolean;
   availableMetadata: { domains: string[]; standards: string[]; indicators: string[]; outcomes: string[] };
   setAvailableMetadata: React.Dispatch<React.SetStateAction<{ domains: string[]; standards: string[]; indicators: string[]; outcomes: string[] }>>;
-  setIsLessonModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsLessonModalOpen: (open: boolean) => void;
   isBankModalOpen: boolean;
   setIsBankModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   isQuestionBankModalOpen: boolean;
@@ -73,8 +74,6 @@ export interface CourseEditorContextType {
   setBankItems: React.Dispatch<React.SetStateAction<any[]>>;
   bankQuestions: any[];
   setBankQuestions: React.Dispatch<React.SetStateAction<any[]>>;
-  editingLessonIndex: number | null;
-  setEditingLessonIndex: React.Dispatch<React.SetStateAction<number | null>>;
   currentLesson: Lesson;
   setCurrentLesson: React.Dispatch<React.SetStateAction<Lesson>>;
   activeTab: "info" | "slides" | "exercises" | "assignments" | "attachments" | "scheduling";
