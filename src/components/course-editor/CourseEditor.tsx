@@ -57,7 +57,7 @@ const InnerCourseEditor: React.FC<{ lessonPage?: boolean }> = ({ lessonPage = fa
   // Save shortly after the user pauses. handleSubmit safely merges an open lesson
   // into the course payload, so slides, questions, and lesson metadata are covered too.
   useEffect(() => {
-    if (!hasUnsavedChanges || isSubmitting || isLoading || !isAutoSaveEnabled) return;
+    if (!hasUnsavedChanges || isSubmitting || isLoading || !isAutoSaveEnabled || isLessonModalOpen) return;
 
     const timer = setTimeout(() => {
       handleSubmit(undefined, true);

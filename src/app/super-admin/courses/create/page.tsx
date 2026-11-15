@@ -19,6 +19,7 @@ import { LessonQuestionsBuilder } from "@/components/course-editor/lesson-builde
 import { LessonAttachmentsTab } from "@/components/course-editor/lesson-builder/LessonAttachmentsTab";
 import { CourseCoverUploadField } from "@/components/course-editor/CourseCoverUploadField";
 import { downloadFullLessonWorkbook, handleFullLessonExcelImport } from "@/lib/slidesExcelWorkbook";
+import { courseLessonKey, withCourseLessonKey } from "@/lib/courseCreatePersistence";
 
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ArrowLeft, Plus, Trash2, Video, FileText, HelpCircle, BookOpen, Save, Layers, Edit2, X, ChevronDown, ChevronUp, Play, Layout, Target, CheckCircle2, AlertCircle, Upload, Download, Settings, Eye, Monitor, ListOrdered, FileJson, FileDown, Clock, Lightbulb, MessageSquareQuote, TriangleAlert, Search } from 'lucide-react';
@@ -464,7 +465,12 @@ export default function CreateCoursePage() {
   };
 
   const openEditLessonModal = (index: number) => {
-    const lessonToEdit = { ...lessons[index] };
+    const rawLesson = lessons[index];
+    if (!rawLesson) return;
+    const lessonToEdit = withCourseLessonKey({ ...rawLesson });
+    if (!rawLesson.id && !rawLesson.newLessonId && lessonToEdit.newLessonId) {
+      setLessons((prev: any[]) => prev.map((item, i) => (i === index ? { ...item, newLessonId: lessonToEdit.newLessonId } : item)));
+    }
     if (lessonToEdit.content === undefined || lessonToEdit.content === null) lessonToEdit.content = "";
     if (!lessonToEdit.slides || lessonToEdit.slides.length === 0) lessonToEdit.slides = [{ id: Date.now(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? "المقدمة" : "Introduction", content: "", sections: [] }];
     if (!lessonToEdit.questions) lessonToEdit.questions = [];
@@ -1126,7 +1132,16 @@ export default function CreateCoursePage() {
                     standards: "", indicators: "", learningOutcomes: "", isVisible: true,
                     publishDate: "", cutOffDate: "", slides: [], questions: [], assignments: [], attachments: []
                   }),
-                  (nextLesson) => setLessons((prev: any[]) => [...prev, { ...nextLesson, isContentLoaded: true, order: prev.length + 1 }]),
+                  (nextLesson) => setLessons((prev: any[]) => [
+                    ...prev,
+                    withCourseLessonKey({
+                      ...nextLesson,
+                      id: undefined,
+                      newLessonId: crypto.randomUUID(),
+                      isContentLoaded: true,
+                      order: prev.length + 1,
+                    }),
+                  ]),
                   language,
                   showToast
                 )
@@ -1172,7 +1187,7 @@ export default function CreateCoursePage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {lessons.map((lesson, index) => (
-              <div key={index} className="bg-white border border-slate-100 rounded-[40px] p-8 hover:border-indigo-500/30 transition-all group relative overflow-hidden shadow-sm hover:shadow-xl">
+              <div key={courseLessonKey(lesson) || index} className="bg-white border border-slate-100 rounded-[40px] p-8 hover:border-indigo-500/30 transition-all group relative overflow-hidden shadow-sm hover:shadow-xl">
                 <div className="absolute top-0 left-0 w-2 h-full bg-indigo-600 opacity-0 group-hover:opacity-100 transition-all"></div>
                 <div className="flex justify-between items-start mb-6">
                   <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-2xl border border-indigo-100">

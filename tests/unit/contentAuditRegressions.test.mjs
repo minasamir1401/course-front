@@ -401,3 +401,114 @@ test('the course editor never assigns the last saved lesson ID to an open new dr
  assert.equal(editor.currentLesson.title, 'Updated during save');
  assert.equal(editor.hasUnsavedChanges, true);
 });
+
+test('saving a lesson closes and resets the modal, blocks autosave on open modals, and keeps existing lessons intact when adding or importing another lesson', async t => {
+ const state = [];
+ let slot = 0;
+ const react = {
+  createContext: () => ({ Provider: () => null }),
+  useState(value) {
+   const index = slot++;
+   if (!(index in state)) state[index] = typeof value === 'function' ? value() : value;
+   return [state[index], next => { state[index] = typeof next === 'function' ? next(state[index]) : next; }];
+  },
+  useRef(value) {
+   const index = slot++;
+   return state[index] ??= { current: value };
+  },
+  useCallback: value => value,
+  useEffect: () => {},
+ };
+ const requests = [];
+ let versionCounter = 1;
+ let serverLessons = [];
+ const { CourseEditorProvider } = load('../../src/components/course-editor/CourseEditorContext.tsx', {
+  react,
+  'next/navigation': { useSearchParams: () => new URLSearchParams('id=physics-course'), useRouter: () => ({ push() {} }) },
+  '@/lib/bilingualMetadata': bilingual,
+  '@/lib/egyptTime': egyptTime,
+  '@/lib/courseCreatePersistence': persistence,
+  '@/lib/courseLessonSummary': lessonSummary,
+  '@/hooks/useDeletionPolicy': { useDeletionPolicy: () => true },
+  '@/context/NotificationContext': { useNotification: () => ({ showToast: (_, level) => assert.notEqual(level, 'error') }) },
+  '@/contexts/LanguageContext': { useLanguage: () => ({ language: 'en' }) },
+  '@/lib/offlineSync': { captureOfflineOwner: () => null, offlineSync: { getDraftStorageKey: () => null, removeByUrl: async () => {} } },
+  '@/lib/api': { API_URL: '/api', apiFetch: async (url, options) => {
+   if (!options?.method) {
+    return new Response(JSON.stringify({ id: 'physics-course', title: 'Physics', updatedAt: '2026-11-15T10:00:00.000Z', lessons: [] }));
+   }
+   const body = JSON.parse(options.body);
+   requests.push({ url, body });
+   serverLessons = body.lessons.map(l => ({
+    ...l,
+    id: l.id || l.newLessonId,
+    updatedAt: `2026-11-15T10:00:0${versionCounter}.000Z`,
+   }));
+   versionCounter += 1;
+   return new Response(JSON.stringify({
+    updatedAt: `2026-11-15T10:00:0${versionCounter}.000Z`,
+    lessons: serverLessons,
+   }));
+  } },
+ });
+ const originalStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+ Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: { getItem: () => 'fixture-session' } });
+ t.after(() => {
+  if (originalStorage) Object.defineProperty(globalThis, 'localStorage', originalStorage);
+  else delete globalThis.localStorage;
+ });
+
+ const render = () => { slot = 0; return CourseEditorProvider({ role: 'SUPER_ADMIN', children: null }).props.value; };
+ let editor = render();
+ await editor.fetchCourseData('fixture-session', 'physics-course');
+ editor = render();
+
+ // 1. Add and save Lesson 1 ("Work, Energy & Power")
+ editor.openAddLessonModal();
+ editor = render();
+ editor.setCurrentLesson(prev => ({ ...prev, title: 'Work, Energy & Power' }));
+ editor = render();
+ await editor.saveLesson();
+ editor = render();
+
+ assert.equal(editor.isLessonModalOpen, false);
+ assert.equal(editor.currentLesson.id, undefined);
+ assert.equal(editor.currentLesson.title, '');
+ assert.equal(editor.lessons.length, 1);
+ const firstLessonId = editor.lessons[0].id;
+ assert.equal(editor.lessons[0].title, 'Work, Energy & Power');
+
+ // 2. Reopen Lesson 1 and confirm autosave is blocked while modal is open even though lesson has an id
+ editor.setCurrentLesson({ ...editor.lessons[0], title: 'Edited In Modal' });
+ editor.setIsLessonModalOpen(true);
+ editor = render();
+ const requestsBeforeAuto = requests.length;
+ await editor.handleSubmit(undefined, true);
+ assert.equal(requests.length, requestsBeforeAuto);
+ editor.setIsLessonModalOpen(false);
+ editor = render();
+
+ // 3. Add Lesson 2 ("Gravitation") and verify Lesson 1 stays intact
+ editor.openAddLessonModal();
+ editor = render();
+ editor.setCurrentLesson(prev => ({ ...prev, title: 'Gravitation' }));
+ editor = render();
+ await editor.saveLesson();
+ editor = render();
+
+ assert.equal(editor.lessons.length, 2);
+ assert.equal(editor.lessons[0].id, firstLessonId);
+ assert.equal(editor.lessons[0].title, 'Work, Energy & Power');
+ assert.equal(editor.lessons[1].title, 'Gravitation');
+ assert.notEqual(editor.lessons[1].id, firstLessonId);
+
+ // 4. Import a third lesson via addImportedLesson -> gets a distinct newLessonId and preserves previous lessons
+ editor.addImportedLesson({ title: 'Optics', slides: [{ id: 'opt-1', type: 'TEXT', content: '<p>Light</p>' }] });
+ editor = render();
+ assert.equal(editor.lessons.length, 3);
+ assert.equal(editor.lessons[2].id, undefined);
+ assert.ok(editor.lessons[2].newLessonId);
+ assert.equal(editor.lessons[2].isContentLoaded, true);
+ assert.equal(editor.lessons[0].title, 'Work, Energy & Power');
+ assert.equal(editor.lessons[1].title, 'Gravitation');
+});

@@ -25,6 +25,7 @@ const {
   readSlidesImport,
   buildFullLessonWorkbook,
   importFullLessonWorkbook,
+  handleFullLessonExcelImport,
 } = require('../src/lib/slidesExcelWorkbook.ts');
 const {
   buildLessonMetadataExportRows,
@@ -220,4 +221,51 @@ test('buildFullLessonWorkbook and importFullLessonWorkbook roundtrip a complete 
   assert.equal(imported.questions.length, 1);
   assert.equal(imported.questions[0].textEn, 'What is the unit of speed?');
   assert.equal(imported.assignments.length, 1);
+});
+
+test('handleFullLessonExcelImport protects existing open lesson when importing a differently named lesson', async () => {
+  const gravitationWb = buildFullLessonWorkbook({
+    title: 'Gravitation',
+    domain: 'Physics',
+    slides: [{ id: 'g-1', type: 'TEXT', label: 'CONTENT', title: 'Gravity Intro', content: '<p>F = G*m1*m2/r^2</p>' }],
+    questions: [],
+    assignments: [],
+  }, 'en');
+  const fileBuffer = XLSX.write(gravitationWb, { type: 'array', bookType: 'xlsx' });
+  const mockEvent = {
+    target: {
+      files: [{ name: 'gravitation.xlsx', arrayBuffer: async () => fileBuffer }],
+      value: 'C:\\fakepath\\gravitation.xlsx',
+    },
+  };
+
+  let appliedLesson = null;
+  const openExistingLesson = {
+    id: 'wep-existing-id',
+    updatedAt: '2026-11-15T10:00:00.000Z',
+    title: 'Work, Energy & Power',
+    slides: [{ id: 'wep-slide', title: 'Old slide' }],
+  };
+
+  const originalWindow = global.window;
+  global.window = { confirm: () => true };
+  try {
+    await handleFullLessonExcelImport(
+      mockEvent,
+      () => openExistingLesson,
+      (nextLesson) => { appliedLesson = nextLesson; },
+      'en',
+    );
+  } finally {
+    global.window = originalWindow;
+  }
+
+  assert.ok(appliedLesson);
+  assert.equal(appliedLesson.title, 'Gravitation');
+  assert.equal(appliedLesson.id, undefined);
+  assert.equal(appliedLesson.updatedAt, undefined);
+  assert.ok(appliedLesson.newLessonId);
+  assert.equal(appliedLesson.isContentLoaded, true);
+  assert.equal(openExistingLesson.id, 'wep-existing-id');
+  assert.equal(openExistingLesson.title, 'Work, Energy & Power');
 });

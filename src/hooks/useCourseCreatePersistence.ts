@@ -7,6 +7,7 @@ import {
   buildCourseSavePayload,
   mergeServerSavedLessons,
   stageCourseLesson,
+  withCourseLessonKey,
 } from "@/lib/courseCreatePersistence";
 import { captureOfflineOwner, offlineSync } from "@/lib/offlineSync";
 
@@ -97,7 +98,12 @@ export function useCourseCreatePersistence({
 
       return runQueuedSave(async () => {
         const activeCourseData = courseDataRef.current;
-        const activeLessons = lessonsRef.current;
+        const rawLessons = lessonsRef.current;
+        const activeLessons = rawLessons.map(withCourseLessonKey);
+        if (activeLessons.some((lesson, index) => lesson !== rawLessons[index])) {
+          lessonsRef.current = activeLessons;
+          setLessons(activeLessons);
+        }
 
         if (!activeCourseData?.title?.trim()) {
           return { ok: false, courseId: createdIdRef.current };
@@ -295,7 +301,7 @@ export function useCourseCreatePersistence({
       return;
     }
 
-    const updatedLesson = { ...currentLesson, isContentLoaded: true };
+    const updatedLesson = withCourseLessonKey({ ...currentLesson, isContentLoaded: true });
     const newLessons = stageCourseLesson(lessonsRef.current, updatedLesson);
     if (!newLessons) {
       showToast(language === "ar" ? "لم يعد الدرس موجودًا في الكورس." : "The lesson is no longer in the course.", "error");
@@ -304,8 +310,26 @@ export function useCourseCreatePersistence({
 
     lessonsRef.current = newLessons;
     setLessons(newLessons);
-    setCurrentLesson(updatedLesson);
     setIsLessonModalOpen(false);
+    setCurrentLesson({
+      newLessonId: crypto.randomUUID(),
+      title: "",
+      domain: "",
+      content: "",
+      videoUrl: "",
+      summary: "",
+      notes: "",
+      standards: "",
+      indicators: "",
+      learningOutcomes: "",
+      isVisible: true,
+      publishDate: "",
+      cutOffDate: "",
+      slides: [],
+      questions: [],
+      assignments: [],
+      attachments: [],
+    });
 
     if (courseDataRef.current?.title?.trim() || createdIdRef.current) {
       const result = await persistCourseToServer();

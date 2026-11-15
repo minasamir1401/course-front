@@ -11,6 +11,7 @@ import { formatEgyptDateTime } from "@/lib/egyptTime";
 import { useNotification } from "@/context/NotificationContext";
 import ImportExcelModal from "@/components/modals/ImportExcelModal";
 import CopyLessonModal from "@/components/modals/CopyLessonModal";
+import { downloadFullLessonWorkbook, handleFullLessonExcelImport } from "@/lib/slidesExcelWorkbook";
 
 export const LessonList: React.FC = () => {
   const router = useRouter();
@@ -28,6 +29,7 @@ export const LessonList: React.FC = () => {
     activeContentTab,
     openAddLessonModal,
     openEditLessonModal,
+    addImportedLesson,
     handleRemoveLesson,
     fetchCourseData,
     handleSubmit,
@@ -310,6 +312,51 @@ export const LessonList: React.FC = () => {
                 <span className="hidden sm:inline">{language === "ar" ? "قالب ودليل الإكسيل" : "Excel Guide & Template"}</span>
               </button>
               <button type="button"
+                onClick={() => downloadFullLessonWorkbook(null, language)}
+                className="px-4 sm:px-6 py-3 sm:py-4 rounded-2xl font-black flex items-center gap-2 sm:gap-3 transition-all border-2 border-sky-200 text-sky-700 hover:border-sky-600 hover:bg-sky-50 bg-white text-xs sm:text-base"
+              >
+                <FileSpreadsheet size={20} />
+                <span className="hidden sm:inline">{language === "ar" ? "قالب درس شامل Excel" : "Lesson Template Excel"}</span>
+              </button>
+              <input
+                id="edit-curriculum-full-lesson-excel"
+                type="file"
+                accept=".xlsx,.xls"
+                className="hidden"
+                onChange={(e) =>
+                  handleFullLessonExcelImport(
+                    e,
+                    () => ({
+                      title: "",
+                      domain: "",
+                      videoUrl: "",
+                      summary: "",
+                      notes: "",
+                      standards: "",
+                      indicators: "",
+                      learningOutcomes: "",
+                      isVisible: true,
+                      publishDate: "",
+                      cutOffDate: "",
+                      slides: [],
+                      questions: [],
+                      assignments: [],
+                      attachments: [],
+                    }),
+                    (nextLesson) => addImportedLesson(nextLesson),
+                    language,
+                    showToast,
+                  )
+                }
+              />
+              <label
+                htmlFor="edit-curriculum-full-lesson-excel"
+                className="px-4 sm:px-6 py-3 sm:py-4 rounded-2xl font-black flex items-center gap-2 sm:gap-3 transition-all border-2 border-emerald-200 text-emerald-700 hover:border-emerald-600 hover:bg-emerald-50 bg-white text-xs sm:text-base cursor-pointer"
+              >
+                <Upload size={20} />
+                <span className="hidden sm:inline">{language === "ar" ? "استيراد درس جديد Excel" : "Import New Lesson Excel"}</span>
+              </label>
+              <button type="button"
                 onClick={() => setIsImportModalOpen(true)}
                 className="px-4 sm:px-6 py-3 sm:py-4 rounded-2xl font-black flex items-center gap-2 sm:gap-3 transition-all border-2 border-indigo-100 text-indigo-600 hover:border-indigo-600 hover:bg-indigo-50 bg-white text-xs sm:text-base"
               >
@@ -370,7 +417,7 @@ export const LessonList: React.FC = () => {
             </div>
           ) : (
             lessons.map((lesson, index) => {
-              const lessonKey = lesson.id ? String(lesson.id) : `idx-${index}`;
+              const lessonKey = lesson.id ? String(lesson.id) : (lesson.newLessonId || `idx-${index}`);
               const isExpanded = expandedLessonKey === lessonKey;
               const stat = lesson.id ? courseLessonStats[lesson.id] : null;
               const dash = lesson.id ? lessonDashboards[lesson.id] : null;

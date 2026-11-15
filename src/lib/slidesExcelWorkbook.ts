@@ -1183,7 +1183,63 @@ export async function handleFullLessonExcelImport(
   if (!file) return;
   try {
     const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
-    const nextLesson = importFullLessonWorkbook(wb, getLesson(), language);
+    const baseLesson = getLesson();
+    const blankBase = {
+      title: '',
+      domain: '',
+      content: '',
+      videoUrl: '',
+      summary: '',
+      notes: '',
+      standards: '',
+      indicators: '',
+      learningOutcomes: '',
+      isVisible: true,
+      publishDate: '',
+      cutOffDate: '',
+      slides: [],
+      questions: [],
+      assignments: [],
+      attachments: [],
+    };
+
+    const currentTitle = String(baseLesson?.title || '').trim();
+    const hasExistingLesson = Boolean(baseLesson?.id || (baseLesson?.newLessonId && currentTitle));
+    const asNewLesson = importFullLessonWorkbook(wb, blankBase, language);
+    const importedTitle = String(asNewLesson?.title || '').trim();
+
+    if (hasExistingLesson && importedTitle && currentTitle && importedTitle.toLowerCase() !== currentTitle.toLowerCase()) {
+      const shouldImportAsNew = typeof window === 'undefined' || typeof window.confirm !== 'function'
+        ? true
+        : window.confirm(
+            language === 'ar'
+              ? `عنوان الدرس في الملف ("${importedTitle}") يختلف عن الدرس المفتوح حالياً ("${currentTitle}").\n\nاضغط موافق لتحميله كدرس جديد منفصل بدون المساس بالدرس القديم، أو إلغاء للتراجع.`
+              : `The Excel file is for a different lesson ("${importedTitle}") than the open lesson ("${currentTitle}").\n\nClick OK to load it as a separate new lesson without modifying the existing one, or Cancel to abort.`
+          );
+      if (!shouldImportAsNew) {
+        showToast?.(
+          language === 'ar' ? 'تم إلغاء الاستيراد للحفاظ على الدرس الحالي' : 'Import cancelled to keep the existing lesson',
+          'info',
+        );
+        return;
+      }
+      applyLesson({
+        ...asNewLesson,
+        id: undefined,
+        updatedAt: undefined,
+        newLessonId: typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : undefined,
+        isContentLoaded: true,
+      });
+      showToast?.(
+        language === 'ar'
+          ? `تم تجهيز "${importedTitle}" كدرس جديد بدون استبدال الدرس القديم — اضغط تحديث وحفظ لإضافته.`
+          : `"${importedTitle}" loaded as a new lesson — click Update & Save to add it without replacing "${currentTitle}".`,
+        'info',
+      );
+      return;
+    }
+
+    const nextLesson = importFullLessonWorkbook(wb, baseLesson, language);
     applyLesson(nextLesson);
     showToast?.(
       language === 'ar'

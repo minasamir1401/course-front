@@ -99,6 +99,7 @@ export interface CourseEditorContextType {
   handleRemoveLesson: (index: number) => void;
   openAddLessonModal: () => void;
   openEditLessonModal: (index: number) => void;
+  addImportedLesson: (lesson: Partial<Lesson>) => void;
   openBankModal: () => Promise<void>;
   openQuestionBankModal: () => Promise<void>;
   addQuestionFromBank: (q: any) => void;

@@ -50,6 +50,7 @@ export const CourseEditorProvider: React.FC<{
   const courseVersionRef = useRef<string | undefined>(undefined);
   const loadedCourseRef = useRef<string | null>(null);
   const courseLoadRef = useRef(0);
+  const slideCountsRef = useRef<Map<string, number>>(new Map());
   const initialSchoolIdsRef = useRef<string[]>([]);
   const serializeLessonContent = (lesson: Lesson, field: "attachments" | "slides" | "questions" | "assignments") => {
     // Existing lessons from the fast list are summaries. Never overwrite their
@@ -96,7 +97,8 @@ export const CourseEditorProvider: React.FC<{
   const [isQuestionBankModalOpen, setIsQuestionBankModalOpen] = useState(false);
   const [bankItems, setBankItems] = useState<any[]>([]);
   const [bankQuestions, setBankQuestions] = useState<any[]>([]);
-  const [currentLesson, setCurrentLesson] = useState<Lesson>({
+  const buildBlankLessonDraft = (): Lesson => ({
+    newLessonId: typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : undefined,
     title: "",
     domain: "",
     videoUrl: "",
@@ -121,7 +123,9 @@ export const CourseEditorProvider: React.FC<{
     questions: [],
     assignments: [],
     attachments: [],
+    isContentLoaded: true,
   });
+  const [currentLesson, setCurrentLesson] = useState<Lesson>(buildBlankLessonDraft);
   const liveEditor = useRef({ courseId, courseData, currentLesson, isLessonModalOpen, isLessonContentLoading });
   liveEditor.current = { courseId, courseData, currentLesson, isLessonModalOpen, isLessonContentLoading };
   const failedSaveBodyRef = useRef<string | undefined>(undefined);
@@ -212,7 +216,7 @@ export const CourseEditorProvider: React.FC<{
   }, [courseData, lessons, currentLesson, isLoading]);
 
   // =============================================
-  // 💾 EMERGENCY LOCAL DRAFT BACKUP
+  // EMERGENCY LOCAL DRAFT BACKUP
   // IndexedDB stores full lesson content; localStorage is only a fallback.
   // =============================================
   const DRAFT_KEY = offlineSync.getDraftStorageKey(courseId ? `lms_draft_course_${courseId}` : 'lms_draft_course_new');
@@ -440,6 +444,7 @@ export const CourseEditorProvider: React.FC<{
         setExams(data.exams || []);
 
         const rawLessons = (data.lessons || []).slice().sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0));
+        slideCountsRef.current = new Map();
         if (data.lessonsAreSummaries || rawLessons.some((lesson: any) => lesson.slidesCount !== undefined && lesson.slides === undefined)) {
           setLessons(rawLessons.map((lesson: any) => ({
             ...buildCourseLessonSummary(lesson),
@@ -462,12 +467,21 @@ export const CourseEditorProvider: React.FC<{
                 ]),
               );
               if (!isCurrent() || countsByLessonId.size === 0) return;
+              slideCountsRef.current = countsByLessonId;
+              // Skip mutating lesson references mid-save; reconcile() reads slideCountsRef when save finishes.
+              if (isSavingRef.current) return;
               suppressUnsavedTrackingRef.current = true;
-              setLessons((currentLessons) => currentLessons.map((lesson) => (
-                lesson.id && countsByLessonId.has(lesson.id)
-                  ? { ...lesson, slidesCount: countsByLessonId.get(lesson.id)! }
-                  : lesson
-              )));
+              setLessons((currentLessons) => {
+                let changed = false;
+                const next = currentLessons.map((lesson) => {
+                  if (!lesson.id || !countsByLessonId.has(lesson.id)) return lesson;
+                  const nextCount = countsByLessonId.get(lesson.id)!;
+                  if (lesson.slidesCount === nextCount) return lesson;
+                  changed = true;
+                  return { ...lesson, slidesCount: nextCount };
+                });
+                return changed ? next : currentLessons;
+              });
             })
             .catch(() => {
               // The list is still usable if the optional counts request fails.
@@ -665,36 +679,29 @@ export const CourseEditorProvider: React.FC<{
     lessonSessionRef.current += 1;
     setIsLessonContentLoading(false);
     suppressUnsavedTrackingRef.current = true;
-    setCurrentLesson({
-      newLessonId: crypto.randomUUID(),
-      title: "",
-      domain: "",
-      videoUrl: "",
-      summary: "",
-      notes: "",
-      standards: "",
-      indicators: "",
-      learningOutcomes: "",
-      isVisible: true,
-      publishDate: "",
-      cutOffDate: "",
-      slides: [
-        {
-          id: Date.now(),
-          type: "TEXT",
-          label: "CONTENT",
-          title: language === "ar" ? "المقدمة" : "Introduction",
-          content: "",
-          sections: [],
-        },
-      ],
-      questions: [],
-      assignments: [],
-      attachments: [],
-      isContentLoaded: true,
-    });
+    setCurrentLesson(buildBlankLessonDraft());
     setActiveTab("info");
     setIsLessonModalOpen(true);
+  };
+
+  const addImportedLesson = (importedLesson: Partial<Lesson>) => {
+    const normalized: Lesson = {
+      ...buildBlankLessonDraft(),
+      ...importedLesson,
+      id: undefined,
+      newLessonId: crypto.randomUUID(),
+      isContentLoaded: true,
+      isVisible: importedLesson.isVisible !== undefined ? importedLesson.isVisible : true,
+      slides: Array.isArray(importedLesson.slides) ? importedLesson.slides : [],
+      questions: Array.isArray(importedLesson.questions) ? importedLesson.questions : [],
+      assignments: Array.isArray(importedLesson.assignments) ? importedLesson.assignments : [],
+      attachments: Array.isArray(importedLesson.attachments) ? importedLesson.attachments : [],
+    };
+    setLessons((prev) => {
+      const next = [...prev, normalized];
+      lessonsRef.current = next;
+      return next;
+    });
   };
 
   const openEditLessonModal = async (index: number) => {
@@ -849,7 +856,7 @@ export const CourseEditorProvider: React.FC<{
       const editor = liveEditor.current;
       if (editor.courseId !== courseId || (mode === "lesson" && requestedSession !== lessonSessionRef.current)) return;
       if (courseId && loadedCourseRef.current !== courseId) return;
-      if (mode === "auto" && editor.isLessonModalOpen && !editor.currentLesson.id) return;
+      if (mode === "auto" && editor.isLessonModalOpen) return;
       if (mode === "lesson" && (!editor.isLessonModalOpen || editor.isLessonContentLoading)) return;
       if (editor.isLessonModalOpen && editor.currentLesson.id && editor.currentLesson.isContentLoaded !== true) return;
 
@@ -873,12 +880,20 @@ export const CourseEditorProvider: React.FC<{
         showToast(language === "ar" ? "الدرس لم يعد موجودًا في الكورس. حدّث الصفحة وراجع المسودة." : "The lesson is no longer in this course. Refresh and review the draft.", "error");
         return;
       }
+      const baselineLessons = mode === "lesson" && draft ? submitted : beforeSave;
+      if (mode === "lesson" && draft) {
+        suppressUnsavedTrackingRef.current = true;
+        lessonsRef.current = submitted;
+        setLessons(submitted);
+      }
 
       const token = localStorage.getItem(tokenKey) || localStorage.getItem("token");
       if (!courseId || !token) {
         if (mode === "lesson") {
           setLessons(submitted);
           setIsLessonModalOpen(false);
+          suppressUnsavedTrackingRef.current = true;
+          setCurrentLesson(buildBlankLessonDraft());
         }
         return;
       }
@@ -906,6 +921,11 @@ export const CourseEditorProvider: React.FC<{
         if (draft && session === lessonSessionRef.current) {
           const latest = liveEditor.current.currentLesson;
           setLessons(current => stageCourseLesson(current, withCourseLessonKey(latest)) ?? current);
+          if (mode === "lesson") {
+            setIsLessonModalOpen(false);
+            suppressUnsavedTrackingRef.current = true;
+            setCurrentLesson(buildBlankLessonDraft());
+          }
         }
         showToast(
           language === "ar" ? "تم حفظ التغييرات محلياً في قائمة المزامنة." : "Changes were saved locally in the sync queue.",
@@ -955,12 +975,12 @@ export const CourseEditorProvider: React.FC<{
 
       const currentEditor = liveEditor.current;
       const latestLessons = lessonsRef.current;
-      const listChanged = latestLessons !== beforeSave;
+      const listChanged = latestLessons !== baselineLessons;
       const draftStillOpen = session === lessonSessionRef.current && currentEditor.isLessonModalOpen;
       const editedDuringSave = currentEditor.courseData !== editor.courseData || listChanged ||
         ((editor.isLessonModalOpen || currentEditor.isLessonModalOpen) && currentEditor.currentLesson !== editor.currentLesson) ||
         (currentEditor.isLessonModalOpen && !draftStillOpen);
-      const initialById = new Map(beforeSave.map(lesson => [courseLessonKey(lesson), lesson]));
+      const initialById = new Map(baselineLessons.map(lesson => [courseLessonKey(lesson), lesson]));
       const submittedById = new Map(submitted.map(lesson => [courseLessonKey(lesson), lesson]));
 
       const reconcile = (server: Lesson, local?: Lesson): Lesson => {
@@ -969,8 +989,11 @@ export const CourseEditorProvider: React.FC<{
           return { ...local, id: server.id, newLessonId: undefined, updatedAt: server.updatedAt };
         }
         const isContentLoaded = Boolean(sent?.isContentLoaded);
+        const base = isContentLoaded ? server : buildCourseLessonSummary(server);
+        const fallbackCount = sent?.slidesCount ?? (server.id ? slideCountsRef.current.get(server.id) : undefined) ?? 0;
         return {
-          ...(isContentLoaded ? server : buildCourseLessonSummary(server)),
+          ...base,
+          ...(!isContentLoaded && (base as any).slidesCount === 0 && fallbackCount > 0 ? { slidesCount: fallbackCount } : {}),
           isContentLoaded,
           publishDate: server.publishDate ? toEgyptInput(server.publishDate) : "",
           cutOffDate: server.cutOffDate ? toEgyptInput(server.cutOffDate) : "",
@@ -998,11 +1021,14 @@ export const CourseEditorProvider: React.FC<{
       suppressUnsavedTrackingRef.current = !editedDuringSave;
       lessonsRef.current = nextLessons;
       setLessons(nextLessons);
-      if (acknowledgedDraft && draftStillOpen) {
+      if (acknowledgedDraft && draftStillOpen && editedDuringSave) {
         setCurrentLesson(previous => {
           if (session !== lessonSessionRef.current || courseLessonKey(previous) !== draftKey) return previous;
           return { ...previous, id: acknowledgedDraft.id, newLessonId: undefined, updatedAt: acknowledgedDraft.updatedAt };
         });
+      } else if (mode === "lesson" && draftStillOpen) {
+        setIsLessonModalOpen(false);
+        setCurrentLesson(buildBlankLessonDraft());
       }
 
       if (!editedDuringSave) clearDraft();
@@ -1126,6 +1152,7 @@ export const CourseEditorProvider: React.FC<{
         handleRemoveLesson,
         openAddLessonModal,
         openEditLessonModal,
+        addImportedLesson,
         openBankModal,
         openQuestionBankModal,
         addQuestionFromBank,
