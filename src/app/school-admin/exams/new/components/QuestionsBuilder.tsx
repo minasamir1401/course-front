@@ -22,6 +22,7 @@ import * as XLSX from "xlsx";
 import { QuestionExcelExportButton } from '@/components/QuestionExcelExportButton';
 import QuestionImageGallery from '@/components/QuestionImageGallery';
 import { extractImageUrls } from '@/lib/image-utils';
+import { getTrueFalseDefaults, resolvePreferredQuestionLang } from '@/lib/questionLanguage';
 
 export const QuestionsBuilder = (props: any) => {
   const { currentModule, setCurrentModule, activeSubExamIndex, source, language, assignmentsExcelRef, questionsExcelRef, handleAssignmentsExcelChange, handleQuestionsExcelChange, handleExcelUpload, downloadQuestionsTemplate, downloadAdvancedMetadataTemplate, handleAddQuestionForSource, showQuestionForm, setShowQuestionForm, list, moveQuestionForSource, expandedQuestionIndex, setExpandedQuestionIndex, handleEditQuestionForSource, removeQuestionForSource, tempQuestion, setTempQuestion, updateCurrentQuestionField, customSkills, setCustomSkills, allExistingSkills, availableMetadata, openDropdownId, setOpenDropdownId, addQuestionSection, updateQuestionSectionContent, removeQuestionSection, isQuestionCorrectAnswer, toggleQuestionCorrectAnswer, updateQuestionOption, handleSaveQuestionForSource, editingQuestionIndex, advancedMetadataExcelRef, handleAdvancedMetadataExcelChange } = props;
@@ -36,31 +37,7 @@ export const QuestionsBuilder = (props: any) => {
     return false;
   }, [language, props.examData?.title, currentModule?.title]);
 
-  const detectQuestionLanguage = (q: any): 'ar' | 'en' => {
-    if (!q) return 'en';
-    const clean = (str?: string | null) => String(str || '').replace(/<[^>]*>/g, '').trim();
-
-    const textClean = clean(q.text);
-    const textEnClean = clean(q.textEn);
-    const optsClean = Array.isArray(q.options) ? q.options.map(clean).join(' ') : '';
-    const optsEnClean = Array.isArray(q.optionsEn) ? q.optionsEn.map(clean).join(' ') : '';
-
-    const allAr = `${textClean} ${optsClean}`;
-    const allEn = `${textEnClean} ${optsEnClean}`;
-
-    const hasAr = hasArabicChars(allAr);
-    const hasEn = hasEnglishChars(allEn) || (hasEnglishChars(allAr) && !hasAr);
-
-    if (hasEn && !hasAr) return 'en';
-    if (hasAr && !hasEn) return 'ar';
-
-    if (hasArabicChars(textClean)) return 'ar';
-    if (hasEnglishChars(textClean) && !hasArabicChars(textClean)) return 'en';
-
-    return 'en';
-  };
-
-  const [questionActiveLang, setQuestionActiveLang] = React.useState<'ar' | 'en'>('en');
+  const [questionActiveLang, setQuestionActiveLang] = React.useState<'ar' | 'en'>(language === 'en' ? 'en' : 'ar');
   const [cardPreviewLang, setCardPreviewLang] = React.useState<Record<number, 'ar' | 'en'>>({});
   const [isTranslatingQuestion, setIsTranslatingQuestion] = React.useState(false);
   useQuestionHintTranslation(tempQuestion, setTempQuestion, questionActiveLang, isTranslatingQuestion);
@@ -72,12 +49,12 @@ export const QuestionsBuilder = (props: any) => {
       const qKey = `${editingQuestionIndex ?? 'new'}-${tempQuestion?.id ?? ''}`;
       if (lastActiveQKeyRef.current !== qKey) {
         lastActiveQKeyRef.current = qKey;
-        setQuestionActiveLang(detectQuestionLanguage(tempQuestion));
+        setQuestionActiveLang(resolvePreferredQuestionLang(tempQuestion, language));
       }
     } else {
       lastActiveQKeyRef.current = null;
     }
-  }, [showQuestionForm, editingQuestionIndex, tempQuestion?.id, isExamEnglish]);
+  }, [showQuestionForm, editingQuestionIndex, tempQuestion, language]);
 
   const extractFirstImage = (text?: string, imageUrl?: string): string | null => {
     if (imageUrl && typeof imageUrl === 'string' && imageUrl.trim()) return imageUrl.trim();
@@ -118,7 +95,7 @@ export const QuestionsBuilder = (props: any) => {
         srcExplanation || '',
         srcHint || '',
         ...srcOpts,
-        ...srcSections      ];
+        ...srcSections];
 
       const translations = await translateBatch(textsToTranslate, from, to);
 
@@ -254,8 +231,8 @@ export const QuestionsBuilder = (props: any) => {
               className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-4 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
             >
               <Upload className="w-4 h-4" />
-              {source === 'assignments' 
-                ? (language === 'ar' ? 'استيراد الواجبات' : 'Import Assignments') 
+              {source === 'assignments'
+                ? (language === 'ar' ? 'استيراد الواجبات' : 'Import Assignments')
                 : (language === 'ar' ? 'استيراد الأسئلة' : 'Import Questions')}
             </button>
             <button
@@ -264,8 +241,8 @@ export const QuestionsBuilder = (props: any) => {
               className="bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 px-4 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
             >
               <Download className="w-4 h-4" />
-              {source === 'assignments' 
-                ? (language === 'ar' ? 'نموذج الواجبات' : 'Assignments Template') 
+              {source === 'assignments'
+                ? (language === 'ar' ? 'نموذج الواجبات' : 'Assignments Template')
                 : (language === 'ar' ? 'نموذج الأسئلة' : 'Questions Template')}
             </button>
             {source === 'questions' && (
@@ -336,7 +313,7 @@ export const QuestionsBuilder = (props: any) => {
                       <div className="flex flex-col flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded uppercase whitespace-nowrap shrink-0">
-                            {QUESTION_TYPES.find(t => t.id === q.type)?.labelEn || q.type}
+                            {QUESTION_TYPES.find(t => t.id === q.type)?.[resolvePreferredQuestionLang(q, language) === 'ar' ? 'labelAr' : 'labelEn'] || q.type}
                           </span>
                           <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded uppercase whitespace-nowrap shrink-0">
                             {q.points || 1} {language === 'ar' ? 'درجة' : 'pts'} • {q.xpPoints || 10} XP
@@ -344,7 +321,9 @@ export const QuestionsBuilder = (props: any) => {
                         </div>
                         <div className="flex items-center gap-3 min-w-0">
                           {(() => {
-                            const img = extractFirstImage(q.text || q.textEn, q.imageUrl);
+                            const prefLang = resolvePreferredQuestionLang(q, language);
+                            const summaryHtml = prefLang === 'en' ? (q.textEn || q.text || '') : (q.text || q.textEn || '');
+                            const img = extractFirstImage(summaryHtml, q.imageUrl);
                             if (!img) return null;
                             return (
                               <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-slate-200 shrink-0 bg-slate-50">
@@ -352,7 +331,7 @@ export const QuestionsBuilder = (props: any) => {
                               </div>
                             );
                           })()}
-                          <QuestionSummary html={q.text || q.textEn || ''} className="text-slate-700 font-bold line-clamp-2 text-sm flex-1 min-w-0" />
+                          <QuestionSummary html={resolvePreferredQuestionLang(q, language) === 'en' ? (q.textEn || q.text || '') : (q.text || q.textEn || '')} className="text-slate-700 font-bold line-clamp-2 text-sm flex-1 min-w-0" />
                         </div>
                       </div>
                     </div>
@@ -379,7 +358,7 @@ export const QuestionsBuilder = (props: any) => {
 
                   {/* Question details collapsible view */}
                   {expandedQuestionIndex === index && (() => {
-                    const qPreviewLang = cardPreviewLang[index] || questionActiveLang || 'ar';
+                    const qPreviewLang = cardPreviewLang[index] || resolvePreferredQuestionLang(q, language);
                     const isCardEn = qPreviewLang === 'en';
                     const activeQText = (isCardEn && q.textEn) ? q.textEn : (q.text || q.textEn || '');
                     const rawArOpts = Array.isArray(q.options) ? q.options : [];
@@ -387,129 +366,127 @@ export const QuestionsBuilder = (props: any) => {
                     const activeQOpts = (isCardEn && rawEnOpts.length > 0) ? rawEnOpts : rawArOpts;
                     const hasEnContent = Boolean(q.textEn) || rawEnOpts.length > 0 || Boolean(q.explanationEn);
                     return (
-                    <div className="px-8 pb-8 pt-4 border-t border-slate-50 bg-slate-50/30 animate-in slide-in-from-top-2 duration-300">
-                      {hasEnContent && (
-                        <div className="flex justify-end mb-4">
-                          <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 text-xs font-black shadow-xs">
-                            <span className="text-[10px] text-slate-400 px-2">{language === 'ar' ? 'لغة المعاينة:' : 'Preview Language:'}</span>
-                            <button
-                              type="button"
-                              onClick={() => setCardPreviewLang(prev => ({ ...prev, [index]: 'ar' }))}
-                              className={`px-3 py-1 rounded-lg transition-all ${
-                                !isCardEn ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-50'
-                              }`}
-                            >
-                              العربية
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setCardPreviewLang(prev => ({ ...prev, [index]: 'en' }))}
-                              className={`px-3 py-1 rounded-lg transition-all ${
-                                isCardEn ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-50'
-                              }`}
-                            >
-                              English
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-4">
-                          <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{isCardEn ? 'Question Content:' : 'نص السؤال / المحتوى:'}</h5>
-                          <HtmlRenderer html={activeQText} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm text-sm font-bold" />
-                          {(() => {
-                            const img = extractFirstImage(activeQText, q.imageUrl);
-                            if (!img) return null;
-                            return (
-                              <div className="rounded-2xl overflow-hidden border border-slate-200 bg-white p-2 shadow-sm max-w-sm">
-                                <NextImage src={img} alt="Question attachment" width={360} sizes="(max-width: 768px) 100vw, 360px" height={240} className="w-full h-auto max-h-60 object-contain rounded-xl" unoptimized={shouldSkipImageOptimization(img)} />
-                              </div>
-                            );
-                          })()}
-                        </div>
-
-                        <div className="space-y-4">
-                          {q.type !== 'TEXT' && (
-                            <>
-                              <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{isCardEn ? 'Question Preview:' : 'معاينة السؤال:'}</h5>
-                              {['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(q.type) ? (
-                                <div className="space-y-2">
-                                  {Array.isArray(activeQOpts) && activeQOpts.filter(Boolean).map((opt: string, oIdx: number) => {
-                                    const arOpt = rawArOpts[oIdx];
-                                    const isCorrect = q.type === 'MULTI_SELECT'
-                                      ? ((q.correctAnswers || []).includes(opt) || (arOpt && (q.correctAnswers || []).includes(arOpt)))
-                                      : (q.correctAnswer === opt || (arOpt && q.correctAnswer === arOpt));
-                                    return (
-                                      <div key={oIdx} className={`p-3 rounded-xl border flex items-center gap-3 text-xs font-bold transition-all ${isCorrect ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-white border-slate-100 text-slate-600'}`}>
-                                        <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${isCorrect ? 'bg-emerald-500 text-white' : 'bg-slate-100'}`}>
-                                          {isCorrect ? '✓' : ''}
-                                        </div>
-                                        <span className="w-5 h-5 rounded-md bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-[10px] text-indigo-600 shrink-0">
-                                          {getOptionLetter(oIdx, qPreviewLang)}
-                                        </span>
-                                        <HtmlRenderer html={cleanOptionText(opt)} tag="span" />
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              ) : q.type === 'FLASH_CARD' ? (
-                                <div className="p-4 bg-slate-50 border border-slate-150 rounded-2xl text-xs space-y-2 font-bold text-right" dir={isCardEn ? 'ltr' : 'rtl'}>
-                                  <p className="text-slate-800"><span className="text-indigo-600">{isCardEn ? 'Front (Question):' : 'الوجه الأمامي (السؤال):'}</span> {parseJson(isCardEn ? (q.optionsEn || q.options) : q.options, { front: "" }).front || activeQText}</p>
-                                  <p className="text-slate-800"><span className="text-indigo-600">{isCardEn ? 'Back (Answer):' : 'الوجه الخلفي (الإجابة):'}</span> {parseJson(isCardEn ? (q.optionsEn || q.options) : q.options, { back: "" }).back || (isCardEn ? (q.correctAnswerEn || q.correctAnswer) : q.correctAnswer)}</p>
-                                </div>
-                              ) : (
-                                <div className="p-4 bg-slate-50 border border-slate-150 rounded-2xl text-xs space-y-1.5 font-bold text-right" dir={isCardEn ? 'ltr' : 'rtl'}>
-                                  <p className="text-slate-400">{isCardEn ? `Activity Type: ${q.type}` : `نوع النشاط: ${q.type}`}</p>
-                                  <p className="text-slate-800"><span className="text-emerald-600">✓ {isCardEn ? 'Correct Answer:' : 'الإجابة النموذجية:'}</span> {isCardEn ? (q.correctAnswerEn || q.correctAnswer) : (typeof q.correctAnswer === 'object' ? JSON.stringify(q.correctAnswer) : String(q.correctAnswer || ""))}</p>
-                                </div>
-                              )}
-                            </>
-                          )}
-
-                          {(q.hint || q.hintEn) && (
-                            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs space-y-1 font-bold">
-                              <div className="flex items-center gap-1.5 text-amber-700 font-black">
-                                <Lightbulb className="w-3.5 h-3.5" />
-                                <span>{isCardEn ? 'In-Exam Solving Hint:' : 'تلميح مساعد للحل أثناء الاختبار:'}</span>
-                              </div>
-                              <div className="text-slate-700 font-bold font-sans">
-                                <HtmlRenderer html={isCardEn ? (q.hintEn || q.hint) : (q.hint || q.hintEn)} />
-                              </div>
+                      <div className="px-8 pb-8 pt-4 border-t border-slate-50 bg-slate-50/30 animate-in slide-in-from-top-2 duration-300">
+                        {hasEnContent && (
+                          <div className="flex justify-end mb-4">
+                            <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 text-xs font-black shadow-xs">
+                              <span className="text-[10px] text-slate-400 px-2">{language === 'ar' ? 'لغة المعاينة:' : 'Preview Language:'}</span>
+                              <button
+                                type="button"
+                                onClick={() => setCardPreviewLang(prev => ({ ...prev, [index]: 'ar' }))}
+                                className={`px-3 py-1 rounded-lg transition-all ${!isCardEn ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-50'
+                                  }`}
+                              >
+                                العربية
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setCardPreviewLang(prev => ({ ...prev, [index]: 'en' }))}
+                                className={`px-3 py-1 rounded-lg transition-all ${isCardEn ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-50'
+                                  }`}
+                              >
+                                English
+                              </button>
                             </div>
-                          )}
+                          </div>
+                        )}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                          <div className="space-y-4">
+                            <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{isCardEn ? 'Question Content:' : 'نص السؤال / المحتوى:'}</h5>
+                            <HtmlRenderer html={activeQText} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm text-sm font-bold" />
+                            {(() => {
+                              const img = extractFirstImage(activeQText, q.imageUrl);
+                              if (!img) return null;
+                              return (
+                                <div className="rounded-2xl overflow-hidden border border-slate-200 bg-white p-2 shadow-sm max-w-sm">
+                                  <NextImage src={img} alt="Question attachment" width={360} sizes="(max-width: 768px) 100vw, 360px" height={240} className="w-full h-auto max-h-60 object-contain rounded-xl" unoptimized={shouldSkipImageOptimization(img)} />
+                                </div>
+                              );
+                            })()}
+                          </div>
 
-                          {((q.sections && q.sections.length > 0) || (q.explanation && String(q.explanation).trim() !== '' && q.explanation !== '[]' && q.explanation !== '""')) && (
-                            <div className="space-y-3 pt-2">
-                              <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{isCardEn ? 'Post-Exam Explanation:' : 'الشرح والتفسير (يظهر بعد التسليم):'}</h5>
-                              <div className="space-y-2">
-                                {q.sections && q.sections.length > 0 ? (
-                                  q.sections.map((sec: any, secIdx: number) => {
-                                    const secContent = isCardEn ? (sec.contentEn || sec.textEn || sec.content) : (sec.content || sec.textEn);
-                                    return (
-                                      <div key={secIdx} className="p-4 rounded-xl border border-indigo-100 bg-indigo-50/40 text-xs">
-                                        <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider inline-flex items-center gap-1 mb-1.5 bg-indigo-100 text-indigo-700">
-                                          <BookOpen className="w-3 h-3" />
-                                          {isCardEn ? 'Explanation' : 'الشرح والتوضيح'}
-                                        </span>
-                                        <HtmlRenderer html={secContent} className="text-slate-700 font-bold font-sans" />
-                                      </div>
-                                    );
-                                  })
+                          <div className="space-y-4">
+                            {q.type !== 'TEXT' && (
+                              <>
+                                <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{isCardEn ? 'Question Preview:' : 'معاينة السؤال:'}</h5>
+                                {['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(q.type) ? (
+                                  <div className="space-y-2">
+                                    {Array.isArray(activeQOpts) && activeQOpts.filter(Boolean).map((opt: string, oIdx: number) => {
+                                      const arOpt = rawArOpts[oIdx];
+                                      const isCorrect = q.type === 'MULTI_SELECT'
+                                        ? ((q.correctAnswers || []).includes(opt) || (arOpt && (q.correctAnswers || []).includes(arOpt)))
+                                        : (q.correctAnswer === opt || (arOpt && q.correctAnswer === arOpt));
+                                      return (
+                                        <div key={oIdx} className={`p-3 rounded-xl border flex items-center gap-3 text-xs font-bold transition-all ${isCorrect ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-white border-slate-100 text-slate-600'}`}>
+                                          <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${isCorrect ? 'bg-emerald-500 text-white' : 'bg-slate-100'}`}>
+                                            {isCorrect ? '✓' : ''}
+                                          </div>
+                                          <span className="w-5 h-5 rounded-md bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-[10px] text-indigo-600 shrink-0">
+                                            {getOptionLetter(oIdx, qPreviewLang)}
+                                          </span>
+                                          <HtmlRenderer html={cleanOptionText(opt)} tag="span" />
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                ) : q.type === 'FLASH_CARD' ? (
+                                  <div className="p-4 bg-slate-50 border border-slate-150 rounded-2xl text-xs space-y-2 font-bold text-right" dir={isCardEn ? 'ltr' : 'rtl'}>
+                                    <p className="text-slate-800"><span className="text-indigo-600">{isCardEn ? 'Front (Question):' : 'الوجه الأمامي (السؤال):'}</span> {parseJson(isCardEn ? (q.optionsEn || q.options) : q.options, { front: "" }).front || activeQText}</p>
+                                    <p className="text-slate-800"><span className="text-indigo-600">{isCardEn ? 'Back (Answer):' : 'الوجه الخلفي (الإجابة):'}</span> {parseJson(isCardEn ? (q.optionsEn || q.options) : q.options, { back: "" }).back || (isCardEn ? (q.correctAnswerEn || q.correctAnswer) : q.correctAnswer)}</p>
+                                  </div>
                                 ) : (
-                                  <div className="p-4 rounded-xl border border-indigo-100 bg-indigo-50/40 text-xs">
-                                    <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider inline-flex items-center gap-1 mb-1.5 bg-indigo-100 text-indigo-700">
-                                      <BookOpen className="w-3 h-3" />
-                                      {isCardEn ? 'Explanation' : 'الشرح والتوضيح'}
-                                    </span>
-                                    <HtmlRenderer html={isCardEn ? (q.explanationEn || q.explanation) : String(q.explanation)} className="text-slate-700 font-bold font-sans" />
+                                  <div className="p-4 bg-slate-50 border border-slate-150 rounded-2xl text-xs space-y-1.5 font-bold text-right" dir={isCardEn ? 'ltr' : 'rtl'}>
+                                    <p className="text-slate-400">{isCardEn ? `Activity Type: ${q.type}` : `نوع النشاط: ${q.type}`}</p>
+                                    <p className="text-slate-800"><span className="text-emerald-600">✓ {isCardEn ? 'Correct Answer:' : 'الإجابة النموذجية:'}</span> {isCardEn ? (q.correctAnswerEn || q.correctAnswer) : (typeof q.correctAnswer === 'object' ? JSON.stringify(q.correctAnswer) : String(q.correctAnswer || ""))}</p>
                                   </div>
                                 )}
+                              </>
+                            )}
+
+                            {(q.hint || q.hintEn) && (
+                              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs space-y-1 font-bold">
+                                <div className="flex items-center gap-1.5 text-amber-700 font-black">
+                                  <Lightbulb className="w-3.5 h-3.5" />
+                                  <span>{isCardEn ? 'In-Exam Solving Hint:' : 'تلميح مساعد للحل أثناء الاختبار:'}</span>
+                                </div>
+                                <div className="text-slate-700 font-bold font-sans">
+                                  <HtmlRenderer html={isCardEn ? (q.hintEn || q.hint) : (q.hint || q.hintEn)} />
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            )}
+
+                            {((q.sections && q.sections.length > 0) || (q.explanation && String(q.explanation).trim() !== '' && q.explanation !== '[]' && q.explanation !== '""')) && (
+                              <div className="space-y-3 pt-2">
+                                <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{isCardEn ? 'Post-Exam Explanation:' : 'الشرح والتفسير (يظهر بعد التسليم):'}</h5>
+                                <div className="space-y-2">
+                                  {q.sections && q.sections.length > 0 ? (
+                                    q.sections.map((sec: any, secIdx: number) => {
+                                      const secContent = isCardEn ? (sec.contentEn || sec.textEn || sec.content) : (sec.content || sec.textEn);
+                                      return (
+                                        <div key={secIdx} className="p-4 rounded-xl border border-indigo-100 bg-indigo-50/40 text-xs">
+                                          <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider inline-flex items-center gap-1 mb-1.5 bg-indigo-100 text-indigo-700">
+                                            <BookOpen className="w-3 h-3" />
+                                            {isCardEn ? 'Explanation' : 'الشرح والتوضيح'}
+                                          </span>
+                                          <HtmlRenderer html={secContent} className="text-slate-700 font-bold font-sans" />
+                                        </div>
+                                      );
+                                    })
+                                  ) : (
+                                    <div className="p-4 rounded-xl border border-indigo-100 bg-indigo-50/40 text-xs">
+                                      <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider inline-flex items-center gap-1 mb-1.5 bg-indigo-100 text-indigo-700">
+                                        <BookOpen className="w-3 h-3" />
+                                        {isCardEn ? 'Explanation' : 'الشرح والتوضيح'}
+                                      </span>
+                                      <HtmlRenderer html={isCardEn ? (q.explanationEn || q.explanation) : String(q.explanation)} className="text-slate-700 font-bold font-sans" />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
                     );
                   })()}
                 </div>
@@ -549,15 +526,20 @@ export const QuestionsBuilder = (props: any) => {
                       const newType = val;
                       const updated = { ...tempQuestion, type: newType };
                       if (newType === "TRUE_FALSE") {
-                        updated.options = questionActiveLang === 'en' ? ["True", "False", "", ""] : (language === 'ar' ? ["صحيح", "خطأ", "", ""] : ["True", "False", "", ""]);
-                        updated.correctAnswer = questionActiveLang === 'en' ? "True" : (language === 'ar' ? "صحيح" : "True");
+                        const tf = getTrueFalseDefaults(questionActiveLang);
+                        updated.options = [...tf.options, "", ""];
+                        updated.correctAnswer = tf.correctAnswer;
+                        updated.optionsEn = [...tf.optionsEn, "", ""];
+                        updated.correctAnswerEn = tf.correctAnswerEn;
                       } else if (tempQuestion.type === "TRUE_FALSE") {
                         updated.options = ["", "", "", ""];
                         updated.correctAnswer = "";
+                        updated.optionsEn = ["", "", "", ""];
+                        updated.correctAnswerEn = "";
                       }
                       setTempQuestion(updated);
                     }}
-                    options={QUESTION_TYPES.map(type => ({ value: type.id, label: type.labelEn }))}
+                    options={QUESTION_TYPES.map(type => ({ value: type.id, label: questionActiveLang === 'ar' ? type.labelAr : type.labelEn }))}
                     placeholder={questionActiveLang === 'en' ? 'Select Type...' : (language === 'ar' ? 'اختر النوع...' : 'Select Type...')}
                   />
                 </div>
@@ -582,7 +564,7 @@ export const QuestionsBuilder = (props: any) => {
                   />
                 </div>
               </div>
-              
+
               {/* ── Question Metadata ── */}
               <div className="flex items-center justify-between px-1 mb-2">
                 <span className="text-[11.5px] font-bold text-indigo-700 flex items-center gap-1.5 bg-indigo-50/70 border border-indigo-100/80 px-3 py-1.5 rounded-xl">
@@ -591,8 +573,8 @@ export const QuestionsBuilder = (props: any) => {
                     {questionActiveLang === 'en'
                       ? 'Content Guidance: Recommended maximum of 8 metadata tags for optimal presentation.'
                       : (language === 'ar'
-                          ? 'توجيه المحتوى: يُنصح ألا تزيد البيانات الوصفية (Metadata) عن 8 عناصر للحفاظ على تناسق العرض وسرعة المراجعة.'
-                          : 'Content Guidance: Recommended maximum of 8 metadata tags for optimal presentation.')}
+                        ? 'توجيه المحتوى: يُنصح ألا تزيد البيانات الوصفية (Metadata) عن 8 عناصر للحفاظ على تناسق العرض وسرعة المراجعة.'
+                        : 'Content Guidance: Recommended maximum of 8 metadata tags for optimal presentation.')}
                   </span>
                 </span>
               </div>
@@ -617,11 +599,11 @@ export const QuestionsBuilder = (props: any) => {
                   const activeFieldKey = isEn && field.translatable ? `${field.key}En` : field.key;
                   const currentVal = field.key === 'standard'
                     ? (isEn
-                        ? (tempQuestion.standardEn || tempQuestion.learningOutcomeEn || tempQuestion.standard || tempQuestion.learningOutcome || '')
-                        : (tempQuestion.standard || tempQuestion.learningOutcome || ''))
+                      ? (tempQuestion.standardEn || tempQuestion.learningOutcomeEn || tempQuestion.standard || tempQuestion.learningOutcome || '')
+                      : (tempQuestion.standard || tempQuestion.learningOutcome || ''))
                     : field.key === 'dok'
-                    ? (normalizeDok(tempQuestion.dok) || tempQuestion.dok || '')
-                    : (isEn && field.translatable
+                      ? (normalizeDok(tempQuestion.dok) || tempQuestion.dok || '')
+                      : (isEn && field.translatable
                         ? (tempQuestion[`${field.key}En`] ?? tempQuestion[field.key] ?? field.defaultValue ?? '')
                         : (tempQuestion[field.key] ?? field.defaultValue ?? ''));
 
@@ -765,8 +747,8 @@ export const QuestionsBuilder = (props: any) => {
                       {isTranslatingQuestion
                         ? (language === 'ar' ? 'جارٍ الترجمة...' : 'Translating...')
                         : (questionActiveLang === 'ar'
-                            ? (language === 'ar' ? 'ترجمة فورية للإنجليزية' : 'Translate to English')
-                            : (language === 'ar' ? 'ترجمة فورية للعربية' : 'Translate to Arabic'))}
+                          ? (language === 'ar' ? 'ترجمة فورية للإنجليزية' : 'Translate to English')
+                          : (language === 'ar' ? 'ترجمة فورية للعربية' : 'Translate to Arabic'))}
                     </span>
                   </button>
                 </div>
@@ -979,9 +961,11 @@ export const QuestionsBuilder = (props: any) => {
                           onChange={(value) => setTempQuestion((previous: any) => {
                             const sections = [...(previous.sections || [])];
                             sections[idx] = { ...updateBilingualRichText(sections[idx], 'content', value, questionActiveLang), type: 'EXPLANATION' };
-                            return { ...previous, sections,
+                            return {
+                              ...previous, sections,
                               explanation: sections[idx].content ?? previous.explanation,
-                              explanationEn: sections[idx].contentEn ?? previous.explanationEn };
+                              explanationEn: sections[idx].contentEn ?? previous.explanationEn
+                            };
                           })}
                           placeholder={questionActiveLang === 'ar' ? "اكتب محتوى الشرح والتفسير هنا..." : "Write explanation content here..."}
                           className="!bg-white !border-slate-200"
@@ -1049,7 +1033,7 @@ export const QuestionsBuilder = (props: any) => {
                           const arOpt = currentOptsAr[oIndex];
                           const enOpt = resolvedOptsEn[oIndex];
 
-                          const isOptionCorrect = 
+                          const isOptionCorrect =
                             tempQuestion.correctAnswerIndex === oIndex ||
                             (tempQuestion.type === 'MULTI_SELECT' && (
                               (tempQuestion.correctAnswerIndices || []).includes(oIndex) ||

@@ -83,8 +83,19 @@ export function questionExportRows(questions: Question[], language: string): any
       throw new Error('Edit complex options in the question editor. / عدّل الاختيارات المركبة من محرر الأسئلة.');
     }
 
-    const arCorrect = Array.isArray(q.correctAnswer) ? JSON.stringify(q.correctAnswer) : (q.correctAnswer ?? '');
+    const qTypeNorm = String(q.questionType || (q.type === 'QUESTION' ? q.label : q.type) || 'MCQ').toUpperCase();
+    let arCorrect = Array.isArray(q.correctAnswer) ? JSON.stringify(q.correctAnswer) : (q.correctAnswer ?? '');
     let enCorrect = q.correctAnswerEn ?? '';
+    if (qTypeNorm === 'TRUE_FALSE' && arCorrect) {
+      const tfNorm = String(arCorrect).trim().toLowerCase();
+      const isT = ['true', 'صحيح', 'صح', 'صواب', '1'].includes(tfNorm);
+      const isF = ['false', 'خطأ', 'خاطئ', 'غير صحيح', '0'].includes(tfNorm);
+      if (isT || isF) {
+        const hasArQ = /[\u0600-\u06FF]/.test(String(q.text ?? q.content ?? '')) || options.some((o: any) => /[\u0600-\u06FF]/.test(String(o)));
+        if (hasArQ || language !== 'en') arCorrect = isF ? 'خطأ' : 'صحيح';
+        if (!enCorrect) enCorrect = isF ? 'False' : 'True';
+      }
+    }
     if (!enCorrect && arCorrect && options.length && optionsEn.length) {
       const idx = options.findIndex((o: string, i: number) => isOptionMatch(arCorrect, o, i));
       if (idx >= 0 && optionsEn[idx]) enCorrect = optionsEn[idx];
@@ -145,7 +156,7 @@ export function questionTemplateRows(language: string): any[][] {
       type: 'TRUE_FALSE',
       options: ['صحيح', 'خطأ'],
       optionsEn: ['True', 'False'],
-      correctAnswer: 'True',
+      correctAnswer: 'صحيح',
       correctAnswerEn: 'True',
       points: 1,
       explanation: 'تستغرق دورة الأرض حول الشمس حوالي 365.25 يوماً.',
@@ -242,6 +253,13 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
     const isOpt = h.includes('option') || h.includes('الخيار') || h.includes('خيار');
     return hasNum && isOpt;
   }));
+
+  const combinedOptEnIndex = optionEnIndices.every(i => i < 0)
+    ? findCol(h => isEnHeader(h) && (h.includes('options') || h.includes('الخيارات')) && !/[1-5]/.test(h))
+    : -1;
+  const combinedOptIndex = optionIndices.every(i => i < 0)
+    ? findCol((h, _, colIdx) => colIdx !== combinedOptEnIndex && !isEnHeader(h) && (h.includes('options') || h.includes('الخيارات')) && !/[1-5]/.test(h))
+    : -1;
 
   const correctEnIndex = findCol(h => {
     const isCorrect = h.includes('correct answer') || h.includes('الإجابة الصحيحة') || h.includes('الاجابة الصحيحة') || h.includes('الاجابه الصحيحه');
@@ -355,6 +373,8 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
     if (optionIndices.some(i => i >= 0)) {
       arOptions = optionIndices.map((i, n) => i < 0 ? array(previous?.options)[n] ?? '' : String(row[i] ?? ''));
       while (arOptions.length && !key(arOptions[arOptions.length - 1])) arOptions.pop();
+    } else if (combinedOptIndex >= 0) {
+      arOptions = String(row[combinedOptIndex] ?? '').split(/\s*\|\s*|[,،]/).map(s => s.trim()).filter(Boolean);
     } else if (previous?.options) {
       arOptions = array(previous.options);
     }
@@ -363,11 +383,15 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
     if (optionEnIndices.some(i => i >= 0)) {
       enOptions = optionEnIndices.map((i, n) => i < 0 ? array(previous?.optionsEn)[n] ?? '' : String(row[i] ?? ''));
       while (enOptions.length && !key(enOptions[enOptions.length - 1])) enOptions.pop();
+    } else if (combinedOptEnIndex >= 0) {
+      enOptions = String(row[combinedOptEnIndex] ?? '').split(/\s*\|\s*|[,،]/).map(s => s.trim()).filter(Boolean);
     } else if (previous?.optionsEn) {
       enOptions = array(previous.optionsEn);
     }
 
-    if (!arOptions.length && enOptions.length) {
+    const rawTextCellAr = textIndex >= 0 ? String(row[textIndex] ?? '').trim() : '';
+    const hasArText = /[\u0600-\u06FF]/.test(rawTextCellAr);
+    if (!arOptions.length && enOptions.length && (!hasArText || enOptions.every(o => !/[a-zA-Z]{2,}/.test(o)))) {
       arOptions = [...enOptions];
     }
     if (!previous && !enOptions.length && arOptions.some(o => /[a-zA-Z]/.test(o) && !/[\u0600-\u06FF]/.test(o))) {
@@ -422,15 +446,16 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
       const ansStr = (rawCorrectAr || rawCorrectEn).toLowerCase();
       const isTrue = ['true', 'صحيح', 'صح', 'صواب', '1'].includes(ansStr);
       const isFalse = ['false', 'خطأ', 'خاطئ', 'غير صحيح', '0'].includes(ansStr);
+      const hasArTF = /[\u0600-\u06FF]/.test(`${q.text} ${rawCorrectAr} ${arOptions.join(' ')}`) || (textIndex >= 0 && !isEnHeader(headersNorm[textIndex]));
       if (isTrue) {
-        q.correctAnswer = 'True';
+        q.correctAnswer = hasArTF ? 'صحيح' : 'True';
         q.correctAnswerEn = 'True';
-        if (!q.options.length) q.options = ['صحيح', 'خطأ'];
+        if (!q.options.length) q.options = hasArTF ? ['صحيح', 'خطأ'] : ['True', 'False'];
         if (!q.optionsEn) q.optionsEn = ['True', 'False'];
       } else if (isFalse) {
-        q.correctAnswer = 'False';
+        q.correctAnswer = hasArTF ? 'خطأ' : 'False';
         q.correctAnswerEn = 'False';
-        if (!q.options.length) q.options = ['صحيح', 'خطأ'];
+        if (!q.options.length) q.options = hasArTF ? ['صحيح', 'خطأ'] : ['True', 'False'];
         if (!q.optionsEn) q.optionsEn = ['True', 'False'];
       } else {
         rowFail('Choose True or False.', 'الإجابة يجب أن تكون صحيح أو خطأ.');

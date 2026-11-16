@@ -23,6 +23,7 @@ import * as XLSX from "xlsx";
 import { QuestionExcelExportButton } from '@/components/QuestionExcelExportButton';
 import QuestionImageGallery from '@/components/QuestionImageGallery';
 import { extractImageUrls } from '@/lib/image-utils';
+import { getTrueFalseDefaults, resolvePreferredQuestionLang } from '@/lib/questionLanguage';
 
 
 export const QuestionsBuilder = (props: any) => {
@@ -38,31 +39,7 @@ export const QuestionsBuilder = (props: any) => {
     return false;
   }, [language, props.examData?.title, currentModule?.title]);
 
-  const detectQuestionLanguage = (q: any): 'ar' | 'en' => {
-    if (!q) return 'en';
-    const clean = (str?: string | null) => String(str || '').replace(/<[^>]*>/g, '').trim();
-
-    const textClean = clean(q.text);
-    const textEnClean = clean(q.textEn);
-    const optsClean = Array.isArray(q.options) ? q.options.map(clean).join(' ') : '';
-    const optsEnClean = Array.isArray(q.optionsEn) ? q.optionsEn.map(clean).join(' ') : '';
-
-    const allAr = `${textClean} ${optsClean}`;
-    const allEn = `${textEnClean} ${optsEnClean}`;
-
-    const hasAr = hasArabicChars(allAr);
-    const hasEn = hasEnglishChars(allEn) || (hasEnglishChars(allAr) && !hasAr);
-
-    if (hasEn && !hasAr) return 'en';
-    if (hasAr && !hasEn) return 'ar';
-
-    if (hasArabicChars(textClean)) return 'ar';
-    if (hasEnglishChars(textClean) && !hasArabicChars(textClean)) return 'en';
-
-    return 'en';
-  };
-
-  const [questionActiveLang, setQuestionActiveLang] = React.useState<'ar' | 'en'>('en');
+  const [questionActiveLang, setQuestionActiveLang] = React.useState<'ar' | 'en'>(language === 'en' ? 'en' : 'ar');
   const [cardPreviewLang, setCardPreviewLang] = React.useState<Record<number, 'ar' | 'en'>>({});
   const [isTranslatingQuestion, setIsTranslatingQuestion] = React.useState(false);
   useQuestionHintTranslation(tempQuestion, setTempQuestion, questionActiveLang, isTranslatingQuestion);
@@ -75,12 +52,12 @@ export const QuestionsBuilder = (props: any) => {
       const qKey = `${editingQuestionIndex ?? 'new'}-${tempQuestion?.id ?? ''}`;
       if (lastActiveQKeyRef.current !== qKey) {
         lastActiveQKeyRef.current = qKey;
-        setQuestionActiveLang(detectQuestionLanguage(tempQuestion));
+        setQuestionActiveLang(resolvePreferredQuestionLang(tempQuestion, language));
       }
     } else {
       lastActiveQKeyRef.current = null;
     }
-  }, [showQuestionForm, editingQuestionIndex, tempQuestion?.id, isExamEnglish]);
+  }, [showQuestionForm, editingQuestionIndex, tempQuestion, language]);
 
   const extractFirstImage = (text?: string, imageUrl?: string): string | null => {
     if (imageUrl && typeof imageUrl === 'string' && imageUrl.trim()) return imageUrl.trim();
@@ -349,7 +326,7 @@ export const QuestionsBuilder = (props: any) => {
                       <div className="flex flex-col flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded uppercase whitespace-nowrap shrink-0">
-                            {QUESTION_TYPES.find(t => t.id === q.type)?.labelEn || q.type}
+                            {QUESTION_TYPES.find(t => t.id === q.type)?.[resolvePreferredQuestionLang(q, language) === 'ar' ? 'labelAr' : 'labelEn'] || q.type}
                           </span>
                           <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded uppercase whitespace-nowrap shrink-0">
                             {q.points || 1} {language === 'ar' ? 'درجة' : 'pts'} • {q.xpPoints || 10} XP
@@ -357,7 +334,9 @@ export const QuestionsBuilder = (props: any) => {
                         </div>
                         <div className="flex items-center gap-3 min-w-0">
                           {(() => {
-                            const img = extractFirstImage(q.text || q.textEn, q.imageUrl);
+                            const prefLang = resolvePreferredQuestionLang(q, language);
+                            const summaryHtml = prefLang === 'en' ? (q.textEn || q.text || '') : (q.text || q.textEn || '');
+                            const img = extractFirstImage(summaryHtml, q.imageUrl);
                             if (!img) return null;
                             return (
                               <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-slate-200 shrink-0 bg-slate-50">
@@ -365,7 +344,7 @@ export const QuestionsBuilder = (props: any) => {
                               </div>
                             );
                           })()}
-                          <QuestionSummary html={q.text || q.textEn || ''} className="text-slate-700 font-bold line-clamp-2 text-sm flex-1 min-w-0" />
+                          <QuestionSummary html={resolvePreferredQuestionLang(q, language) === 'en' ? (q.textEn || q.text || '') : (q.text || q.textEn || '')} className="text-slate-700 font-bold line-clamp-2 text-sm flex-1 min-w-0" />
                         </div>
                       </div>
                     </div>
@@ -410,7 +389,7 @@ export const QuestionsBuilder = (props: any) => {
 
                   {/* Question details collapsible view */}
                   {expandedQuestionIndex === index && (() => {
-                    const qPreviewLang = cardPreviewLang[index] || questionActiveLang || 'ar';
+                    const qPreviewLang = cardPreviewLang[index] || resolvePreferredQuestionLang(q, language);
                     const isCardEn = qPreviewLang === 'en';
                     const activeQText = (isCardEn && q.textEn) ? q.textEn : (q.text || q.textEn || '');
                     const rawArOpts = Array.isArray(q.options) ? q.options : [];
@@ -580,15 +559,20 @@ export const QuestionsBuilder = (props: any) => {
                       const newType = val;
                       const updated = { ...tempQuestion, type: newType };
                       if (newType === "TRUE_FALSE") {
-                        updated.options = questionActiveLang === 'en' ? ["True", "False", "", ""] : (language === 'ar' ? ["صحيح", "خطأ", "", ""] : ["True", "False", "", ""]);
-                        updated.correctAnswer = questionActiveLang === 'en' ? "True" : (language === 'ar' ? "صحيح" : "True");
+                        const tf = getTrueFalseDefaults(questionActiveLang);
+                        updated.options = [...tf.options, "", ""];
+                        updated.correctAnswer = tf.correctAnswer;
+                        updated.optionsEn = [...tf.optionsEn, "", ""];
+                        updated.correctAnswerEn = tf.correctAnswerEn;
                       } else if (tempQuestion.type === "TRUE_FALSE") {
                         updated.options = ["", "", "", ""];
                         updated.correctAnswer = "";
+                        updated.optionsEn = ["", "", "", ""];
+                        updated.correctAnswerEn = "";
                       }
                       setTempQuestion(updated);
                     }}
-                    options={QUESTION_TYPES.map(type => ({ value: type.id, label: type.labelEn }))}
+                    options={QUESTION_TYPES.map(type => ({ value: type.id, label: questionActiveLang === 'ar' ? type.labelAr : type.labelEn }))}
                     placeholder={questionActiveLang === 'en' ? 'Select Type...' : (language === 'ar' ? 'اختر النوع...' : 'Select Type...')}
                   />
                 </div>

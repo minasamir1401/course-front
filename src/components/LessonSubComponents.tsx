@@ -16,20 +16,20 @@ export const normalizeAnswerGlobal = (value: any) => {
 
 export const checkAdvancedCorrect = (q: any, ans: any) => {
   if (!ans) return false;
-  
+
   if (q?.type === 'MEMORY_GAME') {
     try {
       let parsedAns = typeof ans === 'string' ? JSON.parse(ans) : ans;
       if (typeof parsedAns === 'string') parsedAns = JSON.parse(parsedAns);
-      
+
       let parsedOpts = q.options || {};
       if (typeof parsedOpts === 'string') parsedOpts = JSON.parse(parsedOpts);
       if (typeof parsedOpts === 'string') parsedOpts = JSON.parse(parsedOpts);
-      
+
       if (Array.isArray(parsedAns) && Array.isArray(parsedOpts?.pairs)) {
         return parsedAns.length === parsedOpts.pairs.length;
       }
-    } catch(e) {}
+    } catch (e) { }
     return false;
   }
 
@@ -43,7 +43,7 @@ export const checkAdvancedCorrect = (q: any, ans: any) => {
       const trimmed = str.trim();
       return (trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'));
     };
-    
+
     const corrAns = q.correctAnswer;
     const hasJson = isJsonString(corrAns) || isJsonString(ans) || typeof ans === 'object' || typeof corrAns === 'object';
     if (hasJson) {
@@ -59,7 +59,7 @@ export const checkAdvancedCorrect = (q: any, ans: any) => {
         return correctKeys.every((k: string) => cleanStr(correct[k]) === cleanStr(student[k]));
       }
     }
-  } catch (e) {}
+  } catch (e) { }
   return cleanStr(ans) === cleanStr(q.correctAnswer);
 };
 
@@ -83,7 +83,7 @@ export const isQuestionLike = (item: any) => {
 export const getQuestionOptions = (q: any, language: string) => {
   if (!q) return [];
   if (q.type === 'TRUE_FALSE' || q.label === 'TRUE_FALSE') {
-    return ['True', 'False'];
+    return language === 'en' ? ['True', 'False'] : ['صحيح', 'خطأ'];
   }
   let options = (language === 'en' && Array.isArray(q.optionsEn) && q.optionsEn.filter(Boolean).length > 0)
     ? q.optionsEn
@@ -92,7 +92,7 @@ export const getQuestionOptions = (q: any, language: string) => {
     try {
       const parsed = JSON.parse(options);
       options = parsed.choices || parsed;
-    } catch (e) {}
+    } catch (e) { }
   }
   if (Array.isArray(options) && options.filter(Boolean).length > 0) {
     return options.filter(Boolean);
@@ -106,9 +106,9 @@ export const QuestionFeedback = ({ isCorrect, isSkipped, xp, streak, language }:
   }
 
   return (
-    <AnimatedFeedback 
-      isCorrect={isCorrect} 
-      xp={xp} 
+    <AnimatedFeedback
+      isCorrect={isCorrect}
+      xp={xp}
       streak={streak}
     />
   );
@@ -225,7 +225,7 @@ export const WelcomeGadgetCard = ({ item, t }: { item: any; t: any }) => {
   const [isOpen, setIsOpen] = useState(false);
   return (
     <div className="bg-slate-50/50 border border-slate-100 p-6 md:p-8 rounded-[35px] hover:bg-white hover:shadow-xl transition-all duration-500 group flex flex-col">
-      <div 
+      <div
         className="cursor-pointer flex flex-col items-start"
         onClick={() => setIsOpen(!isOpen)}
       >
@@ -239,7 +239,7 @@ export const WelcomeGadgetCard = ({ item, t }: { item: any; t: any }) => {
         </div>
         <h3 className="text-xl font-black text-slate-900 tracking-tight">{item.title}</h3>
       </div>
-      
+
       {isOpen && (
         <div className="mt-4 pt-4 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="text-sm md:text-base text-slate-600 leading-relaxed font-bold whitespace-pre-wrap">
@@ -262,7 +262,7 @@ export const ItemSectionsBubbles = ({ item, isSubmitted, language, filterType = 
   };
 
   if (!item?.sections || item.sections.length === 0) return null;
-  
+
   let filteredSections = item.sections.filter((sec: any) => sec.type !== 'FEEDBACK' && sec.type !== 'EXPLANATION');
   if (filterType === 'HINT_ONLY') {
     filteredSections = filteredSections.filter((sec: any) => sec.type === 'HINT');
@@ -271,20 +271,20 @@ export const ItemSectionsBubbles = ({ item, isSubmitted, language, filterType = 
   } else if (filterType === 'POST_ANSWER_ONLY') {
     filteredSections = filteredSections.filter((sec: any) => sec.type !== 'HINT' && sec.type !== 'WARNING');
   }
-  
+
   if (filteredSections.length === 0) return null;
-  
+
   // Only show non-HINT/WARNING sections if submitted.
   const sectionsToShow = filteredSections.filter((sec: any) => sec.type === 'HINT' || sec.type === 'WARNING' || isSubmitted);
 
   if (sectionsToShow.length === 0) return null;
-  
+
   return (
     <>
       {sectionsToShow.map((sec: any, idx: number) => {
         const preset = SECTION_STYLE_PRESETS[sec.type] || SECTION_STYLE_PRESETS.EXPLANATION;
         return (
-          <InteractiveTag 
+          <InteractiveTag
             key={sec.id || idx}
             label={preset.label}
             value={<HtmlRenderer html={(language === 'en' && sec.contentEn) ? sec.contentEn : sec.content} />}

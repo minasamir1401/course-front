@@ -10,6 +10,7 @@ require.extensions['.ts'] = (module, filename) => {
 const XLSX = require('xlsx');
 const { questionExportRows, questionTemplateRows, planQuestionImport } = require('../src/lib/questionExcelSync.ts');
 const { buildQuestionWorkbook, readQuestionImport, importModuleQuestions } = require('../src/lib/questionExcelWorkbook.ts');
+const { resolvePreferredQuestionLang, getTrueFalseDefaults } = require('../src/lib/questionLanguage.ts');
 const q = (id = 'q1') => ({ id, text: '<b>5 + 5?</b>', type: 'MCQ', options: ['8', '10'],
   correctAnswer: '10', points: 1, skill: 'Algebra', explanation: 'Explanation', moduleId: 'm1', subExamId: 's1' });
 const opts = { canDelete: true, language: 'en' };
@@ -218,4 +219,89 @@ test('foreign exported workbook previews copying and applies new IDs only after 
   assert.equal(ctx.currentModule.questions.length, 2);
   assert.equal(ctx.currentModule.questions[0].id, 'existing');
   assert.notEqual(ctx.currentModule.questions[1].id, 'foreign');
+});
+
+test('Arabic TRUE_FALSE and MCQ import/export preserve Arabic options and answers', () => {
+  const tfQuestion = {
+    id: 'tf-ar-1',
+    type: 'TRUE_FALSE',
+    text: 'الشمس أكبر من الأرض',
+    options: ['صحيح', 'خطأ'],
+    optionsEn: ['True', 'False'],
+    correctAnswer: 'صحيح',
+    correctAnswerEn: 'True',
+    points: 2,
+  };
+  const exportedRows = questionExportRows([tfQuestion], 'ar');
+  const importedPlan = planQuestionImport(exportedRows, [tfQuestion], { canDelete: true, language: 'ar' });
+  assert.equal(importedPlan.questions[0].correctAnswer, 'صحيح');
+  assert.deepEqual(importedPlan.questions[0].options, ['صحيح', 'خطأ']);
+
+  const addedRows = questionExportRows([tfQuestion], 'ar');
+  addedRows[1][1] = 'ADD';
+  const addedPlan = planQuestionImport(addedRows, [], { canDelete: true, language: 'ar' });
+  assert.equal(addedPlan.questions[0].correctAnswer, 'صحيح');
+  assert.deepEqual(addedPlan.questions[0].options, ['صحيح', 'خطأ']);
+
+  const combinedArRows = [
+    ['النوع', 'نص السؤال بالعربية', 'الخيارات بالعربية', 'الإجابة الصحيحة بالعربية', 'Options (En)', 'Correct Answer (En)'],
+    ['MCQ', 'ما عاصمة الأردن؟', 'عمّان | إربد | العقبة', 'عمّان', '', ''],
+    ['TRUE_FALSE', 'الأرض مسطحة', '', 'خطأ', 'True | False', 'False'],
+  ];
+  const combinedPlan = planQuestionImport(combinedArRows, [], { canDelete: true, language: 'ar' });
+  assert.deepEqual(combinedPlan.questions[0].options, ['عمّان', 'إربد', 'العقبة']);
+  assert.equal(combinedPlan.questions[0].correctAnswer, 'عمّان');
+  assert.deepEqual(combinedPlan.questions[1].options, ['صحيح', 'خطأ']);
+  assert.equal(combinedPlan.questions[1].correctAnswer, 'خطأ');
+});
+
+test('resolvePreferredQuestionLang and getTrueFalseDefaults honor Arabic content and UI language', () => {
+  assert.equal(
+    resolvePreferredQuestionLang({
+      type: 'TRUE_FALSE',
+      text: 'العدد $7$ أولي',
+      options: ['صحيح', 'خطأ'],
+      optionsEn: ['True', 'False'],
+    }, 'en'),
+    'ar'
+  );
+  assert.equal(
+    resolvePreferredQuestionLang({
+      type: 'MCQ',
+      text: 'اختر الإجابة الصحيحة',
+      textEn: 'Choose the right answer',
+    }, 'ar'),
+    'ar'
+  );
+  assert.equal(
+    resolvePreferredQuestionLang({
+      type: 'MCQ',
+      text: 'اختر الإجابة الصحيحة',
+      textEn: 'Choose the right answer',
+    }, 'en'),
+    'en'
+  );
+  assert.equal(
+    resolvePreferredQuestionLang({
+      type: 'MCQ',
+      textEn: 'Solve $x + 1 = 3$',
+      optionsEn: ['1', '2'],
+    }, 'ar'),
+    'en'
+  );
+  assert.equal(resolvePreferredQuestionLang({ type: 'MCQ', text: '' }, 'ar'), 'ar');
+  assert.equal(resolvePreferredQuestionLang({ type: 'MCQ', text: '' }, 'en'), 'en');
+
+  assert.deepEqual(getTrueFalseDefaults('ar'), {
+    options: ['صحيح', 'خطأ'],
+    correctAnswer: 'صحيح',
+    optionsEn: ['True', 'False'],
+    correctAnswerEn: 'True',
+  });
+  assert.deepEqual(getTrueFalseDefaults('en'), {
+    options: ['True', 'False'],
+    correctAnswer: 'True',
+    optionsEn: ['True', 'False'],
+    correctAnswerEn: 'True',
+  });
 });

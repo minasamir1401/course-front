@@ -5,11 +5,13 @@ export async function downloadCourseBackupFile(
   format: "excel" | "json",
   tokenKey: string,
   courseTitle?: string,
+  language: string = "ar",
 ) {
   const token = localStorage.getItem(tokenKey);
+  const lang = language === "en" ? "en" : "ar";
   const endpoint =
     format === "excel"
-      ? `${API_URL}/school/export/course/${courseId}`
+      ? `${API_URL}/school/export/course/${courseId}?lang=${lang}`
       : `${API_URL}/school/export/json/course/${courseId}`;
 
   const res = await apiFetch(endpoint, {

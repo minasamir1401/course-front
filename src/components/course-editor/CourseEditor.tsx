@@ -6,11 +6,13 @@ import { CourseSettingsForm } from "./CourseSettingsForm";
 import { LessonList } from "./LessonList";
 import { LessonBuilderModal } from "./LessonBuilderModal";
 import DashboardLayout from "@/components/DashboardLayout";
-import { ArrowLeft, Save, Trash2, ShieldCheck, RotateCcw } from "lucide-react";
+import { ArrowLeft, Save, Trash2, Download } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AiGuidanceEditor from '@/components/ai/AiGuidanceEditor';
 import Link from 'next/link';
 import { useLanguage } from "@/contexts/LanguageContext";
+import { offlineSync } from "@/lib/offlineSync";
+import { useNotification } from "@/context/NotificationContext";
 
 interface CourseEditorProps {
   role: "SUPER_ADMIN" | "SCHOOL_ADMIN";
@@ -22,6 +24,7 @@ const InnerCourseEditor: React.FC<{ lessonPage?: boolean }> = ({ lessonPage = fa
   const params = useSearchParams();
   const openedLesson = useRef<string | null>(null);
   const { language } = useLanguage();
+  const { showToast } = useNotification();
   const {
     isLoading,
     isSubmitting,
@@ -136,6 +139,27 @@ const InnerCourseEditor: React.FC<{ lessonPage?: boolean }> = ({ lessonPage = fa
                     {language === "ar" ? "آخر حفظ تلقائي:" : "Last auto-save:"} {lastAutoSave.toLocaleTimeString(undefined, { timeZone: 'Africa/Cairo' })}
                   </span>
                 )}
+
+                <button type="button"
+                  onClick={async () => {
+                    try {
+                      const summary = await offlineSync.downloadBrowserWorkspaceBackup();
+                      showToast(
+                        language === "ar"
+                          ? `تم تصدير مسودات المتصفح (${summary.editorDraftsCount} مسودة، ${summary.pendingSavesCount} حفظ معلق)`
+                          : `Exported browser drafts (${summary.editorDraftsCount} drafts, ${summary.pendingSavesCount} pending saves)`,
+                        "success"
+                      );
+                    } catch {
+                      showToast(language === "ar" ? "تعذر تصدير مسودات المتصفح" : "Failed to export browser drafts", "error");
+                    }
+                  }}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-4 rounded-2xl font-bold flex items-center gap-2 border border-slate-200 transition-all whitespace-nowrap shrink-0"
+                  title={language === "ar" ? "تصدير مسودات IndexedDB و localStorage" : "Export IndexedDB and localStorage drafts"}
+                >
+                  <Download className="w-5 h-5" />
+                  <span>{language === "ar" ? "تصدير مسودات المتصفح" : "Export Browser Drafts"}</span>
+                </button>
 
                 <button type="button"
                   onClick={(e) => handleSubmit(e)}

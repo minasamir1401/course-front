@@ -167,7 +167,8 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
     const titleClean = cleanHtml(block.title);
     const titleEnClean = cleanHtml(block.titleEn);
     const optsJoined = Array.isArray(block.options) ? block.options.map(cleanHtml).join(' ') : '';
-    const optsEnJoined = Array.isArray(block.optionsEn) ? block.optionsEn.map(cleanHtml).join(' ') : '';
+    const isTf = block.label === 'TRUE_FALSE' || block.type === 'TRUE_FALSE';
+    const optsEnJoined = !isTf && Array.isArray(block.optionsEn) ? block.optionsEn.map(cleanHtml).join(' ') : '';
 
     const allAr = `${body} ${titleClean} ${optsJoined}`;
     const allEn = `${bodyEn} ${titleEnClean} ${optsEnJoined}`;
@@ -175,6 +176,7 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
     const hasAr = hasArabicChars(allAr);
     const hasEn = isEnglishOnly(allEn) || (isEnglishOnly(allAr) && !hasAr);
 
+    if (hasAr && hasEn) return language === 'en' ? 'en' : 'ar';
     if (hasEn && !hasAr) return 'en';
     if (hasAr && !hasEn) return 'ar';
 
@@ -308,17 +310,17 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
       setTranslatingSlide(prev => ({ ...prev, [blockKey]: false }));
     }
   };
-  
-  const headerLabel = source === 'slides' 
-    ? (language === 'ar' ? 'شرائح الشرح والدرس' : 'Lesson Content & Slides') 
-    : source === 'assignments' 
-      ? (language === 'ar' ? 'تكليفات الدرس (Assignments)' : 'Lesson Assignments') 
+
+  const headerLabel = source === 'slides'
+    ? (language === 'ar' ? 'شرائح الشرح والدرس' : 'Lesson Content & Slides')
+    : source === 'assignments'
+      ? (language === 'ar' ? 'تكليفات الدرس (Assignments)' : 'Lesson Assignments')
       : (language === 'ar' ? 'تدريبات الدرس (Quiz Me)' : 'Lesson Exercises (Quiz Me)');
-      
-  const headerDesc = source === 'slides' 
-    ? (language === 'ar' ? 'قم بإضافة محتوى نصي، أمثلة، ملاحظات، أو أسئلة تفاعلية مدمجة لشرح الدرس' : 'Add text content, examples, notes, or interactive questions to explain the lesson') 
-    : source === 'assignments' 
-      ? (language === 'ar' ? 'قم بإضافة التكليفات التطبيقية والواجبات المنزلية للطلاب' : 'Add application assignments and homework for students') 
+
+  const headerDesc = source === 'slides'
+    ? (language === 'ar' ? 'قم بإضافة محتوى نصي، أمثلة، ملاحظات، أو أسئلة تفاعلية مدمجة لشرح الدرس' : 'Add text content, examples, notes, or interactive questions to explain the lesson')
+    : source === 'assignments'
+      ? (language === 'ar' ? 'قم بإضافة التكليفات التطبيقية والواجبات المنزلية للطلاب' : 'Add application assignments and homework for students')
       : (language === 'ar' ? 'قم بإضافة أسئلة تدريبية تفاعلية لتقييم فهم واستيعاب الطالب' : 'Add interactive practice questions to evaluate student understanding');
 
   return (
@@ -333,12 +335,12 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
         />
       )}
       {source !== 'slides' && (
-        <input 
-          type="file" 
-          ref={source === 'assignments' ? assignmentsExcelRef : questionsExcelRef} 
-          style={{ display: 'none' }} 
-          accept=".xlsx,.xls" 
-          onChange={source === 'assignments' ? handleAssignmentsExcelChange : handleQuestionsExcelChange} 
+        <input
+          type="file"
+          ref={source === 'assignments' ? assignmentsExcelRef : questionsExcelRef}
+          style={{ display: 'none' }}
+          accept=".xlsx,.xls"
+          onChange={source === 'assignments' ? handleAssignmentsExcelChange : handleQuestionsExcelChange}
         />
       )}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
@@ -370,7 +372,7 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
           )}
           {source !== 'slides' && (
             <>
-              <button 
+              <button
                 type="button"
                 onClick={() => handleExcelUpload(source === 'assignments' ? 'assignments' : 'questions')}
                 className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
@@ -378,7 +380,7 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
                 <Upload className="w-4 h-4" />
                 {language === 'ar' ? 'استيراد Excel' : 'Import Excel'}
               </button>
-              <button 
+              <button
                 type="button"
                 onClick={() => downloadQuestionsTemplate(source === 'assignments' ? 'assignments' : 'questions')}
                 className="bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
@@ -416,7 +418,7 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
             </>
           )}
           {source === 'slides' && Boolean(currentLesson?.id) && (
-            <button 
+            <button
               type="button"
               onClick={() => setIsCopyModalOpen(true)}
               className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
@@ -425,7 +427,7 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
               {language === 'ar' ? 'تصدير شرائح' : 'Export Slides'}
             </button>
           )}
-          <button 
+          <button
             type="button"
             onClick={() => handleAddBlock('TEXT')}
             className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer text-xs"
@@ -433,7 +435,7 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
             <Plus className="w-4 h-4" />
             {language === 'ar' ? "+ محتوى نصي" : "+ Add Text"}
           </button>
-          <button 
+          <button
             type="button"
             onClick={() => handleAddBlock('QUESTION')}
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all shadow-lg cursor-pointer text-xs"
@@ -495,7 +497,7 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
           onClose={() => setIsCopyModalOpen(false)}
           sourceLessonId={currentLesson.id}
           sourceSlides={list}
-          onSuccess={() => {}}
+          onSuccess={() => { }}
         />
       )}
     </SlideKeyboardRegion>

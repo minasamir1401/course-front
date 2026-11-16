@@ -1,7 +1,9 @@
 "use client";
 
 import React from "react";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Download, Save } from "lucide-react";
+import { offlineSync } from "@/lib/offlineSync";
+import { useNotification } from "@/context/NotificationContext";
 
 interface CourseCreateHeaderProps {
   language: string;
@@ -32,6 +34,7 @@ export const CourseCreateHeader: React.FC<CourseCreateHeaderProps> = ({
   onBack,
   onSave,
 }) => {
+  const { showToast } = useNotification();
   return (
     <div className="max-w-[1600px] mx-auto px-4 md:px-8 pt-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm">
@@ -79,6 +82,28 @@ export const CourseCreateHeader: React.FC<CourseCreateHeaderProps> = ({
               {language === "ar" ? "محفوظ كمسودة" : "Saved draft"}
             </span>
           )}
+
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                const summary = await offlineSync.downloadBrowserWorkspaceBackup();
+                showToast(
+                  language === "ar"
+                    ? `تم تصدير مسودات المتصفح (${summary.editorDraftsCount} مسودة، ${summary.pendingSavesCount} حفظ معلق)`
+                    : `Exported browser drafts (${summary.editorDraftsCount} drafts, ${summary.pendingSavesCount} pending saves)`,
+                  "success"
+                );
+              } catch {
+                showToast(language === "ar" ? "تعذر تصدير مسودات المتصفح" : "Failed to export browser drafts", "error");
+              }
+            }}
+            className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-4 rounded-2xl font-bold flex items-center gap-2 border border-slate-200 transition-all whitespace-nowrap shrink-0"
+            title={language === "ar" ? "تصدير مسودات IndexedDB و localStorage" : "Export IndexedDB and localStorage drafts"}
+          >
+            <Download className="w-5 h-5" />
+            <span>{language === "ar" ? "تصدير مسودات المتصفح" : "Export Browser Drafts"}</span>
+          </button>
 
           <button
             type="button"

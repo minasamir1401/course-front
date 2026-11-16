@@ -260,7 +260,7 @@ export default function EditSchoolSkillClusterPage() {
   const submitPreviewAnswer = handlePreviewSubmit;
   const currentPreviewIdx = previewActivity ? previewActivitiesList.findIndex((a:any) => a.id === previewActivity.id) : 0;
   
-  const downloadTemplate = downloadSkillTemplate;
+  const downloadTemplate = () => downloadSkillTemplate(language);
 
   const getGradeDisplay = (g: any) => (GRADE_LABELS as any)[g]?.[language === 'ar' ? 'ar' : 'en'] || g;
   

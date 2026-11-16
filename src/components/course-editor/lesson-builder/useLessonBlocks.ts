@@ -23,7 +23,7 @@ export function useLessonBlocks(setCurrentLesson: (lesson: any) => void) {
   };
 
   const addBlock = useCallback((source: 'slides' | 'assignments' | 'questions' = 'slides', type: 'TEXT' | 'QUESTION') => {
-    const newBlock = type === 'TEXT' 
+    const newBlock = type === 'TEXT'
       ? { id: Date.now() + Math.random(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? `محتوى جديد` : `New Content`, titleEn: language === 'en' ? `New Content` : '', content: "", contentEn: "", text: "", textEn: "", videoUrl: "", sections: [] }
       : { id: Date.now() + Math.random(), type: 'QUESTION', label: 'MCQ', title: language === 'ar' ? `سؤال جديد` : `New Question`, titleEn: language === 'en' ? `New Question` : '', content: "", contentEn: "", text: "", textEn: "", videoUrl: "", options: ["", "", "", ""], optionsEn: ["", "", "", ""], correctAnswer: "", correctAnswerEn: "", sections: [] };
     setCurrentLesson((prev: any) => ({
@@ -33,7 +33,7 @@ export function useLessonBlocks(setCurrentLesson: (lesson: any) => void) {
   }, [language, setCurrentLesson]);
 
   const insertBlockAt = useCallback((source: 'slides' | 'assignments' | 'questions' = 'slides', index: number, type: 'TEXT' | 'QUESTION') => {
-    const newBlock = type === 'TEXT' 
+    const newBlock = type === 'TEXT'
       ? { id: Date.now() + Math.random(), type: 'TEXT', label: 'CONTENT', title: language === 'ar' ? `محتوى جديد` : `New Content`, titleEn: language === 'en' ? `New Content` : '', content: "", contentEn: "", text: "", textEn: "", videoUrl: "", sections: [] }
       : { id: Date.now() + Math.random(), type: 'QUESTION', label: 'MCQ', title: language === 'ar' ? `سؤال جديد` : `New Question`, titleEn: language === 'en' ? `New Question` : '', content: "", contentEn: "", text: "", textEn: "", videoUrl: "", options: ["", "", "", ""], optionsEn: ["", "", "", ""], correctAnswer: "", correctAnswerEn: "", sections: [] };
     setCurrentLesson((prev: any) => {
@@ -101,14 +101,19 @@ export function useLessonBlocks(setCurrentLesson: (lesson: any) => void) {
   const updateBlockTypeAndReset = useCallback((source: 'slides' | 'assignments' | 'questions', index: number, newType: string) => {
     const isOldSimple = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(newType);
     let defaultOptions: any = ["", "", "", ""];
+    let defaultOptionsEn: any = ["", "", "", ""];
     let defaultCorrect = "";
-    
+    let defaultCorrectEn = "";
+
     if (newType === 'TRUE_FALSE') {
-      defaultOptions = ["True", "False"];
-      defaultCorrect = "True";
+      defaultOptions = language === 'en' ? ["True", "False"] : ["صحيح", "خطأ"];
+      defaultCorrect = language === 'en' ? "True" : "صحيح";
+      defaultOptionsEn = ["True", "False"];
+      defaultCorrectEn = "True";
     } else if (newType === 'MULTI_SELECT') {
       defaultOptions = ["", "", "", ""];
       defaultCorrect = "[]";
+      defaultCorrectEn = "[]";
     } else if (!isOldSimple) {
       if (newType === 'MATCHING') {
         defaultOptions = JSON.stringify({ left: [], right: [] });
@@ -135,20 +140,24 @@ export function useLessonBlocks(setCurrentLesson: (lesson: any) => void) {
         defaultOptions = JSON.stringify({ choices: [] });
         defaultCorrect = "";
       }
+      defaultOptionsEn = defaultOptions;
+      defaultCorrectEn = defaultCorrect;
     }
-    
+
     setCurrentLesson((prev: any) => {
       const newSlides = [...(prev[source] || [])];
-      newSlides[index] = { 
-        ...newSlides[index], 
+      newSlides[index] = {
+        ...newSlides[index],
         label: newType,
         options: defaultOptions,
+        optionsEn: defaultOptionsEn,
         correctAnswer: defaultCorrect,
+        correctAnswerEn: defaultCorrectEn,
         correctAnswers: newType === 'MULTI_SELECT' ? [] : undefined
       };
       return { ...prev, [source]: newSlides };
     });
-  }, [setCurrentLesson]);
+  }, [language, setCurrentLesson]);
 
   const removeBlock = useCallback((source: 'slides' | 'assignments' | 'questions' = 'slides', index: number) => {
     if (!confirm(language === 'ar' ? "هل أنت متأكد من حذف هذه الشريحة/السؤال؟" : "Are you sure you want to delete this slide/question?")) return;
@@ -170,11 +179,11 @@ export function useLessonBlocks(setCurrentLesson: (lesson: any) => void) {
   }, [setCurrentLesson]);
 
   const updateSection = useCallback((
-    source: 'slides' | 'assignments' | 'questions' = 'slides', 
-    blockIndex: number, 
-    sectionIndex: number, 
-    content: string, 
-    blockRef?: any, 
+    source: 'slides' | 'assignments' | 'questions' = 'slides',
+    blockIndex: number,
+    sectionIndex: number,
+    content: string,
+    blockRef?: any,
     sectionRef?: any,
     field: 'content' | 'contentEn' = 'content'
   ) => {

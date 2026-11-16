@@ -8,8 +8,8 @@ import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
 import { normalizeDok } from '@/lib/examQuestionMetadata';
 import React, { useState } from "react";
 import Image from "next/image";
-import { 
-  Plus, Trash2, HelpCircle, Upload, Download, Edit2, CheckCircle2, 
+import {
+  Plus, Trash2, HelpCircle, Upload, Download, Edit2, CheckCircle2,
   Lightbulb, TriangleAlert, ChevronDown, ChevronUp, Save, X, BookOpen, Target, FileText, Copy, Languages, Loader2,
   Image as ImageIcon
 } from "lucide-react";
@@ -29,6 +29,7 @@ import QuestionMetadataExcelTools from '@/components/QuestionMetadataExcelTools'
 import { translateBatch } from '@/lib/translationService';
 import QuestionImageGallery from '@/components/QuestionImageGallery';
 import { extractImageUrls } from '@/lib/image-utils';
+import { resolvePreferredQuestionLang } from "@/lib/questionLanguage";
 interface LessonQuestionsBuilderProps {
   source: 'assignments' | 'questions';
   currentLesson: any;
@@ -89,7 +90,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
   const canDeleteContent = !role || isSuperAdmin || allowContentDeletion;
 
   const [customSkills, setCustomSkills] = useState<string[]>([]);
-  const [questionActiveLang, setQuestionActiveLang] = useState<'ar' | 'en'>('en');
+  const [questionActiveLang, setQuestionActiveLang] = useState<'ar' | 'en'>(language === 'en' ? 'en' : 'ar');
   const [cardPreviewLang, setCardPreviewLang] = useState<Record<number, 'ar' | 'en'>>({});
   const [isTranslatingQuestion, setIsTranslatingQuestion] = useState(false);
 
@@ -104,34 +105,8 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
     if (lastActiveQKeyRef.current === qKey) return;
     lastActiveQKeyRef.current = qKey;
 
-    const clean = (str?: string | null) => String(str || '').replace(/<[^>]*>/g, '').trim();
-    const hasArabic = (str?: string | null) => /[\u0600-\u06FF]/.test(clean(str));
-    const hasEnglish = (str?: string | null) => /[a-zA-Z]/.test(clean(str));
-
-    const textClean = clean(tempQuestion.text);
-    const textEnClean = clean(tempQuestion.textEn);
-    const optsClean = Array.isArray(tempQuestion.options) ? tempQuestion.options.map(clean).join(' ') : '';
-    const optsEnClean = Array.isArray(tempQuestion.optionsEn) ? tempQuestion.optionsEn.map(clean).join(' ') : '';
-
-    const allAr = `${textClean} ${optsClean}`;
-    const allEn = `${textEnClean} ${optsEnClean}`;
-
-    const hasAr = hasArabic(allAr);
-    const hasEn = hasEnglish(allEn) || (hasEnglish(allAr) && !hasAr);
-
-    if (hasEn && !hasAr) {
-      setQuestionActiveLang('en');
-    } else if (hasAr && !hasEn) {
-      setQuestionActiveLang('ar');
-    } else if (hasEnglish(textClean) && !hasArabic(textClean)) {
-      setQuestionActiveLang('en');
-    } else if (hasArabic(textClean)) {
-      setQuestionActiveLang('ar');
-    } else {
-      // Default to English for new questions
-      setQuestionActiveLang('en');
-    }
-  }, [showQuestionForm, editingQuestionIndex, tempQuestion?.id, language]);
+    setQuestionActiveLang(resolvePreferredQuestionLang(tempQuestion, language));
+  }, [showQuestionForm, editingQuestionIndex, tempQuestion, language]);
 
   const extractFirstImage = (question: any): string | null => {
     if (!question) return null;
@@ -174,7 +149,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
         srcText || '',
         srcExplanation || '',
         ...srcOpts,
-        ...srcSections      ];
+        ...srcSections];
 
       const translations = await translateBatch(textsToTranslate, from, to);
 
@@ -554,7 +529,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
 
     if (tempQuestion.type === 'TRUE_FALSE') {
       return normalizeAnswerGlobal(tempQuestion.correctAnswer) === normalizeAnswerGlobal(clean) ||
-             normalizeAnswerGlobal(tempQuestion.correctAnswerEn) === normalizeAnswerGlobal(clean);
+        normalizeAnswerGlobal(tempQuestion.correctAnswerEn) === normalizeAnswerGlobal(clean);
     }
 
     if (tempQuestion.type === 'MULTI_SELECT') {
@@ -593,7 +568,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
   };
 
   // State to track which question is expanded in the list
-  
+
   const renderMetadataDropdown = (
     label: string,
     currentValue: string,
@@ -642,7 +617,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
             <ChevronDown className="w-3.5 h-3.5" />
           </button>
         </div>
-        
+
         {isOpen && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>
@@ -720,167 +695,170 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
     );
   };
 
-    const list = currentLesson[source] || [];
-    const headerLabel = source === 'assignments' 
-      ? (language === 'ar' ? 'واجبات وتكليفات الدرس (Assignments)' : 'Lesson Assignments')
-      : (language === 'ar' ? 'تدريبات وتقييمات الدرس (Quiz Me)' : 'Quiz Me Practice');
-    
-    const headerDesc = source === 'assignments'
-      ? (language === 'ar' ? 'قم بإضافة التكليفات التطبيقية والواجبات المنزلية للطلاب' : 'Add application homework and assignments for students')
-      : (language === 'ar' ? 'قم بإضافة أسئلة تدريبية تفاعلية لتقييم فهم واستيعاب الطالب' : 'Add interactive practice questions to test student understanding');
+  const list = currentLesson[source] || [];
+  const headerLabel = source === 'assignments'
+    ? (language === 'ar' ? 'واجبات وتكليفات الدرس (Assignments)' : 'Lesson Assignments')
+    : (language === 'ar' ? 'تدريبات وتقييمات الدرس (Quiz Me)' : 'Quiz Me Practice');
 
-    return (
-      <div className="space-y-8 animate-in fade-in duration-300">
-        <input 
-          type="file" 
-          ref={source === 'assignments' ? assignmentsExcelRef : questionsExcelRef} 
-          style={{ display: 'none' }} 
-          accept=".xlsx,.xls" 
-          onChange={source === 'assignments' ? handleAssignmentsExcelChange : handleQuestionsExcelChange} 
-        />
-        
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-          <div>
-            <h4 className="text-xl font-black text-slate-900 flex items-center gap-3">
-              <HelpCircle className="w-6 h-6 text-indigo-600" />
-              {headerLabel}
-            </h4>
-            <p className="text-slate-400 text-sm font-bold mt-1">{headerDesc}</p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <QuestionExcelExportButton questions={currentLesson[source] || []} language={language} />
-            <QuestionMetadataExcelTools questions={currentLesson[source] || []} scope={`${currentLesson.id ?? ''}:${source}`} language={language} disabled={showQuestionForm} onChange={questions => setCurrentLesson({ ...currentLesson, [source]: questions })} />
-            <button 
+  const headerDesc = source === 'assignments'
+    ? (language === 'ar' ? 'قم بإضافة التكليفات التطبيقية والواجبات المنزلية للطلاب' : 'Add application homework and assignments for students')
+    : (language === 'ar' ? 'قم بإضافة أسئلة تدريبية تفاعلية لتقييم فهم واستيعاب الطالب' : 'Add interactive practice questions to test student understanding');
+
+  return (
+    <div className="space-y-8 animate-in fade-in duration-300">
+      <input
+        type="file"
+        ref={source === 'assignments' ? assignmentsExcelRef : questionsExcelRef}
+        style={{ display: 'none' }}
+        accept=".xlsx,.xls"
+        onChange={source === 'assignments' ? handleAssignmentsExcelChange : handleQuestionsExcelChange}
+      />
+
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+        <div>
+          <h4 className="text-xl font-black text-slate-900 flex items-center gap-3">
+            <HelpCircle className="w-6 h-6 text-indigo-600" />
+            {headerLabel}
+          </h4>
+          <p className="text-slate-400 text-sm font-bold mt-1">{headerDesc}</p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <QuestionExcelExportButton questions={currentLesson[source] || []} language={language} />
+          <QuestionMetadataExcelTools questions={currentLesson[source] || []} scope={`${currentLesson.id ?? ''}:${source}`} language={language} disabled={showQuestionForm} onChange={questions => setCurrentLesson({ ...currentLesson, [source]: questions })} />
+          <button
+            type="button"
+            onClick={() => handleExcelUpload(source === 'assignments' ? 'assignments' : 'questions')}
+            className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
+          >
+            <Upload className="w-4 h-4" />
+            {language === 'ar' ? 'استيراد Excel' : 'Import Excel'}
+          </button>
+          <button
+            type="button"
+            onClick={() => downloadQuestionsTemplate(source === 'assignments' ? 'assignments' : 'questions')}
+            className="bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
+          >
+            <Download className="w-4 h-4" />
+            {language === 'ar' ? 'تحميل نموذج' : 'Template'}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleAddQuestionForSource(source)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all shadow-lg cursor-pointer"
+          >
+            <Plus className="w-5 h-5" />
+            {language === 'ar' ? '+ إضافة سؤال' : '+ Add Question'}
+          </button>
+          {Boolean(currentLesson?.id) && (
+            <button
               type="button"
-              onClick={() => handleExcelUpload(source === 'assignments' ? 'assignments' : 'questions')}
+              onClick={() => setIsCopyModalOpen(true)}
               className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
             >
-              <Upload className="w-4 h-4" />
-              {language === 'ar' ? 'استيراد Excel' : 'Import Excel'}
+              <Copy className="w-4 h-4" />
+              {language === 'ar' ? 'تصدير الأسئلة' : 'Export Questions'}
             </button>
-            <button 
-              type="button"
-              onClick={() => downloadQuestionsTemplate(source === 'assignments' ? 'assignments' : 'questions')}
-              className="bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
-            >
-              <Download className="w-4 h-4" />
-              {language === 'ar' ? 'تحميل نموذج' : 'Template'}
-            </button>
-            <button 
-              type="button"
-              onClick={() => handleAddQuestionForSource(source)}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all shadow-lg cursor-pointer"
-            >
-              <Plus className="w-5 h-5" />
-              {language === 'ar' ? '+ إضافة سؤال' : '+ Add Question'}
-            </button>
-            {Boolean(currentLesson?.id) && (
-              <button 
-                type="button"
-                onClick={() => setIsCopyModalOpen(true)}
-                className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-5 py-2.5 rounded-xl font-black flex items-center gap-2 transition-all cursor-pointer shadow-sm text-xs"
-              >
-                <Copy className="w-4 h-4" />
-                {language === 'ar' ? 'تصدير الأسئلة' : 'Export Questions'}
-              </button>
-            )}
-          </div>
+          )}
         </div>
+      </div>
 
-        {/* Saved Questions Cards List */}
-        {!showQuestionForm && (
-          <div className="space-y-4">
-            {list.length === 0 ? (
-              <div className="bg-white rounded-[35px] border-4 border-dashed border-slate-100 p-16 flex flex-col items-center justify-center text-center gap-4">
-                <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300">
-                  <HelpCircle className="w-8 h-8" />
-                </div>
-                <div>
-                  <h4 className="text-xl font-black text-slate-800 mb-1">{language === 'ar' ? 'لا يوجد أسئلة مضافة' : 'No questions added yet'}</h4>
-                  <p className="text-slate-400 font-bold text-xs max-w-sm">{language === 'ar' ? 'ابدأ بإضافة سؤال جديد أو استيراده من ملف إكسيل' : 'Start by adding a new question or importing from Excel'}</p>
-                </div>
-                <button 
-                  type="button"
-                  onClick={() => handleAddQuestionForSource(source)}
-                  className="bg-indigo-50 text-indigo-600 px-8 py-3.5 rounded-2xl font-black transition-all hover:bg-indigo-100 cursor-pointer text-xs"
-                >
-                  {language === 'ar' ? '+ إضافة أول سؤال' : '+ Add First Question'}
-                </button>
+      {/* Saved Questions Cards List */}
+      {!showQuestionForm && (
+        <div className="space-y-4">
+          {list.length === 0 ? (
+            <div className="bg-white rounded-[35px] border-4 border-dashed border-slate-100 p-16 flex flex-col items-center justify-center text-center gap-4">
+              <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300">
+                <HelpCircle className="w-8 h-8" />
               </div>
-            ) : (
-              list.map((q: any, index: number) => (
-                <div key={q.id ?? index} className="bg-white rounded-2xl sm:rounded-[30px] border border-slate-100 shadow-sm overflow-hidden group hover:shadow-md transition-all duration-300">
-                  <div className="px-3 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-                    <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 overflow-hidden">
-                      <div className="flex flex-col items-center gap-1 shrink-0">
-                        <button type="button" onClick={() => moveQuestionForSource(source, index, 'UP')} disabled={index === 0} className="text-slate-300 hover:text-indigo-600 disabled:opacity-20 transition-colors"><ChevronUp className="w-4 h-4" /></button>
-                        <span className="w-8 h-8 min-w-8 shrink-0 whitespace-nowrap tabular-nums bg-slate-900 text-white rounded-lg flex items-center justify-center font-black text-xs">{index + 1}</span>
-                        <button type="button" onClick={() => moveQuestionForSource(source, index, 'DOWN')} disabled={index === list.length - 1} className="text-slate-300 hover:text-indigo-600 disabled:opacity-20 transition-colors"><ChevronDown className="w-4 h-4" /></button>
-                      </div>
-                      {(() => {
-                        const img = extractFirstImage(q);
-                        if (!img) return null;
-                        return (
-                          <div className="w-14 h-14 rounded-xl border border-slate-200 overflow-hidden bg-slate-50 shrink-0 flex items-center justify-center relative">
-                            <Image src={img} alt="Question image" fill sizes="56px" className="object-cover" unoptimized={shouldSkipImageOptimization(img)} />
-                          </div>
-                        );
-                      })()}
-                      <div className="flex flex-col flex-1 overflow-hidden">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded uppercase">
-                            {QUESTION_TYPES.find(t => t.id === q.type)?.label || q.type}
-                          </span>
-                          <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded uppercase">
-                            {q.level || "Medium"} {q.dok ? `• ${q.dok}` : ''} • {q.points || 1} {language === 'ar' ? 'درجة' : 'pts'}
-                          </span>
-                          {q.standard && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">{q.standard}</span>}
-                        </div>
-                        <QuestionSummary html={q.text || q.textEn || ''} className="text-slate-700 font-bold truncate text-sm" />
-                      </div>
+              <div>
+                <h4 className="text-xl font-black text-slate-800 mb-1">{language === 'ar' ? 'لا يوجد أسئلة مضافة' : 'No questions added yet'}</h4>
+                <p className="text-slate-400 font-bold text-xs max-w-sm">{language === 'ar' ? 'ابدأ بإضافة سؤال جديد أو استيراده من ملف إكسيل' : 'Start by adding a new question or importing from Excel'}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleAddQuestionForSource(source)}
+                className="bg-indigo-50 text-indigo-600 px-8 py-3.5 rounded-2xl font-black transition-all hover:bg-indigo-100 cursor-pointer text-xs"
+              >
+                {language === 'ar' ? '+ إضافة أول سؤال' : '+ Add First Question'}
+              </button>
+            </div>
+          ) : (
+            list.map((q: any, index: number) => (
+              <div key={q.id ?? index} className="bg-white rounded-2xl sm:rounded-[30px] border border-slate-100 shadow-sm overflow-hidden group hover:shadow-md transition-all duration-300">
+                <div className="px-3 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                  <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 overflow-hidden">
+                    <div className="flex flex-col items-center gap-1 shrink-0">
+                      <button type="button" onClick={() => moveQuestionForSource(source, index, 'UP')} disabled={index === 0} className="text-slate-300 hover:text-indigo-600 disabled:opacity-20 transition-colors"><ChevronUp className="w-4 h-4" /></button>
+                      <span className="w-8 h-8 min-w-8 shrink-0 whitespace-nowrap tabular-nums bg-slate-900 text-white rounded-lg flex items-center justify-center font-black text-xs">{index + 1}</span>
+                      <button type="button" onClick={() => moveQuestionForSource(source, index, 'DOWN')} disabled={index === list.length - 1} className="text-slate-300 hover:text-indigo-600 disabled:opacity-20 transition-colors"><ChevronDown className="w-4 h-4" /></button>
                     </div>
-
-                    <div className="flex items-center justify-end gap-2 shrink-0">
-                      <button 
-                        type="button"
-                        onClick={() => setExpandedQuestionIndex(expandedQuestionIndex === index ? null : index)}
-                        className="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center hover:bg-slate-100 hover:text-indigo-600 transition-all"
-                        title="Expand"
-                      >
-                        {expandedQuestionIndex === index ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                      </button>
-                      <button 
-                        type="button"
-                        onClick={() => handleEditQuestionForSource(source, index)}
-                        className="w-10 h-10 bg-blue-50 text-blue-400 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"
-                        title="Edit"
-                      >
-                        <Edit2 className="w-5 h-5" />
-                      </button>
-                      <button 
-                        type="button"
-                        onClick={() => removeQuestionForSource(source, index)}
-                        className="w-10 h-10 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
+                    {(() => {
+                      const img = extractFirstImage(q);
+                      if (!img) return null;
+                      return (
+                        <div className="w-14 h-14 rounded-xl border border-slate-200 overflow-hidden bg-slate-50 shrink-0 flex items-center justify-center relative">
+                          <Image src={img} alt="Question image" fill sizes="56px" className="object-cover" unoptimized={shouldSkipImageOptimization(img)} />
+                        </div>
+                      );
+                    })()}
+                    <div className="flex flex-col flex-1 overflow-hidden">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded uppercase">
+                          {QUESTION_TYPES.find(t => t.id === q.type)?.label || q.type}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded uppercase">
+                          {q.level || "Medium"} {q.dok ? `• ${q.dok}` : ''} • {q.points || 1} {language === 'ar' ? 'درجة' : 'pts'}
+                        </span>
+                        {q.standard && <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">{q.standard}</span>}
+                      </div>
+                      <QuestionSummary
+                        html={resolvePreferredQuestionLang(q, language) === 'en' ? (q.textEn || q.text || '') : (q.text || q.textEn || '')}
+                        className="text-slate-700 font-bold truncate text-sm"
+                      />
                     </div>
                   </div>
 
+                  <div className="flex items-center justify-end gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedQuestionIndex(expandedQuestionIndex === index ? null : index)}
+                      className="w-10 h-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center hover:bg-slate-100 hover:text-indigo-600 transition-all"
+                      title="Expand"
+                    >
+                      {expandedQuestionIndex === index ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleEditQuestionForSource(source, index)}
+                      className="w-10 h-10 bg-blue-50 text-blue-400 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"
+                      title="Edit"
+                    >
+                      <Edit2 className="w-5 h-5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeQuestionForSource(source, index)}
+                      className="w-10 h-10 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
 
-                  {/* Question details collapsible view */}
-                  {expandedQuestionIndex === index && (() => {
-                    const qPreviewLang = cardPreviewLang[index] || questionActiveLang || 'ar';
-                    const isCardEn = qPreviewLang === 'en';
-                    const activeQText = (isCardEn && q.textEn) ? q.textEn : (q.text || q.textEn || '');
-                    const rawArOpts = Array.isArray(q.options) ? q.options : [];
-                    const rawEnOpts = Array.isArray(q.optionsEn) ? q.optionsEn : [];
-                    const activeQOpts = (isCardEn && rawEnOpts.length > 0) ? rawEnOpts : rawArOpts;
-                    const hasEnContent = Boolean(q.textEn) || rawEnOpts.length > 0 || Boolean(q.explanationEn);
-                    const cardSectionPresets: Record<string, any> = getSectionStylePresets(qPreviewLang);
 
-                    return (
+                {/* Question details collapsible view */}
+                {expandedQuestionIndex === index && (() => {
+                  const qPreviewLang = cardPreviewLang[index] || resolvePreferredQuestionLang(q, language);
+                  const isCardEn = qPreviewLang === 'en';
+                  const activeQText = (isCardEn && q.textEn) ? q.textEn : (q.text || q.textEn || '');
+                  const rawArOpts = Array.isArray(q.options) ? q.options : [];
+                  const rawEnOpts = Array.isArray(q.optionsEn) ? q.optionsEn : [];
+                  const activeQOpts = (isCardEn && rawEnOpts.length > 0) ? rawEnOpts : rawArOpts;
+                  const hasEnContent = Boolean(q.textEn) || rawEnOpts.length > 0 || Boolean(q.explanationEn);
+                  const cardSectionPresets: Record<string, any> = getSectionStylePresets(qPreviewLang);
+
+                  return (
                     <div className="px-8 pb-8 pt-4 border-t border-slate-50 bg-slate-50/30 animate-in slide-in-from-top-2 duration-300">
                       {hasEnContent && (
                         <div className="flex justify-end mb-4">
@@ -889,18 +867,16 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                             <button
                               type="button"
                               onClick={() => setCardPreviewLang(prev => ({ ...prev, [index]: 'ar' }))}
-                              className={`px-3 py-1 rounded-lg transition-all ${
-                                !isCardEn ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-50'
-                              }`}
+                              className={`px-3 py-1 rounded-lg transition-all ${!isCardEn ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-50'
+                                }`}
                             >
                               العربية
                             </button>
                             <button
                               type="button"
                               onClick={() => setCardPreviewLang(prev => ({ ...prev, [index]: 'en' }))}
-                              className={`px-3 py-1 rounded-lg transition-all ${
-                                isCardEn ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-50'
-                              }`}
+                              className={`px-3 py-1 rounded-lg transition-all ${isCardEn ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-50'
+                                }`}
                             >
                               English
                             </button>
@@ -923,7 +899,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                           })()}
                           <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{isCardEn ? 'Question Content:' : 'نص السؤال / المحتوى:'}</h5>
                           <HtmlRenderer html={activeQText} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm text-sm font-bold" />
-                          
+
                           {(isCardEn ? (q.learningOutcomeEn || q.learningOutcome) : q.learningOutcome) && (
                             <div className="flex items-center gap-2 text-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-150 w-fit text-xs font-bold">
                               <Target className="w-4 h-4" />
@@ -931,7 +907,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                             </div>
                           )}
                         </div>
-                        
+
                         <div className="space-y-4">
                           {q.type !== 'TEXT' && (
                             <>
@@ -958,8 +934,8 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                                 </div>
                               ) : q.type === 'FLASH_CARD' ? (
                                 <div className="p-4 bg-slate-50 border border-slate-150 rounded-2xl text-xs space-y-2 font-bold text-right" dir={isCardEn ? 'ltr' : 'rtl'}>
-                                  <p className="text-slate-800"><span className="text-indigo-600">{isCardEn ? 'Front (Question):' : 'الوجه الأمامي (السؤال):'}</span> {parseJson(isCardEn ? (q.optionsEn || q.options) : q.options, {front: ""}).front || activeQText}</p>
-                                  <p className="text-slate-800"><span className="text-indigo-600">{isCardEn ? 'Back (Answer):' : 'الوجه الخلفي (الإجابة):'}</span> {parseJson(isCardEn ? (q.optionsEn || q.options) : q.options, {back: ""}).back || (isCardEn ? (q.correctAnswerEn || q.correctAnswer) : q.correctAnswer)}</p>
+                                  <p className="text-slate-800"><span className="text-indigo-600">{isCardEn ? 'Front (Question):' : 'الوجه الأمامي (السؤال):'}</span> {parseJson(isCardEn ? (q.optionsEn || q.options) : q.options, { front: "" }).front || activeQText}</p>
+                                  <p className="text-slate-800"><span className="text-indigo-600">{isCardEn ? 'Back (Answer):' : 'الوجه الخلفي (الإجابة):'}</span> {parseJson(isCardEn ? (q.optionsEn || q.options) : q.options, { back: "" }).back || (isCardEn ? (q.correctAnswerEn || q.correctAnswer) : q.correctAnswer)}</p>
                                 </div>
                               ) : (
                                 <div className="p-4 bg-slate-50 border border-slate-150 rounded-2xl text-xs space-y-1.5 font-bold text-right" dir={isCardEn ? 'ltr' : 'rtl'}>
@@ -994,24 +970,24 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                         </div>
                       </div>
                     </div>
-                    );
-                  })()}
-                </div>
-              ))
-            )}
-          </div>
-        )}
+                  );
+                })()}
+              </div>
+            ))
+          )}
+        </div>
+      )}
 
-        {/* Premium Save Slide Form inside card list view */}
-        <LessonQuestionForm {...{source, currentLesson, language, showQuestionForm, setShowQuestionForm, editingQuestionIndex, tempQuestion, setTempQuestion, openDropdownId, setOpenDropdownId, showToast, showQuestionMetadata, setShowQuestionMetadata, showQuestionSections, setShowQuestionSections, questionActiveLang, setQuestionActiveLang, isTranslatingQuestion, extractFirstImage, handleAutoTranslateQuestion, QUESTION_TYPES, SECTION_STYLE_PRESETS, handleSaveQuestionForSource, updateCurrentQuestionField, updateQuestionOption, toggleQuestionCorrectAnswer, isQuestionCorrectAnswer, addQuestionSection, removeQuestionSection}} />
-        <CopySlidesModal 
-          isOpen={isCopyModalOpen}
-          onClose={() => setIsCopyModalOpen(false)}
-          sourceLessonId={currentLesson.id}
-          sourceSlides={list}
-          onSuccess={() => {}}
-          itemType={source}
-        />
-      </div>
-    );
+      {/* Premium Save Slide Form inside card list view */}
+      <LessonQuestionForm {...{ source, currentLesson, language, showQuestionForm, setShowQuestionForm, editingQuestionIndex, tempQuestion, setTempQuestion, openDropdownId, setOpenDropdownId, showToast, showQuestionMetadata, setShowQuestionMetadata, showQuestionSections, setShowQuestionSections, questionActiveLang, setQuestionActiveLang, isTranslatingQuestion, extractFirstImage, handleAutoTranslateQuestion, QUESTION_TYPES, SECTION_STYLE_PRESETS, handleSaveQuestionForSource, updateCurrentQuestionField, updateQuestionOption, toggleQuestionCorrectAnswer, isQuestionCorrectAnswer, addQuestionSection, removeQuestionSection }} />
+      <CopySlidesModal
+        isOpen={isCopyModalOpen}
+        onClose={() => setIsCopyModalOpen(false)}
+        sourceLessonId={currentLesson.id}
+        sourceSlides={list}
+        onSuccess={() => { }}
+        itemType={source}
+      />
+    </div>
+  );
 };

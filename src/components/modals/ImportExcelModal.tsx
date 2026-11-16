@@ -24,11 +24,12 @@ export default function ImportExcelModal({ isOpen, onClose, onSuccess }: Props) 
   const handleDownloadTemplate = async () => {
     try {
       const token = localStorage.getItem("super_admin_token") || localStorage.getItem("school_admin_token");
-      const res = await fetch(`${API_URL}/school/import/template`, {
+      const lang = language === "en" ? "en" : "ar";
+      const res = await fetch(`${API_URL}/school/import/template?lang=${lang}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) throw new Error("Failed to download template");
-      
+
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -122,7 +123,7 @@ export default function ImportExcelModal({ isOpen, onClose, onSuccess }: Props) 
               <li>{language === 'ar' ? "يمكنك كتابة نص عادي في أعمدة الواجبات والاختبارات، وسيقوم النظام بتحويلها تلقائياً، أو استخدم JSON." : "You can write plain text in assignments/questions columns and the system will auto-format them."}</li>
               <li>{language === 'ar' ? "إذا كان الشيت باللغة الإنجليزية فقط، يقوم النظام تلقائياً بترجمة النصوص والأسئلة والجداول والميتا داتا للعربية مع الحفاظ على المعادلات (LaTeX)." : "English-only workbooks are automatically translated to Arabic while keeping English fields and LaTeX equations intact."}</li>
             </ul>
-            <button 
+            <button
               onClick={handleDownloadTemplate}
               className="mt-4 flex items-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-700 font-bold rounded-xl hover:bg-indigo-200 transition-colors"
             >
@@ -132,14 +133,14 @@ export default function ImportExcelModal({ isOpen, onClose, onSuccess }: Props) 
           </div>
 
           {/* Upload Area */}
-          <div 
+          <div
             onClick={() => fileInputRef.current?.click()}
             className={`border-2 border-dashed rounded-3xl p-10 flex flex-col items-center justify-center text-center cursor-pointer transition-colors ${file ? 'border-indigo-500 bg-indigo-50/50' : 'border-slate-200 hover:border-indigo-400 hover:bg-slate-50'}`}
           >
-            <input 
-              type="file" 
-              accept=".xlsx,.xls,.csv" 
-              className="hidden" 
+            <input
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              className="hidden"
               ref={fileInputRef}
               onChange={handleFileChange}
             />
@@ -171,14 +172,14 @@ export default function ImportExcelModal({ isOpen, onClose, onSuccess }: Props) 
 
         {/* Footer */}
         <div className="p-6 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-3 rounded-b-3xl">
-          <button 
+          <button
             onClick={onClose}
             disabled={isUploading}
             className="px-6 py-3 rounded-xl text-slate-600 font-bold hover:bg-slate-200 transition-colors disabled:opacity-50"
           >
             {language === 'ar' ? "إلغاء" : "Cancel"}
           </button>
-          <button 
+          <button
             onClick={handleUpload}
             disabled={!file || isUploading}
             className="flex items-center gap-2 px-8 py-3 rounded-xl bg-indigo-600 text-white font-black hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:bg-slate-300"

@@ -12,7 +12,7 @@ export default function TrueFalseEditor({ question, updateQuestionData, language
   const isFalseVal = (v: any) => ["خطأ", "false", "0", "غير صحيح"].includes(String(v || "").trim().toLowerCase()) || String(v) === "False";
 
   const setCorrect = (val: string) => {
-    updateQuestionData({ choices: ["True", "False"] }, val);
+    updateQuestionData({ choices: language === 'ar' ? ["صحيح", "خطأ"] : ["True", "False"] }, language === 'ar' ? (val === 'True' ? 'صحيح' : val === 'False' ? 'خطأ' : val) : val);
   };
 
   const isTrue = isTrueVal(correctVal);
@@ -27,35 +27,33 @@ export default function TrueFalseEditor({ question, updateQuestionData, language
         <button
           type="button"
           onClick={() => setCorrect("True")}
-          className={`flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all duration-200 cursor-pointer ${
-            isTrue 
-              ? "bg-emerald-50/70 border-emerald-500 shadow-md shadow-emerald-500/10 text-emerald-700" 
+          className={`flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all duration-200 cursor-pointer ${isTrue
+              ? "bg-emerald-50/70 border-emerald-500 shadow-md shadow-emerald-500/10 text-emerald-700"
               : "bg-slate-50/50 border-slate-200 text-slate-500 hover:bg-slate-50 hover:border-slate-300"
-          }`}
+            }`}
         >
           <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 transition-colors ${isTrue ? "bg-emerald-500 text-white" : "bg-slate-200 text-slate-400"}`}>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-6 h-6">
               <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
             </svg>
           </div>
-          <span className="font-black text-sm">True</span>
+          <span className="font-black text-sm">{language === 'ar' ? 'صحيح' : 'True'}</span>
         </button>
 
         <button
           type="button"
           onClick={() => setCorrect("False")}
-          className={`flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all duration-200 cursor-pointer ${
-            isFalse 
-              ? "bg-rose-50/70 border-rose-500 shadow-md shadow-rose-500/10 text-rose-700" 
+          className={`flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all duration-200 cursor-pointer ${isFalse
+              ? "bg-rose-50/70 border-rose-500 shadow-md shadow-rose-500/10 text-rose-700"
               : "bg-slate-50/50 border-slate-200 text-slate-500 hover:bg-slate-50 hover:border-slate-300"
-          }`}
+            }`}
         >
           <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 transition-colors ${isFalse ? "bg-rose-500 text-white" : "bg-slate-200 text-slate-400"}`}>
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-6 h-6">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
-          <span className="font-black text-sm">False</span>
+          <span className="font-black text-sm">{language === 'ar' ? 'خطأ' : 'False'}</span>
         </button>
       </div>
     </div>
@@ -63,4 +61,4 @@ export default function TrueFalseEditor({ question, updateQuestionData, language
 }
 
 // -------------------------------------------------------------
-// 📝 3. MULTI_SELECT (اختيارات متعددة)
+// 📝 3. MULTI_SELECT (اختيارات متعددة)

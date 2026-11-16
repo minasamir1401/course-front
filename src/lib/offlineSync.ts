@@ -25,6 +25,15 @@ export interface OfflineSyncState {
   lastSyncedAt: string | null;
   lastError: string | null;
 }
+export interface ExportedBrowserWorkspaceData {
+  exportedAt: string;
+  origin: string | null;
+  indexedDbAvailable: boolean;
+  editorDrafts: StoredDraft[];
+  pendingSaves: Array<Omit<PendingSave, "headers">>;
+  localStorageDrafts: Array<{ key: string; value: unknown }>;
+  legacyQueue: Array<Omit<PendingSave, "headers">>;
+}
 type Listener = (state: OfflineSyncState) => void;
 interface StoredDraft { key: string; payload: unknown; savedAt: string }
 let databasePromise: Promise<IDBDatabase | null> | null = null;
@@ -231,6 +240,88 @@ class OfflineSyncManager {
     const database = await openDatabase(); if (!database) return;
     const transaction = database.transaction(DRAFT_STORE, "readwrite");
     const done = transactionDone(transaction); transaction.objectStore(DRAFT_STORE).delete(key); await done;
+  }
+  async exportBrowserWorkspaceData(): Promise<ExportedBrowserWorkspaceData> {
+    await this.ready;
+    const database = await openDatabase();
+    let editorDrafts: StoredDraft[] = [];
+    let storedPending: PendingSave[] = [];
+
+    if (database) {
+      try {
+        editorDrafts = await requestResult(database.transaction(DRAFT_STORE, "readonly").objectStore(DRAFT_STORE).getAll()) || [];
+      } catch {}
+      try {
+        storedPending = await requestResult(database.transaction(QUEUE_STORE, "readonly").objectStore(QUEUE_STORE).getAll()) || [];
+      } catch {}
+    }
+
+    const pendingMap = new Map<string, Omit<PendingSave, "headers">>();
+    for (const entry of [...storedPending, ...this.queue]) {
+      if (!entry || typeof entry.id !== "string") continue;
+      const { headers: _headers, ...safeEntry } = entry;
+      pendingMap.set(entry.id, safeEntry);
+    }
+
+    const localStorageDrafts: Array<{ key: string; value: unknown }> = [];
+    let legacyQueue: Array<Omit<PendingSave, "headers">> = [];
+    if (typeof localStorage !== "undefined") {
+      try {
+        const rawLegacy = localStorage.getItem(LEGACY_QUEUE_STORAGE_KEY);
+        if (rawLegacy) {
+          const parsed = JSON.parse(rawLegacy);
+          if (Array.isArray(parsed)) {
+            legacyQueue = parsed
+              .filter((entry: any): entry is PendingSave => Boolean(entry) && typeof entry === "object")
+              .map(({ headers: _headers, ...entry }) => entry);
+          }
+        }
+      } catch {}
+
+      if (typeof localStorage.length === "number" && typeof localStorage.key === "function") {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (!key || (!key.startsWith("lms_draft_v2:") && !key.startsWith("lms_draft_"))) continue;
+          try {
+            const raw = localStorage.getItem(key);
+            localStorageDrafts.push({ key, value: raw ? JSON.parse(raw) : null });
+          } catch {
+            localStorageDrafts.push({ key, value: localStorage.getItem(key) });
+          }
+        }
+      }
+    }
+
+    return {
+      exportedAt: new Date().toISOString(),
+      origin: typeof window !== "undefined" && window.location?.origin ? window.location.origin : null,
+      indexedDbAvailable: Boolean(database),
+      editorDrafts,
+      pendingSaves: Array.from(pendingMap.values()),
+      localStorageDrafts,
+      legacyQueue,
+    };
+  }
+  async downloadBrowserWorkspaceBackup(): Promise<{
+    editorDraftsCount: number;
+    pendingSavesCount: number;
+    localStorageDraftsCount: number;
+  }> {
+    const data = await this.exportBrowserWorkspaceData();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `klevro-browser-drafts-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return {
+      editorDraftsCount: data.editorDrafts.length,
+      pendingSavesCount: data.pendingSaves.length + data.legacyQueue.length,
+      localStorageDraftsCount: data.localStorageDrafts.length,
+    };
   }
   private storageError() {
     this.lastError = "تعذر حفظ التغييرات في المتصفح. لا تغلق الصفحة؛ نزّل نسخة من التغييرات.";

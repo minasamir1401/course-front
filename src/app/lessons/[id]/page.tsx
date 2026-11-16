@@ -636,7 +636,7 @@ export default function LessonPlayerPage() {
                         </div>
                         {/* Question Text */}
                         <div className="question-frame mb-8 w-full">
-                          <HtmlRenderer html={lesson.assignments[currentAssignmentIndex].text} tag="div" className="text-lg md:text-2xl font-black text-slate-900 leading-relaxed tracking-tight break-words w-full text-start" />
+                          <HtmlRenderer html={language === 'en' ? (lesson.assignments[currentAssignmentIndex].textEn || lesson.assignments[currentAssignmentIndex].text) : (lesson.assignments[currentAssignmentIndex].text || lesson.assignments[currentAssignmentIndex].textEn)} tag="div" className="text-lg md:text-2xl font-black text-slate-900 leading-relaxed tracking-tight break-words w-full text-start" />
                         </div>
                         {/* Question Input */}
                         {isQuestionLike(lesson.assignments[currentAssignmentIndex]) && (
@@ -973,7 +973,7 @@ export default function LessonPlayerPage() {
                           </div>
                         </div>
                         <div className="question-frame mb-8 w-full">
-                          <HtmlRenderer html={lesson.questions[currentQuestionIndex].text} tag="div" className="text-lg md:text-2xl font-black text-slate-900 leading-relaxed tracking-tight break-words w-full text-start" />
+                          <HtmlRenderer html={language === 'en' ? (lesson.questions[currentQuestionIndex].textEn || lesson.questions[currentQuestionIndex].text) : (lesson.questions[currentQuestionIndex].text || lesson.questions[currentQuestionIndex].textEn)} tag="div" className="text-lg md:text-2xl font-black text-slate-900 leading-relaxed tracking-tight break-words w-full text-start" />
                         </div>
                         {/* Resolve effective type: if type='QUESTION', use label; otherwise use type */}
                         {['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(

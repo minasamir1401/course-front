@@ -33,10 +33,14 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({ language = "ar" })
 
   const arabic = language === "ar";
 
-  const exportPending = () => {
+  const exportPending = async () => {
     try {
-      const data = offlineSync.getPending().map(({ headers: _headers, ...entry }) => entry);
-      const url = URL.createObjectURL(new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), changes: data }, null, 2)], { type: "application/json" }));
+      const workspace = await offlineSync.exportBrowserWorkspaceData();
+      const payload = {
+        ...workspace,
+        changes: workspace.pendingSaves,
+      };
+      const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
       const anchor = document.createElement("a");
       anchor.href = url;
       anchor.download = `pending-changes-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
@@ -111,7 +115,7 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({ language = "ar" })
       {state.pendingCount > 0 && (
         <button
           type="button"
-          onClick={exportPending}
+          onClick={() => void exportPending()}
           className="rounded-full border border-amber-400 px-3 py-1 text-xs text-amber-200 hover:bg-amber-950/40 transition-colors"
         >
           {arabic ? "تنزيل نسخة" : "Download changes"}

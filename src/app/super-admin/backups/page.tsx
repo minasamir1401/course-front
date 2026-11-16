@@ -28,6 +28,8 @@ function isBundledArchiveBackup(backup: BackupFile) {
   );
 }
 
+const isR2Backup = (backup: BackupFile) => backup.type === 'R2_FULL_SYSTEM';
+
 export default function BackupsPage() {
   const { showToast } = useNotification();
   const { t, language } = useLanguage();
@@ -58,6 +60,7 @@ export default function BackupsPage() {
   // Explorer states
   const [isExplorerOpen, setIsExplorerOpen] = useState(false);
   const [explorerTree, setExplorerTree] = useState<any[]>([]);
+  const [explorerDetails, setExplorerDetails] = useState<any>(null);
   const [explorerFilename, setExplorerFilename] = useState("");
   const [explorerSource, setExplorerSource] = useState<'local' | 'cloud'>('local');
   const [liveCourses, setLiveCourses] = useState<{ id: string; title: string }[]>([]);
@@ -146,7 +149,18 @@ export default function BackupsPage() {
         }
       });
       if (res.ok) {
-        showToast(language === 'ar' ? "تم إنشاء النسخة الاحتياطية بنجاح" : "Backup created successfully", "success");
+        const data = await res.json().catch(() => ({}));
+        const filesCount = Number(data?.localUploadFiles || 0);
+        showToast(
+          language === 'ar'
+            ? (filesCount > 0
+                ? `تم عمل نسخة كاملة بالصور بنجاح (${filesCount} صورة/ملف مع قاعدة البيانات)`
+                : "تم عمل نسخة كاملة بالصور وقاعدة البيانات بنجاح")
+            : (filesCount > 0
+                ? `Full backup created with ${filesCount} images and database`
+                : "Full backup with images and database created successfully"),
+          "success"
+        );
         fetchBackups();
       } else {
         const data = await res.json().catch(() => ({}));
@@ -239,6 +253,7 @@ export default function BackupsPage() {
       const data = await res.json();
       if (res.ok) {
         setExplorerTree(data.tree);
+        setExplorerDetails(data.details || null);
         setExplorerFilename(filename);
         setExplorerSource(source);
         setIsExplorerOpen(true);
@@ -261,7 +276,13 @@ export default function BackupsPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        showToast(language === 'ar' ? "تمت الاستعادة بنجاح!" : "Restored successfully!", "success");
+        const addedCopies = Number(data?.createdAsNewCount || 0);
+        const successMsg = addedCopies > 0
+          ? (language === 'ar'
+              ? `تمت الاستعادة بنجاح (تمت إضافة ${addedCopies} درس بمعرف جديد بجانب الموجود دون استبداله)`
+              : `Restored successfully (${addedCopies} lesson(s) added with a new ID alongside existing lessons)`)
+          : (language === 'ar' ? "تمت الاستعادة بنجاح!" : "Restored successfully!");
+        showToast(successMsg, "success");
         setIsExplorerOpen(false);
       } else {
         showToast(data.error || "Failed to restore", "error");
@@ -315,40 +336,17 @@ export default function BackupsPage() {
     }
   };
 
-  const handleCreateManualArchive = async () => {
-    if (creating) return;
-    setCreating(true);
-    try {
-      const token = localStorage.getItem("super_admin_token") || localStorage.getItem("token");
-      const res = await apiFetch(`${API_URL}/admin/backup/bundle-manual`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        showToast(language === 'ar' ? "تم إنشاء الأرشيف المجمع وحفظه بنجاح" : "Bundled archive created and saved successfully", "success");
-        await fetchBackups();
-      } else {
-        const error = await res.json();
-        showToast(error.error || "خطأ في إنشاء الأرشيف", "error");
-      }
-    } catch (e) {
-      console.error(e);
-      showToast("خطأ في الاتصال بالخادم", "error");
-    } finally {
-      setCreating(false);
-    }
-  };
-
   const handleSelectAll = () => {
-    if (selectedBackups.length === backups.length) {
+    const deletableBackups = backups.filter(backup => !isR2Backup(backup));
+    if (selectedBackups.length === deletableBackups.length) {
       setSelectedBackups([]);
     } else {
-      setSelectedBackups(backups.map(b => b.name));
+      setSelectedBackups(deletableBackups.map(b => b.name));
     }
   };
 
   const handleSelectOldest = () => {
-    const restorableBackups = backups.filter(b => !isBundledArchiveBackup(b));
+    const restorableBackups = individualBackups.filter(backup => !isR2Backup(backup));
     const sorted = [...restorableBackups].sort((a, b) => {
       const dateA = new Date(a.createdAt || 0).getTime();
       const dateB = new Date(b.createdAt || 0).getTime();
@@ -551,20 +549,12 @@ export default function BackupsPage() {
               <span>{language === 'ar' ? "تحميل نسخة شاملة بالصور" : "Download Full Backup (with Images)"}</span>
             </button>
             <button 
-              onClick={handleCreateManualArchive}
-              disabled={creating || uploading || restoring || backups.length === 0}
-              className="bg-purple-600/20 hover:bg-purple-600 border border-purple-500/50 hover:border-purple-500 text-white font-bold px-6 py-4 rounded-2xl flex items-center gap-3 transition-all cursor-pointer backdrop-blur-md shadow-md text-sm active:scale-95 disabled:opacity-50"
-            >
-              <Archive className="w-5 h-5 text-purple-300" />
-              <span>{language === 'ar' ? "تجميع وحفظ كـ ZIP" : "Bundle & Save as ZIP"}</span>
-            </button>
-            <button 
               onClick={handleCreateBackup}
               disabled={creating || uploading || restoring}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-6 py-4 rounded-2xl flex items-center gap-3 transition-all cursor-pointer shadow-lg shadow-indigo-500/20 text-sm active:scale-95 disabled:opacity-50"
+              className="min-[541px]:col-span-2 justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-black px-6 py-4 rounded-2xl flex items-center gap-3 transition-all cursor-pointer shadow-lg shadow-indigo-500/20 text-sm active:scale-95 disabled:opacity-50"
             >
               {creating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
-              <span>{language === 'ar' ? "إنشاء نسخة جديدة" : "Create New Backup"}</span>
+              <span>{language === 'ar' ? "عمل نسخة كاملة بالصور" : "Create Full Backup (with Images)"}</span>
             </button>
           </div>
         </div>
@@ -647,20 +637,20 @@ export default function BackupsPage() {
                   className="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-8 py-3.5 rounded-2xl flex items-center gap-2.5 transition-all cursor-pointer shadow-md"
                 >
                   <Plus className="w-5 h-5" />
-                  <span>{language === 'ar' ? "إنشاء أول نسخة الآن" : "Create Checkpoint"}</span>
+                  <span>{language === 'ar' ? "عمل نسخة كاملة بالصور" : "Create Full Backup (with Images)"}</span>
                 </button>
               </div>
             ) : (
               <div className={`${styles.fileList} flex flex-col gap-4 max-h-[600px] overflow-y-auto custom-scrollbar pr-2`}>
                 {individualBackups.map((backup) => {
-                  const isArchive = isBundledArchiveBackup(backup);
+                  const isR2 = isR2Backup(backup);
                   return (
                     <div 
                     key={backup.name} 
                     className={`${styles.fileCard} bg-white hover:bg-slate-50/50 border ${selectedBackups.includes(backup.name) ? 'border-red-400 ring-2 ring-red-100' : 'border-slate-100'} rounded-[28px] p-6 flex flex-col gap-4 shadow-sm hover:shadow-md transition-all duration-300 relative`}
                   >
                     <div className={`${styles.fileInfo} flex flex-col sm:flex-row items-start sm:items-center gap-5 w-full`}>
-                      {showDeleteButton && (
+                      {showDeleteButton && !isR2 && (
                         <div className="absolute top-4 right-4 sm:relative sm:top-auto sm:right-auto sm:ml-2">
                           <input 
                             type="checkbox" 
@@ -677,7 +667,7 @@ export default function BackupsPage() {
                         </div>
                       )}
                       <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-[20px] flex items-center justify-center shrink-0">
-                          {backup.name.endsWith('.zip') ? <Archive className="w-7 h-7" /> : <FileJson className="w-7 h-7" />}
+                          {isR2 || backup.name.endsWith('.zip') ? <Archive className="w-7 h-7" /> : <FileJson className="w-7 h-7" />}
                       </div>
                       <div className="space-y-1.5 min-w-0 flex-1">
                         <h4 className="text-lg font-black text-slate-800 break-words whitespace-normal" title={backup.name}>{backup.name}</h4>
@@ -694,7 +684,11 @@ export default function BackupsPage() {
                       </div>
                     </div>
                     <div className={`${styles.fileActions} flex items-center gap-3 w-full pt-2`}>
-                      {!isArchive ? (
+                      {isR2 ? (
+                        <div className="flex-1 bg-slate-50 text-slate-600 font-bold px-5 py-3 rounded-xl border border-slate-100 text-sm text-center">
+                          {language === 'ar' ? 'نسخة مشفّرة على Cloudflare R2. حمّلها لاستعادتها باستخدام مفتاح age.' : 'Encrypted Cloudflare R2 backup. Download it to restore with your age key.'}
+                        </div>
+                      ) : (
                         <>
                           <button
                             onClick={() => handleExplore(backup.name, backup.isCloud ? 'cloud' : 'local')}
@@ -712,10 +706,6 @@ export default function BackupsPage() {
                             {language === 'ar' ? "استعادة شاملة" : "Full Restore"}
                           </button>
                         </>
-                      ) : (
-                        <div className="flex-1 bg-slate-50 text-slate-400 font-bold px-5 py-3 rounded-xl border border-slate-100 text-sm flex items-center justify-center text-center">
-                          {language === 'ar' ? "أرشيف مجمع (حمل لفك الضغط)" : "Bundled Archive (Download to extract)"}
-                        </div>
                       )}
                       <button
                         onClick={() => handleDownloadBackup(backup.name)}
@@ -725,7 +715,7 @@ export default function BackupsPage() {
                       >
                         <Download className="w-5 h-5" />
                       </button>
-                      {showDeleteButton && (
+                      {showDeleteButton && !isR2 && (
                         <button
                           onClick={() => handleDeleteBackup(backup.name)}
                           className="bg-red-50 hover:bg-red-600 hover:text-white text-red-500 p-3.5 rounded-xl transition-all cursor-pointer border border-red-100 shrink-0 animate-in fade-in zoom-in"
@@ -917,6 +907,7 @@ export default function BackupsPage() {
         isOpen={isExplorerOpen}
         onClose={() => setIsExplorerOpen(false)}
         treeData={explorerTree}
+        details={explorerDetails}
         filename={explorerFilename}
         source={explorerSource}
         liveCourses={liveCourses}

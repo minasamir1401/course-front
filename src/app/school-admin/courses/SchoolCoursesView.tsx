@@ -57,7 +57,7 @@ export default function SchoolCoursesView() {
 
   const handleCourseExport = async (course: any, format: 'excel' | 'json') => {
     try {
-      await downloadCourseBackupFile(course.id, format, "school_admin_token", course.title);
+      await downloadCourseBackupFile(course.id, format, "school_admin_token", course.title, language);
       showToast(
         language === 'ar'
           ? `تم تحميل النسخة الاحتياطية (${format === 'excel' ? 'Excel' : 'JSON'}) بنجاح`

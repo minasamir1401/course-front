@@ -374,3 +374,31 @@ test('importLessonSlides detaches lesson identity instead of merging into an ope
   assert.equal(currentLesson.slides[0].title, 'Orbital Velocity');
   assert.deepEqual(currentLesson.questions, []);
 });
+
+test('Arabic slides and questions preserve Arabic text, LaTeX, combined options, and TRUE_FALSE Arabic answers', () => {
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
+    ['عنوان الدرس بالعربية', 'المجال بالعربية'],
+    ['المعادلات الجبرية', 'الجبر'],
+  ]), 'Metadata');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
+    ['الترتيب', 'النوع', 'العنوان بالعربية', 'المحتوى بالعربية', 'الخيارات بالعربية', 'الإجابة الصحيحة بالعربية'],
+    [1, 'TEXT', 'تمهيد', '<p>نحل المعادلة $2x = 10$</p>', '', ''],
+    [2, 'TRUE_FALSE', 'سؤال تحقق', 'قيمة $x$ تساوي $5$', 'صحيح | خطأ', 'صحيح'],
+    [3, 'MCQ', 'اختر الإجابة', 'ما ضعف العدد 4؟', '6 | 8 | 10', '8'],
+  ]), 'Slides');
+
+  const roundtripped = roundtripWorkbook(wb);
+  const imported = importFullLessonWorkbook(roundtripped, { id: 'l-ar', slides: [], questions: [], assignments: [] }, 'ar');
+  assert.equal(imported.title, 'المعادلات الجبرية');
+  assert.equal(imported.slides.length, 3);
+  assert.ok(imported.slides[0].content.includes('$2x = 10$'));
+  assert.equal(imported.slides[1].label, 'TRUE_FALSE');
+  assert.deepEqual(imported.slides[1].options, ['صحيح', 'خطأ']);
+  assert.equal(imported.slides[1].correctAnswer, 'صحيح');
+  assert.deepEqual(imported.slides[2].options, ['6', '8', '10']);
+  assert.equal(imported.slides[2].correctAnswer, '8');
+
+  const sampleSlideRows = buildSlidesWorkbook([], 'ar');
+  assert.equal(EMOJI_PATTERN.test(JSON.stringify(XLSX.utils.sheet_to_json(sampleSlideRows.Sheets[sampleSlideRows.SheetNames[0]], { header: 1 }))), false);
+});

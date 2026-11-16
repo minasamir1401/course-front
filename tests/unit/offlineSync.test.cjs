@@ -10,7 +10,7 @@ const userB={id:'bob',schoolId:'school-b',role:'TEACHER'};
 function harness({write=async()=>new Response('{}'),storage=new Map(),session=userA,failStorage=false}={}) {
   storage.set('school_admin_user', JSON.stringify(session)); storage.set('school_admin_token','cookie_auth');
   const sent=[],timers=[],events={};
-  const localStorage={getItem:k=>storage.get(k)??null,setItem:(k,v)=>{if(failStorage)throw new Error('quota exceeded');storage.set(k,v)},removeItem:k=>storage.delete(k)};
+  const localStorage={getItem:k=>storage.get(k)??null,setItem:(k,v)=>{if(failStorage)throw new Error('quota exceeded');storage.set(k,v)},removeItem:k=>storage.delete(k),get length(){return storage.size},key:i=>Array.from(storage.keys())[i]??null};
   let currentSession=session;
   const fetch=async(url,init)=>{
     if(String(url).endsWith('/auth/session'))return Response.json({user:currentSession});
@@ -95,4 +95,38 @@ test('flush skips item if removeByUrl cancels it while verifying session',async(
   assert.equal(sent.length,0);
   assert.equal(queueRef.getPending().length,0);
 });
+
+test('exportBrowserWorkspaceData collects drafts and sanitizes headers while excluding auth tokens',async()=>{
+  const storage=new Map([
+    ['super_admin_token','secret-super-token'],
+    ['lms_draft_v2:alice:course-chem',JSON.stringify({title:'SAAT Chemistry',lessons:[{title:'Acids'}]})],
+    ['lms_draft_legacy',JSON.stringify({title:'Old Draft'})],
+    ['unrelated_key','ignore-me'],
+  ]);
+  const h=harness({storage});await ready();
+  await h.queue.enqueue({...item('{"title":"Pending Course"}'),headers:{'Content-Type':'application/json',Authorization:'Bearer secret-bearer'}});
+  const exported=await h.queue.exportBrowserWorkspaceData();
+  assert.equal(exported.origin,'https://lms.test');
+  assert.equal(exported.localStorageDrafts.length,2);
+  assert.deepEqual(Array.from(exported.localStorageDrafts, d=>d.key).sort(),['lms_draft_legacy','lms_draft_v2:alice:course-chem']);
+  assert.equal(exported.pendingSaves.length,1);
+  assert.equal('headers' in exported.pendingSaves[0],false);
+  const serialized=JSON.stringify(exported);
+  assert.equal(serialized.includes('secret-super-token'),false);
+  assert.equal(serialized.includes('secret-bearer'),false);
+  assert.equal(serialized.includes('cookie_auth'),false);
+  assert.equal(serialized.includes('unrelated_key'),false);
+});
+
+test('exportBrowserWorkspaceData ignores null or corrupt items in offline queue',async()=>{
+  const storage=new Map([
+    ['lms_offline_sync_queue',JSON.stringify([null,'bad-entry',{...item('{"title":"Valid"}'),id:'q-1',enqueuedAt:'2026-11-16T00:00:00.000Z',attempts:0}])],
+  ]);
+  const h=harness({storage});await ready();
+  const exported=await h.queue.exportBrowserWorkspaceData();
+  assert.equal(exported.pendingSaves.length,1);
+  assert.equal(exported.pendingSaves[0].id,'q-1');
+  assert.equal('headers' in exported.pendingSaves[0],false);
+});
+
 

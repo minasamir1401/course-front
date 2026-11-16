@@ -280,9 +280,9 @@ export function parseInteractiveFromExcel(
     const choices = optionsList.length
       ? optionsList
       : trimmedCell
-          .split(/\||[,،]/)
-          .map(s => s.trim())
-          .filter(Boolean);
+        .split(/\||[,،]/)
+        .map(s => s.trim())
+        .filter(Boolean);
     const ansArr = correctText
       ? correctText.split(/\||[,،]/).map(s => s.trim()).filter(Boolean)
       : choices;
@@ -296,9 +296,9 @@ export function parseInteractiveFromExcel(
     const choices = optionsList.length
       ? optionsList
       : trimmedCell
-          .split(/\||\r?\n|[,،]/)
-          .map(s => s.trim())
-          .filter(Boolean);
+        .split(/\||\r?\n|[,،]/)
+        .map(s => s.trim())
+        .filter(Boolean);
     return {
       options: JSON.stringify({ choices }),
       correctAnswer: correctText || JSON.stringify(choices),
@@ -443,13 +443,13 @@ export function slidesExportRows(slides: SlideBlock[], language: string): any[][
       const correctAr = Array.isArray(slide.correctAnswers) && slide.correctAnswers.length
         ? JSON.stringify(slide.correctAnswers)
         : Array.isArray(slide.correctAnswer)
-        ? JSON.stringify(slide.correctAnswer)
-        : String(slide.correctAnswer ?? '');
+          ? JSON.stringify(slide.correctAnswer)
+          : String(slide.correctAnswer ?? '');
       const correctEn = Array.isArray(slide.correctAnswersEn) && slide.correctAnswersEn.length
         ? JSON.stringify(slide.correctAnswersEn)
         : Array.isArray(slide.correctAnswerEn)
-        ? JSON.stringify(slide.correctAnswerEn)
-        : String(slide.correctAnswerEn ?? '');
+          ? JSON.stringify(slide.correctAnswerEn)
+          : String(slide.correctAnswerEn ?? '');
 
       const interactiveAr = blockType === 'QUESTION' ? formatInteractiveForExcel(slide, 'ar') : '';
       const interactiveEn = blockType === 'QUESTION' ? formatInteractiveForExcel(slide, 'en') : '';
@@ -555,7 +555,7 @@ export function slidesTemplateRows(language: string): any[][] {
       contentEn: 'Force is measured in Newtons in the SI system.',
       options: ['صحيح', 'خطأ'],
       optionsEn: ['True', 'False'],
-      correctAnswer: 'True',
+      correctAnswer: 'صحيح',
       correctAnswerEn: 'True',
       points: 1,
     },
@@ -681,11 +681,11 @@ export function planSlidesImport(
   const idIdx = findCol(h => h.includes('slide id') || h.includes('معرف الشريحة') || h === 'id');
   const actionIdx = findCol(h => h.includes('action') || h.includes('الإجراء') || h.includes('الاجراء'));
   const blockTypeIdx = findCol(h => h.includes('block type') || h.includes('نوع الشريحة'));
-  const kindIdx = findCol(h => h.includes('slide kind') || h.includes('تصنيف الشريحة') || h === 'kind' || h === 'type');
+  const kindIdx = findCol(h => h.includes('slide kind') || h.includes('تصنيف الشريحة') || h === 'kind' || h === 'type' || h === 'النوع' || h.includes('نوع السؤال'));
   const titleEnIdx = findCol(h => isEn(h) && (h.includes('title') || h.includes('عنوان الشريحة')));
   const titleIdx = findCol((h, idx) => idx !== titleEnIdx && !h.includes('lesson') && (h.includes('title') || h.includes('عنوان الشريحة') || h === 'عنوان'));
-  const contentEnIdx = findCol(h => isEn(h) && (h.includes('content') || h.includes('محتوى') || h.includes('الشرح')));
-  const contentIdx = findCol((h, idx) => idx !== contentEnIdx && (h.includes('content') || h.includes('محتوى') || h.includes('الشرح')));
+  const contentEnIdx = findCol(h => isEn(h) && (h.includes('content') || h.includes('محتوى') || h.includes('الشرح') || h.includes('question text') || h === 'text en'));
+  const contentIdx = findCol((h, idx) => idx !== contentEnIdx && !isEn(h) && (h.includes('content') || h.includes('محتوى') || h.includes('الشرح') || h.includes('question text') || h.includes('نص السؤال') || h === 'text ar' || h === 'text' || h === 'السؤال'));
   const tableEnIdx = findCol(h => isEn(h) && (h.includes('table') || h.includes('الجدول') || h.includes('جدول')));
   const tableIdx = findCol((h, idx) => idx !== tableEnIdx && (h.includes('table') || h.includes('الجدول') || h.includes('جدول')));
   const videoIdx = findCol(h => h.includes('video') || h.includes('فيديو'));
@@ -698,6 +698,8 @@ export function planSlidesImport(
 
   const optEnCols = [1, 2, 3, 4, 5].map(n => findCol(h => isEn(h) && h.includes(String(n)) && (h.includes('option') || h.includes('خيار') || h.includes('الخيار'))));
   const optArCols = [1, 2, 3, 4, 5].map((n, i) => findCol((h, idx) => !optEnCols.includes(idx) && h.includes(String(n)) && (h.includes('option') || h.includes('خيار') || h.includes('الخيار'))));
+  const combinedOptEnCol = optEnCols.every(i => i < 0) ? findCol(h => isEn(h) && (h.includes('options') || h.includes('الخيارات')) && !/[1-5]/.test(h)) : -1;
+  const combinedOptArCol = optArCols.every(i => i < 0) ? findCol((h, idx) => idx !== combinedOptEnCol && !isEn(h) && (h.includes('options') || h.includes('الخيارات')) && !/[1-5]/.test(h)) : -1;
   const correctEnIdx = findCol(h => isEn(h) && (h.includes('correct answer') || h.includes('الإجابة الصحيحة') || h.includes('الاجابة الصحيحة')));
   const correctArIdx = findCol((h, idx) => idx !== correctEnIdx && (h.includes('correct answer') || h.includes('الإجابة الصحيحة') || h.includes('الاجابة الصحيحة')));
 
@@ -797,8 +799,18 @@ export function planSlidesImport(
     if (videoIdx >= 0) slide.videoUrl = key(row[videoIdx]);
 
     if (slide.type === 'QUESTION') {
-      const optsAr = optArCols.map(i => (i >= 0 ? String(row[i] ?? '').trim() : '')).filter(Boolean);
-      const optsEn = optEnCols.map(i => (i >= 0 ? String(row[i] ?? '').trim() : '')).filter(Boolean);
+      const optsArFromCols = optArCols.map(i => (i >= 0 ? String(row[i] ?? '').trim() : '')).filter(Boolean);
+      const optsAr = optsArFromCols.length
+        ? optsArFromCols
+        : combinedOptArCol >= 0
+          ? String(row[combinedOptArCol] ?? '').split(/\s*\|\s*|[,،]/).map(s => s.trim()).filter(Boolean)
+          : [];
+      const optsEnFromCols = optEnCols.map(i => (i >= 0 ? String(row[i] ?? '').trim() : '')).filter(Boolean);
+      const optsEn = optsEnFromCols.length
+        ? optsEnFromCols
+        : combinedOptEnCol >= 0
+          ? String(row[combinedOptEnCol] ?? '').split(/\s*\|\s*|[,،]/).map(s => s.trim()).filter(Boolean)
+          : [];
       const ansAr = correctArIdx >= 0 ? String(row[correctArIdx] ?? '').trim() : '';
       const ansEn = correctEnIdx >= 0 ? String(row[correctEnIdx] ?? '').trim() : '';
       const interAr = interactiveIdx >= 0 ? String(row[interactiveIdx] ?? '').trim() : '';
@@ -814,10 +826,15 @@ export function planSlidesImport(
           slide.correctAnswerEn = parsedEn.correctAnswer;
         }
       } else if (slide.label === 'TRUE_FALSE') {
-        slide.options = optsAr.length ? optsAr : ['صحيح', 'خطأ'];
+        const hasArSlide = /[\u0600-\u06FF]/.test(`${titleAr} ${rawContentAr} ${ansAr} ${optsAr.join(' ')}`) || contentIdx >= 0 || titleIdx >= 0;
+        const tfNorm = (ansAr || ansEn).trim().toLowerCase();
+        const isFalse = ['false', 'خطأ', 'خاطئ', 'غير صحيح', '0'].includes(tfNorm);
+        slide.options = optsAr.length ? optsAr : (hasArSlide ? ['صحيح', 'خطأ'] : ['True', 'False']);
         slide.optionsEn = optsEn.length ? optsEn : ['True', 'False'];
-        slide.correctAnswer = ansAr || ansEn || 'True';
-        slide.correctAnswerEn = ansEn || (slide.correctAnswer === 'صحيح' ? 'True' : slide.correctAnswer === 'خطأ' ? 'False' : slide.correctAnswer);
+        slide.correctAnswer = isFalse
+          ? (hasArSlide ? 'خطأ' : 'False')
+          : (hasArSlide ? 'صحيح' : 'True');
+        slide.correctAnswerEn = ansEn || (isFalse ? 'False' : 'True');
       } else if (slide.label === 'MULTI_SELECT') {
         slide.options = optsAr.length ? optsAr : optsEn;
         if (optsEn.length) slide.optionsEn = optsEn;
@@ -1038,10 +1055,10 @@ export async function importLessonSlides(
       const shouldImportAsNew = typeof window === 'undefined' || typeof window.confirm !== 'function'
         ? true
         : window.confirm(
-            language === 'ar'
-              ? `عنوان الدرس في الملف ("${workbookTitle}") يختلف عن الدرس المفتوح حالياً ("${displayOpen}").\n\nاضغط موافق لفصله كدرس جديد منفصل بدون المساس بالدرس القديم، أو إلغاء للتراجع.`
-              : `The Excel file belongs to a different lesson ("${workbookTitle}") than the open lesson ("${displayOpen}").\n\nClick OK to detach into a separate new lesson without modifying the existing one, or Cancel to abort.`,
-          );
+          language === 'ar'
+            ? `عنوان الدرس في الملف ("${workbookTitle}") يختلف عن الدرس المفتوح حالياً ("${displayOpen}").\n\nاضغط موافق لفصله كدرس جديد منفصل بدون المساس بالدرس القديم، أو إلغاء للتراجع.`
+            : `The Excel file belongs to a different lesson ("${workbookTitle}") than the open lesson ("${displayOpen}").\n\nClick OK to detach into a separate new lesson without modifying the existing one, or Cancel to abort.`,
+        );
       if (!shouldImportAsNew) {
         showToast?.(
           language === 'ar' ? 'تم إلغاء استيراد الشرائح للحفاظ على الدرس الحالي' : 'Slides import cancelled to keep the existing lesson',
@@ -1366,11 +1383,11 @@ export async function handleFullLessonExcelImport(
       const displayOpen = identity.persistedTitle || identity.currentTitle;
       const confirmPrompt = !importedTitle
         ? (language === 'ar'
-            ? `ملف الإكسيل لا يحتوي على عنوان درس بينما الدرس "${displayOpen}" مفتوح حالياً.\n\nاضغط موافق لتحميله كدرس جديد منفصل بدون المساس بالدرس القديم، أو إلغاء للتراجع.`
-            : `The Excel file has no lesson title while "${displayOpen}" is open.\n\nClick OK to load it as a separate new lesson without modifying the existing one, or Cancel to abort.`)
+          ? `ملف الإكسيل لا يحتوي على عنوان درس بينما الدرس "${displayOpen}" مفتوح حالياً.\n\nاضغط موافق لتحميله كدرس جديد منفصل بدون المساس بالدرس القديم، أو إلغاء للتراجع.`
+          : `The Excel file has no lesson title while "${displayOpen}" is open.\n\nClick OK to load it as a separate new lesson without modifying the existing one, or Cancel to abort.`)
         : (language === 'ar'
-            ? `عنوان الدرس في الملف ("${importedTitle}") يختلف عن الدرس المفتوح حالياً ("${displayOpen}").\n\nاضغط موافق لتحميله كدرس جديد منفصل بدون المساس بالدرس القديم، أو إلغاء للتراجع.`
-            : `The Excel file is for a different lesson ("${importedTitle}") than the open lesson ("${displayOpen}").\n\nClick OK to load it as a separate new lesson without modifying the existing one, or Cancel to abort.`);
+          ? `عنوان الدرس في الملف ("${importedTitle}") يختلف عن الدرس المفتوح حالياً ("${displayOpen}").\n\nاضغط موافق لتحميله كدرس جديد منفصل بدون المساس بالدرس القديم، أو إلغاء للتراجع.`
+          : `The Excel file is for a different lesson ("${importedTitle}") than the open lesson ("${displayOpen}").\n\nClick OK to load it as a separate new lesson without modifying the existing one, or Cancel to abort.`);
       const shouldImportAsNew = typeof window === 'undefined' || typeof window.confirm !== 'function'
         ? true
         : window.confirm(confirmPrompt);

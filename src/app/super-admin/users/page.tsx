@@ -6,7 +6,7 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { apiFetch, API_URL } from '@/lib/api';
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Users, Plus, Search, Shield, User, ChevronRight, Trash2, Key, X, GraduationCap, School, Sparkles, Edit } from 'lucide-react';
+import { Users, Plus, Search, Shield, ShieldAlert, User, Trash2, Key, X, GraduationCap, School, Sparkles, Edit, Copy, Download, RefreshCw } from 'lucide-react';
 import Link from "next/link";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useNotification } from "@/context/NotificationContext";
@@ -41,14 +41,34 @@ function UsersManagementContent() {
   const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
   const [listError, setListError] = useState('');
   const requestRef = React.useRef<AbortController | null>(null);
-  const [activeTab, setActiveTab] = useState<UserRole | 'ALL'>('ALL');
+  const [activeTab, setActiveTab] = useState<UserRole | 'ALL' | 'EXPOSED_RESET'>('ALL');
   const [selectedSchool, setSelectedSchool] = useState<string>("ALL");
   const [selectedGrade, setSelectedGrade] = useState<string>("ALL");
   const [adminRole, setAdminRole] = useState<string | null>(null);
+  const [currentAdminId, setCurrentAdminId] = useState<string | null>(null);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [exposedAccounts, setExposedAccounts] = useState<any[]>([]);
+  const [exposedSummary, setExposedSummary] = useState<{
+    total: number;
+    byRole: Record<string, number>;
+    adminsAffected: number;
+    superAdminsAffected: number;
+    schoolAdminsAffected: number;
+  }>({ total: 0, byRole: {}, adminsAffected: 0, superAdminsAffected: 0, schoolAdminsAffected: 0 });
+  const [resetModalUser, setResetModalUser] = useState<any>(null);
+  const [resetPasswordInput, setResetPasswordInput] = useState("");
+  const [resetSubmitting, setResetSubmitting] = useState(false);
+  const [generatedCredential, setGeneratedCredential] = useState<{ username: string; password: string } | null>(null);
+  const [bulkCredentials, setBulkCredentials] = useState<any[] | null>(null);
 
   useEffect(() => {
-    setAdminRole(localStorage.getItem('admin_role'));
+    try {
+      const storedUser = JSON.parse(localStorage.getItem('super_admin_user') || 'null');
+      setAdminRole(storedUser?.role || localStorage.getItem('admin_role'));
+      setCurrentAdminId(storedUser?.id || null);
+    } catch {
+      setAdminRole(localStorage.getItem('admin_role'));
+    }
   }, []);
 
   // Modal states
@@ -83,15 +103,41 @@ function UsersManagementContent() {
   }, [router, roleParam]);
 
   useEffect(() => { setPage(1); }, [search, activeTab, selectedSchool, selectedGrade]);
-  useEffect(() => { void fetchData(); return () => requestRef.current?.abort(); }, [page, search, activeTab, selectedSchool, selectedGrade]);
+  useEffect(() => {
+    if (activeTab === 'EXPOSED_RESET') {
+      void fetchExposedAccounts();
+      return;
+    }
+    void fetchData();
+    return () => requestRef.current?.abort();
+  }, [page, search, activeTab, selectedSchool, selectedGrade]);
+  useEffect(() => { void fetchExposedAccounts(); }, []);
 
   useEffect(() => { setSelectedUsers([]); }, [page, search, activeTab, selectedSchool, selectedGrade]);
+
+  const fetchExposedAccounts = async () => {
+    const token = localStorage.getItem("super_admin_token");
+    if (!token) return;
+    try {
+      const res = await apiFetch(`${API_URL}/admin/users/exposed-reset?includeHashes=true`, {
+        headers: { "Authorization": `Bearer ${token}` },
+        cache: 'no-store',
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setExposedAccounts(Array.isArray(data.accounts) ? data.accounts : []);
+      if (data.summary) setExposedSummary(data.summary);
+    } catch {
+      // Ignore transient summary errors on main directory load
+    }
+  };
 
   const fetchData = async () => {
     setListError('');
     requestRef.current?.abort();
     const currentRequest = new AbortController(); requestRef.current = currentRequest;
-    const directoryQuery = new URLSearchParams({ excludeSuperAdmin: 'true', page: String(page), limit: '25', search, role: activeTab === 'ALL' ? '' : activeTab, schoolId: selectedSchool === 'ALL' ? '' : selectedSchool, grade: selectedGrade === 'ALL' ? '' : selectedGrade });
+    const roleFilter = activeTab === 'ALL' || activeTab === 'EXPOSED_RESET' ? '' : activeTab;
+    const directoryQuery = new URLSearchParams({ excludeSuperAdmin: 'true', page: String(page), limit: '25', search, role: roleFilter, schoolId: selectedSchool === 'ALL' ? '' : selectedSchool, grade: selectedGrade === 'ALL' ? '' : selectedGrade });
     setIsLoading(true);
     const token = localStorage.getItem("super_admin_token");
     try {
@@ -194,6 +240,7 @@ function UsersManagementContent() {
       if (res.ok) {
         setEditModalOpen(false);
         fetchData();
+        void fetchExposedAccounts();
         showToast(language === 'ar' ? 'تم تحديث المستخدم بنجاح' : 'User updated successfully', 'success');
       } else {
         const data = await res.json();
@@ -206,15 +253,140 @@ function UsersManagementContent() {
     }
   };
 
+  const openResetModal = (user: any) => {
+    setResetModalUser(user);
+    setResetPasswordInput("");
+    setGeneratedCredential(null);
+  };
+
+  const handleResetExposedPassword = async (generate: boolean) => {
+    if (!resetModalUser) return;
+    if (!generate) {
+      const minLen = resetModalUser.role === 'SUPER_ADMIN' ? 16 : 8;
+      if (resetPasswordInput.length < minLen) {
+        showToast(
+          language === 'ar'
+            ? `كلمة المرور يجب أن لا تقل عن ${minLen} حرفاً`
+            : `Password must be at least ${minLen} characters`,
+          'error'
+        );
+        return;
+      }
+    }
+    setResetSubmitting(true);
+    const token = localStorage.getItem("super_admin_token");
+    try {
+      const res = await apiFetch(`${API_URL}/admin/users/${resetModalUser.id}/reset-exposed-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(generate ? { generate: true } : { password: resetPasswordInput }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(data.error || (language === 'ar' ? 'فشل إعادة تعيين كلمة المرور' : 'Failed to reset password'), 'error');
+        return;
+      }
+      if (data.temporaryPassword) {
+        setGeneratedCredential({ username: resetModalUser.username, password: data.temporaryPassword });
+      } else {
+        setResetModalUser(null);
+      }
+      showToast(language === 'ar' ? 'تم إعادة تعيين كلمة المرور بنجاح' : 'Password reset successfully', 'success');
+      await Promise.all([fetchExposedAccounts(), activeTab !== 'EXPOSED_RESET' ? fetchData() : Promise.resolve()]);
+    } catch {
+      showToast(t('usersPage.connError') || 'Connection error', 'error');
+    } finally {
+      setResetSubmitting(false);
+    }
+  };
+
+  const handleBulkResetExposed = async () => {
+    const eligibleIds = filteredUsers
+      .filter((u: any) => selectedUsers.includes(u.id) && u.id !== currentAdminId && (u.exposedResetRequired || u.exposedCredentialDetected || activeTab === 'EXPOSED_RESET'))
+      .map((u: any) => u.id);
+    if (eligibleIds.length === 0) return;
+
+    const confirmed = await confirm(
+      language === 'ar' ? 'تأكيد إعادة تعيين كلمات المرور' : 'Confirm Bulk Password Reset',
+      language === 'ar'
+        ? `سيتم توليد كلمة مرور عشوائية جديدة لـ ${eligibleIds.length} حساب وتعطيل الجلسات القديمة. متابعة؟`
+        : `Generate unique random replacement passwords for ${eligibleIds.length} account(s)?`
+    );
+    if (!confirmed) return;
+
+    const token = localStorage.getItem("super_admin_token");
+    setResetSubmitting(true);
+    try {
+      const res = await apiFetch(`${API_URL}/admin/users/exposed-reset/bulk`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userIds: eligibleIds }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(data.error || (language === 'ar' ? 'فشل إعادة التعيين الجماعي' : 'Bulk reset failed'), 'error');
+        return;
+      }
+      setBulkCredentials(Array.isArray(data.credentials) ? data.credentials : []);
+      setSelectedUsers([]);
+      showToast(
+        language === 'ar' ? `تم إعادة تعيين ${data.resetCount} حساب بنجاح` : `Reset ${data.resetCount} accounts`,
+        'success'
+      );
+      await Promise.all([fetchExposedAccounts(), activeTab !== 'EXPOSED_RESET' ? fetchData() : Promise.resolve()]);
+    } catch {
+      showToast(t('usersPage.connError') || 'Connection error', 'error');
+    } finally {
+      setResetSubmitting(false);
+    }
+  };
+
+  const downloadAffectedList = () => {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      summary: exposedSummary,
+      accounts: exposedAccounts.map(({ plainPassword: _ignored, ...rest }) => rest),
+    };
+    const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `exposed-reset-accounts-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const downloadBulkCredentials = (rows: any[]) => {
+    const url = URL.createObjectURL(new Blob([JSON.stringify({ generatedAt: new Date().toISOString(), credentials: rows }, null, 2)], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `reset-credentials-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
   const handleSelectUser = (id: string) => {
     setSelectedUsers(prev => 
       prev.includes(id) ? prev.filter(userId => userId !== id) : [...prev, id]
     );
   };
 
+  const isUserSelectable = (u: any) => (
+    activeTab === 'EXPOSED_RESET' ? u.id !== currentAdminId : u.role !== 'SUPER_ADMIN'
+  );
+
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
-      setSelectedUsers(filteredUsers.filter((u: any) => u.role !== 'SUPER_ADMIN').map((u: any) => u.id));
+      setSelectedUsers(filteredUsers.filter(isUserSelectable).map((u: any) => u.id));
     } else {
       setSelectedUsers([]);
     }
@@ -312,11 +484,15 @@ function UsersManagementContent() {
     }
   };
 
-  const filteredUsers = users.filter((u: any) => {
-    if (u.role === 'SUPER_ADMIN') return false;
-    const matchesSearch = u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         u.username.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesTab = activeTab === 'ALL' || u.role === activeTab;
+  const sourceList = activeTab === 'EXPOSED_RESET' ? exposedAccounts : users;
+  const filteredUsers = sourceList.filter((u: any) => {
+    if (activeTab !== 'EXPOSED_RESET' && u.role === 'SUPER_ADMIN') return false;
+    const q = searchTerm.toLowerCase();
+    const matchesSearch = !q ||
+      String(u.name || '').toLowerCase().includes(q) ||
+      String(u.username || '').toLowerCase().includes(q) ||
+      String(u.email || '').toLowerCase().includes(q);
+    const matchesTab = activeTab === 'ALL' || activeTab === 'EXPOSED_RESET' || u.role === activeTab;
     const matchesSchool = selectedSchool === 'ALL' || u.schoolId === selectedSchool;
     const matchesGrade = selectedGrade === 'ALL' || u.grade === selectedGrade;
     
@@ -354,6 +530,13 @@ function UsersManagementContent() {
     { id: 'SCHOOL_ADMIN', label: t('usersPage.schoolAdmins'), icon: Shield },
     { id: 'TEACHER', label: t('usersPage.teachers'), icon: User },
     { id: 'STUDENT', label: t('usersPage.students'), icon: GraduationCap },
+    {
+      id: 'EXPOSED_RESET',
+      label: language === 'ar'
+        ? `يلزم إعادة التعيين (${exposedSummary.total})`
+        : `Reset Required (${exposedSummary.total})`,
+      icon: ShieldAlert,
+    },
   ];
 
   return (
@@ -373,7 +556,17 @@ function UsersManagementContent() {
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-              {selectedUsers.length > 0 && adminRole === 'SUPER_ADMIN' && (
+              {selectedUsers.length > 0 && (activeTab === 'EXPOSED_RESET' || filteredUsers.some((u: any) => selectedUsers.includes(u.id) && (u.exposedResetRequired || u.exposedCredentialDetected))) && (
+                <button
+                  onClick={() => void handleBulkResetExposed()}
+                  disabled={resetSubmitting}
+                  className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-xl shadow-amber-600/20 disabled:opacity-50 text-sm sm:text-base cursor-pointer"
+                >
+                  <RefreshCw className="w-5 h-5" />
+                  {language === 'ar' ? `إعادة تعيين كلمات مرور المحددين (${selectedUsers.length})` : `Bulk Reset Passwords (${selectedUsers.length})`}
+                </button>
+              )}
+              {selectedUsers.length > 0 && adminRole === 'SUPER_ADMIN' && activeTab !== 'EXPOSED_RESET' && (
                 <button
                   onClick={handleBulkDelete}
                   className="bg-rose-500 hover:bg-rose-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-xl shadow-rose-500/20 hover:scale-105 active:scale-95 text-sm sm:text-base cursor-pointer"
@@ -400,6 +593,49 @@ function UsersManagementContent() {
         </div>
 
 
+
+        {/* Exposed Credentials Alert Banner */}
+        {exposedSummary.total > 0 && (
+          <div className="rounded-3xl border border-amber-200 bg-amber-50/90 p-5 sm:p-6 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                <ShieldAlert className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h2 className="text-base sm:text-lg font-black text-amber-950">
+                  {language === 'ar'
+                    ? `يوجد ${exposedSummary.total} حساب بعلامة EXPOSED_RESET_REQUIRED`
+                    : `${exposedSummary.total} account(s) flagged with EXPOSED_RESET_REQUIRED`}
+                </h2>
+                <p className="text-xs sm:text-sm font-bold text-amber-900">
+                  {language === 'ar'
+                    ? `الأدمنز المتأثرون: ${exposedSummary.adminsAffected} (سوبر أدمن: ${exposedSummary.superAdminsAffected} | مدير مدرسة: ${exposedSummary.schoolAdminsAffected})`
+                    : `Affected admins: ${exposedSummary.adminsAffected} (Super Admin: ${exposedSummary.superAdminsAffected} | School Admin: ${exposedSummary.schoolAdminsAffected})`}
+                </p>
+                <p className="text-xs text-amber-800 font-medium">
+                  {Object.entries(exposedSummary.byRole).map(([r, count]) => `${r}: ${count}`).join(' | ')}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveTab('EXPOSED_RESET')}
+                className="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs sm:text-sm font-black transition-all cursor-pointer"
+              >
+                {language === 'ar' ? 'عرض الحسابات المتأثرة' : 'Review Affected Accounts'}
+              </button>
+              <button
+                type="button"
+                onClick={downloadAffectedList}
+                className="px-4 py-2.5 rounded-xl bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer"
+              >
+                <Download className="w-4 h-4" />
+                {language === 'ar' ? 'تنزيل القائمة' : 'Download List'}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Tabs & Filters */}
         <div className="space-y-6">
@@ -587,7 +823,7 @@ function UsersManagementContent() {
                         <input 
                           type="checkbox" 
                           className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
-                          checked={filteredUsers.filter((u: any) => u.role !== 'SUPER_ADMIN').length > 0 && selectedUsers.length === filteredUsers.filter((u: any) => u.role !== 'SUPER_ADMIN').length}
+                          checked={filteredUsers.filter(isUserSelectable).length > 0 && selectedUsers.length === filteredUsers.filter(isUserSelectable).length}
                           onChange={handleSelectAll}
                         />
                       </th>
@@ -599,10 +835,12 @@ function UsersManagementContent() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {filteredUsers.map((user: any) => (
+                    {filteredUsers.map((user: any) => {
+                      const isExposed = Boolean(user.exposedResetRequired || user.exposedCredentialDetected || activeTab === 'EXPOSED_RESET');
+                      return (
                       <tr key={user.id} className="hover:bg-slate-50/50 transition-all group">
                         <td className="px-6 py-5 text-center">
-                          {user.role !== 'SUPER_ADMIN' && (
+                          {isUserSelectable(user) && (
                             <input 
                               type="checkbox" 
                               className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
@@ -623,12 +861,23 @@ function UsersManagementContent() {
                           </div>
                         </td>
                         <td className="px-8 py-5">
-                          <div className="flex items-center gap-2">
-                            <Key className="w-4 h-4 text-amber-500/70" />
-                            <span className="font-mono text-slate-700 bg-amber-500/5 px-3 py-1.5 rounded-lg border border-amber-500/10 text-xs">
-                              {user.plainPassword || "********"}
-                            </span>
-                          </div>
+                          {isExposed ? (
+                            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-black">
+                              <ShieldAlert className="w-4 h-4 shrink-0" />
+                              <span>
+                                {user.exposedCredentialDetected
+                                  ? (language === 'ar' ? 'مكشوف - يلزم إعادة التعيين' : 'EXPOSED_RESET_REQUIRED')
+                                  : (language === 'ar' ? 'يلزم إعادة التعيين' : 'RESET_REQUIRED')}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <Key className="w-4 h-4 text-amber-500/70" />
+                              <span className="font-mono text-slate-700 bg-amber-500/5 px-3 py-1.5 rounded-lg border border-amber-500/10 text-xs">
+                                {user.plainPassword || "********"}
+                              </span>
+                            </div>
+                          )}
                         </td>
                         <td className="px-8 py-5">
                           <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black border tracking-wider ${
@@ -657,14 +906,30 @@ function UsersManagementContent() {
                         </td>
                         <td className="px-8 py-5">
                           <div className="flex items-center justify-center gap-3">
-                            <button 
-                              onClick={() => handleImpersonate(user)}
-                              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-2xl text-xs font-black transition-all shadow-lg shadow-indigo-600/10 active:scale-95 group/btn cursor-pointer"
-                              title="Login as User"
-                            >
-                              <Sparkles className="w-4 h-4 group-hover/btn:animate-pulse" />
-                              <span>{t('usersPage.directLogin')}</span>
-                            </button>
+                            {isExposed ? (
+                              user.id !== currentAdminId ? (
+                                <button
+                                  onClick={() => openResetModal(user)}
+                                  className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5 rounded-2xl text-xs font-black transition-all shadow-lg shadow-amber-600/10 active:scale-95 cursor-pointer"
+                                >
+                                  <Key className="w-4 h-4" />
+                                  <span>{language === 'ar' ? 'إعادة تعيين كلمة المرور' : 'Reset Password'}</span>
+                                </button>
+                              ) : (
+                                <span className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-500 text-xs font-bold">
+                                  {language === 'ar' ? 'الجلسة الحالية' : 'Current Session'}
+                                </span>
+                              )
+                            ) : (
+                              <button 
+                                onClick={() => handleImpersonate(user)}
+                                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-2xl text-xs font-black transition-all shadow-lg shadow-indigo-600/10 active:scale-95 group/btn cursor-pointer"
+                                title="Login as User"
+                              >
+                                <Sparkles className="w-4 h-4 group-hover/btn:animate-pulse" />
+                                <span>{t('usersPage.directLogin')}</span>
+                              </button>
+                            )}
                             <button 
                               onClick={() => openEditModal(user)}
                               className="w-10 h-10 rounded-xl bg-slate-50 hover:bg-indigo-50 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-all border border-slate-100 cursor-pointer"
@@ -672,7 +937,7 @@ function UsersManagementContent() {
                             >
                               <Edit className="w-4 h-4" />
                             </button>
-                            {adminRole === 'SUPER_ADMIN' && user.role !== 'SUPER_ADMIN' && (
+                            {adminRole === 'SUPER_ADMIN' && user.role !== 'SUPER_ADMIN' && activeTab !== 'EXPOSED_RESET' && (
                               <button 
                                 onClick={() => handleDeleteUser(user.id)}
                                 className="w-10 h-10 rounded-xl bg-slate-50 hover:bg-rose-50 flex items-center justify-center text-slate-400 hover:text-rose-600 transition-all border border-slate-100 cursor-pointer"
@@ -683,7 +948,8 @@ function UsersManagementContent() {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -691,11 +957,13 @@ function UsersManagementContent() {
 
             {/* Mobile / Tablet Responsive Cards View */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:hidden">
-              {filteredUsers.map((user: any) => (
+              {filteredUsers.map((user: any) => {
+                const isExposed = Boolean(user.exposedResetRequired || user.exposedCredentialDetected || activeTab === 'EXPOSED_RESET');
+                return (
                 <div key={user.id} className="bg-white p-5 sm:p-6 rounded-[24px] border border-slate-100 shadow-sm flex flex-col justify-between gap-4">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      {user.role !== 'SUPER_ADMIN' && (
+                      {isUserSelectable(user) && (
                         <input 
                           type="checkbox" 
                           className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
@@ -725,9 +993,16 @@ function UsersManagementContent() {
                   <div className="space-y-3 py-3 border-y border-slate-50 text-start" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-slate-400 font-bold">{language === 'ar' ? 'كلمة المرور' : 'Password'}</span>
-                      <span className="font-mono text-slate-700 bg-amber-500/5 px-2 py-1 rounded border border-amber-500/10 font-bold">
-                        {user.plainPassword || "********"}
-                      </span>
+                      {isExposed ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-rose-50 border border-rose-200 text-rose-700 font-black">
+                          <ShieldAlert className="w-3.5 h-3.5" />
+                          {language === 'ar' ? 'يلزم إعادة التعيين' : 'EXPOSED_RESET_REQUIRED'}
+                        </span>
+                      ) : (
+                        <span className="font-mono text-slate-700 bg-amber-500/5 px-2 py-1 rounded border border-amber-500/10 font-bold">
+                          {user.plainPassword || "********"}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-slate-400 font-bold">{language === 'ar' ? 'المدرسة' : 'School'}</span>
@@ -749,14 +1024,30 @@ function UsersManagementContent() {
                     >
                       <Edit className="w-4 h-4" />
                     </button>
-                    <button 
-                      onClick={() => handleImpersonate(user)}
-                      className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl text-xs font-black transition-all shadow-md shadow-indigo-600/10 cursor-pointer"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-                      <span>{t('usersPage.directLogin')}</span>
-                    </button>
-                    {user.role !== 'SUPER_ADMIN' && (
+                    {isExposed ? (
+                      user.id !== currentAdminId ? (
+                        <button
+                          onClick={() => openResetModal(user)}
+                          className="flex-1 flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-700 text-white py-3 rounded-xl text-xs font-black transition-all shadow-md shadow-amber-600/10 cursor-pointer"
+                        >
+                          <Key className="w-3.5 h-3.5" />
+                          <span>{language === 'ar' ? 'إعادة تعيين كلمة المرور' : 'Reset Password'}</span>
+                        </button>
+                      ) : (
+                        <span className="flex-1 text-center py-3 rounded-xl bg-slate-100 text-slate-500 text-xs font-bold">
+                          {language === 'ar' ? 'الجلسة الحالية' : 'Current Session'}
+                        </span>
+                      )
+                    ) : (
+                      <button 
+                        onClick={() => handleImpersonate(user)}
+                        className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl text-xs font-black transition-all shadow-md shadow-indigo-600/10 cursor-pointer"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                        <span>{t('usersPage.directLogin')}</span>
+                      </button>
+                    )}
+                    {user.role !== 'SUPER_ADMIN' && activeTab !== 'EXPOSED_RESET' && (
                       <button 
                         onClick={() => handleDeleteUser(user.id)}
                         className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600 hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
@@ -766,7 +1057,8 @@ function UsersManagementContent() {
                     )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {filteredUsers.length === 0 && (
@@ -871,9 +1163,209 @@ function UsersManagementContent() {
             </div>
           </div>
         )}
+
+        {/* Single User Exposed Password Reset Modal */}
+        {resetModalUser && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+            <div className="bg-white border border-slate-100 w-full max-w-lg rounded-3xl p-6 sm:p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+                    <ShieldAlert className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900">
+                      {language === 'ar' ? 'إعادة تعيين كلمة المرور' : 'Reset Exposed Password'}
+                    </h3>
+                    <p className="text-xs text-slate-500 font-mono" dir="ltr">
+                      {resetModalUser.name} (@{resetModalUser.username}) - {resetModalUser.role}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setResetModalUser(null);
+                    setGeneratedCredential(null);
+                  }}
+                  className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {!generatedCredential ? (
+                <div className="space-y-5" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
+                  <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 font-semibold leading-relaxed">
+                    {language === 'ar'
+                      ? `يتطلب هذا الحساب (${resetModalUser.role}) إعادة تعيين كلمة المرور بحد أدنى ${resetModalUser.role === 'SUPER_ADMIN' ? 16 : 8} حرفاً (وحد أقصى 72 بايت). يتم إبطال علامة القفل تلقائياً بعد الحفظ.`
+                      : `This ${resetModalUser.role} account requires a replacement password of at least ${resetModalUser.role === 'SUPER_ADMIN' ? 16 : 8} characters (max 72 bytes).`}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-slate-600 mb-2">
+                      {language === 'ar' ? 'كلمة مرور جديدة يدوياً' : 'New Custom Password'}
+                    </label>
+                    <input
+                      type="text"
+                      value={resetPasswordInput}
+                      onChange={(e) => setResetPasswordInput(e.target.value)}
+                      dir="ltr"
+                      placeholder={resetModalUser.role === 'SUPER_ADMIN' ? 'Min 16 characters' : 'Min 8 characters'}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-slate-800 font-mono outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-50 transition-all"
+                    />
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                    <button
+                      type="button"
+                      disabled={resetSubmitting || !resetPasswordInput}
+                      onClick={() => void handleResetExposedPassword(false)}
+                      className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-black py-3.5 px-4 rounded-xl transition-all cursor-pointer"
+                    >
+                      {resetSubmitting
+                        ? (language === 'ar' ? 'جاري التنفيذ...' : 'Applying...')
+                        : (language === 'ar' ? 'حفظ كلمة المرور اليدوية' : 'Save Custom Password')}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={resetSubmitting}
+                      onClick={() => void handleResetExposedPassword(true)}
+                      className="flex-1 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-black py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      <span>{language === 'ar' ? 'توليد كلمة مرور عشوائية' : 'Generate Strong Random'}</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-5" style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
+                  <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 font-bold">
+                    {language === 'ar'
+                      ? 'تم تعيين كلمة المرور المؤقتة بنجاح. انسخها الآن لأنها تظهر لمرة واحدة فقط ولن يتم تخزينها بنص واضح.'
+                      : 'Temporary password assigned. Copy it now; it is shown only once and is not stored in plaintext.'}
+                  </div>
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 font-mono text-sm" dir="ltr">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">username:</span>
+                      <span className="font-bold text-slate-900">{generatedCredential.username}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-slate-500">password:</span>
+                      <span className="font-black text-indigo-700 select-all break-all">{generatedCredential.password}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void navigator.clipboard.writeText(`${generatedCredential.username} : ${generatedCredential.password}`);
+                        showToast(language === 'ar' ? 'تم النسخ للحافظة' : 'Copied to clipboard', 'success');
+                      }}
+                      className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Copy className="w-4 h-4" />
+                      <span>{language === 'ar' ? 'نسخ البيانات' : 'Copy Credentials'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setResetModalUser(null);
+                        setGeneratedCredential(null);
+                      }}
+                      className="px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl cursor-pointer"
+                    >
+                      {language === 'ar' ? 'إغلاق' : 'Close'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Bulk Reset One-Time Credentials Modal */}
+        {bulkCredentials && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+            <div className="bg-white border border-slate-100 w-full max-w-2xl rounded-3xl p-6 sm:p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-xl font-black text-slate-900">
+                    {language === 'ar' ? 'بيانات إعادة التعيين الجماعي (لمرة واحدة)' : 'Bulk Reset Credentials (One-Time View)'}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {language === 'ar'
+                      ? 'احفظ أو نزّل هذا الملف الآن. لن تتمكن من عرض كلمات المرور هذه مرة أخرى.'
+                      : 'Download or copy these credentials now. They are hashed in the database and cannot be retrieved again.'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setBulkCredentials(null)}
+                  className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="overflow-x-auto border border-slate-200 rounded-2xl mb-5 max-h-80">
+                <table className="w-full text-xs text-left" dir="ltr">
+                  <thead className="bg-slate-50 text-slate-500 font-bold uppercase border-b border-slate-200">
+                    <tr>
+                      <th className="px-4 py-3">Username</th>
+                      <th className="px-4 py-3">Role</th>
+                      <th className="px-4 py-3">School</th>
+                      <th className="px-4 py-3">Temporary Password</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-mono">
+                    {bulkCredentials.map((row: any) => (
+                      <tr key={row.id}>
+                        <td className="px-4 py-2.5 font-bold text-slate-800">{row.username}</td>
+                        <td className="px-4 py-2.5 text-slate-600">{row.role}</td>
+                        <td className="px-4 py-2.5 text-slate-600">{row.schoolName || '-'}</td>
+                        <td className="px-4 py-2.5 font-black text-indigo-700 select-all">{row.temporaryPassword}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex flex-wrap gap-3 justify-end">
+                <button
+                  type="button"
+                  onClick={() => downloadBulkCredentials(bulkCredentials)}
+                  className="bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-5 rounded-xl flex items-center gap-2 cursor-pointer"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>{language === 'ar' ? 'تنزيل ملف JSON' : 'Download JSON'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const text = bulkCredentials.map((r: any) => `${r.username}\t${r.role}\t${r.temporaryPassword}`).join('\n');
+                    void navigator.clipboard.writeText(text);
+                    showToast(language === 'ar' ? 'تم النسخ للحافظة' : 'Copied to clipboard', 'success');
+                  }}
+                  className="bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 px-5 rounded-xl flex items-center gap-2 cursor-pointer"
+                >
+                  <Copy className="w-4 h-4" />
+                  <span>{language === 'ar' ? 'نسخ الكل' : 'Copy All'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBulkCredentials(null)}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-5 rounded-xl cursor-pointer"
+                >
+                  {language === 'ar' ? 'إغلاق' : 'Close'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       {listError && <div role="alert" className="report-error">{listError}<button className="underline ms-3" onClick={() => fetchData()}>{language === 'ar' ? 'إعادة المحاولة' : 'Retry'}</button></div>}
-      <DirectoryPager page={page} total={pagination.total} pages={pagination.totalPages} onPage={setPage} loading={isLoading} />
+      {activeTab !== 'EXPOSED_RESET' && (
+        <DirectoryPager page={page} total={pagination.total} pages={pagination.totalPages} onPage={setPage} loading={isLoading} />
+      )}
     </DashboardLayout>
   );
 }

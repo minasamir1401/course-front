@@ -40,7 +40,7 @@ export default function SuperAdminCoursesPage() {
     fetchCourses(true);
     fetchStats();
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -101,7 +101,7 @@ export default function SuperAdminCoursesPage() {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
-      
+
       const newCourses = data.courses || [];
       if (reset) {
         setCourses(newCourses);
@@ -245,301 +245,302 @@ export default function SuperAdminCoursesPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6 sm:space-y-10" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-          
-          {/* Header Section */}
-          <div className="relative min-w-0 bg-white rounded-[20px] sm:rounded-[36px] p-4 sm:p-6 xl:p-8 overflow-hidden shadow-sm border border-slate-100">
-             <div className="relative z-10 flex min-w-0 flex-col gap-6 sm:gap-8">
-                <div className={`flex min-w-0 w-full items-start gap-3 sm:gap-6 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
-                   <div className="w-12 h-12 sm:w-20 sm:h-20 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-xl sm:rounded-[28px] flex items-center justify-center shadow-xl shadow-indigo-500/20 transform -rotate-3 hover:rotate-0 transition-all duration-500 shrink-0">
-                      <Sparkles className="w-6 h-6 sm:w-10 sm:h-10 text-white" />
-                   </div>
-                   <div className="min-w-0 flex-1">
-                      <h1 className="text-xl sm:text-3xl xl:text-4xl font-black text-slate-900 mb-2 tracking-tight leading-snug break-words">{t('coursesPage.title')}</h1>
-                      <p className="text-slate-500 text-xs sm:text-base font-medium max-w-2xl leading-relaxed break-words opacity-80">
-                         {t('coursesPage.subtitle')}
-                      </p>
-                   </div>
-                </div>
 
-                <div className="grid min-w-0 w-full grid-cols-1 sm:grid-cols-2 2xl:grid-cols-4 gap-3">
-                  <input
-                    type="file"
-                    ref={jsonInputRef}
-                    onChange={handleImportJson}
-                    accept=".json,application/json"
-                    className="hidden"
-                  />
-                  <button 
-                    onClick={handleRestoreFromCloud}
-                    className="group min-w-0 min-h-12 bg-sky-50 text-sky-600 border border-sky-100 px-4 py-3 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base shadow-sm hover:bg-sky-100 transition-colors flex items-center gap-2 justify-center text-center"
-                    title={language === 'ar' ? "استرجاع كافة الكورسات والدروس من السحابة" : "Restore all courses & lessons from cloud"}
-                  >
-                    <DownloadCloud className="w-5 h-5 shrink-0" />
-                    {language === 'ar' ? "استرجاع السحابة" : "Restore Cloud"}
-                  </button>
-                  <button
-                    onClick={() => downloadFullLessonWorkbook(null, language)}
-                    className="group min-w-0 min-h-12 bg-sky-50 text-sky-700 border border-sky-200 px-4 py-3 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base shadow-sm hover:bg-sky-100 transition-colors flex items-center gap-2 justify-center text-center"
-                  >
-                    <DownloadCloud className="w-5 h-5 shrink-0" />
-                    {language === 'ar' ? "قالب ودليل الإكسيل" : "Excel Guide & Template"}
-                  </button>
-                  <button 
-                    onClick={() => setIsImportModalOpen(true)}
-                    className="group min-w-0 min-h-12 bg-indigo-50 text-indigo-600 px-4 py-3 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base shadow-sm hover:bg-indigo-100 transition-colors flex items-center gap-2 justify-center text-center"
-                  >
-                    <FileSpreadsheet className="w-5 h-5 shrink-0" />
-                    {language === 'ar' ? "استيراد Excel" : "Import Excel"}
-                  </button>
-                  <button 
-                    onClick={() => jsonInputRef.current?.click()}
-                    className="group min-w-0 min-h-12 bg-emerald-50 text-emerald-600 px-4 py-3 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base shadow-sm hover:bg-emerald-100 transition-colors flex items-center gap-2 justify-center text-center"
-                  >
-                    <Upload className="w-5 h-5 shrink-0" />
-                    {language === 'ar' ? "استعادة JSON" : "Restore JSON"}
-                  </button>
-                  <Link 
-                    href="/super-admin/courses/create"
-                    className="group min-w-0 min-h-12 bg-slate-900 text-white px-4 py-3 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base shadow-xl shadow-slate-900/10 hover:bg-slate-800 transition-colors flex items-center gap-2 justify-center text-center"
-                  >
-                    <Plus className="w-5 h-5 shrink-0 group-hover:rotate-90 transition-transform" />
-                    {t('coursesPage.createCurriculum')}
-                  </Link>
-                </div>
-             </div>
-             
-             {/* Decorative elements */}
-             <div className="absolute top-0 right-0 w-1/3 h-full bg-indigo-500/5 blur-[120px] rounded-full -mr-20"></div>
+        {/* Header Section */}
+        <div className="relative min-w-0 bg-white rounded-[20px] sm:rounded-[36px] p-4 sm:p-6 xl:p-8 overflow-hidden shadow-sm border border-slate-100">
+          <div className="relative z-10 flex min-w-0 flex-col gap-6 sm:gap-8">
+            <div className={`flex min-w-0 w-full items-start gap-3 sm:gap-6 ${language === 'ar' ? 'text-right' : 'text-left'}`}>
+              <div className="w-12 h-12 sm:w-20 sm:h-20 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-xl sm:rounded-[28px] flex items-center justify-center shadow-xl shadow-indigo-500/20 transform -rotate-3 hover:rotate-0 transition-all duration-500 shrink-0">
+                <Sparkles className="w-6 h-6 sm:w-10 sm:h-10 text-white" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-xl sm:text-3xl xl:text-4xl font-black text-slate-900 mb-2 tracking-tight leading-snug break-words">{t('coursesPage.title')}</h1>
+                <p className="text-slate-500 text-xs sm:text-base font-medium max-w-2xl leading-relaxed break-words opacity-80">
+                  {t('coursesPage.subtitle')}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid min-w-0 w-full grid-cols-1 sm:grid-cols-2 2xl:grid-cols-4 gap-3">
+              <input
+                type="file"
+                ref={jsonInputRef}
+                onChange={handleImportJson}
+                accept=".json,application/json"
+                className="hidden"
+              />
+              <button
+                onClick={handleRestoreFromCloud}
+                className="group min-w-0 min-h-12 bg-sky-50 text-sky-600 border border-sky-100 px-4 py-3 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base shadow-sm hover:bg-sky-100 transition-colors flex items-center gap-2 justify-center text-center"
+                title={language === 'ar' ? "استرجاع كافة الكورسات والدروس من السحابة" : "Restore all courses & lessons from cloud"}
+              >
+                <DownloadCloud className="w-5 h-5 shrink-0" />
+                {language === 'ar' ? "استرجاع السحابة" : "Restore Cloud"}
+              </button>
+              <button
+                onClick={() => downloadFullLessonWorkbook(null, language)}
+                className="group min-w-0 min-h-12 bg-sky-50 text-sky-700 border border-sky-200 px-4 py-3 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base shadow-sm hover:bg-sky-100 transition-colors flex items-center gap-2 justify-center text-center"
+              >
+                <DownloadCloud className="w-5 h-5 shrink-0" />
+                {language === 'ar' ? "قالب ودليل الإكسيل" : "Excel Guide & Template"}
+              </button>
+              <button
+                onClick={() => setIsImportModalOpen(true)}
+                className="group min-w-0 min-h-12 bg-indigo-50 text-indigo-600 px-4 py-3 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base shadow-sm hover:bg-indigo-100 transition-colors flex items-center gap-2 justify-center text-center"
+              >
+                <FileSpreadsheet className="w-5 h-5 shrink-0" />
+                {language === 'ar' ? "استيراد Excel" : "Import Excel"}
+              </button>
+              <button
+                onClick={() => jsonInputRef.current?.click()}
+                className="group min-w-0 min-h-12 bg-emerald-50 text-emerald-600 px-4 py-3 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base shadow-sm hover:bg-emerald-100 transition-colors flex items-center gap-2 justify-center text-center"
+              >
+                <Upload className="w-5 h-5 shrink-0" />
+                {language === 'ar' ? "استعادة JSON" : "Restore JSON"}
+              </button>
+              <Link
+                href="/super-admin/courses/create"
+                className="group min-w-0 min-h-12 bg-slate-900 text-white px-4 py-3 rounded-xl sm:rounded-2xl font-black text-sm sm:text-base shadow-xl shadow-slate-900/10 hover:bg-slate-800 transition-colors flex items-center gap-2 justify-center text-center"
+              >
+                <Plus className="w-5 h-5 shrink-0 group-hover:rotate-90 transition-transform" />
+                {t('coursesPage.createCurriculum')}
+              </Link>
+            </div>
           </div>
 
-          {/* Stats & Filters */}
-          <div className="flex flex-col xl:flex-row gap-4 sm:gap-6 items-center justify-between">
-             <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 w-full xl:w-auto">
-                 {[
-                   { label: t('coursesPage.totalCurricula'), value: stats.total, icon: Layers, color: "blue" },
-                   { label: t('coursesPage.lessons'), value: stats.lessons, icon: Monitor, color: "indigo" },
-                   { label: t('coursesPage.subjects'), value: stats.subjects, icon: Book, color: "emerald" }
-                 ].map((stat, i) => (
-                   <div key={i} className="bg-white p-3 sm:p-5 px-4 sm:px-8 rounded-xl sm:rounded-[28px] border border-slate-100 shadow-sm flex items-center gap-3 sm:gap-5">
-                      <div className={`w-8 h-8 sm:w-12 h-12 rounded-lg sm:rounded-2xl bg-${stat.color}-50 text-${stat.color}-600 flex items-center justify-center shrink-0`}>
-                         <stat.icon className="w-4 h-4 sm:w-6 h-6" />
-                      </div>
-                      <div className={language === 'ar' ? 'text-right' : 'text-left'}>
-                         <p className="text-[8px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{stat.label}</p>
-                         <p className="text-sm sm:text-xl font-black text-slate-900 leading-tight">
-                            {loadingStats ? (
-                              <span className="inline-block w-8 h-4 bg-slate-100 animate-pulse rounded"></span>
-                            ) : (
-                              stat.value
-                            )}
-                          </p>
-                      </div>
-                   </div>
-                 ))}
-             </div>
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-1/3 h-full bg-indigo-500/5 blur-[120px] rounded-full -mr-20"></div>
+        </div>
 
-              <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
-                 <div className="relative flex-1 xl:w-96">
-                    <Search className={`absolute ${language === 'ar' ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-5 h-5`} />
-                    <input 
-                      type="text" 
-                      placeholder={language === 'ar' ? "ابحث..." : "Search..."}
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className={`w-full ${language === 'ar' ? 'pr-9 sm:pr-12 pl-4' : 'pl-9 sm:pl-12 pr-4'} py-2.5 sm:py-4 rounded-xl sm:rounded-2xl bg-white border border-slate-200 text-[10px] sm:text-sm font-bold focus:outline-none focus:ring-4 focus:ring-indigo-600/5 transition-all`}
-                    />
-                 </div>
-                 <button className="w-full sm:w-14 h-10 sm:h-14 bg-white border border-slate-200 rounded-xl sm:rounded-2xl flex items-center justify-center text-slate-400 hover:bg-slate-50 transition-all shadow-sm">
-                    <Filter className="w-4 h-4 sm:w-6 h-6" />
-                 </button>
+        {/* Stats & Filters */}
+        <div className="flex flex-col xl:flex-row gap-4 sm:gap-6 items-center justify-between">
+          <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 w-full xl:w-auto">
+            {[
+              { label: t('coursesPage.totalCurricula'), value: stats.total, icon: Layers, color: "blue" },
+              { label: t('coursesPage.lessons'), value: stats.lessons, icon: Monitor, color: "indigo" },
+              { label: t('coursesPage.subjects'), value: stats.subjects, icon: Book, color: "emerald" }
+            ].map((stat, i) => (
+              <div key={i} className="bg-white p-3 sm:p-5 px-4 sm:px-8 rounded-xl sm:rounded-[28px] border border-slate-100 shadow-sm flex items-center gap-3 sm:gap-5">
+                <div className={`w-8 h-8 sm:w-12 h-12 rounded-lg sm:rounded-2xl bg-${stat.color}-50 text-${stat.color}-600 flex items-center justify-center shrink-0`}>
+                  <stat.icon className="w-4 h-4 sm:w-6 h-6" />
+                </div>
+                <div className={language === 'ar' ? 'text-right' : 'text-left'}>
+                  <p className="text-[8px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{stat.label}</p>
+                  <p className="text-sm sm:text-xl font-black text-slate-900 leading-tight">
+                    {loadingStats ? (
+                      <span className="inline-block w-8 h-4 bg-slate-100 animate-pulse rounded"></span>
+                    ) : (
+                      stat.value
+                    )}
+                  </p>
+                </div>
               </div>
+            ))}
           </div>
 
-          {/* Main Grid */}
+          <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
+            <div className="relative flex-1 xl:w-96">
+              <Search className={`absolute ${language === 'ar' ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 sm:w-5 h-5`} />
+              <input
+                type="text"
+                placeholder={language === 'ar' ? "ابحث..." : "Search..."}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={`w-full ${language === 'ar' ? 'pr-9 sm:pr-12 pl-4' : 'pl-9 sm:pl-12 pr-4'} py-2.5 sm:py-4 rounded-xl sm:rounded-2xl bg-white border border-slate-200 text-[10px] sm:text-sm font-bold focus:outline-none focus:ring-4 focus:ring-indigo-600/5 transition-all`}
+              />
+            </div>
+            <button className="w-full sm:w-14 h-10 sm:h-14 bg-white border border-slate-200 rounded-xl sm:rounded-2xl flex items-center justify-center text-slate-400 hover:bg-slate-50 transition-all shadow-sm">
+              <Filter className="w-4 h-4 sm:w-6 h-6" />
+            </button>
+          </div>
+        </div>
 
-          {/* Subtle cloud sync indicator - shows only during background 3s refresh (Removed as per user request) */}
+        {/* Main Grid */}
 
-          {loading ? (
-             <div className="flex flex-col gap-4 sm:gap-6">
-                {[1, 2, 3].map((n) => (
-                   <div key={n} className="bg-slate-100 animate-pulse rounded-2xl h-32 w-full"></div>
-                ))}
-             </div>
-          ) : filteredCourses.length === 0 ? (
-              <div className="bg-white border-2 sm:border-4 border-dashed border-slate-100 rounded-[24px] sm:rounded-[60px] p-8 sm:p-32 text-center">
-                 <div className="w-12 h-12 sm:w-24 h-24 bg-slate-50 rounded-xl sm:rounded-[40px] flex items-center justify-center mx-auto mb-4 sm:mb-8">
-                    <BookOpen className="w-6 h-6 sm:w-12 h-12 text-slate-200" />
-                 </div>
-                 <h3 className="text-base sm:text-2xl font-black text-slate-900 mb-2">{t('coursesPage.noCurricula')}</h3>
-                 <p className="text-slate-500 font-bold max-w-sm mx-auto mb-6 sm:mb-10 opacity-70 text-[10px] sm:text-base">{t('coursesPage.startByAdding')}</p>
-                 <Link href="/super-admin/courses/create" className="bg-indigo-600 text-white px-6 sm:px-10 py-2.5 sm:py-4 rounded-xl sm:rounded-2xl font-black shadow-xl shadow-indigo-600/20 inline-block text-[10px] sm:text-base">
-                    {t('coursesPage.addCurriculum')}
-                 </Link>
-              </div>
-          ) : (
-              <>
-                <div className="flex flex-col gap-4 sm:gap-6 pb-10 sm:pb-20">
-                   {filteredCourses.map((course) => (
-                      <div key={course.id} className="group bg-white rounded-[20px] sm:rounded-[30px] border border-slate-100 p-4 sm:p-6 hover:shadow-3xl hover:shadow-indigo-600/10 transition-all duration-500 relative overflow-hidden flex flex-col md:flex-row items-center gap-6">
-                        <div className="absolute top-0 right-0 w-1.5 h-full bg-gradient-to-b from-indigo-500 to-blue-500 transform scale-y-0 group-hover:scale-y-100 transition-transform duration-500 origin-top"></div>
-                        
-                        <div className="relative w-16 h-16 sm:w-20 sm:h-20 bg-indigo-50 rounded-lg sm:rounded-2xl flex items-center justify-center group-hover:scale-110 transition-all duration-500 overflow-hidden border border-slate-100 shrink-0">
-                           {course.coverImage ? (
-                              <Image
-                                src={getFullImageUrl(course.coverImage) || ""}
-                                fill
-                                sizes="80px"
-                                className="object-cover"
-                                alt="Cover"
-                                unoptimized={shouldSkipImageOptimization(getFullImageUrl(course.coverImage) || "")}
-                              />
-                           ) : (
-                              <Layers className="w-8 h-8 text-indigo-600" />
-                           )}
-                        </div>
- 
-                        <div className={`flex-1 min-w-0 w-full md:w-auto text-center ${language === 'ar' ? 'md:text-right' : 'md:text-left'}`}>
-                           <div className={`flex flex-wrap items-center justify-center ${language === 'ar' ? 'md:justify-start' : 'md:justify-end'} gap-2 mb-2`}>
-                              <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md uppercase tracking-widest shrink-0">{course.subject || (language === 'ar' ? "عام" : "General")}</span>
-                              <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md uppercase tracking-widest shrink-0">{getGradeName(course.grade) || (language === 'ar' ? "عام" : "General")}</span>
-                              {course._source === 'both' ? (
-                                <span className="text-[10px] font-black text-purple-700 bg-purple-100 border border-purple-200 px-2.5 py-1 rounded-md shrink-0 flex items-center gap-1 shadow-xs">
-                                  {language === 'ar' ? 'الاثنين (الأساسية + الاحتياطية)' : 'Both (Primary + Backup DB)'}
-                                </span>
-                              ) : course._source === 'cloud' ? (
-                                <span className="text-[10px] font-black text-sky-700 bg-sky-100 border border-sky-200 px-2.5 py-1 rounded-md shrink-0 flex items-center gap-1 shadow-xs">
-                                  {language === 'ar' ? 'الاحتياطية فقط' : 'Backup DB Only'}
-                                </span>
-                              ) : (
-                                <span className="text-[10px] font-black text-slate-700 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md shrink-0 flex items-center gap-1">
-                                  {language === 'ar' ? 'الأساسية فقط (PostgreSQL)' : 'Primary DB Only'}
-                                </span>
-                              )}
-                           </div>
-                           <h3 className="text-xl sm:text-2xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors leading-tight mb-1.5 truncate">{course.title}</h3>
-                           <p className="text-slate-400 text-xs sm:text-sm font-bold line-clamp-1">{course.description || (language === 'ar' ? "منهج تعليمي مركزي." : "Central curriculum.")}</p>
-                        </div>
- 
-                        <div className="flex flex-wrap items-center gap-3 shrink-0 w-full md:w-auto justify-between md:justify-end border-t border-slate-50 md:border-none pt-4 md:pt-0">
-                           <div className="flex flex-wrap items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest">
-                              <div className="flex shrink-0 items-center gap-2 whitespace-nowrap bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
-                                 <Monitor className="w-4 h-4 text-indigo-400" />
-                                 <span className="hidden sm:inline">{language === 'ar' ? "درس" : "lesson(s)"}</span> {course._count?.lessons || 0}
-                              </div>
-                              <div className="flex shrink-0 items-center gap-2 whitespace-nowrap bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
-                                 <GraduationCap className="w-4 h-4 text-blue-400" />
-                                 <span className="hidden sm:inline">{language === 'ar' ? "طالب" : "student(s)"}</span> {course._count?.enrollments || 0}
-                              </div>
-                           </div>
-                           
-                           <div className="flex flex-wrap shrink-0 items-center gap-2">
-                              <button 
-                                onClick={async () => {
-                                  try {
-                                    const token = localStorage.getItem("super_admin_token") || localStorage.getItem("school_admin_token");
-                                    const res = await apiFetch(`${API_URL}/school/export/course/${course.id}`, {
-                                      headers: { Authorization: `Bearer ${token}` }
-                                    });
-                                    if (!res.ok) throw new Error("Failed to export course");
-                                    
-                                    const blob = await res.blob();
-                                    const url = window.URL.createObjectURL(blob);
-                                    const a = document.createElement("a");
-                                    a.href = url;
-                                    a.download = `course_${course.id}_export.xlsx`;
-                                    document.body.appendChild(a);
-                                    a.click();
-                                    window.URL.revokeObjectURL(url);
-                                    document.body.removeChild(a);
-                                  } catch (err) {
-                                    showToast("Failed to export course", "error");
-                                  }
-                                }}
-                                title={language === 'ar' ? 'تصدير الكورس كملف إكسيل' : 'Export Course to Excel'}
-                                className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
-                              >
-                                 <DownloadCloud className="w-5 h-5" />
-                              </button>
-                              <button 
-                                onClick={async () => {
-                                  try {
-                                    const token = localStorage.getItem("super_admin_token") || localStorage.getItem("school_admin_token");
-                                    const res = await apiFetch(`${API_URL}/school/export/json/course/${course.id}`, {
-                                      headers: { Authorization: `Bearer ${token}` }
-                                    });
-                                    if (!res.ok) throw new Error("Failed to export JSON");
-                                    
-                                    const blob = await res.blob();
-                                    const url = window.URL.createObjectURL(blob);
-                                    const a = document.createElement("a");
-                                    a.href = url;
-                                    a.download = `course_${course.id}_backup.json`;
-                                    document.body.appendChild(a);
-                                    a.click();
-                                    window.URL.revokeObjectURL(url);
-                                    document.body.removeChild(a);
-                                    showToast(language === 'ar' ? "تم تصدير نسخة JSON بنجاح" : "Exported JSON successfully", "success");
-                                  } catch (err) {
-                                    showToast(language === 'ar' ? "فشل تصدير نسخة JSON" : "Failed to export JSON backup", "error");
-                                  }
-                                }}
-                                title={language === 'ar' ? 'تصدير نسخة JSON احتياطية' : 'Export Course JSON Backup'}
-                                className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
-                              >
-                                 <FileCode className="w-5 h-5" />
-                              </button>
-                              <button 
-                                onClick={() => router.push(`/super-admin/courses/edit?id=${course.id}`)}
-                                className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm"
-                              >
-                                 <Edit2 className="w-5 h-5" />
-                              </button>
-                              <button 
-                                onClick={() => handleDelete(course.id)}
-                                className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center hover:bg-red-600 hover:text-white transition-all shadow-sm"
-                              >
-                                 <Trash2 className="w-5 h-5" />
-                              </button>
-                           </div>
-                        </div>
- 
-                         {/* Decoration */}
-                         <div className="absolute -bottom-12 -left-12 w-32 h-32 text-slate-50 group-hover:text-indigo-50/50 transition-colors duration-500 -rotate-12 pointer-events-none">
-                            <Book className="w-full h-full" />
-                         </div>
-                      </div>
-                   ))}
-                </div>
-   
-                {hasMore && (
-                  <div className="flex justify-center pb-10 sm:pb-20">
-                     <button 
-                       onClick={() => setPage(prev => prev + 1)}
-                       disabled={loadingMore}
-                       className="group bg-white border-2 border-slate-100 text-slate-600 px-10 py-4 rounded-[22px] font-black hover:border-indigo-600 hover:text-indigo-600 transition-all flex items-center gap-3 shadow-sm disabled:opacity-50 hover:shadow-xl hover:shadow-indigo-600/10"
-                     >
-                       {loadingMore ? (
-                          <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                       ) : (
-                         <>
-                           <span>{t('coursesPage.loadMore')}</span>
-                           <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform" />
-                         </>
-                       )}
-                     </button>
+        {/* Subtle cloud sync indicator - shows only during background 3s refresh (Removed as per user request) */}
+
+        {loading ? (
+          <div className="flex flex-col gap-4 sm:gap-6">
+            {[1, 2, 3].map((n) => (
+              <div key={n} className="bg-slate-100 animate-pulse rounded-2xl h-32 w-full"></div>
+            ))}
+          </div>
+        ) : filteredCourses.length === 0 ? (
+          <div className="bg-white border-2 sm:border-4 border-dashed border-slate-100 rounded-[24px] sm:rounded-[60px] p-8 sm:p-32 text-center">
+            <div className="w-12 h-12 sm:w-24 h-24 bg-slate-50 rounded-xl sm:rounded-[40px] flex items-center justify-center mx-auto mb-4 sm:mb-8">
+              <BookOpen className="w-6 h-6 sm:w-12 h-12 text-slate-200" />
+            </div>
+            <h3 className="text-base sm:text-2xl font-black text-slate-900 mb-2">{t('coursesPage.noCurricula')}</h3>
+            <p className="text-slate-500 font-bold max-w-sm mx-auto mb-6 sm:mb-10 opacity-70 text-[10px] sm:text-base">{t('coursesPage.startByAdding')}</p>
+            <Link href="/super-admin/courses/create" className="bg-indigo-600 text-white px-6 sm:px-10 py-2.5 sm:py-4 rounded-xl sm:rounded-2xl font-black shadow-xl shadow-indigo-600/20 inline-block text-[10px] sm:text-base">
+              {t('coursesPage.addCurriculum')}
+            </Link>
+          </div>
+        ) : (
+          <>
+            <div className="flex flex-col gap-4 sm:gap-6 pb-10 sm:pb-20">
+              {filteredCourses.map((course) => (
+                <div key={course.id} className="group bg-white rounded-[20px] sm:rounded-[30px] border border-slate-100 p-4 sm:p-6 hover:shadow-3xl hover:shadow-indigo-600/10 transition-all duration-500 relative overflow-hidden flex flex-col md:flex-row items-center gap-6">
+                  <div className="absolute top-0 right-0 w-1.5 h-full bg-gradient-to-b from-indigo-500 to-blue-500 transform scale-y-0 group-hover:scale-y-100 transition-transform duration-500 origin-top"></div>
+
+                  <div className="relative w-16 h-16 sm:w-20 sm:h-20 bg-indigo-50 rounded-lg sm:rounded-2xl flex items-center justify-center group-hover:scale-110 transition-all duration-500 overflow-hidden border border-slate-100 shrink-0">
+                    {course.coverImage ? (
+                      <Image
+                        src={getFullImageUrl(course.coverImage) || ""}
+                        fill
+                        sizes="80px"
+                        className="object-cover"
+                        alt="Cover"
+                        unoptimized={shouldSkipImageOptimization(getFullImageUrl(course.coverImage) || "")}
+                      />
+                    ) : (
+                      <Layers className="w-8 h-8 text-indigo-600" />
+                    )}
                   </div>
-                )}
-              </>
-          )}
+
+                  <div className={`flex-1 min-w-0 w-full md:w-auto text-center ${language === 'ar' ? 'md:text-right' : 'md:text-left'}`}>
+                    <div className={`flex flex-wrap items-center justify-center ${language === 'ar' ? 'md:justify-start' : 'md:justify-end'} gap-2 mb-2`}>
+                      <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md uppercase tracking-widest shrink-0">{course.subject || (language === 'ar' ? "عام" : "General")}</span>
+                      <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md uppercase tracking-widest shrink-0">{getGradeName(course.grade) || (language === 'ar' ? "عام" : "General")}</span>
+                      {course._source === 'both' ? (
+                        <span className="text-[10px] font-black text-purple-700 bg-purple-100 border border-purple-200 px-2.5 py-1 rounded-md shrink-0 flex items-center gap-1 shadow-xs">
+                          {language === 'ar' ? 'الاثنين (الأساسية + الاحتياطية)' : 'Both (Primary + Backup DB)'}
+                        </span>
+                      ) : course._source === 'cloud' ? (
+                        <span className="text-[10px] font-black text-sky-700 bg-sky-100 border border-sky-200 px-2.5 py-1 rounded-md shrink-0 flex items-center gap-1 shadow-xs">
+                          {language === 'ar' ? 'الاحتياطية فقط' : 'Backup DB Only'}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-black text-slate-700 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md shrink-0 flex items-center gap-1">
+                          {language === 'ar' ? 'الأساسية فقط (PostgreSQL)' : 'Primary DB Only'}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="text-xl sm:text-2xl font-black text-slate-900 group-hover:text-indigo-600 transition-colors leading-tight mb-1.5 truncate">{course.title}</h3>
+                    <p className="text-slate-400 text-xs sm:text-sm font-bold line-clamp-1">{course.description || (language === 'ar' ? "منهج تعليمي مركزي." : "Central curriculum.")}</p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3 shrink-0 w-full md:w-auto justify-between md:justify-end border-t border-slate-50 md:border-none pt-4 md:pt-0">
+                    <div className="flex flex-wrap items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest">
+                      <div className="flex shrink-0 items-center gap-2 whitespace-nowrap bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
+                        <Monitor className="w-4 h-4 text-indigo-400" />
+                        <span className="hidden sm:inline">{language === 'ar' ? "درس" : "lesson(s)"}</span> {course._count?.lessons || 0}
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2 whitespace-nowrap bg-slate-50 px-3 py-2 rounded-xl border border-slate-100">
+                        <GraduationCap className="w-4 h-4 text-blue-400" />
+                        <span className="hidden sm:inline">{language === 'ar' ? "طالب" : "student(s)"}</span> {course._count?.enrollments || 0}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap shrink-0 items-center gap-2">
+                      <button
+                        onClick={async () => {
+                          try {
+                            const token = localStorage.getItem("super_admin_token") || localStorage.getItem("school_admin_token");
+                            const lang = language === "en" ? "en" : "ar";
+                            const res = await apiFetch(`${API_URL}/school/export/course/${course.id}?lang=${lang}`, {
+                              headers: { Authorization: `Bearer ${token}` }
+                            });
+                            if (!res.ok) throw new Error("Failed to export course");
+
+                            const blob = await res.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement("a");
+                            a.href = url;
+                            a.download = `course_${course.id}_export.xlsx`;
+                            document.body.appendChild(a);
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                            document.body.removeChild(a);
+                          } catch (err) {
+                            showToast("Failed to export course", "error");
+                          }
+                        }}
+                        title={language === 'ar' ? 'تصدير الكورس كملف إكسيل' : 'Export Course to Excel'}
+                        className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
+                      >
+                        <DownloadCloud className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const token = localStorage.getItem("super_admin_token") || localStorage.getItem("school_admin_token");
+                            const res = await apiFetch(`${API_URL}/school/export/json/course/${course.id}`, {
+                              headers: { Authorization: `Bearer ${token}` }
+                            });
+                            if (!res.ok) throw new Error("Failed to export JSON");
+
+                            const blob = await res.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement("a");
+                            a.href = url;
+                            a.download = `course_${course.id}_backup.json`;
+                            document.body.appendChild(a);
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                            document.body.removeChild(a);
+                            showToast(language === 'ar' ? "تم تصدير نسخة JSON بنجاح" : "Exported JSON successfully", "success");
+                          } catch (err) {
+                            showToast(language === 'ar' ? "فشل تصدير نسخة JSON" : "Failed to export JSON backup", "error");
+                          }
+                        }}
+                        title={language === 'ar' ? 'تصدير نسخة JSON احتياطية' : 'Export Course JSON Backup'}
+                        className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
+                      >
+                        <FileCode className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => router.push(`/super-admin/courses/edit?id=${course.id}`)}
+                        className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                      >
+                        <Edit2 className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(course.id)}
+                        className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center hover:bg-red-600 hover:text-white transition-all shadow-sm"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Decoration */}
+                  <div className="absolute -bottom-12 -left-12 w-32 h-32 text-slate-50 group-hover:text-indigo-50/50 transition-colors duration-500 -rotate-12 pointer-events-none">
+                    <Book className="w-full h-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {hasMore && (
+              <div className="flex justify-center pb-10 sm:pb-20">
+                <button
+                  onClick={() => setPage(prev => prev + 1)}
+                  disabled={loadingMore}
+                  className="group bg-white border-2 border-slate-100 text-slate-600 px-10 py-4 rounded-[22px] font-black hover:border-indigo-600 hover:text-indigo-600 transition-all flex items-center gap-3 shadow-sm disabled:opacity-50 hover:shadow-xl hover:shadow-indigo-600/10"
+                >
+                  {loadingMore ? (
+                    <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <>
+                      <span>{t('coursesPage.loadMore')}</span>
+                      <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform" />
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </>
+        )}
 
       </div>
-      <ImportExcelModal 
-        isOpen={isImportModalOpen} 
-        onClose={() => setIsImportModalOpen(false)} 
+      <ImportExcelModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
         onSuccess={() => {
           fetchCourses(true);
           fetchStats();
-        }} 
+        }}
       />
     </DashboardLayout>
   );

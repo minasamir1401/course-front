@@ -19,7 +19,7 @@ export const LessonList: React.FC = () => {
   const { showToast } = useNotification();
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
-  const [lessonToCopy, setLessonToCopy] = useState<{id: string, title: string} | null>(null);
+  const [lessonToCopy, setLessonToCopy] = useState<{ id: string, title: string } | null>(null);
   const jsonInputRef = useRef<HTMLInputElement | null>(null);
   const {
     role,
@@ -67,7 +67,7 @@ export const LessonList: React.FC = () => {
         }
         setCourseLessonStats(map);
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => { active = false; };
   }, [courseId, lessons.length, role, effectiveCourseSchoolId, schoolQuery]);
 
@@ -114,11 +114,12 @@ export const LessonList: React.FC = () => {
       showToast(language === 'ar' ? "جاري حفظ التعديلات وتصدير الكورس..." : "Saving changes & exporting course...", "info");
       if (handleSubmit) await handleSubmit(undefined, false);
       const token = localStorage.getItem("super_admin_token") || localStorage.getItem("school_admin_token");
-      const res = await apiFetch(`${API_URL}/school/export/course/${courseId}`, {
+      const lang = language === "en" ? "en" : "ar";
+      const res = await apiFetch(`${API_URL}/school/export/course/${courseId}?lang=${lang}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) throw new Error("Export failed");
-      
+
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -161,11 +162,12 @@ export const LessonList: React.FC = () => {
     try {
       if (handleSubmit) await handleSubmit(undefined, false);
       const token = localStorage.getItem("super_admin_token") || localStorage.getItem("school_admin_token");
-      const res = await apiFetch(`${API_URL}/school/export/lesson/${lessonId}`, {
+      const lang = language === "en" ? "en" : "ar";
+      const res = await apiFetch(`${API_URL}/school/export/lesson/${lessonId}?lang=${lang}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) throw new Error("Export failed");
-      
+
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -193,7 +195,7 @@ export const LessonList: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) throw new Error("Export JSON failed");
-      
+
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -447,9 +449,8 @@ export const LessonList: React.FC = () => {
                         </button>
                         <div className="flex flex-wrap items-center gap-2.5 mt-2">
                           <div
-                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black ${
-                              lesson.isVisible ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-500"
-                            }`}
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black ${lesson.isVisible ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-500"
+                              }`}
                             title={lesson.isVisible ? (ar ? "مرئي للطلاب" : "Visible to students") : (ar ? "مخفي عن الطلاب" : "Hidden")}
                           >
                             <span className={`w-2 h-2 rounded-full ${lesson.isVisible ? "bg-emerald-500" : "bg-red-500"}`} />
@@ -501,11 +502,10 @@ export const LessonList: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => void toggleLessonDashboard(lesson, index)}
-                        className={`px-3.5 py-2 rounded-xl font-black text-xs flex items-center gap-2 transition-all shadow-sm border ${
-                          isExpanded
+                        className={`px-3.5 py-2 rounded-xl font-black text-xs flex items-center gap-2 transition-all shadow-sm border ${isExpanded
                             ? "bg-indigo-600 text-white border-indigo-600"
                             : "bg-indigo-50/80 text-indigo-700 border-indigo-100 hover:bg-indigo-600 hover:text-white"
-                        }`}
+                          }`}
                         title={ar ? "تفاصيل وداشبورد الدرس" : "Lesson Details & Dashboard"}
                       >
                         <BarChart3 className="w-4 h-4" />
@@ -721,13 +721,12 @@ export const LessonList: React.FC = () => {
                                             <span className="text-xs text-slate-400">{row.grade || "—"} · {row.classroom?.name || row.username}</span>
                                           </td>
                                           <td className="p-3">
-                                            <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-black ${
-                                              row.progress?.isCompleted
+                                            <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-black ${row.progress?.isCompleted
                                                 ? "bg-emerald-50 text-emerald-700"
                                                 : row.progress || row.assessments?.length
                                                   ? "bg-indigo-50 text-indigo-700"
                                                   : "bg-amber-50 text-amber-700"
-                                            }`}>
+                                              }`}>
                                               {row.progress?.isCompleted
                                                 ? (ar ? "أكمل الدرس" : "Completed")
                                                 : row.progress || row.assessments?.length
@@ -807,9 +806,9 @@ export const LessonList: React.FC = () => {
         ) : null}
       </div>
 
-      <ImportExcelModal 
-        isOpen={isImportModalOpen} 
-        onClose={() => setIsImportModalOpen(false)} 
+      <ImportExcelModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
         onSuccess={() => {
           if (courseId) {
             const token = localStorage.getItem("super_admin_token") || localStorage.getItem("school_admin_token");
@@ -819,7 +818,7 @@ export const LessonList: React.FC = () => {
           } else {
             window.location.reload();
           }
-        }} 
+        }}
       />
 
       {lessonToCopy && (
