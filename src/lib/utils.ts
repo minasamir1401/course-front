@@ -43,6 +43,10 @@ export const getOptionLetter = (index: number, _language?: string): string => {
 
 export const cleanOptionText = (text: string): string => {
   if (!text || typeof text !== 'string') return text || "";
-  // Remove leading manual numbering/lettering like "A. ", "B- ", "C) ", "أ. ", "1. ", "أ - ", "A - ", etc.
-  return text.replace(/^(?:(?:[A-Za-z\u0621-\u064A]|\d+)\s*[.)-]\s+)/, '').trim();
+  return text
+    .replace(/^\((?:[A-Ha-h\u0621-\u064A]|[1-9])\)\s+/, '')
+    .replace(/^(?:[A-Ha-h\u0621-\u064A]|[1-9])\s*[.)]\s+/, '')
+    .replace(/^(?:[A-H\u0623\u0627\u0628\u062C\u062F\u0647]|[1-9])-\s+/, '')
+    .replace(/^(?:[A-H\u0623\u0627\u0628\u062C\u062F\u0647])\s+-\s+(?=[\u0600-\u06FF]|[A-Za-z]{2,})/, '')
+    .trim();
 };

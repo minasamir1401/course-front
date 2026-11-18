@@ -32,6 +32,7 @@ const {
   importLessonSlides,
   handleFullLessonExcelImport,
 } = require('../../src/lib/slidesExcelWorkbook.ts');
+const { resolveSingleCorrectOptionIndex } = require('../../src/lib/answerEvaluation.ts');
 const {
   importModuleQuestions,
 } = require('../../src/lib/questionExcelWorkbook.ts');
@@ -288,3 +289,59 @@ test('autoTranslateSkillMetadata translates English skill metadata and preserves
   assert.ok(translatedStd.includes('عربي[Recognize equivalent fractions]'));
   assert.equal(result.translations[translatedStd], 'Recognize equivalent fractions');
 }));
+
+test('autoTranslateQuestionsList disambiguates Point Q / Point S collisions and avoids false index fallback for numeric and single-letter options', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (_url, init) => {
+    const body = JSON.parse(init?.body || '{}');
+    const texts = Array.isArray(body.texts) ? body.texts : [];
+    return new Response(JSON.stringify({
+      translations: texts.map((text) => {
+        if (text === 'Point Q' || text === 'Point S') return 'النقطة س';
+        if (text === 'Point P') return 'النقطة ص';
+        if (text === 'Point R') return 'النقطة ر';
+        return `عربي[${text}]`;
+      }),
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  };
+
+  try {
+    const translated = await autoTranslateQuestionsList([
+      {
+        type: 'MCQ',
+        textEn: 'Which point represents (-3, 2)?',
+        optionsEn: ['Point P', 'Point Q', 'Point R', 'Point S'],
+        correctAnswerEn: 'Point Q',
+      },
+      {
+        type: 'MCQ',
+        textEn: 'What is 2 + 2?',
+        optionsEn: ['4', '2', '6', '8'],
+        correctAnswerEn: '4',
+      },
+      {
+        type: 'MCQ',
+        textEn: 'Pick lowercase variable b',
+        optionsEn: ['b', 'a', 'x', 'y'],
+        correctAnswerEn: 'b',
+      },
+    ]);
+
+    assert.equal(new Set(translated[0].options).size, 4);
+    assert.equal(translated[0].correctAnswerEn, 'Point Q');
+    assert.equal(translated[0].correctAnswer, translated[0].options[1]);
+    assert.equal(resolveSingleCorrectOptionIndex(translated[0], true), 1);
+
+    assert.equal(translated[1].correctAnswer, '4');
+    assert.equal(translated[1].correctAnswerEn, '4');
+    assert.equal(resolveSingleCorrectOptionIndex(translated[1], true), 0);
+
+    assert.equal(translated[2].correctAnswer, translated[2].options[0]);
+    assert.notEqual(translated[2].correctAnswer, translated[2].options[1]);
+    assert.notEqual(translated[2].correctAnswer, 'B');
+    assert.equal(translated[2].correctAnswerEn, 'b');
+    assert.equal(resolveSingleCorrectOptionIndex(translated[2], true), 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

@@ -1,8 +1,12 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const fs = require('node:fs');
+const path = require('node:path');
 const ts = require('typescript');
 require.extensions['.ts'] = (module, filename) => {
+  const originalRequire = module.require.bind(module);
+  module.require = (name) =>
+    originalRequire(name.startsWith('@/') ? path.resolve(__dirname, '../src', name.slice(2)) : name);
   module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
   }).outputText, filename);
@@ -11,6 +15,16 @@ const XLSX = require('xlsx');
 const { questionExportRows, questionTemplateRows, planQuestionImport } = require('../src/lib/questionExcelSync.ts');
 const { buildQuestionWorkbook, readQuestionImport, importModuleQuestions } = require('../src/lib/questionExcelWorkbook.ts');
 const { resolvePreferredQuestionLang, getTrueFalseDefaults } = require('../src/lib/questionLanguage.ts');
+const { cleanOptionText } = require('../src/lib/utils.ts');
+const {
+  stripOptionPrefix,
+  isOptionMatch,
+  resolveSingleOptionIndexForValue,
+  resolveSingleCorrectOptionIndex,
+  isAnswerCorrect,
+} = require('../src/lib/answerEvaluation.ts');
+const { normalizePersistedExamQuestion } = require('../src/lib/persistedExamQuestion.ts');
+const { buildInitialCourseSectionMeta, populateBilingualQuestionDraft } = require('../src/lib/questionDraftHelpers.ts');
 const q = (id = 'q1') => ({ id, text: '<b>5 + 5?</b>', type: 'MCQ', options: ['8', '10'],
   correctAnswer: '10', points: 1, skill: 'Algebra', explanation: 'Explanation', moduleId: 'm1', subExamId: 's1' });
 const opts = { canDelete: true, language: 'en' };
@@ -304,4 +318,119 @@ test('resolvePreferredQuestionLang and getTrueFalseDefaults honor Arabic content
     optionsEn: ['True', 'False'],
     correctAnswerEn: 'True',
   });
+});
+
+test('excel import prioritizes exact option text over 1-based index/letter fallbacks', () => {
+  const numRows = [
+    ['Question Text (En)', 'Question Type', 'Option 1 (En)', 'Option 2 (En)', 'Option 3 (En)', 'Option 4 (En)', 'Correct Answer (En)'],
+    ['What is 2 + 2?', 'MCQ', '4', '2', '6', '8', '4'],
+  ];
+  const numPlan = planQuestionImport(numRows, [], opts);
+  assert.equal(numPlan.questions[0].correctAnswer, '4');
+  assert.equal(numPlan.questions[0].correctAnswerEn, '4');
+  assert.equal(numPlan.questions[0].correctAnswerIndex, 0);
+
+  const exportedNum = questionExportRows(numPlan.questions, 'en');
+  const reimportedNum = planQuestionImport(exportedNum, numPlan.questions, opts);
+  assert.equal(reimportedNum.questions[0].correctAnswerEn, '4');
+
+  const varRows = [
+    ['Question Text (En)', 'Question Type', 'Option 1 (En)', 'Option 2 (En)', 'Option 3 (En)', 'Option 4 (En)', 'Correct Answer (En)'],
+    ['Which variable is first?', 'MCQ', 'b', 'a', 'x', 'y', 'b'],
+  ];
+  const varPlan = planQuestionImport(varRows, [], opts);
+  assert.equal(varPlan.questions[0].correctAnswer, 'b');
+  assert.equal(varPlan.questions[0].correctAnswerEn, 'b');
+  assert.equal(varPlan.questions[0].correctAnswerIndex, 0);
+
+  const decRows = [
+    ['Question Text (En)', 'Question Type', 'Option 1 (En)', 'Option 2 (En)', 'Option 3 (En)', 'Option 4 (En)', 'Correct Answer (En)'],
+    ['Choose 1.5', 'MCQ', '1.5', '2.5', '3.5', '4.5', '1.5'],
+  ];
+  const decPlan = planQuestionImport(decRows, [], opts);
+  assert.equal(decPlan.questions[0].correctAnswer, '1.5');
+  assert.equal(decPlan.questions[0].correctAnswerIndex, 0);
+});
+
+test('negative numbers, decimals, and algebraic subtraction expressions are never stripped or confused with indices', () => {
+  assert.equal(stripOptionPrefix('1.5'), '1.5');
+  assert.equal(cleanOptionText('1.5'), '1.5');
+  assert.equal(cleanOptionText('x - 2'), 'x - 2');
+  assert.equal(cleanOptionText('a - b'), 'a - b');
+  assert.equal(cleanOptionText('B) x - 2'), 'x - 2');
+
+  const negQuestion = {
+    type: 'MCQ',
+    options: ['0', '1', '2', '-2'],
+    correctAnswer: '-2',
+  };
+  assert.equal(isOptionMatch('-2', '2', 2), false);
+  assert.equal(isOptionMatch('-2', '-2', 3), true);
+  assert.equal(resolveSingleOptionIndexForValue('-2', ['0', '1', '2', '-2']), 3);
+  assert.equal(isAnswerCorrect(negQuestion, '-2'), true);
+  assert.equal(isAnswerCorrect(negQuestion, '2'), false);
+});
+
+test('Point Q / Point S collision repair and single-choice index resolution never highlight two options', () => {
+  const collidedQuestion = {
+    id: 'q-points',
+    type: 'MCQ',
+    text: 'ما النقطة (-3, 2)؟',
+    textEn: 'Which point represents the ordered pair (-3, 2)?',
+    options: ['النقطة ع', 'النقطة س', 'النقطة ر', 'النقطة س'],
+    optionsEn: ['Point P', 'Point Q', 'Point R', 'Point S'],
+    correctAnswer: 'النقطة س',
+    explanationEn: 'Step 4: This location is point Q. Option D (Point S) is incorrect.',
+  };
+
+  assert.equal(resolveSingleCorrectOptionIndex(collidedQuestion, true), 1);
+
+  const repaired = normalizePersistedExamQuestion(collidedQuestion);
+  assert.equal(new Set(repaired.options).size, 4);
+  assert.equal(repaired.correctAnswerIndex, 1);
+  assert.equal(repaired.correctAnswerEn, 'Point Q');
+  assert.equal(repaired.correctAnswer, repaired.options[1]);
+  assert.equal(resolveSingleCorrectOptionIndex(repaired, true), 1);
+  assert.equal(resolveSingleCorrectOptionIndex(repaired, false), 1);
+});
+
+test('bilingual courseEn and sectionEn metadata drafting and Excel update preserve English without leaking Arabic', () => {
+  assert.deepEqual(
+    buildInitialCourseSectionMeta({ title: 'Digital SAT', titleEn: '' }, { title: 'Mathematics', titleEn: '' }),
+    { course: 'Digital SAT', courseEn: 'Digital SAT', section: 'Mathematics', sectionEn: 'Mathematics' }
+  );
+  assert.deepEqual(
+    buildInitialCourseSectionMeta({ title: 'سات الرقمية', titleEn: 'Digital SAT' }, { title: 'الرياضيات', titleEn: '' }),
+    { course: 'سات الرقمية', courseEn: 'Digital SAT', section: 'الرياضيات', sectionEn: '' }
+  );
+
+  const draft = populateBilingualQuestionDraft({
+    type: 'MCQ',
+    text: 'Find x',
+    course: 'سات الرقمية',
+    section: 'الرياضيات',
+    domain: 'Algebra',
+    options: ['x', 'y'],
+    optionsEn: ['x', 'y'],
+    correctAnswer: 'x',
+  });
+  assert.equal(draft.courseEn, undefined);
+  assert.equal(draft.sectionEn, undefined);
+  assert.equal(draft.domainEn, 'Algebra');
+  assert.equal(draft.correctAnswerIndex, 0);
+
+  const existing = {
+    ...q('q-meta'),
+    course: 'سات الرقمية',
+    courseEn: 'Digital SAT',
+    section: 'الرياضيات',
+    sectionEn: 'Math',
+  };
+  const exportRows = questionExportRows([existing], 'en');
+  exportRows[1][column(exportRows, 'Question Text (En)')] = 'Updated question en';
+  const imported = planQuestionImport(exportRows, [existing], opts);
+  assert.equal(imported.questions[0].course, 'سات الرقمية');
+  assert.equal(imported.questions[0].courseEn, 'Digital SAT');
+  assert.equal(imported.questions[0].section, 'الرياضيات');
+  assert.equal(imported.questions[0].sectionEn, 'Math');
 });

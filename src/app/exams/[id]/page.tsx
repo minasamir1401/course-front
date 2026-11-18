@@ -22,6 +22,7 @@ import StudentExamCalculator from "@/components/StudentExamCalculator";
 import { examArrowDelta } from '@/lib/examKeyboard';
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getOptionLetter, cleanOptionText } from "@/lib/utils";
+import { resolveSingleCorrectOptionIndex } from "@/lib/answerEvaluation";
 import { getAnswerStatusLabel, getInExamQuestionTypeLabel, getSafeCurrentQuestion, resolveTakeExamQuestions, toggleReviewFlag } from '@/lib/takeExamUi';
 import InteractiveQuestionRenderer from '@/components/InteractiveQuestionRenderer';
 import { examArtworkKey } from '@/lib/examArtwork';
@@ -765,6 +766,13 @@ function TakeExamPageContent() {
                       return clean.length > 25 || clean.includes('\\') || clean.includes('$') || clean.includes('=') || clean.includes('^') || opt.includes('<img');
                     });
 
+                    const preferEnPreview = choices.some((c: string, idx: number) => c && rawArChoices[idx] !== c);
+                    const singlePreviewCorrectIdx = question.type === "MULTI_SELECT"
+                      ? -1
+                      : resolveSingleCorrectOptionIndex(
+                          { ...question, options: rawArChoices, optionsEn: rawEnChoices },
+                          preferEnPreview
+                        );
                     return (
                       <div className={`grid gap-4 ${hasLongChoices ? "grid-cols-1" : "grid-cols-1 md:grid-cols-2"}`}>
                         {choices.map((option: string, i: number) => {
@@ -776,7 +784,7 @@ function TakeExamPageContent() {
 
                           const isOptionCorrectInPreview = question.type === "MULTI_SELECT"
                             ? Array.isArray(question.correctAnswers) && (question.correctAnswers.includes(option) || (arOpt && question.correctAnswers.includes(arOpt)))
-                            : (question.correctAnswer === option || (arOpt && question.correctAnswer === arOpt));
+                            : i === singlePreviewCorrectIdx;
 
                           return (
                             <ExamOptionButton

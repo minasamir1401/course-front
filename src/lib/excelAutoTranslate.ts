@@ -139,6 +139,8 @@ function isTrueFalseList(opts: string[]): boolean {
 function resolveOptionIndex(raw: string, opts: string[]): number {
   const val = String(raw ?? '').trim();
   if (!val) return -1;
+  const textMatch = opts.findIndex((o) => normalizeChoiceMatch(o, val));
+  if (textMatch >= 0) return textMatch;
   if (/^[1-9]$/.test(val)) {
     const idx = Number(val) - 1;
     return idx >= 0 && idx < opts.length ? idx : -1;
@@ -147,7 +149,50 @@ function resolveOptionIndex(raw: string, opts: string[]): number {
   if (enIdx >= 0 && enIdx < opts.length) return enIdx;
   const arIdx = ['أ', 'ب', 'ج', 'د', 'هـ', 'و'].indexOf(val);
   if (arIdx >= 0 && arIdx < opts.length) return arIdx;
-  return opts.findIndex((o) => normalizeChoiceMatch(o, val));
+  return -1;
+}
+
+function disambiguateTranslatedOptions(rawOpts: string[], translatedOpts: string[]): string[] {
+  const norm = (v: unknown) => String(v ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
+  const next = [...translatedOpts];
+  const groups = new Map<string, number[]>();
+  next.forEach((opt, i) => {
+    const key = norm(opt);
+    if (!key) return;
+    const list = groups.get(key) || [];
+    list.push(i);
+    groups.set(key, list);
+  });
+
+  for (const indices of groups.values()) {
+    if (indices.length < 2) continue;
+    if (new Set(indices.map((i) => norm(rawOpts[i]))).size < 2) continue;
+
+    const suffixTokens = indices.map((i) => {
+      const m = String(rawOpts[i] ?? '').trim().match(/([A-Za-z0-9']+)$/);
+      return m ? m[1] : '';
+    });
+    if (suffixTokens.every(Boolean) && new Set(suffixTokens.map((t) => t.toLowerCase())).size === indices.length) {
+      const candidate = indices.map((i, k) => {
+        const cur = String(next[i] ?? '').trim();
+        const replaced = cur.replace(/\s+\S+$/, ` ${suffixTokens[k]}`);
+        return replaced !== cur ? replaced : `${cur} (${suffixTokens[k]})`;
+      });
+      if (new Set(candidate.map(norm)).size === indices.length) {
+        indices.forEach((i, k) => { next[i] = candidate[k]; });
+        continue;
+      }
+    }
+
+    indices.forEach((i) => {
+      const src = String(rawOpts[i] ?? '').trim();
+      const cur = String(next[i] ?? '').trim();
+      if (src && !norm(cur).includes(norm(src))) {
+        next[i] = `${cur} (${src})`;
+      }
+    });
+  }
+  return next;
 }
 
 function isSingleLetterCellSymbol(cell: string): boolean {
@@ -426,7 +471,7 @@ function translateInteractivePayload(
       return { options: rewrapOpts(tfAr), optionsEn: rewrapOpts(tfEn), correctAnswer: canonicalAns, correctAnswerEn: canonicalAns };
     }
 
-    const arOpts = rawOpts.map((o) => collector.get(o, 'content'));
+    const arOpts = disambiguateTranslatedOptions(rawOpts, rawOpts.map((o) => collector.get(o, 'content')));
     if (Array.isArray(rawAns)) {
       const arAns = rawAns.map((a: any) => {
         const str = String(a ?? '');
@@ -460,11 +505,17 @@ function translateInteractivePayload(
     }
 
     const idx = resolveOptionIndex(ansStr, rawOpts);
+    const matchedByText = idx >= 0 && normalizeChoiceMatch(rawOpts[idx], ansStr);
     const arAns =
       idx >= 0
-        ? (/^[A-F]$/i.test(ansStr.trim()) ? ansStr.trim().toUpperCase() : arOpts[idx])
+        ? (!matchedByText && /^[A-F]$/i.test(ansStr.trim()) ? ansStr.trim().toUpperCase() : arOpts[idx])
         : (/^[A-F]$/i.test(ansStr.trim()) ? ansStr.trim().toUpperCase() : collector.get(ansStr, 'content'));
-    return { options: rewrapOpts(arOpts), optionsEn: rewrapOpts(rawOpts), correctAnswer: arAns, correctAnswerEn: rawAns };
+    return {
+      options: rewrapOpts(arOpts),
+      optionsEn: rewrapOpts(rawOpts),
+      correctAnswer: arAns,
+      correctAnswerEn: idx >= 0 && /^[1-9]$/.test(ansStr.trim()) && !matchedByText ? rawOpts[idx] : rawAns,
+    };
   }
 
   let translatedOpts = rawOpts;

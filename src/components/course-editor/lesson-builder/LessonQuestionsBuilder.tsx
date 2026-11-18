@@ -2,6 +2,8 @@
 import LessonQuestionForm from "./LessonQuestionForm";
 import QuestionSummary from '@/components/QuestionSummary';
 import { translateMetadataFields } from '@/lib/questionMetadataTranslation';
+import { resolveSingleCorrectOptionIndex } from '@/lib/answerEvaluation';
+import { populateBilingualQuestionDraft } from '@/lib/questionDraftHelpers';
 
 
 import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
@@ -325,6 +327,8 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
         contentEn: s.contentEn || (hasEnglish(s.content) && !hasArabic(s.content) ? s.content : '')
       }));
     }
+
+    populateBilingualQuestionDraft(item);
 
     setTempQuestion(item);
     setEditingQuestionIndex(index);
@@ -914,23 +918,27 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
                               <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{isCardEn ? 'Question Preview:' : 'معاينة السؤال:'}</h5>
                               {['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(q.type) ? (
                                 <div className="space-y-2">
-                                  {Array.isArray(activeQOpts) && activeQOpts.filter(Boolean).map((opt: string, oIdx: number) => {
-                                    const arOpt = rawArOpts[oIdx];
-                                    const isCorrect = q.type === 'MULTI_SELECT'
-                                      ? ((q.correctAnswers || []).includes(opt) || (arOpt && (q.correctAnswers || []).includes(arOpt)))
-                                      : (q.correctAnswer === opt || (arOpt && q.correctAnswer === arOpt));
-                                    return (
-                                      <div key={oIdx} className={`p-3 rounded-xl border flex items-center gap-3 text-xs font-bold transition-all ${isCorrect ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-white border-slate-100 text-slate-600'}`}>
-                                        <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${isCorrect ? 'bg-emerald-500 text-white' : 'bg-slate-100'}`}>
-                                          {isCorrect ? '✓' : ''}
+                                  {(() => {
+                                    const singleCorrectIdx = q.type === 'MULTI_SELECT' ? -1 : resolveSingleCorrectOptionIndex(q, isCardEn);
+                                    return Array.isArray(activeQOpts) && activeQOpts.map((opt: string, oIdx: number) => {
+                                      if (!opt || !String(opt).trim()) return null;
+                                      const arOpt = rawArOpts[oIdx];
+                                      const isCorrect = q.type === 'MULTI_SELECT'
+                                        ? ((q.correctAnswers || []).includes(opt) || (arOpt && (q.correctAnswers || []).includes(arOpt)))
+                                        : oIdx === singleCorrectIdx;
+                                      return (
+                                        <div key={oIdx} className={`p-3 rounded-xl border flex items-center gap-3 text-xs font-bold transition-all ${isCorrect ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-white border-slate-100 text-slate-600'}`}>
+                                          <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${isCorrect ? 'bg-emerald-500 text-white' : 'bg-slate-100'}`}>
+                                            {isCorrect ? '✓' : ''}
+                                          </div>
+                                          <span className="w-5 h-5 rounded-md bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-[10px] text-indigo-600 shrink-0">
+                                            {getOptionLetter(oIdx, qPreviewLang)}
+                                          </span>
+                                          <HtmlRenderer html={cleanOptionText(opt)} tag="span" className="flex-1 break-words whitespace-normal min-w-0 !leading-relaxed" />
                                         </div>
-                                        <span className="w-5 h-5 rounded-md bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-[10px] text-indigo-600 shrink-0">
-                                          {getOptionLetter(oIdx, qPreviewLang)}
-                                        </span>
-                                        <HtmlRenderer html={cleanOptionText(opt)} tag="span" className="flex-1 break-words whitespace-normal min-w-0 !leading-relaxed" />
-                                      </div>
-                                    );
-                                  })}
+                                      );
+                                    });
+                                  })()}
                                 </div>
                               ) : q.type === 'FLASH_CARD' ? (
                                 <div className="p-4 bg-slate-50 border border-slate-150 rounded-2xl text-xs space-y-2 font-bold text-right" dir={isCardEn ? 'ltr' : 'rtl'}>

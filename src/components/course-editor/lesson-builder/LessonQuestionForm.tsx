@@ -1,4 +1,5 @@
 "use client";
+import { resolveSingleCorrectOptionIndex } from '@/lib/answerEvaluation';
 import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
 import { normalizeDok } from '@/lib/examQuestionMetadata';
 import Image from "next/image";
@@ -109,15 +110,25 @@ export default function LessonQuestionForm(props: any) {
                 { key: 'errorPattern', labelAr: 'نمط الخطأ', labelEn: 'Error Pattern' },
                 { key: 'estimatedTime', labelAr: 'الوقت المقدر', labelEn: 'Estimated Time' },
               ].map((field) => {
-                const activeFieldKey = questionActiveLang === 'en' && ['domain', 'standard', 'learningOutcome', 'indicator', 'skill', 'subskill', 'microSkill', 'errorPattern'].includes(field.key)
-                  ? `${field.key}En`
-                  : field.key;
+                const isEn = questionActiveLang === 'en';
+                const isTranslatable = ['course', 'section', 'domain', 'standard', 'learningOutcome', 'indicator', 'skill', 'subskill', 'microSkill', 'errorPattern'].includes(field.key);
+                const activeFieldKey = isEn && isTranslatable ? `${field.key}En` : field.key;
+                const hasAr = (val?: string | null) => /[\u0600-\u06FF]/.test(String(val || ''));
+                const enVal = tempQuestion[`${field.key}En`];
+                const baseVal = tempQuestion[field.key];
+                const baseStandard = tempQuestion.standard || tempQuestion.learningOutcome || '';
 
                 const currentVal = field.key === 'standard'
-                  ? (questionActiveLang === 'en' ? (tempQuestion.standardEn || tempQuestion.learningOutcomeEn || '') : (tempQuestion.standard || tempQuestion.learningOutcome || ''))
+                  ? (isEn
+                      ? (tempQuestion.standardEn || tempQuestion.learningOutcomeEn || (!hasAr(baseStandard) ? baseStandard : ''))
+                      : baseStandard)
                   : field.key === 'dok'
                     ? (normalizeDok(tempQuestion.dok) || tempQuestion.dok || '')
-                    : (tempQuestion[activeFieldKey] || (questionActiveLang === 'ar' ? field.defaultValue : '') || '');
+                    : (isEn && isTranslatable
+                        ? (enVal !== undefined && enVal !== null
+                            ? (enVal === '' && !hasAr(baseVal) ? (baseVal || '') : enVal)
+                            : (!hasAr(baseVal) ? (baseVal || '') : ''))
+                        : (baseVal || (questionActiveLang === 'ar' ? field.defaultValue : '') || ''));
 
                 return (
                   <div key={field.key} className="flex flex-col gap-2">
@@ -556,34 +567,27 @@ export default function LessonQuestionForm(props: any) {
                     return arVal || '';
                   });
                   const activeOpts = questionActiveLang === 'ar' ? currentOptsAr : currentOptsEn;
+                  const singleFormCorrectIdx = tempQuestion.type === 'MULTI_SELECT'
+                    ? -1
+                    : resolveSingleCorrectOptionIndex(
+                        { ...tempQuestion, options: currentOptsAr, optionsEn: currentOptsEn },
+                        questionActiveLang === 'en'
+                      );
 
                   return activeOpts.map((opt: string, oIndex: number) => {
                     const arOpt = currentOptsAr[oIndex];
                     const enOpt = currentOptsEn[oIndex];
 
-                    const isOptionCorrect = Boolean(
-                      (tempQuestion.correctAnswerIndex !== undefined && tempQuestion.correctAnswerIndex === oIndex) ||
-                      (tempQuestion.correctAnswerIndices && tempQuestion.correctAnswerIndices.includes(oIndex)) ||
-                      (tempQuestion.type === 'MULTI_SELECT' && (
-                        (opt && isQuestionCorrectAnswer(opt)) ||
-                        (arOpt && (tempQuestion.correctAnswers || []).includes(arOpt)) ||
-                        (enOpt && (tempQuestion.correctAnswers || []).includes(enOpt)) ||
-                        (enOpt && (tempQuestion.correctAnswersEn || []).includes(enOpt))
-                      )) ||
-                      (tempQuestion.type !== 'MULTI_SELECT' && Boolean(
-                        (opt && isQuestionCorrectAnswer(opt)) ||
-                        (arOpt && isQuestionCorrectAnswer(arOpt)) ||
-                        (enOpt && isQuestionCorrectAnswer(enOpt)) ||
-                        (tempQuestion.correctAnswer && (
-                          (arOpt && tempQuestion.correctAnswer.trim() === arOpt.trim()) ||
-                          (enOpt && tempQuestion.correctAnswer.trim() === enOpt.trim())
-                        )) ||
-                        (tempQuestion.correctAnswerEn && (
-                          (arOpt && tempQuestion.correctAnswerEn.trim() === arOpt.trim()) ||
-                          (enOpt && tempQuestion.correctAnswerEn.trim() === enOpt.trim())
-                        ))
-                      ))
-                    );
+                    const isOptionCorrect =
+                      tempQuestion.type === 'MULTI_SELECT'
+                        ? Boolean(
+                            (tempQuestion.correctAnswerIndices && tempQuestion.correctAnswerIndices.includes(oIndex)) ||
+                            (opt && isQuestionCorrectAnswer(opt)) ||
+                            (arOpt && (tempQuestion.correctAnswers || []).includes(arOpt)) ||
+                            (enOpt && (tempQuestion.correctAnswers || []).includes(enOpt)) ||
+                            (enOpt && (tempQuestion.correctAnswersEn || []).includes(enOpt))
+                          )
+                        : oIndex === singleFormCorrectIdx;
 
                     return (
                       <div key={oIndex} className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isOptionCorrect ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
@@ -618,10 +622,10 @@ export default function LessonQuestionForm(props: any) {
                                 optionsEn: updatedEn,
                                 ...(syncBase ? { options: updatedAr } : {})
                               }));
-                              if (tempQuestion.correctAnswerIndex === oIndex || (!tempQuestion.correctAnswer && !currentOptsAr[oIndex])) {
-                                updateCurrentQuestionField("correctAnswer", val);
-                                updateCurrentQuestionField("correctAnswerEn", val);
-                              } else if (tempQuestion.correctAnswerIndex === oIndex) {
+                              if (oIndex === singleFormCorrectIdx || (!tempQuestion.correctAnswer && !currentOptsAr[oIndex])) {
+                                if (!currentOptsAr[oIndex] || !/[\u0600-\u06FF]/.test(currentOptsAr[oIndex])) {
+                                  updateCurrentQuestionField("correctAnswer", val);
+                                }
                                 updateCurrentQuestionField("correctAnswerEn", val);
                               }
                             }

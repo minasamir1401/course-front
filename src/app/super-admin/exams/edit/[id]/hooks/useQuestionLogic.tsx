@@ -5,6 +5,7 @@ import { ChevronDown, Edit2, Trash2, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { validateExamQuestionForSave } from '@/lib/examQuestionValidation';
 import { normalizeQuestionOptions } from '@/lib/questionOptions';
+import { buildInitialCourseSectionMeta, populateBilingualQuestionDraft } from '@/lib/questionDraftHelpers';
 import { normalizeQuestionSections } from '@/lib/persistedExamQuestion';
 
 export const useQuestionLogic = (props: any) => {
@@ -39,8 +40,7 @@ export const useQuestionLogic = (props: any) => {
       videoUrl: "",
       sections: [],
       attempts: 1,
-      course: props.examData?.title || "",
-      section: currentModule?.title || ""
+      ...buildInitialCourseSectionMeta(props.examData, currentModule)
     });
     setEditingStandaloneIndex(null);
     setQuestionSource('questions');
@@ -57,6 +57,7 @@ export const useQuestionLogic = (props: any) => {
     item.standard = outcome;
     item.learningOutcome = outcome;
     if (item.dok) item.dok = normalizeDok(item.dok) || item.dok;
+    populateBilingualQuestionDraft(item);
     setTempQuestion(item);
     setEditingStandaloneIndex(index);
     setQuestionSource('questions');
@@ -131,8 +132,7 @@ export const useQuestionLogic = (props: any) => {
       videoUrl: "",
       sections: [],
       attempts: 1,
-      course: props.examData?.title || "",
-      section: currentModule?.title || ""
+      ...buildInitialCourseSectionMeta(props.examData, currentModule)
     });
     setEditingQuestionIndex(null);
     setCurrentModule((prev: any) => ({ ...prev, _isStandalone: false }));
@@ -175,26 +175,7 @@ export const useQuestionLogic = (props: any) => {
       }));
     }
 
-    if (item.correctAnswerIndex === undefined || item.correctAnswerIndex === null) {
-      if (item.correctAnswer) {
-        const arIdx = item.options.findIndex((o: string) => String(o).trim() === String(item.correctAnswer).trim());
-        if (arIdx !== -1) {
-          item.correctAnswerIndex = arIdx;
-          if (!item.correctAnswerEn && item.optionsEn?.[arIdx]) {
-            item.correctAnswerEn = item.optionsEn[arIdx];
-          }
-        } else {
-          const enIdx = (item.optionsEn || []).findIndex((o: string) => String(o).trim() === String(item.correctAnswer).trim());
-          if (enIdx !== -1) {
-            item.correctAnswerIndex = enIdx;
-            item.correctAnswerEn = item.optionsEn[enIdx];
-          }
-        }
-      } else if (item.correctAnswerEn) {
-        const enIdx = (item.optionsEn || []).findIndex((o: string) => String(o).trim() === String(item.correctAnswerEn).trim());
-        if (enIdx !== -1) item.correctAnswerIndex = enIdx;
-      }
-    }
+    populateBilingualQuestionDraft(item);
 
     setTempQuestion(item);
     setEditingQuestionIndex(index);

@@ -26,6 +26,7 @@ import { QuestionExcelExportButton } from '@/components/QuestionExcelExportButto
 import QuestionImageGallery from '@/components/QuestionImageGallery';
 import { extractImageUrls } from '@/lib/image-utils';
 import { getTrueFalseDefaults, resolvePreferredQuestionLang } from '@/lib/questionLanguage';
+import { resolveSingleCorrectOptionIndex } from '@/lib/answerEvaluation';
 
 
 export const QuestionsBuilder = (props: any) => {
@@ -337,8 +338,17 @@ export const QuestionsBuilder = (props: any) => {
                               <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded uppercase whitespace-nowrap shrink-0">
                                 {q.points || 1} {language === 'ar' ? 'درجة' : 'pts'} • {q.xpPoints || 10} XP
                               </span>
-                              {q.domain && <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded whitespace-nowrap shrink-0">{q.domain}</span>}
-                              {q.skill && <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded whitespace-nowrap shrink-0">{q.skill}</span>}
+                              {(() => {
+                                const prefLang = resolvePreferredQuestionLang(q, language);
+                                const domainLabel = prefLang === 'en' ? (q.domainEn || q.domain) : q.domain;
+                                const skillLabel = prefLang === 'en' ? (q.skillEn || q.skill) : q.skill;
+                                return (
+                                  <>
+                                    {domainLabel && <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded whitespace-nowrap shrink-0">{domainLabel}</span>}
+                                    {skillLabel && <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded whitespace-nowrap shrink-0">{skillLabel}</span>}
+                                  </>
+                                );
+                              })()}
                             </div>
                             <QuestionSummary html={resolvePreferredQuestionLang(q, language) === 'en' ? (q.textEn || q.text || '') : (q.text || q.textEn || '')} className="text-slate-700 font-bold line-clamp-2 text-sm flex-1 min-w-0" />
                           </div>
@@ -429,9 +439,9 @@ export const QuestionsBuilder = (props: any) => {
 
                                 {/* Metadata summary tags */}
                                 <div className="flex flex-wrap gap-2">
-                                  {q.course && <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-lg">{isCardEn ? 'Course:' : 'المادة:'} {q.course}</span>}
-                                  {q.section && <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-lg">{isCardEn ? 'Section:' : 'القسم:'} {q.section}</span>}
-                                  {q.domain && <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded-lg">{isCardEn ? 'Domain:' : 'المجال:'} {q.domain}</span>}
+                                  {(isCardEn ? (q.courseEn || q.course) : q.course) && <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-lg">{isCardEn ? 'Exam:' : 'الاختبار:'} {isCardEn ? (q.courseEn || q.course) : q.course}</span>}
+                                  {(isCardEn ? (q.sectionEn || q.section) : q.section) && <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-lg">{isCardEn ? 'Section:' : 'القسم:'} {isCardEn ? (q.sectionEn || q.section) : q.section}</span>}
+                                  {(isCardEn ? (q.domainEn || q.domain) : q.domain) && <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded-lg">{isCardEn ? 'Domain:' : 'المجال:'} {isCardEn ? (q.domainEn || q.domain) : q.domain}</span>}
                                   {q.gradeTarget && <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg">{isCardEn ? 'Grade:' : 'الصف:'} {q.gradeTarget}</span>}
                                 </div>
                               </div>
@@ -442,23 +452,27 @@ export const QuestionsBuilder = (props: any) => {
                                     <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest">{isCardEn ? 'Question Preview:' : 'معاينة السؤال:'}</h5>
                                     {['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(q.type) ? (
                                       <div className="space-y-2">
-                                        {Array.isArray(activeQOpts) && activeQOpts.filter(Boolean).map((opt: string, oIdx: number) => {
-                                          const arOpt = rawArOpts[oIdx];
-                                          const isCorrect = q.type === 'MULTI_SELECT'
-                                            ? ((q.correctAnswers || []).includes(opt) || (arOpt && (q.correctAnswers || []).includes(arOpt)))
-                                            : (q.correctAnswer === opt || (arOpt && q.correctAnswer === arOpt));
-                                          return (
-                                            <div key={oIdx} className={`p-3 rounded-xl border flex items-center gap-3 text-xs font-bold transition-all ${isCorrect ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-white border-slate-100 text-slate-600'}`}>
-                                              <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${isCorrect ? 'bg-emerald-500 text-white' : 'bg-slate-100'}`}>
-                                                {isCorrect ? '✓' : ''}
+                                        {(() => {
+                                          const singleCorrectIdx = q.type === 'MULTI_SELECT' ? -1 : resolveSingleCorrectOptionIndex(q, isCardEn);
+                                          return Array.isArray(activeQOpts) && activeQOpts.map((opt: string, oIdx: number) => {
+                                            if (!opt || !String(opt).trim()) return null;
+                                            const arOpt = rawArOpts[oIdx];
+                                            const isCorrect = q.type === 'MULTI_SELECT'
+                                              ? ((q.correctAnswers || []).includes(opt) || (arOpt && (q.correctAnswers || []).includes(arOpt)))
+                                              : oIdx === singleCorrectIdx;
+                                            return (
+                                              <div key={oIdx} className={`p-3 rounded-xl border flex items-center gap-3 text-xs font-bold transition-all ${isCorrect ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-white border-slate-100 text-slate-600'}`}>
+                                                <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${isCorrect ? 'bg-emerald-500 text-white' : 'bg-slate-100'}`}>
+                                                  {isCorrect ? '✓' : ''}
+                                                </div>
+                                                <span className="w-5 h-5 rounded-md bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-[10px] text-indigo-600 shrink-0">
+                                                  {getOptionLetter(oIdx, qPreviewLang)}
+                                                </span>
+                                                <HtmlRenderer html={cleanOptionText(opt)} tag="span" />
                                               </div>
-                                              <span className="w-5 h-5 rounded-md bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-[10px] text-indigo-600 shrink-0">
-                                                {getOptionLetter(oIdx, qPreviewLang)}
-                                              </span>
-                                              <HtmlRenderer html={cleanOptionText(opt)} tag="span" />
-                                            </div>
-                                          );
-                                        })}
+                                            );
+                                          });
+                                        })()}
                                       </div>
                                     ) : q.type === 'FLASH_CARD' ? (
                                       <div className="p-4 bg-slate-50 border border-slate-150 rounded-2xl text-xs space-y-2 font-bold text-right" dir={isCardEn ? 'ltr' : 'rtl'}>
@@ -613,8 +627,8 @@ export const QuestionsBuilder = (props: any) => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6 bg-slate-50 border border-slate-100 rounded-[24px]">
                 {[
-                  { key: 'course', labelAr: 'الاختبار', labelEn: 'Exam' },
-                  { key: 'section', labelAr: 'القسم', labelEn: 'Section' },
+                  { key: 'course', labelAr: 'الاختبار', labelEn: 'Exam', translatable: true },
+                  { key: 'section', labelAr: 'القسم', labelEn: 'Section', translatable: true },
                   { key: 'domain', labelAr: 'المجال', labelEn: 'Domain', optionsKey: 'domains', translatable: true },
                   { key: 'standard', labelAr: 'نواتج التعلم', labelEn: 'Learning Outcomes', optionsKey: 'standards', translatable: true },
                   { key: 'indicator', labelAr: 'المؤشرات', labelEn: 'Indicators', optionsKey: 'indicators', translatable: true },
@@ -629,15 +643,19 @@ export const QuestionsBuilder = (props: any) => {
                 ].map((field: any) => {
                   const isEn = questionActiveLang === 'en';
                   const activeFieldKey = isEn && field.translatable ? `${field.key}En` : field.key;
+                  const enMetaVal = tempQuestion[`${field.key}En`];
+                  const baseMetaVal = tempQuestion[field.key];
                   const currentVal = field.key === 'standard'
                     ? (isEn
-                      ? (tempQuestion.standardEn || tempQuestion.learningOutcomeEn || tempQuestion.standard || tempQuestion.learningOutcome || '')
+                      ? (tempQuestion.standardEn || tempQuestion.learningOutcomeEn || (!hasArabicChars(tempQuestion.standard || tempQuestion.learningOutcome) ? (tempQuestion.standard || tempQuestion.learningOutcome || '') : ''))
                       : (tempQuestion.standard || tempQuestion.learningOutcome || ''))
                     : field.key === 'dok'
                       ? (normalizeDok(tempQuestion.dok) || tempQuestion.dok || '')
                       : (isEn && field.translatable
-                        ? (tempQuestion[`${field.key}En`] ?? tempQuestion[field.key] ?? field.defaultValue ?? '')
-                        : (tempQuestion[field.key] ?? field.defaultValue ?? ''));
+                        ? (enMetaVal !== undefined && enMetaVal !== null
+                          ? (enMetaVal === '' && !hasArabicChars(baseMetaVal) ? (baseMetaVal || '') : enMetaVal)
+                          : (!hasArabicChars(baseMetaVal) ? (baseMetaVal ?? field.defaultValue ?? '') : ''))
+                        : (baseMetaVal ?? field.defaultValue ?? ''));
 
                   return (
                     <div key={field.key} className="flex flex-col gap-2">
@@ -1060,32 +1078,26 @@ export const QuestionsBuilder = (props: any) => {
                           return arVal || '';
                         });
                         const activeOpts = questionActiveLang === 'ar' ? currentOptsAr : resolvedOptsEn;
+                        const singleFormCorrectIdx = tempQuestion.type === 'MULTI_SELECT'
+                          ? -1
+                          : resolveSingleCorrectOptionIndex(
+                              { ...tempQuestion, options: currentOptsAr, optionsEn: resolvedOptsEn },
+                              questionActiveLang === 'en'
+                            );
 
                         return activeOpts.map((opt: string, oIndex: number) => {
                           const arOpt = currentOptsAr[oIndex];
                           const enOpt = resolvedOptsEn[oIndex];
 
                           const isOptionCorrect =
-                            tempQuestion.correctAnswerIndex === oIndex ||
-                            (tempQuestion.type === 'MULTI_SELECT' && (
-                              (tempQuestion.correctAnswerIndices || []).includes(oIndex) ||
-                              (arOpt && (tempQuestion.correctAnswers || []).includes(arOpt)) ||
-                              (enOpt && (tempQuestion.correctAnswers || []).includes(enOpt)) ||
-                              (enOpt && (tempQuestion.correctAnswersEn || []).includes(enOpt))
-                            )) ||
-                            (tempQuestion.type !== 'MULTI_SELECT' && Boolean(
-                              (opt && isQuestionCorrectAnswer(opt)) ||
-                              (arOpt && isQuestionCorrectAnswer(arOpt)) ||
-                              (enOpt && isQuestionCorrectAnswer(enOpt)) ||
-                              (tempQuestion.correctAnswer && (
-                                (arOpt && tempQuestion.correctAnswer.trim() === arOpt.trim()) ||
-                                (enOpt && tempQuestion.correctAnswer.trim() === enOpt.trim())
-                              )) ||
-                              (tempQuestion.correctAnswerEn && (
-                                (arOpt && tempQuestion.correctAnswerEn.trim() === arOpt.trim()) ||
-                                (enOpt && tempQuestion.correctAnswerEn.trim() === enOpt.trim())
-                              ))
-                            ));
+                            tempQuestion.type === 'MULTI_SELECT'
+                              ? (
+                                  (tempQuestion.correctAnswerIndices || []).includes(oIndex) ||
+                                  (arOpt && (tempQuestion.correctAnswers || []).includes(arOpt)) ||
+                                  (enOpt && (tempQuestion.correctAnswers || []).includes(enOpt)) ||
+                                  (enOpt && (tempQuestion.correctAnswersEn || []).includes(enOpt))
+                                )
+                              : oIndex === singleFormCorrectIdx;
 
                           return (
                             <div key={oIndex} className={`flex items-center gap-4 p-5 rounded-[22px] border-2 transition-all ${isOptionCorrect ? 'bg-emerald-50 border-emerald-500 shadow-md' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
@@ -1118,10 +1130,10 @@ export const QuestionsBuilder = (props: any) => {
                                       updatedAr[oIndex] = val;
                                       updateCurrentQuestionField("options", updatedAr);
                                     }
-                                    if (tempQuestion.correctAnswerIndex === oIndex || (!tempQuestion.correctAnswer && !currentOptsAr[oIndex])) {
-                                      updateCurrentQuestionField("correctAnswer", val);
-                                      updateCurrentQuestionField("correctAnswerEn", val);
-                                    } else if (tempQuestion.correctAnswerIndex === oIndex) {
+                                    if (oIndex === singleFormCorrectIdx || (!tempQuestion.correctAnswer && !currentOptsAr[oIndex])) {
+                                      if (isArOptsEnglish || !currentOptsAr[oIndex] || !hasArabicChars(currentOptsAr[oIndex])) {
+                                        updateCurrentQuestionField("correctAnswer", val);
+                                      }
                                       updateCurrentQuestionField("correctAnswerEn", val);
                                     }
                                   }

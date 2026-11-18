@@ -842,6 +842,8 @@ export function planSlidesImport(
           const arr = parseJsonSafe(val, null);
           if (Array.isArray(arr)) return arr.map(String);
           return val.split(/[,،]/).map(s => s.trim()).filter(Boolean).map(tok => {
+            const exact = opts.find(o => String(o ?? '').trim().toLowerCase() === tok.toLowerCase());
+            if (exact !== undefined) return exact;
             const n = Number(tok);
             return Number.isInteger(n) && n >= 1 && opts[n - 1] ? opts[n - 1] : tok;
           });
@@ -854,7 +856,10 @@ export function planSlidesImport(
         slide.options = optsAr.length ? optsAr : optsEn;
         if (optsEn.length) slide.optionsEn = optsEn;
         const resolveAns = (val: string, opts: string[]) => {
-          const n = Number(val);
+          const trimmed = val.trim();
+          const exact = opts.find(o => String(o ?? '').trim().toLowerCase() === trimmed.toLowerCase());
+          if (exact !== undefined) return exact;
+          const n = Number(trimmed);
           return Number.isInteger(n) && n >= 1 && opts[n - 1] ? opts[n - 1] : val;
         };
         slide.correctAnswer = resolveAns(ansAr || ansEn, slide.options || []);

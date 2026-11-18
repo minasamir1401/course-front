@@ -13,100 +13,13 @@ import HtmlRenderer from "@/components/HtmlRenderer";
 import Watermark from "@/components/Watermark";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getOptionLetter, cleanOptionText } from "@/lib/utils";
+import { isOptionMatch, resolveSingleCorrectOptionIndex, resolveSingleOptionIndexForValue } from "@/lib/answerEvaluation";
 import { normalizeAnswerGlobal } from "@/components/LessonSubComponents";
 import { InteractiveTag } from "@/components/InteractiveTag";
 import InteractiveQuestionRenderer from "@/components/InteractiveQuestionRenderer";
 import { getSubmissionTotalPoints } from "@/lib/examResult";
 import { getExamSessionToken } from "@/lib/examSession";
 import SubmissionOutcome from '@/components/reports/SubmissionOutcome';
-
-const stripHtmlAndNormalize = (str: any) => {
-  if (str === null || str === undefined) return '';
-  return String(str)
-    .replace(/<[^>]*>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/[\s\u00A0]+/g, ' ')
-    .trim()
-    .toLowerCase();
-};
-
-const normalizeArabicLetters = (str: string) => {
-  if (!str) return '';
-  return str
-    .replace(/[أإآٱ]/g, 'ا')
-    .replace(/ة/g, 'ه')
-    .replace(/ى/g, 'ي')
-    .replace(/[\u064B-\u065F\u0670]/g, '');
-};
-
-const stripOptionPrefix = (str: string) => {
-  if (!str) return '';
-  return str
-    .replace(/^\((?:[a-zA-Z\u0621-\u064A0-9])\)\s*/, '')
-    .replace(/^[a-zA-Z\u0621-\u064A0-9]\s*[\.\:\-\)]\s*/, '')
-    .trim();
-};
-
-const isOptionMatch = (targetVal: any, optText: string, optIndex: number = -1) => {
-  if (targetVal === null || targetVal === undefined || optText === null || optText === undefined) return false;
-  const rawTarget = String(targetVal).trim();
-  const normTarget = stripHtmlAndNormalize(rawTarget);
-  const normOpt = stripHtmlAndNormalize(optText);
-
-  if (!normTarget || !normOpt) return false;
-
-  // 1. Direct exact normalized string match
-  if (normTarget === normOpt) return true;
-
-  // 1b. Arabic letter normalization match
-  const arNormTarget = normalizeArabicLetters(normTarget);
-  const arNormOpt = normalizeArabicLetters(normOpt);
-  if (arNormTarget === arNormOpt) return true;
-
-  // 1c. Match after stripping option prefix like "A.", "B:", "أ)", "1 - "
-  const strippedTarget = stripOptionPrefix(normTarget);
-  const strippedOpt = stripOptionPrefix(normOpt);
-  if (strippedTarget && strippedOpt && strippedTarget === strippedOpt) return true;
-
-  const strippedArTarget = stripOptionPrefix(arNormTarget);
-  const strippedArOpt = stripOptionPrefix(arNormOpt);
-  if (strippedArTarget && strippedArOpt && strippedArTarget === strippedArOpt) return true;
-
-  // 2. True / False / Correct / Incorrect normalization check
-  const tfTarget = normalizeAnswerGlobal(rawTarget);
-  const tfOpt = normalizeAnswerGlobal(optText);
-  const isTfKeywords = ['true', 'false', 'صح', 'خطأ', 'correct', 'incorrect'];
-  
-  if (isTfKeywords.includes(normTarget) || isTfKeywords.includes(normOpt)) {
-    return tfTarget === tfOpt;
-  }
-
-  // 3. Option letter/index check (e.g. target is "A", "B", "C", "D" or "0", "1", "2", "3" or "أ", "ب", "ج", "د")
-  if (optIndex >= 0) {
-    const letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-    const arLetters = ['ا', 'ب', 'ج', 'د', 'ه', 'و', 'ز', 'ح'];
-    const targetClean = normalizeArabicLetters(rawTarget.toLowerCase().replace(/[^a-z0-9\u0621-\u064A]/g, ''));
-    if (
-      targetClean === letters[optIndex] ||
-      targetClean === arLetters[optIndex] ||
-      targetClean === String(optIndex)
-    ) return true;
-  }
-
-  // 4. Multi-word string containment (only for long strings with multiple words)
-  if (normTarget.length > 6 && normOpt.length > 6) {
-    const targetWords = normTarget.split(/\s+/).filter(Boolean);
-    const optWords = normOpt.split(/\s+/).filter(Boolean);
-    if (targetWords.length >= 3 && optWords.length >= 3) {
-      if (normTarget.includes(normOpt) || normOpt.includes(normTarget)) return true;
-    }
-  }
-
-  return false;
-};
 
 const t = (key: string, lang: 'ar' | 'en') => {
   const translations: Record<string, { ar: string; en: string }> = {
@@ -401,22 +314,27 @@ export default function ExamResultPage() {
       return normalizeAnswerGlobal(ans.selectedAnswer) === normalizeAnswerGlobal(q.correctAnswer);
     }
 
+    if (q.type !== 'MULTI_SELECT') {
+      let optsAr: any[] = [];
+      try { optsAr = typeof q.options === 'string' ? JSON.parse(q.options || '[]') : (Array.isArray(q.options) ? q.options : []); } catch {}
+      let optsEn: any[] = [];
+      try { optsEn = typeof q.optionsEn === 'string' ? JSON.parse(q.optionsEn || '[]') : (Array.isArray(q.optionsEn) ? q.optionsEn : []); } catch {}
+
+      if (optsAr.length > 0 || optsEn.length > 0) {
+        const preferEn = lang === 'en';
+        const cIdx = resolveSingleCorrectOptionIndex({ ...q, options: optsAr, optionsEn: optsEn }, preferEn);
+        const sIdx = resolveSingleOptionIndexForValue(
+          ans.selectedAnswer,
+          optsAr.map((o: any) => String(o ?? '')),
+          optsEn.map((o: any) => String(o ?? '')),
+          preferEn
+        );
+        if (cIdx >= 0 && sIdx >= 0) return cIdx === sIdx;
+      }
+    }
+
     if (isOptionMatch(q.correctAnswer, ans.selectedAnswer, -1)) return true;
     if (q.correctAnswerEn && isOptionMatch(q.correctAnswerEn, ans.selectedAnswer, -1)) return true;
-
-    let optsAr: any[] = [];
-    try { optsAr = typeof q.options === 'string' ? JSON.parse(q.options || '[]') : (Array.isArray(q.options) ? q.options : []); } catch {}
-    let optsEn: any[] = [];
-    try { optsEn = typeof q.optionsEn === 'string' ? JSON.parse(q.optionsEn || '[]') : (Array.isArray(q.optionsEn) ? q.optionsEn : []); } catch {}
-    const maxO = Math.max(optsAr.length, optsEn.length);
-    for (let i = 0; i < maxO; i++) {
-      const ar = optsAr[i];
-      const en = optsEn[i];
-      const sMatch = (ar && isOptionMatch(ans.selectedAnswer, ar, i)) || (en && isOptionMatch(ans.selectedAnswer, en, i));
-      const cMatch = (ar && isOptionMatch(q.correctAnswer, ar, i)) || (en && isOptionMatch(q.correctAnswer, en, i)) ||
-        (q.correctAnswerEn && ((ar && isOptionMatch(q.correctAnswerEn, ar, i)) || (en && isOptionMatch(q.correctAnswerEn, en, i))));
-      if (sMatch && cMatch) return true;
-    }
 
     return false;
   };
@@ -861,6 +779,15 @@ export default function ExamResultPage() {
                         const optionsList = (isTrueFalse ? ["True", "False"] : displayOptionsArr)
                           .filter((opt: string) => opt && opt.trim() !== "");
 
+                        const mapRawIndexToList = (rawIdx: number): number => {
+                          if (rawIdx < 0) return -1;
+                          if (optionsList.length === displayOptionsArr.length && rawIdx < optionsList.length) {
+                            return rawIdx;
+                          }
+                          const targetText = displayOptionsArr[rawIdx] || optionsArr[rawIdx] || optionsEnArr[rawIdx];
+                          return targetText ? optionsList.findIndex((opt: string) => opt === targetText) : -1;
+                        };
+
                         const resolveOptionIndex = (val: any): number => {
                           if (val === null || val === undefined || val === '') return -1;
                           if (isTrueFalse) {
@@ -870,13 +797,23 @@ export default function ExamResultPage() {
                             return -1;
                           }
                           for (let i = 0; i < optionsList.length; i++) {
+                            if (isOptionMatch(val, optionsList[i], -1)) return i;
+                          }
+                          for (let i = 0; i < Math.max(optionsArr.length, optionsEnArr.length); i++) {
+                            const ar = optionsArr[i];
+                            const en = optionsEnArr[i];
+                            if ((ar && isOptionMatch(val, ar, -1)) || (en && isOptionMatch(val, en, -1))) {
+                              return mapRawIndexToList(i);
+                            }
+                          }
+                          for (let i = 0; i < optionsList.length; i++) {
                             if (isOptionMatch(val, optionsList[i], i)) return i;
                           }
                           for (let i = 0; i < Math.max(optionsArr.length, optionsEnArr.length); i++) {
                             const ar = optionsArr[i];
                             const en = optionsEnArr[i];
                             if ((ar && isOptionMatch(val, ar, i)) || (en && isOptionMatch(val, en, i))) {
-                              return i < optionsList.length ? i : -1;
+                              return mapRawIndexToList(i);
                             }
                           }
                           return -1;
@@ -910,7 +847,17 @@ export default function ExamResultPage() {
                             sAnswers.map((s: any) => resolveOptionIndex(s)).filter((i: number) => i >= 0)
                           ));
                         } else {
-                          let cIdx = resolveOptionIndex(answer.question.correctAnswer);
+                          let cIdx = -1;
+                          if (!isTrueFalse) {
+                            const rawCIdx = resolveSingleCorrectOptionIndex(
+                              { ...answer.question, options: optionsArr, optionsEn: optionsEnArr },
+                              lang === 'en'
+                            );
+                            cIdx = mapRawIndexToList(rawCIdx);
+                          }
+                          if (cIdx < 0) {
+                            cIdx = resolveOptionIndex(answer.question.correctAnswer);
+                          }
                           if (cIdx < 0 && answer.question.correctAnswerEn) {
                             cIdx = resolveOptionIndex(answer.question.correctAnswerEn);
                           }

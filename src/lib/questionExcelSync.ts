@@ -1,6 +1,6 @@
 import { questionMetadataFields } from './bilingualMetadata';
 import { metadataColumn } from './lessonMetadataExcel';
-import { isOptionMatch } from './answerEvaluation';
+import { isOptionMatch, resolveSingleCorrectOptionIndex } from './answerEvaluation';
 import { normalizeDok } from './examQuestionMetadata';
 import { normalizeQuestionSections } from './persistedExamQuestion';
 
@@ -97,7 +97,7 @@ export function questionExportRows(questions: Question[], language: string): any
       }
     }
     if (!enCorrect && arCorrect && options.length && optionsEn.length) {
-      const idx = options.findIndex((o: string, i: number) => isOptionMatch(arCorrect, o, i));
+      const idx = resolveSingleCorrectOptionIndex(q, language === 'en');
       if (idx >= 0 && optionsEn[idx]) enCorrect = optionsEn[idx];
     }
 
@@ -106,7 +106,8 @@ export function questionExportRows(questions: Question[], language: string): any
     let enMulti = array(q.correctAnswersEn);
     if (!enMulti.length && arMulti.length && options.length && optionsEn.length) {
       enMulti = arMulti.map((a: string) => {
-        const idx = options.findIndex((o: string, i: number) => isOptionMatch(a, o, i));
+        let idx = options.findIndex((o: string) => isOptionMatch(a, o, -1));
+        if (idx < 0) idx = options.findIndex((o: string, i: number) => isOptionMatch(a, o, i));
         return idx >= 0 && optionsEn[idx] ? optionsEn[idx] : a;
       });
     }
@@ -406,18 +407,34 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
 
     const resolveOptIndex = (val: string): number => {
       if (!val) return -1;
-      if (/^[1-5]$/.test(val)) return Number(val) - 1;
-      const upper = val.toUpperCase();
+      const trimmed = val.trim();
+      const lower = trimmed.toLowerCase();
+
+      const exactAr = q.options.findIndex((o: string) => String(o ?? '').trim().toLowerCase() === lower);
+      if (exactAr >= 0) return exactAr;
+      const exactEn = (q.optionsEn || []).findIndex((o: string) => String(o ?? '').trim().toLowerCase() === lower);
+      if (exactEn >= 0) return exactEn;
+
+      const arMatch = q.options.findIndex((o: string) => isOptionMatch(val, o, -1));
+      if (arMatch >= 0) return arMatch;
+      const enMatch = (q.optionsEn || []).findIndex((o: string) => isOptionMatch(val, o, -1));
+      if (enMatch >= 0) return enMatch;
+
+      if (/^[1-5]$/.test(trimmed)) return Number(trimmed) - 1;
+      const upper = trimmed.toUpperCase();
       const letterIdx = ['A', 'B', 'C', 'D', 'E'].indexOf(upper);
       if (letterIdx >= 0) return letterIdx;
-      const arLetterIdx = ['أ', 'ب', 'ج', 'د', 'هـ'].indexOf(val);
+      const arLetterIdx = ['أ', 'ب', 'ج', 'د', 'هـ'].indexOf(trimmed);
       if (arLetterIdx >= 0) return arLetterIdx;
-
-      const arMatch = q.options.findIndex((o: string, i: number) => isOptionMatch(val, o, i));
-      if (arMatch >= 0) return arMatch;
-
-      const enMatch = (q.optionsEn || []).findIndex((o: string, i: number) => isOptionMatch(val, o, i));
-      if (enMatch >= 0) return enMatch;
+      const labelMatch = trimmed.match(/^(?:option|choice|الخيار|خيار)\s*\(?\s*([A-E1-5أبجدهـ])\s*\)?$/i);
+      if (labelMatch) {
+        const tok = labelMatch[1];
+        if (/^[1-5]$/.test(tok)) return Number(tok) - 1;
+        const li = ['A', 'B', 'C', 'D', 'E'].indexOf(tok.toUpperCase());
+        if (li >= 0) return li;
+        const ali = ['أ', 'ب', 'ج', 'د', 'هـ'].indexOf(tok);
+        if (ali >= 0) return ali;
+      }
 
       return -1;
     };
@@ -430,13 +447,20 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
         q.correctAnswer = previous.correctAnswer;
         q.correctAnswerEn = previous.correctAnswerEn ?? null;
       } else {
+        const arTextMatches = rawCorrectAr
+          ? q.options.reduce((acc: number[], o: string, i: number) => (isOptionMatch(rawCorrectAr, o, -1) ? [...acc, i] : acc), [])
+          : [];
         let matchedIndex = -1;
-        if (rawCorrectAr) matchedIndex = resolveOptIndex(rawCorrectAr);
+        if (rawCorrectEn && (arTextMatches.length !== 1 || !rawCorrectAr)) {
+          matchedIndex = resolveOptIndex(rawCorrectEn);
+        }
+        if (matchedIndex < 0 && rawCorrectAr) matchedIndex = resolveOptIndex(rawCorrectAr);
         if (matchedIndex < 0 && rawCorrectEn) matchedIndex = resolveOptIndex(rawCorrectEn);
 
         if (matchedIndex >= 0) {
-          q.correctAnswer = q.options[matchedIndex] ?? rawCorrectAr;
+          q.correctAnswer = q.options[matchedIndex] ?? (rawCorrectAr || rawCorrectEn);
           q.correctAnswerEn = q.optionsEn?.[matchedIndex] ?? (rawCorrectEn || null);
+          q.correctAnswerIndex = matchedIndex;
         } else {
           q.correctAnswer = rawCorrectAr || rawCorrectEn;
           q.correctAnswerEn = rawCorrectEn || (rawCorrectAr && /[a-zA-Z]/.test(rawCorrectAr) ? rawCorrectAr : null);
@@ -489,7 +513,8 @@ export function planQuestionImport(rows: any[][], current: Question[], options: 
         });
       } else if (q.optionsEn?.length && itemsAr.length) {
         itemsEn = itemsAr.map(val => {
-          const idx = q.options.findIndex((o: string, i: number) => isOptionMatch(val, o, i));
+          let idx = q.options.findIndex((o: string) => isOptionMatch(val, o, -1));
+          if (idx < 0) idx = q.options.findIndex((o: string, i: number) => isOptionMatch(val, o, i));
           return idx >= 0 && q.optionsEn[idx] ? q.optionsEn[idx] : val;
         }).filter(Boolean);
       }
