@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import DashboardLayout from "@/components/DashboardLayout";
+import ContentAuditPanel from '@/components/admin/ContentAuditPanel';
+import { LocalBackupStatusCard } from '@/components/admin/LocalBackupMonitor';
 import { apiFetch, API_URL } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Activity, AlertTriangle, Bell, BookOpen, Building2, ChevronRight, Code2, Database, Layers, ShieldAlert, Server, Table2, Users, ClipboardList, FileText, Bug, RefreshCw, Search, CheckCircle2, RotateCcw } from 'lucide-react';
@@ -300,6 +302,9 @@ export default function SuperAdminMonitorPage() {
             {error}
           </div>
         )}
+
+        <LocalBackupStatusCard />
+        <ContentAuditPanel />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4">
           {cards.map((card) => {

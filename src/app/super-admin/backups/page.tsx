@@ -30,12 +30,31 @@ function isBundledArchiveBackup(backup: BackupFile) {
 
 const isR2Backup = (backup: BackupFile) => backup.type === 'R2_FULL_SYSTEM';
 
+function getDailyBackupDay(filename: string) {
+  return (/^backup-daily-(\d{4}-\d{2}-\d{2})\.zip$/.exec(filename)
+    ?? /^r2-daily-(\d{4}-\d{2}-\d{2})\.zip\.age$/.exec(filename))?.[1];
+}
+
 export default function BackupsPage() {
   const { showToast } = useNotification();
   const { t, language } = useLanguage();
   const [backups, setBackups] = useState<BackupFile[]>([]);
-  const individualBackups = backups.filter(b => !isBundledArchiveBackup(b));
+  const [backupList, setBackupList] = useState<'daily' | 'other' | null>(null);
   const archiveBackups = backups.filter(isBundledArchiveBackup);
+  const availableBackups = backups.filter(b => !isBundledArchiveBackup(b));
+  const dailyByDay = new Map<string, BackupFile>();
+  for (const backup of availableBackups) {
+    const day = getDailyBackupDay(backup.name);
+    if (!day) continue;
+    const existing = dailyByDay.get(day);
+    if (!existing || (isR2Backup(existing) && !isR2Backup(backup))) {
+      dailyByDay.set(day, backup);
+    }
+  }
+  const dailyBackups = [...dailyByDay].sort(([a], [b]) => b.localeCompare(a)).map(([, backup]) => backup);
+  const otherBackups = availableBackups.filter(backup => dailyByDay.get(getDailyBackupDay(backup.name) ?? '') !== backup);
+  const showingDaily = (backupList ?? (dailyBackups.length > 0 ? 'daily' : 'other')) === 'daily';
+  const individualBackups = showingDaily ? dailyBackups : otherBackups;
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -116,11 +135,11 @@ export default function BackupsPage() {
         const data = await res.json();
         // The API returns { backups: [...] } or an array
         const list = Array.isArray(data) ? data : (data.backups || []);
-        const mapped = list.map((b: any) => ({
+        const mapped: BackupFile[] = list.map((b: any) => ({
           ...b,
           name: b.filename || b.name || "backup.json"
         }));
-        setBackups(mapped);
+        setBackups([...new Map(mapped.map(backup => [backup.name, backup])).values()]);
 
       } else {
         setListError(true);
@@ -337,7 +356,7 @@ export default function BackupsPage() {
   };
 
   const handleSelectAll = () => {
-    const deletableBackups = backups.filter(backup => !isR2Backup(backup));
+    const deletableBackups = individualBackups.filter(backup => !isR2Backup(backup));
     if (selectedBackups.length === deletableBackups.length) {
       setSelectedBackups([]);
     } else {
@@ -346,7 +365,7 @@ export default function BackupsPage() {
   };
 
   const handleSelectOldest = () => {
-    const restorableBackups = individualBackups.filter(backup => !isR2Backup(backup));
+    const restorableBackups = individualBackups.filter(backup => !isR2Backup(backup) && !backup.name.endsWith('.zip'));
     const sorted = [...restorableBackups].sort((a, b) => {
       const dateA = new Date(a.createdAt || 0).getTime();
       const dateB = new Date(b.createdAt || 0).getTime();
@@ -463,11 +482,11 @@ export default function BackupsPage() {
   };
 
   const formatSize = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+    if (!Number.isFinite(bytes) || bytes < 1) return '0 B';
+    const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+    const unit = Math.min(Math.floor(Math.log2(bytes) / 10), units.length - 1);
+    const size = bytes / 1024 ** unit;
+    return size.toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US', { maximumFractionDigits: 2 }) + ' ' + units[unit];
   };
 
   const formatDate = (dateStr: string) => {
@@ -519,9 +538,9 @@ export default function BackupsPage() {
               <span>{language === 'ar' ? "النسخ الاحتياطي والاستعادة" : "System Backup & Restore"}</span>
             </h1>
             <p className="text-slate-300 font-bold max-w-xl text-sm leading-relaxed">
-              {language === 'ar' 
-                ? "قم بإدارة وحماية بيانات النظام بالكامل. يمكنك إنشاء نسخ احتياطية شاملة لقاعدة البيانات، تحميلها، أو استعادتها بأمان تام مع تأكيد ثنائي لحمايتها."
-                : "Manage and safeguard complete system data. Create comprehensive database checkpoints, download files, or securely restore records with multi-factor confirmation modals."}
+              {language === 'ar'
+                ? 'تبدأ النسخة التلقائية لقاعدة البيانات الساعة 3 صباحًا بتوقيت القاهرة. تُحفظ نسخة واحدة لكل يوم بدون ملفات الوسائط، وتبقى محفوظة بدون حذف تلقائي.'
+                : 'The automatic database backup starts at 3:00 AM Cairo time. It keeps one archive per day without media files. Daily archives do not expire automatically.'}
             </p>
           </div>
           <div className={`${styles.heroActions} flex flex-wrap gap-4 z-10 shrink-0`}>
@@ -608,6 +627,33 @@ export default function BackupsPage() {
               </div>
             </div>
 
+            {!loading && !listError && (dailyBackups.length > 0 || otherBackups.length > 0) && (
+              <div role="group" aria-label={language === 'ar' ? 'نوع النسخ الاحتياطية' : 'Backup category'} className="flex flex-wrap gap-2">
+                {([
+                  ['daily', language === 'ar' ? 'النسخ اليومية' : 'Daily backups', dailyBackups.length],
+                  ['other', language === 'ar' ? 'النسخ الأخرى' : 'Other backups', otherBackups.length],
+                ] as const).map(([category, label, count]) => {
+                  const selected = showingDaily === (category === 'daily');
+                  return (
+                    <button
+                      key={category}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => {
+                        setBackupList(category);
+                        setSelectedBackups([]);
+                      }}
+                      className={"min-h-11 rounded-xl border px-4 py-2 text-sm font-bold " + (selected
+                        ? 'border-indigo-200 bg-indigo-50 text-indigo-700'
+                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50')}
+                    >
+                      {label} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             {listError ? (
               <div role="alert" className={styles.listError}>
                 <AlertTriangle size={24} aria-hidden="true"/>
@@ -619,6 +665,12 @@ export default function BackupsPage() {
                 <Loader2 className="w-12 h-12 text-indigo-600 animate-spin" />
                 <span className="text-slate-400 font-bold">{language === 'ar' ? "جاري تحميل قائمة النسخ..." : "Fetching backups list..."}</span>
               </div>
+            ) : individualBackups.length === 0 && availableBackups.length > 0 ? (
+              <p className="rounded-2xl border border-slate-200 bg-white p-5 text-sm font-bold text-slate-600">
+                {showingDaily
+                  ? (language === 'ar' ? 'لم تُحفظ أي نسخة يومية بعد.' : 'No daily backups have been saved yet.')
+                  : (language === 'ar' ? 'لا توجد نسخ أخرى.' : 'No other backups found.')}
+              </p>
             ) : individualBackups.length === 0 ? (
               <div className={`${styles.state} bg-white rounded-[35px] border-4 border-dashed border-slate-100 p-24 flex flex-col justify-center items-center text-center gap-6 shadow-sm`}>
                 <div className="w-20 h-20 bg-slate-50 rounded-[25px] flex items-center justify-center text-slate-200">

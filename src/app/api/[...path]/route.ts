@@ -36,6 +36,8 @@ const HOP_BY_HOP_HEADERS = new Set([
 
 async function handler(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   const { path } = await params;
+  const monitorRequest = req.method === 'GET' && path[0] === 'admin'
+    && (path[1] === 'diagnostics' || path[1] === 'monitor');
   const backendBase = getBackendBase();
   const targetUrl = `${backendBase}/api/${(path || []).join('/')}${req.nextUrl.search}`;
 
@@ -159,6 +161,13 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
       void backendResponse.body?.cancel().catch(() => {});
       lifetime.dispose();
     }
+    if (!noBody && monitorRequest) {
+      // Complete bounded monitor responses before sending headers so a stalled backend
+      // produces a 504 instead of an interrupted response stream.
+      const payload = await readProxyBody(backendResponse.body!, 8 * 1024 * 1024, lifetime.signal);
+      lifetime.dispose();
+      return new NextResponse(payload, { status: backendResponse.status, headers: responseHeaders });
+    }
     const responseBody = noBody ? null : proxyResponseBody(backendResponse.body!, lifetime);
     return new NextResponse(responseBody, {
       status: backendResponse.status,
@@ -168,7 +177,9 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
   } catch (error: any) {
     lifetime.dispose();
     if (error instanceof ProxyBodyTooLargeError) {
-      return NextResponse.json({ error: error.message }, { status: 413 });
+      return monitorRequest
+        ? NextResponse.json({ error: 'Monitoring response is too large' }, { status: 502 })
+        : NextResponse.json({ error: error.message }, { status: 413 });
     }
     const isClientDisconnect = Boolean(req.signal?.aborted);
     const isTimeout =
