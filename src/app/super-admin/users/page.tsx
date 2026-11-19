@@ -305,7 +305,8 @@ function UsersManagementContent() {
 
   const handleBulkResetExposed = async () => {
     const eligibleIds = filteredUsers
-      .filter((u: any) => selectedUsers.includes(u.id) && u.id !== currentAdminId && (u.exposedResetRequired || u.exposedCredentialDetected || activeTab === 'EXPOSED_RESET'))
+      .filter((u: any) => selectedUsers.includes(u.id) && u.id !== currentAdminId && u.role !== 'SUPER_ADMIN'
+        && (activeTab === 'EXPOSED_RESET' ? u.bulkEligible !== false : u.exposedResetRequired || u.exposedCredentialDetected))
       .map((u: any) => u.id);
     if (eligibleIds.length === 0) return;
 
@@ -351,7 +352,7 @@ function UsersManagementContent() {
     const payload = {
       exportedAt: new Date().toISOString(),
       summary: exposedSummary,
-      accounts: exposedAccounts.map(({ plainPassword: _ignored, ...rest }) => rest),
+      accounts: exposedAccounts.map(({ name, username, role, schoolName, resetState }) => ({ name, username, role, schoolName, resetState })),
     };
     const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
     const a = document.createElement('a');
@@ -363,15 +364,25 @@ function UsersManagementContent() {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
-  const downloadBulkCredentials = (rows: any[]) => {
-    const url = URL.createObjectURL(new Blob([JSON.stringify({ generatedAt: new Date().toISOString(), credentials: rows }, null, 2)], { type: 'application/json' }));
+  const downloadResetResults = (rows: any[]) => {
+    const accounts = rows.map(({ name, username, role, schoolName }) => ({ name, username, role, schoolName }));
+    const url = URL.createObjectURL(new Blob([JSON.stringify({ generatedAt: new Date().toISOString(), accounts }, null, 2)], { type: 'application/json' }));
     const a = document.createElement('a');
     a.href = url;
-    a.download = `reset-credentials-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    a.download = `reset-results-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const copyTemporaryPassword = async (password: string) => {
+    try {
+      await navigator.clipboard.writeText(password);
+      showToast(language === 'ar' ? 'اتنسخت كلمة المرور' : 'Password copied', 'success');
+    } catch {
+      showToast(language === 'ar' ? 'تعذّر النسخ للحافظة' : 'Could not copy the password', 'error');
+    }
   };
 
   const handleSelectUser = (id: string) => {
@@ -381,7 +392,7 @@ function UsersManagementContent() {
   };
 
   const isUserSelectable = (u: any) => (
-    activeTab === 'EXPOSED_RESET' ? u.id !== currentAdminId : u.role !== 'SUPER_ADMIN'
+    u.role !== 'SUPER_ADMIN' && (activeTab !== 'EXPOSED_RESET' || (u.id !== currentAdminId && u.bulkEligible !== false))
   );
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -604,8 +615,8 @@ function UsersManagementContent() {
               <div className="space-y-1">
                 <h2 className="text-base sm:text-lg font-black text-amber-950">
                   {language === 'ar'
-                    ? `يوجد ${exposedSummary.total} حساب بعلامة EXPOSED_RESET_REQUIRED`
-                    : `${exposedSummary.total} account(s) flagged with EXPOSED_RESET_REQUIRED`}
+                    ? `${exposedSummary.total} حساب محتاج إعادة تعيين كلمة المرور`
+                    : `${exposedSummary.total} account(s) need a password reset`}
                 </h2>
                 <p className="text-xs sm:text-sm font-bold text-amber-900">
                   {language === 'ar'
@@ -866,7 +877,7 @@ function UsersManagementContent() {
                               <ShieldAlert className="w-4 h-4 shrink-0" />
                               <span>
                                 {user.exposedCredentialDetected
-                                  ? (language === 'ar' ? 'مكشوف - يلزم إعادة التعيين' : 'EXPOSED_RESET_REQUIRED')
+                                  ? (language === 'ar' ? 'يلزم إعادة تعيين كلمة المرور' : 'Password reset required')
                                   : (language === 'ar' ? 'يلزم إعادة التعيين' : 'RESET_REQUIRED')}
                               </span>
                             </div>
@@ -996,7 +1007,7 @@ function UsersManagementContent() {
                       {isExposed ? (
                         <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-rose-50 border border-rose-200 text-rose-700 font-black">
                           <ShieldAlert className="w-3.5 h-3.5" />
-                          {language === 'ar' ? 'يلزم إعادة التعيين' : 'EXPOSED_RESET_REQUIRED'}
+                          {language === 'ar' ? 'يلزم إعادة التعيين' : 'Password reset required'}
                         </span>
                       ) : (
                         <span className="font-mono text-slate-700 bg-amber-500/5 px-2 py-1 rounded border border-amber-500/10 font-bold">
@@ -1257,14 +1268,11 @@ function UsersManagementContent() {
                   <div className="flex gap-3">
                     <button
                       type="button"
-                      onClick={() => {
-                        void navigator.clipboard.writeText(`${generatedCredential.username} : ${generatedCredential.password}`);
-                        showToast(language === 'ar' ? 'تم النسخ للحافظة' : 'Copied to clipboard', 'success');
-                      }}
+                      onClick={() => void copyTemporaryPassword(generatedCredential.password)}
                       className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <Copy className="w-4 h-4" />
-                      <span>{language === 'ar' ? 'نسخ البيانات' : 'Copy Credentials'}</span>
+                      <span>{language === 'ar' ? 'نسخ كلمة المرور' : 'Copy password'}</span>
                     </button>
                     <button
                       type="button"
@@ -1294,8 +1302,8 @@ function UsersManagementContent() {
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
                     {language === 'ar'
-                      ? 'احفظ أو نزّل هذا الملف الآن. لن تتمكن من عرض كلمات المرور هذه مرة أخرى.'
-                      : 'Download or copy these credentials now. They are hashed in the database and cannot be retrieved again.'}
+                      ? 'انسخ كلمة المرور لكل حساب قبل إغلاق النافذة. كلمات المرور المؤقتة بتظهر هنا مرة واحدة.'
+                      : 'Copy each temporary password before closing. This is the only time they are shown.'}
                   </p>
                 </div>
                 <button
@@ -1322,7 +1330,13 @@ function UsersManagementContent() {
                         <td className="px-4 py-2.5 font-bold text-slate-800">{row.username}</td>
                         <td className="px-4 py-2.5 text-slate-600">{row.role}</td>
                         <td className="px-4 py-2.5 text-slate-600">{row.schoolName || '-'}</td>
-                        <td className="px-4 py-2.5 font-black text-indigo-700 select-all">{row.temporaryPassword}</td>
+                        <td className="px-4 py-2.5">
+                          <button type="button" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2 py-1.5 font-semibold text-indigo-700 hover:bg-indigo-50"
+                            onClick={() => void copyTemporaryPassword(row.temporaryPassword)}>
+                            <Copy className="size-3.5" aria-hidden="true" />
+                            {language === 'ar' ? 'نسخ كلمة المرور' : 'Copy password'}
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1332,23 +1346,11 @@ function UsersManagementContent() {
               <div className="flex flex-wrap gap-3 justify-end">
                 <button
                   type="button"
-                  onClick={() => downloadBulkCredentials(bulkCredentials)}
+                  onClick={() => downloadResetResults(bulkCredentials)}
                   className="bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-5 rounded-xl flex items-center gap-2 cursor-pointer"
                 >
                   <Download className="w-4 h-4" />
-                  <span>{language === 'ar' ? 'تنزيل ملف JSON' : 'Download JSON'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const text = bulkCredentials.map((r: any) => `${r.username}\t${r.role}\t${r.temporaryPassword}`).join('\n');
-                    void navigator.clipboard.writeText(text);
-                    showToast(language === 'ar' ? 'تم النسخ للحافظة' : 'Copied to clipboard', 'success');
-                  }}
-                  className="bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 px-5 rounded-xl flex items-center gap-2 cursor-pointer"
-                >
-                  <Copy className="w-4 h-4" />
-                  <span>{language === 'ar' ? 'نسخ الكل' : 'Copy All'}</span>
+                  <span>{language === 'ar' ? 'تنزيل النتائج بدون كلمات مرور' : 'Download results without passwords'}</span>
                 </button>
                 <button
                   type="button"

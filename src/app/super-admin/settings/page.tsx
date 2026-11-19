@@ -104,6 +104,10 @@ export default function SuperAdminSettingsPage() {
         showToast(language === 'ar' ? "يرجى إدخال كلمة المرور الجديدة." : "Please enter the new password.", "error");
         return;
       }
+      if (securityData.password.length < 16 || new TextEncoder().encode(securityData.password).length > 72) {
+        showToast(language === 'ar' ? "استخدم 16 حرف على الأقل، وبحد أقصى 72 بايت." : "Use at least 16 characters and no more than 72 bytes.", "error");
+        return;
+      }
       if (securityData.password !== securityData.confirmPassword) {
         showToast(language === 'ar' ? "كلمتا المرور غير متطابقتين!" : "Passwords do not match!", "error");
         return;

@@ -60,9 +60,7 @@ const pushError = (entry: Omit<FrontendErrorEntry, "id" | "timestamp">) => {
       headers: { "Content-Type": "application/json" },
       keepalive: true,
       body: JSON.stringify({
-        level: "error",
-        message: newEntry.message,
-        details: JSON.stringify(newEntry)
+        message: newEntry.message.slice(0, 1500)
       })
     }).catch(() => {}); // ignore network errors to avoid loops
   } catch {}

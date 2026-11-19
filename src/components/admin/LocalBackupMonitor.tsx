@@ -81,6 +81,10 @@ function LocalBackupAlert() {
   const { language } = useLanguage();
   const isArabic = language === 'ar';
   const [dismissed, setDismissed] = useState<string | null>(null);
+  const [dismissedOutage, setDismissedOutage] = useState(false);
+  useEffect(() => {
+    if (!unavailable) setDismissedOutage(false);
+  }, [unavailable]);
   const key = status?.viewerId ? 'local-backup-alert:' + status.viewerId : null;
   useEffect(() => {
     if (!key) return;
@@ -92,23 +96,28 @@ function LocalBackupAlert() {
     return () => window.removeEventListener('storage', read);
   }, [key]);
 
-  const alert = status?.alert;
-  if (!alert || dismissed === alert.id) return null;
-  const message = alert.reason
+  const alert = status?.alert?.id !== dismissed ? status?.alert : null;
+  const showOutage = unavailable && !dismissedOutage;
+  if (!alert && !showOutage) return null;
+  const message = alert && (alert.reason
     ? (isArabic ? 'فشلت محاولة النسخ المحلي لليوم ' : 'Local backup attempt failed for ') + alert.day + ' · ' + reasons[alert.reason][isArabic ? 0 : 1]
-    : (isArabic ? 'النسخة المحلية متأخرة ليوم ' : 'Local backup is overdue for ') + alert.day;
+    : (isArabic ? 'النسخة المحلية متأخرة ليوم ' : 'Local backup is overdue for ') + alert.day);
   return (
     <aside dir={isArabic ? 'rtl' : 'ltr'} role="status" className="flex flex-wrap items-center gap-3 border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
       <AlertTriangle className="h-5 w-5 shrink-0" aria-hidden="true" />
       <span className="flex-1 basis-48 font-semibold">
-        {unavailable ? (isArabic ? 'آخر حالة معروفة: ' : 'Last known status: ') : ''}{message}
+        {showOutage && <span className="block">{isArabic ? 'تعذّر التحقق من حالة النسخ المحلية.' : 'Local backup status is unavailable.'}</span>}
+        {message && <span className="block">{unavailable ? (isArabic ? 'آخر حالة معروفة: ' : 'Last known status: ') : ''}{message}</span>}
       </span>
       <Link className="font-semibold underline underline-offset-2" href="/super-admin/monitor#local-backups">
         {isArabic ? 'عرض التفاصيل' : 'View details'}
       </Link>
       <button type="button" className="rounded-lg border border-amber-300 px-3 py-1.5 font-semibold" onClick={() => {
-        setDismissed(alert.id);
-        if (key) try { localStorage.setItem(key, alert.id); } catch { /* Dismiss for this view. */ }
+        if (showOutage) setDismissedOutage(true);
+        if (alert) {
+          setDismissed(alert.id);
+          if (key) try { localStorage.setItem(key, alert.id); } catch { /* Dismiss for this view. */ }
+        }
       }}>
         {isArabic ? 'تجاهل' : 'Dismiss'}
       </button>

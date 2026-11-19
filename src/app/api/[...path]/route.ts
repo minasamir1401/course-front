@@ -190,12 +190,12 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
     if (isClientDisconnect) {
       // Client closed tab, reloaded, or navigated away before response completed
       if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_PROXY) {
-        console.warn('[API Proxy Client Disconnect]', targetUrl);
+        console.warn('[API Proxy Client Disconnect]', req.nextUrl.pathname);
       }
       return new NextResponse(null, { status: 499 });
     }
 
-    console.error('[API Proxy Error]', targetUrl, error?.message);
+    console.error('[API Proxy Error]', req.nextUrl.pathname, isTimeout ? 'Backend request timed out' : 'Backend request failed');
 
     return NextResponse.json(
       {

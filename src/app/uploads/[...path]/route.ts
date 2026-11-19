@@ -102,7 +102,7 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ path: s
   } catch (error: any) {
     lifetime.dispose();
     if (error instanceof ProxyBodyTooLargeError) return NextResponse.json({ error: error.message }, { status: 413 });
-    console.error('[Upload Proxy Error]', targetUrl, error?.message);
+    console.error('[Upload Proxy Error]', req.nextUrl.pathname);
     return NextResponse.json(
       {
         error: error?.name === 'TimeoutError' ? 'Backend request timed out' : 'Failed to reach backend',
