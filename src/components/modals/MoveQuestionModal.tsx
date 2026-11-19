@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { API_URL } from "@/lib/api";
+import { API_URL, apiFetch } from "@/lib/api";
+import { questionMoveError } from "@/lib/questionMoveError";
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { X, ArrowRightLeft, Search, BookOpen, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
@@ -45,26 +46,6 @@ export default function MoveQuestionModal({
 
   const isUnsaved = !questionId || !currentExamId || !isUuid(questionId) || !isUuid(currentExamId);
 
-  const getAuthHeaders = useCallback((): HeadersInit => {
-    if (typeof window === "undefined") return { "Content-Type": "application/json" };
-    const token =
-      localStorage.getItem("super_admin_token") ||
-      localStorage.getItem("school_admin_token") ||
-      localStorage.getItem("teacher_token") ||
-      localStorage.getItem("token") ||
-      "";
-
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json"
-    };
-
-    if (token && token !== "cookie_auth") {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
-
-    return headers;
-  }, []);
-
   const safeJson = useCallback(async (res: Response, defaultError: string) => {
     try {
       return await res.json();
@@ -76,17 +57,14 @@ export default function MoveQuestionModal({
   const fetchExams = useCallback(async () => {
     setLoadingExams(true);
     try {
-      const res = await fetch(`${API_URL}/exams?limit=200`, {
-        headers: getAuthHeaders(),
-        credentials: "include"
-      });
+      const res = await apiFetch(`${API_URL}/exams?limit=200`);
       const data = await safeJson(
         res,
         isAr ? "تعذر قراءة بيانات الاختبارات من الخادم" : "Could not parse exams data from server"
       );
       if (res.ok) {
         const rawList = Array.isArray(data) ? data : (data.exams || []);
-        setExams(rawList);
+        setExams(rawList.filter((exam: { canManage?: boolean }) => exam.canManage === true));
       } else {
         showToast(data.error || (isAr ? "فشل جلب الاختبارات" : "Failed to fetch exams"), "error");
       }
@@ -96,15 +74,12 @@ export default function MoveQuestionModal({
     } finally {
       setLoadingExams(false);
     }
-  }, [getAuthHeaders, isAr, safeJson, showToast]);
+  }, [isAr, safeJson, showToast]);
 
   const fetchExamModules = useCallback(async (examId: string) => {
     setLoadingModules(true);
     try {
-      const res = await fetch(`${API_URL}/exams/${examId}?includeQuestions=false`, {
-        headers: getAuthHeaders(),
-        credentials: "include"
-      });
+      const res = await apiFetch(`${API_URL}/exams/${examId}?includeQuestions=false`);
       const data = await safeJson(res, "");
       if (res.ok && data.modules) {
         setModules(Array.isArray(data.modules) ? data.modules : []);
@@ -117,7 +92,7 @@ export default function MoveQuestionModal({
     } finally {
       setLoadingModules(false);
     }
-  }, [getAuthHeaders, safeJson]);
+  }, [safeJson]);
 
   useEffect(() => {
     if (isOpen) {
@@ -160,10 +135,9 @@ export default function MoveQuestionModal({
 
     setSubmitting(true);
     try {
-      const res = await fetch(`${API_URL}/exams/${currentExamId}/questions/${questionId}/move`, {
+      const res = await apiFetch(`${API_URL}/exams/${currentExamId}/questions/${questionId}/move`, {
         method: "POST",
-        headers: getAuthHeaders(),
-        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           targetExamId: selectedExamId,
           targetModuleId: selectedModuleId || null,
@@ -183,7 +157,7 @@ export default function MoveQuestionModal({
         onSuccess(questionId);
         onClose();
       } else {
-        showToast(data.error || (isAr ? "فشل نقل السؤال" : "Failed to move question"), "error");
+        showToast(questionMoveError(data, res.status, isAr), "error");
       }
     } catch (err) {
       console.error("handleMove error:", err);

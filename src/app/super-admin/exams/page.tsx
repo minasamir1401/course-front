@@ -12,6 +12,7 @@ import ExamModulesManager from "@/components/exams/ExamModulesManager";
 import { buildExamModuleViews, buildModuleCardSettingsHref, buildModulePortalHref } from "@/lib/examModuleView";
 import { getCreatedAtLabel, getCreatorLabel, getExamAudienceLabel, getUpdatedAtLabel } from "@/lib/examModulePresentation";
 import { buildStandaloneMoveGroups, buildStandaloneMoveSelectionSummary } from "@/lib/standaloneQuestionMoveView";
+import { questionMoveError } from "@/lib/questionMoveError";
 import { getModuleQuestionCardCounts, getStandaloneQuestionsCount } from "@/lib/standaloneQuestionCount";
 import SubjectArtwork from '@/components/student/SubjectArtwork';
 import { examArtworkKey } from '@/lib/examArtwork';
@@ -62,12 +63,8 @@ export default function SuperAdminExamsPage() {
     try {
       const isSuper = !!localStorage.getItem("super_admin_token");
       setIsSuperAdmin(isSuper);
-      const token = localStorage.getItem("super_admin_token") || localStorage.getItem("lms_token") || localStorage.getItem("token");
-
       // Fetch Schools for filter
-      const schoolsRequest = apiFetch(`${API_URL}/admin/schools?view=options`, {
-        headers: { Authorization: `Bearer ${token}` }
-      }).then(async schoolsRes => {
+      const schoolsRequest = apiFetch(`${API_URL}/admin/schools?view=options`).then(async schoolsRes => {
         if (!schoolsRes.ok) throw new Error('School options unavailable');
         const schoolsData = await schoolsRes.json();
         setSchools(Array.isArray(schoolsData) ? schoolsData : (schoolsData.schools || []));
@@ -86,9 +83,7 @@ export default function SuperAdminExamsPage() {
         url += (url.includes("?") ? "&" : "") + `grade=${filterType}`;
       }
 
-      const [res] = await Promise.all([apiFetch(url, {
-        headers: { Authorization: `Bearer ${token}` }
-      }), schoolsRequest]);
+      const [res] = await Promise.all([apiFetch(url), schoolsRequest]);
       const data = await res.json();
       setExams(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -189,8 +184,9 @@ export default function SuperAdminExamsPage() {
   };
 
   const openMoveStandaloneQuestionsModal = (exam: any, moduleItem?: any) => {
+    if (exam.canManage !== true) return;
     const standaloneCount = getStandaloneQuestionsCount(exam);
-    const targetSubExams = exams.flatMap((candidateExam: any) =>
+    const targetSubExams = exams.filter(candidate => candidate.canManage === true).flatMap((candidateExam: any) =>
       (candidateExam.modules || []).flatMap((candidateModule: any) =>
         (candidateModule.subExams || []).map((subExam: any) => ({
           id: subExam.id,
@@ -211,7 +207,7 @@ export default function SuperAdminExamsPage() {
     }
 
     if (targetSubExams.length === 0) {
-      showToast(language === 'ar' ? 'لا يوجد أي اختبار داخل أي موديول حاليًا. أنشئ اختبارًا داخل موديول أولًا.' : 'There is no exam inside any module yet. Create an exam inside a module first.', 'error');
+      showToast(language === 'ar' ? 'مفيش اختبار وجهة عندك صلاحية تعدّل عليه داخل الموديولات المعروضة.' : 'No editable destination exam is available in the modules shown.', 'error');
       return;
     }
 
@@ -237,13 +233,9 @@ export default function SuperAdminExamsPage() {
 
     setIsMovingStandalone(true);
     try {
-      const token = localStorage.getItem("super_admin_token") || localStorage.getItem("lms_token") || localStorage.getItem("token");
       const res = await apiFetch(`${API_URL}/exams/${standaloneMoveContext.examId}/move-standalone-questions`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           targetExamId: selectedTarget.examId,
           targetModuleId: selectedTarget.moduleId,
@@ -253,7 +245,9 @@ export default function SuperAdminExamsPage() {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to move standalone questions');
+        if (res.status >= 500) console.error("Standalone question move failed", res.status);
+        showToast(questionMoveError(errorData, res.status, language === 'ar'), 'error');
+        return;
       }
 
       showToast(
@@ -466,7 +460,7 @@ export default function SuperAdminExamsPage() {
               const hasStandaloneQuestions = sourceStandaloneQuestionsCount > 0;
               const firstModuleId = (exam.modules || [])[0]?.id;
               const isStandaloneOwnerCard = isSyntheticModuleCard || String(module.id) === String(firstModuleId);
-              const canMoveStandaloneQuestions = hasStandaloneQuestions && isStandaloneOwnerCard;
+              const canMoveStandaloneQuestions = hasStandaloneQuestions && isStandaloneOwnerCard && exam.canManage === true;
               const cardQuestionCounts = getModuleQuestionCardCounts(module.questionsCount, sourceStandaloneQuestionsCount);
               const audienceLabel = getExamAudienceLabel(exam, language);
               const createdAtLabel = getCreatedAtLabel(module.createdAt || actualModule?.createdAt || exam.createdAt, language);
@@ -538,33 +532,14 @@ export default function SuperAdminExamsPage() {
                       <ArrowUpRight className="w-4 h-4" />
                     </Link>
                   )}
-                  {hasStandaloneQuestions && isStandaloneOwnerCard && (
+                  {canMoveStandaloneQuestions && (
                     <button
                       type="button"
-                      onClick={() => {
-                        if (canMoveStandaloneQuestions) {
-                          openMoveStandaloneQuestionsModal(exam, actualModule);
-                          return;
-                        }
-                      }}
-                      className={`mt-5 w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-2xl font-black text-sm transition-colors ${
-                        canMoveStandaloneQuestions
-                          ? 'border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
-                          : 'border border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200'
-                      }`}
+                      onClick={() => openMoveStandaloneQuestionsModal(exam, actualModule)}
+                      className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 py-3.5 text-sm font-black text-amber-700 transition-colors hover:bg-amber-100"
                     >
                       <FolderOutput className="w-4 h-4" />
-                      {canMoveStandaloneQuestions
-                        ? (
-                          language === 'ar'
-                            ? `نقل ${sourceStandaloneQuestionsCount} سؤال منفرد إلى أي اختبار داخل موديول موجود`
-                            : `Move ${sourceStandaloneQuestionsCount} standalone questions into any existing module exam`
-                        )
-                        : (
-                          language === 'ar'
-                            ? `يوجد ${sourceStandaloneQuestionsCount} سؤال منفرد, لكن يجب إنشاء اختبار أولًا`
-                            : `${sourceStandaloneQuestionsCount} standalone questions found, but create an exam first`
-                        )}
+                      {language === 'ar' ? `نقل ${sourceStandaloneQuestionsCount} سؤال منفرد` : `Move ${sourceStandaloneQuestionsCount} standalone questions`}
                     </button>
                   )}
                 </div>
