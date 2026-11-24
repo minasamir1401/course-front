@@ -5,6 +5,8 @@ import { X, Upload, FileSpreadsheet, Download, AlertCircle, CheckCircle2, Loader
 import { API_URL } from "@/lib/api";
 import { useLanguage } from "@/contexts/LanguageContext";
 
+const MAX_EXCEL_UPLOAD_MIB = 20;
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -45,11 +47,19 @@ export default function ImportExcelModal({ isOpen, onClose, onSuccess }: Props) 
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setFile(e.target.files[0]);
-      setError(null);
-      setSuccess(null);
+    const selected = e.target.files?.[0];
+    if (!selected) return;
+    setSuccess(null);
+    if (selected.size >= MAX_EXCEL_UPLOAD_MIB * 1024 * 1024) {
+      setFile(null);
+      e.target.value = "";
+      setError(language === "ar"
+        ? `اختَر ملف Excel أصغر من ${MAX_EXCEL_UPLOAD_MIB} ميبيبايت.`
+        : `Choose an Excel file smaller than ${MAX_EXCEL_UPLOAD_MIB} MiB.`);
+      return;
     }
+    setFile(selected);
+    setError(null);
   };
 
   const handleUpload = async () => {
@@ -139,7 +149,7 @@ export default function ImportExcelModal({ isOpen, onClose, onSuccess }: Props) 
           >
             <input
               type="file"
-              accept=".xlsx,.xls,.csv"
+              accept=".xlsx,.xls"
               className="hidden"
               ref={fileInputRef}
               onChange={handleFileChange}
@@ -151,7 +161,9 @@ export default function ImportExcelModal({ isOpen, onClose, onSuccess }: Props) 
               {file ? file.name : (language === 'ar' ? "اختر ملف إكسيل" : "Select an Excel file")}
             </h4>
             <p className="text-sm font-medium text-slate-500">
-              {file ? `${(file.size / 1024).toFixed(1)} KB` : (language === 'ar' ? "انقر لاختيار الملف (.xlsx)" : "Click to browse (.xlsx)")}
+              {file ? `${(file.size / 1024).toFixed(1)} KB` : (language === "ar"
+                ? `ملف XLSX أو XLS أصغر من ${MAX_EXCEL_UPLOAD_MIB} ميبيبايت`
+                : `XLSX or XLS under ${MAX_EXCEL_UPLOAD_MIB} MiB`)}
             </p>
           </div>
 

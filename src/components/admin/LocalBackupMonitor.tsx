@@ -10,6 +10,7 @@ import { apiFetch } from '@/lib/api';
 type Failure = 'database' | 'disk-full' | 'storage' | 'archive';
 type BackupStatus = {
   viewerId: string;
+  offsite?: { state: 'disabled' | 'ready' | 'overdue' | 'unavailable'; dueDay?: string; archivedAt?: string };
   state: 'ready' | 'waiting' | 'failed' | 'overdue' | 'disabled';
   alert: { id: string; day: string; reason?: Failure } | null;
   archive: { day: string; filename: string; createdAt: string; size: number } | null;
@@ -153,6 +154,15 @@ export function LocalBackupStatusCard() {
     {status && <p className="text-sm font-semibold text-slate-800">{statusLabels[status.state]}{status.alert && <span dir="ltr"> · {status.alert.day}</span>}</p>}
     {status?.archive && <p className="break-all text-sm text-slate-600">
       {isArabic ? 'آخر نسخة متاحة: ' : 'Latest available backup: '}<bdi>{status.archive.filename}</bdi>
+    </p>}
+    {status?.offsite && <p className={status.offsite.state === 'ready' ? 'text-sm text-slate-700' : 'text-sm text-amber-800'}>
+      {({
+        disabled: isArabic ? 'النسخ الخارجية غير مفعّلة' : 'Offsite backups are disabled',
+        ready: isArabic ? 'النسخة الخارجية متاحة' : 'Offsite backup is available',
+        overdue: isArabic ? 'النسخة الخارجية متأخرة' : 'Offsite backup is overdue',
+        unavailable: isArabic ? 'تعذّر التحقق من النسخة الخارجية' : 'Offsite backup status is unavailable',
+      })[status.offsite.state]}
+      {status.offsite.dueDay && <bdi> · {status.offsite.dueDay}</bdi>}
     </p>}
     {!!status?.attempts.length && <ol className="max-h-56 divide-y overflow-auto rounded-xl border border-slate-200 px-3">
       {status.attempts.map(attempt => <li key={attempt.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">

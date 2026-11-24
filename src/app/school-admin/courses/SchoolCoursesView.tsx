@@ -4,6 +4,7 @@ import { shouldSkipImageOptimization } from "@/lib/imageDisplay";
 import { fetchAllPages } from "@/lib/paginatedFetch";
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import DashboardLayout from "@/components/DashboardLayout";
 import { BookOpen, Plus, Search, Edit2, Trash2, Monitor, CheckCircle2, Layout, GraduationCap, FileSpreadsheet, DownloadCloud, FileCode, Upload } from 'lucide-react';
 import { useRouter } from "next/navigation";
@@ -303,7 +304,11 @@ export default function SchoolCoursesView() {
                            <BookOpen className="w-8 h-8" />
                          )}
                        </div>
-                       <div className="flex gap-2">
+                       {course.canManage === false ? (
+                         <Link href={`/courses/${course.id}?staff=1`} className="rounded-xl bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-100">
+                           {language === 'ar' ? 'عرض الدروس' : 'View lessons'}
+                         </Link>
+                       ) : <div className="flex gap-2">
                          <button
                            type="button"
                            title={language === 'ar' ? 'تصدير Excel احتياطي' : 'Export Excel Backup'}
@@ -332,7 +337,7 @@ export default function SchoolCoursesView() {
                          >
                            <Trash2 className="w-5 h-5" />
                          </button>
-                       </div>
+                       </div>}
                     </div>
 
                     <div className={`mb-8 ${language === 'ar' ? 'text-right' : 'text-left'}`}>

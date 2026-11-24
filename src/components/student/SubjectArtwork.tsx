@@ -8,8 +8,8 @@ import { getExamArtwork } from '@/lib/examArtwork';
 import { BookOpen, Compass, FlaskConical, GraduationCap, Lightbulb, Target } from 'lucide-react';
 import styles from './SubjectArtwork.module.css';
 
-type Props={subject?:unknown;title?:string;coverImage?:string|null;variant?:'cover'|'thumbnail'|'preview';className?:string;priority?:boolean;examKey?:string};
-export default function SubjectArtwork({subject,title='',coverImage,variant='cover',className='',priority=false,examKey}:Props) {
+type Props={subject?:unknown;title?:string;coverImage?:string|null;variant?:'cover'|'thumbnail'|'preview';className?:string;priority?:boolean;sizes?:string;examKey?:string};
+export default function SubjectArtwork({subject,title='',coverImage,variant='cover',className='',priority=false,sizes,examKey}:Props) {
   const artwork=getSubjectArtwork(subject,title);
   const examArt=examKey?getExamArtwork(examKey,subject):null;
   const custom=coverImage?(coverImage.startsWith('/klevro/')?coverImage:getFullImageUrl(coverImage)):null;
@@ -20,7 +20,7 @@ export default function SubjectArtwork({subject,title='',coverImage,variant='cov
   return <div className={`${styles.artwork} ${styles[variant]} ${examArt&&!isCustom?styles.exam:''} ${className}`} data-subject={artwork.key} data-custom-cover={isCustom?'true':'false'} data-exam-artwork={examKey} data-artwork-fingerprint={examArt?.fingerprint}
     style={examArt&&!isCustom?{background:`linear-gradient(${examArt.angle}deg,${examArt.from},#fff 55%,${examArt.to})`,color:examArt.accent}:undefined}>
     {examArt&&!isCustom&&<><span className={styles.orbit} aria-hidden="true" style={{transform:`translate(${examArt.offset}%,${-examArt.offset}%) rotate(${examArt.angle}deg)`}}/><span className={styles.motif} aria-hidden="true"><Motif strokeWidth={1.7}/></span></>}
-    <Image src={src} alt="" aria-hidden="true" fill preload={priority} sizes={variant==='thumbnail'?'84px':variant==='preview'?'180px':'(max-width: 480px) 100vw, (max-width: 1000px) 50vw, 25vw'} className={isCustom?styles.uploaded:styles.illustration} unoptimized={shouldSkipImageOptimization(src)} onError={isCustom?()=>setFailedSource(src):undefined}/>
+    <Image src={src} alt="" aria-hidden="true" fill preload={priority} sizes={sizes ?? (variant==='thumbnail'?'84px':variant==='preview'?'180px':'(max-width: 480px) 100vw, (max-width: 1000px) 50vw, 25vw')} className={isCustom?styles.uploaded:styles.illustration} unoptimized={shouldSkipImageOptimization(src)} onError={isCustom?()=>setFailedSource(src):undefined}/>
   </div>;
 }
 export function SubjectPreview({subject,title='',coverImage,language,allowCustomCover=true}:{subject?:unknown;title?:string;coverImage?:string|null;language:string;allowCustomCover?:boolean}) {

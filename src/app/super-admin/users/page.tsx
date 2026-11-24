@@ -51,10 +51,16 @@ function UsersManagementContent() {
   const [exposedSummary, setExposedSummary] = useState<{
     total: number;
     byRole: Record<string, number>;
+    byState?: Record<string, number>;
     adminsAffected: number;
     superAdminsAffected: number;
     schoolAdminsAffected: number;
   }>({ total: 0, byRole: {}, adminsAffected: 0, superAdminsAffected: 0, schoolAdminsAffected: 0 });
+  const exposedLabel = (state: unknown) => {
+    if (state === 'BACKUP_ID') return language === 'ar' ? 'المعرّف موجود في النسخة المكشوفة' : 'Account ID found in exposed backup';
+    if (state === 'EXPOSED_HASH') return language === 'ar' ? 'هاش كلمة المرور مكشوف' : 'Known exposed password hash';
+    return language === 'ar' ? 'يلزم إعادة تعيين كلمة المرور' : 'Password reset required';
+  };
   const [resetModalUser, setResetModalUser] = useState<any>(null);
   const [resetPasswordInput, setResetPasswordInput] = useState("");
   const [resetSubmitting, setResetSubmitting] = useState(false);
@@ -626,6 +632,9 @@ function UsersManagementContent() {
                 <p className="text-xs text-amber-800 font-medium">
                   {Object.entries(exposedSummary.byRole).map(([r, count]) => `${r}: ${count}`).join(' | ')}
                 </p>
+                {exposedSummary.byState && <p className="text-xs font-semibold text-rose-700">
+                  {Object.entries(exposedSummary.byState).map(([state, count]) => exposedLabel(state) + ' · ' + count).join('  |  ')}
+                </p>}
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -876,9 +885,7 @@ function UsersManagementContent() {
                             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-black">
                               <ShieldAlert className="w-4 h-4 shrink-0" />
                               <span>
-                                {user.exposedCredentialDetected
-                                  ? (language === 'ar' ? 'يلزم إعادة تعيين كلمة المرور' : 'Password reset required')
-                                  : (language === 'ar' ? 'يلزم إعادة التعيين' : 'RESET_REQUIRED')}
+                                {exposedLabel(user.resetState)}
                               </span>
                             </div>
                           ) : (
@@ -1007,7 +1014,7 @@ function UsersManagementContent() {
                       {isExposed ? (
                         <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-rose-50 border border-rose-200 text-rose-700 font-black">
                           <ShieldAlert className="w-3.5 h-3.5" />
-                          {language === 'ar' ? 'يلزم إعادة التعيين' : 'Password reset required'}
+                          {exposedLabel(user.resetState)}
                         </span>
                       ) : (
                         <span className="font-mono text-slate-700 bg-amber-500/5 px-2 py-1 rounded border border-amber-500/10 font-bold">

@@ -42,17 +42,11 @@ export default function BackupsPage() {
   const [backupList, setBackupList] = useState<'daily' | 'other' | null>(null);
   const archiveBackups = backups.filter(isBundledArchiveBackup);
   const availableBackups = backups.filter(b => !isBundledArchiveBackup(b));
-  const dailyByDay = new Map<string, BackupFile>();
-  for (const backup of availableBackups) {
-    const day = getDailyBackupDay(backup.name);
-    if (!day) continue;
-    const existing = dailyByDay.get(day);
-    if (!existing || (isR2Backup(existing) && !isR2Backup(backup))) {
-      dailyByDay.set(day, backup);
-    }
-  }
-  const dailyBackups = [...dailyByDay].sort(([a], [b]) => b.localeCompare(a)).map(([, backup]) => backup);
-  const otherBackups = availableBackups.filter(backup => dailyByDay.get(getDailyBackupDay(backup.name) ?? '') !== backup);
+  const dailyBackups = availableBackups
+    .filter(backup => getDailyBackupDay(backup.name))
+    .sort((a, b) => getDailyBackupDay(b.name)!.localeCompare(getDailyBackupDay(a.name)!)
+      || Number(isR2Backup(a)) - Number(isR2Backup(b)));
+  const otherBackups = availableBackups.filter(backup => !getDailyBackupDay(backup.name));
   const showingDaily = (backupList ?? (dailyBackups.length > 0 ? 'daily' : 'other')) === 'daily';
   const individualBackups = showingDaily ? dailyBackups : otherBackups;
   const [loading, setLoading] = useState(true);

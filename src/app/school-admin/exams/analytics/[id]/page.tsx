@@ -1,4 +1,6 @@
-"use client";
-import { useParams } from 'next/navigation';
 import ReportWorkspace from '@/components/reports/ReportWorkspace';
-export default function ExamReportPage() { const { id } = useParams<{ id: string }>(); return <ReportWorkspace role="SCHOOL_ADMIN" examId={id} initialTab="overview" />; }
+
+export default async function ExamReportPage({ params }: PageProps<'/school-admin/exams/analytics/[id]'>) {
+  const { id } = await params;
+  return <ReportWorkspace role="SCHOOL_ADMIN" examId={id} initialTab="overview" />;
+}

@@ -41,7 +41,7 @@ export default function ActivitiesOverview(props: Props) {
   return <>
     <header className={styles.hero}>
       <div className={styles.heroCopy}><span className={styles.eyebrow}><Sparkles size={15}/>{txt('مساحتك للتدريب والتجربة','Your space to practise')}</span><h1>{txt('الأنشطة والمهارات','Activities & skills')}</h1><p>{txt('تعلّم بالتجربة، وطوّر مهاراتك خطوة بخطوة. اختر نشاطًا وتابع تقدّمك.','Learn by doing and build your skills step by step. Choose an activity and follow your progress.')}</p><span className={styles.grade}><BookOpen size={14}/>{gradeLabel}</span></div>
-      <div className={styles.heroArt}><Image src={getSubjectArtwork(subject).src} alt="" aria-hidden="true" fill loading="eager" unoptimized sizes="(max-width:500px) 185px, 285px"/></div>
+      <div className={styles.heroArt}><Image src={getSubjectArtwork(subject).src} alt="" aria-hidden="true" fill loading="eager" sizes="(max-width:500px) 185px, 285px"/></div>
     </header>
     <section className={styles.metrics} aria-label={txt('تقدّمك في الأنشطة','Your activity progress')}>
       {[{label:txt('النجوم المكتسبة','Stars earned'),value:data?`${totalStars} / ${maxStars}`:'—',Icon:Trophy,tone:'gold'}, {label:txt('نقاط الخبرة','XP earned'),value:data?`${xp} XP`:'—',Icon:Sparkles,tone:'purple'}, {label:txt('متوسط الإتقان','Average mastery'),value:data?`${mastery}%`:'—',Icon:BrainCircuit,tone:'cyan'}, {label:txt('الصف الدراسي','Current grade'),value:gradeLabel,Icon:BookOpen,tone:'rose'}].map(({label,value,Icon,tone}) => <article key={tone} className={styles.metric}><span className={styles.metricIcon} data-tone={tone}><Icon size={22} strokeWidth={1.6}/></span><div><p>{label}</p><strong>{tone==='rose'?value:<bdi dir="ltr">{value}</bdi>}</strong></div></article>)}

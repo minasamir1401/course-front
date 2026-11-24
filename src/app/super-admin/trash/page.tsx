@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Trash2, RefreshCw, BookOpen, Layers, CheckCircle2, AlertTriangle, ArrowLeft, ChevronRight, ChevronLeft, Trash, Users } from 'lucide-react';
+import { Trash2, RefreshCw, BookOpen, Layers, CheckCircle2, AlertTriangle, ArrowLeft, ChevronRight, ChevronLeft, Users } from 'lucide-react';
 import { useRouter } from "next/navigation";
 import { useNotification } from "@/context/NotificationContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -40,11 +40,7 @@ export default function TrashPage() {
   const [totalItems, setTotalItems] = useState(0);
   const [selectedItems, setSelectedItems] = useState<{ id: string, type: 'course' | 'lesson' | 'exam' | 'question' | 'user' }[]>([]);
   const [isBulkRestoring, setIsBulkRestoring] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('all');
-  const [isEmptyingTrash, setIsEmptyingTrash] = useState(false);
-  const [showEmptyModal, setShowEmptyModal] = useState(false);
 
   const LIMIT = 50;
 
@@ -157,99 +153,14 @@ export default function TrashPage() {
         setSelectedItems([]);
         fetchTrash(currentPage);
       } else {
-        showToast(language === 'ar' ? "فشل الاستعادة الجماعية" : "Bulk restore failed", "error");
+        const error = await res.json().catch(() => ({}));
+        showToast(error.error || (language === 'ar' ? "فشل الاستعادة الجماعية" : "Bulk restore failed"), "error");
       }
     } catch (e) {
       console.error(e);
       showToast(language === 'ar' ? "حدث خطأ" : "An error occurred", "error");
     } finally {
       setIsBulkRestoring(false);
-    }
-  };
-
-  const handlePermanentDelete = async (id: string, type: 'course' | 'lesson' | 'exam' | 'question' | 'user') => {
-    if (!confirm(language === 'ar' ? 'هل أنت متأكد من الحذف النهائي لهذا العنصر؟ لا يمكن التراجع عن هذا الإجراء.' : 'Are you sure you want to permanently delete this item? This action cannot be undone.')) {
-      return;
-    }
-    setDeletingId(id);
-    try {
-      const token = localStorage.getItem("super_admin_token");
-      const res = await apiFetch(`${API_URL}/admin/trash/item/${type}/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        showToast(language === 'ar' ? "تم الحذف النهائي بنجاح" : "Permanently deleted successfully", "success");
-        setSelectedItems(prev => prev.filter(item => item.id !== id));
-        fetchTrash(currentPage);
-      } else {
-        const err = await res.json().catch(() => ({}));
-        showToast(err.error || (language === 'ar' ? "فشل الحذف النهائي" : "Permanent delete failed"), "error");
-      }
-    } catch (e) {
-      console.error(e);
-      showToast(language === 'ar' ? "حدث خطأ" : "An error occurred", "error");
-    } finally {
-      setDeletingId(null);
-    }
-  };
-
-  const handleBulkPermanentDelete = async () => {
-    if (selectedItems.length === 0) return;
-    if (!confirm(language === 'ar' ? `هل أنت متأكد من الحذف النهائي لـ ${selectedItems.length} عنصر؟ لا يمكن التراجع عن هذا الإجراء.` : `Are you sure you want to permanently delete ${selectedItems.length} items? This cannot be undone.`)) {
-      return;
-    }
-    setIsBulkDeleting(true);
-    try {
-      const token = localStorage.getItem("super_admin_token");
-      const res = await apiFetch(`${API_URL}/admin/trash/bulk-delete`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ items: selectedItems })
-      });
-      if (res.ok) {
-        showToast(language === 'ar' ? "تم الحذف النهائي للعناصر المحددة بنجاح" : "Selected items permanently deleted", "success");
-        setSelectedItems([]);
-        fetchTrash(currentPage);
-      } else {
-        showToast(language === 'ar' ? "فشل الحذف الجماعي" : "Bulk permanent delete failed", "error");
-      }
-    } catch (e) {
-      console.error(e);
-      showToast(language === 'ar' ? "حدث خطأ" : "An error occurred", "error");
-    } finally {
-      setIsBulkDeleting(false);
-    }
-  };
-
-  const handleEmptyTrash = async () => {
-    setIsEmptyingTrash(true);
-    try {
-      const token = localStorage.getItem("super_admin_token");
-      const url = activeTab === 'all' 
-        ? `${API_URL}/admin/trash/empty` 
-        : `${API_URL}/admin/trash/empty?type=${activeTab}`;
-        
-      const res = await apiFetch(url, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (res.ok) {
-        showToast(language === 'ar' ? "تم إفراغ السلة بنجاح" : "Trash emptied successfully", "success");
-        setShowEmptyModal(false);
-        fetchTrash(1);
-      } else {
-        showToast(language === 'ar' ? "فشل إفراغ السلة" : "Failed to empty trash", "error");
-      }
-    } catch (e) {
-      console.error(e);
-      showToast(language === 'ar' ? "حدث خطأ أثناء الاتصال بالخادم" : "An error occurred", "error");
-    } finally {
-      setIsEmptyingTrash(false);
     }
   };
 
@@ -295,31 +206,15 @@ export default function TrashPage() {
               <>
                 <button 
                   onClick={handleBulkRestore}
-                  disabled={isBulkRestoring || isBulkDeleting}
+                  disabled={isBulkRestoring}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-4 rounded-2xl flex items-center gap-3 transition-all shadow-sm text-sm disabled:opacity-50"
                 >
                   <RefreshCw className={`w-5 h-5 ${isBulkRestoring ? 'animate-spin' : ''}`} />
                   <span>{language === 'ar' ? `استعادة المحدد (${selectedItems.length})` : `Restore Selected (${selectedItems.length})`}</span>
                 </button>
-                <button 
-                  onClick={handleBulkPermanentDelete}
-                  disabled={isBulkRestoring || isBulkDeleting}
-                  className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-4 rounded-2xl flex items-center gap-3 transition-all shadow-sm text-sm disabled:opacity-50"
-                >
-                  <Trash className={`w-5 h-5 ${isBulkDeleting ? 'animate-spin' : ''}`} />
-                  <span>{language === 'ar' ? `حذف المحدد نهائياً (${selectedItems.length})` : `Delete Selected (${selectedItems.length})`}</span>
-                </button>
               </>
             )}
             
-            <button 
-              onClick={() => setShowEmptyModal(true)}
-              disabled={loading || items.length === 0}
-              className="bg-red-50 hover:bg-red-600 text-red-600 hover:text-white border border-red-200 font-bold px-6 py-4 rounded-2xl flex items-center gap-3 transition-all cursor-pointer shadow-sm text-sm disabled:opacity-50"
-            >
-              <Trash className="w-5 h-5" />
-              <span>{language === 'ar' ? "إفراغ السلة" : "Empty Trash"}</span>
-            </button>
             <button 
               onClick={() => fetchTrash(currentPage)}
               disabled={loading}
@@ -420,20 +315,11 @@ export default function TrashPage() {
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     onClick={() => handleRestore(item.id, item.type)}
-                    disabled={restoringId === item.id || deletingId === item.id}
+                    disabled={restoringId === item.id}
                     className="bg-slate-100 hover:bg-slate-800 hover:text-white text-slate-700 font-black px-5 py-3 rounded-xl transition-all flex items-center gap-2 text-sm disabled:opacity-50"
                   >
                     {restoringId === item.id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                     {language === 'ar' ? "استعادة" : "Restore"}
-                  </button>
-                  <button
-                    onClick={() => handlePermanentDelete(item.id, item.type)}
-                    disabled={restoringId === item.id || deletingId === item.id}
-                    className="bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-600 font-black px-4 py-3 rounded-xl transition-all flex items-center gap-2 text-sm disabled:opacity-50 border border-rose-200"
-                    title={language === 'ar' ? "حذف نهائي" : "Delete permanently"}
-                  >
-                    {deletingId === item.id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                    <span className="hidden sm:inline">{language === 'ar' ? "حذف نهائي" : "Delete"}</span>
                   </button>
                 </div>
               </div>
@@ -471,41 +357,6 @@ export default function TrashPage() {
         <DeduplicatorModal onClose={() => setShowDeduplicator(false)} token={token} />
       )}
 
-      {/* Empty Trash Confirmation Modal */}
-      {showEmptyModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-rose-100" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-            <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mb-6 mx-auto">
-              <Trash className="w-8 h-8 text-red-600" />
-            </div>
-            <h3 className="text-2xl font-black text-slate-800 text-center mb-4">
-              {language === 'ar' ? "هل أنت متأكد من إفراغ السلة؟" : "Are you sure you want to empty the trash?"}
-            </h3>
-            <p className="text-slate-500 text-center font-bold mb-8 leading-relaxed">
-              {language === 'ar' 
-                ? `سيتم حذف جميع العناصر${activeTab !== 'all' ? ' في هذا القسم' : ''} نهائياً ولن تتمكن من استعادتها أبداً.`
-                : `All items${activeTab !== 'all' ? ' in this section' : ''} will be permanently deleted and cannot be recovered.`}
-            </p>
-            <div className="flex gap-4">
-              <button
-                onClick={() => setShowEmptyModal(false)}
-                disabled={isEmptyingTrash}
-                className="flex-1 px-6 py-4 rounded-2xl font-bold text-slate-600 bg-slate-50 hover:bg-slate-100 transition-all"
-              >
-                {language === 'ar' ? "إلغاء" : "Cancel"}
-              </button>
-              <button
-                onClick={handleEmptyTrash}
-                disabled={isEmptyingTrash}
-                className="flex-1 px-6 py-4 rounded-2xl font-bold text-white bg-red-600 hover:bg-red-700 transition-all flex items-center justify-center gap-2"
-              >
-                {isEmptyingTrash ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Trash className="w-5 h-5" />}
-                {language === 'ar' ? "نعم، حذف نهائي" : "Yes, Empty"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </DashboardLayout>
   );
 }
