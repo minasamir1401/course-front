@@ -11,6 +11,8 @@ import { offlineSync, captureOfflineOwner } from "@/lib/offlineSync";
 import { buildCourseLessonSummary } from "@/lib/courseLessonSummary";
 import { courseLessonKey, parseLessonJsonArray, stageCourseLesson, withCourseLessonKey } from "@/lib/courseCreatePersistence";
 import { useDeletionPolicy } from "@/hooks/useDeletionPolicy";
+import { getAutoTranslateEnabled } from "@/lib/autoTranslatePreference";
+import { autoTranslateLessonDraftForSave, lessonNeedsArabicTranslation } from "@/lib/manualAutoTranslate";
 import type { CourseData, Lesson, CourseEditorContextType } from './types';
 export type { CourseData, Lesson } from './types';
 const CourseEditorContext = createContext<CourseEditorContextType | undefined>(undefined);
@@ -875,9 +877,17 @@ export const CourseEditorProvider: React.FC<{
       }
 
       const session = lessonSessionRef.current;
-      const draft = editor.isLessonModalOpen && lessonTitle && !editor.isLessonContentLoading
+      const autoTranslateOn = getAutoTranslateEnabled();
+      let draft = editor.isLessonModalOpen && lessonTitle && !editor.isLessonContentLoading
         ? withCourseLessonKey({ ...editor.currentLesson, isContentLoaded: true })
         : undefined;
+      if (mode !== "auto" && autoTranslateOn && draft && lessonNeedsArabicTranslation(draft)) {
+        try {
+          draft = await autoTranslateLessonDraftForSave(draft);
+        } catch (err) {
+          console.error("Auto-translate draft on save failed:", err);
+        }
+      }
       const beforeSave = lessonsRef.current;
       const submitted = draft ? stageCourseLesson(beforeSave, draft) : beforeSave;
       if (!submitted) {
@@ -916,6 +926,7 @@ export const CourseEditorProvider: React.FC<{
         ...editor.courseData,
         ...getSchoolPayload(editor.courseData),
         expectedUpdatedAt: courseVersionRef.current,
+        autoTranslate: autoTranslateOn,
         lessons: submitted.map(serializeLessonForPut),
       });
       if (mode === "auto" && failedSaveBodyRef.current === body) return;

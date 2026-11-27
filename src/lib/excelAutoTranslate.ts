@@ -3,8 +3,10 @@ import { translateBatch } from './translationService';
 export type ExcelTranslationKind = 'content' | 'metadata';
 
 const ARABIC_CHAR_RE = /[\u0600-\u06FF]/;
+const ARABIC_LETTER_RE = /[\u0621-\u064A\u0671-\u06D3]/;
 const LATIN_CHAR_RE = /[A-Za-z]/;
 const INLINE_TABLE_BLOCK_RE = /(\[TABLE\][\s\S]*?\[\/TABLE\])/gi;
+const MIXED_HTML_BLOCK_RE = /(<(?:p|div|li|td|th|h[1-6])\b[^>]*>[\s\S]*?<\/(?:p|div|li|td|th|h[1-6])>)/gi;
 
 const INTERACTIVE_OBJECT_KEYS = ['front', 'back', 'text', 'label', 'title', 'left', 'right', 'word', 'clue', 'question'] as const;
 
@@ -80,7 +82,14 @@ function stripMarkupAndMath(value: unknown): string {
 
 export function hasArabicVisibleText(value: unknown): boolean {
   const plain = stripMarkupAndMath(value);
-  return ARABIC_CHAR_RE.test(plain);
+  return ARABIC_LETTER_RE.test(plain);
+}
+
+export function hasMixedEnglishHtmlBlocks(value: unknown, kind: ExcelTranslationKind = 'content'): value is string {
+  if (typeof value !== 'string' || !hasArabicVisibleText(value)) return false;
+  const blocks = value.match(MIXED_HTML_BLOCK_RE);
+  if (!blocks || blocks.length < 2) return false;
+  return blocks.some((block) => isEnglishWithoutArabic(block, kind));
 }
 
 export function isMetadataIdentifier(value: string): boolean {
@@ -152,7 +161,7 @@ function resolveOptionIndex(raw: string, opts: string[]): number {
   return -1;
 }
 
-function disambiguateTranslatedOptions(rawOpts: string[], translatedOpts: string[]): string[] {
+export function disambiguateTranslatedOptions(rawOpts: string[], translatedOpts: string[]): string[] {
   const norm = (v: unknown) => String(v ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
   const next = [...translatedOpts];
   const groups = new Map<string, number[]>();
@@ -222,6 +231,15 @@ class TranslationCollector {
       });
       return;
     }
+    if (hasMixedEnglishHtmlBlocks(text, kind)) {
+      const blocks = text.match(MIXED_HTML_BLOCK_RE) || [];
+      for (const block of blocks) {
+        if (isEnglishWithoutArabic(block, kind)) {
+          this.queues[kind].add(block);
+        }
+      }
+      return;
+    }
     if (!isEnglishWithoutArabic(text, kind)) return;
     this.queues[kind].add(text);
   }
@@ -276,6 +294,11 @@ class TranslationCollector {
         if (isTableCell && isSingleLetterCellSymbol(segment)) return segment;
         return this.maps[kind].get(segment) ?? segment;
       });
+    }
+    if (hasMixedEnglishHtmlBlocks(text, kind)) {
+      return text.replace(MIXED_HTML_BLOCK_RE, (block) => (
+        isEnglishWithoutArabic(block, kind) ? (this.maps[kind].get(block) ?? block) : block
+      ));
     }
     return this.maps[kind].get(text) ?? text;
   }
@@ -338,6 +361,10 @@ function collectLocalizedPair(
 ): void {
   const ar = typeof arVal === 'string' ? arVal.trim() : '';
   const en = typeof enVal === 'string' ? enVal.trim() : '';
+  if (hasMixedEnglishHtmlBlocks(arVal, kind)) {
+    collector.add(arVal, kind);
+    return;
+  }
   const source =
     en && (!ar || ar === en || isEnglishWithoutArabic(ar, kind))
       ? (enVal as string)
@@ -361,6 +388,9 @@ function applyLocalizedPair(
   const read = (src: string) => (multiline ? collector.getLines(src, kind) : collector.get(src, kind));
 
   if (ar.trim() && hasArabicVisibleText(ar)) {
+    if (hasMixedEnglishHtmlBlocks(ar, kind)) {
+      return { ar: read(ar), en };
+    }
     return { ar, en };
   }
   if (en.trim() && (!ar.trim() || ar.trim() === en.trim() || isEnglishWithoutArabic(ar, kind))) {
@@ -372,7 +402,7 @@ function applyLocalizedPair(
   return { ar, en };
 }
 
-function collectInteractiveStrings(
+export function collectInteractiveStrings(
   optsVal: unknown,
   ansVal: unknown,
   collector: TranslationCollector,
@@ -441,7 +471,7 @@ function collectInteractiveStrings(
   }
 }
 
-function translateInteractivePayload(
+export function translateInteractivePayload(
   optsVal: unknown,
   ansVal: unknown,
   collector: TranslationCollector,

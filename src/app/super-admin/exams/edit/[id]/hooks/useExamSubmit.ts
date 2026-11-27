@@ -1,5 +1,8 @@
 import { apiFetch, API_URL } from '@/lib/api';
 import { buildDraftModules, buildExamSubmissionPayload } from '@/lib/examEditingPayload';
+import { getAutoTranslateEnabled } from '@/lib/autoTranslatePreference';
+import { questionNeedsArabicTranslation } from '@/lib/manualAutoTranslate';
+import { autoTranslateQuestionsList } from '@/lib/excelAutoTranslate';
 import { buildExamSavePayload, isChildExamSave } from '@/lib/examSaveScope';
 import { getStandaloneExamQuestions } from '@/lib/examModuleQuestions';
 import { normalizePersistedExamQuestions } from '@/lib/persistedExamQuestion';
@@ -45,6 +48,15 @@ export const useExamSubmit = (props: any) => {
         modules: finalModules,
         standaloneQuestions,
       });
+      const autoTranslateOn = getAutoTranslateEnabled();
+      let preparedQuestions = allQuestions;
+      if (autoTranslateOn && Array.isArray(preparedQuestions) && preparedQuestions.some(questionNeedsArabicTranslation)) {
+        try {
+          preparedQuestions = await autoTranslateQuestionsList(preparedQuestions);
+        } catch (err) {
+          console.error('Auto-translate exam questions on submit failed:', err);
+        }
+      }
       if (cleanedStandaloneQuestions && cleanedStandaloneQuestions.length < (standaloneQuestions?.length || 0)) {
         setStandaloneQuestions?.(cleanedStandaloneQuestions);
       }
@@ -115,8 +127,9 @@ export const useExamSubmit = (props: any) => {
           gradeTarget: examData.gradeTarget,
 
           modules: modulesPayload,
-          questions: allQuestions,
-          deletedQuestionIds: submittedDeletedQuestionIds
+          questions: preparedQuestions,
+          deletedQuestionIds: submittedDeletedQuestionIds,
+          autoTranslate: autoTranslateOn
         }, { moduleId, subExamId }))
       });
 

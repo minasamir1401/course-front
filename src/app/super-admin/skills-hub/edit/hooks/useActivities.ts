@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { apiFetch, API_URL } from '@/lib/api';
+import { getAutoTranslateEnabled } from '@/lib/autoTranslatePreference';
+import { activityNeedsArabicTranslation, translateSingleActivityItem } from '@/lib/manualAutoTranslate';
 
 const getSuperToken = () => {
   if (typeof window === 'undefined') return '';
@@ -11,7 +13,7 @@ export const useActivities = (props: { clusterId: string | null; language: strin
 
   const [expandedLessonId, setExpandedLessonId] = useState<string | null>(null);
   const [activitiesData, setActivitiesData] = useState<Record<string, any[]>>({});
-  
+
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<any>(null);
 
@@ -93,9 +95,19 @@ export const useActivities = (props: { clusterId: string | null; language: strin
     setIsActivityModalOpen(true);
   };
 
-  const handleSaveActivity = async (data: any) => {
-    const hasAr = (str?: any) => /[\u0600-\u06FF]/.test(String(str || ''));
+  const handleSaveActivity = async (rawData: any) => {
+    let data = rawData;
+    const hasAr = (str?: any) => /[\u0621-\u064A\u0671-\u06D3]/.test(String(str || ''));
     const hasEn = (str?: any) => /[a-zA-Z]/.test(String(str || ''));
+
+    if (getAutoTranslateEnabled() && activityNeedsArabicTranslation(data)) {
+      try {
+        const tr = await translateSingleActivityItem(data, 'en');
+        data = tr.updated;
+      } catch (err) {
+        console.error('Auto-translate skill activity on save failed:', err);
+      }
+    }
 
     const effectiveTitle = data?.title || data?.titleEn || '';
     const effectiveTitleEn = data?.titleEn || (hasEn(data?.title) && !hasAr(data?.title) ? data.title : null);
@@ -108,7 +120,7 @@ export const useActivities = (props: { clusterId: string | null; language: strin
     try {
       const token = getSuperToken();
       const isNew = Boolean(editingActivity?.isNew || !data.id);
-      const url = isNew 
+      const url = isNew
         ? `${API_URL}/skills-hub/activities`
         : `${API_URL}/skills-hub/activities/${data.id}`;
       const method = isNew ? 'POST' : 'PUT';
@@ -141,7 +153,8 @@ export const useActivities = (props: { clusterId: string | null; language: strin
         explanation: data.explanation || null,
         explanationEn: data.explanationEn || null,
         keyInsight: data.keyInsight || null,
-        keyInsightEn: data.keyInsightEn || null
+        keyInsightEn: data.keyInsightEn || null,
+        autoTranslate: getAutoTranslateEnabled(),
       };
 
       const res = await apiFetch(url, {
@@ -171,7 +184,7 @@ export const useActivities = (props: { clusterId: string | null; language: strin
 
   const handleDeleteActivity = async (id: string, lessonId: string) => {
     if (!confirm(language === 'ar' ? 'هل أنت متأكد من حذف هذا النشاط؟' : 'Are you sure you want to delete this activity?')) return;
-    
+
     try {
       const token = getSuperToken();
       const res = await apiFetch(`${API_URL}/skills-hub/activities/${id}`, {

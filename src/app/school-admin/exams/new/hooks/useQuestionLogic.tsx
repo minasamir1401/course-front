@@ -5,6 +5,8 @@ import { normalizeDok } from '@/lib/examQuestionMetadata';
 import { ChevronDown, Edit2, Trash2, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { validateExamQuestionForSave } from '@/lib/examQuestionValidation';
+import { getAutoTranslateEnabled } from '@/lib/autoTranslatePreference';
+import { questionNeedsArabicTranslation, translateSingleQuestionItem } from '@/lib/manualAutoTranslate';
 import { normalizeQuestionOptions } from '@/lib/questionOptions';
 import { buildInitialCourseSectionMeta, populateBilingualQuestionDraft } from '@/lib/questionDraftHelpers';
 
@@ -77,7 +79,7 @@ export const useQuestionLogic = (props: any) => {
     setShowQuestionForm(true);
   };
 
-  const handleSaveStandaloneQuestion = () => {
+  const handleSaveStandaloneQuestion = async () => {
     const validation = validateExamQuestionForSave(tempQuestion, language);
     if (validation.error) {
       showToast(validation.error, "error");
@@ -91,10 +93,19 @@ export const useQuestionLogic = (props: any) => {
       dok: normalizeDok(tempQuestion.dok) || tempQuestion.dok || "",
       label: tempQuestion.type
     };
+    let finalItem = itemToSave;
+    if (getAutoTranslateEnabled() && questionNeedsArabicTranslation(finalItem)) {
+      try {
+        const tr = await translateSingleQuestionItem(finalItem, 'en');
+        finalItem = tr.updated;
+      } catch (err) {
+        console.error('Auto-translate standalone question failed:', err);
+      }
+    }
     setStandaloneQuestions((prev: any) => {
       const newList = [...prev];
-      if (editingStandaloneIndex !== null) newList[editingStandaloneIndex] = itemToSave;
-      else newList.push(itemToSave);
+      if (editingStandaloneIndex !== null) newList[editingStandaloneIndex] = finalItem;
+      else newList.push(finalItem);
       return newList;
     });
     setShowQuestionForm(false);
@@ -184,7 +195,7 @@ export const useQuestionLogic = (props: any) => {
     setShowQuestionForm(true);
   };
 
-  const handleSaveQuestionForSource = (source: 'assignments' | 'questions') => {
+  const handleSaveQuestionForSource = async (source: 'assignments' | 'questions') => {
     const preparedQuestion = { ...tempQuestion };
     if (!preparedQuestion.text && preparedQuestion.textEn) {
       preparedQuestion.text = preparedQuestion.textEn;
@@ -223,18 +234,27 @@ export const useQuestionLogic = (props: any) => {
       label: preparedQuestion.type // Ensure label is synced with type
     };
 
+    let finalItem = itemToSave;
+    if (getAutoTranslateEnabled() && questionNeedsArabicTranslation(finalItem)) {
+      try {
+        const tr = await translateSingleQuestionItem(finalItem, 'en');
+        finalItem = tr.updated;
+      } catch (err) {
+        console.error('Auto-translate question failed:', err);
+      }
+    }
     setCurrentModule((prev: any) => {
       if (source === 'questions' && activeSubExamIndex !== null && prev.subExams && prev.subExams[activeSubExamIndex]) {
         const newSubExams = [...prev.subExams];
         const newQuestions = [...(newSubExams[activeSubExamIndex].questions || [])];
-        if (editingQuestionIndex !== null) newQuestions[editingQuestionIndex] = itemToSave;
-        else newQuestions.push(itemToSave);
+        if (editingQuestionIndex !== null) newQuestions[editingQuestionIndex] = finalItem;
+        else newQuestions.push(finalItem);
         newSubExams[activeSubExamIndex] = { ...newSubExams[activeSubExamIndex], questions: newQuestions };
         return { ...prev, subExams: newSubExams };
       } else {
         const newList = [...(prev[source] || [])];
-        if (editingQuestionIndex !== null) newList[editingQuestionIndex] = itemToSave;
-        else newList.push(itemToSave);
+        if (editingQuestionIndex !== null) newList[editingQuestionIndex] = finalItem;
+        else newList.push(finalItem);
         return { ...prev, [source]: newList };
       }
     });

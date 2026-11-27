@@ -8,6 +8,7 @@ import { Monitor, X, Target, Clock, HelpCircle, Upload, Download, FileText, Tras
 import { CustomSelect } from '@/components/ui/CustomSelect';
 import FileUpload from '@/components/FileUpload';
 import { getModuleEditorTabs } from '@/lib/moduleEditorTabs';
+import AutoTranslateToggle from '@/components/AutoTranslateToggle';
 
 export const ModuleModal = (props: any) => {
   const { showToast } = useNotification();
@@ -37,9 +38,12 @@ export const ModuleModal = (props: any) => {
                       : (language === 'ar' ? "بناء محتوى الموديول والأسئلة" : "Build module content and questions")}
                   </p>
                 </div>
-                <button type="button" onClick={() => setIsModuleModalOpen(false)} className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-all">
-                  <X className="w-6 h-6" />
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <AutoTranslateToggle language={language} compact />
+                  <button type="button" onClick={() => setIsModuleModalOpen(false)} className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-all">
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
               </div>
 
               {/* Modal Tabs */}

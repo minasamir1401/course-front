@@ -1,5 +1,6 @@
 "use client";
 import { questionMetadata } from "@/lib/bilingualMetadata";
+import { hasArabicLetters, isDefaultSlideTitle } from "@/lib/slideLanguage";
 import { useSlideKeyboard } from "@/hooks/useSlideKeyboard";
 import { useModalFocus } from "@/hooks/useModalFocus";
 import StudentPageHeader from "@/components/student/StudentPageHeader";
@@ -29,7 +30,9 @@ import AnimatedFeedback from "@/components/AnimatedFeedback";
 import { InteractiveTag } from "@/components/InteractiveTag";
 import { 
   normalizeAnswerGlobal, 
-  checkAdvancedCorrect, 
+  checkAdvancedCorrect,
+  isSingleOptionCorrect,
+  isMultiAnswerCorrect,
   isQuestionLike, 
   getQuestionOptions, 
   QuestionFeedback, 
@@ -222,7 +225,7 @@ export default function LessonPlayerPage() {
                     {lesson.videoUrl ? (language === 'ar' ? 'شاهد الفيديو أعلاه ثم ابدأ في استعراض الشرح والتمارين.' : 'Watch the video above, then start browsing the explanation and exercises.') : (language === 'ar' ? 'ابدأ بمحتوى الدرس، ثم طبّق ما تعلمته في التدريبات والتمارين.' : 'Start with the lesson content, then practise what you learned in the activities and exercises.')}
                   </p>
                 </div>
-                {(lesson.standards || lesson.indicators || lesson.learningOutcomes) && (
+                {(questionMetadata(lesson, "standards", language) || questionMetadata(lesson, "indicators", language) || questionMetadata(lesson, "learningOutcomes", language)) && (
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
                     {[
                       { title: t('lesson.standards'), icon: Target, content: questionMetadata(lesson, "standards", language), color: "text-blue-600", bg: "bg-blue-50" },
@@ -259,11 +262,25 @@ export default function LessonPlayerPage() {
                   </div>
                 </div>
                 <div className="p-5 md:p-8 flex flex-col items-center text-center w-full">
-                  {lesson.slides[currentSlideIndex].id === 'intro-video-slide' && (
+                  {lesson.slides[currentSlideIndex].id === 'intro-video-slide' ? (
                     <h3 className="text-2xl md:text-4xl font-black text-slate-900 mb-6 leading-tight tracking-tight animate-in fade-in slide-in-from-top-4 duration-500">
                       {language === 'ar' ? "فيديو مقدمة الدرس" : "Lesson Introduction Video"}
                     </h3>
-                  )}
+                  ) : (() => {
+                    const curSlide = lesson.slides[currentSlideIndex];
+                    const slideHeading = language === 'en'
+                      ? (curSlide.titleEn || (!hasArabicLetters(curSlide.title) ? curSlide.title : ''))
+                      : (curSlide.title || curSlide.titleEn || '');
+                    if (!slideHeading || !String(slideHeading).trim() || isDefaultSlideTitle(slideHeading)) return null;
+                    return (
+                      <h3
+                        dir={language === 'ar' ? 'rtl' : 'ltr'}
+                        className="text-2xl md:text-3xl font-black text-slate-900 mb-6 leading-tight tracking-tight"
+                      >
+                        {slideHeading}
+                      </h3>
+                    );
+                  })()}
                   {lesson.slides[currentSlideIndex].videoUrl && (
                     <div className="w-full max-w-4xl mx-auto mb-8 rounded-[35px] overflow-hidden shadow-2xl border border-slate-100 relative aspect-video" style={{ aspectRatio: '16/9' }}>
                       <VideoPlayer
@@ -276,11 +293,12 @@ export default function LessonPlayerPage() {
                   <div className={`w-full max-w-5xl mb-8 ${isQuestionLike(lesson.slides[currentSlideIndex]) ? 'question-frame' : 'text-frame'}`}>
                     <HtmlRenderer
                       html={language === 'en' ? (lesson.slides[currentSlideIndex].contentEn || lesson.slides[currentSlideIndex].textEn || lesson.slides[currentSlideIndex].content || lesson.slides[currentSlideIndex].text) : (lesson.slides[currentSlideIndex].content || lesson.slides[currentSlideIndex].text)}
+                      dir={language === 'ar' ? 'rtl' : 'ltr'}
                       className="text-base md:text-xl text-slate-600 leading-[1.8] font-bold prose prose-indigo break-words w-full animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150 text-start"
                     />
                   </div>
                   <div className="w-full max-w-5xl flex flex-wrap gap-3 text-start mb-6 -mt-4 animate-in fade-in duration-500 delay-200">
-                    {lesson.slides[currentSlideIndex].skill && (
+                    {questionMetadata(lesson.slides[currentSlideIndex], "skill", language) && (
                       <InteractiveTag 
                         label={t('lesson.skill') || 'Skill'} 
                         value={questionMetadata(lesson.slides[currentSlideIndex], "skill", language)} 
@@ -289,7 +307,7 @@ export default function LessonPlayerPage() {
                         bubbleTheme="border-amber-200 text-amber-900" 
                       />
                     )}
-                    {lesson.slides[currentSlideIndex].standard && (
+                    {questionMetadata(lesson.slides[currentSlideIndex], "standard", language) && (
                       <InteractiveTag 
                         label={t('lesson.standards')} 
                         value={questionMetadata(lesson.slides[currentSlideIndex], "standard", language)} 
@@ -298,7 +316,7 @@ export default function LessonPlayerPage() {
                         bubbleTheme="border-blue-200 text-blue-900" 
                       />
                     )}
-                    {lesson.slides[currentSlideIndex].indicator && (
+                    {questionMetadata(lesson.slides[currentSlideIndex], "indicator", language) && (
                       <InteractiveTag 
                         label={t('lesson.indicators')} 
                         value={questionMetadata(lesson.slides[currentSlideIndex], "indicator", language)} 
@@ -307,7 +325,7 @@ export default function LessonPlayerPage() {
                         bubbleTheme="border-purple-200 text-purple-900" 
                       />
                     )}
-                    {lesson.slides[currentSlideIndex].learningOutcome && (
+                    {questionMetadata(lesson.slides[currentSlideIndex], "learningOutcome", language) && (
                       <InteractiveTag 
                         label={t('lesson.outcomes')} 
                         value={questionMetadata(lesson.slides[currentSlideIndex], "learningOutcome", language)} 
@@ -316,7 +334,7 @@ export default function LessonPlayerPage() {
                         bubbleTheme="border-emerald-200 text-emerald-900" 
                       />
                     )}
-                    {isQuestionLike(lesson.slides[currentSlideIndex]) && lesson.slides[currentSlideIndex].dok && (
+                    {isQuestionLike(lesson.slides[currentSlideIndex]) && questionMetadata(lesson.slides[currentSlideIndex], "dok", language) && (
                       <InteractiveTag 
                         label={language === 'ar' ? 'عمق المعرفة' : 'DOK'} 
                         value={questionMetadata(lesson.slides[currentSlideIndex], "dok", language)} 
@@ -352,10 +370,10 @@ export default function LessonPlayerPage() {
                           return (
                             <div className={`mt-8 grid gap-4 w-full max-w-4xl ${hasLongSlideOpts ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"}`}>
                               {slideOpts.map((opt: string, oIdx: number) => {
-                              const isMulti = lesson.slides[currentSlideIndex].label === 'MULTI_SELECT';
+                              const isMulti = lesson.slides[currentSlideIndex].type === 'MULTI_SELECT' || lesson.slides[currentSlideIndex].label === 'MULTI_SELECT';
                               const isSelected = isMulti ? (slideAnswers[currentSlideIndex] || []).includes(opt) : slideAnswers[currentSlideIndex] === opt;
                               const isSubmitted = slideSubmitted[currentSlideIndex];
-                              const isCorrect = isSubmitted && (isMulti ? (lesson.slides[currentSlideIndex].correctAnswers || []).includes(opt) : ((!lesson.slides[currentSlideIndex].correctAnswer && isSelected) || normalizeAnswerGlobal(opt) === normalizeAnswerGlobal(lesson.slides[currentSlideIndex].correctAnswer)));
+                              const isCorrect = isSubmitted && isSingleOptionCorrect(lesson.slides[currentSlideIndex], opt, language);
                               const isWrong = isSubmitted && isSelected && !isCorrect;
                               return (
                                 <button
@@ -384,7 +402,7 @@ export default function LessonPlayerPage() {
                                       {getOptionLetter(oIdx, language)}
                                     </span>
                                     <span className={`text-xl font-bold flex-1 ${isSelected ? (isCorrect ? 'text-emerald-700' : isWrong ? 'text-red-700' : 'text-indigo-700') : 'text-slate-700'}`}>
-                                      <HtmlRenderer html={cleanOptionText(opt)} tag="span" />
+                                      <HtmlRenderer html={cleanOptionText(opt)} tag="span" dir={language === 'ar' ? 'rtl' : 'ltr'} />
                                     </span>
                                   </div>
                                   {isSelected && !isSubmitted && <CheckCircle2 className="absolute top-1/2 left-6 -translate-y-1/2 w-8 h-8 text-indigo-500" />}
@@ -447,14 +465,14 @@ export default function LessonPlayerPage() {
                       filterType="POST_ANSWER_ONLY"
                     />
                   </div>
-                  {isQuestionLike(lesson.slides[currentSlideIndex]) && slideAnswers[currentSlideIndex] && (lesson.slides[currentSlideIndex].hint || lesson.slides[currentSlideIndex].hintEn) && (
-                    <div className="w-full mt-6 p-5 bg-indigo-50 border-2 border-indigo-100 rounded-2xl text-indigo-900 animate-in slide-in-from-top-4 fade-in duration-500 text-start shadow-sm hidden">
+                  {isQuestionLike(lesson.slides[currentSlideIndex]) && slideAnswers[currentSlideIndex] && (lesson.slides[currentSlideIndex].hint || lesson.slides[currentSlideIndex].hintEn) && !(lesson.slides[currentSlideIndex].sections || []).some((s: any) => s.type === 'HINT') && (
+                    <div className="w-full mt-6 p-5 bg-indigo-50 border-2 border-indigo-100 rounded-2xl text-indigo-900 animate-in slide-in-from-top-4 fade-in duration-500 text-start shadow-sm">
                       <div className="flex items-center gap-2 mb-2 font-black text-indigo-700">
                         <HelpCircle className="w-5 h-5 shrink-0" />
                         {language === 'ar' ? 'تلميح' : 'Hint'}
                       </div>
                       <div className="text-sm md:text-base leading-relaxed break-words">
-                        <HtmlRenderer html={language === 'en' ? (lesson.slides[currentSlideIndex].hintEn || lesson.slides[currentSlideIndex].hint) : lesson.slides[currentSlideIndex].hint} />
+                        <HtmlRenderer html={language === 'en' ? (lesson.slides[currentSlideIndex].hintEn || lesson.slides[currentSlideIndex].hint) : lesson.slides[currentSlideIndex].hint} dir={language === 'ar' ? 'rtl' : 'ltr'} />
                       </div>
                     </div>
                   )}
@@ -465,7 +483,7 @@ export default function LessonPlayerPage() {
                         {language === 'ar' ? 'التفسير' : 'Explanation'}
                       </div>
                       <div className="text-sm md:text-base leading-relaxed break-words">
-                        <HtmlRenderer html={language === 'en' ? (lesson.slides[currentSlideIndex].explanationEn || lesson.slides[currentSlideIndex].explanation) : lesson.slides[currentSlideIndex].explanation} />
+                        <HtmlRenderer html={language === 'en' ? (lesson.slides[currentSlideIndex].explanationEn || lesson.slides[currentSlideIndex].explanation) : lesson.slides[currentSlideIndex].explanation} dir={language === 'ar' ? 'rtl' : 'ltr'} />
                       </div>
                     </div>
                   )}
@@ -596,7 +614,7 @@ export default function LessonPlayerPage() {
                                 bubbleTheme="border-yellow-200 text-yellow-900"
                               />
                             )}
-                            {lesson.assignments[currentAssignmentIndex].skill && (
+                            {questionMetadata(lesson.assignments[currentAssignmentIndex], "skill", language) && (
                               <InteractiveTag 
                                 label={t('lesson.skill') || 'Skill'}
                                 value={questionMetadata(lesson.assignments[currentAssignmentIndex], "skill", language)}
@@ -605,7 +623,7 @@ export default function LessonPlayerPage() {
                                 bubbleTheme="border-amber-200 text-amber-900"
                               />
                             )}
-                            {lesson.assignments[currentAssignmentIndex].standard && (
+                            {questionMetadata(lesson.assignments[currentAssignmentIndex], "standard", language) && (
                               <InteractiveTag 
                                 label={t('lesson.standard') || 'Standard'}
                                 value={questionMetadata(lesson.assignments[currentAssignmentIndex], "standard", language)}
@@ -614,7 +632,7 @@ export default function LessonPlayerPage() {
                                 bubbleTheme="border-blue-200 text-blue-900"
                               />
                             )}
-                            {lesson.assignments[currentAssignmentIndex].indicator && (
+                            {questionMetadata(lesson.assignments[currentAssignmentIndex], "indicator", language) && (
                               <InteractiveTag 
                                 label={t('lesson.indicator') || 'Indicator'}
                                 value={questionMetadata(lesson.assignments[currentAssignmentIndex], "indicator", language)}
@@ -623,7 +641,7 @@ export default function LessonPlayerPage() {
                                 bubbleTheme="border-purple-200 text-purple-900"
                               />
                             )}
-                            {lesson.assignments[currentAssignmentIndex].learningOutcome && (
+                            {questionMetadata(lesson.assignments[currentAssignmentIndex], "learningOutcome", language) && (
                               <InteractiveTag 
                                 label={t('lesson.outcome') || 'Outcome'}
                                 value={questionMetadata(lesson.assignments[currentAssignmentIndex], "learningOutcome", language)}
@@ -636,7 +654,7 @@ export default function LessonPlayerPage() {
                         </div>
                         {/* Question Text */}
                         <div className="question-frame mb-8 w-full">
-                          <HtmlRenderer html={language === 'en' ? (lesson.assignments[currentAssignmentIndex].textEn || lesson.assignments[currentAssignmentIndex].text) : (lesson.assignments[currentAssignmentIndex].text || lesson.assignments[currentAssignmentIndex].textEn)} tag="div" className="text-lg md:text-2xl font-black text-slate-900 leading-relaxed tracking-tight break-words w-full text-start" />
+                          <HtmlRenderer html={language === 'en' ? (lesson.assignments[currentAssignmentIndex].textEn || lesson.assignments[currentAssignmentIndex].text) : (lesson.assignments[currentAssignmentIndex].text || lesson.assignments[currentAssignmentIndex].textEn)} tag="div" dir={language === 'ar' ? 'rtl' : 'ltr'} className="text-lg md:text-2xl font-black text-slate-900 leading-relaxed tracking-tight break-words w-full text-start" />
                         </div>
                         {/* Question Input */}
                         {isQuestionLike(lesson.assignments[currentAssignmentIndex]) && (
@@ -658,7 +676,7 @@ export default function LessonPlayerPage() {
                                   const isMulti = lesson.assignments[currentAssignmentIndex].type === 'MULTI_SELECT' || lesson.assignments[currentAssignmentIndex].label === 'MULTI_SELECT';
                                   const isSelected = isMulti ? (assignmentAnswers[currentAssignmentIndex] || []).includes(opt) : assignmentAnswers[currentAssignmentIndex] === opt;
                                   const isSubmitted = assignmentSubmitted[currentAssignmentIndex];
-                                  const isCorrect = isSubmitted && (isMulti ? (lesson.assignments[currentAssignmentIndex].correctAnswers || []).includes(opt) : ((!lesson.assignments[currentAssignmentIndex].correctAnswer && isSelected) || normalizeAnswerGlobal(opt) === normalizeAnswerGlobal(lesson.assignments[currentAssignmentIndex].correctAnswer)));
+                                  const isCorrect = isSubmitted && isSingleOptionCorrect(lesson.assignments[currentAssignmentIndex], opt, language);
                                   const isWrong = isSubmitted && isSelected && !isCorrect;
                                   return (
                                     <button
@@ -691,7 +709,7 @@ export default function LessonPlayerPage() {
                                             {getOptionLetter(oIdx, language)}
                                           </span>
                                           <span className={`flex-1 break-words whitespace-normal min-w-0 !leading-relaxed ${isSelected && !isSubmitted ? 'text-white' : ''}`}>
-                                            <HtmlRenderer html={cleanOptionText(opt)} tag="span" />
+                                            <HtmlRenderer html={cleanOptionText(opt)} tag="span" dir={language === 'ar' ? 'rtl' : 'ltr'} />
                                           </span>
                                         </div>
                                         <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${isSelected && !isSubmitted ? 'border-white bg-white/20' : isCorrect ? 'border-emerald-500 bg-emerald-500 text-white' : isWrong ? 'border-red-500 bg-red-500 text-white' : 'border-slate-200'}`}>
@@ -764,7 +782,7 @@ export default function LessonPlayerPage() {
                               {language === 'ar' ? 'تلميح' : 'Hint'}
                             </div>
                             <div className="text-sm md:text-base leading-relaxed break-words">
-                              <HtmlRenderer html={language === 'en' ? (lesson.assignments[currentAssignmentIndex].hintEn || lesson.assignments[currentAssignmentIndex].hint) : lesson.assignments[currentAssignmentIndex].hint} />
+                              <HtmlRenderer html={language === 'en' ? (lesson.assignments[currentAssignmentIndex].hintEn || lesson.assignments[currentAssignmentIndex].hint) : lesson.assignments[currentAssignmentIndex].hint} dir={language === 'ar' ? 'rtl' : 'ltr'} />
                             </div>
                           </div>
                         )}
@@ -775,7 +793,7 @@ export default function LessonPlayerPage() {
                               {language === 'ar' ? 'التفسير' : 'Explanation'}
                             </div>
                             <div className="text-sm md:text-base leading-relaxed break-words">
-                              <HtmlRenderer html={language === 'en' ? (lesson.assignments[currentAssignmentIndex].explanationEn || lesson.assignments[currentAssignmentIndex].explanation) : lesson.assignments[currentAssignmentIndex].explanation} />
+                              <HtmlRenderer html={language === 'en' ? (lesson.assignments[currentAssignmentIndex].explanationEn || lesson.assignments[currentAssignmentIndex].explanation) : lesson.assignments[currentAssignmentIndex].explanation} dir={language === 'ar' ? 'rtl' : 'ltr'} />
                             </div>
                           </div>
                         )}
@@ -787,8 +805,8 @@ export default function LessonPlayerPage() {
                           const isStandard = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(effectiveAType || 'MCQ');
                           const studentAnswers = assignmentAnswers[currentAssignmentIndex] || (isMulti ? [] : '');
                           const isCorrect = isStandard
-                            ? (isMulti ? studentAnswers.length === (lesson.assignments[currentAssignmentIndex].correctAnswers || []).length && studentAnswers.every((a: string) => (lesson.assignments[currentAssignmentIndex].correctAnswers || []).includes(a)) : (!lesson.assignments[currentAssignmentIndex].correctAnswer || normalizeAnswerGlobal(assignmentAnswers[currentAssignmentIndex]) === normalizeAnswerGlobal(lesson.assignments[currentAssignmentIndex].correctAnswer)))
-                            : checkAdvancedCorrect(lesson.assignments[currentAssignmentIndex], assignmentAnswers[currentAssignmentIndex]);
+                            ? (isMulti ? isMultiAnswerCorrect(lesson.assignments[currentAssignmentIndex], studentAnswers, language) : isSingleOptionCorrect(lesson.assignments[currentAssignmentIndex], String(assignmentAnswers[currentAssignmentIndex] ?? ''), language))
+                            : checkAdvancedCorrect(lesson.assignments[currentAssignmentIndex], assignmentAnswers[currentAssignmentIndex], language);
                           const isSkipped = !studentAnswers || (Array.isArray(studentAnswers) && studentAnswers.length === 0) || studentAnswers === '' || studentAnswers === '[]';
                           const isExplanation = lesson.assignments[currentAssignmentIndex].type === 'EXPLANATION' || lesson.assignments[currentAssignmentIndex].label === 'EXPLANATION';
                           if (isExplanation) return null;
@@ -930,7 +948,7 @@ export default function LessonPlayerPage() {
                                 bubbleTheme="border-yellow-200 text-yellow-900"
                               />
                             )}
-                            {lesson.questions[currentQuestionIndex].skill && (
+                            {questionMetadata(lesson.questions[currentQuestionIndex], "skill", language) && (
                               <InteractiveTag 
                                 label={t('lesson.skill') || 'Skill'}
                                 value={questionMetadata(lesson.questions[currentQuestionIndex], "skill", language)}
@@ -939,7 +957,7 @@ export default function LessonPlayerPage() {
                                 bubbleTheme="border-amber-200 text-amber-900"
                               />
                             )}
-                            {lesson.questions[currentQuestionIndex].standard && (
+                            {questionMetadata(lesson.questions[currentQuestionIndex], "standard", language) && (
                               <InteractiveTag 
                                 label={t('lesson.standard') || 'Standard'}
                                 value={questionMetadata(lesson.questions[currentQuestionIndex], "standard", language)}
@@ -948,7 +966,7 @@ export default function LessonPlayerPage() {
                                 bubbleTheme="border-blue-200 text-blue-900"
                               />
                             )}
-                            {lesson.questions[currentQuestionIndex].indicator && (
+                            {questionMetadata(lesson.questions[currentQuestionIndex], "indicator", language) && (
                               <InteractiveTag 
                                 label={t('lesson.indicator') || 'Indicator'}
                                 value={questionMetadata(lesson.questions[currentQuestionIndex], "indicator", language)}
@@ -957,7 +975,7 @@ export default function LessonPlayerPage() {
                                 bubbleTheme="border-purple-200 text-purple-900"
                               />
                             )}
-                            {lesson.questions[currentQuestionIndex].learningOutcome && (
+                            {questionMetadata(lesson.questions[currentQuestionIndex], "learningOutcome", language) && (
                               <InteractiveTag 
                                 label={t('lesson.outcome') || 'Outcome'}
                                 value={questionMetadata(lesson.questions[currentQuestionIndex], "learningOutcome", language)}
@@ -973,7 +991,7 @@ export default function LessonPlayerPage() {
                           </div>
                         </div>
                         <div className="question-frame mb-8 w-full">
-                          <HtmlRenderer html={language === 'en' ? (lesson.questions[currentQuestionIndex].textEn || lesson.questions[currentQuestionIndex].text) : (lesson.questions[currentQuestionIndex].text || lesson.questions[currentQuestionIndex].textEn)} tag="div" className="text-lg md:text-2xl font-black text-slate-900 leading-relaxed tracking-tight break-words w-full text-start" />
+                          <HtmlRenderer html={language === 'en' ? (lesson.questions[currentQuestionIndex].textEn || lesson.questions[currentQuestionIndex].text) : (lesson.questions[currentQuestionIndex].text || lesson.questions[currentQuestionIndex].textEn)} tag="div" dir={language === 'ar' ? 'rtl' : 'ltr'} className="text-lg md:text-2xl font-black text-slate-900 leading-relaxed tracking-tight break-words w-full text-start" />
                         </div>
                         {/* Resolve effective type: if type='QUESTION', use label; otherwise use type */}
                         {['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(
@@ -983,10 +1001,10 @@ export default function LessonPlayerPage() {
                         ) ? (
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                             {getQuestionOptions(lesson.questions[currentQuestionIndex], language).map((opt: string, oIdx: number) => {
-                              const isMulti = lesson.questions[currentQuestionIndex].type === 'MULTI_SELECT';
+                              const isMulti = lesson.questions[currentQuestionIndex].type === 'MULTI_SELECT' || lesson.questions[currentQuestionIndex].label === 'MULTI_SELECT';
                               const isSelected = isMulti ? (answers[currentQuestionIndex] || []).includes(opt) : answers[currentQuestionIndex] === opt;
                               const isSubmitted = quizSubmitted[currentQuestionIndex];
-                              const isCorrect = isSubmitted && (isMulti ? (lesson.questions[currentQuestionIndex].correctAnswers || []).includes(opt) : ((!lesson.questions[currentQuestionIndex].correctAnswer && isSelected) || normalizeAnswerGlobal(opt) === normalizeAnswerGlobal(lesson.questions[currentQuestionIndex].correctAnswer)));
+                              const isCorrect = isSubmitted && isSingleOptionCorrect(lesson.questions[currentQuestionIndex], opt, language);
                               const isWrong = isSubmitted && isSelected && !isCorrect;
                               return (
                                 <button
@@ -1010,7 +1028,7 @@ export default function LessonPlayerPage() {
                                         {getOptionLetter(oIdx, language)}
                                       </span>
                                       <span className={`flex-1 break-words whitespace-normal min-w-0 !leading-relaxed ${isSelected && !isSubmitted ? 'text-white' : ''}`}>
-                                        <HtmlRenderer html={cleanOptionText(opt)} tag="span" />
+                                        <HtmlRenderer html={cleanOptionText(opt)} tag="span" dir={language === 'ar' ? 'rtl' : 'ltr'} />
                                       </span>
                                     </div>
                                     <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${isSelected && !isSubmitted ? 'border-white bg-white/20' : isCorrect ? 'border-emerald-500 bg-emerald-500 text-white' : isWrong ? 'border-red-500 bg-red-500 text-white' : 'border-slate-200'}`}>
@@ -1079,7 +1097,7 @@ export default function LessonPlayerPage() {
                               {language === 'ar' ? 'تلميح' : 'Hint'}
                             </div>
                             <div className="text-sm md:text-base leading-relaxed break-words">
-                              <HtmlRenderer html={language === 'en' ? (lesson.questions[currentQuestionIndex].hintEn || lesson.questions[currentQuestionIndex].hint) : lesson.questions[currentQuestionIndex].hint} />
+                              <HtmlRenderer html={language === 'en' ? (lesson.questions[currentQuestionIndex].hintEn || lesson.questions[currentQuestionIndex].hint) : lesson.questions[currentQuestionIndex].hint} dir={language === 'ar' ? 'rtl' : 'ltr'} />
                             </div>
                           </div>
                         )}
@@ -1090,7 +1108,7 @@ export default function LessonPlayerPage() {
                               {language === 'ar' ? 'التفسير' : 'Explanation'}
                             </div>
                             <div className="text-sm md:text-base leading-relaxed break-words">
-                              <HtmlRenderer html={language === 'en' ? (lesson.questions[currentQuestionIndex].explanationEn || lesson.questions[currentQuestionIndex].explanation) : lesson.questions[currentQuestionIndex].explanation} />
+                              <HtmlRenderer html={language === 'en' ? (lesson.questions[currentQuestionIndex].explanationEn || lesson.questions[currentQuestionIndex].explanation) : lesson.questions[currentQuestionIndex].explanation} dir={language === 'ar' ? 'rtl' : 'ltr'} />
                             </div>
                           </div>
                         )}
@@ -1102,8 +1120,8 @@ export default function LessonPlayerPage() {
                           const isStandard = ['MCQ', 'TRUE_FALSE', 'MULTI_SELECT'].includes(effectiveQType || 'MCQ');
                           const studentAnswers = answers[currentQuestionIndex] || (isMulti ? [] : '');
                           const isCorrect = isStandard
-                            ? (isMulti ? studentAnswers.length === (lesson.questions[currentQuestionIndex].correctAnswers || []).length && studentAnswers.every((a: string) => (lesson.questions[currentQuestionIndex].correctAnswers || []).includes(a)) : (!lesson.questions[currentQuestionIndex].correctAnswer || normalizeAnswerGlobal(answers[currentQuestionIndex]) === normalizeAnswerGlobal(lesson.questions[currentQuestionIndex].correctAnswer)))
-                            : checkAdvancedCorrect(lesson.questions[currentQuestionIndex], answers[currentQuestionIndex]);
+                            ? (isMulti ? isMultiAnswerCorrect(lesson.questions[currentQuestionIndex], studentAnswers, language) : isSingleOptionCorrect(lesson.questions[currentQuestionIndex], String(answers[currentQuestionIndex] ?? ''), language))
+                            : checkAdvancedCorrect(lesson.questions[currentQuestionIndex], answers[currentQuestionIndex], language);
                           const isSkipped = !studentAnswers || (Array.isArray(studentAnswers) && studentAnswers.length === 0) || studentAnswers === '' || studentAnswers === '[]';
                           const isExplanation = lesson.questions[currentQuestionIndex].type === 'EXPLANATION' || lesson.questions[currentQuestionIndex].label === 'EXPLANATION';
                           if (isExplanation) return null;

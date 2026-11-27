@@ -81,18 +81,18 @@ export function pipeTextToHtmlTable(pipeText: string): string {
   const bodyRows = lines.slice(1).map(parseRow);
 
   const ths = headerCells
-    .map(c => `<th class="border border-slate-300 bg-indigo-50 px-3 py-2 font-bold text-slate-900">${escapeHtml(c)}</th>`)
+    .map(c => `<th class="border border-slate-300 bg-indigo-50 px-3 py-2 font-bold text-slate-900" style="border: 1px solid #cbd5e1; background-color: #eef2ff; padding: 8px 12px; font-weight: 700; color: #0f172a;">${escapeHtml(c)}</th>`)
     .join('');
   const trs = bodyRows
     .map(
       row =>
         `<tr>${headerCells
-          .map((_, idx) => `<td class="border border-slate-300 px-3 py-2 text-slate-700">${escapeHtml(row[idx] ?? '')}</td>`)
+          .map((_, idx) => `<td class="border border-slate-300 px-3 py-2 text-slate-700" style="border: 1px solid #cbd5e1; padding: 8px 12px; color: #334155;">${escapeHtml(row[idx] ?? '')}</td>`)
           .join('')}</tr>`,
     )
     .join('');
 
-  return `<table class="w-full border-collapse border border-slate-300 my-3"><thead><tr>${ths}</tr></thead>${trs ? `<tbody>${trs}</tbody>` : ''}</table>`;
+  return `<table class="w-full border-collapse border border-slate-300 my-3" style="width: 100%; border-collapse: collapse; border: 1px solid #cbd5e1; margin: 12px 0;"><thead><tr>${ths}</tr></thead>${trs ? `<tbody>${trs}</tbody>` : ''}</table>`;
 }
 
 export function extractHtmlTablesToPipeText(html: string): { cleanHtml: string; tablePipe: string } {

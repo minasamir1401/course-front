@@ -7,6 +7,10 @@ import InteractiveQuestionEditor from "@/components/InteractiveQuestionEditor";
 import RichTextEditor from "@/components/RichTextEditor";
 import QuestionImageGallery from "@/components/QuestionImageGallery";
 import { extractImageUrls } from "@/lib/image-utils";
+import AutoTranslateToggle from "@/components/AutoTranslateToggle";
+import { getAutoTranslateEnabled } from "@/lib/autoTranslatePreference";
+import { updateBilingualRichText } from "@/lib/bilingualRichText";
+import { hasArabicLetters } from "@/lib/slideLanguage";
 export default function ActivityEditorModal(props: any) {
  const { t, language, showToast, lessons, expandedLessonId, activitiesData, isActivityModalOpen, setIsActivityModalOpen, editingActivity, setEditingActivity, handleSaveActivity, mounted, activityActiveLang, setActivityActiveLang, isTranslatingActivity, handleAutoTranslateActivity, saveLessonMetadata, getLessonMetadata } = props;
  const updateMetadata = (field: string, value: string) => {
@@ -48,6 +52,7 @@ export default function ActivityEditorModal(props: any) {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                  <AutoTranslateToggle language={language} compact />
                   <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-xl">
                     <button
                       type="button"
@@ -78,7 +83,7 @@ export default function ActivityEditorModal(props: any) {
                   <button
                     type="button"
                     disabled={isTranslatingActivity}
-                    onClick={handleAutoTranslateActivity}
+                    onClick={() => handleAutoTranslateActivity()}
                     className="px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-sm hover:opacity-90 disabled:opacity-50 cursor-pointer"
                   >
                     {isTranslatingActivity ? (
@@ -126,9 +131,9 @@ export default function ActivityEditorModal(props: any) {
                       value={editingActivity.titleEn !== undefined && editingActivity.titleEn !== null && editingActivity.titleEn !== '' ? editingActivity.titleEn : (editingActivity.title && !/[\u0600-\u06FF]/.test(editingActivity.title) ? editingActivity.title : '')} 
                       onChange={(e) => {
                         const val = e.target.value;
-                        const syncBase = !editingActivity.title || (!/[\u0600-\u06FF]/.test(editingActivity.title) && editingActivity.title === (editingActivity.titleEn || ''));
+                        const syncBase = !getAutoTranslateEnabled() && (!editingActivity.title || (!hasArabicLetters(editingActivity.title) && editingActivity.title === (editingActivity.titleEn || '')));
                         setEditingActivity({
-                          ...editingActivity, 
+                          ...editingActivity,
                           titleEn: val,
                           ...(syncBase ? { title: val } : {})
                         });
@@ -238,8 +243,9 @@ export default function ActivityEditorModal(props: any) {
                     {activityActiveLang === 'ar' ? (
                       <RichTextEditor 
                         key="ar-qtext"
+                        dir="rtl"
                         value={(editingActivity.questionText ) ? editingActivity.questionText : ""} 
-                        onChange={(val) => setEditingActivity({...editingActivity, questionText: val})} 
+                        onChange={(val) => setEditingActivity((prev: any) => updateBilingualRichText(prev, 'questionText', val, 'ar'))} 
                         availableImages={extractImageUrls([
                           editingActivity.questionText,
                           editingActivity.questionTextEn,
@@ -253,15 +259,15 @@ export default function ActivityEditorModal(props: any) {
                     ) : (
                       <RichTextEditor 
                         key="en-qtext"
-                        value={editingActivity.questionTextEn || (editingActivity.questionText && !/[\u0600-\u06FF]/.test(editingActivity.questionText) ? editingActivity.questionText : "")} 
-                        onChange={(val) => {
-                          const syncBase = !editingActivity.questionText || (!/[\u0600-\u06FF]/.test(editingActivity.questionText) && editingActivity.questionText === (editingActivity.questionTextEn || ''));
-                          setEditingActivity({
-                            ...editingActivity, 
-                            questionTextEn: val,
-                            ...(syncBase ? { questionText: val } : {})
-                          });
-                        }} 
+                        dir="ltr"
+                        value={editingActivity.questionTextEn || (editingActivity.questionText && !hasArabicLetters(editingActivity.questionText) ? editingActivity.questionText : "")} 
+                        onChange={(val) => setEditingActivity((prev: any) => {
+                          const synced = updateBilingualRichText(prev, 'questionText', val, 'en');
+                          if (getAutoTranslateEnabled() && (!prev.questionText || (!hasArabicLetters(prev.questionText) && prev.questionText === (prev.questionTextEn || '')))) {
+                            return { ...synced, questionText: prev.questionText || '' };
+                          }
+                          return synced;
+                        })} 
                         availableImages={extractImageUrls([
                           editingActivity.questionText,
                           editingActivity.questionTextEn,
@@ -359,7 +365,7 @@ export default function ActivityEditorModal(props: any) {
                     value={editingActivity.explanationEn !== undefined && editingActivity.explanationEn !== null && editingActivity.explanationEn !== '' ? editingActivity.explanationEn : (editingActivity.explanation && !/[\u0600-\u06FF]/.test(editingActivity.explanation) ? editingActivity.explanation : '')} 
                     onChange={(e) => {
                       const val = e.target.value;
-                      const syncBase = !editingActivity.explanation || (!/[\u0600-\u06FF]/.test(editingActivity.explanation) && editingActivity.explanation === (editingActivity.explanationEn || ''));
+                      const syncBase = !getAutoTranslateEnabled() && (!editingActivity.explanation || (!hasArabicLetters(editingActivity.explanation) && editingActivity.explanation === (editingActivity.explanationEn || '')));
                       setEditingActivity({
                         ...editingActivity, 
                         explanationEn: val,
@@ -531,7 +537,7 @@ export default function ActivityEditorModal(props: any) {
                         value={editingActivity.hintEn !== undefined && editingActivity.hintEn !== null && editingActivity.hintEn !== '' ? editingActivity.hintEn : (editingActivity.hint && !/[\u0600-\u06FF]/.test(editingActivity.hint) ? editingActivity.hint : '')} 
                         onChange={(e) => {
                           const val = e.target.value;
-                          const syncBase = !editingActivity.hint || (!/[\u0600-\u06FF]/.test(editingActivity.hint) && editingActivity.hint === (editingActivity.hintEn || ''));
+                          const syncBase = !getAutoTranslateEnabled() && (!editingActivity.hint || (!hasArabicLetters(editingActivity.hint) && editingActivity.hint === (editingActivity.hintEn || '')));
                           setEditingActivity({
                             ...editingActivity, 
                             hintEn: val,
@@ -566,7 +572,7 @@ export default function ActivityEditorModal(props: any) {
                         value={editingActivity.tipEn !== undefined && editingActivity.tipEn !== null && editingActivity.tipEn !== '' ? editingActivity.tipEn : (editingActivity.tip && !/[\u0600-\u06FF]/.test(editingActivity.tip) ? editingActivity.tip : '')} 
                         onChange={(e) => {
                           const val = e.target.value;
-                          const syncBase = !editingActivity.tip || (!/[\u0600-\u06FF]/.test(editingActivity.tip) && editingActivity.tip === (editingActivity.tipEn || ''));
+                          const syncBase = !getAutoTranslateEnabled() && (!editingActivity.tip || (!hasArabicLetters(editingActivity.tip) && editingActivity.tip === (editingActivity.tipEn || '')));
                           setEditingActivity({
                             ...editingActivity, 
                             tipEn: val,
@@ -601,7 +607,7 @@ export default function ActivityEditorModal(props: any) {
                         value={editingActivity.keyInsightEn !== undefined && editingActivity.keyInsightEn !== null && editingActivity.keyInsightEn !== '' ? editingActivity.keyInsightEn : (editingActivity.keyInsight && !/[\u0600-\u06FF]/.test(editingActivity.keyInsight) ? editingActivity.keyInsight : '')} 
                         onChange={(e) => {
                           const val = e.target.value;
-                          const syncBase = !editingActivity.keyInsight || (!/[\u0600-\u06FF]/.test(editingActivity.keyInsight) && editingActivity.keyInsight === (editingActivity.keyInsightEn || ''));
+                          const syncBase = !getAutoTranslateEnabled() && (!editingActivity.keyInsight || (!hasArabicLetters(editingActivity.keyInsight) && editingActivity.keyInsight === (editingActivity.keyInsightEn || '')));
                           setEditingActivity({
                             ...editingActivity, 
                             keyInsightEn: val,

@@ -1,7 +1,6 @@
 "use client";
 import LessonQuestionForm from "./LessonQuestionForm";
 import QuestionSummary from '@/components/QuestionSummary';
-import { translateMetadataFields } from '@/lib/questionMetadataTranslation';
 import { resolveSingleCorrectOptionIndex } from '@/lib/answerEvaluation';
 import { populateBilingualQuestionDraft } from '@/lib/questionDraftHelpers';
 
@@ -28,10 +27,10 @@ import { useOptionalCourseEditor } from "../CourseEditorContext";
 import * as XLSX from "xlsx";
 import { QuestionExcelExportButton } from '@/components/QuestionExcelExportButton';
 import QuestionMetadataExcelTools from '@/components/QuestionMetadataExcelTools';
-import { translateBatch } from '@/lib/translationService';
 import QuestionImageGallery from '@/components/QuestionImageGallery';
-import { extractImageUrls } from '@/lib/image-utils';
 import { resolvePreferredQuestionLang } from "@/lib/questionLanguage";
+import AutoTranslateToggle, { useAutoTranslatePreference } from "@/components/AutoTranslateToggle";
+import { mergeSafeArabicQuestionPatch, questionNeedsArabicTranslation, questionNeedsTabAutoTranslate, translateSingleQuestionItem } from "@/lib/manualAutoTranslate";
 interface LessonQuestionsBuilderProps {
   source: 'assignments' | 'questions';
   currentLesson: any;
@@ -92,11 +91,13 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
   const canDeleteContent = !role || isSuperAdmin || allowContentDeletion;
 
   const [customSkills, setCustomSkills] = useState<string[]>([]);
+  const [autoTranslateEnabled] = useAutoTranslatePreference();
   const [questionActiveLang, setQuestionActiveLang] = useState<'ar' | 'en'>(language === 'en' ? 'en' : 'ar');
   const [cardPreviewLang, setCardPreviewLang] = useState<Record<number, 'ar' | 'en'>>({});
   const [isTranslatingQuestion, setIsTranslatingQuestion] = useState(false);
 
   const lastActiveQKeyRef = React.useRef<any>(null);
+  const translatingQRef = React.useRef(false);
 
   React.useEffect(() => {
     if (!showQuestionForm || !tempQuestion) {
@@ -122,130 +123,49 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
     return null;
   };
 
-  const handleAutoTranslateQuestion = async () => {
-    if (!tempQuestion) return;
+  const handleAutoTranslateQuestion = async (forcedFromLang?: 'ar' | 'en', fromTabSwitch = false) => {
+    if (!tempQuestion || translatingQRef.current) return;
+    translatingQRef.current = true;
     setIsTranslatingQuestion(true);
+    const snapshot = tempQuestion;
     try {
-      const from = questionActiveLang;
-      const to = from === 'ar' ? 'en' : 'ar';
-
-      const isBaseEnOnly = tempQuestion.text && /[a-zA-Z]/.test(tempQuestion.text) && !/[\u0600-\u06FF]/.test(tempQuestion.text);
-      const srcText = from === 'ar'
-        ? (tempQuestion.text || '')
-        : (tempQuestion.textEn || (isBaseEnOnly ? tempQuestion.text : ''));
-      const srcExplanation = from === 'ar'
-        ? (tempQuestion.explanation || '')
-        : (tempQuestion.explanationEn || tempQuestion.explanation || '');
-
-      const baseLength = Math.max((tempQuestion.options || []).length, (tempQuestion.optionsEn || []).length, 4);
-      const srcOpts = from === 'ar'
-        ? Array.from({ length: baseLength }, (_, i) => String(tempQuestion.options?.[i] || ''))
-        : Array.from({ length: baseLength }, (_, i) => String(tempQuestion.optionsEn?.[i] || tempQuestion.options?.[i] || ''));
-
-      const sectionsList = tempQuestion.sections || [];
-      const srcSections = sectionsList.map((sec: any) =>
-        from === 'ar' ? (sec.content || '') : (sec.contentEn || sec.content || '')
-      );
-
-      const textsToTranslate = [
-        srcText || '',
-        srcExplanation || '',
-        ...srcOpts,
-        ...srcSections];
-
-      const translations = await translateBatch(textsToTranslate, from, to);
-
-      let cursor = 0;
-      let trText = translations[cursor++] || '';
-      const trExplanation = translations[cursor++] || '';
-
-      const srcImgs = extractImageUrls(to === 'en' ? tempQuestion.text : tempQuestion.textEn);
-      if (srcImgs.length > 0 && trText) {
-        const missing = srcImgs.filter((u: string) => !trText.includes(u));
-        if (missing.length > 0) {
-          const tags = missing.map((u: string) => `<p><img loading="lazy" decoding="async" src="${u}" data-align="center" style="max-width: 100%; height: auto; border-radius: 12px; margin: 10px auto; display: block;" /></p>`).join('');
-          trText = `${tags}\n${trText}`;
-        }
+      const result = await translateSingleQuestionItem(snapshot, forcedFromLang || questionActiveLang);
+      if (fromTabSwitch) {
+        if (!result.hasTranslatableSource || !result.changed) return;
+        const previewMerged = mergeSafeArabicQuestionPatch(snapshot, snapshot, result.updated);
+        if (JSON.stringify(previewMerged) === JSON.stringify(snapshot)) return;
+        setTempQuestion((current: any) => mergeSafeArabicQuestionPatch(current, snapshot, result.updated));
+        showToast('تمت الترجمة إلى العربية بنجاح', 'success');
+        return;
       }
 
-      const trOpts = translations.slice(cursor, cursor + srcOpts.length);
-      cursor += srcOpts.length;
-
-      const trSections = translations.slice(cursor, cursor + srcSections.length);
-      cursor += srcSections.length;
-
-      const updated = { ...tempQuestion };
-      if (to === 'en') {
-        if (trText) updated.textEn = trText;
-        if (trExplanation) updated.explanationEn = trExplanation;
-        updated.optionsEn = trOpts;
-
-        if (sectionsList.length > 0) {
-          updated.sections = sectionsList.map((sec: any, i: number) => ({
-            ...sec,
-            contentEn: trSections[i] || sec.contentEn || sec.content || ''
-          }));
-          if (!updated.explanationEn && trSections[0]) {
-            updated.explanationEn = trSections[0];
-          }
-        } else if (trExplanation) {
-          updated.sections = [{ id: Date.now(), type: 'EXPLANATION', content: srcExplanation || '', contentEn: trExplanation }];
-        }
-
-        if (tempQuestion.correctAnswerIndex !== undefined && tempQuestion.correctAnswerIndex !== null) {
-          if (trOpts[tempQuestion.correctAnswerIndex]) {
-            updated.correctAnswerEn = trOpts[tempQuestion.correctAnswerIndex];
-          }
-        } else if (tempQuestion.correctAnswer) {
-          const arOpts = tempQuestion.options || [];
-          const matchedIdx = arOpts.findIndex((o: string) => String(o).trim() === String(tempQuestion.correctAnswer).trim());
-          if (matchedIdx !== -1 && trOpts[matchedIdx]) {
-            updated.correctAnswerEn = trOpts[matchedIdx];
-            updated.correctAnswerIndex = matchedIdx;
-          }
-        }
-        setQuestionActiveLang('en');
+      if (!result.hasTranslatableSource) {
+        showToast(language === 'ar' ? 'لا يوجد نص للترجمة' : 'No translatable text found', 'info');
+        return;
+      }
+      setTempQuestion((current: any) => (current === snapshot ? result.updated : current));
+      setQuestionActiveLang(result.targetLang);
+      if (result.changed) {
+        showToast(language === 'ar' ? 'تمت الترجمة الفورية لكامل السؤال والميتا داتا بنجاح' : 'Question and metadata translated successfully', 'success');
       } else {
-        if (trText) updated.text = trText;
-        if (trExplanation) updated.explanation = trExplanation;
-        updated.options = trOpts;
-
-        if (sectionsList.length > 0) {
-          updated.sections = sectionsList.map((sec: any, i: number) => ({
-            ...sec,
-            content: trSections[i] || sec.content || sec.contentEn || ''
-          }));
-          if (!updated.explanation && trSections[0]) {
-            updated.explanation = trSections[0];
-          }
-        } else if (trExplanation) {
-          updated.sections = [{ id: Date.now(), type: 'EXPLANATION', content: trExplanation, contentEn: srcExplanation || '' }];
-        }
-
-        if (tempQuestion.correctAnswerIndex !== undefined && tempQuestion.correctAnswerIndex !== null) {
-          if (trOpts[tempQuestion.correctAnswerIndex]) {
-            updated.correctAnswer = trOpts[tempQuestion.correctAnswerIndex];
-          }
-        } else if (tempQuestion.correctAnswerEn || tempQuestion.correctAnswer) {
-          const enOpts = tempQuestion.optionsEn || [];
-          const target = tempQuestion.correctAnswerEn || tempQuestion.correctAnswer;
-          const matchedIdx = enOpts.findIndex((o: string) => String(o).trim() === String(target).trim());
-          if (matchedIdx !== -1 && trOpts[matchedIdx]) {
-            updated.correctAnswer = trOpts[matchedIdx];
-            updated.correctAnswerIndex = matchedIdx;
-          }
-        }
-        setQuestionActiveLang('ar');
+        showToast(language === 'ar' ? 'تعذرت ترجمة المحتوى حالياً؛ يرجى المحاولة مرة أخرى' : 'Translation returned unchanged text; please try again', 'error');
       }
-
-      Object.assign(updated, await translateMetadataFields(tempQuestion, to));
-      setTempQuestion(updated);
-      showToast(language === 'ar' ? 'تمت الترجمة الفورية لكامل السؤال والميتا داتا بنجاح' : 'Question and metadata translated successfully', 'success');
     } catch (err: any) {
       console.error('Auto translate question error:', err);
-      showToast(err.message || (language === 'ar' ? 'فشلت الترجمة التلقائية' : 'Auto translation failed'), 'error');
+      if (!fromTabSwitch) {
+        showToast(err.message || (language === 'ar' ? 'فشلت الترجمة التلقائية' : 'Auto translation failed'), 'error');
+      }
     } finally {
+      translatingQRef.current = false;
       setIsTranslatingQuestion(false);
+    }
+  };
+
+  const handleSwitchQuestionLang = (nextLang: 'ar' | 'en') => {
+    const prevLang = questionActiveLang;
+    setQuestionActiveLang(nextLang);
+    if (prevLang === 'en' && nextLang === 'ar' && autoTranslateEnabled && tempQuestion && questionNeedsTabAutoTranslate(tempQuestion)) {
+      void handleAutoTranslateQuestion('en', true);
     }
   };
 
@@ -340,59 +260,73 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
     setShowQuestionForm(true);
   };
 
-  const handleSaveQuestionForSource = (source: 'assignments' | 'questions') => {
-    if (!tempQuestion.text && tempQuestion.textEn) {
-      tempQuestion.text = tempQuestion.textEn;
-    }
-    if ((!tempQuestion.options || tempQuestion.options.length === 0 || tempQuestion.options.every((o: any) => !o)) && tempQuestion.optionsEn?.length) {
-      tempQuestion.options = [...tempQuestion.optionsEn];
-    }
-    if (!tempQuestion.explanation && tempQuestion.explanationEn) {
-      tempQuestion.explanation = tempQuestion.explanationEn;
-    }
-    if ((!tempQuestion.optionsEn || tempQuestion.optionsEn.length === 0) && tempQuestion.options?.length) {
-      tempQuestion.optionsEn = [...tempQuestion.options];
-    }
-    if (!tempQuestion.textEn && tempQuestion.text && /[a-zA-Z]/.test(tempQuestion.text) && !/[\u0600-\u06FF]/.test(tempQuestion.text)) {
-      tempQuestion.textEn = tempQuestion.text;
-    }
+  const handleSaveQuestionForSource = async (source: 'assignments' | 'questions') => {
+    let working = { ...tempQuestion };
 
-    if (!tempQuestion.text && !tempQuestion.textEn) {
+    if (!working.text && !working.textEn) {
       showToast(language === 'ar' ? "يرجى إدخال نص السؤال" : "Please enter question text", "error");
       return;
     }
 
-    if (tempQuestion.type !== 'TEXT') {
-      if (tempQuestion.type === 'TRUE_FALSE') {
-        if (!tempQuestion.correctAnswer) {
+    if (autoTranslateEnabled && questionNeedsArabicTranslation(working)) {
+      try {
+        setIsTranslatingQuestion(true);
+        const tr = await translateSingleQuestionItem(working, 'en');
+        working = tr.updated;
+      } catch (err) {
+        console.error('Auto-translate question on save failed:', err);
+      } finally {
+        setIsTranslatingQuestion(false);
+      }
+    }
+
+    if (!working.text && working.textEn) {
+      working.text = working.textEn;
+    }
+    if ((!working.options || working.options.length === 0 || working.options.every((o: any) => !o)) && working.optionsEn?.length) {
+      working.options = [...working.optionsEn];
+    }
+    if (!working.explanation && working.explanationEn) {
+      working.explanation = working.explanationEn;
+    }
+    if ((!working.optionsEn || working.optionsEn.length === 0) && working.options?.length) {
+      working.optionsEn = [...working.options];
+    }
+    if (!working.textEn && working.text && /[a-zA-Z]/.test(working.text) && !/[\u0600-\u06FF]/.test(working.text)) {
+      working.textEn = working.text;
+    }
+
+    if (working.type !== 'TEXT') {
+      if (working.type === 'TRUE_FALSE') {
+        if (!working.correctAnswer) {
           showToast(language === 'ar' ? "يرجى تحديد الإجابة الصحيحة" : "Please select the correct answer", "error");
           return;
         }
-      } else if (tempQuestion.type === 'MULTI_SELECT') {
-        const validAnswers = (tempQuestion.correctAnswers || []).filter(Boolean);
+      } else if (working.type === 'MULTI_SELECT') {
+        const validAnswers = (working.correctAnswers || []).filter(Boolean);
         if (validAnswers.length === 0) {
           showToast(language === 'ar' ? "يرجى اختيار إجابة صحيحة واحدة على الأقل" : "Please select at least one correct answer", "error");
           return;
         }
       } else {
-        if (!tempQuestion.correctAnswer) {
+        if (!working.correctAnswer) {
           showToast(language === 'ar' ? "يرجى اختيار الإجابة الصحيحة" : "Please select the correct answer", "error");
           return;
         }
       }
     }
 
-    const outcome = tempQuestion.standard || tempQuestion.learningOutcome || "";
+    const outcome = working.standard || working.learningOutcome || "";
     const itemToSave = {
-      ...tempQuestion,
-      text: tempQuestion.text || tempQuestion.textEn || "",
-      textEn: tempQuestion.textEn || "",
-      optionsEn: tempQuestion.optionsEn || [],
-      explanationEn: tempQuestion.explanationEn || "",
+      ...working,
+      text: working.text || working.textEn || "",
+      textEn: working.textEn || "",
+      optionsEn: working.optionsEn || [],
+      explanationEn: working.explanationEn || "",
       standard: outcome,
       learningOutcome: outcome,
-      dok: normalizeDok(tempQuestion.dok) || tempQuestion.dok || "",
-      label: tempQuestion.type // Ensure label is synced with type
+      dok: normalizeDok(working.dok) || working.dok || "",
+      label: working.type
     };
 
     setCurrentLesson((prev: any) => {
@@ -726,7 +660,8 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
           </h4>
           <p className="text-slate-400 text-sm font-bold mt-1">{headerDesc}</p>
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <AutoTranslateToggle language={language} />
           <QuestionExcelExportButton questions={currentLesson[source] || []} language={language} />
           <QuestionMetadataExcelTools questions={currentLesson[source] || []} scope={`${currentLesson.id ?? ''}:${source}`} language={language} disabled={showQuestionForm} onChange={questions => setCurrentLesson({ ...currentLesson, [source]: questions })} />
           <button
@@ -987,7 +922,7 @@ export const LessonQuestionsBuilder: React.FC<LessonQuestionsBuilderProps> = ({
       )}
 
       {/* Premium Save Slide Form inside card list view */}
-      <LessonQuestionForm {...{ source, currentLesson, language, showQuestionForm, setShowQuestionForm, editingQuestionIndex, tempQuestion, setTempQuestion, openDropdownId, setOpenDropdownId, showToast, showQuestionMetadata, setShowQuestionMetadata, showQuestionSections, setShowQuestionSections, questionActiveLang, setQuestionActiveLang, isTranslatingQuestion, extractFirstImage, handleAutoTranslateQuestion, QUESTION_TYPES, SECTION_STYLE_PRESETS, handleSaveQuestionForSource, updateCurrentQuestionField, updateQuestionOption, toggleQuestionCorrectAnswer, isQuestionCorrectAnswer, addQuestionSection, removeQuestionSection }} />
+      <LessonQuestionForm {...{ source, currentLesson, language, showQuestionForm, setShowQuestionForm, editingQuestionIndex, tempQuestion, setTempQuestion, openDropdownId, setOpenDropdownId, showToast, showQuestionMetadata, setShowQuestionMetadata, showQuestionSections, setShowQuestionSections, questionActiveLang, setQuestionActiveLang: handleSwitchQuestionLang, isTranslatingQuestion, extractFirstImage, handleAutoTranslateQuestion, QUESTION_TYPES, SECTION_STYLE_PRESETS, handleSaveQuestionForSource, updateCurrentQuestionField, updateQuestionOption, toggleQuestionCorrectAnswer, isQuestionCorrectAnswer, addQuestionSection, removeQuestionSection }} />
       <CopySlidesModal
         isOpen={isCopyModalOpen}
         onClose={() => setIsCopyModalOpen(false)}

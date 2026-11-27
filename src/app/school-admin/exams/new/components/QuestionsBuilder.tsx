@@ -16,7 +16,9 @@ import { sanitizeHtml } from '@/lib/sanitize';
 import { ChevronUp, ChevronDown, CheckCircle2, Edit2, Trash2, Plus, FileText, Settings, Activity, MoveUp, MoveDown, Mic, Video, Image as ImageIcon, Layout, Check, HelpCircle, Upload, Download, Target, X, Save, Languages, Loader2, Lightbulb, BookOpen } from 'lucide-react';
 import { normalizeDok } from '@/lib/examQuestionMetadata';
 import { CustomSelect } from '@/components/ui/CustomSelect';
-import { translateBatch } from '@/lib/translationService';
+import AutoTranslateToggle, { useAutoTranslatePreference } from '@/components/AutoTranslateToggle';
+import { getAutoTranslateEnabled } from '@/lib/autoTranslatePreference';
+import { mergeSafeArabicQuestionPatch, questionNeedsTabAutoTranslate, translateSingleQuestionItem } from '@/lib/manualAutoTranslate';
 import InteractiveQuestionEditor from '@/components/InteractiveQuestionEditor';
 import * as XLSX from "xlsx";
 import { QuestionExcelExportButton } from '@/components/QuestionExcelExportButton';
@@ -41,6 +43,8 @@ export const QuestionsBuilder = (props: any) => {
   const [questionActiveLang, setQuestionActiveLang] = React.useState<'ar' | 'en'>(language === 'en' ? 'en' : 'ar');
   const [cardPreviewLang, setCardPreviewLang] = React.useState<Record<number, 'ar' | 'en'>>({});
   const [isTranslatingQuestion, setIsTranslatingQuestion] = React.useState(false);
+  const [autoTranslateEnabled] = useAutoTranslatePreference();
+  const translatingQuestionRef = React.useRef(false);
   useQuestionHintTranslation(tempQuestion, setTempQuestion, questionActiveLang, isTranslatingQuestion);
   const [isUploadingImage, setIsUploadingImage] = React.useState(false);
   const lastActiveQKeyRef = React.useRef<any>(null);
@@ -50,12 +54,13 @@ export const QuestionsBuilder = (props: any) => {
       const qKey = `${editingQuestionIndex ?? 'new'}-${tempQuestion?.id ?? ''}`;
       if (lastActiveQKeyRef.current !== qKey) {
         lastActiveQKeyRef.current = qKey;
-        setQuestionActiveLang(resolvePreferredQuestionLang(tempQuestion, language));
+        const preferredDefaultLang = editingQuestionIndex === null && isExamEnglish ? 'en' : language;
+        setQuestionActiveLang(resolvePreferredQuestionLang(tempQuestion, preferredDefaultLang));
       }
     } else {
       lastActiveQKeyRef.current = null;
     }
-  }, [showQuestionForm, editingQuestionIndex, tempQuestion, language]);
+  }, [showQuestionForm, editingQuestionIndex, tempQuestion, language, isExamEnglish]);
 
   const extractFirstImage = (text?: string, imageUrl?: string): string | null => {
     if (imageUrl && typeof imageUrl === 'string' && imageUrl.trim()) return imageUrl.trim();
@@ -64,134 +69,65 @@ export const QuestionsBuilder = (props: any) => {
     return match ? match[1] : null;
   };
 
-  const handleAutoTranslateQuestion = async () => {
-    if (!tempQuestion) return;
+  const handleAutoTranslateQuestion = async (forcedFromLang?: 'ar' | 'en', fromTabSwitch = false) => {
+    if (!tempQuestion || translatingQuestionRef.current) return;
+    translatingQuestionRef.current = true;
     setIsTranslatingQuestion(true);
+    const snapshot = tempQuestion;
+    const from = forcedFromLang || questionActiveLang;
+    const to = from === 'ar' ? 'en' : 'ar';
     try {
-      const from = questionActiveLang;
-      const to = from === 'ar' ? 'en' : 'ar';
-
-      const srcText = from === 'ar'
-        ? (tempQuestion.text || '')
-        : (tempQuestion.textEn || tempQuestion.text || '');
-      const srcExplanation = from === 'ar'
-        ? (tempQuestion.explanation || '')
-        : (tempQuestion.explanationEn || tempQuestion.explanation || '');
-      const srcHint = from === 'ar'
-        ? (tempQuestion.hint || '')
-        : (tempQuestion.hintEn || tempQuestion.hint || '');
-
-      const baseLength = Math.max((tempQuestion.options || []).length, (tempQuestion.optionsEn || []).length, 4);
-      const srcOpts = from === 'ar'
-        ? Array.from({ length: baseLength }, (_, i) => String(tempQuestion.options?.[i] || ''))
-        : Array.from({ length: baseLength }, (_, i) => String(tempQuestion.optionsEn?.[i] || tempQuestion.options?.[i] || ''));
-
-      const sectionsList = tempQuestion.sections || [];
-      const srcSections = sectionsList.map((s: any) =>
-        from === 'ar' ? String(s.content || s.text || '') : String(s.contentEn || s.textEn || s.content || '')
-      );
-
-      const textsToTranslate = [
-        srcText || '',
-        srcExplanation || '',
-        srcHint || '',
-        ...srcOpts,
-        ...srcSections];
-
-      const translations = await translateBatch(textsToTranslate, from, to);
-
-      let trText = translations[0] || '';
-      const trExplanation = translations[1] || '';
-      const trHint = translations[2] || '';
-      let cursor = 3;
-
-      const srcImgs = extractImageUrls(to === 'en' ? tempQuestion.text : tempQuestion.textEn);
-      if (srcImgs.length > 0 && trText) {
-        const missing = srcImgs.filter((u: string) => !trText.includes(u));
-        if (missing.length > 0) {
-          const tags = missing.map((u: string) => `<p><img loading="lazy" decoding="async" src="${u}" data-align="center" style="max-width: 100%; height: auto; border-radius: 12px; margin: 10px auto; display: block;" /></p>`).join('');
-          trText = `${tags}\n${trText}`;
-        }
+      if (props.translateQuestion) {
+        const translated = await props.translateQuestion(snapshot, from, to);
+        setTempQuestion((current: any) => (current === snapshot ? translated : current));
+        if (!fromTabSwitch) setQuestionActiveLang(to);
+        return;
       }
 
-      const trOpts = translations.slice(cursor, cursor + srcOpts.length);
-      cursor += srcOpts.length;
+      const result = await translateSingleQuestionItem(snapshot, from);
+      if (fromTabSwitch) {
+        if (!result.hasTranslatableSource || !result.changed) return;
+        const previewMerged = mergeSafeArabicQuestionPatch(snapshot, snapshot, result.updated);
+        if (JSON.stringify(previewMerged) === JSON.stringify(snapshot)) return;
+        setTempQuestion((current: any) => mergeSafeArabicQuestionPatch(current, snapshot, result.updated));
+        props.showToast?.('تمت الترجمة إلى العربية بنجاح', 'success');
+        return;
+      }
 
-      const trSections = translations.slice(cursor, cursor + srcSections.length);
-      cursor += srcSections.length;
-
-      const updated = { ...tempQuestion };
-      if (to === 'en') {
-        if (trText) updated.textEn = trText;
-        if (trExplanation) updated.explanationEn = trExplanation;
-        if (trHint) updated.hintEn = trHint;
-        updated.optionsEn = trOpts;
-
-        if (sectionsList.length > 0) {
-          updated.sections = sectionsList.map((sec: any, i: number) => ({
-            ...sec,
-            contentEn: trSections[i] || sec.contentEn || sec.content || ''
-          }));
-          if (!updated.explanationEn && trSections[0]) {
-            updated.explanationEn = trSections[0];
-          }
-        } else if (trExplanation) {
-          updated.sections = [{ id: Date.now(), type: 'EXPLANATION', content: srcExplanation || '', contentEn: trExplanation }];
-        }
-
-        if (tempQuestion.correctAnswerIndex !== undefined && tempQuestion.correctAnswerIndex !== null) {
-          if (trOpts[tempQuestion.correctAnswerIndex]) {
-            updated.correctAnswerEn = trOpts[tempQuestion.correctAnswerIndex];
-          }
-        } else if (tempQuestion.correctAnswer) {
-          const arOpts = tempQuestion.options || [];
-          const matchedIdx = arOpts.findIndex((o: string) => String(o).trim() === String(tempQuestion.correctAnswer).trim());
-          if (matchedIdx !== -1 && trOpts[matchedIdx]) {
-            updated.correctAnswerEn = trOpts[matchedIdx];
-            updated.correctAnswerIndex = matchedIdx;
-          }
-        }
-        setQuestionActiveLang('en');
+      if (!result.hasTranslatableSource) {
+        props.showToast?.(language === 'ar' ? 'لا يوجد نص للترجمة' : 'No translatable text found', 'info');
+        return;
+      }
+      setTempQuestion((current: any) => (current === snapshot ? result.updated : current));
+      setQuestionActiveLang(result.targetLang);
+      if (result.changed) {
+        props.showToast?.(
+          result.targetLang === 'en' ? 'Translated to English successfully' : 'تمت الترجمة إلى العربية بنجاح',
+          'success',
+        );
       } else {
-        if (trText) updated.text = trText;
-        if (trExplanation) updated.explanation = trExplanation;
-        if (trHint) updated.hint = trHint;
-        updated.options = trOpts;
-
-        if (sectionsList.length > 0) {
-          updated.sections = sectionsList.map((sec: any, i: number) => ({
-            ...sec,
-            content: trSections[i] || sec.content || sec.contentEn || ''
-          }));
-          if (!updated.explanation && trSections[0]) {
-            updated.explanation = trSections[0];
-          }
-        } else if (trExplanation) {
-          updated.sections = [{ id: Date.now(), type: 'EXPLANATION', content: trExplanation, contentEn: srcExplanation || '' }];
-        }
-
-        if (tempQuestion.correctAnswerIndex !== undefined && tempQuestion.correctAnswerIndex !== null) {
-          if (trOpts[tempQuestion.correctAnswerIndex]) {
-            updated.correctAnswer = trOpts[tempQuestion.correctAnswerIndex];
-          }
-        } else if (tempQuestion.correctAnswerEn || tempQuestion.correctAnswer) {
-          const enOpts = tempQuestion.optionsEn || [];
-          const target = tempQuestion.correctAnswerEn || tempQuestion.correctAnswer;
-          const matchedIdx = enOpts.findIndex((o: string) => String(o).trim() === String(target).trim());
-          if (matchedIdx !== -1 && trOpts[matchedIdx]) {
-            updated.correctAnswer = trOpts[matchedIdx];
-            updated.correctAnswerIndex = matchedIdx;
-          }
-        }
-        setQuestionActiveLang('ar');
+        props.showToast?.(
+          language === 'ar' ? 'تعذرت ترجمة السؤال حالياً؛ يرجى المحاولة مرة أخرى' : 'Translation returned unchanged text; please try again',
+          'error',
+        );
       }
-
-      Object.assign(updated, await translateMetadataFields(tempQuestion, to));
-      setTempQuestion(updated);
     } catch (err: any) {
       console.error('Auto translate question error:', err);
+      props.onTranslationError?.(err);
+      if (!fromTabSwitch) {
+        props.showToast?.(err?.message || (language === 'ar' ? 'فشلت الترجمة التلقائية' : 'Auto translation failed'), 'error');
+      }
     } finally {
+      translatingQuestionRef.current = false;
       setIsTranslatingQuestion(false);
+    }
+  };
+
+  const handleSwitchQuestionLang = (nextLang: 'ar' | 'en') => {
+    const prevLang = questionActiveLang;
+    setQuestionActiveLang(nextLang);
+    if (prevLang === 'en' && nextLang === 'ar' && autoTranslateEnabled && tempQuestion && !props.translateQuestion && questionNeedsTabAutoTranslate(tempQuestion)) {
+      void handleAutoTranslateQuestion('en', true);
     }
   };
 
@@ -673,12 +609,12 @@ export const QuestionsBuilder = (props: any) => {
                           onChange={(e) => {
                             const val = e.target.value;
                             updateCurrentQuestionField(activeFieldKey, val);
-                            if (isEn && (!tempQuestion[field.key] || !hasArabicChars(tempQuestion[field.key]))) {
+                            if (!getAutoTranslateEnabled() && isEn && (!tempQuestion[field.key] || !hasArabicChars(tempQuestion[field.key]))) {
                               updateCurrentQuestionField(field.key, val);
                             }
                             if (field.key === 'standard') {
                               updateCurrentQuestionField(isEn ? 'learningOutcomeEn' : 'learningOutcome', val);
-                              if (isEn && (!tempQuestion.learningOutcome || !hasArabicChars(tempQuestion.learningOutcome))) {
+                              if (!getAutoTranslateEnabled() && isEn && (!tempQuestion.learningOutcome || !hasArabicChars(tempQuestion.learningOutcome))) {
                                 updateCurrentQuestionField('learningOutcome', val);
                               }
                             }
@@ -701,12 +637,12 @@ export const QuestionsBuilder = (props: any) => {
                           onChange={(e) => {
                             const val = e.target.value;
                             updateCurrentQuestionField(activeFieldKey, val);
-                            if (isEn && (!tempQuestion[field.key] || !hasArabicChars(tempQuestion[field.key]))) {
+                            if (!getAutoTranslateEnabled() && isEn && (!tempQuestion[field.key] || !hasArabicChars(tempQuestion[field.key]))) {
                               updateCurrentQuestionField(field.key, val);
                             }
                             if (field.key === 'standard') {
                               updateCurrentQuestionField(isEn ? 'learningOutcomeEn' : 'learningOutcome', val);
-                              if (isEn && (!tempQuestion.learningOutcome || !hasArabicChars(tempQuestion.learningOutcome))) {
+                              if (!getAutoTranslateEnabled() && isEn && (!tempQuestion.learningOutcome || !hasArabicChars(tempQuestion.learningOutcome))) {
                                 updateCurrentQuestionField('learningOutcome', val);
                               }
                             }
@@ -724,17 +660,18 @@ export const QuestionsBuilder = (props: any) => {
                   {language === 'ar' ? 'لغة تحرير السؤال الحالي:' : 'Current Editing Language:'}
                 </span>
                 <div className="flex items-center gap-2 flex-wrap">
+                  <AutoTranslateToggle language={language} compact />
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
-                      onClick={() => setQuestionActiveLang('en')}
+                      onClick={() => handleSwitchQuestionLang('en')}
                       className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${questionActiveLang === 'en' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-white'}`}
                     >
                       English (EN)
                     </button>
                     <button
                       type="button"
-                      onClick={() => setQuestionActiveLang('ar')}
+                      onClick={() => handleSwitchQuestionLang('ar')}
                       className={`px-4 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${questionActiveLang === 'ar' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-white'}`}
                     >
                       العربية (Arabic)
@@ -744,7 +681,7 @@ export const QuestionsBuilder = (props: any) => {
                   <button
                     type="button"
                     disabled={isTranslatingQuestion}
-                    onClick={handleAutoTranslateQuestion}
+                    onClick={() => void handleAutoTranslateQuestion()}
                     className="px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-sm hover:opacity-90 disabled:opacity-50 cursor-pointer"
                   >
                     {isTranslatingQuestion ? (
@@ -799,6 +736,7 @@ export const QuestionsBuilder = (props: any) => {
                 </div>
                 <RichTextEditor
                   key={`${tempQuestion.id || "draft"}:${questionActiveLang}`}
+                  dir={questionActiveLang === 'ar' ? 'rtl' : 'ltr'}
                   value={(questionActiveLang === 'ar' ? (tempQuestion.text || '') : (tempQuestion.textEn || (tempQuestion.text && !hasArabicChars(tempQuestion.text) ? tempQuestion.text : ''))) || ""}
                   onChange={(value) => setTempQuestion((previous: any) => updateBilingualRichText(previous, "text", value, questionActiveLang))}
                   availableImages={extractImageUrls([
@@ -913,6 +851,7 @@ export const QuestionsBuilder = (props: any) => {
                 </p>
                 <RichTextEditor
                   key={`${tempQuestion.id || "draft"}:${questionActiveLang}`}
+                  dir={questionActiveLang === 'ar' ? 'rtl' : 'ltr'}
                   value={(questionActiveLang === 'ar' ? tempQuestion.hint : (tempQuestion.hintEn ?? "")) || ''}
                   onChange={(val) => setTempQuestion((previous: any) => updateBilingualRichText(previous, "hint", val, questionActiveLang))}
                   placeholder={questionActiveLang === 'ar' ? 'اكتب تلميحاً لمساعدة الطالب في الحل هنا...' : 'Write an in-exam solving hint here...'}
@@ -966,6 +905,7 @@ export const QuestionsBuilder = (props: any) => {
                         </div>
                         <RichTextEditor
                           key={`${tempQuestion.id || "draft"}:${questionActiveLang}`}
+                          dir={questionActiveLang === 'ar' ? 'rtl' : 'ltr'}
                           value={secVal}
                           onChange={(value) => setTempQuestion((previous: any) => {
                             const sections = [...(previous.sections || [])];
@@ -1084,13 +1024,13 @@ export const QuestionsBuilder = (props: any) => {
                                     const updatedEn = [...resolvedOptsEn];
                                     updatedEn[oIndex] = val;
                                     updateCurrentQuestionField("optionsEn", updatedEn);
-                                    if (isArOptsEnglish || !tempQuestion.options || !tempQuestion.options.some((o: string) => hasArabicChars(o))) {
+                                    if (!getAutoTranslateEnabled() && (isArOptsEnglish || !tempQuestion.options || !tempQuestion.options.some((o: string) => hasArabicChars(o)))) {
                                       const updatedAr = [...currentOptsAr];
                                       updatedAr[oIndex] = val;
                                       updateCurrentQuestionField("options", updatedAr);
                                     }
                                     if (oIndex === singleFormCorrectIdx || (!tempQuestion.correctAnswer && !currentOptsAr[oIndex])) {
-                                      if (isArOptsEnglish || !currentOptsAr[oIndex] || !hasArabicChars(currentOptsAr[oIndex])) {
+                                      if (!getAutoTranslateEnabled() && (isArOptsEnglish || !currentOptsAr[oIndex] || !hasArabicChars(currentOptsAr[oIndex]))) {
                                         updateCurrentQuestionField("correctAnswer", val);
                                       }
                                       updateCurrentQuestionField("correctAnswerEn", val);

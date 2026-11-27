@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { translateText } from '@/lib/translationService';
+import { getAutoTranslateEnabled } from '@/lib/autoTranslatePreference';
 
 /** Hints can be added after translating the prompt; fill only a missing Arabic hint. */
 export function useQuestionHintTranslation(
@@ -15,6 +16,7 @@ export function useQuestionHintTranslation(
     const enteringArabic = !previous || previous.id !== id || previous.language !== activeLanguage
       || (previous.translating && !translatingQuestion);
     previousContext.current = { id, language: activeLanguage, translating: translatingQuestion };
+    if (!getAutoTranslateEnabled()) return;
     const visibleText = (html: string) => html.replace(/<[^>]*>/g, '').replace(/&[^;]+;/g, ' ');
     const sourceText = visibleText(hintEn || '').trim();
     const targetText = visibleText(hint || '').trim();

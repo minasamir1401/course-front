@@ -14,6 +14,7 @@ interface HtmlRendererProps {
   className?: string;
   tag?: React.ElementType;
   imageLoading?: "lazy" | "eager";
+  dir?: "rtl" | "ltr" | "auto";
 }
 
 function renderKatex(inner: string, display: boolean): string {
@@ -153,7 +154,7 @@ function getCachedProcessedHtml(rawHtml: string, imageLoading: "lazy" | "eager")
   return processed;
 }
 
-function HtmlRenderer({ html, className = "", tag: Tag = "div", imageLoading = "lazy" }: HtmlRendererProps) {
+function HtmlRenderer({ html, className = "", tag: Tag = "div", imageLoading = "lazy", dir = "auto" }: HtmlRendererProps) {
   const combinedClassName = className.includes("prose") ? className : `prose ${className}`.trim();
   
   const processedHtml = React.useMemo(() => {
@@ -164,7 +165,7 @@ function HtmlRenderer({ html, className = "", tag: Tag = "div", imageLoading = "
     <Tag
       className={combinedClassName}
       dangerouslySetInnerHTML={{ __html: processedHtml }}
-      dir="auto"
+      dir={dir}
     />
   );
 }

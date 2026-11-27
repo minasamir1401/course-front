@@ -2,6 +2,9 @@
 import { apiFetch, API_URL } from '@/lib/api';
 import { buildCreatedModulePortalHref } from '@/lib/moduleCreationWorkflow';
 import { buildDraftModules, buildExamSubmissionPayload } from '@/lib/examEditingPayload';
+import { getAutoTranslateEnabled } from '@/lib/autoTranslatePreference';
+import { questionNeedsArabicTranslation } from '@/lib/manualAutoTranslate';
+import { autoTranslateQuestionsList } from '@/lib/excelAutoTranslate';
 
 export const useExamSubmit = (props: any) => {
   const { examData, modules, isModuleModalOpen, currentModule, editingModuleIndex, manualSubmitRef, autoSaveGenerationRef, autoSaveTimerRef, setIsLoading, autoSaveWriteQueueRef, createdIdRef, standaloneQuestions, deletedQuestionIds, setDeletedQuestionIds, showToast, language, router, t, isLoading, moduleMode } = props;
@@ -61,6 +64,15 @@ export const useExamSubmit = (props: any) => {
       const isCentral = targetSchoolIds.length > 0 ? false : !!examData.isCentral;
 
       const { modulesPayload, allQuestions } = buildExamSubmissionPayload({ modules: finalModules, standaloneQuestions });
+      const autoTranslateOn = getAutoTranslateEnabled();
+      let preparedQuestions = allQuestions;
+      if (autoTranslateOn && Array.isArray(preparedQuestions) && preparedQuestions.some(questionNeedsArabicTranslation)) {
+        try {
+          preparedQuestions = await autoTranslateQuestionsList(preparedQuestions);
+        } catch (err) {
+          console.error('Auto-translate exam questions on submit failed:', err);
+        }
+      }
 
       if (moduleMode && modulesPayload.length === 0) {
         showToast(language === 'ar' ? 'أضف الموديول أولًا ثم احفظ' : 'Add the module first, then save', 'error');
@@ -118,8 +130,9 @@ export const useExamSubmit = (props: any) => {
           gradeTarget: examData.gradeTarget,
 
           modules: modulesPayload,
-          questions: allQuestions,
-          deletedQuestionIds: submittedDeletedQuestionIds
+          questions: preparedQuestions,
+          deletedQuestionIds: submittedDeletedQuestionIds,
+          autoTranslate: autoTranslateOn
         })
       });
 

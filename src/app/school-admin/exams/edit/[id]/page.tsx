@@ -6,6 +6,7 @@ import { useRouter, useSearchParams, useParams } from "next/navigation";
 import { useNotification } from "@/context/NotificationContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useLanguage } from "@/contexts/LanguageContext";
+import AutoTranslateToggle from "@/components/AutoTranslateToggle";
 import { Save, ArrowLeft, Plus, Settings } from 'lucide-react';
 import * as XLSX from "xlsx";
 
@@ -297,7 +298,11 @@ export default function SchoolAdminEditExamPage() {
                 <p className="text-slate-400 text-lg mt-1 font-bold">{language === 'ar' ? 'صمم تجربة تقييم متكاملة لطلابك' : 'Design a complete assessment experience for your students'}</p>
               </div>
             </div>
-            {modules.length === 0 && <button
+            <div className="flex flex-wrap items-center gap-3 shrink-0">
+
+              <AutoTranslateToggle language={language} compact />
+
+              {modules.length === 0 && <button
               type="button"
               onClick={moduleManagement.openAddModuleModal}
               className="bg-white text-indigo-600 px-8 py-5 rounded-[22px] font-black flex items-center gap-3 border border-indigo-100 hover:bg-indigo-50 transition-all"
@@ -313,6 +318,7 @@ export default function SchoolAdminEditExamPage() {
               {isLoading ? (language === 'ar' ? 'جارٍ الحفظ...' : 'Saving...') : (language === 'ar' ? 'حفظ ونشر التقييم' : 'Save & Publish Exam')}
               <Save className="w-6 h-6" />
             </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">

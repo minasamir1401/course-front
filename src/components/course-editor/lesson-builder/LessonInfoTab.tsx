@@ -3,10 +3,11 @@ import { exportLessonMetadataWorkbook } from "@/lib/lessonMetadataExcel";
 import { importLessonMetadataFromExcelFile } from "@/lib/excelAutoTranslate";
 
 import BilingualMetadataEditor from "@/components/BilingualMetadataEditor";
-import React from "react";
-import { Upload, Download, Target, Video } from "lucide-react";
+import React, { useState } from "react";
+import { Upload, Download, Target, Video, Languages, Loader2 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { buildCourseMetadataTemplateRows } from '@/lib/examExcelTemplates';
+import { autoTranslateLessonMetadata } from "@/lib/excelAutoTranslate";
 
 interface LessonInfoTabProps {
   currentLesson: any;
@@ -27,6 +28,32 @@ export const LessonInfoTab: React.FC<LessonInfoTabProps> = ({
 }) => {
   const latestLesson = React.useRef(currentLesson);
   React.useEffect(() => { latestLesson.current = currentLesson; }, [currentLesson]);
+  const [isTranslatingMeta, setIsTranslatingMeta] = useState(false);
+
+  const handleTranslateInfoMetadata = async () => {
+    if (!currentLesson || isTranslatingMeta) return;
+    setIsTranslatingMeta(true);
+    try {
+      const translated = await autoTranslateLessonMetadata({
+        title: currentLesson.title,
+        titleEn: currentLesson.titleEn,
+        domain: currentLesson.domain,
+        domainEn: currentLesson.domainEn,
+        standards: currentLesson.standards,
+        standardsEn: currentLesson.standardsEn,
+        indicators: currentLesson.indicators,
+        indicatorsEn: currentLesson.indicatorsEn,
+        learningOutcomes: currentLesson.learningOutcomes,
+        learningOutcomesEn: currentLesson.learningOutcomesEn,
+      });
+      setCurrentLesson((prev: any) => ({ ...prev, ...translated }));
+      showToast(language === 'ar' ? 'تمت ترجمة بيانات الدرس والمعايير للعربية' : 'Lesson metadata translated to Arabic', 'success');
+    } catch (err: any) {
+      showToast(err?.message || (language === 'ar' ? 'فشلت ترجمة البيانات' : 'Failed to translate metadata'), 'error');
+    } finally {
+      setIsTranslatingMeta(false);
+    }
+  };
 
   const handleMetadataExcelChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -93,6 +120,10 @@ export const LessonInfoTab: React.FC<LessonInfoTabProps> = ({
         </h4>
         <input type="file" ref={metadataExcelRef} accept=".xlsx,.xls" className="hidden" onChange={handleMetadataExcelChange} />
         <div className="flex flex-wrap gap-3">
+          <button type="button" onClick={handleTranslateInfoMetadata} disabled={isTranslatingMeta} className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm font-bold text-amber-800 shadow-sm hover:bg-amber-100 disabled:opacity-50 cursor-pointer">
+            {isTranslatingMeta ? <Loader2 size={16} className="animate-spin" /> : <Languages size={16} />}
+            {isTranslatingMeta ? (language === 'ar' ? 'جارٍ الترجمة...' : 'Translating...') : (language === 'ar' ? 'ترجمة البيانات للعربية' : 'Translate Metadata to Arabic')}
+          </button>
           <button type="button" onClick={() => handleExcelUpload('metadata')} className="flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-5 py-3 text-sm font-bold text-emerald-700 shadow-sm hover:bg-emerald-100"><Upload size={16} />{language === 'ar' ? 'استيراد Metadata' : 'Import metadata'}</button>
           <button type="button" onClick={() => exportLessonMetadataWorkbook(currentLesson, language, XLSX)} className="flex items-center gap-2 rounded-xl border border-amber-100 bg-amber-50 px-5 py-3 text-sm font-bold text-amber-700 shadow-sm hover:bg-amber-100"><Download size={16} />{language === 'ar' ? 'تصدير المعايير Excel' : 'Export Metadata'}</button>
           <button type="button" onClick={downloadMetadataTemplate} className="flex items-center gap-2 rounded-xl border border-indigo-100 bg-indigo-50 px-5 py-3 text-sm font-bold text-indigo-700 shadow-sm hover:bg-indigo-100"><Download size={16} />{language === 'ar' ? 'قالب Excel باللغتين' : 'Bilingual Excel template'}</button>

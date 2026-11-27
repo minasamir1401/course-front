@@ -14,6 +14,9 @@ import MathInput from "@/components/MathInput";
 import InteractiveQuestionEditor from "@/components/InteractiveQuestionEditor";
 import { getOptionLetter } from "@/lib/utils";
 import { normalizeAnswerGlobal } from "@/components/LessonSubComponents";
+import { syncRichTextFormatting } from "@/lib/bilingualRichText";
+import { getAutoTranslateEnabled } from "@/lib/autoTranslatePreference";
+import { hasArabicLetters } from "@/lib/slideLanguage";
 
 interface SlideCardProps {
   block: any;
@@ -133,7 +136,7 @@ export const SlideCard: React.FC<SlideCardProps> = React.memo(({
   const handleTitleChange = (val: string) => {
     if (slideLang === 'en') {
       const updates: Record<string, any> = { titleEn: val };
-      if (!block.title || (!/[\u0600-\u06FF]/.test(block.title) && block.title === (block.titleEn || ''))) {
+      if (!getAutoTranslateEnabled() && (!block.title || (!/[\u0600-\u06FF]/.test(block.title) && block.title === (block.titleEn || '')))) {
         updates.title = val;
       }
       updateBlockFields(source, sIdx, updates, block);
@@ -144,13 +147,31 @@ export const SlideCard: React.FC<SlideCardProps> = React.memo(({
 
   const handleContentChange = (val: string) => {
     if (slideLang === 'en') {
-      const updates: Record<string, any> = { contentEn: val };
-      if (!block.content || (!/[\u0600-\u06FF]/.test(block.content) && block.content === (block.contentEn || ''))) {
+      const prevEn = String(block.contentEn || block.textEn || '');
+      const currentAr = String(block.content || block.text || '');
+      const updates: Record<string, any> = { contentEn: val, textEn: val };
+      if (currentAr && hasArabicLetters(currentAr)) {
+        const syncedAr = syncRichTextFormatting(prevEn, val, currentAr);
+        if (syncedAr !== currentAr) {
+          updates.content = syncedAr;
+          updates.text = syncedAr;
+        }
+      } else if (!getAutoTranslateEnabled() && (!currentAr || (!hasArabicLetters(currentAr) && currentAr === prevEn))) {
         updates.content = val;
+        updates.text = val;
       }
       updateBlockFields(source, sIdx, updates, block);
     } else {
-      updateBlock(source, sIdx, 'content', val, block);
+      const prevAr = String(block.content || block.text || '');
+      const updates: Record<string, any> = { content: val, text: val };
+      if (block.contentEn) {
+        const syncedEn = syncRichTextFormatting(prevAr, val, String(block.contentEn));
+        if (syncedEn !== block.contentEn) {
+          updates.contentEn = syncedEn;
+          updates.textEn = syncedEn;
+        }
+      }
+      updateBlockFields(source, sIdx, updates, block);
     }
   };
 
@@ -413,6 +434,7 @@ export const SlideCard: React.FC<SlideCardProps> = React.memo(({
                 value={resolvedContent}
                 onChange={handleContentChange}
                 availableImages={availableImages}
+                dir={slideLang === 'ar' ? 'rtl' : 'ltr'}
                 placeholder={block.type === 'TEXT'
                   ? (slideLang === 'en' ? 'Write explanation content here (English)...' : 'اكتب محتوى الشرح هنا...')
                   : (slideLang === 'en' ? 'Write question text here (English)...' : 'اكتب نص السؤال هنا...')}
@@ -589,13 +611,21 @@ export const SlideCard: React.FC<SlideCardProps> = React.memo(({
                                     onChange={(val) => {
                                       if (slideLang === 'en') {
                                         const newOptsEn = [...(block.optionsEn && block.optionsEn.length > 0 ? block.optionsEn : displayOpts)];
+                                        const oldEnVal = newOptsEn[oIdx];
                                         newOptsEn[oIdx] = val;
                                         const updates: Record<string, any> = { optionsEn: newOptsEn };
+                                        if (block.label === 'MULTI_SELECT' && Array.isArray(block.correctAnswersEn) && block.correctAnswersEn.includes(oldEnVal)) {
+                                          updates.correctAnswersEn = block.correctAnswersEn.map((a: string) => a === oldEnVal ? val : a);
+                                        } else if (block.correctAnswerEn === oldEnVal) {
+                                          updates.correctAnswerEn = val;
+                                        }
 
-                                        const newOpts = [...(block.options || [])];
-                                        if (!newOpts[oIdx] || (!/[\u0600-\u06FF]/.test(newOpts[oIdx]) && newOpts[oIdx] === displayOpts[oIdx])) {
-                                          newOpts[oIdx] = val;
-                                          updates.options = newOpts;
+                                        if (!getAutoTranslateEnabled()) {
+                                          const newOpts = [...(block.options || [])];
+                                          if (!newOpts[oIdx] || (!hasArabicLetters(newOpts[oIdx]) && newOpts[oIdx] === oldEnVal)) {
+                                            newOpts[oIdx] = val;
+                                            updates.options = newOpts;
+                                          }
                                         }
                                         updateBlockFields(source, sIdx, updates, block);
                                       } else {
@@ -674,20 +704,33 @@ export const SlideCard: React.FC<SlideCardProps> = React.memo(({
                         const newSlides = [...(prev[source] || [])];
                         const resolvedIndex = newSlides.findIndex((candidate: any) => candidate === block || (block.id != null && candidate?.id === block.id));
                         if (resolvedIndex < 0) return prev;
-                        newSlides[resolvedIndex] = {
-                          ...newSlides[resolvedIndex],
-                          options: updatedQ.options,
-                          optionsEn: slideLang === 'en' ? updatedQ.options : newSlides[resolvedIndex].optionsEn,
-                          correctAnswer: updatedQ.correctAnswer,
-                          correctAnswerEn: slideLang === 'en' ? updatedQ.correctAnswer : newSlides[resolvedIndex].correctAnswerEn,
-                          ...(updatedQ.type === 'MULTI_SELECT' ? (() => {
-                            try {
-                              return { correctAnswers: JSON.parse(updatedQ.correctAnswer) };
-                            } catch (e) {
-                              return {};
-                            }
-                          })() : {})
-                        };
+                        const currentSlide = newSlides[resolvedIndex];
+                        if (slideLang === 'en') {
+                          const arOptsStr = typeof currentSlide.options === 'string' ? currentSlide.options : JSON.stringify(currentSlide.options || '');
+                          const keepExistingAr = hasArabicLetters(arOptsStr) || getAutoTranslateEnabled();
+                          newSlides[resolvedIndex] = {
+                            ...currentSlide,
+                            optionsEn: updatedQ.options,
+                            correctAnswerEn: updatedQ.correctAnswer,
+                            ...(!keepExistingAr ? {
+                              options: updatedQ.options,
+                              correctAnswer: updatedQ.correctAnswer,
+                            } : {}),
+                          };
+                        } else {
+                          newSlides[resolvedIndex] = {
+                            ...currentSlide,
+                            options: updatedQ.options,
+                            correctAnswer: updatedQ.correctAnswer,
+                            ...(updatedQ.type === 'MULTI_SELECT' ? (() => {
+                              try {
+                                return { correctAnswers: JSON.parse(updatedQ.correctAnswer) };
+                              } catch (e) {
+                                return {};
+                              }
+                            })() : {})
+                          };
+                        }
                         return { ...prev, [source]: newSlides };
                       });
                     }}
@@ -743,6 +786,7 @@ export const SlideCard: React.FC<SlideCardProps> = React.memo(({
                             availableImages={availableImages}
                             placeholder={slideLang === 'en' ? `${sec.type} content (English)...` : `محتوى الـ ${sec.type}...`}
                             className="!bg-white"
+                            dir={slideLang === 'ar' ? 'rtl' : 'ltr'}
                           />
                         </div>
                       );

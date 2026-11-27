@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ReactElement } from "react";
 import { ArrowLeft, Calendar, Eye, HelpCircle, Save, Settings } from "lucide-react";
+import AutoTranslateToggle from "@/components/AutoTranslateToggle";
 
 type Props = {
   backHref: string;
@@ -86,6 +87,7 @@ export default function SubExamEditorScreen({
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <AutoTranslateToggle language={language} compact />
           <Link
             href={examHref}
             target="_blank"

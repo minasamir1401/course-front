@@ -5,6 +5,7 @@ import { buildQuestionWorkbook, importModuleQuestions } from '@/lib/questionExce
 import { buildCourseMetadataTemplateRows } from '@/lib/examExcelTemplates';
 
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
 import { apiFetch, API_URL } from '@/lib/api';
 import { normalizeDok } from '@/lib/examQuestionMetadata';
@@ -23,6 +24,7 @@ import { downloadFullLessonWorkbook, handleFullLessonExcelImport } from "@/lib/s
 import { courseLessonKey, withCourseLessonKey } from "@/lib/courseCreatePersistence";
 
 import { useLanguage } from "@/contexts/LanguageContext";
+import AutoTranslateToggle from "@/components/AutoTranslateToggle";
 import { ArrowLeft, Plus, Trash2, Video, FileText, HelpCircle, BookOpen, Save, Layers, Edit2, X, ChevronDown, ChevronUp, Play, Layout, Target, CheckCircle2, AlertCircle, Upload, Download, Settings, Eye, Monitor, ListOrdered, FileJson, FileDown, Clock, Lightbulb, MessageSquareQuote, TriangleAlert, Search } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import RichTextEditor from "@/components/RichTextEditor";
@@ -768,12 +770,13 @@ export default function CreateCoursePage() {
 
   return (
     <DashboardLayout>
-      {isLessonModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 overflow-y-auto">
+      {isLessonModalOpen && typeof document !== "undefined" && createPortal(
+        <div dir={language === "ar" ? "rtl" : "ltr"} className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 overflow-y-auto">
           <div className="bg-white rounded-[40px] w-full max-w-6xl my-auto relative shadow-2xl flex flex-col max-h-[90vh]">
             <div className="p-8 border-b border-slate-100 flex flex-wrap justify-between items-center gap-3 bg-slate-50 rounded-t-[40px] shrink-0">
                <h2 className="text-2xl font-black text-slate-900">{t('courseCreate.lessonDetails') || "Lesson Details"}</h2>
                <div className="flex flex-wrap items-center gap-2">
+                 <AutoTranslateToggle language={language} compact />
                  <input
                    id="create-modal-full-lesson-excel"
                    type="file"
@@ -880,7 +883,8 @@ export default function CreateCoursePage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <CourseCreateHeader

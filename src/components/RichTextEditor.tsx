@@ -20,6 +20,7 @@ interface RichTextEditorProps {
   placeholder?: string;
   className?: string;
   availableImages?: string[];
+  dir?: 'rtl' | 'ltr' | 'auto';
 }
 
 function cleanWordPaste(html: string): string {
@@ -163,7 +164,7 @@ const MATH_SIZES = [
 // Shared across editor instances so moving between questions keeps the draft.
 const lastMathDraft = { formula: "x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}", size: 'large', display: false };
 
-export default function RichTextEditor({ value, onChange, placeholder = "", className = "", availableImages = [] }: RichTextEditorProps) {
+export default function RichTextEditor({ value, onChange, placeholder = "", className = "", availableImages = [], dir = "auto" }: RichTextEditorProps) {
   const formProtectionRef = useEditorFormProtection();
   const { language } = useLanguage();
   const { showToast } = useNotification();
@@ -655,7 +656,15 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
         <div className="w-px h-6 bg-slate-200 mx-1" />
 
         <select
-          onChange={(e) => execCommand('fontSize', e.target.value)}
+          onMouseDown={() => saveSelection()}
+          onFocus={() => saveSelection()}
+          onChange={(e) => {
+            const val = e.target.value;
+            if (!val) return;
+            execCommand('fontSize', val, true);
+            e.target.value = "";
+          }}
+          defaultValue=""
           className="bg-transparent text-xs font-bold text-slate-500 outline-none hover:text-indigo-600 cursor-pointer p-1"
           title={language === 'ar' ? "حجم الخط" : "Font Size"}
         >
@@ -731,8 +740,20 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
         
         <ToolButton 
           onClick={() => {
-             document.execCommand('backColor', false, '#fef08a') || document.execCommand('hiliteColor', false, '#fef08a');
+             const editor = editorRef.current;
+             if (!editor) return;
+             const saved = savedSelectionRef.current?.cloneRange();
+             editor.focus();
+             const selection = window.getSelection();
+             if (selection && saved && editor.contains(saved.startContainer) && editor.contains(saved.endContainer)) {
+               selection.removeAllRanges();
+               selection.addRange(saved);
+             }
+             if (!document.execCommand('hiliteColor', false, '#fef08a')) {
+               document.execCommand('backColor', false, '#fef08a');
+             }
              handleInput(true);
+             saveSelection();
           }} 
           icon={Highlighter} 
           title={language === 'ar' ? "تظليل النص (أصفر)" : "Highlight"}
@@ -1071,7 +1092,7 @@ export default function RichTextEditor({ value, onChange, placeholder = "", clas
           onPaste={handlePaste}
           onDrop={handleDrop}
           className="p-3 md:p-6 outline-none text-lg min-h-[300px] prose prose-slate max-w-none editor-content"
-          dir="auto"
+          dir={dir}
           suppressContentEditableWarning
         />
         <style jsx global>{`

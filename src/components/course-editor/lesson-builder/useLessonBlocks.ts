@@ -3,6 +3,9 @@
 import { useCallback } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNotification } from "@/context/NotificationContext";
+import { syncRichTextFormatting } from "@/lib/bilingualRichText";
+import { getAutoTranslateEnabled } from "@/lib/autoTranslatePreference";
+import { hasArabicLetters } from "@/lib/slideLanguage";
 
 export function useLessonBlocks(setCurrentLesson: (lesson: any) => void) {
   const { language } = useLanguage();
@@ -205,13 +208,20 @@ export function useLessonBlocks(setCurrentLesson: (lesson: any) => void) {
       if (!sections[resolvedSectionIndex]) return prev;
       if (sections[resolvedSectionIndex][field] === content) return prev;
 
-      sections[resolvedSectionIndex] = { ...sections[resolvedSectionIndex], [field]: content };
+      const currentSection = sections[resolvedSectionIndex];
+      const prevContent = String(currentSection[field] || '');
+      const updatedSection = { ...currentSection, [field]: content };
       if (field === 'contentEn') {
-        const currentAr = sections[resolvedSectionIndex].content;
-        if (!currentAr || (!/[\u0600-\u06FF]/.test(currentAr) && currentAr === (sections[resolvedSectionIndex].contentEn || ''))) {
-          sections[resolvedSectionIndex].content = content;
+        const currentAr = String(currentSection.content || '');
+        if (currentAr && hasArabicLetters(currentAr)) {
+          updatedSection.content = syncRichTextFormatting(prevContent, content, currentAr);
+        } else if (!getAutoTranslateEnabled() && (!currentAr || (!/[\u0600-\u06FF]/.test(currentAr) && currentAr === (currentSection.contentEn || '')))) {
+          updatedSection.content = content;
         }
+      } else if (field === 'content' && currentSection.contentEn) {
+        updatedSection.contentEn = syncRichTextFormatting(prevContent, content, String(currentSection.contentEn));
       }
+      sections[resolvedSectionIndex] = updatedSection;
       newSlides[resolvedBlockIndex] = { ...block, sections };
       return { ...prev, [source]: newSlides };
     });

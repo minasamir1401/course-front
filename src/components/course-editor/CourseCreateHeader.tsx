@@ -4,6 +4,7 @@ import React from "react";
 import { ArrowLeft, Download, Save } from "lucide-react";
 import { offlineSync } from "@/lib/offlineSync";
 import { useNotification } from "@/context/NotificationContext";
+import AutoTranslateToggle from "@/components/AutoTranslateToggle";
 
 interface CourseCreateHeaderProps {
   language: string;
@@ -55,6 +56,7 @@ export const CourseCreateHeader: React.FC<CourseCreateHeaderProps> = ({
         </div>
 
         <div className="flex flex-wrap gap-3 items-center shrink-0">
+          <AutoTranslateToggle language={language} compact />
           <div className="flex items-center gap-3 bg-slate-100 px-4 py-2 rounded-2xl border border-slate-200 shrink-0">
             <span className="text-sm font-bold text-slate-600 whitespace-nowrap">
               {language === "ar" ? "الحفظ التلقائي" : "Auto-Save"}

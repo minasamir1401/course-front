@@ -106,7 +106,12 @@ test('both new exam save hooks publish standalone and nested questions',async()=
   let submitted;
   const api={API_URL:'http://localhost/api',apiFetch:async(_url,init)=>{submitted=JSON.parse(init.body);return Response.json({exam:{id:'created'}});}};
   const editing=load('../../src/lib/examEditingPayload.ts');
-  const {useExamSubmit}=load('../../src/app/'+role+'/exams/new/hooks/useExamSubmit.ts',{'@/lib/api':api,'@/lib/examEditingPayload':editing,'@/lib/moduleCreationWorkflow':{buildCreatedModulePortalHref:()=>null}});
+  const autoTranslateMocks = {
+   '@/lib/autoTranslatePreference': { getAutoTranslateEnabled: () => false },
+   '@/lib/manualAutoTranslate': { questionNeedsArabicTranslation: () => false },
+   '@/lib/excelAutoTranslate': { autoTranslateQuestionsList: async x => x },
+  };
+  const {useExamSubmit}=load('../../src/app/'+role+'/exams/new/hooks/useExamSubmit.ts',{'@/lib/api':api,'@/lib/examEditingPayload':editing,'@/lib/moduleCreationWorkflow':{buildCreatedModulePortalHref:()=>null},...autoTranslateMocks});
   const old=globalThis.localStorage;globalThis.localStorage={getItem:()=> 'cookie_auth'};
   try {
    await useExamSubmit({examData:{title:'Standalone',duration:60,passingScore:0,grades:['Grade'],subjects:['Math']},modules:[],standaloneQuestions:[{text:'Question one',id:'q-one'}],manualSubmitRef:{current:false},autoSaveGenerationRef:{current:0},autoSaveTimerRef:{current:null},autoSaveWriteQueueRef:{current:Promise.resolve()},createdIdRef:{current:null},setIsLoading:()=>{},showToast:message=>{if(message?.includes('Failed'))throw Error(message);},language:'en',router:{push:()=>{}},moduleMode:false}).handleSubmit({preventDefault:()=>{}});
@@ -121,7 +126,12 @@ test('rapid first-save clicks send only one creation request for both admin role
   const response = new Promise(resolve => { complete = resolve; });
   const api = { API_URL: 'http://localhost/api', apiFetch: async () => { calls++; return response; } };
   const { useExamSubmit } = load('../../src/app/' + role + '/exams/new/hooks/useExamSubmit.ts', {
-   '@/lib/api': api, '@/lib/examEditingPayload': load('../../src/lib/examEditingPayload.ts'), '@/lib/moduleCreationWorkflow': { buildCreatedModulePortalHref: () => null },
+   '@/lib/api': api,
+   '@/lib/examEditingPayload': load('../../src/lib/examEditingPayload.ts'),
+   '@/lib/moduleCreationWorkflow': { buildCreatedModulePortalHref: () => null },
+   '@/lib/autoTranslatePreference': { getAutoTranslateEnabled: () => false },
+   '@/lib/manualAutoTranslate': { questionNeedsArabicTranslation: () => false },
+   '@/lib/excelAutoTranslate': { autoTranslateQuestionsList: async x => x },
   });
   const old = globalThis.localStorage; globalThis.localStorage = { getItem: () => 'cookie_auth' };
   try {
@@ -352,6 +362,8 @@ test('the course editor never assigns the last saved lesson ID to an open new dr
   '@/lib/courseCreatePersistence': persistence,
   '@/lib/courseLessonSummary': lessonSummary,
   '@/hooks/useDeletionPolicy': { useDeletionPolicy: () => true },
+  '@/lib/autoTranslatePreference': { getAutoTranslateEnabled: () => false },
+  '@/lib/manualAutoTranslate': { lessonNeedsArabicTranslation: () => false, autoTranslateLessonDraftForSave: async l => l },
   '@/context/NotificationContext': { useNotification: () => ({ showToast: (_, level) => assert.notEqual(level, 'error') }) },
   '@/contexts/LanguageContext': { useLanguage: () => ({ language: 'en' }) },
   '@/lib/offlineSync': { captureOfflineOwner: () => null, offlineSync: { getDraftStorageKey: () => null, removeByUrl: async () => {} } },
@@ -430,6 +442,8 @@ test('saving a lesson closes and resets the modal, blocks autosave on open modal
   '@/lib/courseCreatePersistence': persistence,
   '@/lib/courseLessonSummary': lessonSummary,
   '@/hooks/useDeletionPolicy': { useDeletionPolicy: () => true },
+  '@/lib/autoTranslatePreference': { getAutoTranslateEnabled: () => false },
+  '@/lib/manualAutoTranslate': { lessonNeedsArabicTranslation: () => false, autoTranslateLessonDraftForSave: async l => l },
   '@/context/NotificationContext': { useNotification: () => ({ showToast: (_, level) => assert.notEqual(level, 'error') }) },
   '@/contexts/LanguageContext': { useLanguage: () => ({ language: 'en' }) },
   '@/lib/offlineSync': { captureOfflineOwner: () => null, offlineSync: { getDraftStorageKey: () => null, removeByUrl: async () => {} } },
@@ -539,6 +553,8 @@ test('CourseEditorContext sets originalTitle on openEditLessonModal and rolls ba
   '@/lib/courseCreatePersistence': persistence,
   '@/lib/courseLessonSummary': lessonSummary,
   '@/hooks/useDeletionPolicy': { useDeletionPolicy: () => true },
+  '@/lib/autoTranslatePreference': { getAutoTranslateEnabled: () => false },
+  '@/lib/manualAutoTranslate': { lessonNeedsArabicTranslation: () => false, autoTranslateLessonDraftForSave: async l => l },
   '@/context/NotificationContext': { useNotification: () => ({ showToast: () => {} }) },
   '@/contexts/LanguageContext': { useLanguage: () => ({ language: 'en' }) },
   '@/lib/offlineSync': { captureOfflineOwner: () => null, offlineSync: { getDraftStorageKey: () => null, removeByUrl: async () => {} } },

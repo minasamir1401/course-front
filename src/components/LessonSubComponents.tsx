@@ -14,7 +14,86 @@ export const normalizeAnswerGlobal = (value: any) => {
   return norm;
 };
 
-export const checkAdvancedCorrect = (q: any, ans: any) => {
+const parseOptionArray = (raw: any): string[] => {
+  if (Array.isArray(raw)) return raw.map((v) => String(v ?? ''));
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) return parsed.map((v) => String(v ?? ''));
+      } catch {}
+    }
+  }
+  return [];
+};
+
+const parseAnswerArray = (raw: any): string[] => {
+  if (Array.isArray(raw)) return raw.map((v) => String(v ?? '').trim()).filter(Boolean);
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (!trimmed) return [];
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) return parsed.map((v) => String(v ?? '').trim()).filter(Boolean);
+      } catch {}
+    }
+    return [trimmed];
+  }
+  return [];
+};
+
+export const getCorrectAnswersForItem = (q: any, language?: string): string[] => {
+  if (!q) return [];
+  const primary = language === 'en' ? [q.correctAnswersEn, q.correctAnswerEn] : [q.correctAnswers, q.correctAnswer];
+  const secondary = language === 'en' ? [q.correctAnswers, q.correctAnswer] : [q.correctAnswersEn, q.correctAnswerEn];
+
+  const direct = [...primary, ...secondary].flatMap(parseAnswerArray);
+  const arOpts = parseOptionArray(q.options);
+  const enOpts = parseOptionArray(q.optionsEn);
+
+  if (arOpts.length > 0 && arOpts.length === enOpts.length) {
+    const mapped: string[] = [];
+    for (const ans of direct) {
+      const normAns = normalizeAnswerGlobal(ans);
+      const arIdx = arOpts.findIndex((o) => normalizeAnswerGlobal(o) === normAns);
+      if (arIdx >= 0 && enOpts[arIdx]) mapped.push(enOpts[arIdx]);
+      const enIdx = enOpts.findIndex((o) => normalizeAnswerGlobal(o) === normAns);
+      if (enIdx >= 0 && arOpts[enIdx]) mapped.push(arOpts[enIdx]);
+    }
+    return Array.from(new Set([...direct, ...mapped]));
+  }
+
+  return Array.from(new Set(direct));
+};
+
+export const isSingleOptionCorrect = (q: any, opt: string, language?: string): boolean => {
+  if (!q) return false;
+  const optNorm = normalizeAnswerGlobal(opt);
+  const candidates = getCorrectAnswersForItem(q, language);
+  return candidates.some((c) => normalizeAnswerGlobal(c) === optNorm);
+};
+
+export const isMultiAnswerCorrect = (q: any, studentAnswers: any, language?: string): boolean => {
+  if (!q) return false;
+  const studentList = Array.isArray(studentAnswers)
+    ? studentAnswers.map((a) => normalizeAnswerGlobal(a)).filter(Boolean)
+    : [];
+  const preferredRaw = language === 'en'
+    ? (parseAnswerArray(q.correctAnswersEn).length ? parseAnswerArray(q.correctAnswersEn) : parseAnswerArray(q.correctAnswers))
+    : (parseAnswerArray(q.correctAnswers).length ? parseAnswerArray(q.correctAnswers) : parseAnswerArray(q.correctAnswersEn));
+
+  const fallbackSingle = preferredRaw.length ? preferredRaw : parseAnswerArray(language === 'en' ? (q.correctAnswerEn || q.correctAnswer) : (q.correctAnswer || q.correctAnswerEn));
+  const expectedSet = new Set(fallbackSingle.map((a) => normalizeAnswerGlobal(a)));
+  if (expectedSet.size === 0 || studentList.length !== expectedSet.size) return false;
+
+  const allAllowed = new Set(getCorrectAnswersForItem(q, language).map((a) => normalizeAnswerGlobal(a)));
+  const uniqueStudent = new Set(studentList);
+  return uniqueStudent.size === expectedSet.size && studentList.every((a) => allAllowed.has(a));
+};
+
+export const checkAdvancedCorrect = (q: any, ans: any, language?: string) => {
   if (!ans) return false;
 
   if (q?.type === 'MEMORY_GAME') {
@@ -22,7 +101,7 @@ export const checkAdvancedCorrect = (q: any, ans: any) => {
       let parsedAns = typeof ans === 'string' ? JSON.parse(ans) : ans;
       if (typeof parsedAns === 'string') parsedAns = JSON.parse(parsedAns);
 
-      let parsedOpts = q.options || {};
+      let parsedOpts = (language === 'en' && q.optionsEn ? q.optionsEn : q.options) || {};
       if (typeof parsedOpts === 'string') parsedOpts = JSON.parse(parsedOpts);
       if (typeof parsedOpts === 'string') parsedOpts = JSON.parse(parsedOpts);
 
@@ -34,33 +113,40 @@ export const checkAdvancedCorrect = (q: any, ans: any) => {
   }
 
   if (q?.type === 'TRUE_FALSE') {
-    return normalizeAnswerGlobal(ans) === normalizeAnswerGlobal(q.correctAnswer);
+    return isSingleOptionCorrect(q, String(ans), language);
   }
   const cleanStr = (s: any) => String(s ?? '').trim().replace(/"/g, '');
-  try {
-    const isJsonString = (str: any) => {
-      if (typeof str !== 'string') return false;
-      const trimmed = str.trim();
-      return (trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'));
-    };
+  const compareAgainst = (corrAns: any): boolean => {
+    try {
+      const isJsonString = (str: any) => {
+        if (typeof str !== 'string') return false;
+        const trimmed = str.trim();
+        return (trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'));
+      };
 
-    const corrAns = q.correctAnswer;
-    const hasJson = isJsonString(corrAns) || isJsonString(ans) || typeof ans === 'object' || typeof corrAns === 'object';
-    if (hasJson) {
-      const correct = typeof corrAns === 'string' && (corrAns.startsWith('{') || corrAns.startsWith('[')) ? JSON.parse(corrAns) : corrAns;
-      const student = typeof ans === 'string' && (ans.startsWith('{') || ans.startsWith('[')) ? JSON.parse(ans) : ans;
-      if (Array.isArray(correct) && Array.isArray(student)) {
-        return correct.length === student.length && correct.every((val: any, i: number) => cleanStr(val) === cleanStr(student[i]));
+      const hasJson = isJsonString(corrAns) || isJsonString(ans) || typeof ans === 'object' || typeof corrAns === 'object';
+      if (hasJson) {
+        const correct = typeof corrAns === 'string' && (corrAns.startsWith('{') || corrAns.startsWith('[')) ? JSON.parse(corrAns) : corrAns;
+        const student = typeof ans === 'string' && (ans.startsWith('{') || ans.startsWith('[')) ? JSON.parse(ans) : ans;
+        if (Array.isArray(correct) && Array.isArray(student)) {
+          return correct.length === student.length && correct.every((val: any, i: number) => cleanStr(val) === cleanStr(student[i]));
+        }
+        if (typeof correct === 'object' && typeof student === 'object' && correct !== null && student !== null) {
+          const correctKeys = Object.keys(correct);
+          const studentKeys = Object.keys(student);
+          if (correctKeys.length !== studentKeys.length) return false;
+          return correctKeys.every((k: string) => cleanStr(correct[k]) === cleanStr(student[k]));
+        }
       }
-      if (typeof correct === 'object' && typeof student === 'object' && correct !== null && student !== null) {
-        const correctKeys = Object.keys(correct);
-        const studentKeys = Object.keys(student);
-        if (correctKeys.length !== studentKeys.length) return false;
-        return correctKeys.every((k: string) => cleanStr(correct[k]) === cleanStr(student[k]));
-      }
-    }
-  } catch (e) { }
-  return cleanStr(ans) === cleanStr(q.correctAnswer);
+    } catch (e) { }
+    return cleanStr(ans) === cleanStr(corrAns);
+  };
+
+  const primaryCorr = language === 'en' ? (q?.correctAnswerEn || q?.correctAnswer) : (q?.correctAnswer || q?.correctAnswerEn);
+  const secondaryCorr = language === 'en' ? q?.correctAnswer : q?.correctAnswerEn;
+  if (compareAgainst(primaryCorr)) return true;
+  if (secondaryCorr !== undefined && secondaryCorr !== primaryCorr && compareAgainst(secondaryCorr)) return true;
+  return false;
 };
 
 export const isQuestionLike = (item: any) => {
@@ -143,7 +229,7 @@ export const SectionModalButton = ({ sec, preset, language }: { sec: any; preset
               {preset.label}
             </h4>
             <div className="text-slate-600 text-sm font-bold leading-relaxed max-h-[60vh] overflow-y-auto">
-              <HtmlRenderer html={(language === 'en' && sec.contentEn) ? sec.contentEn : sec.content} />
+              <HtmlRenderer html={(language === 'en' && sec.contentEn) ? sec.contentEn : sec.content} dir={language === 'ar' ? 'rtl' : 'ltr'} />
             </div>
             <div className="flex justify-end pt-2">
               <button

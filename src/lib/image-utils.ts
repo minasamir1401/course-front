@@ -164,8 +164,29 @@ export async function uploadFileToServer(file: File): Promise<string> {
   return data.url;
 }
 
+const SAFE_DATA_IMAGE_RE = /^data:image\/(?:png|jpeg|jpg|gif|webp|avif);base64,[A-Za-z0-9+/=]+$/i;
+
+export function isSafeImageUrl(url: string | undefined | null): boolean {
+  if (!url || typeof url !== 'string') return false;
+  const trimmed = url.trim();
+  if (!trimmed || /[\s"'<>\\]/.test(trimmed)) return false;
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//')) return true;
+  if (/^https?:\/\//i.test(trimmed)) return true;
+  if (SAFE_DATA_IMAGE_RE.test(trimmed)) return true;
+  return false;
+}
+
+export function escapeHtmlAttr(val: string): string {
+  return String(val)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 /**
- * Extracts all unique image URLs from an HTML string.
+ * Extracts all unique safe image URLs from an HTML string.
  */
 export function extractImageUrls(html?: string | null): string[] {
   if (!html) return [];
@@ -174,7 +195,7 @@ export function extractImageUrls(html?: string | null): string[] {
   let match: RegExpExecArray | null;
   while ((match = regex.exec(html)) !== null) {
     const src = match[1]?.trim();
-    if (src && !urls.includes(src)) {
+    if (src && isSafeImageUrl(src) && !urls.includes(src)) {
       urls.push(src);
     }
   }
@@ -182,12 +203,14 @@ export function extractImageUrls(html?: string | null): string[] {
 }
 
 /**
- * Inserts an image into an HTML string if not already present.
+ * Inserts an image into an HTML string if valid and not already present.
  */
 export function insertImageIntoHtml(html: string | undefined | null, imgUrl: string): string {
   const current = String(html || '').trim();
-  if (current.includes(imgUrl)) return current;
-  const imgTag = `<p><img loading="lazy" decoding="async" src="${imgUrl}" data-align="center" style="max-width: 100%; height: auto; border-radius: 12px; margin: 10px auto; display: block;" /></p>`;
+  if (!isSafeImageUrl(imgUrl)) return current;
+  const trimmedUrl = imgUrl.trim();
+  if (current.includes(trimmedUrl)) return current;
+  const imgTag = `<p><img loading="lazy" decoding="async" src="${escapeHtmlAttr(trimmedUrl)}" data-align="center" style="max-width: 100%; height: auto; border-radius: 12px; margin: 10px auto; display: block;" /></p>`;
   if (!current || current === '<p><br></p>' || current === '<p></p>') {
     return imgTag;
   }

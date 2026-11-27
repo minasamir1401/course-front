@@ -2,16 +2,18 @@
 import { translateMetadataFields } from "@/lib/questionMetadataTranslation";
 
 import SlideKeyboardRegion from "@/components/SlideKeyboardRegion";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { Plus, Upload, Download, Layout, Copy } from "lucide-react";
 import { useLessonBlocks } from "./useLessonBlocks";
 import { getSectionStylePresets } from "./constants";
 import { useOptionalCourseEditor } from "../CourseEditorContext";
 import { downloadSlidesWorkbook, importLessonSlides } from "@/lib/slidesExcelWorkbook";
 import CopySlidesModal from "@/components/modals/CopySlidesModal";
-import { translateBatch } from "@/lib/translationService";
 import { useNotification } from "@/context/NotificationContext";
 import { SlideCard } from "./SlideCard";
+import AutoTranslateToggle, { useAutoTranslatePreference } from "@/components/AutoTranslateToggle";
+import { detectSlideLanguage } from "@/lib/slideLanguage";
+import { mergeSafeArabicSlidePatch, slideNeedsTabAutoTranslate, translateSingleSlideItem } from "@/lib/manualAutoTranslate";
 
 interface LessonSlidesBuilderProps {
   source: 'slides' | 'assignments' | 'questions';
@@ -56,6 +58,10 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
   const canDeleteContent = !role || isSuperAdmin || allowContentDeletion;
 
   const [customSkills, setCustomSkills] = useState<string[]>([]);
+  const [autoTranslateEnabled] = useAutoTranslatePreference();
+  const listRef = useRef<any[]>(currentLesson?.[source] || []);
+  listRef.current = currentLesson?.[source] || [];
+  const translatingKeysRef = useRef<Set<string | number>>(new Set());
 
   const DEFAULT_SKILLS = useMemo(() => [
     "Problem Solving", "Reasoning", "Number Sense", "Algebraic Thinking", "Geometry", "Data Analysis",
@@ -150,164 +156,82 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
     setExpandedSlides(prev => ({ ...prev, [index]: true }));
   };
 
-  const cleanHtml = (str?: string) => String(str || '').replace(/<[^>]*>/g, '').trim();
-
-  const isEnglishOnly = (str?: string) => {
-    const clean = cleanHtml(str);
-    return /[a-zA-Z]/.test(clean) && !/[\u0600-\u06FF]/.test(clean);
-  };
-
-  const hasArabicChars = (str?: string) => /[\u0600-\u06FF]/.test(cleanHtml(str));
-
-  const detectSlideLanguage = (block: any): 'ar' | 'en' => {
-    if (!block) return language === 'en' ? 'en' : 'ar';
-
-    const body = cleanHtml(block.content || block.text || '');
-    const bodyEn = cleanHtml(block.contentEn || block.textEn || '');
-    const titleClean = cleanHtml(block.title);
-    const titleEnClean = cleanHtml(block.titleEn);
-    const optsJoined = Array.isArray(block.options) ? block.options.map(cleanHtml).join(' ') : '';
-    const isTf = block.label === 'TRUE_FALSE' || block.type === 'TRUE_FALSE';
-    const optsEnJoined = !isTf && Array.isArray(block.optionsEn) ? block.optionsEn.map(cleanHtml).join(' ') : '';
-
-    const allAr = `${body} ${titleClean} ${optsJoined}`;
-    const allEn = `${bodyEn} ${titleEnClean} ${optsEnJoined}`;
-
-    const hasAr = hasArabicChars(allAr);
-    const hasEn = isEnglishOnly(allEn) || (isEnglishOnly(allAr) && !hasAr);
-
-    if (hasAr && hasEn) return language === 'en' ? 'en' : 'ar';
-    if (hasEn && !hasAr) return 'en';
-    if (hasAr && !hasEn) return 'ar';
-
-    if (hasArabicChars(body)) return 'ar';
-    if (isEnglishOnly(body)) return 'en';
-
-    const isDefaultTitle = !titleClean || titleClean === 'محتوى جديد' || titleClean === 'سؤال جديد' || titleClean === 'New Content' || titleClean === 'New Question';
-    if (!isDefaultTitle) {
-      if (hasArabicChars(titleClean)) return 'ar';
-      if (isEnglishOnly(titleClean)) return 'en';
-    }
-
-    return language === 'en' ? 'en' : 'ar';
-  };
-
   const getSlideLang = (block: any, sIdx: number): 'ar' | 'en' => {
     const key = block?.id ?? sIdx;
-    return slideLanguages[key] || slideLanguages[sIdx] || detectSlideLanguage(block);
+    return slideLanguages[key] || slideLanguages[sIdx] || detectSlideLanguage(block, language);
   };
 
-  const setSlideLang = (sKey: string | number, lang: 'ar' | 'en') => {
-    setSlideLanguages(prev => ({ ...prev, [sKey]: lang }));
-  };
-
-  const handleAutoTranslateSlide = async (sIdx: number) => {
-    const block = list[sIdx];
+  const handleAutoTranslateSlide = async (sIdx: number, forcedFromLang?: 'ar' | 'en', fromTabSwitch = false) => {
+    const currentList = listRef.current;
+    const block = currentList[sIdx];
     if (!block) return;
 
     const blockKey = block?.id ?? sIdx;
-    const currentLang = getSlideLang(block, sIdx);
-    const from = currentLang;
-    const to = currentLang === 'ar' ? 'en' : 'ar';
+    if (translatingKeysRef.current.has(blockKey)) return;
+    translatingKeysRef.current.add(blockKey);
+
+    const activeLang = forcedFromLang || getSlideLang(block, sIdx);
+    const snapshotObj = block;
 
     setTranslatingSlide(prev => ({ ...prev, [blockKey]: true }));
     try {
-      const srcTitle = from === 'ar'
-        ? (block.title || '')
-        : (block.titleEn || (isEnglishOnly(block.title) ? block.title : ''));
-      const srcContent = from === 'ar'
-        ? (block.content || block.text || '')
-        : (block.contentEn || block.textEn || (isEnglishOnly(block.content || block.text) ? (block.content || block.text) : ''));
-
-      let srcOpts: string[] = [];
-      if (block.type === 'QUESTION' && Array.isArray(block.options)) {
-        srcOpts = from === 'ar'
-          ? block.options
-          : ((block.optionsEn && block.optionsEn.length > 0) ? block.optionsEn : block.options);
+      const result = await translateSingleSlideItem(block, activeLang);
+      if (fromTabSwitch) {
+        if (!result.hasTranslatableSource || !result.changed) return;
+        const previewMerged = mergeSafeArabicSlidePatch(snapshotObj, snapshotObj, result.updated);
+        if (JSON.stringify(previewMerged) === JSON.stringify(snapshotObj)) return;
+        setCurrentLesson((prev: any) => {
+          const prevList = [...(prev[source] || [])];
+          const targetIndex = prevList.findIndex((item: any, idx: number) => (item?.id != null && block?.id != null ? item.id === block.id : idx === sIdx));
+          if (targetIndex < 0) return prev;
+          prevList[targetIndex] = mergeSafeArabicSlidePatch(prevList[targetIndex], snapshotObj, result.updated);
+          return { ...prev, [source]: prevList };
+        });
+        showToast("تمت الترجمة إلى العربية بنجاح", "success");
+        return;
       }
 
-      const sectionsList = block.sections || [];
-      const srcSections = sectionsList.map((sec: any) =>
-        from === 'ar' ? (sec.content || '') : (sec.contentEn || sec.content || '')
-      );
-
-      const textsToTranslate = [
-        srcTitle,
-        srcContent,
-        ...srcOpts,
-        ...srcSections
-      ];
-
-      const translations = await translateBatch(textsToTranslate, from, to);
-
-      let cursor = 0;
-      const trTitle = translations[cursor++] || '';
-      const trContent = translations[cursor++] || '';
-      const trOpts = translations.slice(cursor, cursor + srcOpts.length);
-      cursor += srcOpts.length;
-      const trSections = translations.slice(cursor, cursor + srcSections.length);
-      cursor += srcSections.length;
-
-      const updated = { ...block };
-      if (to === 'en') {
-        if (trTitle) updated.titleEn = trTitle;
-        if (trContent) {
-          updated.contentEn = trContent;
-          updated.textEn = trContent;
-        }
-        if (trOpts.length > 0) {
-          updated.optionsEn = trOpts;
-        }
-        if (sectionsList.length > 0) {
-          updated.sections = sectionsList.map((sec: any, i: number) => ({
-            ...sec,
-            contentEn: trSections[i] || sec.contentEn || sec.content || ''
-          }));
-        }
-        if (!updated.title && trTitle) updated.title = trTitle;
-        if (!updated.content && trContent) {
-          updated.content = trContent;
-          updated.text = trContent;
-        }
-      } else {
-        if (trTitle) updated.title = trTitle;
-        if (trContent) {
-          updated.content = trContent;
-          updated.text = trContent;
-        }
-        if (trOpts.length > 0) {
-          updated.options = trOpts;
-        }
-        if (sectionsList.length > 0) {
-          updated.sections = sectionsList.map((sec: any, i: number) => ({
-            ...sec,
-            content: trSections[i] || sec.content || ''
-          }));
-        }
-        if (!updated.titleEn && srcTitle) updated.titleEn = srcTitle;
-        if (!updated.contentEn && srcContent) {
-          updated.contentEn = srcContent;
-          updated.textEn = srcContent;
-        }
-        if ((!updated.optionsEn || updated.optionsEn.length === 0) && srcOpts.length > 0) {
-          updated.optionsEn = srcOpts;
-        }
+      if (!result.hasTranslatableSource) {
+        showToast(language === 'ar' ? "لا يوجد نص للترجمة في هذه الشريحة" : "No translatable text found in this slide", "info");
+        return;
       }
 
-      Object.assign(updated, await translateMetadataFields(block, to));
+      const snapshotJson = JSON.stringify(block);
       setCurrentLesson((prev: any) => {
-        const newSlides = [...(prev[source] || [])];
-        newSlides[sIdx] = updated;
-        return { ...prev, [source]: newSlides };
+        const prevList = [...(prev[source] || [])];
+        const targetIndex = prevList.findIndex((item: any, idx: number) => (item?.id != null && block?.id != null ? item.id === block.id : idx === sIdx));
+        if (targetIndex < 0) return prev;
+        if (JSON.stringify(prevList[targetIndex]) !== snapshotJson) {
+          return prev;
+        }
+        prevList[targetIndex] = result.updated;
+        return { ...prev, [source]: prevList };
       });
 
-      setSlideLang(blockKey, to);
-      showToast(to === 'en' ? "Translated to English successfully" : "تمت الترجمة إلى العربية بنجاح", "success");
+      setSlideLanguages(prev => ({ ...prev, [blockKey]: result.targetLang }));
+      if (result.changed) {
+        showToast(result.targetLang === 'en' ? "Translated to English successfully" : "تمت الترجمة إلى العربية بنجاح", "success");
+      } else {
+        showToast(language === 'ar' ? "تعذرت ترجمة المحتوى حالياً؛ يرجى المحاولة مرة أخرى" : "Translation returned unchanged text; please try again", "error");
+      }
     } catch (err: any) {
       console.error("Translation error:", err);
-      showToast(language === 'ar' ? "فشلت الترجمة التلقائية" : "Auto translation failed", "error");
+      if (!fromTabSwitch) {
+        showToast(language === 'ar' ? "فشلت الترجمة التلقائية" : "Auto translation failed", "error");
+      }
     } finally {
+      translatingKeysRef.current.delete(blockKey);
       setTranslatingSlide(prev => ({ ...prev, [blockKey]: false }));
+    }
+  };
+
+  const setSlideLang = (sKey: string | number, lang: 'ar' | 'en') => {
+    const currentList = listRef.current;
+    const idx = currentList.findIndex((b: any, i: number) => (b?.id ?? i) === sKey || i === sKey);
+    const prevLang = idx >= 0 ? getSlideLang(currentList[idx], idx) : null;
+    setSlideLanguages(prev => ({ ...prev, [sKey]: lang }));
+    if (prevLang === 'en' && lang === 'ar' && autoTranslateEnabled && idx >= 0 && slideNeedsTabAutoTranslate(currentList[idx])) {
+      void handleAutoTranslateSlide(idx, 'en', true);
     }
   };
 
@@ -352,6 +276,7 @@ export const LessonSlidesBuilder: React.FC<LessonSlidesBuilderProps> = ({
           <p className="text-slate-400 text-sm font-bold mt-1">{headerDesc}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          <AutoTranslateToggle language={language} />
           {list.length > 1 && (
             <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 gap-1 text-xs">
               <button

@@ -10,6 +10,7 @@ import { API_URL, apiFetch } from '@/lib/api';
 import { fetchStudentStats } from '@/lib/student-stats';
 import { formatEgyptDateTime } from '@/lib/egyptTime';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { questionMetadata } from '@/lib/bilingualMetadata';
 import frame from '@/components/student/LearningPage.module.css';
 import styles from './CourseDetails.module.css';
 
@@ -30,7 +31,7 @@ export default function CourseDetailsView({ id, staffRequested }: { id: string; 
   const available=(lesson:any)=>staffPreview||(!lesson.publishDate||Date.parse(lesson.publishDate)<=now)&&(!lesson.cutOffDate||Date.parse(lesson.cutOffDate)>now);
   const completed=(lesson:any)=>Boolean(lesson.progresses?.[0]?.isCompleted);
   const next=lessons.find((lesson:any)=>available(lesson)&&!completed(lesson))||lessons.find(available);
-  const groups:Record<string,any[]>={};lessons.forEach((lesson:any)=>{(groups[lesson.domain?.trim()||txt('الدروس','Lessons')]||=[]).push(lesson);});
+  const groups:Record<string,any[]>={};lessons.forEach((lesson:any)=>{(groups[questionMetadata(lesson,'domain',language)?.trim()||txt('الدروس','Lessons')]||=[]).push(lesson);});
   const percentage=Math.max(0,Math.min(100,Number(progress??(lessons.length?Math.round(lessons.filter(completed).length/lessons.length*100):0))||0));
   const number=(value:number)=>value.toLocaleString(ar?'ar-EG':'en-GB');
   const href=(lesson:any)=>'/lessons/'+lesson.id+'?courseId='+id+(staffPreview?'&preview=true':'');

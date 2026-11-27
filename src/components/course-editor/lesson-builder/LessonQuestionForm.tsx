@@ -11,6 +11,9 @@ import * as XLSX from "xlsx";
 import { buildAdvancedMetadataTemplateRows } from '@/lib/examExcelTemplates';
 import QuestionImageGallery from '@/components/QuestionImageGallery';
 import { extractImageUrls } from '@/lib/image-utils';
+import { syncRichTextFormatting, updateBilingualRichText } from '@/lib/bilingualRichText';
+import { getAutoTranslateEnabled } from '@/lib/autoTranslatePreference';
+import { hasArabicLetters } from '@/lib/slideLanguage';
 export default function LessonQuestionForm(props: any) {
   const { source, currentLesson, language, showQuestionForm, setShowQuestionForm, editingQuestionIndex, tempQuestion, setTempQuestion, openDropdownId, setOpenDropdownId, showToast, showQuestionMetadata, setShowQuestionMetadata, showQuestionSections, setShowQuestionSections, questionActiveLang, setQuestionActiveLang, isTranslatingQuestion, extractFirstImage, handleAutoTranslateQuestion, QUESTION_TYPES, SECTION_STYLE_PRESETS, handleSaveQuestionForSource, updateCurrentQuestionField, updateQuestionOption, toggleQuestionCorrectAnswer, isQuestionCorrectAnswer, addQuestionSection, removeQuestionSection } = props;
   return <>{showQuestionForm && (
@@ -120,15 +123,15 @@ export default function LessonQuestionForm(props: any) {
 
                 const currentVal = field.key === 'standard'
                   ? (isEn
-                      ? (tempQuestion.standardEn || tempQuestion.learningOutcomeEn || (!hasAr(baseStandard) ? baseStandard : ''))
-                      : baseStandard)
+                    ? (tempQuestion.standardEn || tempQuestion.learningOutcomeEn || (!hasAr(baseStandard) ? baseStandard : ''))
+                    : baseStandard)
                   : field.key === 'dok'
                     ? (normalizeDok(tempQuestion.dok) || tempQuestion.dok || '')
                     : (isEn && isTranslatable
-                        ? (enVal !== undefined && enVal !== null
-                            ? (enVal === '' && !hasAr(baseVal) ? (baseVal || '') : enVal)
-                            : (!hasAr(baseVal) ? (baseVal || '') : ''))
-                        : (baseVal || (questionActiveLang === 'ar' ? field.defaultValue : '') || ''));
+                      ? (enVal !== undefined && enVal !== null
+                        ? (enVal === '' && !hasAr(baseVal) ? (baseVal || '') : enVal)
+                        : (!hasAr(baseVal) ? (baseVal || '') : ''))
+                      : (baseVal || (questionActiveLang === 'ar' ? field.defaultValue : '') || ''));
 
                 return (
                   <div key={field.key} className="flex flex-col gap-2">
@@ -325,7 +328,7 @@ export default function LessonQuestionForm(props: any) {
             <button
               type="button"
               disabled={isTranslatingQuestion}
-              onClick={handleAutoTranslateQuestion}
+              onClick={() => void handleAutoTranslateQuestion()}
               className="px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-sm hover:opacity-90 disabled:opacity-50 cursor-pointer"
             >
               {isTranslatingQuestion ? (
@@ -380,20 +383,27 @@ export default function LessonQuestionForm(props: any) {
           </div>
           <RichTextEditor
             key={`${tempQuestion.id || "draft"}:${questionActiveLang}`}
+            dir={questionActiveLang === 'ar' ? 'rtl' : 'ltr'}
             value={(questionActiveLang === 'ar'
               ? (tempQuestion.text || '')
               : (tempQuestion.textEn || (tempQuestion.text && !/[\u0600-\u06FF]/.test(tempQuestion.text) ? tempQuestion.text : ''))
             ) || ""}
             onChange={(value) => {
               if (questionActiveLang === 'ar') {
-                updateCurrentQuestionField("text", value);
+                setTempQuestion((prev: any) => updateBilingualRichText(prev, 'text', value, 'ar'));
               } else {
-                const syncBase = !tempQuestion.text || (!/[\u0600-\u06FF]/.test(tempQuestion.text) && tempQuestion.text === (tempQuestion.textEn || ''));
-                setTempQuestion((prev: any) => ({
-                  ...prev,
-                  textEn: value,
-                  ...(syncBase ? { text: value } : {})
-                }));
+                setTempQuestion((prev: any) => {
+                  const prevEn = String(prev.textEn || (!hasArabicLetters(prev.text) ? prev.text : '') || '');
+                  const curAr = String(prev.text || '');
+                  if (hasArabicLetters(curAr)) {
+                    return updateBilingualRichText(prev, 'text', value, 'en');
+                  }
+                  const updated: any = { ...prev, textEn: value };
+                  if (!getAutoTranslateEnabled() && (!curAr || curAr === prevEn)) {
+                    updated.text = value;
+                  }
+                  return updated;
+                });
               }
             }}
             availableImages={extractImageUrls([
@@ -483,27 +493,49 @@ export default function LessonQuestionForm(props: any) {
                       </button>
                     </div>
                     <RichTextEditor
-                      key={`${tempQuestion.id || "draft"}:${questionActiveLang}`}
+                      key={`${tempQuestion.id || "draft"}:sec:${sec.id ?? idx}:${questionActiveLang}`}
+                      dir={questionActiveLang === 'ar' ? 'rtl' : 'ltr'}
                       value={secVal}
                       onChange={(value) => {
-                        const sections = [...(tempQuestion.sections || [])];
-                        if (questionActiveLang === 'ar') {
-                          sections[idx] = { ...sections[idx], content: value };
-                          setTempQuestion((prev: any) => ({ ...prev, sections, explanation: value }));
-                        } else {
-                          const syncBase = !sections[idx].content || (!/[\u0600-\u06FF]/.test(sections[idx].content) && sections[idx].content === (sections[idx].contentEn || ''));
-                          sections[idx] = {
-                            ...sections[idx],
-                            contentEn: value,
-                            ...(syncBase ? { content: value } : {})
-                          };
-                          setTempQuestion((prev: any) => ({
-                            ...prev,
-                            sections,
-                            explanationEn: value,
-                            ...(syncBase ? { explanation: value } : {})
-                          }));
-                        }
+                        setTempQuestion((prev: any) => {
+                          const sections = [...(prev.sections || [])];
+                          const curSec = sections[idx] || {};
+                          const isExplanationSec = curSec.type === 'EXPLANATION';
+                          if (questionActiveLang === 'ar') {
+                            const prevAr = String(curSec.content || '');
+                            const nextSec: any = { ...curSec, content: value };
+                            if (curSec.contentEn) {
+                              nextSec.contentEn = syncRichTextFormatting(prevAr, value, String(curSec.contentEn));
+                            }
+                            sections[idx] = nextSec;
+                            return {
+                              ...prev,
+                              sections,
+                              ...(isExplanationSec ? {
+                                explanation: value,
+                                ...(nextSec.contentEn ? { explanationEn: nextSec.contentEn } : {})
+                              } : {})
+                            };
+                          } else {
+                            const prevEn = String(curSec.contentEn || (!hasArabicLetters(curSec.content) ? curSec.content : '') || '');
+                            const curAr = String(curSec.content || '');
+                            const nextSec: any = { ...curSec, contentEn: value };
+                            if (curAr && hasArabicLetters(curAr)) {
+                              nextSec.content = syncRichTextFormatting(prevEn, value, curAr);
+                            } else if (!getAutoTranslateEnabled() && (!curAr || (!hasArabicLetters(curAr) && curAr === prevEn))) {
+                              nextSec.content = value;
+                            }
+                            sections[idx] = nextSec;
+                            return {
+                              ...prev,
+                              sections,
+                              ...(isExplanationSec ? {
+                                explanationEn: value,
+                                ...(nextSec.content !== curAr ? { explanation: nextSec.content } : {})
+                              } : {})
+                            };
+                          }
+                        });
                       }}
                       placeholder={questionActiveLang === 'ar' ? "اكتب محتوى التفسير هنا..." : "Write explanation block content here..."}
                       className="!bg-white !border-slate-200"
@@ -570,9 +602,9 @@ export default function LessonQuestionForm(props: any) {
                   const singleFormCorrectIdx = tempQuestion.type === 'MULTI_SELECT'
                     ? -1
                     : resolveSingleCorrectOptionIndex(
-                        { ...tempQuestion, options: currentOptsAr, optionsEn: currentOptsEn },
-                        questionActiveLang === 'en'
-                      );
+                      { ...tempQuestion, options: currentOptsAr, optionsEn: currentOptsEn },
+                      questionActiveLang === 'en'
+                    );
 
                   return activeOpts.map((opt: string, oIndex: number) => {
                     const arOpt = currentOptsAr[oIndex];
@@ -581,12 +613,12 @@ export default function LessonQuestionForm(props: any) {
                     const isOptionCorrect =
                       tempQuestion.type === 'MULTI_SELECT'
                         ? Boolean(
-                            (tempQuestion.correctAnswerIndices && tempQuestion.correctAnswerIndices.includes(oIndex)) ||
-                            (opt && isQuestionCorrectAnswer(opt)) ||
-                            (arOpt && (tempQuestion.correctAnswers || []).includes(arOpt)) ||
-                            (enOpt && (tempQuestion.correctAnswers || []).includes(enOpt)) ||
-                            (enOpt && (tempQuestion.correctAnswersEn || []).includes(enOpt))
-                          )
+                          (tempQuestion.correctAnswerIndices && tempQuestion.correctAnswerIndices.includes(oIndex)) ||
+                          (opt && isQuestionCorrectAnswer(opt)) ||
+                          (arOpt && (tempQuestion.correctAnswers || []).includes(arOpt)) ||
+                          (enOpt && (tempQuestion.correctAnswers || []).includes(enOpt)) ||
+                          (enOpt && (tempQuestion.correctAnswersEn || []).includes(enOpt))
+                        )
                         : oIndex === singleFormCorrectIdx;
 
                     return (
@@ -613,7 +645,7 @@ export default function LessonQuestionForm(props: any) {
                               const updatedEn = [...currentOptsEn];
                               updatedEn[oIndex] = val;
                               const updatedAr = [...currentOptsAr];
-                              const syncBase = !updatedAr[oIndex] || (!/[\u0600-\u06FF]/.test(updatedAr[oIndex]) && updatedAr[oIndex] === (currentOptsEn[oIndex] || ''));
+                              const syncBase = !getAutoTranslateEnabled() && (!updatedAr[oIndex] || (!hasArabicLetters(updatedAr[oIndex]) && updatedAr[oIndex] === (currentOptsEn[oIndex] || '')));
                               if (syncBase) {
                                 updatedAr[oIndex] = val;
                               }
@@ -623,7 +655,7 @@ export default function LessonQuestionForm(props: any) {
                                 ...(syncBase ? { options: updatedAr } : {})
                               }));
                               if (oIndex === singleFormCorrectIdx || (!tempQuestion.correctAnswer && !currentOptsAr[oIndex])) {
-                                if (!currentOptsAr[oIndex] || !/[\u0600-\u06FF]/.test(currentOptsAr[oIndex])) {
+                                if (!getAutoTranslateEnabled() && (!currentOptsAr[oIndex] || !hasArabicLetters(currentOptsAr[oIndex]))) {
                                   updateCurrentQuestionField("correctAnswer", val);
                                 }
                                 updateCurrentQuestionField("correctAnswerEn", val);

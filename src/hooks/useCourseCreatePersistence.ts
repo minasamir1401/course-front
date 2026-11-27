@@ -10,6 +10,8 @@ import {
   withCourseLessonKey,
 } from "@/lib/courseCreatePersistence";
 import { captureOfflineOwner, offlineSync } from "@/lib/offlineSync";
+import { getAutoTranslateEnabled } from "@/lib/autoTranslatePreference";
+import { autoTranslateLessonDraftForSave, lessonNeedsArabicTranslation } from "@/lib/manualAutoTranslate";
 
 interface UseCourseCreatePersistenceParams {
   role: CourseCreateRole;
@@ -116,6 +118,7 @@ export function useCourseCreatePersistence({
         }
 
         const payload = buildCourseSavePayload(activeCourseData, activeLessons, role);
+        const autoTranslateOn = getAutoTranslateEnabled();
         const snapshot = JSON.stringify(payload);
         if (isAutoSave && snapshot === lastAutoSaveSnapshotRef.current) {
           return { ok: true, courseId: createdIdRef.current };
@@ -126,8 +129,8 @@ export function useCourseCreatePersistence({
         const activeCourseId = createdIdRef.current;
         const createRequestId = draftKeyRef.current ??= crypto.randomUUID();
         const writePayload = activeCourseId
-          ? { ...payload, expectedUpdatedAt: courseVersionRef.current }
-          : { ...payload, createRequestId };
+          ? { ...payload, autoTranslate: autoTranslateOn, expectedUpdatedAt: courseVersionRef.current }
+          : { ...payload, autoTranslate: autoTranslateOn, createRequestId };
         const method = activeCourseId ? "PUT" : "POST";
         const url = activeCourseId
           ? `${API_URL}/school/courses/${activeCourseId}`
@@ -301,8 +304,15 @@ export function useCourseCreatePersistence({
       return;
     }
 
-    const updatedLesson = withCourseLessonKey({ ...currentLesson, isContentLoaded: true });
-    const newLessons = stageCourseLesson(lessonsRef.current, updatedLesson);
+    let preparedLesson = withCourseLessonKey({ ...currentLesson, isContentLoaded: true });
+    if (getAutoTranslateEnabled() && lessonNeedsArabicTranslation(preparedLesson)) {
+      try {
+        preparedLesson = await autoTranslateLessonDraftForSave(preparedLesson);
+      } catch (err) {
+        console.error("Auto-translate lesson draft on create failed:", err);
+      }
+    }
+    const newLessons = stageCourseLesson(lessonsRef.current, preparedLesson);
     if (!newLessons) {
       showToast(language === "ar" ? "لم يعد الدرس موجودًا في الكورس." : "The lesson is no longer in the course.", "error");
       return;
@@ -396,8 +406,15 @@ export function useCourseCreatePersistence({
           showToast(t("courseCreate.lessonTitleRequired") || "Lesson title is required", "error");
           return;
         }
-        const updatedOpenLesson = { ...currentLesson, isContentLoaded: true };
-        const staged = stageCourseLesson(lessonsRef.current, updatedOpenLesson);
+        let preparedOpenLesson = { ...currentLesson, isContentLoaded: true };
+        if (getAutoTranslateEnabled() && lessonNeedsArabicTranslation(preparedOpenLesson)) {
+          try {
+            preparedOpenLesson = await autoTranslateLessonDraftForSave(preparedOpenLesson);
+          } catch (err) {
+            console.error("Auto-translate open lesson on course submit failed:", err);
+          }
+        }
+        const staged = stageCourseLesson(lessonsRef.current, preparedOpenLesson);
         if (!staged) {
           showToast(language === "ar" ? "لم يعد الدرس موجودًا في الكورس." : "The lesson is no longer in the course.", "error");
           return;

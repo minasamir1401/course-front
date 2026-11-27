@@ -23,6 +23,40 @@ function restoreClientMedia(text: string, mediaTokens: string[]): string {
   return restored;
 }
 
+async function postTranslateJson(payload: Record<string, unknown>): Promise<any> {
+  const maxAttempts = 2;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      const res = await fetch(`${API_URL}/translate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        return await res.json();
+      }
+
+      const shouldRetry = attempt + 1 < maxAttempts && (res.status === 429 || res.status >= 500);
+      if (shouldRetry) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        continue;
+      }
+
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || err.error || 'Translation request failed');
+    } catch (err) {
+      if (attempt + 1 < maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error('Translation request failed');
+}
+
 export async function translateText(
   text: string,
   from: 'ar' | 'en' = 'ar',
@@ -30,20 +64,17 @@ export async function translateText(
 ): Promise<string> {
   if (!text || !text.trim()) return text;
 
-  const { masked, mediaTokens } = maskClientMedia(text);
-  const res = await fetch(`${API_URL}/translate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ text: masked, from, to }),
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || err.error || 'Translation request failed');
+  const stats = measureMaskedStats(text);
+  if (stats.runs > 120 || stats.effectiveLen > 3600 || stats.maskedLen > 90_000) {
+    const chunks = splitOversizedTranslationText(text);
+    if (chunks.length > 1) {
+      const translatedChunks = await translateBatch(chunks, from, to);
+      return translatedChunks.join('');
+    }
   }
 
-  const data = await res.json();
+  const { masked, mediaTokens } = maskClientMedia(text);
+  const data = await postTranslateJson({ text: masked, from, to });
   const translated = data.translatedText || masked;
   return restoreClientMedia(translated, mediaTokens);
 }
@@ -255,19 +286,12 @@ async function executeSingleTranslateBatch(
   const clientMasked = texts.map((t) => maskClientMedia(t));
   const payloadTexts = clientMasked.map((m) => m.masked);
 
-  const res = await fetch(`${API_URL}/translate`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ texts: payloadTexts, from, to, ...(metadata === 'all' ? { kind: 'metadata' } : metadata ? { metadataIndices: metadata } : {}) }),
+  const data = await postTranslateJson({
+    texts: payloadTexts,
+    from,
+    to,
+    ...(metadata === 'all' ? { kind: 'metadata' } : metadata ? { metadataIndices: metadata } : {}),
   });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || err.error || 'Translation request failed');
-  }
-
-  const data = await res.json();
   const translations: string[] = data.translations || payloadTexts;
   return translations.map((translated, idx) =>
     restoreClientMedia(translated, clientMasked[idx]?.mediaTokens || [])

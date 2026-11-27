@@ -21,6 +21,7 @@ import { LessonAttachmentsTab } from "./lesson-builder/LessonAttachmentsTab";
 import ExportLessonDataModal from "@/components/modals/ExportLessonDataModal";
 import { Copy, Sparkles } from "lucide-react";
 import AiGuidanceEditor from '@/components/ai/AiGuidanceEditor';
+import AutoTranslateToggle from '@/components/AutoTranslateToggle';
 import workspace from './LessonWorkspace.module.css';
 import { useRouter } from 'next/navigation';
 
@@ -121,6 +122,7 @@ export const LessonBuilderModal: React.FC<{ fullPage?: boolean }> = ({ fullPage 
               <p>{language === 'ar' ? 'رتّب المحتوى والتدريبات ووجّه المساعد في تجربة واحدة.' : 'Organise content, practice and assistant guidance in one place.'}</p>
             </div>
             <div className="flex flex-wrap items-center gap-2 min-w-0">
+              <AutoTranslateToggle language={language} compact />
               <input
                 id="full-lesson-excel-input"
                 type="file"

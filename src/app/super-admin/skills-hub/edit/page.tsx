@@ -1,6 +1,4 @@
 "use client";
-import { translateMetadataFields } from "@/lib/questionMetadataTranslation";
-import { questionMetadata } from "@/lib/bilingualMetadata";
 import ActivityEditorModal from "./ActivityEditorModal";
 import { downloadSkillTemplate, downloadSkillMetadataTemplate, readSkillMetadata } from '@/lib/skillExcel';
 
@@ -22,7 +20,8 @@ import { extractImageUrls } from "@/lib/image-utils";
 import AnimatedFeedback from "@/components/AnimatedFeedback";
 import { InteractiveTag } from "@/components/InteractiveTag";
 import HtmlRenderer from "@/components/HtmlRenderer";
-import { translateBatch } from "@/lib/translationService";
+import AutoTranslateToggle, { useAutoTranslatePreference } from "@/components/AutoTranslateToggle";
+import { activityNeedsArabicTranslation, translateSingleActivityItem } from "@/lib/manualAutoTranslate";
 
 
 import { useClusterInfo } from './hooks/useClusterInfo';
@@ -72,11 +71,13 @@ export default function EditSkillClusterPage() {
   const [activityActiveLang, setActivityActiveLang] = useState<'ar' | 'en'>('ar');
   const [previewLang, setPreviewLang] = useState<'ar' | 'en'>('ar');
   const [isTranslatingActivity, setIsTranslatingActivity] = useState(false);
+  const [autoTranslateEnabled] = useAutoTranslatePreference();
+  const translatingActivityRef = React.useRef(false);
 
   useEffect(() => {
     if (!isActivityModalOpen || !editingActivity) return;
     const clean = (str?: string) => String(str || '').replace(/<[^>]*>/g, '').trim();
-    const hasAr = (str?: string) => /[\u0600-\u06FF]/.test(clean(str));
+    const hasAr = (str?: string) => /[\u0621-\u064A\u0671-\u06D3]/.test(clean(str));
     const hasEn = (str?: string) => /[a-zA-Z]/.test(clean(str));
 
     const qClean = clean(editingActivity.questionText);
@@ -105,105 +106,35 @@ export default function EditSkillClusterPage() {
     }
   }, [isActivityModalOpen, editingActivity?.id]);
 
-  const handleAutoTranslateActivity = async () => {
-    if (!editingActivity) return;
+  const handleAutoTranslateActivity = async (forcedFromLang?: 'ar' | 'en') => {
+    if (!editingActivity || translatingActivityRef.current) return;
+    translatingActivityRef.current = true;
     setIsTranslatingActivity(true);
     try {
-      const from = activityActiveLang;
-      const to = from === 'ar' ? 'en' : 'ar';
-
-      const srcTitle = from === 'ar' ? editingActivity.title : (editingActivity.titleEn || editingActivity.title);
-      const srcPrompt = from === 'ar' ? editingActivity.questionText : (editingActivity.questionTextEn || editingActivity.questionText);
-      const srcExplanation = from === 'ar' ? editingActivity.explanation : (editingActivity.explanationEn || editingActivity.explanation);
-      const srcHint = from === 'ar' ? editingActivity.hint : (editingActivity.hintEn || editingActivity.hint);
-      const srcTip = from === 'ar' ? editingActivity.tip : (editingActivity.tipEn || editingActivity.tip);
-      const srcKeyInsight = from === 'ar' ? editingActivity.keyInsight : (editingActivity.keyInsightEn || editingActivity.keyInsight);
-
-      const baseTexts = [
-        srcTitle || '',
-        srcPrompt || '',
-        srcExplanation || '',
-        srcHint || '',
-        srcTip || '',
-        srcKeyInsight || '',
-      ];
-
-      let rawOpts: any = null;
-      const srcOpts = from === 'ar' ? editingActivity.options : (editingActivity.optionsEn || editingActivity.options);
-      try {
-        rawOpts = typeof srcOpts === 'string' ? JSON.parse(srcOpts) : srcOpts;
-      } catch {
-        rawOpts = null;
+      const result = await translateSingleActivityItem(editingActivity, forcedFromLang || activityActiveLang);
+      if (!result.hasTranslatableSource) {
+        showToast(language === 'ar' ? 'لا يوجد نص للترجمة' : 'No translatable text found', 'info');
+        return;
       }
-
-      let choiceTexts: string[] = [];
-      if (rawOpts && Array.isArray(rawOpts.choices)) {
-        choiceTexts = rawOpts.choices.map((c: any) => (typeof c === 'object' && c ? c.text || '' : String(c || '')));
-      }
-
-      const allTexts = [...baseTexts, ...choiceTexts];
-      const translations = await translateBatch(allTexts, from, to);
-
-      const [trTitle, trPrompt, trExplanation, trHint, trTip, trKeyInsight] = translations.slice(0, 6);
-      const trChoices = translations.slice(6, 6 + choiceTexts.length);
-
-      const updated = { ...editingActivity };
-      if (to === 'en') {
-        if (trTitle) updated.titleEn = trTitle;
-        if (trPrompt) updated.questionTextEn = trPrompt;
-        if (trExplanation) updated.explanationEn = trExplanation;
-        if (trHint) updated.hintEn = trHint;
-        if (trTip) updated.tipEn = trTip;
-        if (trKeyInsight) updated.keyInsightEn = trKeyInsight;
-
-        if (rawOpts && Array.isArray(rawOpts.choices)) {
-          const translatedOpts = {
-            ...rawOpts,
-            choices: rawOpts.choices.map((c: any, i: number) => {
-              if (typeof c === 'object' && c) {
-                return { ...c, text: trChoices[i] || c.text };
-              }
-              return trChoices[i] || c;
-            })
-          };
-          updated.optionsEn = JSON.stringify(translatedOpts);
-        }
-        setActivityActiveLang('en');
+      setEditingActivity(result.updated);
+      setActivityActiveLang(result.targetLang);
+      if (result.changed) {
+        showToast(language === 'ar' ? 'تمت الترجمة الفورية بنجاح' : 'Content translated successfully', 'success');
       } else {
-        if (!updated.titleEn && editingActivity.title && !/[\u0600-\u06FF]/.test(editingActivity.title)) updated.titleEn = editingActivity.title;
-        if (!updated.questionTextEn && editingActivity.questionText && !/[\u0600-\u06FF]/.test(editingActivity.questionText)) updated.questionTextEn = editingActivity.questionText;
-        if (!updated.optionsEn && editingActivity.options && !/[\u0600-\u06FF]/.test(typeof editingActivity.options === 'string' ? editingActivity.options : JSON.stringify(editingActivity.options))) {
-          updated.optionsEn = typeof editingActivity.options === 'string' ? editingActivity.options : JSON.stringify(editingActivity.options);
-        }
-
-        if (trTitle) updated.title = trTitle;
-        if (trPrompt) updated.questionText = trPrompt;
-        if (trExplanation) updated.explanation = trExplanation;
-        if (trHint) updated.hint = trHint;
-        if (trTip) updated.tip = trTip;
-        if (trKeyInsight) updated.keyInsight = trKeyInsight;
-
-        if (rawOpts && Array.isArray(rawOpts.choices)) {
-          const translatedOpts = {
-            ...rawOpts,
-            choices: rawOpts.choices.map((c: any, i: number) => {
-              if (typeof c === 'object' && c) {
-                return { ...c, text: trChoices[i] || c.text };
-              }
-              return trChoices[i] || c;
-            })
-          };
-          updated.options = JSON.stringify(translatedOpts);
-        }
-        setActivityActiveLang('ar');
+        showToast(language === 'ar' ? 'تعذرت ترجمة المحتوى حالياً؛ يرجى المحاولة مرة أخرى' : 'Translation returned unchanged text; please try again', 'error');
       }
-      Object.assign(updated, await translateMetadataFields(editingActivity, to, ['standard', 'indicator', 'learningOutcome', 'skill']));
-      setEditingActivity(updated);
-      showToast(language === 'ar' ? 'تمت الترجمة الفورية بنجاح' : 'Content translated successfully', 'success');
     } catch (err: any) {
       showToast(err.message || (language === 'ar' ? 'حدث خطأ أثناء الترجمة' : 'Translation failed'), 'error');
     } finally {
+      translatingActivityRef.current = false;
       setIsTranslatingActivity(false);
+    }
+  };
+
+  const handleSwitchActivityLang = (nextLang: 'ar' | 'en') => {
+    setActivityActiveLang(nextLang);
+    if (nextLang === 'ar' && autoTranslateEnabled && editingActivity && activityNeedsArabicTranslation(editingActivity)) {
+      void handleAutoTranslateActivity('en');
     }
   };
 
@@ -345,6 +276,9 @@ export default function EditSkillClusterPage() {
                 </p>
               </div>
             </div>
+            <div className="shrink-0">
+              <AutoTranslateToggle language={language} compact />
+            </div>
           </div>
           <div className="absolute top-0 right-0 w-1/3 h-full bg-amber-500/5 blur-[120px] rounded-full -mr-20"></div>
         </div>
@@ -360,8 +294,8 @@ export default function EditSkillClusterPage() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
               className={`flex items-center gap-2 sm:gap-3 px-4 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-full font-black text-xs sm:text-sm transition-all whitespace-nowrap ${activeTab === tab.id
-                  ? "bg-amber-500 text-white shadow-md shadow-amber-500/20"
-                  : "bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                ? "bg-amber-500 text-white shadow-md shadow-amber-500/20"
+                : "bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-900"
                 }`}
             >
               <tab.icon className="w-4 h-4 sm:w-5 h-5" />
@@ -447,8 +381,8 @@ export default function EditSkillClusterPage() {
                       <label
                         key={g}
                         className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border-2 cursor-pointer transition-all ${isSelected
-                            ? "bg-amber-50 border-amber-400 text-amber-900 shadow-sm"
-                            : "bg-white border-slate-200 text-slate-600 hover:bg-slate-100"
+                          ? "bg-amber-50 border-amber-400 text-amber-900 shadow-sm"
+                          : "bg-white border-slate-200 text-slate-600 hover:bg-slate-100"
                           }`}
                       >
                         <input
@@ -728,7 +662,7 @@ export default function EditSkillClusterPage() {
       )}
 
       {/* Activity Modal */}
-      <ActivityEditorModal {...{ t, language, showToast, lessons, expandedLessonId, activitiesData, isActivityModalOpen, setIsActivityModalOpen, editingActivity, setEditingActivity, handleSaveActivity, mounted, activityActiveLang, setActivityActiveLang, isTranslatingActivity, handleAutoTranslateActivity, saveLessonMetadata, getLessonMetadata }} />
+      <ActivityEditorModal {...{ t, language, showToast, lessons, expandedLessonId, activitiesData, isActivityModalOpen, setIsActivityModalOpen, editingActivity, setEditingActivity, handleSaveActivity, mounted, activityActiveLang, setActivityActiveLang: handleSwitchActivityLang, isTranslatingActivity, handleAutoTranslateActivity, saveLessonMetadata, getLessonMetadata }} />
 
       {mounted && previewActivity && createPortal(
         <div data-slide-preview role="dialog" aria-modal="true" tabIndex={-1} className="fixed inset-0 z-[150] bg-slate-50 flex flex-col w-full h-full min-h-screen overflow-hidden text-slate-900 animate-in fade-in duration-200" dir={language === 'ar' ? 'rtl' : 'ltr'}>
@@ -759,8 +693,8 @@ export default function EditSkillClusterPage() {
                   type="button"
                   onClick={() => setPreviewLang('ar')}
                   className={`px-3 py-1.5 rounded-lg font-black transition-all ${previewLang === 'ar'
-                      ? 'bg-indigo-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
                     }`}
                 >
                   العربية
@@ -769,8 +703,8 @@ export default function EditSkillClusterPage() {
                   type="button"
                   onClick={() => setPreviewLang('en')}
                   className={`px-3 py-1.5 rounded-lg font-black transition-all ${previewLang === 'en'
-                      ? 'bg-indigo-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
                     }`}
                 >
                   English
@@ -783,8 +717,8 @@ export default function EditSkillClusterPage() {
               </div>
 
               <div className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border text-xs font-black transition-all ${previewTimeLeft !== null && previewTimeLeft <= 10
-                  ? 'bg-rose-50 border-rose-200 text-rose-600 animate-pulse'
-                  : 'bg-slate-100 border-slate-200 text-slate-700'
+                ? 'bg-rose-50 border-rose-200 text-rose-600 animate-pulse'
+                : 'bg-slate-100 border-slate-200 text-slate-700'
                 }`}>
                 <Clock className={`w-4 h-4 ${previewTimeLeft !== null && previewTimeLeft <= 10 ? 'text-rose-500' : 'text-indigo-600'}`} />
                 <span>
@@ -941,8 +875,8 @@ export default function EditSkillClusterPage() {
                     onClick={handlePreviewPrev}
                     disabled={!hasPreviewPrev}
                     className={`px-5 py-3.5 rounded-2xl border-2 font-bold text-sm transition-all flex items-center gap-2 ${hasPreviewPrev
-                        ? "bg-slate-50 border-slate-200 text-slate-800 hover:bg-slate-100 cursor-pointer"
-                        : "bg-slate-50/50 border-slate-100 text-slate-300 cursor-not-allowed"
+                      ? "bg-slate-50 border-slate-200 text-slate-800 hover:bg-slate-100 cursor-pointer"
+                      : "bg-slate-50/50 border-slate-100 text-slate-300 cursor-not-allowed"
                       }`}
                   >
                     {previewLang === 'ar' ? <ArrowRight className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />}
@@ -954,8 +888,8 @@ export default function EditSkillClusterPage() {
                     onClick={handlePreviewNext}
                     disabled={!hasPreviewNext}
                     className={`px-5 py-3.5 rounded-2xl border-2 font-bold text-sm transition-all flex items-center gap-2 ${hasPreviewNext
-                        ? "bg-slate-50 border-slate-200 text-slate-800 hover:bg-slate-100 cursor-pointer"
-                        : "bg-slate-50/50 border-slate-100 text-slate-300 cursor-not-allowed"
+                      ? "bg-slate-50 border-slate-200 text-slate-800 hover:bg-slate-100 cursor-pointer"
+                      : "bg-slate-50/50 border-slate-100 text-slate-300 cursor-not-allowed"
                       }`}
                   >
                     <span>{previewLang === 'ar' ? 'التالي' : 'Next'}</span>
@@ -968,8 +902,8 @@ export default function EditSkillClusterPage() {
                     onClick={submitPreviewAnswer}
                     disabled={!previewAnswer || previewIsSubmitting}
                     className={`px-10 py-3.5 rounded-2xl font-black text-sm transition-all flex items-center gap-2 active:scale-95 cursor-pointer ${!previewAnswer || previewIsSubmitting
-                        ? "bg-sky-100 text-sky-400 cursor-not-allowed border border-sky-200/50 shadow-none"
-                        : "bg-sky-500 text-white hover:bg-sky-600 shadow-xl shadow-sky-500/25 border border-sky-500/20"
+                      ? "bg-sky-100 text-sky-400 cursor-not-allowed border border-sky-200/50 shadow-none"
+                      : "bg-sky-500 text-white hover:bg-sky-600 shadow-xl shadow-sky-500/25 border border-sky-500/20"
                       }`}
                   >
                     {previewIsSubmitting ? (
